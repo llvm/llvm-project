@@ -1,18 +1,25 @@
-//===-- Definition of kernel's version of struct termios --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Definition of the kernel's version of struct termios.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 #define LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 
+#include "hdr/types/cc_t.h"
+#include "hdr/types/tcflag_t.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // The kernel's struct termios is different from the libc's struct termios. The
 // kernel's syscalls expect the size and layout of its definition of struct
@@ -36,6 +43,6 @@ struct kernel_termios {
   cc_t c_cc[KERNEL_NCCS];
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H

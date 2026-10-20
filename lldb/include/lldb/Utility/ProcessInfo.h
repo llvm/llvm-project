@@ -36,9 +36,7 @@ public:
 
   void Clear();
 
-  const char *GetName() const;
-
-  llvm::StringRef GetNameAsStringRef() const;
+  llvm::StringRef GetName() const;
 
   FileSpec &GetExecutableFile() { return m_executable; }
 
@@ -247,6 +245,11 @@ public:
 
   std::optional<bool> IsZombie() const { return m_zombie; }
 
+  // proc/../status specifies CoreDumping as the field
+  // so we match the case here.
+  void SetIsCoreDumping(bool is_coredumping) { m_coredumping = is_coredumping; }
+  std::optional<bool> IsCoreDumping() const { return m_coredumping; }
+
   void Dump(Stream &s, UserIDResolver &resolver) const;
 
   static void DumpTableHeader(Stream &s, bool show_args, bool verbose);
@@ -266,6 +269,7 @@ protected:
   struct timespec m_cumulative_system_time;
   std::optional<int8_t> m_priority_value = std::nullopt;
   std::optional<bool> m_zombie = std::nullopt;
+  std::optional<bool> m_coredumping = std::nullopt;
 };
 
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
@@ -323,7 +327,7 @@ public:
   bool ArchitectureMatches(const ArchSpec &arch_spec) const;
 
   /// Return true iff the process name in this object matches process_name.
-  bool NameMatches(const char *process_name) const;
+  bool NameMatches(llvm::StringRef process_name) const;
 
   /// Return true iff the process ID and parent process IDs in this object match
   /// the ones in proc_info.

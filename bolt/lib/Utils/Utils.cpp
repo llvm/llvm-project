@@ -11,10 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if defined(__linux__)
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 namespace llvm {
 namespace bolt {
@@ -66,13 +73,19 @@ std::string getUnescapedName(const StringRef &Name) {
   return Output;
 }
 
-std::optional<StringRef> getLTOCommonName(const StringRef Name) {
-  for (StringRef Suffix : {".__uniq.", ".lto_priv.", ".constprop.", ".llvm."}) {
+std::optional<StringRef> getCommonName(const StringRef Name, bool KeepSuffix,
+                                       ArrayRef<StringRef> Suffixes) {
+  for (StringRef Suffix : Suffixes) {
     size_t LTOSuffixPos = Name.find(Suffix);
     if (LTOSuffixPos != StringRef::npos)
-      return Name.substr(0, LTOSuffixPos + Suffix.size());
+      return Name.substr(0, LTOSuffixPos + (KeepSuffix ? Suffix.size() : 0));
   }
   return std::nullopt;
+}
+
+std::optional<StringRef> getLTOCommonName(const StringRef Name) {
+  return getCommonName(Name, true,
+                       {".__uniq.", ".lto_priv.", ".constprop.", ".llvm."});
 }
 
 std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
@@ -89,6 +102,58 @@ std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
       reinterpret_cast<const uint8_t *>(Start + ExprBytes.size() - 1);
   uint8_t Reg = decodeULEB128(Start, nullptr, End);
   return Reg;
+}
+
+void safePWrite(raw_fd_ostream &OS, const char *Src, size_t Size,
+                uint64_t Offset) {
+  if (Size == 0)
+    return;
+
+  const uint64_t SavedPos = OS.tell();
+  const uint64_t RequiredPos = Offset + Size;
+  const bool Extended = SavedPos < RequiredPos;
+
+  // raw_pwrite_stream::pwrite() expects the stream to be large enough
+  // to cover the write. If the target offset exceeds the current stream
+  // position, we must extend the stream by seeking to the required position
+  // first to avoid failures.
+  if (Extended)
+    OS.seek(RequiredPos);
+
+  OS.pwrite(Src, Size, Offset);
+
+  if (Extended)
+    OS.seek(SavedPos);
+}
+
+void pageOutMemory(const void *Addr, size_t Size) {
+#if defined(__linux__) && defined(MADV_PAGEOUT)
+  const uintptr_t Start = reinterpret_cast<uintptr_t>(Addr);
+  const size_t PageSize = static_cast<size_t>(::getpagesize());
+  // madvise() requires a page-aligned start.
+  if (PageSize == 0 || Start % PageSize != 0 || Size < PageSize)
+    return;
+  (void)::madvise(const_cast<void *>(Addr), Size & ~(PageSize - 1),
+                  MADV_PAGEOUT);
+#else
+  (void)Addr;
+  (void)Size;
+#endif
+}
+
+void dropFileFromPageCache(StringRef Path) {
+#if defined(__linux__)
+  if (Path.empty())
+    return;
+  SmallString<128> PathStorage(Path);
+  const int FD = ::open(PathStorage.c_str(), O_RDONLY);
+  if (FD < 0)
+    return;
+  (void)::posix_fadvise(FD, 0, 0, POSIX_FADV_DONTNEED);
+  ::close(FD);
+#else
+  (void)Path;
+#endif
 }
 
 } // namespace bolt

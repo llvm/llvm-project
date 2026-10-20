@@ -5,7 +5,7 @@
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 \
 // RUN:   -Xclang -fkeep-static-consts -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/nested-types.lldbinit 2>&1 | FileCheck %s
 
 struct S {
@@ -126,30 +126,59 @@ int main(int argc, char **argv) {
 // CHECK: (lldb) target modules dump ast
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
+
 // CHECK: |-CXXRecordDecl {{.*}} struct S definition
-// CHECK: | |-FieldDecl {{.*}} C 'int'
-// CHECK: | |-FieldDecl {{.*}} D 'int'
-// CHECK: | |-FieldDecl {{.*}} DD 'void *'
 // CHECK: | |-CXXRecordDecl {{.*}} struct NestedStruct definition
 // CHECK: | | |-FieldDecl {{.*}} A 'int'
 // CHECK: | | `-FieldDecl {{.*}} B 'int'
-// CHECK: | `-EnumDecl {{.*}} NestedEnum
-// CHECK: |   |-EnumConstantDecl {{.*}} EnumValue1 'S::NestedEnum'
-// CHECK: |   `-EnumConstantDecl {{.*}} EnumValue2 'S::NestedEnum'
+// CHECK: | |-EnumDecl {{.*}} NestedEnum
+// CHECK: | | |-EnumConstantDecl {{.*}} EnumValue1 'S::NestedEnum'
+// CHECK: | | `-EnumConstantDecl {{.*}} EnumValue2 'S::NestedEnum'
+// CHECK: | |-TypedefDecl {{.*}} VoidPtrT 'void *'
+// CHECK: | | `-PointerType {{.*}} 'void *'
+// CHECK: | |   `-BuiltinType {{.*}} 'void'
+// CHECK: | |-FieldDecl {{.*}} C 'int'
+// CHECK: | |-FieldDecl {{.*}} D 'int'
+// CHECK: | `-FieldDecl {{.*}} DD 'void *'
+
 // CHECK: |-CXXRecordDecl {{.*}} struct T definition
-// CHECK: | |-FieldDecl {{.*}} NT 'int'
+// CHECK: | |-TypedefDecl {{.*}} NestedTypedef 'int'
+// CHECK: | | `-BuiltinType {{.*}} 'int'
+// CHECK: | |-TypedefDecl {{.*}} NestedTypedef2 'S'
+// CHECK: | | `-RecordType {{.*}} 'S' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'S'
 // CHECK: | |-CXXRecordDecl {{.*}} struct NestedStruct definition
 // CHECK: | | |-FieldDecl {{.*}} E 'int'
 // CHECK: | | `-FieldDecl {{.*}} F 'int'
-// CHECK: | `-CXXRecordDecl {{.*}} struct U definition
-// CHECK: |   |-FieldDecl {{.*}} G 'int'
-// CHECK: |   `-FieldDecl {{.*}} H 'int'
+// CHECK: | |-TypedefDecl {{.*}} NestedStructAlias 'T::NestedStruct'
+// CHECK: | | `-RecordType {{.*}} 'T::NestedStruct' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'NestedStruct'
+// CHECK: | |-TypedefDecl {{.*}} NST 'S::NestedStruct'
+// CHECK: | | `-RecordType {{.*}} 'S::NestedStruct' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'NestedStruct'
+// CHECK: | |-CXXRecordDecl {{.*}} struct U definition
+// CHECK: | | |-FieldDecl {{.*}} G 'int'
+// CHECK: | | `-FieldDecl {{.*}} H 'int'
+// CHECK: | `-FieldDecl {{.*}} NT 'int'
+
 // CHECK: |-CXXRecordDecl {{.*}} class U<int> definition
+// CHECK: | |-CXXRecordDecl {{.*}} struct W definition
+// CHECK: | | |-FieldDecl {{.*}} M 'int'
+// CHECK: | | `-FieldDecl {{.*}} N 'int'
+// CHECK: | |-TypedefDecl {{.*}} Y 'U<int>::V<int>'
+// CHECK: | | `-RecordType {{.*}} 'U<int>::V<int>' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'U<int>::V<int>'
+// CHECK: | |-TypedefDecl {{.*}} Z 'U<int>::V<T>'
+// CHECK: | | `-RecordType {{.*}} 'U<int>::V<T>' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'U<int>::V<T>'
 // CHECK: | |-FieldDecl {{.*}} K 'int'
-// CHECK: | |-FieldDecl {{.*}} L 'int'
-// CHECK: | `-CXXRecordDecl {{.*}} struct W definition
-// CHECK: |   |-FieldDecl {{.*}} M 'int'
-// CHECK: |   `-FieldDecl {{.*}} N 'int'
+// CHECK: | `-FieldDecl {{.*}} L 'int'
+
 // CHECK: |-CXXRecordDecl {{.*}} struct U<int>::V<int> definition
+// CHECK: | |-TypedefDecl {{.*}}> W 'int'
+// CHECK: | | `-BuiltinType {{.*}} 'int'
+// CHECK: | |-TypedefDecl {{.*}} X 'U<int>'
+// CHECK: | | `-RecordType {{.*}} 'U<int>' canonical
+// CHECK: | |   `-CXXRecord {{.*}} 'U<int>'
 // CHECK: | |-FieldDecl {{.*}} I 'int'
 // CHECK: | `-FieldDecl {{.*}} J 'int'

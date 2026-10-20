@@ -20,6 +20,10 @@
 #include <termios.h>
 #endif
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 using namespace lldb_private;
 
 struct Terminal::Data {
@@ -398,6 +402,23 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
 #else // !LLDB_ENABLE_TERMIOS
   return termiosMissingError();
 #endif // LLDB_ENABLE_TERMIOS
+}
+
+bool Terminal::SupportsUnicode() {
+#ifdef _WIN32
+  return ::GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_CHAR;
+#else
+  static std::optional<bool> g_result;
+  if (g_result)
+    return g_result.value();
+
+  const char *lang_var = std::getenv("LANG");
+  if (!lang_var)
+    return false;
+  g_result =
+      llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
+  return g_result.value();
+#endif
 }
 
 TerminalState::TerminalState(Terminal term, bool save_process_group)

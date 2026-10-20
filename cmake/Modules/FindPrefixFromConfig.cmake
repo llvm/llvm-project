@@ -39,10 +39,10 @@ function(find_prefix_from_config out_var prefix_var path_to_leave)
     # install prefix, and avoid hard-coding any absolute paths.
     set(config_code
       "# Compute the installation prefix from this LLVMConfig.cmake file location."
-      "get_filename_component(${prefix_var} \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
+      "get_filename_component(${prefix_var} \"\${CMAKE_CURRENT_LIST_FILE}\" REALPATH)")
     # Construct the proper number of get_filename_component(... PATH)
     # calls to compute the installation prefix.
-    string(REGEX REPLACE "/" ";" _count "${path_to_leave}")
+    string(REGEX REPLACE "/" ";" _count "${path_to_leave}/plus_one")
     foreach(p ${_count})
       list(APPEND config_code
         "get_filename_component(${prefix_var} \"\${${prefix_var}}\" PATH)")

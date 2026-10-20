@@ -7,12 +7,19 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # assert() ends a WASI process, there is no signal to stop on
 class AssertingInferiorTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
+        debug_info=no_match(["pdb"]),
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
     )
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr25338")
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
+    )
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple="^mips")
     def test_inferior_asserting(self):
         """Test that lldb reliably catches the inferior asserting (command)."""
@@ -21,7 +28,13 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
+        debug_info=no_match(["pdb"]),
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
+    )
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
     @expectedFailureAndroid(api_levels=list(range(16 + 1)))  # b.android.com/179836
     def test_inferior_asserting_register(self):
@@ -31,11 +44,17 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
+        debug_info=no_match(["pdb"]),
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
     )
     @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
+    )
+    @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )
@@ -57,11 +76,17 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
+        debug_info=no_match(["pdb"]),
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
     )
     @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
+    )
+    @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )
@@ -73,11 +98,17 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
+        debug_info=no_match(["pdb"]),
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
     )
     @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="github.com/llvm/llvm-project/issues/224600",
+    )
+    @expectedFailureAll(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm$"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338",
     )

@@ -19,15 +19,53 @@
 // `GET_<TargetName>_MACRO_FUSION_PRED_IMPL` and then including the generated
 // header file.
 //
-// The generated predicator will be like:
+// Each predicator also maintains `Statistic`s that count how often the fusion
+// is matched. A fusion that runs in both scheduling stages keeps separate
+// pre-RA and post-RA counters, because both schedulers run MacroFusion.
+//
+// A fusion can opt out of a scheduling stage via the `RunPreRA`/`RunPostRA`
+// fields. When a stage is disabled, the generated predicator returns `false`
+// early during that stage (detected via the `NoVRegs` machine function
+// property) and only keeps the counter for the stage it actually runs in.
+//
+// A fusion running in both stages will be like:
 //
 // ```
+// STATISTIC(NumNAMEPreRA, "Times NAME Triggered (pre-ra)");
+// STATISTIC(NumNAMEPostRA, "Times NAME Triggered (post-ra)");
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   /* Predicates */
+//   if (SecondMI.getMF()->getProperties().hasNoVRegs())
+//     ++NumNAMEPostRA;
+//   else
+//     ++NumNAMEPreRA;
+//   return true;
+// }
+// ```
+//
+// A fusion restricted to a single stage (e.g. pre-RA only) will be like:
+//
+// ```
+// STATISTIC(NumNAMEPreRA, "Times NAME Triggered (pre-ra)");
+// bool isNAME(const TargetInstrInfo &TII,
+//             const TargetSubtargetInfo &STI,
+//             const MachineInstr *FirstMI,
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
+//   auto &MRI = SecondMI.getMF()->getRegInfo();
+//   if (SecondMI.getMF()->getProperties().hasNoVRegs())
+//     return false;
+//   /* Predicates */
+//   ++NumNAMEPreRA;
 //   return true;
 // }
 // ```
@@ -41,6 +79,7 @@
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -52,81 +91,121 @@ using namespace llvm;
 
 namespace {
 class MacroFusionPredicatorEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
-  void emitMacroFusionDecl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitMacroFusionImpl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitPredicates(ArrayRef<Record *> FirstPredicate, bool IsCommutable,
-                      PredicateExpander &PE, raw_ostream &OS);
-  void emitFirstPredicate(Record *SecondPredicate, bool IsCommutable,
-                          PredicateExpander &PE, raw_ostream &OS);
-  void emitSecondPredicate(Record *SecondPredicate, bool IsCommutable,
+  void emitMacroFusionDecl(ArrayRef<const Record *> Fusions,
                            PredicateExpander &PE, raw_ostream &OS);
-  void emitBothPredicate(Record *Predicates, bool IsCommutable,
+  void emitMacroFusionImpl(ArrayRef<const Record *> Fusions,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitPredicates(ArrayRef<const Record *> FirstPredicate,
+                      bool IsCommutable, PredicateExpander &PE,
+                      raw_ostream &OS);
+  void emitFirstPredicate(const Record *SecondPredicate, bool IsCommutable,
+                          PredicateExpander &PE, raw_ostream &OS);
+  void emitSecondPredicate(const Record *SecondPredicate, bool IsCommutable,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitBothPredicate(const Record *Predicates, bool IsCommutable,
                          PredicateExpander &PE, raw_ostream &OS);
 
 public:
-  MacroFusionPredicatorEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  MacroFusionPredicatorEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace.
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
-    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
-  OS << "namespace llvm {\n";
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_DECL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
-  for (Record *Fusion : Fusions) {
+  for (const Record *Fusion : Fusions)
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
-       << "const TargetSubtargetInfo &, "
-       << "const MachineInstr *, "
-       << "const MachineInstr &);\n";
-  }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
+       << "const TargetSubtargetInfo &, const MachineInstr *, "
+       << "const MachineInstr &, const SDep *);\n";
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
-    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
-  OS << "namespace llvm {\n";
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_IMPL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
-  for (Record *Fusion : Fusions) {
-    std::vector<Record *> Predicates =
+  for (const Record *Fusion : Fusions) {
+    std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
+    bool RunPreRA = Fusion->getValueAsBit("RunPreRA");
+    bool RunPostRA = Fusion->getValueAsBit("RunPostRA");
+
+    if (!RunPreRA && !RunPostRA)
+      PrintFatalError(Fusion->getLoc(),
+                      "Fusion '" + Fusion->getName() +
+                          "' must run in at least one of the pre-RA and "
+                          "post-RA scheduling stages");
+
+    // Emit the statistics that count how often this fusion is matched. The
+    // pre-RA and post-RA schedulers both run MacroFusion, so a fusion that
+    // runs in both stages keeps separate counters (distinguished below via the
+    // `NoVRegs` property) to avoid conflating the two. A fusion that opts out
+    // of a stage only needs the counter for the stage it actually runs in.
+    if (RunPreRA)
+      OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
+         << Fusion->getName() << " Triggered (pre-ra)\");\n";
+    if (RunPostRA)
+      OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
+         << Fusion->getName() << " Triggered (post-ra)\");\n";
 
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
-    OS.indent(4) << "const MachineInstr &SecondMI) {\n";
+    OS.indent(4) << "const MachineInstr &SecondMI, const SDep *Dep) {\n";
+    OS.indent(2) << "if (isNonDataDep(Dep))\n";
+    OS.indent(4) << "return false;\n";
     OS.indent(2)
         << "[[maybe_unused]] auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
+    // If the fusion opts out of a scheduling stage, bail out early when we are
+    // running in that stage. The pre-RA scheduler still has virtual registers,
+    // while the post-RA scheduler runs after they have been allocated.
+    if (!RunPreRA) {
+      OS.indent(2) << "if (!SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "return false;\n";
+    }
+    if (!RunPostRA) {
+      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "return false;\n";
+    }
+
     emitPredicates(Predicates, IsCommutable, PE, OS);
+
+    // Bump the statistic for the matched stage. When the fusion runs in both
+    // stages we still have to tell them apart at runtime; otherwise the guard
+    // above already established the stage, so a single counter suffices.
+    if (RunPreRA && RunPostRA) {
+      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
+      OS.indent(2) << "else\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
+    } else if (RunPreRA) {
+      OS.indent(2) << "++Num" << Fusion->getName() << "PreRA;\n";
+    } else {
+      OS.indent(2) << "++Num" << Fusion->getName() << "PostRA;\n";
+    }
 
     OS.indent(2) << "return true;\n";
     OS << "}\n";
   }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
 }
 
-void MacroFusionPredicatorEmitter::emitPredicates(ArrayRef<Record *> Predicates,
-                                                  bool IsCommutable,
-                                                  PredicateExpander &PE,
-                                                  raw_ostream &OS) {
-  for (Record *Predicate : Predicates) {
-    Record *Target = Predicate->getValueAsDef("Target");
+void MacroFusionPredicatorEmitter::emitPredicates(
+    ArrayRef<const Record *> Predicates, bool IsCommutable,
+    PredicateExpander &PE, raw_ostream &OS) {
+  for (const Record *Predicate : Predicates) {
+    const Record *Target = Predicate->getValueAsDef("Target");
     if (Target->getName() == "first_fusion_target")
       emitFirstPredicate(Predicate, IsCommutable, PE, OS);
     else if (Target->getName() == "second_fusion_target")
@@ -139,7 +218,7 @@ void MacroFusionPredicatorEmitter::emitPredicates(ArrayRef<Record *> Predicates,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
                                                       bool IsCommutable,
                                                       PredicateExpander &PE,
                                                       raw_ostream &OS) {
@@ -155,12 +234,42 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
         << "if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
+  } else if (Predicate->isSubClassOf("FirstInstHasSameReg")) {
+    int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
+    int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
+
+    OS.indent(2) << "if (!FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg().isVirtual()) {\n";
+    OS.indent(4) << "if (FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg() != FirstMI->getOperand(" << SecondOpIdx
+                 << ").getReg())";
+
+    if (IsCommutable) {
+      OS << " {\n";
+      OS.indent(6) << "if (!FirstMI->getDesc().isCommutable())\n";
+      OS.indent(6) << "  return false;\n";
+
+      OS.indent(6)
+          << "unsigned SrcOpIdx1 = " << SecondOpIdx
+          << ", SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;\n";
+      OS.indent(6)
+          << "if (TII.findCommutedOpIndices(FirstMI, SrcOpIdx1, SrcOpIdx2))\n";
+      OS.indent(6)
+          << "  if (FirstMI->getOperand(" << FirstOpIdx
+          << ").getReg() != FirstMI->getOperand(SrcOpIdx2).getReg())\n";
+      OS.indent(6) << "    return false;\n";
+      OS.indent(4) << "}\n";
+    } else {
+      OS << "\n";
+      OS.indent(4) << "  return false;\n";
+    }
+    OS.indent(2) << "}\n";
   } else if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
-    OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
+    OS.indent(4) << "[[maybe_unused]] const MachineInstr *MI = FirstMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
@@ -172,21 +281,21 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
                                                        bool IsCommutable,
                                                        PredicateExpander &PE,
                                                        raw_ostream &OS) {
   if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
-    OS.indent(4) << "const MachineInstr *MI = &SecondMI;\n";
+    OS.indent(4) << "[[maybe_unused]] const MachineInstr *MI = &SecondMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
-  } else if (Predicate->isSubClassOf("SameReg")) {
+  } else if (Predicate->isSubClassOf("SecondInstHasSameReg")) {
     int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
     int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
 
@@ -223,7 +332,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitBothPredicate(const Record *Predicate,
                                                      bool IsCommutable,
                                                      PredicateExpander &PE,
                                                      raw_ostream &OS) {
@@ -263,10 +372,11 @@ void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
       OS.indent(2) << "  return false;";
     }
     OS << "\n";
-  } else
+  } else {
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for both instruction: " +
                         Predicate->getType()->getAsString());
+  }
 }
 
 void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
@@ -277,9 +387,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   PE.setByRef(false);
   PE.setExpandForMC(false);
 
-  std::vector<Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
-  // Sort macro fusions by name.
-  sort(Fusions, LessRecord());
+  ArrayRef<const Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
   emitMacroFusionDecl(Fusions, PE, OS);
   OS << "\n";
   emitMacroFusionImpl(Fusions, PE, OS);

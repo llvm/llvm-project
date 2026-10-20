@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ;
 ; Used to fail with "Cannot select: v2i32,ch = load 0x16c5890, 0x16f76e0, 0x16f76e0<LD2[undef](align=8), sext from v2i8>"
 

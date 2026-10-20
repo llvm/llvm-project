@@ -19,10 +19,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
@@ -34,7 +34,6 @@
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include <optional>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -59,22 +58,12 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
 
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class IFSOptTable : public opt::GenericOptTable {
+class IFSOptTable : public opt::OptTable {
 public:
-  IFSOptTable() : opt::GenericOptTable(InfoTable) {
+  IFSOptTable() : opt::OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -258,7 +247,6 @@ static Error writeIFS(StringRef FilePath, IFSStub &Stub, bool WriteIfChanged) {
   Error YAMLErr = writeIFSToOutputStream(OutStr, Stub);
   if (YAMLErr)
     return YAMLErr;
-  OutStr.flush();
 
   if (WriteIfChanged) {
     if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
@@ -441,12 +429,9 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto SI = SymbolMap.find(Symbol.Name);
-      if (SI == SymbolMap.end()) {
-        SymbolMap.insert(
-            std::pair<std::string, IFSSymbol>(Symbol.Name, Symbol));
+      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      if (Inserted)
         continue;
-      }
 
       assert(Symbol.Name == SI->second.Name && "Symbol Names Must Match.");
 

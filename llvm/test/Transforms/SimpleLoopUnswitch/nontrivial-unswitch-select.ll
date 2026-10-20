@@ -82,7 +82,7 @@ define i32 @basic_veccond(i32 %N, <2 x i1> %cond, <2 x i32> %select_input) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[COND1:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[SELECT_INPUT]], <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[COND1:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[SELECT_INPUT]], <2 x i32> splat (i32 42)
 ; CHECK-NEXT:    [[VREDUCE:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[COND1]])
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[VREDUCE]], [[RES]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
@@ -603,10 +603,6 @@ define dso_local void @select_nested_loop(i1 noundef zeroext %cond, i32 noundef 
 ; CHECK:       for.cond1.preheader.us.us:
 ; CHECK-NEXT:    [[I_018_US_US:%.*]] = phi i32 [ [[INC7_US_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER_SPLIT_US]] ]
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US_SPLIT_US_US:%.*]]
-; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us.us:
-; CHECK-NEXT:    [[INC7_US_US]] = add nuw i32 [[I_018_US_US]], 1
-; CHECK-NEXT:    [[EXITCOND21_NOT_US:%.*]] = icmp eq i32 [[INC7_US_US]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND21_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US_US]]
 ; CHECK:       for.cond1.preheader.us.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_US_US:%.*]]
 ; CHECK:       for.body4.us.us.us:
@@ -622,6 +618,10 @@ define dso_local void @select_nested_loop(i1 noundef zeroext %cond, i32 noundef 
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US_US]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_US]]
+; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us.us:
+; CHECK-NEXT:    [[INC7_US_US]] = add nuw i32 [[I_018_US_US]], 1
+; CHECK-NEXT:    [[EXITCOND21_NOT_US:%.*]] = icmp eq i32 [[INC7_US_US]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND21_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US_US]]
 ; CHECK:       for.cond.cleanup.loopexit.split.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond1.preheader.us.preheader.split:

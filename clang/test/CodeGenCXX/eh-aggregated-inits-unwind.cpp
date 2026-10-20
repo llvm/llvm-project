@@ -35,7 +35,7 @@ int main() {
   try {
     Container c1;
     // CHECK-LABEL: main
-    // CHECK: %{{.+}} = getelementptr inbounds %struct.Container, ptr %{{.+}}, i32 0, i32 1
+    // CHECK: %{{.+}} = getelementptr inbounds nuw %struct.Container, ptr %{{.+}}, i32 0, i32 1
     Container c2(c1);
 
     return 2;

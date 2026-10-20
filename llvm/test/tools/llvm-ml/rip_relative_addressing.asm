@@ -1,5 +1,5 @@
-; RUN: llvm-ml -m32 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-32
-; RUN: llvm-ml -m64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+; RUN: llvm-ml64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 
 .data
 foo DWORD 28
@@ -52,5 +52,15 @@ t8:
 mov eax, [t8]
 ; CHECK-LABEL: t8:
 ; CHECK: mov eax, dword ptr [t8]
+
+t9:
+mov eax, dword ptr [bar]
+; CHECK-LABEL: t9:
+; CHECK-32: mov eax, dword ptr [bar]
+; CHECK-64: mov eax, dword ptr [rip + bar]
+
+t10:
+mov ebx, dword ptr [4*eax]
+; CHECK: mov ebx, dword ptr [4*eax]
 
 END

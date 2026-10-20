@@ -13,6 +13,7 @@
 #include "list.h"
 #include "mem_map.h"
 #include "mutex.h"
+#include "string_utils.h"
 #include "thread_annotations.h"
 
 namespace scudo {
@@ -21,8 +22,6 @@ template <typename MemMapT> class RegionReleaseRecorder {
 public:
   RegionReleaseRecorder(MemMapT *RegionMemMap, uptr Base, uptr Offset = 0)
       : RegionMemMap(RegionMemMap), Base(Base), Offset(Offset) {}
-
-  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
 
   uptr getReleasedBytes() const { return ReleasedBytes; }
 
@@ -33,12 +32,10 @@ public:
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
     RegionMemMap->releasePagesToOS(getBase() + Offset + From, Size);
-    ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
 
 private:
-  uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
   MemMapT *RegionMemMap = nullptr;
   uptr Base = 0;
@@ -52,8 +49,6 @@ public:
   ReleaseRecorder(uptr Base, uptr Offset = 0, MapPlatformData *Data = nullptr)
       : Base(Base), Offset(Offset), Data(Data) {}
 
-  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
-
   uptr getReleasedBytes() const { return ReleasedBytes; }
 
   uptr getBase() const { return Base; }
@@ -62,12 +57,10 @@ public:
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
     releasePagesToOS(Base, From + Offset, Size, Data);
-    ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
 
 private:
-  uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
   // The starting address to release. Note that we may want to combine (Base +
   // Offset) as a new Base. However, the Base is retrieved from
@@ -88,11 +81,27 @@ public:
 
   void releasePageRangeToOS(uptr From, uptr To) {
     DCHECK_EQ((To - From) % getPageSizeCached(), 0U);
-    ReleasedPagesCount += (To - From) / getPageSizeCached();
+    ReleasedPagesCount += (To - From) >> getPageSizeLogCached();
   }
 
 private:
   uptr ReleasedPagesCount = 0;
+};
+
+template <uptr GroupSize, uptr NumGroups>
+class MemoryGroupFragmentationRecorder {
+public:
+  const uptr NumPagesInOneGroup = GroupSize / getPageSizeCached();
+
+  void releasePageRangeToOS(uptr From, uptr To) {
+    for (uptr I = From / getPageSizeCached(); I < To / getPageSizeCached(); ++I)
+      ++FreePagesCount[I / NumPagesInOneGroup];
+  }
+
+  uptr getNumFreePages(uptr GroupId) { return FreePagesCount[GroupId]; }
+
+private:
+  uptr FreePagesCount[NumGroups] = {};
 };
 
 // A buffer pool which holds a fixed number of static buffers of `uptr` elements
@@ -122,35 +131,36 @@ public:
     MemMapT MemMap = {};
   };
 
-  // Return a zero-initialized buffer which can contain at least the given
-  // number of elements, or nullptr on failure.
-  Buffer getBuffer(const uptr NumElements) {
+  // Buf must be an empty buffer that will be filled in to contain a zero
+  // initialized buffer which can contain the given number of elements.
+  // On failure, Buf.data is guaranteed to be nullptr, and returns false.
+  bool getBuffer(Buffer &Buf, const uptr NumElements) {
+    DCHECK(Buf.Data == nullptr);
     if (UNLIKELY(NumElements > StaticBufferNumElements))
-      return getDynamicBuffer(NumElements);
+      return getDynamicBuffer(Buf, NumElements);
 
-    uptr index;
+    uptr Index;
     {
       // TODO: In general, we expect this operation should be fast so the
       // waiting thread won't be put into sleep. The HybridMutex does implement
       // the busy-waiting but we may want to review the performance and see if
       // we need an explict spin lock here.
       ScopedLock L(Mutex);
-      index = getLeastSignificantSetBitIndex(Mask);
-      if (index < StaticBufferCount)
-        Mask ^= static_cast<uptr>(1) << index;
+      Index = getLeastSignificantSetBitIndex(Mask);
+      if (Index < StaticBufferCount)
+        Mask ^= static_cast<uptr>(1) << Index;
     }
 
-    if (index >= StaticBufferCount)
-      return getDynamicBuffer(NumElements);
+    if (Index >= StaticBufferCount)
+      return getDynamicBuffer(Buf, NumElements);
 
-    Buffer Buf;
-    Buf.Data = &RawBuffer[index * StaticBufferNumElements];
-    Buf.BufferIndex = index;
+    Buf.Data = &RawBuffer[Index * StaticBufferNumElements];
+    Buf.BufferIndex = Index;
     memset(Buf.Data, 0, StaticBufferNumElements * sizeof(uptr));
-    return Buf;
+    return true;
   }
 
-  void releaseBuffer(Buffer Buf) {
+  void releaseBuffer(Buffer &Buf) {
     DCHECK_NE(Buf.Data, nullptr);
     DCHECK_LE(Buf.BufferIndex, StaticBufferCount);
     if (Buf.BufferIndex != StaticBufferCount) {
@@ -158,8 +168,9 @@ public:
       DCHECK_EQ((Mask & (static_cast<uptr>(1) << Buf.BufferIndex)), 0U);
       Mask |= static_cast<uptr>(1) << Buf.BufferIndex;
     } else {
-      Buf.MemMap.unmap(Buf.MemMap.getBase(), Buf.MemMap.getCapacity());
+      Buf.MemMap.unmap();
     }
+    Buf.Data = nullptr;
   }
 
   bool isStaticBufferTestOnly(const Buffer &Buf) {
@@ -169,7 +180,7 @@ public:
   }
 
 private:
-  Buffer getDynamicBuffer(const uptr NumElements) {
+  bool getDynamicBuffer(Buffer &Buf, const uptr NumElements) {
     // When using a heap-based buffer, precommit the pages backing the
     // Vmar by passing |MAP_PRECOMMIT| flag. This allows an optimization
     // where page fault exceptions are skipped as the allocated memory
@@ -178,12 +189,15 @@ private:
     const uptr MmapFlags = MAP_ALLOWNOMEM | (SCUDO_FUCHSIA ? MAP_PRECOMMIT : 0);
     const uptr MappedSize =
         roundUp(NumElements * sizeof(uptr), getPageSizeCached());
-    Buffer Buf;
-    if (Buf.MemMap.map(/*Addr=*/0, MappedSize, "scudo:counters", MmapFlags)) {
-      Buf.Data = reinterpret_cast<uptr *>(Buf.MemMap.getBase());
-      Buf.BufferIndex = StaticBufferCount;
+    if (!UNLIKELY(Buf.MemMap.map(/*Addr=*/0, MappedSize, "scudo:counters",
+                                 MmapFlags))) {
+      return false;
     }
-    return Buf;
+
+    DCHECK(Buf.Data == nullptr);
+    Buf.Data = reinterpret_cast<uptr *>(Buf.MemMap.getBase());
+    Buf.BufferIndex = StaticBufferCount;
+    return true;
   }
 
   HybridMutex Mutex;
@@ -214,19 +228,18 @@ public:
     if (!isAllocated())
       return;
     Buffers.releaseBuffer(Buffer);
-    Buffer = {};
   }
 
   // Lock of `StaticBuffer` is acquired conditionally and there's no easy way to
   // specify the thread-safety attribute properly in current code structure.
   // Besides, it's the only place we may want to check thread safety. Therefore,
   // it's fine to bypass the thread-safety analysis now.
-  void reset(uptr NumberOfRegion, uptr CountersPerRegion, uptr MaxValue) {
-    DCHECK_GT(NumberOfRegion, 0);
+  void reset(uptr NumberOfRegions, uptr CountersPerRegion, uptr MaxValue) {
+    DCHECK_GT(NumberOfRegions, 0);
     DCHECK_GT(CountersPerRegion, 0);
     DCHECK_GT(MaxValue, 0);
 
-    Regions = NumberOfRegion;
+    Regions = NumberOfRegions;
     NumCounters = CountersPerRegion;
 
     constexpr uptr MaxCounterBits = sizeof(*Buffer.Data) * 8UL;
@@ -247,7 +260,10 @@ public:
         roundUp(NumCounters, static_cast<uptr>(1U) << PackingRatioLog) >>
         PackingRatioLog;
     BufferNumElements = SizePerRegion * Regions;
-    Buffer = Buffers.getBuffer(BufferNumElements);
+    if (!Buffers.getBuffer(Buffer, BufferNumElements)) {
+      DCHECK(Buffer.Data == nullptr);
+      Printf("Scudo WARNING: unable to allocate buffer for RegionPageMap");
+    }
   }
 
   bool isAllocated() const { return Buffer.Data != nullptr; }
@@ -348,7 +364,7 @@ private:
 template <class ReleaseRecorderT> class FreePagesRangeTracker {
 public:
   explicit FreePagesRangeTracker(ReleaseRecorderT &Recorder)
-      : Recorder(Recorder), PageSizeLog(getLog2(getPageSizeCached())) {}
+      : Recorder(Recorder) {}
 
   void processNextPage(bool Released) {
     if (Released) {
@@ -372,6 +388,7 @@ public:
 private:
   void closeOpenedRange() {
     if (InRange) {
+      const uptr PageSizeLog = getPageSizeLogCached();
       Recorder.releasePageRangeToOS((CurrentRangeStatePage << PageSizeLog),
                                     (CurrentPage << PageSizeLog));
       InRange = false;
@@ -379,7 +396,6 @@ private:
   }
 
   ReleaseRecorderT &Recorder;
-  const uptr PageSizeLog;
   bool InRange = false;
   uptr CurrentPage = 0;
   uptr CurrentRangeStatePage = 0;
@@ -389,7 +405,7 @@ struct PageReleaseContext {
   PageReleaseContext(uptr BlockSize, uptr NumberOfRegions, uptr ReleaseSize,
                      uptr ReleaseOffset = 0)
       : BlockSize(BlockSize), NumberOfRegions(NumberOfRegions) {
-    PageSize = getPageSizeCached();
+    const uptr PageSize = getPageSizeCached();
     if (BlockSize <= PageSize) {
       if (PageSize % BlockSize == 0) {
         // Same number of chunks per page, no cross overs.
@@ -408,7 +424,7 @@ struct PageReleaseContext {
         SameBlockCountPerPage = false;
       }
     } else {
-      if (BlockSize % PageSize == 0) {
+      if ((BlockSize & (PageSize - 1)) == 0) {
         // One chunk covers multiple pages, no cross overs.
         FullPagesBlockCountMax = 1;
         SameBlockCountPerPage = true;
@@ -427,8 +443,8 @@ struct PageReleaseContext {
     if (NumberOfRegions != 1)
       DCHECK_EQ(ReleaseOffset, 0U);
 
-    PagesCount = roundUp(ReleaseSize, PageSize) / PageSize;
-    PageSizeLog = getLog2(PageSize);
+    const uptr PageSizeLog = getPageSizeLogCached();
+    PagesCount = roundUp(ReleaseSize, PageSize) >> PageSizeLog;
     ReleasePageOffset = ReleaseOffset >> PageSizeLog;
   }
 
@@ -441,7 +457,6 @@ struct PageReleaseContext {
     if (PageMap.isAllocated())
       return true;
     PageMap.reset(NumberOfRegions, PagesCount, FullPagesBlockCountMax);
-    // TODO: Log some message when we fail on PageMap allocation.
     return PageMap.isAllocated();
   }
 
@@ -451,6 +466,7 @@ struct PageReleaseContext {
   // RegionSize, it's not necessary to be aligned with page size.
   bool markRangeAsAllCounted(uptr From, uptr To, uptr Base,
                              const uptr RegionIndex, const uptr RegionSize) {
+    const uptr PageSize = getPageSizeCached();
     DCHECK_LT(From, To);
     DCHECK_LE(To, Base + RegionSize);
     DCHECK_EQ(From % PageSize, 0U);
@@ -467,12 +483,12 @@ struct PageReleaseContext {
     if (FirstBlockInRange >= ToInRegion)
       return true;
 
-    // First block may not sit at the first pape in the range, move
+    // First block may not sit at the first page in the range, move
     // `FromInRegion` to the first block page.
     FromInRegion = roundDown(FirstBlockInRange, PageSize);
 
     // When The first block is not aligned to the range boundary, which means
-    // there is a block sitting acorss `From`, that looks like,
+    // there is a block sitting across `From`, that looks like,
     //
     //   From                                             To
     //     V                                               V
@@ -544,6 +560,7 @@ struct PageReleaseContext {
     if (!ensurePageMapAllocated())
       return false;
 
+    const uptr PageSize = getPageSizeCached();
     if (MayContainLastBlockInRegion) {
       const uptr LastBlockInRegion =
           ((RegionSize / BlockSize) - 1U) * BlockSize;
@@ -605,17 +622,19 @@ struct PageReleaseContext {
     return true;
   }
 
-  uptr getPageIndex(uptr P) { return (P >> PageSizeLog) - ReleasePageOffset; }
-  uptr getReleaseOffset() { return ReleasePageOffset << PageSizeLog; }
+  uptr getPageIndex(uptr P) {
+    return (P >> getPageSizeLogCached()) - ReleasePageOffset;
+  }
+  uptr getReleaseOffset() {
+    return ReleasePageOffset << getPageSizeLogCached();
+  }
 
   uptr BlockSize;
   uptr NumberOfRegions;
   // For partial region marking, some pages in front are not needed to be
   // counted.
   uptr ReleasePageOffset;
-  uptr PageSize;
   uptr PagesCount;
-  uptr PageSizeLog;
   uptr FullPagesBlockCountMax;
   bool SameBlockCountPerPage;
   RegionPageMap PageMap;
@@ -628,7 +647,7 @@ template <class ReleaseRecorderT, typename SkipRegionT>
 NOINLINE void
 releaseFreeMemoryToOS(PageReleaseContext &Context,
                       ReleaseRecorderT &Recorder, SkipRegionT SkipRegion) {
-  const uptr PageSize = Context.PageSize;
+  const uptr PageSize = getPageSizeCached();
   const uptr BlockSize = Context.BlockSize;
   const uptr PagesCount = Context.PagesCount;
   const uptr NumberOfRegions = Context.NumberOfRegions;
@@ -671,7 +690,7 @@ releaseFreeMemoryToOS(PageReleaseContext &Context,
       uptr PrevPageBoundary = 0;
       uptr CurrentBoundary = 0;
       if (ReleasePageOffset > 0) {
-        PrevPageBoundary = ReleasePageOffset * PageSize;
+        PrevPageBoundary = ReleasePageOffset << getPageSizeLogCached();
         CurrentBoundary = roundUpSlow(PrevPageBoundary, BlockSize);
       }
       for (uptr J = 0; J < PagesCount; J++) {

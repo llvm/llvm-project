@@ -1,14 +1,19 @@
+set(LLVM_LINK_COMPONENTS nativecodegen AsmParser BitReader Core)
+
 add_mlir_unittest(MLIRTargetLLVMTests
+  ImportGEPInRange.cpp
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
+DEPENDS
+  MLIRRegisterAllDialects
 )
 
-llvm_map_components_to_libnames(llvm_libs nativecodegen)
-
-target_link_libraries(MLIRTargetLLVMTests
+mlir_target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
+  MLIRTargetLLVMIRImport
+  MLIRDLTIDialect
   MLIRNVVMTarget
   MLIRROCDLTarget
   MLIRGPUDialect
@@ -19,7 +24,6 @@ target_link_libraries(MLIRTargetLLVMTests
   MLIRNVVMToLLVMIRTranslation
   MLIRROCDLToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
-  ${llvm_libs}
 )
 
 if (DEFINED LLVM_NATIVE_TARGET)

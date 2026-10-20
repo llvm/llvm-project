@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 
 class targetCommandTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -36,6 +38,7 @@ class targetCommandTestCase(TestBase):
         self.build(dictionary=dc)
         self.addTearDownCleanup(dictionary=dc)
 
+    @skipIfWasm  # a null dereference is a valid read in a Wasm linear memory, so the inferior does not fault
     def test_target_command(self):
         """Test some target commands: create, list, select."""
         self.buildAll()
@@ -74,7 +77,7 @@ class targetCommandTestCase(TestBase):
             # Find the largest index of the existing list.
             import re
 
-            pattern = re.compile("target #(\d+):")
+            pattern = re.compile(r"target #(\d+):")
             for line in reversed(output.split(os.linesep)):
                 match = pattern.search(line)
                 if match:
@@ -417,7 +420,7 @@ class targetCommandTestCase(TestBase):
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_core_file(self):
         tf = tempfile.NamedTemporaryFile()
@@ -440,7 +443,7 @@ class targetCommandTestCase(TestBase):
             ],
         )
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_invalid_core_file(self):
         invalid_core_path = os.path.join(self.getSourceDir(), "invalid_core_file")
@@ -451,7 +454,7 @@ class targetCommandTestCase(TestBase):
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_sym_file(self):
         tf = tempfile.NamedTemporaryFile()
@@ -561,6 +564,7 @@ class targetCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56079"
     )
+    @skipIfWasm  # a Wasm executable statically links the C library, so its debug info holds many ints
     def test_target_modules_type(self):
         self.buildB()
         self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)

@@ -46,7 +46,7 @@ top:
 L86:                                              ; preds = %L86, %top
   %i.0 = phi i64 [ 0, %top ], [ %tmp, %L86 ]
   %tmp = add i64 %i.0, 1
-  br i1 undef, label %L86, label %if29
+  br i1 false, label %L86, label %if29
 
 if29:                                             ; preds = %L86
   %tmp1 = shl i64 %tmp, 1
@@ -60,13 +60,13 @@ if31:                                             ; preds = %if38, %if29
 L119:                                             ; preds = %L119, %if31
   %i5.0 = phi i64 [ %"#temp#1.sroa.0.022", %if31 ], [ %tmp3, %L119 ]
   %tmp3 = add i64 %i5.0, 1
-  br i1 undef, label %L119, label %if38
+  br i1 false, label %L119, label %if38
 
 if38:                                             ; preds = %L119
   %tmp4 = add i64 %tmp2, %i5.0
   %tmp5 = getelementptr i64, ptr addrspace(10) %arg, i64 %tmp4
   %tmp6 = load i64, ptr addrspace(10) %tmp5
-  br i1 undef, label %done, label %if31
+  br i1 true, label %done, label %if31
 
 done:                                             ; preds = %if38
   ret void

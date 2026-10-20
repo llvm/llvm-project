@@ -1,0 +1,10 @@
+static_library("Atomic") {
+  output_name = "LLVMFrontendAtomic"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [ "Atomic.cpp" ]
+}

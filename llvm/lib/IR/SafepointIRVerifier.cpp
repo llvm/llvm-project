@@ -31,6 +31,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/SafepointIRVerifier.h"
+#include "IROptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetOperations.h"
@@ -44,19 +45,12 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "safepoint-ir-verifier"
 
 using namespace llvm;
-
-/// This option is used for writing test cases.  Instead of crashing the program
-/// when verification fails, report a message to the console (for FileCheck
-/// usage) and continue execution as if nothing happened.
-static cl::opt<bool> PrintOnly("safepoint-ir-verifier-print-only",
-                               cl::init(false));
 
 namespace {
 
@@ -134,12 +128,11 @@ public:
     ReversePostOrderTraversal<const Function *> RPOT(&F);
     for (const BasicBlock *BB : RPOT) {
       const Instruction *TI = BB->getTerminator();
-      assert(TI && "blocks must be well formed");
 
       // For conditional branches, we can perform simple conditional propagation on
       // the condition value itself.
-      const BranchInst *BI = dyn_cast<BranchInst>(TI);
-      if (!BI || !BI->isConditional() || !isa<Constant>(BI->getCondition()))
+      const CondBrInst *BI = dyn_cast<CondBrInst>(TI);
+      if (!BI || !isa<Constant>(BI->getCondition()))
         continue;
 
       // If a branch has two identical successors, we cannot declare either dead.
@@ -157,7 +150,6 @@ public:
 protected:
   void addDeadBlock(const BasicBlock *BB) {
     SmallVector<const BasicBlock *, 4> NewDead;
-    SmallSetVector<const BasicBlock *, 4> DF;
 
     NewDead.push_back(BB);
     while (!NewDead.empty()) {
@@ -171,7 +163,7 @@ protected:
       // Do not need to mark all in and out edges dead
       // because BB is marked dead and this is enough
       // to run further.
-      DeadBlocks.insert(Dom.begin(), Dom.end());
+      DeadBlocks.insert_range(Dom);
 
       // Figure out the dominance-frontier(D).
       for (BasicBlock *B : Dom)
@@ -197,7 +189,6 @@ protected:
 static void Verify(const Function &F, const DominatorTree &DT,
                    const CFGDeadness &CD);
 
-namespace llvm {
 PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   const auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
@@ -206,15 +197,12 @@ PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
   Verify(F, DT, CD);
   return PreservedAnalyses::all();
 }
-} // namespace llvm
 
 namespace {
 
 struct SafepointIRVerifier : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  SafepointIRVerifier() : FunctionPass(ID) {
-    initializeSafepointIRVerifierPass(*PassRegistry::getPassRegistry());
-  }
+  SafepointIRVerifier() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -272,8 +260,11 @@ static bool containsGCPtrType(Type *Ty) {
 }
 
 // Debugging aid -- prints a [Begin, End) range of values.
-template<typename IteratorTy>
-static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
+// Only used inside LLVM_DEBUG below, so it has no instantiations in release
+// builds (NDEBUG); [[maybe_unused]] avoids -Wunused-template in that case.
+template <typename IteratorTy>
+[[maybe_unused]] static void PrintValueSet(raw_ostream &OS, IteratorTy Begin,
+                                           IteratorTy End) {
   OS << "[ ";
   while (Begin != End) {
     OS << **Begin << " ";
@@ -289,6 +280,7 @@ static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
 
 using AvailableValueSet = DenseSet<const Value *>;
 
+namespace {
 /// State we compute and track per basic block.
 struct BasicBlockState {
   // Set of values available coming in, before the phi nodes
@@ -305,6 +297,7 @@ struct BasicBlockState {
   // contribute to AvailableOut.
   bool Cleared = false;
 };
+} // namespace
 
 /// A given derived pointer can have multiple base pointers through phi/selects.
 /// This type indicates when the base pointer is exclusively constant
@@ -610,11 +603,10 @@ void GCPtrTracker::verifyFunction(GCPtrTracker &&Tracker,
 }
 
 void GCPtrTracker::recalculateBBsStates() {
-  SetVector<const BasicBlock *> Worklist;
   // TODO: This order is suboptimal, it's better to replace it with priority
   // queue where priority is RPO number of BB.
-  for (auto &BBI : BlockMap)
-    Worklist.insert(BBI.first);
+  SetVector<const BasicBlock *> Worklist(llvm::from_range,
+                                         llvm::make_first_range(BlockMap));
 
   // This loop iterates the AvailableIn/Out sets until it converges.
   // The AvailableIn and AvailableOut sets decrease as we iterate.
@@ -644,7 +636,7 @@ void GCPtrTracker::recalculateBBsStates() {
     transferBlock(BB, *BBS, ContributionChanged);
     if (OldOutCount != BBS->AvailableOut.size()) {
       assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
-      Worklist.insert(succ_begin(BB), succ_end(BB));
+      Worklist.insert_range(successors(BB));
     }
   }
 }
@@ -748,7 +740,7 @@ void GCPtrTracker::gatherDominatingDefs(const BasicBlock *BB,
     auto BBS = getBasicBlockState(DTN->getBlock());
     assert(BBS && "immediate dominator cannot be dead for a live block");
     const auto &Defs = BBS->Contribution;
-    Result.insert(Defs.begin(), Defs.end());
+    Result.insert_range(Defs);
     // If this block is 'Cleared', then nothing LiveIn to this block can be
     // available after this block completes.  Note: This turns out to be
     // really important for reducing memory consuption of the initial available
@@ -882,7 +874,7 @@ void InstructionVerifier::reportInvalidUse(const Value &V,
   errs() << "Illegal use of unrelocated value found!\n";
   errs() << "Def: " << V << "\n";
   errs() << "Use: " << I << "\n";
-  if (!PrintOnly)
+  if (!getIROptions(I.getContext()).safepoint_ir_verifier_print_only)
     abort();
   AnyInvalidUses = true;
 }
@@ -891,6 +883,8 @@ static void Verify(const Function &F, const DominatorTree &DT,
                    const CFGDeadness &CD) {
   LLVM_DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName()
                     << "\n");
+  bool PrintOnly =
+      getIROptions(F.getContext()).safepoint_ir_verifier_print_only;
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
 

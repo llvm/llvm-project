@@ -41,7 +41,7 @@ class ClangdLSPServer : private ClangdServer::Callbacks,
 public:
   struct Options : ClangdServer::Options {
     /// Supplies configuration (overrides ClangdServer::ContextProvider).
-    config::Provider *ConfigProvider = nullptr;
+    std::unique_ptr<config::Provider> ConfigProvider;
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
@@ -63,12 +63,18 @@ public:
 
     /// Limit the number of references returned (0 means no limit).
     size_t ReferencesLimit = 0;
+
+    /// Flag to hint the experimental modules support is enabled.
+    bool EnableExperimentalModulesSupport = false;
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                  const ClangdLSPServer::Options &Opts);
+                  ClangdLSPServer::Options &&Opts);
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
+
+  ClangdLSPServer(const ClangdLSPServer &other) = delete;
+  ClangdLSPServer &operator=(const ClangdLSPServer &other) = delete;
 
   /// Run LSP server loop, communicating with the Transport provided in the
   /// constructor. This method must not be executed more than once.
@@ -104,6 +110,8 @@ private:
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
                                  Callback<std::vector<TextEdit>>);
+  void onDocumentRangesFormatting(const DocumentRangesFormattingParams &,
+                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
   // The results are serialized 'vector<DocumentSymbol>' if
@@ -153,6 +161,9 @@ private:
   void onCallHierarchyIncomingCalls(
       const CallHierarchyIncomingCallsParams &,
       Callback<std::vector<CallHierarchyIncomingCall>>);
+  void onCallHierarchyOutgoingCalls(
+      const CallHierarchyOutgoingCallsParams &,
+      Callback<std::vector<CallHierarchyOutgoingCall>>);
   void onClangdInlayHints(const InlayHintsParams &,
                           Callback<llvm::json::Value>);
   void onInlayHint(const InlayHintsParams &, Callback<std::vector<InlayHint>>);
@@ -232,7 +243,7 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  // FIXME: The caching is a temporary solution to get corresponding clangd 
+  // FIXME: The caching is a temporary solution to get corresponding clangd
   // diagnostic from a LSP diagnostic.
   // Ideally, ClangdServer can generate an identifier for each diagnostic,
   // emit them via the LSP's data field (which was newly added in LSP 3.16).
@@ -323,6 +334,8 @@ private:
   std::optional<OverlayCDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
   std::optional<ClangdServer> Server;
+  // Manages to build module files.
+  std::optional<ModulesBuilder> ModulesManager;
 };
 } // namespace clangd
 } // namespace clang

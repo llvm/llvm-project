@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wreturn-type -Wno-return-mismatch -fsyntax-only -verify=return-type %s
+// RUN: %clang_cc1 -Wno-error=return-type -Wno-return-mismatch -fsyntax-only -verify=return-type %s
 // RUN: %clang_cc1 -Wno-return-type -Wreturn-mismatch -fsyntax-only -verify=return-mismatch %s
 
 int foo(void) __attribute__((noreturn));

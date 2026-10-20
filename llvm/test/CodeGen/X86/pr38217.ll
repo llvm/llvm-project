@@ -11,7 +11,7 @@ define dso_local void @_Z12d2s_bufferedmPc(i64 %arg, ptr nocapture %arg1) {
 ; CHECK-NEXT:  # %bb.1: # %bb2.preheader
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movabsq $3777893186295716171, %r8 # imm = 0x346DC5D63886594B
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rdi, %rax

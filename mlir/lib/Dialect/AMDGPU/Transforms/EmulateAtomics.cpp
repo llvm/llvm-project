@@ -10,11 +10,12 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUEMULATEATOMICSPASS
@@ -86,104 +87,170 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
   }
 }
 
+template <typename OpTy>
+static typename OpTy::Properties
+getPropertiesFromAttrs(OpBuilder &builder, Location loc,
+                       ArrayRef<NamedAttribute> attrs) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  LogicalResult result =
+      OpTy::setPropertiesFromAttr(properties, builder.getDictionaryAttr(attrs),
+                                  [&]() { return emitError(loc); });
+  assert(succeeded(result) && "failed to convert operation properties");
+  (void)result;
+  return properties;
+}
+
+// A helper function to flatten a vector value to a scalar containing its bits,
+// returning the value itself if othetwise.
+static Value flattenVecToBits(ConversionPatternRewriter &rewriter, Location loc,
+                              Value val) {
+  auto vectorType = dyn_cast<VectorType>(val.getType());
+  if (!vectorType)
+    return val;
+
+  int64_t bitwidth =
+      vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
+  Type allBitsType = rewriter.getIntegerType(bitwidth);
+  auto allBitsVecType = VectorType::get({1}, allBitsType);
+  Value bitcast = vector::BitCastOp::create(rewriter, loc, allBitsVecType, val);
+  Value scalar = vector::ExtractOp::create(rewriter, loc, bitcast, 0);
+  return scalar;
+}
+
 template <typename AtomicOp, typename ArithOp>
 LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     AtomicOp atomicOp, Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = atomicOp.getLoc();
 
-  ArrayRef<NamedAttribute> origAttrs = atomicOp->getAttrs();
+  NamedAttrList origProperties;
+  atomicOp->getName().walkInherentAttrs(atomicOp,
+                                        [&](StringRef name, Attribute &attr) {
+                                          origProperties.append(name, attr);
+                                        });
+  ArrayRef<NamedAttribute> discardableAttrs =
+      atomicOp->getDiscardableAttrDictionary().getValue();
   ValueRange operands = adaptor.getOperands();
   Value data = operands.take_front()[0];
   ValueRange invariantArgs = operands.drop_front();
   Type dataType = data.getType();
 
   SmallVector<NamedAttribute> loadAttrs;
-  patchOperandSegmentSizes(origAttrs, loadAttrs, DataArgAction::Drop);
+  patchOperandSegmentSizes(origProperties, loadAttrs, DataArgAction::Drop);
+  auto loadProperties =
+      getPropertiesFromAttrs<RawBufferLoadOp>(rewriter, loc, loadAttrs);
   Value initialLoad =
-      rewriter.create<RawBufferLoadOp>(loc, dataType, invariantArgs, loadAttrs);
+      RawBufferLoadOp::create(rewriter, loc, TypeRange{dataType}, invariantArgs,
+                              loadProperties, discardableAttrs);
   Block *currentBlock = rewriter.getInsertionBlock();
   Block *afterAtomic =
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+  afterAtomic->addArgument(dataType, loc);
   Block *loopBlock = rewriter.createBlock(afterAtomic, {dataType}, {loc});
 
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<cf::BranchOp>(loc, loopBlock, initialLoad);
+  cf::BranchOp::create(rewriter, loc, loopBlock, initialLoad);
 
   rewriter.setInsertionPointToEnd(loopBlock);
   Value prevLoad = loopBlock->getArgument(0);
-  Value operated = rewriter.create<ArithOp>(loc, data, prevLoad);
+  Value operated = ArithOp::create(rewriter, loc, data, prevLoad);
+  dataType = operated.getType();
 
   SmallVector<NamedAttribute> cmpswapAttrs;
-  patchOperandSegmentSizes(origAttrs, cmpswapAttrs, DataArgAction::Duplicate);
+  patchOperandSegmentSizes(origProperties, cmpswapAttrs,
+                           DataArgAction::Duplicate);
   SmallVector<Value> cmpswapArgs = {operated, prevLoad};
   cmpswapArgs.append(invariantArgs.begin(), invariantArgs.end());
-  Value atomicRes = rewriter.create<RawBufferAtomicCmpswapOp>(
-      loc, dataType, cmpswapArgs, cmpswapAttrs);
+  auto cmpswapProperties = getPropertiesFromAttrs<RawBufferAtomicCmpswapOp>(
+      rewriter, loc, cmpswapAttrs);
+  Value atomicRes = RawBufferAtomicCmpswapOp::create(
+      rewriter, loc, TypeRange{dataType}, cmpswapArgs, cmpswapProperties,
+      discardableAttrs);
 
   // We care about exact bitwise equality here, so do some bitcasts.
   // These will fold away during lowering to the ROCDL dialect, where
   // an int->float bitcast is introduced to account for the fact that cmpswap
   // only takes integer arguments.
 
-  Value prevLoadForCompare = prevLoad;
-  Value atomicResForCompare = atomicRes;
+  Value prevLoadForCompare = flattenVecToBits(rewriter, loc, prevLoad);
+  Value atomicResForCompare = flattenVecToBits(rewriter, loc, atomicRes);
   if (auto floatDataTy = dyn_cast<FloatType>(dataType)) {
     Type equivInt = rewriter.getIntegerType(floatDataTy.getWidth());
     prevLoadForCompare =
-        rewriter.create<arith::BitcastOp>(loc, equivInt, prevLoad);
+        arith::BitcastOp::create(rewriter, loc, equivInt, prevLoad);
     atomicResForCompare =
-        rewriter.create<arith::BitcastOp>(loc, equivInt, atomicRes);
+        arith::BitcastOp::create(rewriter, loc, equivInt, atomicRes);
   }
-  Value canLeave = rewriter.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::eq, atomicResForCompare, prevLoadForCompare);
-  rewriter.create<cf::CondBranchOp>(loc, canLeave, afterAtomic, ValueRange{},
-                                    loopBlock, atomicRes);
-  rewriter.eraseOp(atomicOp);
+  Value canLeave =
+      arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                            atomicResForCompare, prevLoadForCompare);
+  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic,
+                           ValueRange{prevLoad}, loopBlock, atomicRes);
+  rewriter.replaceOp(atomicOp, ValueRange{afterAtomic->getArgument(0)});
   return success();
 }
 
+/// Returns whether \p op can be lowered to a native buffer atomic fadd on
+/// \p target.
+static bool isFaddNativelySupported(const ROCDL::TargetInfo &target,
+                                    RawBufferAtomicFaddOp op) {
+  namespace AMDGPU = ::llvm::AMDGPU;
+
+  // A target with only the no-return form can still perform the atomic, it
+  // just cannot report the old value, so it suffices when the result is dead.
+  bool hasFadd = target.has(AMDGPU::FEAT_ATOMIC_FADD_RTN_INSTS) ||
+                 (target.has(AMDGPU::FEAT_ATOMIC_FADD_NO_RTN_INSTS) &&
+                  op.getOldValue().use_empty());
+  if (!hasFadd)
+    return false;
+
+  // The packed 16-bit forms are separate instructions with their own features.
+  Type elemType = getElementTypeOrSelf(op.getValue().getType());
+  if (isa<Float16Type>(elemType))
+    return target.has(AMDGPU::FEAT_ATOMIC_BUFFER_GLOBAL_PK_ADD_F16_INSTS);
+  if (isa<BFloat16Type>(elemType))
+    return target.has(AMDGPU::FEAT_ATOMIC_BUFFER_PK_ADD_BF16_INST);
+  return true;
+}
+
 void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
-    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset) {
-  // gfx10 has no atomic adds.
-  if (chipset.majorVersion == 10 || chipset.majorVersion < 9 ||
-      (chipset.majorVersion == 9 && chipset.minorVersion < 0x08)) {
-    target.addIllegalOp<RawBufferAtomicFaddOp>();
-  }
-  // gfx9 has no to a very limited support for floating-point min and max.
-  if (chipset.majorVersion == 9) {
-    if (chipset.minorVersion >= 0x0a && chipset.minorVersion != 0x41) {
-      // gfx90a supports f64 max (and min, but we don't have a min wrapper right
-      // now) but all other types need to be emulated.
-      target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
-          [](RawBufferAtomicFmaxOp op) -> bool {
-            return op.getValue().getType().isF64();
-          });
-    } else {
-      target.addIllegalOp<RawBufferAtomicFmaxOp>();
-    }
-    if (chipset.minorVersion == 0x41) {
-      // gfx941 requires non-CAS atomics to be implemented with CAS loops.
-      // The workaround here mirrors HIP and OpenMP.
-      target.addIllegalOp<RawBufferAtomicFaddOp, RawBufferAtomicFmaxOp,
-                          RawBufferAtomicSmaxOp, RawBufferAtomicUminOp>();
-    }
+    ConversionTarget &target, RewritePatternSet &patterns,
+    const ROCDL::TargetInfo &targetInfo, PatternBenefit benefit) {
+  namespace AMDGPU = ::llvm::AMDGPU;
+
+  target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
+      [targetInfo](RawBufferAtomicFaddOp op) -> bool {
+        return isFaddNativelySupported(targetInfo, op);
+      });
+
+  // Floating-point min and max are only emulated on gfx9; later generations
+  // have them for every type this op accepts. f64 is the one gfx9 case that
+  // may be native.
+  if (targetInfo.isGeneration(9)) {
+    target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
+        [targetInfo](RawBufferAtomicFmaxOp op) -> bool {
+          return op.getValue().getType().isF64() &&
+                 targetInfo.has(AMDGPU::FEAT_ATOMIC_FMIN_FMAX_GLOBAL_F64);
+        });
   }
   patterns.add<
       RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaximumFOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicSmaxOp, arith::MaxSIOp>,
       RawBufferAtomicByCasPattern<RawBufferAtomicUminOp, arith::MinUIOp>>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {
   Operation *op = getOperation();
-  FailureOr<Chipset> maybeChipset = Chipset::parse(chipset);
-  if (failed(maybeChipset)) {
-    emitError(op->getLoc(), "Invalid chipset name: " + chipset);
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(ROCDL::resolveArchOption(arch, chipset),
+                             /*waveSize=*/0, [&] { return op->emitError(); });
+  if (failed(targetInfo))
     return signalPassFailure();
-  }
 
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
@@ -191,7 +258,7 @@ void AmdgpuEmulateAtomicsPass::runOnOperation() {
   target.markUnknownOpDynamicallyLegal(
       [](Operation *op) -> bool { return true; });
 
-  populateAmdgpuEmulateAtomicsPatterns(target, patterns, *maybeChipset);
+  populateAmdgpuEmulateAtomicsPatterns(target, patterns, *targetInfo);
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     return signalPassFailure();
 }

@@ -25,7 +25,7 @@ protected:
 
 public:
   X86MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)
-      : MCSymbolizer(*Function.getBinaryContext().Ctx.get(), nullptr),
+      : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
         Function(Function), CreateNewSymbols(CreateNewSymbols) {}
 
   X86MCSymbolizer(const X86MCSymbolizer &) = delete;

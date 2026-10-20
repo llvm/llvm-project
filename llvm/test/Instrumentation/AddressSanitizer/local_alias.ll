@@ -18,9 +18,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Check that we generate internal alias and odr indicator symbols for global to be protected.
 ; CHECK-NOINDICATOR-NOT: __odr_asan_gen_a
 ; CHECK-NOALIAS-NOT: private alias
-; CHECK-INDICATOR: @___asan_gen_.1 = private unnamed_addr constant [2 x i8] c"a\00", align 1
+; CHECK-INDICATOR: @___asan_gen_global{{[.0-9]*}} = private unnamed_addr constant [2 x i8] c"a\00", align 1
 ; CHECK-INDICATOR: @__odr_asan_gen_a = global i8 0, align 1
-; CHECK-INDICATOR: @___asan_gen_.4 = private unnamed_addr constant [2 x i8] c"d\00", align 1
+; CHECK-INDICATOR: @___asan_gen_global{{[.0-9]*}} = private unnamed_addr constant [2 x i8] c"d\00", align 1
 ; CHECK-INDICATOR: @__odr_asan_gen__ZL1d = global i8 0, align 1
 ; CHECK-ALIAS: @0 = private alias { [2 x i32], [24 x i8] }, ptr @a
 

@@ -38,11 +38,11 @@
 
 // CK12-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK12-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// CK12-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 8, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK12-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK12-64-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 // Map types: OMP_MAP_TO  | OMP_MAP_PRIVATE | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 673
-// CK12-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 673]
+// CK12-32-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 673, i64 288]
 
 // CK12-LABEL: implicit_maps_float_complex{{.*}}(
 void implicit_maps_float_complex (int a){
@@ -66,23 +66,23 @@ void implicit_maps_float_complex (int a){
 // CK12-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK12-32-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK12-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-// CK12-32: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK12-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK12-32: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target
   {
     fc *= fc;
   }
 }
 
-// CK12-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK12-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK12-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK12-64: store i[[sz]] [[ARG]], ptr [[ADDR]],
-// CK12-64: {{.+}} = getelementptr inbounds { float, float }, ptr [[ADDR]], i32 0, i32 0
+// CK12-64: {{.+}} = getelementptr inbounds nuw { float, float }, ptr [[ADDR]], i32 0, i32 0
 
-// CK12-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK12-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK12-32: [[ADDR:%.+]] = alloca ptr,
 // CK12-32: store ptr [[ARG]], ptr [[ADDR]],
 // CK12-32: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK12-32: {{.+}} = getelementptr inbounds { float, float }, ptr [[REF]], i32 0, i32 0
+// CK12-32: {{.+}} = getelementptr inbounds nuw { float, float }, ptr [[REF]], i32 0, i32 0
 #endif // CK12
 #endif

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-loop-prefetch < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-loop-prefetch < %s | FileCheck %s
 ; CHECK: dcfetch
 
 target triple = "hexagon"

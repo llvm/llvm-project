@@ -2,22 +2,22 @@
 
 template<typename T>
 void TemplUses() {
-#pragma acc loop device_type(I)
-  for(;;);
+#pragma acc loop device_type(host)
+  for(int i = 0; i < 5; ++i);
 #pragma acc loop dtype(*)
-  for(;;);
-#pragma acc loop device_type(class)
-  for(;;);
-#pragma acc loop device_type(private)
-  for(;;);
-#pragma acc loop device_type(bool)
-  for(;;);
-#pragma acc kernels dtype(true) device_type(false)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
+#pragma acc loop device_type(default)
+  for(int i = 0; i < 5; ++i);
+#pragma acc loop device_type(multicore)
+  for(int i = 0; i < 5; ++i);
+#pragma acc loop device_type(host)
+  for(int i = 0; i < 5; ++i);
+#pragma acc kernels dtype(radeon) device_type(nvidia)
+  for(int i = 0; i < 5; ++i);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}
 #pragma acc loop device_type(T::value)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 void Inst() {

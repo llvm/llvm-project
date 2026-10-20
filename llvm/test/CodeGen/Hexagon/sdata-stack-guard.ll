@@ -1,9 +1,9 @@
 ; Check that the __stack_chk_guard was placed in small data.
-; RUN: llc -march=hexagon -mtriple=hexagon-unknown-linux-gnu -O2 -hexagon-small-data-threshold=4 < %s | FileCheck -check-prefix=GPREL %s
+; RUN: llc -mtriple=hexagon -mtriple=hexagon-unknown-linux-gnu -O2 -hexagon-small-data-threshold=4 < %s | FileCheck -check-prefix=GPREL %s
 ; GPREL: memw(gp+#__stack_chk_guard)
 
 ; For threshold less than 4 (size of address), the variable is not placed in small-data
-; RUN: llc -march=hexagon -mtriple=hexagon-unknown-linux-gnu -O2 -hexagon-small-data-threshold=0 < %s | FileCheck -check-prefix=ABS %s
+; RUN: llc -mtriple=hexagon -mtriple=hexagon-unknown-linux-gnu -O2 -hexagon-small-data-threshold=0 < %s | FileCheck -check-prefix=ABS %s
 ; ABS: memw(##__stack_chk_guard)
 
 @g0 = private unnamed_addr constant [37 x i8] c"This string is longer than 16 bytes\0A\00", align 1

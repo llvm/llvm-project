@@ -1,125 +1,226 @@
-from __future__ import absolute_import
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+"""
+Support for building GoogleBenchmark from the Lit configuration.
+
+The benchmarks in the test suite are linked against GoogleBenchmark, which must be
+built with the same Standard Library (and more generally with the same ABI-affecting
+flags) as the benchmarks themselves. This allows building GoogleBenchmark on-demand
+from Lit using the flags of the configuration being tested.
+
+The result is cached inside the build directory so that subsequent invocations are
+cheap.
+"""
+
+import hashlib
 import os
+import shlex
 import subprocess
-import sys
 
-import lit.Test
 import lit.TestRunner
-import lit.util
-from lit.formats.base import TestFormat
 
-kIsWindows = sys.platform in ["win32", "cygwin"]
+import libcxx.test.config
+import libcxx.test.dsl
+
+THIS_FILE = os.path.abspath(__file__)
+LIBCXX_UTILS = os.path.dirname(os.path.dirname(os.path.dirname(THIS_FILE)))
+MONOREPO_ROOT = os.path.dirname(os.path.dirname(LIBCXX_UTILS))
+SOURCE_DIR = os.path.join(MONOREPO_ROOT, "third-party", "benchmark")
+
+# Flags used by the test suite that must not be used when building GoogleBenchmark.
+# Anything that isn't listed here is forwarded verbatim.
+#
+# -Werror
+#     Avoid failing GoogleBenchmark's build due to warnings.
+# -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
+#     Only relevant when testing libc++ itself.
+# -fmodules, -fcxx-modules, -fmodules-cache-path=
+#     Modules are irrelevant when building a third-party static library, and sharing a
+#     module cache with the test suite is undesirable.
+# -std=
+#     GoogleBenchmark sets CMAKE_CXX_STANDARD itself and requires C++17.
+_DROPPED_FLAGS = {
+    "-Werror",
+    "-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
+    "-fmodules",
+    "-fcxx-modules",
+}
+
+_DROPPED_FLAG_PREFIXES = (
+    "-std=",
+    "-fmodules-cache-path=",
+)
+
+# Flags that are dropped along with the '-Xclang' that introduces them.
+_DROPPED_XCLANG_FLAGS = {
+    "-fmodules-local-submodule-visibility",
+}
 
 
-class GoogleBenchmark(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix, benchmark_args=[]):
-        self.benchmark_args = list(benchmark_args)
-        self.test_sub_dirs = os.path.normcase(str(test_sub_dirs)).split(";")
+def _expand(config, string):
+    """
+    Expand the Lit substitutions in the given string, recursively.
+    """
+    (expanded,) = lit.TestRunner.applySubstitutions(
+        [string],
+        config.substitutions,
+        recursion_limit=config.recursiveExpansionLimit,
+    )
+    return expanded
 
-        # On Windows, assume tests will also end in '.exe'.
-        exe_suffix = str(test_suffix)
-        if kIsWindows:
-            exe_suffix += ".exe"
 
-        # Also check for .py files for testing purposes.
-        self.test_suffixes = {exe_suffix, test_suffix + ".py"}
+def _filterFlags(flags):
+    """
+    Remove the flags that must not be used when building GoogleBenchmark.
+    """
+    result = []
+    flags = iter(flags)
+    for flag in flags:
+        if flag == "-Xclang":
+            arg = next(flags, None)
+            if arg is None:
+                result.append(flag)
+            elif arg not in _DROPPED_XCLANG_FLAGS:
+                result += [flag, arg]
+        elif flag not in _DROPPED_FLAGS and not flag.startswith(_DROPPED_FLAG_PREFIXES):
+            result.append(flag)
+    return result
 
-    def getBenchmarkTests(self, path, litConfig, localConfig):
-        """getBenchmarkTests(path) - [name]
 
-        Return the tests available in gtest executable.
+def _getFlags(config, substitutions):
+    """
+    Return the flags contained in the given substitutions, based on the flags used by the
+    configuration under test.
+    """
+    flags = []
+    for substitution in substitutions:
+        expanded = _expand(config, _getSubstitution(substitution, config))
+        flags += shlex.split(expanded)
+    return _filterFlags(flags)
 
-        Args:
-          path: String path to a gtest executable
-          litConfig: LitConfig instance
-          localConfig: TestingConfig instance"""
 
-        # TODO: allow splitting tests according to the "benchmark family" so
-        # the output for a single family of tests all belongs to the same test
-        # target.
-        list_test_cmd = [path, "--benchmark_list_tests"]
-        try:
-            output = subprocess.check_output(list_test_cmd, env=localConfig.environment)
-        except subprocess.CalledProcessError as exc:
-            litConfig.warning(
-                "unable to discover google-benchmarks in %r: %s. Process output: %s"
-                % (path, sys.exc_info()[1], exc.output)
-            )
-            raise StopIteration
+def _splitLibraries(flags):
+    """
+    Split the given link flags into (flags, libraries), where libraries contains the
+    name of the libraries that were being linked against.
 
-        nested_tests = []
-        for ln in output.splitlines(False):  # Don't keep newlines.
-            ln = lit.util.to_string(ln)
-            if not ln.strip():
-                continue
-
-            index = 0
-            while ln[index * 2 : index * 2 + 2] == "  ":
-                index += 1
-            while len(nested_tests) > index:
-                nested_tests.pop()
-
-            ln = ln[index * 2 :]
-            if ln.endswith("."):
-                nested_tests.append(ln)
-            elif any([name.startswith("DISABLED_") for name in nested_tests + [ln]]):
-                # Gtest will internally skip these tests. No need to launch a
-                # child process for it.
-                continue
+    We can't simply hand the libraries over to CMake as part of CMAKE_CXX_FLAGS, since
+    CMake puts those flags before the object files on the link line.
+    """
+    result = []
+    libraries = []
+    flags = iter(flags)
+    for flag in flags:
+        if flag == "-l":
+            library = next(flags, None)
+            if library is None:
+                result.append(flag)
             else:
-                yield "".join(nested_tests) + ln
+                libraries.append(library)
+        elif flag.startswith("-l"):
+            libraries.append(flag[len("-l") :])
+        else:
+            result.append(flag)
+    return (result, libraries)
 
-    def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
-        source_path = testSuite.getSourcePath(path_in_suite)
-        for subdir in self.test_sub_dirs:
-            dir_path = os.path.join(source_path, subdir)
-            if not os.path.isdir(dir_path):
-                continue
-            for fn in lit.util.listdir_files(dir_path, suffixes=self.test_suffixes):
-                # Discover the tests in this executable.
-                execpath = os.path.join(source_path, subdir, fn)
-                testnames = self.getBenchmarkTests(execpath, litConfig, localConfig)
-                for testname in testnames:
-                    testPath = path_in_suite + (subdir, fn, testname)
-                    yield lit.Test.Test(
-                        testSuite, testPath, localConfig, file_path=execpath
-                    )
 
-    def execute(self, test, litConfig):
-        testPath, testName = os.path.split(test.getSourcePath())
-        while not os.path.exists(testPath):
-            # Handle GTest parametrized and typed tests, whose name includes
-            # some '/'s.
-            testPath, namePrefix = os.path.split(testPath)
-            testName = namePrefix + "/" + testName
+def _getSubstitution(substitution, config):
+    return libcxx.test.config._getSubstitution(substitution, config.substitutions)
 
-        cmd = [testPath, "--benchmark_filter=%s$" % testName] + self.benchmark_args
 
-        if litConfig.noExecute:
-            return lit.Test.PASS, ""
+def _fingerprint(config, flags, libraries):
+    """
+    Return an opaque value identifying this GoogleBenchmark build.
 
-        try:
-            out, err, exitCode = lit.util.executeCommand(
-                cmd,
-                env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
-            )
-        except lit.util.ExecuteCommandTimeoutException:
-            return (
-                lit.Test.TIMEOUT,
-                "Reached timeout of {} seconds".format(litConfig.maxIndividualTestTime),
-            )
+    This changes whenever the compiler is rebuilt or whenever the flags used to build
+    GoogleBenchmark change.
+    """
+    compiler = libcxx.test.dsl._compilerFingerprint(config)
+    return hashlib.sha256(repr((compiler, flags, libraries)).encode()).hexdigest()[:16]
 
-        if exitCode:
-            return lit.Test.FAIL, ("exit code: %d\n" % exitCode) + out + err
 
-        passing_test_line = testName
-        if passing_test_line not in out:
-            msg = "Unable to find %r in google benchmark output:\n\n%s%s" % (
-                passing_test_line,
-                out,
-                err,
-            )
-            return lit.Test.UNRESOLVED, msg
+def _run(litConfig, what, command, cwd):
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    if result.returncode != 0:
+        pretty = " ".join(shlex.quote(arg) for arg in command)
+        litConfig.fatal(
+            "Failed to {} GoogleBenchmark.\n"
+            "Command was:\n{}\n\n"
+            "Output was:\n{}".format(what, pretty, result.stdout)
+        )
 
-        return lit.Test.PASS, err + out
+
+def prepare(config, litConfig):
+    """
+    Make GoogleBenchmark available to the test suite and return the flags required to
+    build the benchmarks against it.
+
+    GoogleBenchmark is built using the same flags as the rest of the test suite, and the
+    result is cached inside the build directory. The cache is keyed on the flags being
+    used, so different Lit configurations do not interfere with each other.
+    """
+    flags, libraries = _splitLibraries(
+        _getFlags(config, ("%{flags}", "%{compile_flags}", "%{link_flags}"))
+    )
+    root = os.path.join(config.test_exec_root, "__gbench__")
+    prefix = os.path.join(root, _fingerprint(config, flags, libraries))
+    buildDir = os.path.join(prefix, "build")
+    installDir = os.path.join(prefix, "install")
+    os.makedirs(root, exist_ok=True)
+
+    cmake = _expand(config, _getSubstitution("%{cmake}", config))
+    if not os.path.exists(os.path.join(buildDir, "CMakeCache.txt")):
+        litConfig.note("Configuring GoogleBenchmark in {}".format(buildDir))
+        compiler = _expand(config, _getSubstitution("%{cxx}", config))
+        cmake_generator = _expand(config, _getSubstitution("%{cmake_generator}", config))
+        cmake_make_program = _expand(config, _getSubstitution("%{cmake_make_program}", config))
+        _run(
+            litConfig,
+            "configure",
+            [
+                cmake,
+                "-S", SOURCE_DIR,
+                "-B", buildDir,
+                "-G", cmake_generator,
+                "-DCMAKE_MAKE_PROGRAM={}".format(cmake_make_program),
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_CXX_COMPILER={}".format(compiler),
+                "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),
+                # Set CMAKE_EXE_LINKER_FLAGS in addition to BENCHMARK_CXX_LIBRARIES since we
+                # need CMake's own probe executables to have the right linker flags.
+                "-DCMAKE_EXE_LINKER_FLAGS={}".format(" ".join("-l{}".format(lib) for lib in libraries)),
+                "-DCMAKE_INSTALL_PREFIX={}".format(installDir),
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DBENCHMARK_CXX_LIBRARIES={}".format(";".join(libraries)),
+                "-DBENCHMARK_ENABLE_TESTING=OFF",
+                "-DBENCHMARK_ENABLE_WERROR=OFF",
+                "-DBENCHMARK_INSTALL_DOCS=OFF",
+            ],
+            cwd=root,
+        )
+
+    # Always build: GoogleBenchmark is compiled against the headers of the library
+    # under test, so it must be rebuilt when those change. This is a no-op when
+    # nothing changed.
+    _run(
+        litConfig,
+        "build",
+        [cmake, "--build", buildDir, "--target", "install", "--parallel", str(os.cpu_count() or 1)],
+        cwd=root,
+    )
+
+    include = os.path.join(installDir, "include")
+    lib = os.path.join(installDir, "lib")
+    return "-isystem {} -L {} -l benchmark".format(include, lib)

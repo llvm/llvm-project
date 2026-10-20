@@ -1,4 +1,4 @@
-# RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips %s -start-after=xray-instrumentation -o - -show-mc-encoding | FileCheck %s
+# RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips %s -start-after=xray-instrumentation -o - -show-mc-encoding | FileCheck %s
 
 # Test that the 'sll $zero, $zero, 0' is correctly recognized as a real
 # instruction rather than some unimplemented opcode for the purposes of
@@ -17,7 +17,7 @@ selected:        false
 tracksRegLiveness: false
 registers:
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -33,14 +33,14 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
 body:             |
   bb.0.entry:
-    $zero = SLL_MMR6 killed $zero, 0
-    JRC16_MMR6 undef $ra, implicit $v0
+    $r0 = SLL_MMR6 killed $r0, 0
+    JRC16_MMR6 undef $r31, implicit $r2
 
 ...

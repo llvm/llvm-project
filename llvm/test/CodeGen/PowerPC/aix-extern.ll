@@ -2,7 +2,7 @@
 ; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=COMMON,BIT32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=COMMON,BIT64 %s
 
@@ -11,7 +11,7 @@
 ; RUN:   -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:   -mattr=-altivec -data-sections=false -xcoff-traceback-table=false \
 ; RUN:   -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
@@ -91,8 +91,7 @@ declare i32 @bar_extern(ptr)
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
 ; CHECKSYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
-; CHECKSYM32-NEXT:   CPU Version ID: TCPU_COM (0x3)
-; CHECKSYM64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
+; CHECKSYM-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 2
 ; CHECKSYM:        Symbol {

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -43,8 +43,8 @@ struct TestLinalgDecomposeOps
     RewritePatternSet decompositionPatterns(context);
     linalg::populateDecomposeLinalgOpsPattern(decompositionPatterns,
                                               removeDeadArgsAndResults);
-    if (failed(applyPatternsAndFoldGreedily(
-            getOperation(), std::move(decompositionPatterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(),
+                                     std::move(decompositionPatterns)))) {
       return signalPassFailure();
     }
   }

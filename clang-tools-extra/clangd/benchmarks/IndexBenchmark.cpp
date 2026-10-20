@@ -24,12 +24,12 @@ namespace {
 
 std::unique_ptr<SymbolIndex> buildMem() {
   return loadIndex(IndexFilename, clang::clangd::SymbolOrigin::Static,
-                   /*UseDex=*/false);
+                   /*UseDex=*/false, /*SupportContainedRefs=*/true);
 }
 
 std::unique_ptr<SymbolIndex> buildDex() {
   return loadIndex(IndexFilename, clang::clangd::SymbolOrigin::Static,
-                   /*UseDex=*/true);
+                   /*UseDex=*/true, /*SupportContainedRefs=*/true);
 }
 
 // Reads JSON array of serialized FuzzyFindRequest's from user-provided file.

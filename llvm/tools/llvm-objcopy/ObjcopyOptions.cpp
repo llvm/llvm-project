@@ -16,6 +16,7 @@
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -39,25 +40,15 @@ enum ObjcopyID {
 };
 
 namespace objcopy_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_CODE
 #include "ObjcopyOpts.inc"
-#undef PREFIX
-
-static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJCOPY_, __VA_ARGS__),
-#include "ObjcopyOpts.inc"
-#undef OPTION
-};
 } // namespace objcopy_opt
 
-class ObjcopyOptTable : public opt::GenericOptTable {
+class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable() : opt::OptTable(objcopy_opt::optionTables()) {
     setGroupedShortOptions(true);
+    setDashDashParsing(true);
   }
 };
 
@@ -70,26 +61,13 @@ enum InstallNameToolID {
 };
 
 namespace install_name_tool {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_CODE
 #include "InstallNameToolOpts.inc"
-#undef PREFIX
-
-static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(INSTALL_NAME_TOOL_, __VA_ARGS__),
-#include "InstallNameToolOpts.inc"
-#undef OPTION
-};
 } // namespace install_name_tool
 
-class InstallNameToolOptTable : public opt::GenericOptTable {
+class InstallNameToolOptTable : public opt::OptTable {
 public:
-  InstallNameToolOptTable()
-      : GenericOptTable(install_name_tool::InstallNameToolInfoTable) {}
+  InstallNameToolOptTable() : OptTable(install_name_tool::optionTables()) {}
 };
 
 enum BitcodeStripID {
@@ -101,26 +79,13 @@ enum BitcodeStripID {
 };
 
 namespace bitcode_strip {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_CODE
 #include "BitcodeStripOpts.inc"
-#undef PREFIX
-
-static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(BITCODE_STRIP_, __VA_ARGS__),
-#include "BitcodeStripOpts.inc"
-#undef OPTION
-};
 } // namespace bitcode_strip
 
-class BitcodeStripOptTable : public opt::GenericOptTable {
+class BitcodeStripOptTable : public opt::OptTable {
 public:
-  BitcodeStripOptTable()
-      : opt::GenericOptTable(bitcode_strip::BitcodeStripInfoTable) {}
+  BitcodeStripOptTable() : opt::OptTable(bitcode_strip::optionTables()) {}
 };
 
 enum StripID {
@@ -131,23 +96,34 @@ enum StripID {
 };
 
 namespace strip {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_CODE
 #include "StripOpts.inc"
-#undef PREFIX
-
-static constexpr opt::OptTable::Info StripInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
-#include "StripOpts.inc"
-#undef OPTION
-};
 } // namespace strip
 
-class StripOptTable : public opt::GenericOptTable {
+class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable() : GenericOptTable(strip::StripInfoTable) {
+  StripOptTable() : OptTable(strip::optionTables()) {
+    setGroupedShortOptions(true);
+  }
+};
+
+enum ExtractBundleEntryID {
+  EXTRACT_BUNDLE_ENTRY_INVALID = 0, // This is not an option ID.
+#define OPTION(...)                                                            \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTION
+};
+
+namespace extract_bundle_entry {
+#define OPTTABLE_CODE
+#include "ExtractBundleEntryOpts.inc"
+} // namespace extract_bundle_entry
+
+class ExtractBundleEntryOptTable : public opt::OptTable {
+public:
+  ExtractBundleEntryOptTable()
+      : OptTable(extract_bundle_entry::optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -296,6 +272,8 @@ static const StringMap<MachineInfo> TargetMap{
     // RISC-V
     {"elf32-littleriscv", {ELF::EM_RISCV, false, true}},
     {"elf64-littleriscv", {ELF::EM_RISCV, true, true}},
+    {"elf32-bigriscv", {ELF::EM_RISCV, false, false}},
+    {"elf64-bigriscv", {ELF::EM_RISCV, true, false}},
     // PowerPC
     {"elf32-powerpc", {ELF::EM_PPC, false, false}},
     {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
@@ -319,6 +297,8 @@ static const StringMap<MachineInfo> TargetMap{
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
     // SystemZ
     {"elf64-s390", {ELF::EM_S390, true, false}},
+    // AMDGPU
+    {"elf64-amdgpu", {ELF::EM_AMDGPU, true, true}},
 };
 
 static Expected<TargetInfo>
@@ -404,7 +384,13 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
 
 namespace {
 
-enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip };
+enum class ToolType {
+  Objcopy,
+  Strip,
+  InstallNameTool,
+  BitcodeStrip,
+  ExtractBundleEntry
+};
 
 } // anonymous namespace
 
@@ -427,6 +413,10 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   case ToolType::BitcodeStrip:
     ToolName = "llvm-bitcode-strip";
     HelpText = " [options] input";
+    break;
+  case ToolType::ExtractBundleEntry:
+    ToolName = "llvm-extract-bundle-entry";
+    HelpText = " URI";
     break;
   }
   OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
@@ -526,6 +516,38 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   return SI;
 }
 
+static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
+  // Parse value given with --remove-note option. The format is:
+  //
+  // [name/]type_id
+  //
+  // where:
+  // <name>    - optional note name. If not given, all notes with the specified
+  //             <type_id> are removed.
+  // <type_id> - note type value, can be decimal or hexadecimal number prefixed
+  //             with 0x.
+  RemoveNoteInfo NI;
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --remove-note, note name is empty");
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
+  }
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
+    return createStringError(errc::invalid_argument,
+                             "bad note type_id for --remove-note: '%s'",
+                             TypeIdStr.str().c_str());
+  return NI;
+}
+
 // Parse input option \p ArgValue and load section data. This function
 // extracts section name and name of the file keeping section data from
 // ArgValue, loads data from the file, and stores section name and data
@@ -556,9 +578,9 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
                                                StringRef OptionName) {
   StringRef StringValue;
   if (ArgValue.starts_with("*+")) {
-    StringValue = ArgValue.slice(2, StringRef::npos);
+    StringValue = ArgValue.substr(2);
   } else if (ArgValue.starts_with("*-")) {
-    StringValue = ArgValue.slice(1, StringRef::npos);
+    StringValue = ArgValue.substr(1);
   } else if (ArgValue.contains("=")) {
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName +
@@ -584,20 +606,76 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
   return *LMAValue;
 }
 
+static Expected<SectionPatternAddressUpdate>
+parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
+                       MatchStyle SectionMatchStyle,
+                       function_ref<Error(Error)> ErrorCallback) {
+  SectionPatternAddressUpdate PatternUpdate;
+
+  size_t LastSymbolIndex = ArgValue.find_last_of("+-=");
+  if (LastSymbolIndex == StringRef::npos)
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": argument value " + ArgValue +
+                                 " is invalid. See --help");
+  char UpdateSymbol = ArgValue[LastSymbolIndex];
+
+  StringRef SectionPattern = ArgValue.slice(0, LastSymbolIndex);
+  if (SectionPattern.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": missing section pattern to apply address change to");
+  if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
+          SectionPattern, SectionMatchStyle, ErrorCallback)))
+    return std::move(E);
+
+  StringRef Value = ArgValue.substr(LastSymbolIndex + 1);
+  if (Value.empty()) {
+    switch (UpdateSymbol) {
+    case '+':
+    case '-':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing value of offset after '" +
+                                   std::string({UpdateSymbol}) + "'");
+
+    case '=':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing address value after '='");
+    }
+  }
+  auto AddrValue = getAsInteger<uint64_t>(Value);
+  if (!AddrValue)
+    return createStringError(AddrValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 std::string({UpdateSymbol}) + " is " + Value +
+                                 " when it should be a 64-bit integer");
+
+  switch (UpdateSymbol) {
+  case '+':
+    PatternUpdate.Update.Kind = AdjustKind::Add;
+    break;
+  case '-':
+    PatternUpdate.Update.Kind = AdjustKind::Subtract;
+    break;
+  case '=':
+    PatternUpdate.Update.Kind = AdjustKind::Set;
+  }
+
+  PatternUpdate.Update.Value = *AddrValue;
+  return PatternUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
-
-  const char *const *DashDash =
-      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
-  if (DashDash != RawArgsArr.end())
-    DashDash = std::next(DashDash);
 
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -609,7 +687,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "argument to '%s' is missing (expected %d value(s))",
         InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
-  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
+  if (InputArgs.size() == 0) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -633,7 +711,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
-  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
@@ -710,16 +787,17 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Cases("efi_application", "efi-app",
+            .Cases({"efi_application", "efi-app"},
                    COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Cases("efi_boot_service_driver", "efi-bsd",
+            .Cases({"efi_boot_service_driver", "efi-bsd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Cases("efi_runtime_driver", "efi-rtd",
+            .Cases({"efi_runtime_driver", "efi-rtd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
+            .Case("xbox", COFF::IMAGE_SUBSYSTEM_XBOX)
             .Default(COFF::IMAGE_SUBSYSTEM_UNKNOWN);
     if (*COFFConfig.Subsystem == COFF::IMAGE_SUBSYSTEM_UNKNOWN)
       return createStringError(errc::invalid_argument,
@@ -797,6 +875,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "invalid or unsupported --compress-sections format: %s",
           A->getValue());
     }
+    if (Type != DebugCompressionType::None) {
+      if (const char *Reason =
+              compression::getReasonIfUnsupported(compression::formatFor(Type)))
+        return createStringError(errc::invalid_argument, Reason);
+    }
 
     auto &P = Config.compressSections.emplace_back();
     P.second = Type;
@@ -872,6 +955,15 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (!LMAValue)
       return LMAValue.takeError();
     Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_change_section_address)) {
+    Expected<SectionPatternAddressUpdate> AddressUpdate =
+        parseChangeSectionAddr(Arg->getValue(), Arg->getSpelling(),
+                               SectionMatchStyle, ErrorCallback);
+    if (!AddressUpdate)
+      return AddressUpdate.takeError();
+    Config.ChangeSectionAddress.push_back(*AddressUpdate);
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
@@ -972,6 +1064,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "bad format for --dump-section, expected section=file");
     Config.DumpSection.push_back(Value);
   }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_extract_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --extract-section, expected section=file");
+    Config.ExtractSection.push_back(Value);
+  }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);
@@ -983,6 +1083,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.ExtractMainPartition =
       InputArgs.hasArg(OBJCOPY_extract_main_partition);
   ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
+  Config.Verbose = InputArgs.hasArg(OBJCOPY_verbose);
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   if (auto *Arg =
           InputArgs.getLastArg(OBJCOPY_discard_all, OBJCOPY_discard_locals)) {
@@ -990,6 +1091,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
@@ -1141,6 +1246,29 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       };
     }
 
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_note)) {
+    Expected<RemoveNoteInfo> NoteInfo = parseRemoveNoteInfo(Arg->getValue());
+    if (!NoteInfo)
+      return NoteInfo.takeError();
+
+    ELFConfig.NotesToRemove.push_back(*NoteInfo);
+  }
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
+
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {
     return createStringError(
@@ -1289,7 +1417,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+  Config.OutputFilename =
+      InputArgs.getLastArgValue(INSTALL_NAME_TOOL_output, Positional[0]);
 
   Expected<OwningBinary<Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);
@@ -1490,6 +1619,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                         STRIP_disable_deterministic_archives, /*default=*/true);
 
   Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
+  Config.Verbose = InputArgs.hasArg(STRIP_verbose);
   Config.InputFormat = FileFormat::Unspecified;
   Config.OutputFormat = FileFormat::Unspecified;
 
@@ -1524,4 +1654,49 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                              "--preserve-dates requires a file");
 
   return std::move(DC);
+}
+
+Error llvm::objcopy::runExtractBundleEntry(
+    const SmallVectorImpl<StringRef> &Args) {
+  for (StringRef Input : Args)
+    if (Error Err = object::extractOffloadBundleByURI(Input))
+      return Err;
+
+  return Error::success();
+}
+
+Expected<SmallVector<StringRef>>
+objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
+  ExtractBundleEntryOptTable T;
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0) {
+    printHelp(T, errs(), ToolType::ExtractBundleEntry);
+    exit(1);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_help)) {
+    printHelp(T, outs(), ToolType::ExtractBundleEntry);
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_version)) {
+    outs() << "llvm-extract-bundle-entry\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_UNKNOWN))
+    return createStringError(errc::invalid_argument, "unknown argument '%s'",
+                             Arg->getAsString(InputArgs).c_str());
+
+  SmallVector<StringRef> Arguments;
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_INPUT))
+    Arguments.push_back(Arg->getValue());
+  assert(!Arguments.empty());
+
+  return Arguments;
 }

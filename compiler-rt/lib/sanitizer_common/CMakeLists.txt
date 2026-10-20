@@ -11,6 +11,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_flags.cpp
   sanitizer_flag_parser.cpp
   sanitizer_fuchsia.cpp
+  sanitizer_haiku.cpp
   sanitizer_libc.cpp
   sanitizer_libignore.cpp
   sanitizer_linux.cpp
@@ -25,9 +26,11 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
   sanitizer_printf.cpp
+  sanitizer_procmaps_aix.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
+  sanitizer_procmaps_haiku.cpp
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
@@ -42,6 +45,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_thread_registry.cpp
   sanitizer_type_traits.cpp
   sanitizer_win.cpp
+  sanitizer_win_interception.cpp
   )
 
 set(SANITIZER_SOURCES
@@ -93,6 +97,8 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report.cpp
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
+  sanitizer_thread_history.cpp
+  sanitizer_unwind_aix.cpp
   sanitizer_unwind_linux_libcdep.cpp
   sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
@@ -105,6 +111,7 @@ set(SANITIZER_IMPL_HEADERS
   sancov_flags.h
   sancov_flags.inc
   sanitizer_addrhashmap.h
+  sanitizer_aix.h
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
@@ -165,6 +172,12 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
+  sanitizer_new_handler.h
+  sanitizer_new_operators.inc
+  sanitizer_offload.h
+  sanitizer_offload_hsa.h
+  sanitizer_offload_opcodes.h
+  sanitizer_offload_rpc.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -206,9 +219,17 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_vector.h
   sanitizer_win.h
   sanitizer_win_defs.h
-  sanitizer_win_dll_thunk.h
-  sanitizer_win_weak_interception.h
+  sanitizer_win_interception.h
+  sanitizer_win_thunk_interception.h
   )
+
+if(MSVC)
+  # asan on windows only supports the release dll version of the runtimes, in the interest of
+  # only having one asan dll to support/test. Having asan statically linked
+  # with the runtime might be possible, but it multiplies the number of scenerios to test.
+  # the program USING sanitizers can use whatever version of the runtime it wants to.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+endif()
 
 include_directories(..)
 
@@ -217,6 +238,9 @@ set(SANITIZER_COMMON_DEFINITIONS
 
 # note: L not I, this is nodefaultlibs for msvc
 append_list_if(MSVC /Zl SANITIZER_COMMON_CFLAGS)
+if(HAIKU)
+   list(APPEND SANITIZER_COMMON_CFLAGS -I/system/develop/headers/private -I/system/develop/headers/private/system/arch/x86_64 -I/system/develop/headers/private/system)
+endif()
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 # Too many existing bugs, needs cleanup.
@@ -301,58 +325,50 @@ add_compiler_rt_object_libraries(RTSanitizerCommonSymbolizerNoHooks
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
 if(WIN32)
-  add_compiler_rt_object_libraries(SanitizerCommonWeakInterception
+  set(RUNTIME_THUNK_CFLAGS -DSANITIZER_DYNAMIC_RUNTIME_THUNK -DSANITIZER_STATIC_RUNTIME_THUNK)
+  append_list_if(MSVC /Zl RUNTIME_THUNK_CFLAGS)
+  add_compiler_rt_object_libraries(SanitizerRuntimeThunk
     ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES
-      sanitizer_win_weak_interception.cpp
-    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DYNAMIC
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-  add_compiler_rt_object_libraries(SancovWeakInterception
-    ${SANITIZER_COMMON_SUPPORTED_OS}
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES
-      sanitizer_coverage_win_weak_interception.cpp
-    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DYNAMIC
+      sanitizer_win_thunk_interception.cpp
+    CFLAGS ${SANITIZER_CFLAGS} ${RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
-  add_compiler_rt_object_libraries(SanitizerCommonDllThunk
+  add_compiler_rt_object_libraries(SancovRuntimeThunk
     ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES
-      sanitizer_win_dll_thunk.cpp
-    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DLL_THUNK
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-  add_compiler_rt_object_libraries(SancovDllThunk
-    ${SANITIZER_COMMON_SUPPORTED_OS}
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES
-      sanitizer_coverage_win_dll_thunk.cpp
+      sanitizer_coverage_win_runtime_thunk.cpp
       sanitizer_coverage_win_sections.cpp
-    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DLL_THUNK
+    CFLAGS ${SANITIZER_CFLAGS} ${RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
 
-  set(DYNAMIC_RUNTIME_THUNK_CFLAGS "-DSANITIZER_DYNAMIC_RUNTIME_THUNK")
-  if(MSVC)
-    list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-Zl")
-  elseif(CMAKE_C_COMPILER_ID MATCHES Clang)
-    list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-nodefaultlibs")
-  endif()
-  add_compiler_rt_object_libraries(SanitizerCommonDynamicRuntimeThunk
-    ${SANITIZER_COMMON_SUPPORTED_OS}
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+# Host offload helpers for device sanitizers.
+include(FindLibcCommonUtils)
+if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
+  set(ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH ${X86_64} ${ARM64} ${PPC64})
+  list_intersect(SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH
+    ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH)
+  add_compiler_rt_object_libraries(RTSanitizerOffload
+    ARCHS ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH}
     SOURCES
-      sanitizer_win_dynamic_runtime_thunk.cpp
-    CFLAGS ${SANITIZER_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
+      sanitizer_offload.cpp
+      sanitizer_offload_image.cpp
+      sanitizer_offload_rpc.cpp
+    ADDITIONAL_HEADERS
+      sanitizer_offload.h
+      sanitizer_offload_hsa.h
+      sanitizer_offload_opcodes.h
+      sanitizer_offload_rpc.h
+    CFLAGS ${SANITIZER_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
-  add_compiler_rt_object_libraries(SancovDynamicRuntimeThunk
-    ${SANITIZER_COMMON_SUPPORTED_OS}
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES
-      sanitizer_coverage_win_dynamic_runtime_thunk.cpp
-      sanitizer_coverage_win_sections.cpp
-    CFLAGS ${SANITIZER_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  foreach(arch ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH})
+    target_link_libraries(RTSanitizerOffload.${arch} PRIVATE
+                          llvm-libc-common-utilities)
+  endforeach()
 endif()
 
 # Unit tests for common sanitizer runtime.

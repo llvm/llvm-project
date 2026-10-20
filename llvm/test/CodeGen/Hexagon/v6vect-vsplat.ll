@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; CHECK-NOT: vsplat
 ; CHECK: call f2
 ; CHECK: v{{[0-9]+}} = vsplat

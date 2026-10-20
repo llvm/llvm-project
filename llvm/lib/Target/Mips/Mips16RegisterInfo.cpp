@@ -11,24 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips16RegisterInfo.h"
-#include "Mips.h"
 #include "Mips16InstrInfo.h"
 #include "MipsInstrInfo.h"
-#include "MipsMachineFunction.h"
-#include "MipsSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -37,7 +28,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips16-registerinfo"
 
-Mips16RegisterInfo::Mips16RegisterInfo() = default;
+Mips16RegisterInfo::Mips16RegisterInfo(const MipsSubtarget &STI)
+    : MipsRegisterInfo(STI) {}
 
 bool Mips16RegisterInfo::requiresRegisterScavenging
   (const MachineFunction &MF) const {
@@ -59,8 +51,8 @@ bool Mips16RegisterInfo::saveScavengerRegister(
     Register Reg) const {
   DebugLoc DL;
   const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
-  TII.copyPhysReg(MBB, I, DL, Mips::T0, Reg, true);
-  TII.copyPhysReg(MBB, UseMI, DL, Reg, Mips::T0, true);
+  TII.copyPhysReg(MBB, I, DL, Mips::R8, Reg, true);
+  TII.copyPhysReg(MBB, UseMI, DL, Reg, Mips::R8, true);
   return true;
 }
 
@@ -101,7 +93,7 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   else {
     const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
     if (TFI->hasFP(MF)) {
-      FrameReg = Mips::S0;
+      FrameReg = Mips::R16;
     }
     else {
       if ((MI.getNumOperands()> OpNo+2) && MI.getOperand(OpNo+2).isReg())

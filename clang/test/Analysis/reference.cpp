@@ -89,8 +89,8 @@ namespace PR13440 {
     S s = { a };
     S2 s2 = { a };
 
-    if (s.x != a) return;
-    if (s2.x != a) return;
+    if (s.x != a) return;  // expected-warning {{comparison between two arrays}}
+    if (s2.x != a) return; // expected-warning {{comparison between two arrays}}
 
     a[0] = 42;
     clang_analyzer_eval(s.x[0] == 42); // expected-warning{{TRUE}}
@@ -123,26 +123,10 @@ S getS();
 S *getSP();
 
 void testReferenceAddress(int &x) {
-// FIXME: Move non-zero reference assumption out of RangeConstraintManager.cpp:422
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval(&x != 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(&ref() != 0); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval(&x != 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(&ref() != 0); // expected-warning{{TRUE}}
-#endif
-
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval(&getS().x != 0); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval(&getS().x != 0); // expected-warning{{TRUE}}
-#endif
-
-#ifdef ANALYZER_CM_Z3
-  clang_analyzer_eval(&getSP()->x != 0); // expected-warning{{UNKNOWN}}
-#else
   clang_analyzer_eval(&getSP()->x != 0); // expected-warning{{TRUE}}
-#endif
 }
 }
 

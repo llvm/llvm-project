@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-return.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
 
 namespace Fortran::semantics {
 
@@ -36,9 +36,9 @@ void ReturnStmtChecker::Leave(const parser::ReturnStmt &returnStmt) {
             IsFunction(*subprogramScope->GetSymbol()))) {
       context_.Say(
           "RETURN with expression is only allowed in SUBROUTINE subprogram"_err_en_US);
-    } else if (subprogramScope->kind() == Scope::Kind::MainProgram &&
-        context_.ShouldWarn(common::LanguageFeature::ProgramReturn)) {
-      context_.Say("RETURN should not appear in a main program"_port_en_US);
+    } else if (subprogramScope->kind() == Scope::Kind::MainProgram) {
+      context_.Warn(common::LanguageFeature::ProgramReturn,
+          "RETURN should not appear in a main program"_port_en_US);
     }
   }
 }

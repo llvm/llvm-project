@@ -7,7 +7,7 @@
 int a1 [[deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
 int a2 [[deprecated("warning", 1)]]; // expected-error{{expected string literal as argument of 'deprecated' attribute}}
 
-int b1 [[gnu::deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
+int b1 [[gnu::deprecated("warning", "fixit")]]; // expected-error{{'gnu::deprecated' attribute takes no more than 1 argument}}
 int b2 [[gnu::deprecated("warning", 1)]]; // expected-error{{expected string literal as argument of 'deprecated' attribute}}
 
 __declspec(deprecated("warning", "fixit")) int c1; // expected-error{{'deprecated' attribute takes no more than 1 argument}}

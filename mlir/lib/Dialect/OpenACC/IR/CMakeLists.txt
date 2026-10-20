@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIROpenACCDialect
   OpenACC.cpp
+  OpenACCCG.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenACC
@@ -9,12 +10,16 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIROpenACCEnumsIncGen
   MLIROpenACCAttributesIncGen
   MLIROpenACCMPOpsInterfacesIncGen
+  MLIROpenACCOpsInterfacesIncGen
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRDialectUtils
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIRTransformUtils
   MLIROpenACCMPCommon
   )
 

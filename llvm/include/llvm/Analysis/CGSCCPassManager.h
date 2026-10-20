@@ -92,6 +92,7 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -99,7 +100,6 @@
 namespace llvm {
 
 class Function;
-class Value;
 template <typename T, unsigned int N> class SmallPriorityWorklist;
 struct CGSCCUpdateResult;
 
@@ -109,9 +109,10 @@ class Module;
 #define DEBUG_TYPE "cgscc"
 
 /// Extern template declaration for the analysis set for this IR unit.
-extern template class AllAnalysesOn<LazyCallGraph::SCC>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<LazyCallGraph::SCC>;
 
-extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+extern template class LLVM_TEMPLATE_ABI
+    AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 
 /// The CGSCC analysis manager.
 ///
@@ -126,7 +127,7 @@ using CGSCCAnalysisManager =
 // See the comments on the definition of the specialization for details on how
 // it differs from the primary template.
 template <>
-PreservedAnalyses
+LLVM_ABI PreservedAnalyses
 PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
             CGSCCUpdateResult &>::run(LazyCallGraph::SCC &InitialC,
                                       CGSCCAnalysisManager &AM,
@@ -147,9 +148,9 @@ using CGSCCPassManager =
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>
-    : PassInfoMixin<RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC,
-                                        CGSCCAnalysisManager, LazyCallGraph &,
-                                        CGSCCUpdateResult &>> {
+    : RequiredPassInfoMixin<RequireAnalysisPass<
+          AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
+          CGSCCUpdateResult &>> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &) {
     (void)AM.template getResult<AnalysisT>(C, CG);
@@ -188,8 +189,8 @@ public:
   /// Regardless of whether this analysis is marked as preserved, all of the
   /// analyses in the \c CGSCCAnalysisManager are potentially invalidated based
   /// on the set of preserved analyses.
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv);
 
 private:
   CGSCCAnalysisManager *InnerAM;
@@ -199,14 +200,14 @@ private:
 /// Provide a specialized run method for the \c CGSCCAnalysisManagerModuleProxy
 /// so it can pass the lazy call graph to the result.
 template <>
-CGSCCAnalysisManagerModuleProxy::Result
+LLVM_ABI CGSCCAnalysisManagerModuleProxy::Result
 CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM);
 
 // Ensure the \c CGSCCAnalysisManagerModuleProxy is provided as an extern
 // template.
 extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
-extern template class OuterAnalysisManagerProxy<
+extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<
     ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
 
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
@@ -244,14 +245,6 @@ struct CGSCCUpdateResult {
   /// to observe SCCs in post-order. When adding SCCs, clients should add them
   /// in reverse post-order.
   SmallPriorityWorklist<LazyCallGraph::SCC *, 1> &CWorklist;
-
-  /// The set of invalidated RefSCCs which should be skipped if they are found
-  /// in \c RCWorklist.
-  ///
-  /// This is used to quickly prune out RefSCCs when they get deleted and
-  /// happen to already be on the worklist. We use this primarily to avoid
-  /// scanning the list and removing entries from it.
-  SmallPtrSetImpl<LazyCallGraph::RefSCC *> &InvalidatedRefSCCs;
 
   /// The set of invalidated SCCs which should be skipped if they are found
   /// in \c CWorklist.
@@ -320,13 +313,13 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
                           LazyCallGraph &, CGSCCUpdateResult &>;
 
-  explicit ModuleToPostOrderCGSCCPassAdaptor(std::unique_ptr<PassConceptT> Pass)
+  explicit ModuleToPostOrderCGSCCPassAdaptor(PassConceptT::unique_ptr Pass)
       : Pass(std::move(Pass)) {}
 
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
@@ -344,7 +337,7 @@ public:
   }
 
   /// Runs the CGSCC pass across every SCC in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -353,10 +346,8 @@ public:
     OS << ')';
   }
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 };
 
 /// A function to deduce a function pass type and wrap it in the
@@ -367,11 +358,7 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToPostOrderCGSCCPassAdaptor(
-      std::unique_ptr<ModuleToPostOrderCGSCCPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))));
+  return ModuleToPostOrderCGSCCPassAdaptor(PassModelT::create(std::move(Pass)));
 }
 
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
@@ -397,23 +384,25 @@ public:
       return *FAM;
     }
 
-    bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
-                    CGSCCAnalysisManager::Invalidator &Inv);
+    LLVM_ABI bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
+                             CGSCCAnalysisManager::Invalidator &Inv);
 
   private:
     FunctionAnalysisManager *FAM;
   };
 
   /// Computes the \c FunctionAnalysisManager and stores it in the result proxy.
-  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &);
+  LLVM_ABI Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                      LazyCallGraph &);
 
 private:
   friend AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
-extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.
 using CGSCCAnalysisManagerFunctionProxy =
@@ -425,7 +414,7 @@ using CGSCCAnalysisManagerFunctionProxy =
 /// routine provides a helper that updates the call graph in those ways
 /// including returning whether any changes were made and populating a CG
 /// update result struct for the overall CGSCC walk.
-LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
+LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
     CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
     FunctionAnalysisManager &FAM);
@@ -436,7 +425,7 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForFunctionPass(
 /// routine provides a helper that updates the call graph in those ways
 /// including returning whether any changes were made and populating a CG
 /// update result struct for the overall CGSCC walk.
-LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
+LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
     LazyCallGraph &G, LazyCallGraph::SCC &C, LazyCallGraph::Node &N,
     CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
     FunctionAnalysisManager &FAM);
@@ -450,11 +439,11 @@ LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public PassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<CGSCCToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit CGSCCToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit CGSCCToFunctionPassAdaptor(typename PassConceptT::unique_ptr Pass,
                                       bool EagerlyInvalidate, bool NoRerun)
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate),
         NoRerun(NoRerun) {}
@@ -474,8 +463,9 @@ public:
   }
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -495,10 +485,8 @@ public:
     OS << ')';
   }
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   bool EagerlyInvalidate;
   bool NoRerun;
 };
@@ -512,12 +500,8 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
                                  bool NoRerun = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return CGSCCToFunctionPassAdaptor(
-      std::unique_ptr<CGSCCToFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate, NoRerun);
+  return CGSCCToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                    EagerlyInvalidate, NoRerun);
 }
 
 // A marker to determine if function passes should be run on a function within a
@@ -528,7 +512,7 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
 class ShouldNotRunFunctionPassesAnalysis
     : public AnalysisInfoMixin<ShouldNotRunFunctionPassesAnalysis> {
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   struct Result {};
 
   Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
@@ -548,20 +532,22 @@ public:
 /// This repetition has the potential to be very large however, as each one
 /// might refine a single call site. As a consequence, in practice we use an
 /// upper bound on the number of repetitions to limit things.
-class DevirtSCCRepeatedPass : public PassInfoMixin<DevirtSCCRepeatedPass> {
+class DevirtSCCRepeatedPass
+    : public OptionalPassInfoMixin<DevirtSCCRepeatedPass> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
                           LazyCallGraph &, CGSCCUpdateResult &>;
 
-  explicit DevirtSCCRepeatedPass(std::unique_ptr<PassConceptT> Pass,
+  explicit DevirtSCCRepeatedPass(PassConceptT::unique_ptr Pass,
                                  int MaxIterations)
       : Pass(std::move(Pass)), MaxIterations(MaxIterations) {}
 
   /// Runs the wrapped pass up to \c MaxIterations on the SCC, iterating
   /// whenever an indirect call is refined.
-  PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -571,7 +557,7 @@ public:
   }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   int MaxIterations;
 };
 
@@ -583,12 +569,8 @@ DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
   using PassModelT =
       detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
                         LazyCallGraph &, CGSCCUpdateResult &>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return DevirtSCCRepeatedPass(
-      std::unique_ptr<DevirtSCCRepeatedPass::PassConceptT>(
-          new PassModelT(std::forward<CGSCCPassT>(Pass))),
-      MaxIterations);
+  return DevirtSCCRepeatedPass(PassModelT::create(std::move(Pass)),
+                               MaxIterations);
 }
 
 // Clear out the debug logging macro.

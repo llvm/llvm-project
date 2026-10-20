@@ -192,19 +192,19 @@ define i32 @PR40483_sub3(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    subl %esi, %ecx
-; X86-NEXT:    subl %esi, %edx
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    movl %esi, (%edx)
 ; X86-NEXT:    jae .LBB5_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB5_1:
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:    orl %ecx, %eax
@@ -333,4 +333,85 @@ define i32 @PR40483_sub6(ptr, i32) nounwind {
   ret i32 %10
 }
 
+define i32 @sbb_merge_add1(i32 %a0) nounwind {
+; X86-LABEL: sbb_merge_add1:
+; X86:       # %bb.0:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    setb %al
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sbb_merge_add1:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $42, %edi
+; X64-NEXT:    setb %al
+; X64-NEXT:    movl %eax, %edi
+; X64-NEXT:    callq use@PLT
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %sbb = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %a0, i32 42)
+  %borrow = extractvalue { i8, i32 } %sbb, 0
+  call void @use(i8 %borrow)
+  %diff = extractvalue { i8, i32 } %sbb, 1
+  %add = add i32 %a0, -42
+  %result = xor i32 %diff, %add
+  ret i32 %result
+}
+
+define i32 @sbb_merge_add2(i32 %a0) nounwind {
+; X86-LABEL: sbb_merge_add2:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl $42, %edi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    setb %al
+; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    negl %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: sbb_merge_add2:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $42, %ebp
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    subl %edi, %ebp
+; X64-NEXT:    setb %al
+; X64-NEXT:    movl %ebp, %ebx
+; X64-NEXT:    negl %ebx
+; X64-NEXT:    movl %eax, %edi
+; X64-NEXT:    callq use@PLT
+; X64-NEXT:    xorl %ebp, %ebx
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %rbp
+; X64-NEXT:    retq
+  %sbb = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 42, i32 %a0)
+  %borrow = extractvalue { i8, i32 } %sbb, 0
+  call void @use(i8 %borrow)
+  %diff = extractvalue { i8, i32 } %sbb, 1
+  %add = add i32 %a0, -42
+  %result = xor i32 %diff, %add
+  ret i32 %result
+}
+
 declare { i8, i32 } @llvm.x86.subborrow.32(i8, i32, i32)
+declare void @use(i8)

@@ -1,4 +1,4 @@
-; Make sure that the constant propogator doesn't divide by zero!
+; Make sure that the constant propagator doesn't divide by zero!
 ;
 ; RUN: opt < %s -passes=instsimplify
 ;

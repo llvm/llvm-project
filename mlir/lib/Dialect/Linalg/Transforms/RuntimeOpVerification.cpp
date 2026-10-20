@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 
@@ -31,15 +32,44 @@ template <typename T>
 struct StructuredOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           StructuredOpInterface<T>, T> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto linalgOp = llvm::cast<LinalgOp>(op);
 
     SmallVector<Range> loopRanges = linalgOp.createLoopRanges(builder, loc);
     auto [starts, ends, _] = getOffsetsSizesAndStrides(loopRanges);
 
-    auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = builder.create<arith::ConstantIndexOp>(loc, 1);
+    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    auto one = arith::ConstantIndexOp::create(builder, loc, 1);
+
+    Value iterationDomainIsNonDegenerate;
+    for (auto [start, end] : llvm::zip(starts, ends)) {
+      auto startValue = getValueOrCreateConstantIndexOp(builder, loc, start);
+      auto endValue = getValueOrCreateConstantIndexOp(builder, loc, end);
+
+      // Loop Trip count > 0 iff start < end
+      Value dimensionHasNonZeroTripCount = index::CmpOp::create(
+          builder, loc, index::IndexCmpPredicate::SLT, startValue, endValue);
+
+      if (!iterationDomainIsNonDegenerate) {
+        iterationDomainIsNonDegenerate = dimensionHasNonZeroTripCount;
+      } else {
+        // Iteration domain is non-degenerate iff all dimensions have loop trip
+        // count > 0
+        iterationDomainIsNonDegenerate =
+            arith::AndIOp::create(builder, loc, iterationDomainIsNonDegenerate,
+                                  dimensionHasNonZeroTripCount);
+      }
+    }
+
+    if (!iterationDomainIsNonDegenerate)
+      return;
+
+    auto ifOp = scf::IfOp::create(builder, loc, iterationDomainIsNonDegenerate,
+                                  /*withElseRegion=*/false);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     // Subtract one from the loop ends before composing with the indexing map
     transform(ends, ends.begin(), [&](OpFoldResult end) {
@@ -70,7 +100,7 @@ struct StructuredOpInterface
             builder.createOrFold<index::MinSOp>(loc, startIndex, endIndex);
         auto cmpOp = builder.createOrFold<index::CmpOp>(
             loc, index::IndexCmpPredicate::SGE, min, zero);
-        auto msg = RuntimeVerifiableOpInterface::generateErrorMessage(
+        auto msg = generateErrorMessage(
             linalgOp, "unexpected negative result on dimension #" +
                           std::to_string(dim) + " of input/output operand #" +
                           std::to_string(opOperand.getOperandNumber()));
@@ -100,7 +130,7 @@ struct StructuredOpInterface
 
         cmpOp = builder.createOrFold<index::CmpOp>(
             loc, predicate, inferredDimSize, actualDimSize);
-        msg = RuntimeVerifiableOpInterface::generateErrorMessage(
+        msg = generateErrorMessage(
             linalgOp, "dimension #" + std::to_string(dim) +
                           " of input/output operand #" +
                           std::to_string(opOperand.getOperandNumber()) +
@@ -108,6 +138,7 @@ struct StructuredOpInterface
         builder.createOrFold<cf::AssertOp>(loc, cmpOp, msg);
       }
     }
+    builder.setInsertionPointAfter(ifOp);
   }
 };
 

@@ -234,6 +234,12 @@ std::unique_ptr<CompilationDatabase>
 std::unique_ptr<CompilationDatabase>
 inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base);
 
+/// Returns a wrapped CompilationDatabase that will transform argv[0] to an
+/// absolute path, if it currently is a plain tool name, looking it up in
+/// PATH.
+std::unique_ptr<CompilationDatabase>
+inferToolLocation(std::unique_ptr<CompilationDatabase> Base);
+
 /// Returns a wrapped CompilationDatabase that will expand all rsp(response)
 /// files on commandline returned by underlying database.
 std::unique_ptr<CompilationDatabase>

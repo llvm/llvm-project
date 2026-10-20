@@ -4,12 +4,12 @@
 define void @test(ptr noalias %p, ptr %p1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[P1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P]], align 2
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i16>, ptr [[GEP2]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <4 x i16> [[TMP5]], ptr [[P1]], align 2
 ; CHECK-NEXT:    ret void
 ;

@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Requires 396145d in the built library.
-// XFAIL: using-built-library-before-llvm-9
-
 // <istream>
 
 // basic_istream<charT,traits>& get(basic_streambuf<char_type,traits>& sb);
 
 #include <istream>
 #include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 

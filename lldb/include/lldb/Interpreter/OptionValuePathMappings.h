@@ -29,16 +29,11 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-
-  void Clear() override {
-    m_path_mappings.Clear(m_notify_changes);
-    m_value_was_set = false;
-  }
 
   bool IsAggregateValue() const override { return true; }
 
@@ -49,6 +44,11 @@ public:
   const PathMappingList &GetCurrentValue() const { return m_path_mappings; }
 
 protected:
+  void ClearImpl() override {
+    m_path_mappings.Clear(m_notify_changes);
+    m_value_was_set = false;
+  }
+
   PathMappingList m_path_mappings;
   bool m_notify_changes;
 };

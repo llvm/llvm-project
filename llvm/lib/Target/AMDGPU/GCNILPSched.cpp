@@ -27,7 +27,7 @@ class GCNILPScheduler {
   };
 
   SpecificBumpPtrAllocator<Candidate> Alloc;
-  typedef simple_ilist<Candidate> Queue;
+  using Queue = simple_ilist<Candidate>;
   Queue PendingQueue;
   Queue AvailQueue;
   unsigned CurQueueId = 0;
@@ -148,9 +148,9 @@ static int BUCompareLatency(const SUnit *left, const SUnit *right) {
   int LDepth = left->getDepth();
   int RDepth = right->getDepth();
   if (LDepth != RDepth) {
-    LLVM_DEBUG(dbgs() << "  Comparing latency of SU (" << left->NodeNum
-                      << ") depth " << LDepth << " vs SU (" << right->NodeNum
-                      << ") depth " << RDepth << "\n");
+    LLVM_DEBUG(dbgs() << "  Comparing latency of " << *left << " depth "
+                      << LDepth << " vs " << *right << " depth " << RDepth
+                      << "\n");
     return LDepth < RDepth ? 1 : -1;
   }
   if (left->Latency != right->Latency)
@@ -168,9 +168,9 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      LLVM_DEBUG(dbgs() << "Depth of SU(" << left->NodeNum << "): "
-                        << left->getDepth() << " != SU(" << right->NodeNum
-                        << "): " << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of " << *left << ": " << left->getDepth()
+                        << " != " << *right << ": " << right->getDepth()
+                        << "\n");
       return left->getDepth() < right->getDepth() ? right : left;
     }
   }
@@ -224,13 +224,11 @@ const SUnit *GCNILPScheduler::pickBest(const SUnit *left, const SUnit *right)
       return result > 0 ? right : left;
     return left;
   }
-  else {
-    if (left->getHeight() != right->getHeight())
-      return (left->getHeight() > right->getHeight()) ? right : left;
+  if (left->getHeight() != right->getHeight())
+    return (left->getHeight() > right->getHeight()) ? right : left;
 
-    if (left->getDepth() != right->getDepth())
-      return (left->getDepth() < right->getDepth()) ? right : left;
-  }
+  if (left->getDepth() != right->getDepth())
+    return (left->getDepth() < right->getDepth()) ? right : left;
 
   assert(left->NodeQueueId && right->NodeQueueId &&
         "NodeQueueId cannot be zero");
@@ -242,7 +240,7 @@ GCNILPScheduler::Candidate* GCNILPScheduler::pickCandidate() {
     return nullptr;
   auto Best = AvailQueue.begin();
   for (auto I = std::next(AvailQueue.begin()), E = AvailQueue.end(); I != E; ++I) {
-    auto NewBestSU = pickBest(Best->SU, I->SU);
+    const auto *NewBestSU = pickBest(Best->SU, I->SU);
     if (NewBestSU != Best->SU) {
       assert(NewBestSU == I->SU);
       Best = I;
@@ -274,7 +272,7 @@ void GCNILPScheduler::advanceToCycle(unsigned NextCycle) {
 
 void GCNILPScheduler::releasePredecessors(const SUnit* SU) {
   for (const auto &PredEdge : SU->Preds) {
-    auto PredSU = PredEdge.getSUnit();
+    auto *PredSU = PredEdge.getSUnit();
     if (PredEdge.isWeak())
       continue;
     assert(PredSU->isBoundaryNode() || PredSU->NumSuccsLeft > 0);
@@ -313,7 +311,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   Schedule.reserve(SUnits.size());
   while (true) {
     if (AvailQueue.empty() && !PendingQueue.empty()) {
-      auto EarliestSU =
+      auto *EarliestSU =
           llvm::min_element(PendingQueue, [=](const Candidate &C1,
                                               const Candidate &C2) {
             return C1.SU->getHeight() < C2.SU->getHeight();
@@ -325,15 +323,13 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
 
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate\n"
                          "Ready queue:";
-               for (auto &C
-                    : AvailQueue) dbgs()
-               << ' ' << C.SU->NodeNum;
+               for (auto &C : AvailQueue) dbgs() << ' ' << *C.SU;
                dbgs() << '\n';);
 
-    auto C = pickCandidate();
+    auto *C = pickCandidate();
     assert(C);
     AvailQueue.remove(*C);
-    auto SU = C->SU;
+    auto *SU = C->SU;
     LLVM_DEBUG(dbgs() << "Selected "; DAG.dumpNode(*SU));
 
     advanceToCycle(SU->getHeight());
@@ -359,4 +355,4 @@ std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
   GCNILPScheduler S;
   return S.schedule(BotRoots, DAG);
 }
-}
+} // namespace llvm

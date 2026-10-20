@@ -78,57 +78,33 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerUnreachablePass(PassRegistry &);
-}
-
-namespace {
-class NVPTXLowerUnreachable : public FunctionPass {
-  StringRef getPassName() const override;
-  bool runOnFunction(Function &F) override;
-  bool isLoweredToTrap(const UnreachableInst &I) const;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerUnreachable(bool TrapUnreachable, bool NoTrapAfterNoreturn)
-      : FunctionPass(ID), TrapUnreachable(TrapUnreachable),
-        NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
-
-private:
-  bool TrapUnreachable;
-  bool NoTrapAfterNoreturn;
-};
-} // namespace
-
-char NVPTXLowerUnreachable::ID = 1;
-
-INITIALIZE_PASS(NVPTXLowerUnreachable, "nvptx-lower-unreachable",
-                "Lower Unreachable", false, false)
-
-StringRef NVPTXLowerUnreachable::getPassName() const {
-  return "add an exit instruction before every unreachable";
-}
-
 // =============================================================================
-// Returns whether a `trap` intrinsic should be emitted before I.
+// Returns whether a `trap` intrinsic would be emitted before I.
 //
 // This is a copy of the logic in SelectionDAGBuilder::visitUnreachable().
 // =============================================================================
-bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
-  if (!TrapUnreachable)
-    return false;
-  if (!NoTrapAfterNoreturn)
-    return true;
-  const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
-  return Call && Call->doesNotReturn();
+static bool isLoweredToTrap(const UnreachableInst &I, bool TrapUnreachable,
+                            bool NoTrapAfterNoreturn) {
+  if (const auto *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
+    // We've already emitted a non-continuable trap.
+    if (Call->isNonContinuableTrap())
+      return true;
+
+    // No traps are emitted for calls that do not return
+    // when this option is enabled.
+    if (NoTrapAfterNoreturn && Call->doesNotReturn())
+      return false;
+  }
+
+  // In all other cases, we will generate a trap if TrapUnreachable is set.
+  return TrapUnreachable;
 }
 
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
+static bool lowerUnreachable(Function &F, bool TrapUnreachable,
+                             bool NoTrapAfterNoreturn) {
   // Early out iff isLoweredToTrap() always returns true.
   if (TrapUnreachable && !NoTrapAfterNoreturn)
     return false;
@@ -141,7 +117,8 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   for (auto &BB : F)
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
-        if (isLoweredToTrap(*unreachableInst))
+        if (isLoweredToTrap(*unreachableInst, TrapUnreachable,
+                            NoTrapAfterNoreturn))
           continue; // trap is emitted as `trap; exit;`.
         CallInst::Create(ExitFTy, Exit, "", unreachableInst->getIterator());
         Changed = true;
@@ -150,7 +127,50 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
   return Changed;
 }
 
-FunctionPass *llvm::createNVPTXLowerUnreachablePass(bool TrapUnreachable,
-                                                    bool NoTrapAfterNoreturn) {
-  return new NVPTXLowerUnreachable(TrapUnreachable, NoTrapAfterNoreturn);
+namespace {
+class NVPTXLowerUnreachableLegacyPass : public FunctionPass {
+  StringRef getPassName() const override {
+    return "add an exit instruction before every unreachable";
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    return lowerUnreachable(F, TrapUnreachable, NoTrapAfterNoreturn);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  NVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
+                                  bool NoTrapAfterNoreturn)
+      : FunctionPass(ID), TrapUnreachable(TrapUnreachable),
+        NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
+
+private:
+  bool TrapUnreachable;
+  bool NoTrapAfterNoreturn;
+};
+} // namespace
+
+char NVPTXLowerUnreachableLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXLowerUnreachableLegacyPass, "nvptx-lower-unreachable",
+                "Lower Unreachable", false, false)
+
+FunctionPass *
+llvm::createNVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
+                                            bool NoTrapAfterNoreturn) {
+  return new NVPTXLowerUnreachableLegacyPass(TrapUnreachable,
+                                             NoTrapAfterNoreturn);
+}
+
+PreservedAnalyses NVPTXLowerUnreachablePass::run(Function &F,
+                                                 FunctionAnalysisManager &FAM) {
+  if (!lowerUnreachable(F, TrapUnreachable, NoTrapAfterNoreturn))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

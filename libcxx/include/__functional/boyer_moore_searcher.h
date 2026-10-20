@@ -17,14 +17,13 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/pair.h>
 #include <array>
+#include <limits>
 #include <unordered_map>
-#include <vector>
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -72,7 +71,10 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit _BMSkipTable(size_t, value_type __default_value, _Hash, _BinaryPredicate) {
+    _LIBCPP_DIAGNOSTIC_PUSH
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wmaybe-uninitialized")
     std::fill_n(__table_.data(), __table_.size(), __default_value);
+    _LIBCPP_DIAGNOSTIC_POP
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(key_type __key, value_type __val) {
@@ -87,11 +89,11 @@ public:
 template <class _RandomAccessIterator1,
           class _Hash            = hash<typename iterator_traits<_RandomAccessIterator1>::value_type>,
           class _BinaryPredicate = equal_to<>>
-class _LIBCPP_TEMPLATE_VIS boyer_moore_searcher {
+class boyer_moore_searcher {
 private:
   using difference_type = typename std::iterator_traits<_RandomAccessIterator1>::difference_type;
   using value_type      = typename std::iterator_traits<_RandomAccessIterator1>::value_type;
-  using __skip_table_type =
+  using __skip_table_type _LIBCPP_NODEBUG =
       _BMSkipTable<value_type,
                    difference_type,
                    _Hash,
@@ -124,8 +126,8 @@ public:
   template <class _RandomAccessIterator2>
   _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
-    static_assert(__is_same_uncvref<typename iterator_traits<_RandomAccessIterator1>::value_type,
-                                    typename iterator_traits<_RandomAccessIterator2>::value_type>::value,
+    static_assert(is_same_v<__remove_cvref_t<typename iterator_traits<_RandomAccessIterator1>::value_type>,
+                            __remove_cvref_t<typename iterator_traits<_RandomAccessIterator2>::value_type>>,
                   "Corpus and Pattern iterators must point to the same type");
     if (__first == __last)
       return std::make_pair(__last, __last);
@@ -195,7 +197,7 @@ private:
     if (__count == 0)
       return;
 
-    vector<difference_type> __scratch(__count);
+    auto __scratch = std::make_unique<difference_type[]>(__count);
 
     __compute_bm_prefix(__first, __last, __pred, __scratch);
     for (size_t __i = 0; __i <= __count; ++__i)
@@ -218,11 +220,11 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(boyer_moore_searcher);
 template <class _RandomAccessIterator1,
           class _Hash            = hash<typename iterator_traits<_RandomAccessIterator1>::value_type>,
           class _BinaryPredicate = equal_to<>>
-class _LIBCPP_TEMPLATE_VIS boyer_moore_horspool_searcher {
+class boyer_moore_horspool_searcher {
 private:
   using difference_type = typename iterator_traits<_RandomAccessIterator1>::difference_type;
   using value_type      = typename iterator_traits<_RandomAccessIterator1>::value_type;
-  using __skip_table_type =
+  using __skip_table_type _LIBCPP_NODEBUG =
       _BMSkipTable<value_type,
                    difference_type,
                    _Hash,
@@ -255,8 +257,8 @@ public:
   template <class _RandomAccessIterator2>
   _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
-    static_assert(__is_same_uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type,
-                                    typename std::iterator_traits<_RandomAccessIterator2>::value_type>::value,
+    static_assert(is_same_v<__remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator1>::value_type>,
+                            __remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator2>::value_type>>,
                   "Corpus and Pattern iterators must point to the same type");
     if (__first == __last)
       return std::make_pair(__last, __last);

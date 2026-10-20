@@ -459,7 +459,7 @@ define i64 @mullo(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[YL:%.*]] = and i64 [[Y:%.*]], 4294967295
 ; CHECK-NEXT:    [[YH:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[YL]], [[XL]]
-; CHECK-NEXT:    [[T1:%.*]] = mul i64 [[XH]], [[Y]]
+; CHECK-NEXT:    [[T1:%.*]] = mul i64 [[Y]], [[XH]]
 ; CHECK-NEXT:    [[T2:%.*]] = mul i64 [[YH]], [[X]]
 ; CHECK-NEXT:    [[T0L:%.*]] = and i64 [[T0]], 4294967295
 ; CHECK-NEXT:    [[T0H:%.*]] = lshr i64 [[T0]], 32
@@ -526,7 +526,7 @@ define i64 @mullo_duplicate(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[YL:%.*]] = and i64 [[Y]], 4294967295
 ; CHECK-NEXT:    [[YH:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[YL]], [[XL]]
-; CHECK-NEXT:    [[T1:%.*]] = mul i64 [[XH]], [[Y]]
+; CHECK-NEXT:    [[T1:%.*]] = mul i64 [[Y]], [[XH]]
 ; CHECK-NEXT:    [[T2:%.*]] = mul i64 [[YH]], [[X]]
 ; CHECK-NEXT:    [[T0L:%.*]] = and i64 [[T0]], 4294967295
 ; CHECK-NEXT:    [[T0H:%.*]] = lshr i64 [[T0]], 32

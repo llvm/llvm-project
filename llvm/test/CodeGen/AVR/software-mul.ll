@@ -1,8 +1,8 @@
-; RUN: llc -mattr=avr6,-mul < %s -march=avr | FileCheck %s
-; RUN: llc -mcpu=attiny85 < %s -march=avr | FileCheck %s
-; RUN: llc -mcpu=ata5272 < %s -march=avr | FileCheck %s
-; RUN: llc -mcpu=attiny861a < %s -march=avr | FileCheck %s
-; RUN: llc -mcpu=at90usb82 < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6,-mul < %s -mtriple=avr | FileCheck %s
+; RUN: llc -mcpu=attiny85 < %s -mtriple=avr | FileCheck %s
+; RUN: llc -mcpu=ata5272 < %s -mtriple=avr | FileCheck %s
+; RUN: llc -mcpu=attiny861a < %s -mtriple=avr | FileCheck %s
+; RUN: llc -mcpu=at90usb82 < %s -mtriple=avr | FileCheck %s
 
 ; Tests lowering of multiplication to compiler support routines.
 

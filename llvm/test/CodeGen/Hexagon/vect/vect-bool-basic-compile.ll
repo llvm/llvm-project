@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that we can compile these functions. Don't check anything else for now.
 ; CHECK-LABEL: test_0:

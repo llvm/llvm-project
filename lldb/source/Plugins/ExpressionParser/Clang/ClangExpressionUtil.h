@@ -27,4 +27,4 @@ lldb::ValueObjectSP GetLambdaValueObject(StackFrame *frame);
 } // namespace ClangExpressionUtil
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONHELPER_H
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGEXPRESSIONUTIL_H

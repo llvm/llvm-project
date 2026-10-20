@@ -17,7 +17,6 @@
 // template <class... Args>
 //     iterator emplace_hint(const_iterator p, Args&&... args);
 
-
 #include <unordered_map>
 #include <cassert>
 #include <iterator>
@@ -26,69 +25,68 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multimap<int, Emplaceable> C;
-        typedef C::iterator R;
-        C c;
-        C::const_iterator e = c.end();
-        R r = c.emplace_hint(e, std::piecewise_construct, std::forward_as_tuple(3),
-                                                          std::forward_as_tuple());
-        assert(c.size() == 1);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable());
+int main(int, char**) {
+  {
+    typedef std::unordered_multimap<int, Emplaceable> C;
+    typedef C::iterator R;
+    C c;
+    C::const_iterator e = c.end();
+    R r = c.emplace_hint(e, std::piecewise_construct, std::forward_as_tuple(3), std::forward_as_tuple());
+    assert(c.size() == 1);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable());
 
-        r = c.emplace_hint(c.end(), std::pair<const int, Emplaceable>(3, Emplaceable(5, 6)));
-        assert(c.size() == 2);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable(5, 6));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
+    r = c.emplace_hint(c.end(), std::pair<const int, Emplaceable>(3, Emplaceable(5, 6)));
+    assert(c.size() == 2);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable(5, 6));
+    LIBCPP_ASSERT(r == std::next(c.begin()));
 
-        r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3),
-                                                        std::forward_as_tuple(6, 7));
-        assert(c.size() == 3);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable(6, 7));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
-        r = c.begin();
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable());
-        r = std::next(r, 2);
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
-    }
-    {
-        typedef std::unordered_multimap<int, Emplaceable, std::hash<int>, std::equal_to<int>,
-                            min_allocator<std::pair<const int, Emplaceable>>> C;
-        typedef C::iterator R;
-        C c;
-        C::const_iterator e = c.end();
-        R r = c.emplace_hint(e, std::piecewise_construct, std::forward_as_tuple(3),
-                                                          std::forward_as_tuple());
-        assert(c.size() == 1);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable());
+    r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3), std::forward_as_tuple(6, 7));
+    assert(c.size() == 3);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable(6, 7));
+    LIBCPP_ASSERT(r == std::next(c.begin()));
+    r = c.begin();
+    assert(r->first == 3);
+    LIBCPP_ASSERT(r->second == Emplaceable());
+    r = std::next(r, 2);
+    assert(r->first == 3);
+    LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
+  }
+  {
+    typedef std::unordered_multimap<int,
+                                    Emplaceable,
+                                    std::hash<int>,
+                                    std::equal_to<int>,
+                                    min_allocator<std::pair<const int, Emplaceable>>>
+        C;
+    typedef C::iterator R;
+    C c;
+    C::const_iterator e = c.end();
+    R r = c.emplace_hint(e, std::piecewise_construct, std::forward_as_tuple(3), std::forward_as_tuple());
+    assert(c.size() == 1);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable());
 
-        r = c.emplace_hint(c.end(), std::pair<const int, Emplaceable>(3, Emplaceable(5, 6)));
-        assert(c.size() == 2);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable(5, 6));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
+    r = c.emplace_hint(c.end(), std::pair<const int, Emplaceable>(3, Emplaceable(5, 6)));
+    assert(c.size() == 2);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable(5, 6));
+    LIBCPP_ASSERT(r == std::next(c.begin()));
 
-        r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3),
-                                                        std::forward_as_tuple(6, 7));
-        assert(c.size() == 3);
-        assert(r->first == 3);
-        assert(r->second == Emplaceable(6, 7));
-        LIBCPP_ASSERT(r == std::next(c.begin()));
-        r = c.begin();
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable());
-        r = std::next(r, 2);
-        assert(r->first == 3);
-        LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
-    }
+    r = c.emplace_hint(r, std::piecewise_construct, std::forward_as_tuple(3), std::forward_as_tuple(6, 7));
+    assert(c.size() == 3);
+    assert(r->first == 3);
+    assert(r->second == Emplaceable(6, 7));
+    LIBCPP_ASSERT(r == std::next(c.begin()));
+    r = c.begin();
+    assert(r->first == 3);
+    LIBCPP_ASSERT(r->second == Emplaceable());
+    r = std::next(r, 2);
+    assert(r->first == 3);
+    LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
+  }
 
   return 0;
 }

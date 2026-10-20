@@ -159,6 +159,7 @@ public:
   lldb::SBError Destroy();
 
   lldb::SBError Continue();
+  lldb::SBError ContinueInDirection(lldb::RunDirection direction);
 
   lldb::SBError Stop();
 
@@ -197,6 +198,13 @@ public:
   void ForceScriptedState(StateType new_state);
 
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
+
+  /// Read memory that may be in a non-default address space.
+  size_t ReadMemory(SBProcessAddress process_addr, void *buf, size_t size,
+                    lldb::SBError &error);
+
+  /// Resolve an address space name to its id, or LLDB_INVALID_ADDRESS_SPACE_ID.
+  lldb::addr_space_t GetAddressSpaceID(const char *name, lldb::SBError &error);
 
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
@@ -378,6 +386,12 @@ public:
   /// \param[in] file_name - The name of the file to save the core file to.
   lldb::SBError SaveCore(const char *file_name);
 
+  /// Save the state of the process with the desired settings
+  /// as defined in the options object.
+  ///
+  /// \param[in] options - The options to use when saving the core file.
+  lldb::SBError SaveCore(SBSaveCoreOptions &options);
+
   /// Query the address load_addr and store the details of the memory
   /// region that contains it in the supplied SBMemoryRegionInfo object.
   /// To iterate over all memory regions use GetMemoryRegionList.
@@ -416,6 +430,15 @@ public:
   ///     The path to the core file for this target or an invalid file spec if
   ///     the process isn't loaded from a core file.
   lldb::SBFileSpec GetCoreFile();
+
+  /// Check whether this process is a live debug session, as opposed to a
+  /// post-mortem session such as a core file or minidump.
+  ///
+  /// \return
+  ///     \b true if the process represents a live debug session, \b false if it
+  ///     is a post-mortem session (e.g. a core file) or there is no underlying
+  ///     process.
+  bool IsLiveDebugSession() const;
 
   /// \{
   /// \group Mask Address Methods
@@ -580,6 +603,7 @@ protected:
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

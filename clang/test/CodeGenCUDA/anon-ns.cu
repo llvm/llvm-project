@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.dev
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
-// RUN:   -aux-triple amdgcn-amd-amdhsa -std=c++17 -fgpu-rdc \
+// RUN:   -aux-triple amdgpu-amd-amdhsa -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.host
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefixes=HIP,COMMON %s
@@ -28,13 +28,13 @@
 // HIP-DAG: define weak_odr {{.*}}void @[[KTX:_Z2ktIN12_GLOBAL__N_11XEEvT_\.intern\.b04fd23c98500190]](
 // HIP-DAG: define weak_odr {{.*}}void @[[KTL:_Z2ktIN12_GLOBAL__N_1UlvE_EEvT_\.intern\.b04fd23c98500190]](
 // HIP-DAG: @[[VM:_ZN12_GLOBAL__N_12vmE\.static\.b04fd23c98500190]] = addrspace(1) externally_initialized global
-// HIP-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE\.static\.b04fd23c98500190]] = addrspace(4) externally_initialized global
+// HIP-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE\.static\.b04fd23c98500190]] = addrspace(4) externally_initialized constant
 // HIP-DAG: @[[VT:_Z2vtIN12_GLOBAL__N_11XEE\.static\.b04fd23c98500190]] = addrspace(1) externally_initialized global
 
 // CUDA-DAG: define weak_odr {{.*}}void @[[KERN:_ZN12_GLOBAL__N_16kernelEv__intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTX:_Z2ktIN12_GLOBAL__N_11XEEvT___intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTL:_Z2ktIN12_GLOBAL__N_1UlvE_EEvT___intern__b04fd23c98500190]](
-// CUDA-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE__static__b04fd23c98500190]] = addrspace(4) externally_initialized global
+// CUDA-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE__static__b04fd23c98500190]] = addrspace(4) externally_initialized constant
 // CUDA-DAG: @[[VT:_Z2vtIN12_GLOBAL__N_11XEE__static__b04fd23c98500190]] = addrspace(1) externally_initialized global
 
 // COMMON-DAG: @_ZN12_GLOBAL__N_12vdE = internal addrspace(1) global
@@ -50,12 +50,13 @@
 // COMMON-DAG: @[[VCSTR:.*]] = {{.*}} c"[[VC]]\00"
 // COMMON-DAG: @[[VTSTR:.*]] = {{.*}} c"[[VT]]\00"
 
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KERNSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTXSTR]]
-// COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTLSTR]]
-// HIP-DAG: call void @__{{.*}}RegisterManagedVar({{.*}}@[[VMSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VCSTR]]
-// COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VTSTR]]
+// The host exports symbols via offloading entries referencing the name strings.
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KERNSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTXSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[KTLSTR]]
+// HIP-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VMSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VCSTR]]
+// COMMON-DAG: @.offloading.entry{{.*}} = {{.*}}@[[VTSTR]]
 
 template <typename T>
 __global__ void kt(T x) {}

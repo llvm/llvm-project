@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetObjectFile.h"
-#include "MCTargetDesc/SparcMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-void SparcELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                          const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void SparcELFTargetObjectFile::initialize(MCContext &Ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 }
 
 const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
@@ -38,8 +39,7 @@ const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(
     }
 
     MCContext &Ctx = getContext();
-    return SparcMCExpr::create(SparcMCExpr::VK_Sparc_R_DISP32,
-                               MCSymbolRefExpr::create(SSym, Ctx), Ctx);
+    return MCSpecifierExpr::create(SSym, ELF::R_SPARC_DISP32, Ctx);
   }
 
   return TargetLoweringObjectFileELF::getTTypeGlobalReference(GV, Encoding, TM,

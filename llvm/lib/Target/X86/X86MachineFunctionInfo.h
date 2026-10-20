@@ -43,7 +43,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~X86MachineFunctionInfo() = default;
+  ~X86MachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<X86MachineFunctionInfo> {
@@ -149,9 +149,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
-  bool PadForPush2Pop2 = false;
-
   /// Candidate registers for push2/pop2
   std::set<Register> CandidatesForPush2Pop2;
 
@@ -169,6 +166,12 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   DenseMap<const Value *, size_t> PreallocatedIds;
   SmallVector<size_t, 0> PreallocatedStackSizes;
   SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
+
+  // True if a function clobbers FP/BP according to its calling convention.
+  bool FPClobberedByCall = false;
+  bool BPClobberedByCall = false;
+  bool FPClobberedByInvoke = false;
+  bool BPClobberedByInvoke = false;
 
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
@@ -205,9 +208,7 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const {
-    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
-  }
+  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
@@ -278,9 +279,6 @@ public:
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
 
-  bool padForPush2Pop2() const { return PadForPush2Pop2; }
-  void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
-
   bool isCandidateForPush2Pop2(Register Reg) const {
     return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();
   }
@@ -328,6 +326,18 @@ public:
     assert(!PreallocatedArgOffsets[Id].empty() && "arg offsets not set");
     return PreallocatedArgOffsets[Id];
   }
+
+  bool getFPClobberedByCall() const { return FPClobberedByCall; }
+  void setFPClobberedByCall(bool C) { FPClobberedByCall = C; }
+
+  bool getBPClobberedByCall() const { return BPClobberedByCall; }
+  void setBPClobberedByCall(bool C) { BPClobberedByCall = C; }
+
+  bool getFPClobberedByInvoke() const { return FPClobberedByInvoke; }
+  void setFPClobberedByInvoke(bool C) { FPClobberedByInvoke = C; }
+
+  bool getBPClobberedByInvoke() const { return BPClobberedByInvoke; }
+  void setBPClobberedByInvoke(bool C) { BPClobberedByInvoke = C; }
 };
 
 } // End llvm namespace

@@ -23,10 +23,10 @@ extern "C" bool CGRectIsEmpty(CGRect);
     CGRect virtualBounds;
 
 // CHECK: [[SRC:%.*]] = call { ptr, i32 } @objc_msgSend
-// CHECK-NEXT:getelementptr inbounds { ptr, i32 }, ptr [[SRC:%.*]]
+// CHECK-NEXT:getelementptr inbounds nuw { ptr, i32 }, ptr [[SRC:%.*]]
 // CHECK-NEXT:extractvalue
 // CHECK-NEXT:store
-// CHECK-NEXT:getelementptr inbounds { ptr, i32 }, ptr [[SRC:%.*]]
+// CHECK-NEXT:getelementptr inbounds nuw { ptr, i32 }, ptr [[SRC:%.*]]
 // CHECK-NEXT:extractvalue
 // CHECK-NEXT:store
   dataRect = CGRectIsEmpty(virtualBounds) ? self.bounds : virtualBounds;

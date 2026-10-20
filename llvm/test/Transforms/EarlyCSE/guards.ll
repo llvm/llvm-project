@@ -139,7 +139,7 @@ right:
 }
 
 define i32 @test5(i32 %val, i1 %c) {
-; Same as test4, but the %left block has mutliple predecessors.
+; Same as test4, but the %left block has multiple predecessors.
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[VAL:%.*]], 40

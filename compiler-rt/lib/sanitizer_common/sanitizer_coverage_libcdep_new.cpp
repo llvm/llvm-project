@@ -53,7 +53,8 @@ static void WriteModuleCoverage(char* file_path, const char* module_name,
   WriteToFile(fd, &Magic, sizeof(Magic));
   WriteToFile(fd, pcs, len * sizeof(*pcs));
   CloseFile(fd);
-  Printf("SanitizerCoverage: %s: %zd PCs written\n", file_path, len);
+  if (common_flags()->print_coverage_summary)
+    Printf("SanitizerCoverage: %s: %zd PCs written\n", file_path, len);
 }
 
 static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
@@ -75,7 +76,8 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
     if (!pc) continue;
 
     if (!GetModuleAndOffsetForPc(pc, nullptr, 0, &pcs[i])) {
-      Printf("ERROR: unknown pc 0x%zx (may happen if dlclose is used)\n", pc);
+      Printf("ERROR: unknown pc %p (may happen if dlclose is used)\n",
+             (void*)pc);
       continue;
     }
     uptr module_base = pc - pcs[i];

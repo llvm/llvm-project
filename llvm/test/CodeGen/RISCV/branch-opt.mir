@@ -18,6 +18,74 @@
     ret void
   }
 
+  define void @ule_negone(ptr %a, i32 signext %b, ptr %c, ptr %d) {
+    store i32 0, ptr %a
+    %p = icmp ule i32 %b, -1
+    br i1 %p, label %block1, label %block2
+
+  block1:                                           ; preds = %0
+    store i32 %b, ptr %c
+    br label %end_block
+
+  block2:                                           ; preds = %0
+    store i32 87, ptr %d
+    br label %end_block
+
+  end_block:                                        ; preds = %block2, %block1
+    ret void
+  }
+
+  define void @ult_zero(ptr %a, i32 signext %b, ptr %c, ptr %d) {
+    store i32 -1, ptr %a
+    %p = icmp ult i32 %b, 0
+    br i1 %p, label %block1, label %block2
+
+  block1:                                           ; preds = %0
+    store i32 %b, ptr %c
+    br label %end_block
+
+  block2:                                           ; preds = %0
+    store i32 87, ptr %d
+    br label %end_block
+
+  end_block:                                        ; preds = %block2, %block1
+    ret void
+  }
+
+  define void @sle_zero(ptr %a, i32 signext %b, ptr %c, ptr %d) {
+    store i32 1, ptr %a
+    %p = icmp sle i32 %b, 0
+    br i1 %p, label %block1, label %block2
+
+  block1:                                           ; preds = %0
+    store i32 %b, ptr %c
+    br label %end_block
+
+  block2:                                           ; preds = %0
+    store i32 87, ptr %d
+    br label %end_block
+
+  end_block:                                        ; preds = %block2, %block1
+    ret void
+  }
+
+  define void @slt_zero(ptr %a, i32 signext %b, ptr %c, ptr %d) {
+    store i32 -1, ptr %a
+    %p = icmp slt i32 %b, 0
+    br i1 %p, label %block1, label %block2
+
+  block1:                                           ; preds = %0
+    store i32 %b, ptr %c
+    br label %end_block
+
+  block2:                                           ; preds = %0
+    store i32 87, ptr %d
+    br label %end_block
+
+  end_block:                                        ; preds = %block2, %block1
+    ret void
+  }
+
   declare void @bar(...)
 
 ...
@@ -65,4 +133,244 @@ body:             |
   bb.2 (%ir-block.4):
     PseudoRET
 
+...
+---
+name:            ule_negone
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: ule_negone
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 0
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, -1
+  ; CHECK-NEXT:   BLTU killed [[ADDI1]], [[COPY2]], %bb.2
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[COPY2]]
+  ; CHECK-NEXT:   SW [[COPY4]], [[COPY1]], 0 :: (store (s32))
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
+  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11, $x12, $x13
+
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %5:gpr = ADDI $x0, 0
+    SW killed %5, %0, 0 :: (store (s32))
+    %6:gpr = ADDI $x0, -1
+    BLTU killed %6, %1, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    %4:gpr = COPY %1
+    SW %4, %2, 0 :: (store (s32))
+    PseudoBR %bb.3
+
+  bb.2:
+    %7:gpr = ADDI $x0, 87
+    SW killed %7, %3, 0 :: (store (s32))
+
+  bb.3:
+    PseudoRET
+...
+---
+name:            ult_zero
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: ult_zero
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
+  ; CHECK-NEXT:   BLTU [[COPY2]], killed [[ADDI1]], %bb.2
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[COPY2]]
+  ; CHECK-NEXT:   SW [[COPY4]], [[COPY1]], 0 :: (store (s32))
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
+  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11, $x12, $x13
+
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %5:gpr = ADDI $x0, -1
+    SW killed %5, %0, 0 :: (store (s32))
+    %6:gpr = ADDI $x0, 0
+    BLTU %1, killed %6, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    %4:gpr = COPY %1
+    SW %4, %2, 0 :: (store (s32))
+    PseudoBR %bb.3
+
+  bb.2:
+    %7:gpr = ADDI $x0, 87
+    SW killed %7, %3, 0 :: (store (s32))
+
+  bb.3:
+    PseudoRET
+...
+---
+name:            sle_zero
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: sle_zero
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
+  ; CHECK-NEXT:   BLT killed [[ADDI1]], [[COPY2]], %bb.2
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[COPY2]]
+  ; CHECK-NEXT:   SW [[COPY4]], [[COPY1]], 0 :: (store (s32))
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
+  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11, $x12, $x13
+
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %5:gpr = ADDI $x0, 1
+    SW killed %5, %0, 0 :: (store (s32))
+    %6:gpr = ADDI $x0, 0
+    BLT killed %6, %1, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    %4:gpr = COPY %1
+    SW %4, %2, 0 :: (store (s32))
+    PseudoBR %bb.3
+
+  bb.2:
+    %7:gpr = ADDI $x0, 87
+    SW killed %7, %3, 0 :: (store (s32))
+
+  bb.3:
+    PseudoRET
+...
+---
+name:            slt_zero
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: slt_zero
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
+  ; CHECK-NEXT:   SW killed [[ADDI]], [[COPY3]], 0 :: (store (s32))
+  ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 0
+  ; CHECK-NEXT:   BLT [[COPY2]], killed [[ADDI1]], %bb.2
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[COPY2]]
+  ; CHECK-NEXT:   SW [[COPY4]], [[COPY1]], 0 :: (store (s32))
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 87
+  ; CHECK-NEXT:   SW killed [[ADDI2]], [[COPY]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11, $x12, $x13
+
+    %3:gpr = COPY $x13
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %5:gpr = ADDI $x0, -1
+    SW killed %5, %0, 0 :: (store (s32))
+    %6:gpr = ADDI $x0, 0
+    BLT %1, killed %6, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    %4:gpr = COPY %1
+    SW %4, %2, 0 :: (store (s32))
+    PseudoBR %bb.3
+
+  bb.2:
+    %7:gpr = ADDI $x0, 87
+    SW killed %7, %3, 0 :: (store (s32))
+
+  bb.3:
+    PseudoRET
 ...

@@ -16,9 +16,9 @@
 ; ASM:         .cv_fpo_setframe        %ebp
 ; ASM:         andl    $-8, %esp
 ; ASM:         .cv_fpo_stackalign      8
-; FIXME: Why 24 bytes? We only need 12 bytes of data.
-; ASM:         subl    $24, %esp
-; ASM:         .cv_fpo_stackalloc      24
+; 12 bytes of data, rounded up to the 8-byte realignment.
+; ASM:         subl    $16, %esp
+; ASM:         .cv_fpo_stackalloc      16
 ; ASM:         .cv_fpo_endprologue
 
 ; 'x' should be EBP-relative, 'a' and 'force_alignment' ESP relative.
@@ -70,7 +70,7 @@
 ; OBJ:     LocalFramePtrReg: VFRAME (0x7536)
 ; OBJ:     ParamFramePtrReg: EBP (0x16)
 ; OBJ:   }
-; 	ESP is VFRAME - 24, ESP offset of 'a' is 4, so -20.
+; 	ESP is VFRAME - 16, ESP offset of 'a' is 4, so -12.
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
 ; OBJ:     Type: int (0x74)
@@ -80,7 +80,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -20
+; OBJ:     Offset: -12
 ; OBJ:   }
 ; 	ESP is VFRAME - 16, ESP offset of 'force_alignment' is 8, so -8.
 ; OBJ:   LocalSym {
@@ -92,7 +92,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -16
+; OBJ:     Offset: -8
 ; OBJ:   }
 ; OBJ:   ProcEnd {
 ; OBJ:     Kind: S_PROC_ID_END (0x114F)
@@ -136,10 +136,10 @@ declare dso_local void @usecsrs(i32, i32) local_unnamed_addr #3
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { argmemonly nounwind }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #4 = { nounwind }
 
 !llvm.dbg.cu = !{!0}

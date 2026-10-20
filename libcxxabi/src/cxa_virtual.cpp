@@ -11,14 +11,14 @@
 
 namespace __cxxabiv1 {
 extern "C" {
-_LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN
+[[noreturn]] _LIBCXXABI_FUNC_VIS
 void __cxa_pure_virtual(void) {
-  abort_message("Pure virtual function called!");
+  __abort_message("Pure virtual function called!");
 }
 
-_LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN
+[[noreturn]] _LIBCXXABI_FUNC_VIS
 void __cxa_deleted_virtual(void) {
-  abort_message("Deleted virtual function called!");
+  __abort_message("Deleted virtual function called!");
 }
 } // extern "C"
 } // abi

@@ -1,4 +1,4 @@
-//===-- orc_rt_macho_tlv.x86-64.s -------------------------------*- ASM -*-===//
+//===-- macho_tlv.x86-64.s --------------------------------------*- ASM -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -x hlsl -finclude-default-header -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
 int2 ToTwoInts(int V) {
   return V.xy; // expected-error{{vector component access exceeds type 'vector<int, 1>' (vector of 1 'int' value)}}
@@ -12,8 +12,20 @@ int4 SomeNonsense(int V) {
   return V.poop; // expected-error{{illegal vector component name 'p'}}
 }
 
+float NumericAccessor(float4 V) {
+  return V.s0; // expected-error{{illegal vector component name 's0'}}
+}
+
+float2 HalvingAccessor(float4 V) {
+  return V.hi; // expected-error{{illegal vector component name 'hi'}}
+}
+
 float2 WhatIsHappening(float V) {
   return V.; // expected-error{{expected unqualified-id}}
+}
+
+float ScalarLValue(float2 V) {
+  (float)V = 4.0; // expected-error{{assignment to cast is illegal, lvalue casts are not supported}}
 }
 
 // These cases produce no error.

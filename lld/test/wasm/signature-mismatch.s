@@ -74,9 +74,6 @@ ret32_address_main:
 # YAML-NEXT:         Name:            ret32
 # YAML-NEXT:       - Index:           3
 # YAML-NEXT:         Name:            call_ret32
-# YAML-NEXT:     GlobalNames:
-# YAML-NEXT:       - Index:           0
-# YAML-NEXT:         Name:            __stack_pointer
 # YAML-NEXT:     DataSegmentNames:
 # YAML-NEXT:       - Index:           0
 # YAML-NEXT:         Name:            .data
@@ -84,6 +81,7 @@ ret32_address_main:
 
 #      RELOC:     Name:            linking
 # RELOC-NEXT:     Version:         2
+# RELOC-NEXT:     TargetArch:      wasm32
 # RELOC-NEXT:     SymbolTable:
 # RELOC-NEXT:       - Index:           0
 # RELOC-NEXT:         Kind:            FUNCTION
@@ -93,7 +91,7 @@ ret32_address_main:
 # RELOC-NEXT:       - Index:           1
 # RELOC-NEXT:         Kind:            FUNCTION
 # RELOC-NEXT:         Name:            ret32
-# RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+# RELOC-NEXT:         Flags:           [ ]
 # RELOC-NEXT:         Function:        2
 # RELOC-NEXT:       - Index:           2
 # RELOC-NEXT:         Kind:            DATA

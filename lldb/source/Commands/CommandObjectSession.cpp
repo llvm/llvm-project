@@ -19,7 +19,9 @@ public:
       : CommandObjectParsed(interpreter, "session save",
                             "Save the current session transcripts to a file.\n"
                             "If no file if specified, transcripts will be "
-                            "saved to a temporary file.",
+                            "saved to a temporary file.\n"
+                            "Note: transcripts will only be saved if "
+                            "interpreter.save-transcript is true.\n",
                             "session save [file]") {
     AddSimpleArgumentList(eArgTypePath, eArgRepeatOptional);
   }
@@ -177,6 +179,7 @@ protected:
         }
         history.Dump(result.GetOutputStream(), start_idx.second,
                      stop_idx.second);
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
       }
     }
   }

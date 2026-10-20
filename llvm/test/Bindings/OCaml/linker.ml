@@ -13,7 +13,7 @@
 open Llvm
 open Llvm_linker
 
-let context = global_context ()
+let context = create_context ()
 let void_type = Llvm.void_type context
 
 let diagnostic_handler _ = ()
@@ -62,4 +62,5 @@ let test_linker () =
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
-  suite "linker" test_linker
+  suite "linker" test_linker;
+  dispose_context context

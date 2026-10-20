@@ -26,7 +26,7 @@ define i8 @t0(i8 %x) {
 
 define <2 x i8> @t1_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -43, i8 -43>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -43)
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;

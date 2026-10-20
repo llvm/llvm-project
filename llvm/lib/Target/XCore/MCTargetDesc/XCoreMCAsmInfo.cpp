@@ -11,7 +11,8 @@ using namespace llvm;
 
 void XCoreMCAsmInfo::anchor() { }
 
-XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT) {
+XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   SupportsDebugInformation = true;
   Data16bitsDirective = "\t.short\t";
   Data32bitsDirective = "\t.long\t";
@@ -31,4 +32,3 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT) {
 
   UseIntegratedAssembler = false;
 }
-

@@ -76,3 +76,29 @@ define i32 @caller3(ptr dereferenceable(33) %t1) {
   ret i32 %t2
 }
 
+; Make sure that we don't propagate a pointer-only attribute to a vector of pointers.
+
+declare void @helper4(<4 x ptr> %ptr)
+
+define void @callee4(ptr readonly %ptr, <4 x i64> %idx) {
+; CHECK-LABEL: define {{[^@]+}}@callee4
+; CHECK-SAME: (ptr readonly [[PTR:%.*]], <4 x i64> [[IDX:%.*]]) {
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i8, ptr [[PTR]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    call void @helper4(<4 x ptr> [[PTRS]])
+; CHECK-NEXT:    ret void
+;
+  %ptrs = getelementptr inbounds i8, ptr %ptr, <4 x i64> %idx
+  call void @helper4(<4 x ptr> %ptrs)
+  ret void
+}
+
+define void @caller4(ptr readonly %ptr, <4 x i64> %idx) {
+; CHECK-LABEL: define {{[^@]+}}@caller4
+; CHECK-SAME: (ptr readonly [[PTR:%.*]], <4 x i64> [[IDX:%.*]]) {
+; CHECK-NEXT:    [[PTRS_I:%.*]] = getelementptr inbounds i8, ptr [[PTR]], <4 x i64> [[IDX]]
+; CHECK-NEXT:    call void @helper4(<4 x ptr> [[PTRS_I]])
+; CHECK-NEXT:    ret void
+;
+  call void @callee4(ptr readonly %ptr, <4 x i64> %idx)
+  ret void
+}

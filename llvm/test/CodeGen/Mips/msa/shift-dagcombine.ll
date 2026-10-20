@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 define void @ashr_v4i32(ptr %c) nounwind {
   ; CHECK-LABEL: ashr_v4i32:

@@ -18,7 +18,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Register/Common/RegisterInfo_arm.h"
 
 #include <array>
 
@@ -30,7 +30,7 @@ class NativeProcessFreeBSD;
 class NativeRegisterContextFreeBSD_arm : public NativeRegisterContextFreeBSD {
 public:
   NativeRegisterContextFreeBSD_arm(const ArchSpec &target_arch,
-                                   NativeThreadProtocol &native_thread);
+                                   NativeThreadFreeBSD &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -57,7 +57,7 @@ private:
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);
 
-  RegisterInfoPOSIX_arm &GetRegisterInfo() const;
+  RegisterInfo_arm &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

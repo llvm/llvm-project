@@ -28,29 +28,21 @@ using namespace llvm;
 static cl::opt<std::string> CPHoistFn("cphoistfn", cl::Hidden, cl::desc(""),
                                       cl::init(""));
 
-namespace llvm {
-void initializeHexagonCopyHoistingPass(PassRegistry &Registry);
-FunctionPass *createHexagonCopyHoisting();
-} // namespace llvm
-
 namespace {
 
 class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {
-    initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonCopyHoisting() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexesWrapperPass>();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveIntervals>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -63,8 +55,8 @@ public:
   void moveCopyInstr(MachineBasicBlock *DestBB,
                      std::pair<Register, Register> Key, MachineInstr *MI);
 
-  MachineFunction *MFN;
-  MachineRegisterInfo *MRI;
+  MachineFunction *MFN = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
   std::vector<DenseMap<std::pair<Register, Register>, MachineInstr *>>
       CopyMIList;
 };
@@ -107,11 +99,10 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
   }
   // Re-compute liveness
   if (Changed) {
-    LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+    LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
     SlotIndexes *SI = LIS.getSlotIndexes();
     SI->reanalyze(Fn);
-    LIS.releaseMemory();
-    LIS.runOnMachineFunction(Fn);
+    LIS.reanalyze(Fn);
   }
   return Changed;
 }
@@ -181,14 +172,15 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
     bool IsSafetoMove = true;
     for (MachineBasicBlock *SuccBB : BB->successors()) {
       auto &SuccBBCopyInst = CopyMIList[SuccBB->getNumber()];
-      if (!SuccBBCopyInst.count(Key)) {
+      auto It = SuccBBCopyInst.find(Key);
+      if (It == SuccBBCopyInst.end()) {
         // Same copy not present in this successor
         IsSafetoMove = false;
         break;
       }
       // If present, make sure that it's safe to pull this copy instruction
       // into the predecessor.
-      MachineInstr *SuccMI = SuccBBCopyInst[Key];
+      MachineInstr *SuccMI = It->second;
       if (!isSafetoMove(SuccMI)) {
         IsSafetoMove = false;
         break;
@@ -250,8 +242,7 @@ void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
   DestBB->splice(FirstTI, MI->getParent(), MI);
 
   addMItoCopyList(MI);
-  for (auto I = ++(DestBB->succ_begin()), E = DestBB->succ_end(); I != E; ++I) {
-    MachineBasicBlock *SuccBB = *I;
+  for (MachineBasicBlock *SuccBB : drop_begin(DestBB->successors())) {
     auto &BBCopyInst = CopyMIList[SuccBB->getNumber()];
     MachineInstr *SuccMI = BBCopyInst[Key];
     SuccMI->eraseFromParent();

@@ -7,12 +7,12 @@ declare <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x 
 ; This test ensures that masked scatter and gather operations, which take vectors of pointers,
 ; do not have pointer aliasing ignored when being processed.
 ; No scatter/gather calls should end up eliminated
-; CHECK: llvm.masked.gather
-; CHECK: llvm.masked.gather
-; CHECK: llvm.masked.scatter
-; CHECK: llvm.masked.gather
-; CHECK: llvm.masked.scatter
-; CHECK: llvm.masked.gather
+; CHECK: call{{.*}}llvm.masked.gather
+; CHECK: call{{.*}}llvm.masked.gather
+; CHECK: call{{.*}}llvm.masked.scatter
+; CHECK: call{{.*}}llvm.masked.gather
+; CHECK: call{{.*}}llvm.masked.scatter
+; CHECK: call{{.*}}llvm.masked.gather
 define spir_kernel void @test(<2 x ptr> %in1, <2 x ptr> %in2, ptr %out) {
 entry:
   ; Just some temporary storage

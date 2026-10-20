@@ -261,11 +261,11 @@ define <32 x double> @test_load_32f64(ptr %ptrs, <32 x i1> %mask, <32 x double> 
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
-; SKX-NEXT:    kshiftrw $8, %k1, %k2
+; SKX-NEXT:    kshiftrd $8, %k1, %k2
 ; SKX-NEXT:    vblendmpd 64(%rdi), %zmm2, %zmm1 {%k2}
-; SKX-NEXT:    kshiftrd $16, %k1, %k1
-; SKX-NEXT:    vblendmpd 128(%rdi), %zmm3, %zmm2 {%k1}
-; SKX-NEXT:    kshiftrw $8, %k1, %k1
+; SKX-NEXT:    kshiftrd $16, %k1, %k2
+; SKX-NEXT:    vblendmpd 128(%rdi), %zmm3, %zmm2 {%k2}
+; SKX-NEXT:    kshiftrd $24, %k1, %k1
 ; SKX-NEXT:    vblendmpd 192(%rdi), %zmm4, %zmm3 {%k1}
 ; SKX-NEXT:    retq
   %res = call <32 x double> @llvm.masked.load.v32f64.p0(ptr %ptrs, i32 4, <32 x i1> %mask, <32 x double> %src0)

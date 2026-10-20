@@ -1,0 +1,879 @@
+//===-- FormatterBytecode.cpp ---------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadicDetails.h"
+#include <type_traits>
+
+using namespace lldb;
+namespace lldb_private {
+
+std::string toString(FormatterBytecode::OpCodes op) {
+  switch (op) {
+#define DEFINE_OPCODE(OP, MNEMONIC, NAME)                                      \
+  case OP: {                                                                   \
+    const char *s = MNEMONIC;                                                  \
+    return s ? s : #NAME;                                                      \
+  }
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_OPCODE
+  }
+  return llvm::utostr(op);
+}
+
+std::string toString(FormatterBytecode::Selectors sel) {
+  switch (sel) {
+#define DEFINE_SELECTOR(ID, NAME)                                              \
+  case ID:                                                                     \
+    return "@" #NAME;
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_SELECTOR
+  }
+  return "@" + llvm::utostr(sel);
+}
+
+std::string toString(FormatterBytecode::Signatures sig) {
+  switch (sig) {
+#define DEFINE_SIGNATURE(ID, NAME)                                             \
+  case ID:                                                                     \
+    return "@" #NAME;
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_SIGNATURE
+  }
+  return llvm::utostr(sig);
+}
+
+std::string toString(const FormatterBytecode::DataStack &data) {
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  os << "[ ";
+  for (auto &d : data) {
+    if (auto s = std::get_if<std::string>(&d))
+      os << '"' << *s << '"';
+    else if (auto u = std::get_if<uint64_t>(&d))
+      os << *u << 'u';
+    else if (auto i = std::get_if<int64_t>(&d))
+      os << *i;
+    else if (auto ap = std::get_if<llvm::APSInt>(&d))
+      os << *ap;
+    else if (auto valobj = std::get_if<ValueObjectSP>(&d)) {
+      if (!valobj->get())
+        os << "null";
+      else
+        os << "object(" << valobj->get()->GetValueAsCString() << ')';
+    } else if (auto type = std::get_if<CompilerType>(&d)) {
+      os << '(' << type->GetTypeName(true) << ')';
+    } else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&d)) {
+      os << toString(*sel);
+    } else if (auto *dict =
+                   std::get_if<std::shared_ptr<FormatterBytecode::Dictionary>>(
+                       &d)) {
+      os << "dict(" << (*dict ? (*dict)->size() : 0) << ')';
+    }
+    os << ' ';
+  }
+  os << ']';
+  return s;
+}
+
+namespace FormatterBytecode {
+
+/// Implement the @format function.
+static llvm::Error FormatImpl(DataStack &data) {
+  auto fmt = data.Pop<std::string>();
+  auto replacements =
+      llvm::formatv_object_base::parseFormatString(fmt, 0, false);
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  unsigned num_args = 0;
+  for (const auto &r : replacements)
+    if (r.Type == llvm::ReplacementType::Format)
+      num_args = std::max(num_args, r.Index + 1);
+
+  if (data.size() < num_args)
+    return llvm::createStringError("not enough arguments");
+
+  for (const auto &r : replacements) {
+    if (r.Type == llvm::ReplacementType::Literal) {
+      os << r.Spec;
+      continue;
+    }
+    using namespace llvm::support::detail;
+    auto arg = data[data.size() - num_args + r.Index];
+    auto format = [&](FormatFunctorRef &&adapter) {
+      llvm::FmtAlign Align(adapter, r.Where, r.Width, r.Pad);
+      Align.format(os, r.Options);
+    };
+
+    if (auto s = std::get_if<std::string>(&arg))
+      format(FormatFunctor(s->c_str()));
+    else if (auto u = std::get_if<uint64_t>(&arg))
+      format(FormatFunctor(u));
+    else if (auto i = std::get_if<int64_t>(&arg))
+      format(FormatFunctor(i));
+    else if (auto ap = std::get_if<llvm::APSInt>(&arg))
+      format(FormatFunctor(*ap));
+    else if (auto valobj = std::get_if<ValueObjectSP>(&arg)) {
+      if (!valobj->get())
+        format(FormatFunctor("null object"));
+      else
+        format(FormatFunctor(valobj->get()->GetValueAsCString()));
+    } else if (auto type = std::get_if<CompilerType>(&arg))
+      format(FormatFunctor(type->GetDisplayTypeName()));
+    else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
+      format(FormatFunctor(toString(*sel)));
+    else if (std::holds_alternative<DictionarySP>(arg))
+      format(FormatFunctor("dict"));
+  }
+  data.Push(s);
+  return llvm::Error::success();
+}
+
+static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
+                             DataType type) {
+  if (data.size() < 1)
+    return llvm::createStringError("not enough elements on data stack");
+
+  auto &elem = data.back();
+  switch (type) {
+  case Any:
+    break;
+  case String:
+    if (!std::holds_alternative<std::string>(elem))
+      return llvm::createStringError("expected String");
+    break;
+  case UInt:
+    if (!std::holds_alternative<uint64_t>(elem))
+      return llvm::createStringError("expected UInt");
+    break;
+  case Int:
+    if (!std::holds_alternative<int64_t>(elem))
+      return llvm::createStringError("expected Int");
+    break;
+  case Object:
+    if (!std::holds_alternative<ValueObjectSP>(elem))
+      return llvm::createStringError("expected Object");
+    break;
+  case Type:
+    if (!std::holds_alternative<CompilerType>(elem))
+      return llvm::createStringError("expected Type");
+    break;
+  case Selector:
+    if (!std::holds_alternative<Selectors>(elem))
+      return llvm::createStringError("expected Selector");
+    break;
+  case Integer:
+    if (!std::holds_alternative<llvm::APSInt>(elem))
+      return llvm::createStringError("expected Integer");
+    break;
+  case Dict:
+    if (!std::holds_alternative<std::shared_ptr<FormatterBytecode::Dictionary>>(
+            elem))
+      return llvm::createStringError("expected Dictionary");
+    break;
+  }
+  return llvm::Error::success();
+}
+
+static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
+                             DataType type1, DataType type2) {
+  if (auto error = TypeCheck(data, type2))
+    return error;
+  return TypeCheck(data.drop_back(), type1);
+}
+
+static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
+                             DataType type1, DataType type2, DataType type3) {
+  if (auto error = TypeCheck(data, type3))
+    return error;
+  return TypeCheck(data.drop_back(), type1, type2);
+}
+
+static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
+                             DataType type1, DataType type2, DataType type3,
+                             DataType type4) {
+  if (auto error = TypeCheck(data, type4))
+    return error;
+  return TypeCheck(data.drop_back(), type1, type2, type3);
+}
+
+/// Wrap the result of a binary operator applied to two APSInts back into a
+/// DataStackElement. Comparison operators yield bool and need bit_width/
+/// is_unsigned to construct the boolean's APSInt representation; arithmetic
+/// operators already yield a correctly-tagged APSInt and ignore them.
+template <typename T>
+static DataStackElement WrapAPSIntResult(T result, unsigned bit_width,
+                                         bool is_unsigned) {
+  if constexpr (std::is_same_v<T, bool>)
+    return llvm::APSInt(llvm::APInt(bit_width, result), is_unsigned);
+  else
+    return DataStackElement(std::move(result));
+}
+
+/// Returns true if `target` is transitively reachable via `from`. Likewise,
+/// returns true if they are the same dictionary. This is used to prevent memory
+/// leaks caused by retain cycles. Dictionaries can be shared by multiple
+/// parents, so each one is visited only once to prevent exponential running
+/// time.
+static bool Reaches(const Dictionary *from, const Dictionary *target) {
+  llvm::SmallPtrSet<const Dictionary *, 8> visited;
+  llvm::SmallVector<const Dictionary *, 8> worklist = {from};
+  while (!worklist.empty()) {
+    const Dictionary *dict = worklist.pop_back_val();
+    if (dict == target)
+      return true;
+    if (!visited.insert(dict).second)
+      continue;
+    for (const auto &entry : *dict)
+      if (auto *nested = std::get_if<DictionarySP>(&entry.second))
+        worklist.push_back(nested->get());
+  }
+  return false;
+}
+
+template <typename T>
+using EnableIfSigned =
+    std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int>;
+template <typename T>
+using EnableIfUnsigned =
+    std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> &&
+                         !std::is_same_v<T, bool>,
+                     int>;
+
+template <typename T, EnableIfSigned<T> = 0>
+static DataStackElement MakeInt(T value, uint32_t version) {
+  if (version < 2)
+    return int64_t(value);
+  return llvm::APSInt::get(value);
+}
+
+template <typename T, EnableIfUnsigned<T> = 0>
+static DataStackElement MakeInt(T value, uint32_t version) {
+  if (version < 2)
+    return uint64_t(value);
+  unsigned width = uint64_t(value) > uint64_t(INT64_MAX) ? 65 : 64;
+  return llvm::APSInt(llvm::APInt(width, value), /*isUnsigned=*/false);
+}
+
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
+                      uint32_t version) {
+  if (control.empty())
+    return llvm::Error::success();
+  // Since the only data types are single endian and ULEBs, the
+  // endianness should not matter.
+  llvm::DataExtractor cur_block(control.back(), true);
+  llvm::DataExtractor::Cursor pc(0);
+
+  while (!control.empty()) {
+    /// Activate the top most block from the control stack.
+    auto activate_block = [&]() {
+      // Save the return address.
+      if (control.size() > 1)
+        control[control.size() - 2] = cur_block.getData().drop_front(pc.tell());
+      cur_block = llvm::DataExtractor(control.back(), true);
+      if (pc)
+        pc = llvm::DataExtractor::Cursor(0);
+    };
+
+    /// Fetch the next byte in the instruction stream.
+    auto next_byte = [&]() -> uint8_t {
+      // At the end of the current block?
+      while (pc.tell() >= cur_block.size() && !control.empty()) {
+        if (control.size() == 1) {
+          control.pop_back();
+          return 0;
+        }
+        control.pop_back();
+        activate_block();
+      }
+
+      // Fetch the next instruction.
+      return cur_block.getU8(pc);
+    };
+
+    // Fetch the next opcode.
+    OpCodes opcode = (OpCodes)next_byte();
+    if (control.empty() || !pc)
+      return pc.takeError();
+
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                     "[eval {0}] opcode={1}, control={2}, data={3}",
+                     toString(sig), toString(opcode), control.size(),
+                     toString(data));
+
+    // Various shorthands to improve the readability of error handling.
+#define TYPE_CHECK(...)                                                        \
+  if (auto error = TypeCheck(data, __VA_ARGS__))                               \
+    return error;
+
+    auto error = [&](llvm::Twine msg) {
+      return llvm::createStringError(msg + "(opcode=" + toString(opcode) + ")");
+    };
+
+    switch (opcode) {
+    // Data stack manipulation.
+    case op_dup:
+      TYPE_CHECK(Any);
+      data.Push(data.back());
+      continue;
+    case op_drop:
+      TYPE_CHECK(Any);
+      data.pop_back();
+      continue;
+    case op_pick: {
+      TYPE_CHECK(UInt);
+      uint64_t idx = data.Pop<uint64_t>();
+      if (idx >= data.size())
+        return error("index out of bounds");
+      data.Push(data[idx]);
+      continue;
+    }
+    case op_over:
+      TYPE_CHECK(Any, Any);
+      data.Push(data[data.size() - 2]);
+      continue;
+    case op_swap: {
+      TYPE_CHECK(Any, Any);
+      auto x = data.PopAny();
+      auto y = data.PopAny();
+      data.Push(x);
+      data.Push(y);
+      continue;
+    }
+    case op_rot: {
+      TYPE_CHECK(Any, Any, Any);
+      auto z = data.PopAny();
+      auto y = data.PopAny();
+      auto x = data.PopAny();
+      data.Push(z);
+      data.Push(x);
+      data.Push(y);
+      continue;
+    }
+
+    // Control stack manipulation.
+    case op_begin: {
+      uint64_t length = cur_block.getULEB128(pc);
+      if (!pc)
+        return pc.takeError();
+      llvm::StringRef block = cur_block.getBytes(pc, length);
+      if (!pc)
+        return pc.takeError();
+      control.push_back(block);
+      continue;
+    }
+    case op_if: {
+      auto cond = data.PopAny();
+      bool truthy;
+      if (auto *ap = std::get_if<llvm::APSInt>(&cond))
+        truthy = !ap->isZero();
+      else if (auto *u = std::get_if<uint64_t>(&cond))
+        // Deprecated.
+        truthy = *u != 0;
+      else
+        return error("expected Integer or UInt");
+      if (truthy) {
+        if (!cur_block.size())
+          return error("empty control stack");
+        activate_block();
+      } else
+        control.pop_back();
+      continue;
+    }
+    case op_ifelse: {
+      if (cur_block.size() < 2)
+        return error("empty control stack");
+      auto cond = data.PopAny();
+      bool truthy;
+      if (auto *ap = std::get_if<llvm::APSInt>(&cond))
+        truthy = !ap->isZero();
+      else if (auto *u = std::get_if<uint64_t>(&cond))
+        // Deprecated.
+        truthy = *u != 0;
+      else
+        return error("expected Integer or UInt");
+      if (!truthy)
+        control[control.size() - 2] = control.back();
+      control.pop_back();
+      activate_block();
+      continue;
+    }
+    case op_return:
+      control.clear();
+      return pc.takeError();
+
+    // Literals.
+    case op_lit_uint:
+      data.Push(cur_block.getULEB128(pc));
+      continue;
+    case op_lit_int:
+      data.Push(cur_block.getSLEB128(pc));
+      continue;
+    case op_lit_integer:
+      data.Push(cur_block.getSLEB128APSInt(pc));
+      continue;
+    case op_lit_selector:
+      data.Push(Selectors(cur_block.getU8(pc)));
+      continue;
+    case op_lit_null:
+      data.Push(ValueObjectSP());
+      continue;
+    case op_lit_string: {
+      uint64_t length = cur_block.getULEB128(pc);
+      llvm::StringRef bytes = cur_block.getBytes(pc, length);
+      data.Push(bytes.str());
+      continue;
+    }
+    case op_as_uint: {
+      TYPE_CHECK(Int);
+      uint64_t casted;
+      int64_t val = data.Pop<int64_t>();
+      memcpy(&casted, &val, sizeof(val));
+      data.Push(casted);
+      continue;
+    }
+    case op_as_int: {
+      TYPE_CHECK(UInt);
+      int64_t casted;
+      uint64_t val = data.Pop<uint64_t>();
+      memcpy(&casted, &val, sizeof(val));
+      data.Push(casted);
+      continue;
+    }
+    case op_is_null: {
+      TYPE_CHECK(Object);
+      data.Push(data.Pop<ValueObjectSP>() ? (uint64_t)0 : (uint64_t)1);
+      continue;
+    }
+
+// Arithmetic operations.
+#define BINOP_IMPL(OP, CHECK_ZERO)                                             \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    if (std::holds_alternative<uint64_t>(y)) {                                 \
+      if (CHECK_ZERO && !std::get<uint64_t>(y))                                \
+        return error(#OP " by zero");                                          \
+      TYPE_CHECK(UInt);                                                        \
+      data.Push((uint64_t)(data.Pop<uint64_t>() OP std::get<uint64_t>(y)));    \
+    } else if (std::holds_alternative<int64_t>(y)) {                           \
+      if (CHECK_ZERO && !std::get<int64_t>(y))                                 \
+        return error(#OP " by zero");                                          \
+      TYPE_CHECK(Int);                                                         \
+      data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      if (lhs.isUnsigned() || rhs.isUnsigned())                                \
+        return error("unsupported unsigned value");                            \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      lhs = lhs.extend(width);                                                 \
+      rhs = rhs.extend(width);                                                 \
+      if (CHECK_ZERO && rhs.isZero())                                          \
+        return error(#OP " by zero");                                          \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));        \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+#define BINOP(OP) BINOP_IMPL(OP, false)
+#define BINOP_CHECKZERO(OP) BINOP_IMPL(OP, true)
+
+// Comparison operations.
+#define CMPOP(OP)                                                              \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    if (std::holds_alternative<uint64_t>(y)) {                                 \
+      TYPE_CHECK(UInt);                                                        \
+      data.Push((uint64_t)(data.Pop<uint64_t>() OP std::get<uint64_t>(y)));    \
+    } else if (std::holds_alternative<int64_t>(y)) {                           \
+      TYPE_CHECK(Int);                                                         \
+      data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      if (lhs.isUnsigned() || rhs.isUnsigned())                                \
+        return error("unsupported unsigned value");                            \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      lhs = lhs.extend(width);                                                 \
+      rhs = rhs.extend(width);                                                 \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));        \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+
+// Bitwise operations use an Integer's underlying bit pattern, not its
+// mathematical value (ie signed-ness is ignored). This means >> is always a
+// logical (zero-filling) shift, never an arithmetic shift. Mismatched bit
+// widths are implicitly zero-extended (not sign-extended).
+#define BITOP(OP)                                                              \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    if (std::holds_alternative<uint64_t>(y)) {                                 \
+      TYPE_CHECK(UInt);                                                        \
+      data.Push((uint64_t)(data.Pop<uint64_t>() OP std::get<uint64_t>(y)));    \
+    } else if (std::holds_alternative<int64_t>(y)) {                           \
+      TYPE_CHECK(Int);                                                         \
+      data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      llvm::APInt lhs_bits =                                                   \
+          static_cast<const llvm::APInt &>(lhs).zext(width);                   \
+      llvm::APInt rhs_bits =                                                   \
+          static_cast<const llvm::APInt &>(rhs).zext(width);                   \
+      llvm::APInt bits = lhs_bits OP rhs_bits;                                 \
+      data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));          \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+
+    case op_plus:
+      BINOP(+);
+      continue;
+    case op_minus:
+      BINOP(-);
+      continue;
+    case op_mul:
+      BINOP(*);
+      continue;
+    case op_div:
+      BINOP_CHECKZERO(/);
+      continue;
+    case op_mod:
+      BINOP_CHECKZERO(%);
+      continue;
+    case op_shl:
+#define SHIFTOP(OP, LEFT)                                                      \
+  {                                                                            \
+    TYPE_CHECK(Any, UInt);                                                     \
+    uint64_t y = data.Pop<uint64_t>();                                         \
+    if (y > 64)                                                                \
+      return error("shift out of bounds");                                     \
+    if (std::holds_alternative<uint64_t>(data.back())) {                       \
+      uint64_t x = data.Pop<uint64_t>();                                       \
+      data.Push(x OP y);                                                       \
+    } else if (std::holds_alternative<int64_t>(data.back())) {                 \
+      int64_t x = data.Pop<int64_t>();                                         \
+      if (x < 0 && LEFT)                                                       \
+        return error("left shift of negative value");                          \
+      if (y > 64)                                                              \
+        return error("shift out of bounds");                                   \
+      data.Push(x OP y);                                                       \
+    } else if (std::holds_alternative<llvm::APSInt>(data.back())) {            \
+      llvm::APSInt x = data.Pop<llvm::APSInt>();                               \
+      if (y > x.getBitWidth())                                                 \
+        return error("shift out of bounds");                                   \
+      const llvm::APInt &bits = x;                                             \
+      llvm::APInt shifted =                                                    \
+          LEFT ? bits.shl((unsigned)y) : bits.lshr((unsigned)y);               \
+      data.Push(llvm::APSInt(std::move(shifted), /*isUnsigned=*/false));       \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+      SHIFTOP(<<, true);
+      continue;
+    case op_shr:
+      SHIFTOP(>>, false);
+      continue;
+    case op_and:
+      BITOP(&);
+      continue;
+    case op_or:
+      BITOP(|);
+      continue;
+    case op_xor:
+      BITOP(^);
+      continue;
+    case op_not: {
+      TYPE_CHECK(Any);
+      auto x = data.PopAny();
+      if (std::holds_alternative<uint64_t>(x))
+        data.Push(~std::get<uint64_t>(x));
+      else if (auto *ap = std::get_if<llvm::APSInt>(&x)) {
+        llvm::APInt bits = ~static_cast<const llvm::APInt &>(*ap);
+        data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));
+      } else
+        return error("unsupported data types");
+      continue;
+    }
+    case op_eq:
+      CMPOP(==);
+      continue;
+    case op_neq:
+      CMPOP(!=);
+      continue;
+    case op_lt:
+      CMPOP(<);
+      continue;
+    case op_gt:
+      CMPOP(>);
+      continue;
+    case op_le:
+      CMPOP(<=);
+      continue;
+    case op_ge:
+      CMPOP(>=);
+      continue;
+    case op_call: {
+      TYPE_CHECK(Selector);
+      Selectors sel = data.Pop<Selectors>();
+
+      // Shorthand to improve readability.
+#define POP_VALOBJ(VALOBJ)                                                     \
+  auto VALOBJ = data.Pop<ValueObjectSP>();                                     \
+  if (!VALOBJ)                                                                 \
+    return error("null object");
+
+      auto sel_error = [&](const char *msg) {
+        return llvm::createStringErrorV("{0} (opcode={1}, selector={2})", msg,
+                                        toString(opcode).c_str(),
+                                        toString(sel).c_str());
+      };
+
+      switch (sel) {
+      case sel_summary: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        const char *summary = valobj->GetSummaryAsCString();
+        data.Push(summary ? std::string(valobj->GetSummaryAsCString())
+                          : std::string());
+        break;
+      }
+      case sel_get_num_children: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto result = valobj->GetNumChildren();
+        if (!result)
+          return result.takeError();
+        data.Push(MakeInt(*result, version));
+        break;
+      }
+      case sel_get_child_at_index: {
+        uint64_t index;
+        if (version >= 2) {
+          TYPE_CHECK(Object, Integer);
+          index = data.Pop<llvm::APSInt>().getLimitedValue(UINT32_MAX);
+        } else {
+          TYPE_CHECK(Object, UInt);
+          index = data.Pop<uint64_t>();
+        }
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetChildAtIndex(index));
+        break;
+      }
+      case sel_get_child_with_name: {
+        TYPE_CHECK(Object, String);
+        auto name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetChildMemberWithName(name));
+        break;
+      }
+      case sel_get_child_index: {
+        TYPE_CHECK(Object, String);
+        auto name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        if (auto index_or_err = valobj->GetIndexOfChildWithName(name))
+          data.Push(MakeInt(*index_or_err, version));
+        else
+          return index_or_err.takeError();
+        break;
+      }
+      case sel_get_parent: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto *parent = valobj->GetParent();
+        data.Push(parent ? parent->GetSP() : ValueObjectSP());
+        break;
+      }
+      case sel_get_type: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        // FIXME: do we need to control dynamic type resolution?
+        data.Push(valobj->GetTypeImpl().GetCompilerType(false));
+        break;
+      }
+      case sel_get_template_argument_type: {
+        uint64_t index;
+        if (version >= 2) {
+          TYPE_CHECK(Type, Integer);
+          index = data.Pop<llvm::APSInt>().getLimitedValue();
+        } else {
+          TYPE_CHECK(Type, UInt);
+          index = data.Pop<uint64_t>();
+        }
+        auto type = data.Pop<CompilerType>();
+        // FIXME: There is more code in SBType::GetTemplateArgumentType().
+        data.Push(type.GetTypeTemplateArgument(index, true));
+        break;
+      }
+      case sel_get_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticValue());
+        break;
+      }
+      case sel_get_non_synthetic_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetNonSyntheticValue());
+        break;
+      }
+      case sel_get_value: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        data.Push(std::string(valobj->GetValueAsCString()));
+        break;
+      }
+      case sel_get_value_as_unsigned: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        bool success;
+        uint64_t val = valobj->GetValueAsUnsigned(0, &success);
+        data.Push(MakeInt(val, version));
+        if (!success)
+          return sel_error("failed to get value");
+        break;
+      }
+      case sel_get_value_as_signed: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        bool success;
+        int64_t val = valobj->GetValueAsSigned(0, &success);
+        data.Push(MakeInt(val, version));
+        if (!success)
+          return sel_error("failed to get value");
+        break;
+      }
+      case sel_get_value_as_address: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        bool success;
+        uint64_t addr = valobj->GetValueAsUnsigned(0, &success);
+        if (!success)
+          return sel_error("failed to get value");
+        if (auto process_sp = valobj->GetProcessSP())
+          addr = process_sp->FixDataAddress(addr);
+        data.Push(MakeInt(addr, version));
+        break;
+      }
+      case sel_cast: {
+        TYPE_CHECK(Object, Type);
+        auto type = data.Pop<CompilerType>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Cast(type));
+        break;
+      }
+      case sel_clone: {
+        TYPE_CHECK(Object, String);
+        auto new_name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Clone(new_name));
+        break;
+      }
+      case sel_get_pointee_type: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        data.Push(type.GetPointeeType());
+        break;
+      }
+      case sel_get_byte_size: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        uint64_t size =
+            llvm::expectedToOptional(type.GetByteSize(nullptr)).value_or(0);
+        data.Push(llvm::APSInt::get(size));
+        break;
+      }
+      case sel_create_child_at_offset: {
+        TYPE_CHECK(Object, String, Integer, Type);
+        auto type = data.Pop<CompilerType>();
+        auto offset = data.Pop<llvm::APSInt>().getLimitedValue(UINT32_MAX);
+        ConstString name(data.Pop<std::string>());
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticChildAtOffset(offset, type, true, name));
+        break;
+      }
+      case sel_strlen: {
+        TYPE_CHECK(String);
+        auto size = data.Pop<std::string>().size();
+        data.Push(MakeInt(size, version));
+        break;
+      }
+      case sel_fmt: {
+        TYPE_CHECK(String);
+        if (auto error = FormatImpl(data))
+          return error;
+        break;
+      }
+      default:
+        return sel_error("selector not implemented");
+      }
+      continue;
+    }
+
+    // Dictionary operations.
+    case op_dict:
+      data.Push(std::make_shared<Dictionary>());
+      continue;
+    case op_dict_set: {
+      TYPE_CHECK(Dict, String, Any);
+      auto value = data.PopAny();
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      if (auto *nested_sp = std::get_if<DictionarySP>(&value))
+        if (Reaches(nested_sp->get(), dict_sp.get()))
+          return error("dict_set would create a reference cycle");
+      (*dict_sp)[key] = std::move(value);
+      continue;
+    }
+    case op_dict_get: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      auto it = dict_sp->find(key);
+      if (it == dict_sp->end())
+        return error("key not found in dictionary");
+      data.Push(it->second);
+      continue;
+    }
+    case op_dict_has: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      bool found = dict_sp->find(key) != dict_sp->end();
+      data.Push(llvm::APSInt::get(found));
+      continue;
+    }
+    }
+    return error("opcode not implemented");
+  }
+  return pc.takeError();
+}
+} // namespace FormatterBytecode
+
+} // namespace lldb_private

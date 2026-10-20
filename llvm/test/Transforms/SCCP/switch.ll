@@ -207,7 +207,7 @@ switch.2:
 ; range information.
 define internal i32 @test_ip_range(i32 %x) {
 ; CHECK-LABEL: define internal range(i32 1, 4) i32 @test_ip_range(
-; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-SAME: i32 range(i32 1, 4) [[X:%.*]]) {
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 3, label [[SWITCH_3:%.*]]
 ; CHECK-NEXT:      i32 1, label [[SWITCH_1:%.*]]

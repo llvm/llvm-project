@@ -92,6 +92,8 @@ define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -101,15 +103,15 @@ define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    jge .LBB4_2
+; CHECK-NEXT:    jge .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB4_2: # %bb2
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    jmp .LBB4_2
+; CHECK-NEXT:  .LBB4_3: # %bb2
 ; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:  .LBB4_2: # %bb1
+; CHECK-NEXT:    addl $8, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl

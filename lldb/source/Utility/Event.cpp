@@ -77,20 +77,26 @@ void Event::Dump(Stream *s) const {
     m_data_sp->Dump(s);
     s->PutChar('}');
   } else
-    s->Printf("<NULL>");
+    s->PutCString("<NULL>");
 }
 
 void Event::DoOnRemoval() {
   std::lock_guard<std::mutex> guard(m_listeners_mutex);
 
-  if (m_data_sp)
-    m_data_sp->DoOnRemoval(this);
+  if (!m_data_sp)
+    return;
+
+  m_data_sp->DoOnRemoval(this);
+
   // Now that the event has been handled by the primary event Listener, forward
   // it to the other Listeners.
+
   EventSP me_sp = shared_from_this();
-  for (auto listener_sp : m_pending_listeners)
-    listener_sp->AddEvent(me_sp);
-  m_pending_listeners.clear();
+  if (m_data_sp->ForwardEventToPendingListeners(this)) {
+    for (auto listener_sp : m_pending_listeners)
+      listener_sp->AddEvent(me_sp);
+    m_pending_listeners.clear();
+  }
 }
 
 #pragma mark -

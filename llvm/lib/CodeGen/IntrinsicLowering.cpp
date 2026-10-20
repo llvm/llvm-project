@@ -40,7 +40,7 @@ static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
   FunctionCallee FCache =
       M->getOrInsertFunction(NewFn, FunctionType::get(RetTy, ParamTys, false));
 
-  IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+  IRBuilder<> Builder(CI->getIterator());
   SmallVector<Value *, 8> Args(ArgBegin, ArgEnd);
   CallInst *NewCI = Builder.CreateCall(FCache, Args);
   NewCI->setName(CI->getName());
@@ -236,8 +236,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     report_fatal_error("Code generator does not support intrinsic function '"+
                       Callee->getName()+"'!");
 
-  case Intrinsic::expect: {
-    // Just replace __builtin_expect(exp, c) with EXP.
+  case Intrinsic::expect:
+  case Intrinsic::expect_with_probability: {
+    // Just replace __builtin_expect(exp, c) and
+    // __builtin_expect_with_probability(exp, c, p) with EXP.
     Value *V = CI->getArgOperand(0);
     CI->replaceAllUsesWith(V);
     break;
@@ -323,10 +325,6 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     CI->replaceAllUsesWith(ConstantInt::get(Type::getInt64Ty(Context), 0));
     break;
   }
-
-  case Intrinsic::dbg_declare:
-  case Intrinsic::dbg_label:
-    break;    // Simply strip out debugging intrinsics
 
   case Intrinsic::eh_typeid_for:
     // Return something different to eh_selector.
@@ -449,7 +447,7 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::lifetime_start:
     // Discard region information.
-    CI->replaceAllUsesWith(UndefValue::get(CI->getType()));
+    CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
     break;
   case Intrinsic::invariant_end:
   case Intrinsic::lifetime_end:
@@ -460,26 +458,4 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
   assert(CI->use_empty() &&
          "Lowering should have eliminated any uses of the intrinsic call!");
   CI->eraseFromParent();
-}
-
-bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
-  // Verify this is a simple bswap.
-  if (CI->arg_size() != 1 || CI->getType() != CI->getArgOperand(0)->getType() ||
-      !CI->getType()->isIntegerTy())
-    return false;
-
-  IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
-  if (!Ty)
-    return false;
-
-  // Okay, we can do this xform, do so now.
-  Module *M = CI->getModule();
-  Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
-
-  Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
-
-  CI->replaceAllUsesWith(Op);
-  CI->eraseFromParent();
-  return true;
 }

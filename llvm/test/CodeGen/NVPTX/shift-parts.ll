@@ -1,10 +1,9 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK: shift_parts_left_128
 define void @shift_parts_left_128(ptr %val, ptr %amtptr) {
 ; CHECK: shl.b64
-; CHECK: mov.b32
 ; CHECK: sub.s32
 ; CHECK: shr.u64
 ; CHECK: or.b64

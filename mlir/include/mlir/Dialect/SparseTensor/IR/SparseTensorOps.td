@@ -92,8 +92,8 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]> {
     ```
   }];
 
-  let arguments = (ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
-                   TensorOf<[AnyType]>:$values);
+  let arguments = (ins Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                       RankedTensorOf<[AnyType]>:$values);
   let results = (outs AnySparseTensor: $result);
   let assemblyFormat =
     "` ` `(` $levels       `)` `,` $values attr-dict `:`"
@@ -138,12 +138,12 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
   }];
 
   let arguments = (ins AnySparseTensor:$tensor,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
-                   TensorOf<[AnyType]>:$out_values);
-  let results = (outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  TensorOf<[AnyType]>:$ret_values,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
-                  AnyIndexingScalarLike:$val_len);
+                       Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                       RankedTensorOf<[AnyType]>:$out_values);
+  let results = (outs Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                      RankedTensorOf<[AnyType]>:$ret_values,
+                      Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                      AnyIndexingScalarLike:$val_len);
   let assemblyFormat =
     "$tensor attr-dict `:` type($tensor)"
     "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
@@ -196,8 +196,8 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins AnyRankedTensor:$source);
+  let results = (outs AnyRankedTensor:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
@@ -266,9 +266,9 @@ def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
   let summary = "Extracts the `level`-th positions array of the `tensor`";
   let description = [{
     Returns the positions array of the tensor's storage at the given
-    level.  This is similar to the `bufferization.to_memref` operation
+    level.  This is similar to the `bufferization.to_buffer` operation
     in the sense that it provides a bridge between a tensor world view
-    and a bufferized world view.  Unlike the `bufferization.to_memref`
+    and a bufferized world view.  Unlike the `bufferization.to_buffer`
     operation, however, this sparse operation actually lowers into code
     that extracts the positions array from the sparse storage itself
     (either by calling a support library or through direct code).
@@ -278,14 +278,15 @@ def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
     Example:
 
     ```mlir
-    %1 = sparse_tensor.positions %0 { level = 1 : index }
+    %1 = sparse_tensor.positions %0 level = 1
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
 
   let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
   let results = (outs AnyNon0RankedMemRef:$result);
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let assemblyFormat =
+      "$tensor `level` `=` $level attr-dict `:` type($tensor) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -295,9 +296,9 @@ def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
   let summary = "Extracts the `level`-th coordinates array of the `tensor`";
   let description = [{
     Returns the coordinates array of the tensor's storage at the given
-    level.  This is similar to the `bufferization.to_memref` operation
+    level.  This is similar to the `bufferization.to_buffer` operation
     in the sense that it provides a bridge between a tensor world view
-    and a bufferized world view.  Unlike the `bufferization.to_memref`
+    and a bufferized world view.  Unlike the `bufferization.to_buffer`
     operation, however, this sparse operation actually lowers into code
     that extracts the coordinates array from the sparse storage itself
     (either by calling a support library or through direct code).
@@ -307,14 +308,15 @@ def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
     Example:
 
     ```mlir
-    %1 = sparse_tensor.coordinates %0 { level = 1 : index }
+    %1 = sparse_tensor.coordinates %0 level = 1
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
 
   let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
   let results = (outs AnyNon0RankedMemRef:$result);
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let assemblyFormat =
+      "$tensor `level` `=` $level attr-dict `:` type($tensor) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -326,9 +328,9 @@ def SparseTensor_ToCoordinatesBufferOp : SparseTensor_Op<"coordinates_buffer",
     Returns the linear coordinates array for a sparse tensor with
     a trailing COO region with at least two levels.  It is an error
     if the tensor doesn't contain such a COO region.  This is similar
-    to the `bufferization.to_memref` operation in the sense that it
+    to the `bufferization.to_buffer` operation in the sense that it
     provides a bridge between a tensor world view and a bufferized
-    world view.  Unlike the `bufferization.to_memref` operation,
+    world view.  Unlike the `bufferization.to_buffer` operation,
     however, this operation actually lowers into code that extracts
     the linear coordinates array from the sparse storage scheme that
     stores the coordinates for the COO region as an array of structures.
@@ -359,9 +361,9 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values",
   let description = [{
     Returns the values array of the sparse storage format for the given
     sparse tensor, independent of the actual dimension. This is similar to
-    the `bufferization.to_memref` operation in the sense that it provides a bridge
+    the `bufferization.to_buffer` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
-    `bufferization.to_memref` operation, however, this sparse operation actually
+    `bufferization.to_buffer` operation, however, this sparse operation actually
     lowers into code that extracts the values array from the sparse storage
     scheme (either by calling a support library or through direct code).
 
@@ -417,7 +419,7 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
      Example:
 
      ```mlir
-     %0 = sparse_tensor.concatenate %1, %2 { dimension = 0 : index }
+     %0 = sparse_tensor.concatenate %1, %2 dimension = 0
        : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
      ```
    }];
@@ -430,7 +432,8 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
 
   let arguments = (ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension);
   let results = (outs AnyRankedTensor:$result);
-  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
+  let assemblyFormat =
+      "$inputs `dimension` `=` $dimension attr-dict `:` type($inputs) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -561,7 +564,7 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
                    SparseTensorStorageSpecifierKindAttr:$specifierKind,
                    OptionalAttr<LevelAttr>:$level);
   let results = (outs Index:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? attr-dict"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? attr-dict"
                        "`:` qualified(type($specifier))";
 
   let hasVerifier = 1;
@@ -588,7 +591,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
                    OptionalAttr<LevelAttr>:$level,
                    Index:$value);
   let results = (outs SparseTensorStorageSpecifier:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? `with` $value"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? `with` $value"
                        " attr-dict `:` qualified(type($result))";
 
   let hasVerifier = 1;
@@ -624,11 +627,11 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
     %c0 = arith.constant 0 : index
     %x = sparse_tensor.lvl %A, %c0 : tensor<4x?xf32, #BSR>
 
-    // Return the dynamic dimension of %A computed by %j mod 3.
+    // Return the dynamic level size of %A computed by j floordiv 3.
     %c1 = arith.constant 1 : index
     %y = sparse_tensor.lvl %A, %c1 : tensor<4x?xf32, #BSR>
 
-    // Always return 3 (since j mod 3 < 3), can be constant fold
+    // Always return 3 (since j mod 3 < 3), can be constant folded.
     %c3 = arith.constant 3 : index
     %y = sparse_tensor.lvl %A, %c3 : tensor<4x?xf32, #BSR>
     ```
@@ -672,7 +675,8 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]> {
                    SparseTensorCrdTransDirectionAttr:$direction,
                    SparseTensorEncodingAttr:$encoder);
   let results = (outs Variadic<Index>:$out_crds);
-  let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
+  let assemblyFormat = "enum($direction) `[` $in_crds `]` `as` $encoder "
+                       "attr-dict `:` type($out_crds)";
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -922,7 +926,7 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
     Example:
 
     ```mlir
-    sparse_tensor.sort insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
+    sparse_tensor.sort insertion_sort_stable %n, %x perm_map = affine_map<(i,j) -> (j,i)>
       : memref<?xindex>
     ```
   }];
@@ -932,8 +936,9 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
                        Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
                        AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                        SparseTensorSortKindAttr:$algorithm);
-  let assemblyFormat = "$algorithm $n"
-                       "`,`$xy (`jointly` $ys^)? attr-dict"
+  let assemblyFormat = "enum($algorithm) $n"
+                       "`,`$xy (`jointly` $ys^)? `perm_map` `=` $perm_map"
+                       " (`ny` `=` $ny^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
   let hasVerifier = 1;
 }
@@ -961,7 +966,7 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]> {
   let arguments = (ins AnySparseTensor: $input_coo,
                        SparseTensorSortKindAttr:$algorithm);
   let results = (outs AnySparseTensor: $result_coo);
-  let assemblyFormat = "$algorithm $input_coo attr-dict"
+  let assemblyFormat = "enum($algorithm) $input_coo attr-dict"
                        "`:` type($input_coo) `to` type($result_coo)";
 
   let hasFolder = 1;
@@ -1306,7 +1311,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
 
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
     ParentOneOf<["BinaryOp", "UnaryOp", "ReduceOp", "SelectOp",
-                 "ForeachOp", "IterateOp"]>]> {
+                 "ForeachOp", "IterateOp", "CoIterateOp"]>]> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
@@ -1418,7 +1423,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      }
 
      // foreach on a row-major dense tensor but visit column first
-     sparse_tensor.foreach in %0 {order=affine_map<(i,j)->(j,i)>}: tensor<2x3xf64> do {
+     sparse_tensor.foreach in %0 order = affine_map<(i,j)->(j,i)> : tensor<2x3xf64> do {
       ^bb0(%row: index, %col: index, %arg3: f64):
          // [%row, %col] -> [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
      }
@@ -1447,11 +1452,12 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
   ];
 
   let regions = (region SizedRegion<1>:$region);
-  let arguments = (ins AnyTensor:$tensor,
+  let arguments = (ins AnyRankedTensor:$tensor,
                        Variadic<AnyType>:$initArgs,
                        OptionalAttr<AffineMapAttr>:$order);
   let results = (outs Variadic<AnyType>:$results);
-  let assemblyFormat = "`in` $tensor (`init``(`$initArgs^`)`)? attr-dict"
+  let assemblyFormat = "`in` $tensor (`init``(`$initArgs^`)`)?"
+                       " (`order` `=` $order^)? attr-dict"
                        "    `:` type($tensor) (`,` type($initArgs)^)?"
                        "  (`->` type($results)^)?  `do` $region";
   let hasVerifier = 1;
@@ -1531,13 +1537,38 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
   let hasVerifier = 1;
 }
 
+def ExtractValOp : SparseTensor_Op<"extract_value", [
+    Pure,
+    TypesMatchWith<"result type matches element type of tensor",
+                   "tensor", "result",
+                   "::llvm::cast<TensorType>($_self).getElementType()">]> {
+  let summary = "Extracts a value from a sparse tensor using an iterator.";
+  let description = [{
+      The `sparse_tensor.extract_value` operation extracts the value
+      pointed to by a sparse iterator from a sparse tensor.
+
+      Example:
+
+      ```mlir
+      %val = sparse_tensor.extract_value %sp at %it
+           : tensor<?x?xf32, #CSR>, !sparse_tensor.iterator<#CSR, lvl = 1>
+      ```
+  }];
+
+  let arguments = (ins AnySparseTensor:$tensor, AnySparseIterator:$iterator);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = "$tensor `at` $iterator attr-dict `:` type($tensor)`,` qualified(type($iterator))";
+  let hasVerifier = 1;
+}
+
 def IterateOp : SparseTensor_Op<"iterate",
     [RecursiveMemoryEffects, RecursivelySpeculatable,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
       ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
        "getYieldedValuesMutable"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-      ["getEntrySuccessorOperands"]>,
+      ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
      SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
 
   let summary = "Iterates over a sparse iteration space";
@@ -1604,14 +1635,14 @@ def IterateOp : SparseTensor_Op<"iterate",
 
   let arguments = (ins AnySparseIterSpace:$iterSpace,
                        Variadic<AnyType>:$initArgs,
-                       LevelSetAttr:$crdUsedLvls);
+                       I64BitSetAttr:$crdUsedLvls);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs)>,
-    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs, "LevelSet" :$crdUsedLvls)>
+    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs, "I64BitSet" :$crdUsedLvls)>
   ];
 
   let extraClassDeclaration = [{
@@ -1619,7 +1650,7 @@ def IterateOp : SparseTensor_Op<"iterate",
       return getIterSpace().getType().getSpaceDim();
     }
     BlockArgument getIterator() {
-      return getRegion().getArguments().front();
+      return getRegion().getArguments().back();
     }
     std::optional<BlockArgument> getLvlCrd(Level lvl) {
       if (getCrdUsedLvls()[lvl]) {
@@ -1629,9 +1660,8 @@ def IterateOp : SparseTensor_Op<"iterate",
       return std::nullopt;
     }
     Block::BlockArgListType getCrds() {
-      // The first block argument is iterator, the remaining arguments are
-      // referenced coordinates.
-      return getRegion().getArguments().slice(1, getCrdUsedLvls().count());
+      // User-provided iteration arguments -> coords -> iterator.
+      return getRegion().getArguments().slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
     unsigned getNumRegionIterArgs() {
       return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();
@@ -1641,6 +1671,135 @@ def IterateOp : SparseTensor_Op<"iterate",
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
   let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
+    [AttrSizedOperandSegments,
+     SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">,
+     RecursiveMemoryEffects]> {
+  let summary = "Co-iterates over a set of sparse iteration spaces";
+  let description = [{
+      The `sparse_tensor.coiterate` operation represents a loop (nest) over
+      a set of iteration spaces. The operation can have multiple regions,
+      with each of them defining a case to compute a result at the current iterations.
+      The case condition is defined solely based on the pattern of specified iterators.
+      For example:
+      ```mlir
+      %ret = sparse_tensor.coiterate (%sp1, %sp2) at(%coord) iter_args(%arg = %init)
+           : (!sparse_tensor.iter_space<#CSR, lvls = 0>,
+              !sparse_tensor.iter_space<#COO, lvls = 0>)
+           -> index
+      case %it1, _ {
+        // %coord is specifed in space %sp1 but *NOT* specified in space %sp2.
+      }
+      case %it1, %it2 {
+        // %coord is specifed in *BOTH* spaces %sp1 and %sp2.
+      }
+      ```
+
+      `sparse_tensor.coiterate` can also operate on loop-carried variables.
+      It returns the final value for each loop-carried variable after loop termination.
+      The initial values of the variables are passed as additional SSA operands
+      to the iterator SSA value and used coordinate SSA values.
+      Each operation region has variadic arguments for specified (used), one argument
+      for each loop-carried variable, representing the value of the variable
+      at the current iteration, followed by a list of arguments for iterators.
+      The body region must contain exactly one block that terminates with
+      `sparse_tensor.yield`.
+
+      The results of an `sparse_tensor.coiterate` hold the final values after
+      the last iteration. If the `sparse_tensor.coiterate` defines any values,
+      a yield must be explicitly present in every region defined in the operation.
+      The number and types of the `sparse_tensor.coiterate` results must match
+      the initial values in the iter_args binding and the yield operands.
+
+
+      A `sparse_tensor.coiterate` example that does elementwise addition between two
+      sparse vectors.
+
+
+      ```mlir
+      %ret = sparse_tensor.coiterate (%sp1, %sp2) at(%coord) iter_args(%arg = %init)
+           : (!sparse_tensor.iter_space<#CSR, lvls = 0>,
+              !sparse_tensor.iter_space<#CSR, lvls = 0>)
+           -> tensor<?xindex, #CSR>
+      case %it1, _ {
+         // v = v1 + 0 = v1
+         %v1 = sparse_tensor.extract_value %t1 at %it1 : index
+         %yield = sparse_tensor.insert %v1 into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      case _, %it2 {
+         // v = v2 + 0 = v2
+         %v2 = sparse_tensor.extract_value %t2 at %it2 : index
+         %yield = sparse_tensor.insert %v1 into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      case %it1, %it2 {
+         // v = v1 + v2
+         %v1 = sparse_tensor.extract_value %t1 at %it1 : index
+         %v2 = sparse_tensor.extract_value %t2 at %it2 : index
+         %v = arith.addi %v1, %v2 : index
+         %yield = sparse_tensor.insert %v into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      ```
+  }];
+
+  let arguments = (ins Variadic<AnySparseIterSpace>:$iterSpaces,
+                       Variadic<AnyType>:$initArgs,
+                       I64BitSetAttr:$crdUsedLvls,
+                       I64BitSetArrayAttr:$cases);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$iterSpace, "ValueRange":$initArgs, "unsigned":$numCases)>,
+  ];
+
+  let extraClassDeclaration = [{
+    unsigned getSpaceDim() {
+      return llvm::cast<::mlir::sparse_tensor::IterSpaceType>(
+                 getIterSpaces().front().getType())
+          .getSpaceDim();
+    }
+    I64BitSet getRegionDefinedSpace(unsigned regionIdx) {
+      return I64BitSet(llvm::cast<IntegerAttr>(getCases()[regionIdx])
+                           .getValue().getZExtValue());
+    }
+    auto getRegionDefinedSpaces() {
+      return llvm::map_range(getCases().getValue(), [](Attribute attr) {
+        return I64BitSet(llvm::cast<IntegerAttr>(attr).getValue().getZExtValue());
+      });
+    }
+
+    // The block arguments starts with user-provided iteration arguments,
+    // follows by referenced coordinates and ends with iterators.
+    Block::BlockArgListType getCrds(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
+    }
+    unsigned getNumRegionIterArgs() {
+      return getInitArgs().size();
+    }
+    Block::BlockArgListType getRegionIterArgs(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .take_front(getNumRegionIterArgs());
+    }
+    Block::BlockArgListType getRegionIterators(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .take_back(getRegionDefinedSpace(regionIdx).count());
+    }
+    ValueRange getYieldedValues(unsigned regionIdx);
+
+    // Returns a vector of regions that are the `sub-cases` of the given case region.
+    // E.g., `case %it1, _, %it3` is a subcase of `case %it1, %it2, %it3`.
+    SmallVector<Region *> getSubCasesOf(unsigned regionIdx);
+  }];
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }
 

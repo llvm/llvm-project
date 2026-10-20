@@ -17,7 +17,7 @@ _start:
 # CHECK-NEXT:     Class: 64-bit (0x2)
 # CHECK-NEXT:     DataEncoding: BigEndian (0x2)
 # CHECK-NEXT:     FileVersion: 1
-# CHECK-NEXT:     OS/ABI: SystemV (0x0)
+# CHECK-NEXT:     OS/ABI: OpenBSD (0xC)
 # CHECK-NEXT:     ABIVersion: 0
 # CHECK-NEXT:     Unused: (00 00 00 00 00 00 00)
 # CHECK-NEXT:   }

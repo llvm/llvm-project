@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv="run-signature-conversion=false run-vector-unrolling=false" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @if_yield
 // CHECK: %[[VAR:.*]] = spirv.Variable : !spirv.ptr<f32, Function>
@@ -33,6 +33,16 @@ func.func @if_yield(%arg0: i1) -> f32 {
 }
 
 // CHECK-LABEL: @while
+// CHECK:       spirv.mlir.loop {
+// CHECK:         spirv.Branch ^[[HEADER:.*]](%{{.*}} : i32)
+// CHECK:       ^[[HEADER]]
+// CHECK:         spirv.BranchConditional %{{.*}}, ^[[BODY:.*]](%{{.*}} : i32), ^[[MERGE:.*]]
+// CHECK:       ^[[BODY]]
+// CHECK:       spirv.Branch
+// CHECK:       ^[[MERGE]]
+// CHECK:         spirv.mlir.merge
+// CHECK:       }
+// CHECK:       spirv.Load "Function"
 func.func @while(%arg0: i32, %arg1: i32) -> i32 {
   %c2_i32 = arith.constant 2 : i32
   %0 = scf.while (%arg3 = %arg0) : (i32) -> (i32) {
@@ -44,4 +54,47 @@ func.func @while(%arg0: i32, %arg1: i32) -> i32 {
     scf.yield %1 : i32
   }
   return %0 : i32
+}
+
+// CHECK-LABEL: @for
+// CHECK:       spirv.mlir.loop {
+// CHECK:         spirv.Branch ^[[HEADER:.*]](%{{.*}}, %{{.*}}, %{{.*}} : i32, f32, f32)
+// CHECK:       ^[[HEADER]]
+// CHECK:         spirv.BranchConditional %{{.*}}, ^[[BODY:.*]], ^[[MERGE:.*]]
+// CHECK:       ^[[BODY]]
+// CHECK:         spirv.Branch ^[[HEADER]]
+// CHECK:       ^[[MERGE]]
+// CHECK:         spirv.mlir.merge
+// CHECK:      }
+func.func @for() {
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 42 : index
+  %step = arith.constant 2 : index
+  %s0 = arith.constant 0.0 : f32
+  %s1 = arith.constant 1.0 : f32
+  %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
+    %sn = arith.addf %si, %si : f32
+    scf.yield %sn, %sn: f32, f32
+  }
+  return
+}
+
+// CHECK-LABEL: @if_yield_math
+// CHECK-SAME: %[[ARG0:.*]]: i1, %[[ARG1:.*]]: f32
+// CHECK:       spirv.mlir.selection {
+// CHECK:         %[[SQRT:.*]] = spirv.GL.Sqrt %[[ARG1]] : f32
+// CHECK:         spirv.Store "Function" %{{.*}}, %[[SQRT]] : f32
+// CHECK:       ^{{.*}}:
+// CHECK:         %[[EXP:.*]] = spirv.GL.Exp %[[ARG1]] : f32
+// CHECK:         spirv.Store "Function" %{{.*}}, %[[EXP]] : f32
+// CHECK:       }
+func.func @if_yield_math(%arg0: i1, %arg1: f32) -> f32 {
+  %0 = scf.if %arg0 -> f32 {
+    %res = math.sqrt %arg1 : f32
+    scf.yield %res : f32
+  } else {
+    %res = math.exp %arg1 : f32
+    scf.yield %res : f32
+  }
+  return %0 : f32
 }

@@ -5,23 +5,18 @@ define void @test(i32 %0, ptr %p) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x i32> <i32 0, i32 0, i32 0, i32 poison, i32 1, i32 1, i32 1, i32 poison, i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <12 x i32> [[TMP1]], <12 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 3, i32 3, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <12 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[PH:%.*]]
 ; CHECK:       ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[TMP0]], i64 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP2]], [[ENTRY:%.*]] ], [ zeroinitializer, [[PH]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP2]], [[ENTRY]] ], [ [[TMP4]], [[PH]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP2]], [[ENTRY]] ], [ zeroinitializer, [[PH]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP6]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[OP_RDX]], [[TMP10]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <12 x i32> [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TMP4]], [[PH]] ]
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = call i32 @llvm.vector.reduce.or.v12i32(<12 x i32> [[TMP5]])
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX5]], [[OP_RDX]]
 ; CHECK-NEXT:    store i32 [[OP_RDX2]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -13,38 +13,26 @@
 
 #include "SimplifyInstructions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
 /// Calls simplifyInstruction in each instruction in functions, and replaces
 /// their values.
-static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
-  std::vector<Instruction *> InstsToDelete;
-
+void llvm::simplifyInstructionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   const DataLayout &DL = Program.getDataLayout();
 
-  std::vector<Instruction *> InstToDelete;
   for (auto &F : Program) {
     for (auto &BB : F) {
-      for (auto &Inst : BB) {
-
+      for (auto &Inst : make_early_inc_range(BB)) {
         SimplifyQuery Q(DL, &Inst);
         if (Value *Simplified = simplifyInstruction(&Inst, Q)) {
           if (O.shouldKeep())
             continue;
           Inst.replaceAllUsesWith(Simplified);
-          InstToDelete.push_back(&Inst);
+          Inst.eraseFromParent();
         }
       }
     }
   }
-
-  for (Instruction *I : InstToDelete)
-    I->eraseFromParent();
-}
-
-void llvm::simplifyInstructionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractInstrFromModule, "Simplifying Instructions");
 }

@@ -56,14 +56,21 @@ max_align_t m5;
 #undef NULL
 #define NULL 0
 
+// Including stddef.h again shouldn't redefine NULL
+#include <stddef.h>
+
+// gtk headers then use __attribute__((sentinel)), which doesn't work if NULL
+// is 0.
+void f(const char* c, ...) __attribute__((sentinel)); // expected-note{{function has been explicitly marked sentinel here}}
+void g() {
+  f("", NULL); // expected-warning{{missing sentinel in function call}}
+}
+
 // glibc (and other) headers then define __need_NULL and rely on stddef.h
 // to redefine NULL to the correct value again.
 #define __need_NULL
 #include <stddef.h>
 
-// gtk headers then use __attribute__((sentinel)), which doesn't work if NULL
-// is 0.
-void f(const char* c, ...) __attribute__((sentinel));
-void g() {
+void h() {
   f("", NULL);  // Shouldn't warn.
 }

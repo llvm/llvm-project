@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hsdr < %s | FileCheck %s
 
 ; Check that zero-extends of short boolean vectors are done correctly.
 ; These are not the only possible instruction sequences, so if something

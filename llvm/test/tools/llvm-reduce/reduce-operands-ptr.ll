@@ -8,7 +8,7 @@
 ; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,ZERO %s < %t
 
-; CHECK-LABEL: define void @foo(
+; CHECK-LABEL: define {{(void|ptr)}} @foo(
 
 ; ONE: load i32, ptr %a0
 ; ONE: load i32, ptr @g
@@ -16,7 +16,7 @@
 
 ; ZERO: load i32, ptr null
 ; ZERO: load i32, ptr null
-; ZERO: extractelement <4 x ptr> zeroinitializer, i32 11
+; ZERO: extractelement <4 x ptr> splat (ptr null), i32 11
 
 @g = global i32 0
 

@@ -1,0 +1,90 @@
+set(
+  LLVM_LINK_COMPONENTS
+  Core
+  FrontendOpenMP
+  Support
+)
+
+add_clang_library(clangCIR
+  CIRDataLayoutSpec.cpp
+  CIRGenerator.cpp
+  CIRGenAsm.cpp
+  CIRGenAtomic.cpp
+  CIRGenBuilder.cpp
+  CIRGenBuiltin.cpp
+  CIRGenBuiltinAArch64.cpp
+  CIRGenBuiltinAMDGPU.cpp
+  CIRGenBuiltinNVPTX.cpp
+  CIRGenAMDGPU.cpp
+  CIRGenBuiltinRISCV.cpp
+  CIRGenBuiltinX86.cpp
+  CIRGenCall.cpp
+  CIRGenClass.cpp
+  CIRGenCleanup.cpp
+  CIRGenCoroutine.cpp
+  CIRGenCUDANV.cpp
+  CIRGenCUDARuntime.cpp
+  CIRGenCXX.cpp
+  CIRGenCXXABI.cpp
+  CIRGenDecl.cpp
+  CIRGenDeclCXX.cpp
+  CIRGenDeclOpenACC.cpp
+  CIRGenDeclOpenMP.cpp
+  CIRGenException.cpp
+  CIRGenExpr.cpp
+  CIRGenExprAggregate.cpp
+  CIRGenExprComplex.cpp
+  CIRGenExprConstant.cpp
+  CIRGenExprCXX.cpp
+  CIRGenExprScalar.cpp
+  CIRGenFunction.cpp
+  CIRGenItaniumCXXABI.cpp
+  CIRGenMicrosoftCXXABI.cpp
+  CIRGenModule.cpp
+  CIRGenOpenACC.cpp
+  CIRGenOpenACCClause.cpp
+  CIRGenOpenACCRecipe.cpp
+  CIRGenOpenMPClause.cpp
+  CIRGenOpenMPRuntime.cpp
+  CIRGenPointerAuth.cpp
+  CIRGenRecordLayoutBuilder.cpp
+  CIRGenStmt.cpp
+  CIRGenStmtOpenACC.cpp
+  CIRGenStmtOpenACCLoop.cpp
+  CIRGenStmtOpenMP.cpp
+  CIRGenSYCL.cpp
+  CIRGenTypes.cpp
+  CIRGenVTables.cpp
+  TargetInfo.cpp
+  Targets/AArch64.cpp
+  Targets/AMDGPU.cpp
+  Targets/NVPTX.cpp
+  Targets/SPIRV.cpp
+
+  DISABLE_PCH_REUSE # PCH contains private headers
+  PRECOMPILE_HEADERS
+  [["pch.h"]]
+
+  DEPENDS
+  MLIRCIR
+  MLIRCIROpInterfacesIncGen
+
+  LINK_LIBS
+  clangAST
+  clangBasic
+  clangCodeGenUtils
+  clangLex
+  CIRRegisterAllDialects
+  CIROpenACCSupport
+  CIROpenMPSupport
+  MLIRArithDialect
+  MLIRCIR
+  MLIRCIRInterfaces
+  MLIRDLTIDialect
+  MLIRLLVMDialect
+  MLIROpenACCDialect
+  MLIROpenMPDialect
+  MLIROpenMPUtils
+  MLIRPtrMemorySpaceInterfaces
+  MLIRTargetLLVMIRImport
+)

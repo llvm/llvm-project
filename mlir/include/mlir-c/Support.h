@@ -46,6 +46,8 @@
 #define MLIR_CAPI_EXPORTED __attribute__((visibility("default")))
 #endif
 
+#define MLIR_PYTHON_API_EXPORTED MLIR_CAPI_EXPORTED
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,6 +60,9 @@ extern "C" {
 
 /// Re-export llvm::ThreadPool so as to avoid including the LLVM C API directly.
 DEFINE_C_API_STRUCT(MlirLlvmThreadPool, void);
+/// Re-export llvm::raw_fd_ostream so as to avoid including the LLVM C API
+/// directly.
+DEFINE_C_API_STRUCT(MlirLlvmRawFdOStream, void);
 DEFINE_C_API_STRUCT(MlirTypeID, const void);
 DEFINE_C_API_STRUCT(MlirTypeIDAllocator, void);
 
@@ -150,6 +155,39 @@ MLIR_CAPI_EXPORTED MlirLlvmThreadPool mlirLlvmThreadPoolCreate(void);
 
 /// Destroy an LLVM thread pool.
 MLIR_CAPI_EXPORTED void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool pool);
+
+/// Returns the maximum number of threads in the thread pool.
+MLIR_CAPI_EXPORTED int
+mlirLlvmThreadPoolGetMaxConcurrency(MlirLlvmThreadPool pool);
+
+//===----------------------------------------------------------------------===//
+// MlirLlvmRawFdOStream.
+//===----------------------------------------------------------------------===//
+
+/// Create a raw_fd_ostream for the given path. This wrapper is needed because
+/// std::ostream does not provide the file sharing semantics required on
+/// Windows.
+/// - `path`: output file path.
+/// - `binary`: controls text vs binary mode.
+/// - `errorCallback`: called with an error message on failure (optional).
+/// - `userData`: forwarded to `errorCallback` so it can copy the error message
+///   into caller-owned storage (e.g., a `std::string`).
+/// On failure, returns a null stream and invokes the optional error callback
+/// with the error message.
+MLIR_CAPI_EXPORTED MlirLlvmRawFdOStream
+mlirLlvmRawFdOStreamCreate(const char *path, bool binary,
+                           MlirStringCallback errorCallback, void *userData);
+
+/// Write a string to a raw_fd_ostream created with mlirLlvmRawFdOStreamCreate.
+MLIR_CAPI_EXPORTED void mlirLlvmRawFdOStreamWrite(MlirLlvmRawFdOStream stream,
+                                                  MlirStringRef string);
+
+/// Checks if a raw_fd_ostream is null.
+MLIR_CAPI_EXPORTED bool mlirLlvmRawFdOStreamIsNull(MlirLlvmRawFdOStream stream);
+
+/// Destroy a raw_fd_ostream created with mlirLlvmRawFdOStreamCreate.
+MLIR_CAPI_EXPORTED void
+mlirLlvmRawFdOStreamDestroy(MlirLlvmRawFdOStream stream);
 
 //===----------------------------------------------------------------------===//
 // TypeID API.

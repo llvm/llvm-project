@@ -59,6 +59,14 @@ static void testTypeCreation(MlirContext ctx) {
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32_4_text));
   // CHECK: !llvm.array<4 x i32>: 1
   fprintf(stderr, "%s: %d\n", i32_4_text, mlirTypeEqual(i32_4, i32_4_ref));
+  // CHECK: array_isa: 1
+  fprintf(stderr, "array_isa: %d\n", mlirTypeIsALLVMArrayType(i32_4));
+  // CHECK: array_element_type: 1
+  fprintf(stderr, "array_element_type: %d\n",
+          mlirTypeEqual(mlirLLVMArrayTypeGetElementType(i32_4), i32));
+  // CHECK: array_num_elements: 4
+  fprintf(stderr, "array_num_elements: %u\n",
+          mlirLLVMArrayTypeGetNumElements(i32_4));
 
   const char *i8_i32_i64_text = "!llvm.func<i8 (i32, i64)>";
   const MlirType i32_i64_arr[] = {i32, i64};
@@ -248,12 +256,16 @@ static void testDebugInfoAttributes(MlirContext ctx) {
       mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo"));
   MlirAttribute bar =
       mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("bar"));
-  MlirAttribute id = mlirDisctinctAttrCreate(foo);
+
+  MlirAttribute none = mlirUnitAttrGet(ctx);
+  MlirAttribute id = mlirDistinctAttrCreate(none);
+  MlirAttribute recId0 = mlirDistinctAttrCreate(none);
+  MlirAttribute recId1 = mlirDistinctAttrCreate(none);
 
   // CHECK: #llvm.di_null_type
   mlirAttributeDump(mlirLLVMDINullTypeAttrGet(ctx));
 
-  // CHECK: #llvm.di_basic_type<tag = DW_TAG_null, name = "foo", sizeInBits =
+  // CHECK: #llvm.di_basic_type<name = "foo", sizeInBits =
   // CHECK-SAME: 64, encoding = DW_ATE_signed>
   MlirAttribute di_type =
       mlirLLVMDIBasicTypeAttrGet(ctx, 0, foo, 64, MlirLLVMTypeEncodingSigned);
@@ -264,12 +276,36 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
-      ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault);
+  // sourceLanguageDialect 1 is DW_LLVM_LANG_DIALECT_simt, as defined by
+  // LLVM's dwarf::LanguageDialectAttribute enum.
+  MlirAttribute compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+          ctx, recId0, false, id, /*DW_LANG_C99=*/0x000c,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
 
-  // CHECK: #llvm.di_compile_unit<{{.*}}>
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<language = DW_LANG_C99
+  // CHECK-SAME: dialect = DW_LLVM_LANG_DIALECT_simt>
   mlirAttributeDump(compile_unit);
+
+  // sourceLanguageName 4 is DW_LNAME_C_plus_plus.
+  MlirAttribute versioned_compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+          ctx, recId0, false, id, /*sourceLanguageName=*/4,
+          /*sourceLanguageVersion=*/202002,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
+
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<name = DW_LNAME_C_plus_plus
+  // CHECK-SAME: version = 202002
+  mlirAttributeDump(versioned_compile_unit);
+
+  // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>
+  mlirAttributeDump(mlirLLVMDICompileUnitAttrGetRecSelf(recId1));
 
   MlirAttribute di_module = mlirLLVMDIModuleAttrGet(
       ctx, file, compile_unit, foo,
@@ -294,17 +330,17 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   // CHECK: #llvm.di_local_variable<{{.*}}>
   MlirAttribute local_var = mlirLLVMDILocalVariableAttrGet(
-      ctx, compile_unit, foo, file, 1, 0, 8, di_type);
+      ctx, compile_unit, foo, file, 1, 0, 8, di_type, 0);
   mlirAttributeDump(local_var);
   // CHECK: #llvm.di_derived_type<{{.*}}>
   // CHECK-NOT: dwarfAddressSpace
   mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(
-      ctx, 0, bar, di_type, 64, 8, 0, MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL,
-      di_type));
+      ctx, 0, bar, file, 1, compile_unit, di_type, 64, 8, 0,
+      MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, di_type));
 
   // CHECK: #llvm.di_derived_type<{{.*}} dwarfAddressSpace = 3{{.*}}>
-  mlirAttributeDump(
-      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, 3, di_type));
+  mlirAttributeDump(mlirLLVMDIDerivedTypeAttrGet(
+      ctx, 0, bar, file, 1, compile_unit, di_type, 64, 8, 0, 3, 0, di_type));
 
   MlirAttribute subroutine_type =
       mlirLLVMDISubroutineTypeAttrGet(ctx, 0x0, 1, &di_type);
@@ -312,9 +348,24 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_subroutine_type<{{.*}}>
   mlirAttributeDump(subroutine_type);
 
-  MlirAttribute di_subprogram =
-      mlirLLVMDISubprogramAttrGet(ctx, id, compile_unit, compile_unit, foo, bar,
-                                  file, 1, 2, 0, subroutine_type);
+  MlirAttribute di_subprogram_self_rec =
+      mlirLLVMDISubprogramAttrGetRecSelf(recId0);
+  MlirAttribute di_imported_entity = mlirLLVMDIImportedEntityAttrGet(
+      ctx, 0, di_subprogram_self_rec, di_module, file, 1, foo, 1, &local_var);
+
+  mlirAttributeDump(di_imported_entity);
+  // CHECK: #llvm.di_imported_entity<{{.*}}>
+
+  MlirAttribute di_annotation = mlirLLVMDIAnnotationAttrGet(
+      ctx, mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("bar")));
+
+  mlirAttributeDump(di_annotation);
+  // CHECK: #llvm.di_annotation<{{.*}}>
+
+  MlirAttribute di_subprogram = mlirLLVMDISubprogramAttrGet(
+      ctx, recId0, false, id, compile_unit, compile_unit, foo, bar, file, 1, 2,
+      0, subroutine_type, 1, &di_imported_entity, 1, &di_annotation);
   // CHECK: #llvm.di_subprogram<{{.*}}>
   mlirAttributeDump(di_subprogram);
 
@@ -338,16 +389,26 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_expression<[(1)]>
   mlirAttributeDump(expression);
 
-  MlirAttribute string_type =
-      mlirLLVMDIStringTypeAttrGet(ctx, 0x0, foo, 16, 0, local_var, expression,
-                                  expression, MlirLLVMTypeEncodingSigned);
-  // CHECK: #llvm.di_string_type<{{.*}}>
+  MlirAttribute basic_type = mlirLLVMDIBasicTypeAttrGet(
+      ctx, 0x0, foo, 8, MlirLLVMTypeEncodingUnsignedChar);
+  MlirAttribute string_type = mlirLLVMDIStringTypeAttrGet(
+      ctx, 0x0, foo, 16, 0, local_var, expression, expression,
+      MlirLLVMTypeEncodingSigned, basic_type);
+  // CHECK: #llvm.di_string_type<{{.*}}charType = {{.*}}>
   mlirAttributeDump(string_type);
+
+  // CHECK: #llvm.di_composite_type<recId = {{.*}}, isRecSelf = true>
+  mlirAttributeDump(mlirLLVMDICompositeTypeAttrGetRecSelf(recId1));
+
+  MlirAttribute discriminator = mlirLLVMDIDerivedTypeAttrGet(
+      ctx, /*DW_TAG_member=*/0x0d, bar, file, 1, compile_unit, di_type, 8, 0, 0,
+      MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, mlirAttributeGetNull());
 
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
-      ctx, 0, id, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type,
-      expression, expression, expression, expression));
+      ctx, recId1, false, 0, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1,
+      &di_type, expression, expression, expression, expression, bar,
+      discriminator));
 }
 
 int main(void) {

@@ -61,34 +61,40 @@ struct DuplicateSymbolDiag {
 SmallVector<DuplicateSymbolDiag> dupSymDiags;
 } // namespace
 
-// Move symbols at \p fromOff in \p fromIsec into \p toIsec, unless that symbol
-// is \p skip.
+// Move local symbols at \p fromOff in \p fromIsec into \p toIsec, unless that
+// symbol is \p skip, in which case we just remove it.
 static void transplantSymbolsAtOffset(InputSection *fromIsec,
                                       InputSection *toIsec, Defined *skip,
                                       uint64_t fromOff, uint64_t toOff) {
   // Ensure the symbols will still be in address order after our insertions.
-  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff,
-                                    [](uint64_t off, const Symbol *s) {
-                                      return cast<Defined>(s)->value < off;
-                                    });
+  auto symSucceedsOff = [](uint64_t off, const Symbol *s) {
+    return cast<Defined>(s)->value > off;
+  };
+  assert(std::is_partitioned(toIsec->symbols.begin(), toIsec->symbols.end(),
+                             [symSucceedsOff, toOff](const Symbol *s) {
+                               return !symSucceedsOff(toOff, s);
+                             }) &&
+         "Symbols in toIsec must be partitioned by toOff.");
+  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff, symSucceedsOff);
   llvm::erase_if(fromIsec->symbols, [&](Symbol *s) {
     auto *d = cast<Defined>(s);
-    if (d->value != fromOff)
+    if (d == skip)
+      return true;
+    if (d->value != fromOff || d->isExternal())
       return false;
-    if (d != skip) {
-      // This repeated insertion will be quadratic unless insertIt is the end
-      // iterator. However, that is typically the case for files that have
-      // .subsections_via_symbols set.
-      insertIt = toIsec->symbols.insert(insertIt, d);
-      d->originalIsec = toIsec;
-      d->value = toOff;
-      // We don't want to have more than one unwindEntry at a given address, so
-      // drop the redundant ones. We We can safely drop the unwindEntries of
-      // the symbols in fromIsec since we will be adding another unwindEntry as
-      // we finish parsing toIsec's file. (We can assume that toIsec has its
-      // own unwindEntry because of the ODR.)
-      d->originalUnwindEntry = nullptr;
-    }
+
+    // This repeated insertion will be quadratic unless insertIt is the end
+    // iterator. However, that is typically the case for files that have
+    // .subsections_via_symbols set.
+    insertIt = toIsec->symbols.insert(insertIt, d);
+    d->originalIsec = toIsec;
+    d->value = toOff;
+    // We don't want to have more than one unwindEntry at a given address, so
+    // drop the redundant ones. We can safely drop the unwindEntries of the
+    // symbols in fromIsec since we will be adding another unwindEntry as we
+    // finish parsing toIsec's file. (We can assume that toIsec has its own
+    // unwindEntry because of the ODR.)
+    d->originalUnwindEntry = nullptr;
     return true;
   });
 }
@@ -98,7 +104,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
-                                 bool isWeakDefCanBeHidden) {
+                                 bool isWeakDefCanBeHidden, bool isCold) {
   bool overridesWeakDef = false;
   auto [s, wasInserted] = insert(name, file);
 
@@ -113,6 +119,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
+          // If either weak definition is cold, the merged symbol is cold.
+          // This matches the behavior of both ld-prime and ld64.
+          defined->cold |= isCold;
         }
         if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec)) {
           concatIsec->wasCoalesced = true;
@@ -198,14 +207,15 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   }
 
   // With -flat_namespace, all extern symbols in dylibs are interposable.
-  // FIXME: Add support for `-interposable` (PR53680).
-  bool interposable = config->namespaceKind == NamespaceKind::flat &&
-                      config->outputType != MachO::MH_EXECUTE &&
+  bool interposable = ((config->namespaceKind == NamespaceKind::flat &&
+                        config->outputType != MachO::MH_EXECUTE) ||
+                       config->interposable) &&
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
       isPrivateExtern, /*includeInSymtab=*/true, isReferencedDynamically,
-      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable);
+      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable,
+      isCold);
   return defined;
 }
 
@@ -215,7 +225,7 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
   return addDefined(target, newFile, src->isec(), src->value, src->size,
                     src->isWeakDef(), isPrivateExtern,
                     src->referencedDynamically, src->noDeadStrip,
-                    src->weakDefCanBeHidden);
+                    src->weakDefCanBeHidden, src->cold);
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
@@ -427,7 +437,7 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
     return true;
 
   // Handle -U.
-  if (config->explicitDynamicLookups.count(sym.getName())) {
+  if (config->explicitDynamicLookups.contains(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
     return true;
   }
@@ -513,7 +523,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
     // If in the symbol table and not undefined.
     if (const Symbol *s = symtab->find(newName))
-      if (dyn_cast<Undefined>(s) == nullptr)
+      if (!isa<Undefined>(s))
         return s;
 
     return nullptr;
@@ -562,8 +572,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
     if (name.equals_insensitive(it.first))
       return it.second;
   for (Symbol *sym : symtab->getSymbols())
-    if (dyn_cast<Undefined>(sym) == nullptr &&
-        name.equals_insensitive(sym->getName()))
+    if (!isa<Undefined>(sym) && name.equals_insensitive(sym->getName()))
       return sym;
 
   // The reference may be a mangled name while the definition is not. Suggest a

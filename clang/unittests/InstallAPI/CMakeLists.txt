@@ -1,11 +1,8 @@
 add_clang_unittest(InstallAPITests
   HeaderFileTest.cpp
   FileListTest.cpp
-  )
-
-clang_target_link_libraries(InstallAPITests
-  PRIVATE
+  CLANG_LIBS
   clangInstallAPI 
+  LINK_LIBS
+  LLVMTestingSupport
   )
-
-target_link_libraries(InstallAPITests PRIVATE LLVMTestingSupport)

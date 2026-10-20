@@ -26,6 +26,7 @@
 #include "lldb/lldb-private-interfaces.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <cstring>
 #include <memory>
@@ -57,11 +58,8 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
         return emulate_insn_ptr;
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetEmulateInstructionCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetEmulateInstructionCreateCallbacks()) {
       EmulateInstruction *emulate_insn_ptr =
           create_callback(arch, supported_inst_type);
       if (emulate_insn_ptr)
@@ -163,8 +161,8 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
   return false;
 }
 
-size_t EmulateInstruction::ReadMemory(const Context &context, lldb::addr_t addr,
-                                      void *dst, size_t dst_len) {
+bool EmulateInstruction::ReadMemory(const Context &context, lldb::addr_t addr,
+                                    void *dst, size_t dst_len) {
   if (m_read_mem_callback != nullptr)
     return m_read_mem_callback(this, m_baton, context, addr, dst, dst_len) ==
            dst_len;
@@ -201,7 +199,7 @@ uint64_t EmulateInstruction::ReadMemoryUnsigned(const Context &context,
 bool EmulateInstruction::WriteMemoryUnsigned(const Context &context,
                                              lldb::addr_t addr, uint64_t uval,
                                              size_t uval_byte_size) {
-  StreamString strm(Stream::eBinary, GetAddressByteSize(), GetByteOrder());
+  StreamString strm(Stream::eBinary, GetByteOrder());
   strm.PutMaxHex64(uval, uval_byte_size);
 
   size_t bytes_written = m_write_mem_callback(
@@ -588,7 +586,94 @@ EmulateInstruction::GetInternalRegisterNumber(RegisterContext *reg_ctx,
   return LLDB_INVALID_REGNUM;
 }
 
+std::unique_ptr<SingleStepBreakpointLocationsPredictor>
+EmulateInstruction::CreateBreakpointLocationPredictor(
+    std::unique_ptr<EmulateInstruction> emulator_up) {
+  auto creator =
+      emulator_up->GetSingleStepBreakpointLocationsPredictorCreator();
+  return creator(std::move(emulator_up));
+}
+
+std::optional<lldb::addr_t> EmulateInstruction::ReadPC() {
+  bool success = false;
+  auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
+                                   LLDB_INVALID_ADDRESS, &success);
+  return success ? std::optional<addr_t>(addr) : std::nullopt;
+}
+
+bool EmulateInstruction::WritePC(lldb::addr_t addr) {
+  EmulateInstruction::Context ctx;
+  ctx.type = eContextAdvancePC;
+  ctx.SetNoArgs();
+  return WriteRegisterUnsigned(ctx, eRegisterKindGeneric,
+                               LLDB_REGNUM_GENERIC_PC, addr);
+}
+
 bool EmulateInstruction::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   return false;
+}
+
+llvm::Expected<BreakpointLocations>
+SingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
+  if (!m_emulator_up->ReadInstruction()) {
+    // try to get at least the size of next instruction to set breakpoint.
+    llvm::Expected<addr_t> next_pc = GetNextInstructionAddress();
+    if (next_pc)
+      return BreakpointLocations{*next_pc};
+    return next_pc.takeError();
+  }
+
+  std::optional<addr_t> entry_pc = m_emulator_up->ReadPC();
+  if (!entry_pc)
+    return llvm::createStringError("Can't read PC");
+
+  m_emulation_result = m_emulator_up->EvaluateInstruction(
+      eEmulateInstructionOptionAutoAdvancePC);
+
+  llvm::Expected<addr_t> next_pc = GetBreakpointLocationAddress(*entry_pc);
+  if (next_pc)
+    return BreakpointLocations{*next_pc};
+  return next_pc.takeError();
+}
+
+llvm::Expected<addr_t>
+SingleStepBreakpointLocationsPredictor::GetNextInstructionAddress() {
+  std::optional<uint32_t> instr_size = m_emulator_up->GetLastInstrSize();
+  if (!instr_size)
+    return llvm::createStringError("Read instruction failed!");
+
+  std::optional<addr_t> pc = m_emulator_up->ReadPC();
+  if (!pc)
+    return llvm::createStringError("Can't read PC");
+
+  lldb::addr_t next_pc = *pc + *instr_size;
+  return next_pc;
+}
+
+llvm::Expected<addr_t>
+SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
+    lldb::addr_t entry_pc) {
+  std::optional<addr_t> addr = m_emulator_up->ReadPC();
+  if (!addr)
+    return llvm::createStringError("Can't read PC");
+  lldb::addr_t pc = *addr;
+
+  if (m_emulation_result) {
+    assert(entry_pc != pc && "Emulation was successfull but PC wasn't updated");
+    return pc;
+  }
+
+  if (entry_pc == pc) {
+    // Emulate instruction failed and it hasn't changed PC. Advance PC with
+    // the size of the current opcode because the emulation of all
+    // PC modifying instruction should be successful. The failure most
+    // likely caused by an unsupported instruction which does not modify PC.
+    return pc + m_emulator_up->GetOpcode().GetByteSize();
+  }
+
+  // The instruction emulation failed after it modified the PC. It is an
+  // unknown error where we can't continue because the next instruction is
+  // modifying the PC but we don't  know how.
+  return llvm::createStringError("Instruction emulation failed unexpectedly.");
 }

@@ -35,6 +35,18 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
+#elif defined SRC_80
+typedef xf_float src_t;
+typedef __uint128_t src_rep_t;
+#define SRC_REP_C (__uint128_t)
+// sign bit, exponent and significand occupy the lower 80 bits.
+static const int srcBits = 80;
+static const int srcSigFracBits = 63;
+// -1 accounts for the sign bit.
+// -1 accounts for the explicitly stored integer bit.
+// srcBits - srcSigFracBits - 1 - 1
+static const int srcExpBits = 15;
+
 #elif defined SRC_QUAD
 typedef tf_float src_t;
 typedef __uint128_t src_rep_t;
@@ -136,13 +148,29 @@ static inline dst_rep_t construct_dst_rep(dst_rep_t sign, dst_rep_t exp, dst_rep
   return result;
 }
 
-// End of specialization parameters.  Two helper routines for conversion to and
+// End of specialization parameters.  Helper routines for conversion to and
 // from the representation of floating-point data as integer values follow.
 
 static inline src_rep_t srcToRep(src_t x) {
   const union {
     src_t f;
     src_rep_t i;
+  } rep = {.f = x};
+  return rep.i;
+}
+
+static inline src_t srcFromRep(src_rep_t x) {
+  const union {
+    src_t f;
+    src_rep_t i;
+  } rep = {.i = x};
+  return rep.f;
+}
+
+static inline dst_rep_t dstToRep(dst_t x) {
+  const union {
+    dst_t f;
+    dst_rep_t i;
   } rep = {.f = x};
   return rep.i;
 }

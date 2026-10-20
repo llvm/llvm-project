@@ -3,6 +3,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
@@ -35,7 +36,15 @@ def ACOp : Op<Test_Dialect, "c", [NoMemoryEffect, SingleBlockImplicitTerminator<
 def ABOp : Op<Test_Dialect, "b", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 }
 
-def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect]> {
+  let summary = "Op with a summary";
+  let description = "Op with a description";
+  let arguments = (ins ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$tensor,
+                       I16Attr:$int_attr);
+  let results = (outs
+    ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$output
+  ); 
+}
 
 def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
   let summary = "attribute summary";
@@ -58,6 +67,44 @@ def TestAttrDefParams : AttrDef<Test_Dialect, "TestAttrDefParams"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+def TestEnumForParam :
+    I32EnumAttr<"TestEnumForParam",
+        "enum for param test", [
+        I32EnumAttrCase<"Alpha", 0, "alpha">,
+        I32EnumAttrCase<"Beta", 1, "beta">]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "NS";
+}
+
+def TestAttrWithEnum : AttrDef<Test_Dialect, "TestAttrWithEnum"> {
+  let mnemonic = "with_enum";
+  let parameters = (ins
+    "int":$value,
+    EnumParameter<TestEnumForParam>:$mode
+  );
+  let assemblyFormat = "`<` $value `,` $mode `>`";
+}
+
+def TestEnumWithAttrWrapper :
+    I32EnumAttr<"TestEnumWithWrapper",
+        "enum with attr wrapper", [
+        I32EnumAttrCase<"Red", 0, "red">,
+        I32EnumAttrCase<"Green", 1, "green">,
+        I32EnumAttrCase<"Blue", 2, "blue">]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "NS";
+}
+def TestEnumWithWrapperAttr : EnumAttr<Test_Dialect, TestEnumWithAttrWrapper, "color">;
+
+def TestAttrWithWrappedEnum : AttrDef<Test_Dialect, "TestAttrWithWrappedEnum"> {
+  let mnemonic = "with_wrapped_enum";
+  let parameters = (ins
+    "int":$id,
+    EnumParameter<TestEnumWithAttrWrapper>:$color
+  );
+  let assemblyFormat = "`<` $id `,` $color `>`";
+}
+
 def TestTypeDef : TypeDef<Test_Dialect, "TestTypeDef"> {
   let mnemonic = "test_type_def";
 }
@@ -69,12 +116,44 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+def TestEnum :
+    I32EnumAttr<"TestEnum",
+        "enum summary", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">]> {
+  let genSpecializedAttr = 1;
+  let cppNamespace = "NS";
+}
+
 // CHECK: Dialect without a [TOC] here.
-// CHECK: TOC added by tool.
-// CHECK: [TOC]
+// CHECK-NEXT:  TOC added by tool.
+// CHECK-EMPTY:
+// CHECK-NEXT:  [TOC]
+// CHECK-EMPTY:
 
 // CHECK-NOT: [TOC]
-// CHECK: test.e
+
+// CHECK:       test.e
+// CHECK-EMPTY:
+// CHECK-NEXT:  _Op with a summary_
+// CHECK-EMPTY:
+// CHECK-NEXT:  Op with a description
+// CHECK-EMPTY:
+
+// CHECK: Operands:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Operand | Description |
+// CHECK-NEXT:  | :-----: | ----------- |
+// CHECK-NEXT:  | `tensor` | |
+// CHECK-EMPTY:
+// CHECK-NEXT:  Results:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Result | Description |
+// CHECK-NEXT:  | :----: | ----------- |
+// CHECK-NEXT:  | `output` | |
+// CHECK-EMPTY:
+
 // CHECK: Group of ops
 // CHECK: test.a
 // CHECK: test.d
@@ -85,9 +164,11 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: Interfaces: `NoMemoryEffect (MemoryEffectOpInterface)`
 // CHECK: Effects: `MemoryEffects::Effect{}`
 
-// CHECK: ## Attribute constraints
-// CHECK: ### attribute summary
-// CHECK: attribute description
+// CHECK:       ## Attribute constraints
+// CHECK-EMPTY:
+// CHECK-NEXT:  ### attribute summary
+// CHECK-EMPTY:
+// CHECK:       attribute description
 
 // CHECK: TestAttrDefAttr
 // CHECK: Syntax:
@@ -96,6 +177,20 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: TestAttrDefParamsAttr
 // CHECK: Syntax:
 // CHECK: #test.test_attr_def_params
+
+// CHECK: TestAttrWithEnumAttr
+// CHECK: Syntax:
+// CHECK:      #test.with_enum<
+// CHECK-NEXT:   int,   # value
+// CHECK-NEXT:   `alpha` | `beta`   # mode
+// CHECK-NEXT: >
+
+// CHECK: TestAttrWithWrappedEnumAttr
+// CHECK: Syntax:
+// CHECK:      #test.with_wrapped_enum<
+// CHECK-NEXT:   int,   # id
+// CHECK-NEXT:   `red` | `green` | `blue`   # color
+// CHECK-NEXT: >
 
 // CHECK: ## Type constraints
 // CHECK: ### type summary
@@ -108,6 +203,21 @@ def TestTypeDefParams : TypeDef<Test_Dialect, "TestTypeDefParams"> {
 // CHECK: TestTypeDefParamsType
 // CHECK: Syntax:
 // CHECK: !test.test_type_def_params
+
+// CHECK:       ## Enums
+// CHECK-EMPTY:
+// CHECK-NEXT:  ### TestEnum
+// CHECK-EMPTY:
+// CHECK-NEXT:  _Enum summary_
+// CHECK-EMPTY:
+// CHECK-NEXT:  #### Cases:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Symbol | Value | String |
+// CHECK-NEXT:  | :----: | :---: | ------ |
+// CHECK-NEXT:  | First | `0` | first |
+// CHECK-NEXT:  | Second | `1` | second |
+// CHECK-NEXT:  | Third | `2` | third |
+// CHECK-EMPTY:
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";

@@ -20,100 +20,95 @@
 
 #include "NVPTX.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+static bool eraseProxyRegs(MachineFunction &MF) {
+  SmallVector<MachineInstr *, 16> RemoveList;
+
+  // ProxyReg instructions forward a register as another: `%dst = mov.iN %src`.
+  // Bulk RAUW the `%dst` registers in two passes over the machine function.
+  DenseMap<Register, Register> RAUWBatch;
+
+  for (auto &BB : MF) {
+    for (auto &MI : BB) {
+      switch (MI.getOpcode()) {
+      case NVPTX::ProxyRegB1:
+      case NVPTX::ProxyRegB16:
+      case NVPTX::ProxyRegB32:
+      case NVPTX::ProxyRegB64: {
+        auto &InOp = *MI.uses().begin();
+        auto &OutOp = *MI.defs().begin();
+        assert(InOp.isReg() && "ProxyReg input should be a register.");
+        assert(OutOp.isReg() && "ProxyReg output should be a register.");
+        RemoveList.push_back(&MI);
+        Register replacement = InOp.getReg();
+        // Check if the replacement itself has been replaced.
+        if (auto it = RAUWBatch.find(replacement); it != RAUWBatch.end())
+          replacement = it->second;
+        RAUWBatch.try_emplace(OutOp.getReg(), replacement);
+        break;
+      }
+      }
+    }
+  }
+
+  // If there were no proxy instructions, exit early.
+  if (RemoveList.empty())
+    return false;
+
+  // Erase the proxy instructions first.
+  for (auto *MI : RemoveList) {
+    MI->eraseFromParent();
+  }
+
+  // Now go replace the registers and remove kill flags conservatively.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (auto [From, To] : RAUWBatch) {
+    MRI.replaceRegWith(From, To);
+    MRI.clearKillFlags(To);
+  }
+
+  return true;
 }
 
 namespace {
 
-struct NVPTXProxyRegErasure : public MachineFunctionPass {
-public:
+struct NVPTXProxyRegErasureLegacyPass : public MachineFunctionPass {
   static char ID;
-  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {
-    initializeNVPTXProxyRegErasurePass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXProxyRegErasureLegacyPass() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return eraseProxyRegs(MF);
+  }
 
   StringRef getPassName() const override {
     return "NVPTX Proxy Register Instruction Erasure";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  void replaceMachineInstructionUsage(MachineFunction &MF, MachineInstr &MI);
-
-  void replaceRegisterUsage(MachineInstr &Instr, MachineOperand &From,
-                            MachineOperand &To);
 };
 
 } // namespace
 
-char NVPTXProxyRegErasure::ID = 0;
+char NVPTXProxyRegErasureLegacyPass::ID = 0;
 
-INITIALIZE_PASS(NVPTXProxyRegErasure, "nvptx-proxyreg-erasure", "NVPTX ProxyReg Erasure", false, false)
+INITIALIZE_PASS(NVPTXProxyRegErasureLegacyPass, "nvptx-proxyreg-erasure",
+                "NVPTX ProxyReg Erasure", false, false)
 
-bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
-  SmallVector<MachineInstr *, 16> RemoveList;
-
-  for (auto &BB : MF) {
-    for (auto &MI : BB) {
-      switch (MI.getOpcode()) {
-      case NVPTX::ProxyRegI1:
-      case NVPTX::ProxyRegI16:
-      case NVPTX::ProxyRegI32:
-      case NVPTX::ProxyRegI64:
-      case NVPTX::ProxyRegF32:
-      case NVPTX::ProxyRegF64:
-        replaceMachineInstructionUsage(MF, MI);
-        RemoveList.push_back(&MI);
-        break;
-      }
-    }
-  }
-
-  for (auto *MI : RemoveList) {
-    MI->eraseFromParent();
-  }
-
-  return !RemoveList.empty();
+MachineFunctionPass *llvm::createNVPTXProxyRegErasureLegacyPass() {
+  return new NVPTXProxyRegErasureLegacyPass();
 }
 
-void NVPTXProxyRegErasure::replaceMachineInstructionUsage(MachineFunction &MF,
-                                                          MachineInstr &MI) {
-  auto &InOp = *MI.uses().begin();
-  auto &OutOp = *MI.defs().begin();
-
-  assert(InOp.isReg() && "ProxyReg input operand should be a register.");
-  assert(OutOp.isReg() && "ProxyReg output operand should be a register.");
-
-  for (auto &BB : MF) {
-    for (auto &I : BB) {
-      replaceRegisterUsage(I, OutOp, InOp);
-    }
-  }
-}
-
-void NVPTXProxyRegErasure::replaceRegisterUsage(MachineInstr &Instr,
-                                                MachineOperand &From,
-                                                MachineOperand &To) {
-  for (auto &Op : Instr.uses()) {
-    if (Op.isReg() && Op.getReg() == From.getReg()) {
-      Op.setReg(To.getReg());
-    }
-  }
-}
-
-MachineFunctionPass *llvm::createNVPTXProxyRegErasurePass() {
-  return new NVPTXProxyRegErasure();
+PreservedAnalyses
+NVPTXProxyRegErasurePass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (!eraseProxyRegs(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

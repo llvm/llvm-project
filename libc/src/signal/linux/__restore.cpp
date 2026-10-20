@@ -11,17 +11,17 @@
 // make any stack allocations so we must ensure this.
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/macros/config.h"
 
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __restore_rt()
-    __attribute__((no_sanitize("all"),
-                   hidden));
+    __attribute__((no_sanitize("all"), visibility("hidden")));
 
 extern "C" void __restore_rt() {
   LIBC_NAMESPACE::syscall_impl<long>(SYS_rt_sigreturn);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

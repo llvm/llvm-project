@@ -12,24 +12,24 @@
 
 #include "Decomposer.h"
 
-#include "Clauses.h"
 #include "Utils.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Parser/provenance.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
-#include "llvm/Frontend/OpenMP/ConstructCompositionT.h"
 #include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <utility>
-#include <variant>
 
 using namespace Fortran;
 
@@ -43,22 +43,31 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersionAttribute(modOp),
-                                            *this, compound,
+    int64_t verAttr = mlir::omp::getOpenMPVersionAttribute(modOp);
+    // verAttr will be -1 if the module attribute is missing.
+    llvm::omp::Version version(std::max<int64_t>(verAttr, 0));
+    tomp::ConstructDecompositionT decompose(version, *this, compound,
                                             llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 
   // Given an object, return its base object if one exists.
-  std::optional<Object> getBaseObject(const Object &object) {
+  std::optional<Object> getBaseObject(const Object &object) const {
     return lower::omp::getBaseObject(object, semaCtx);
   }
 
   // Return the iteration variable of the associated loop if any.
-  std::optional<Object> getLoopIterVar() {
+  std::optional<Object> getLoopIterVar() const {
     if (semantics::Symbol *symbol = getIterationVariableSymbol(eval))
       return Object{symbol, /*designator=*/{}};
     return std::nullopt;
+  }
+
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) const {
+    return semantics::omp::IsClauseAllowedOnDirective(clauseId, dirId, version,
+                                                      &semaCtx);
   }
 
   semantics::SemanticsContext &semaCtx;
@@ -68,16 +77,10 @@ struct ConstructDecomposition {
 };
 } // namespace
 
-static UnitConstruct mergeConstructs(uint32_t version,
-                                     llvm::ArrayRef<UnitConstruct> units) {
-  tomp::ConstructCompositionT compose(version, units);
-  return compose.merged;
-}
-
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
-  os << llvm::omp::getOpenMPDirectiveName(uc.id);
+  os << llvm::omp::getOpenMPDirectiveName(uc.id, llvm::omp::FallbackVersion);
   for (auto [index, clause] : llvm::enumerate(uc.clauses)) {
     os << (index == 0 ? '\t' : ' ');
     os << llvm::omp::getOpenMPClauseName(clause.id);
@@ -90,41 +93,64 @@ ConstructQueue buildConstructQueue(
     Fortran::lower::pft::Evaluation &eval, const parser::CharBlock &source,
     llvm::omp::Directive compound, const List<Clause> &clauses) {
 
-  List<UnitConstruct> constructs;
-
   ConstructDecomposition decompose(modOp, semaCtx, eval, compound, clauses);
-  assert(!decompose.output.empty() && "Construct decomposition failed");
-
-  llvm::SmallVector<llvm::omp::Directive> loweringUnits;
-  std::ignore =
-      llvm::omp::getLeafOrCompositeConstructs(compound, loweringUnits);
-  uint32_t version = getOpenMPVersionAttribute(modOp);
-
-  int leafIndex = 0;
-  for (llvm::omp::Directive dir_id : loweringUnits) {
-    llvm::ArrayRef<llvm::omp::Directive> leafsOrSelf =
-        llvm::omp::getLeafConstructsOrSelf(dir_id);
-    size_t numLeafs = leafsOrSelf.size();
-
-    llvm::ArrayRef<UnitConstruct> toMerge{&decompose.output[leafIndex],
-                                          numLeafs};
-    auto &uc = constructs.emplace_back(mergeConstructs(version, toMerge));
-
-    if (!transferLocations(clauses, uc.clauses)) {
-      // If some clauses are left without source information, use the
-      // directive's source.
-      for (auto &clause : uc.clauses) {
-        if (clause.source.empty())
-          clause.source = source;
-      }
+  // Decomposition produces no output when a clause on a compound directive
+  // cannot be assigned to any of its leaf constructs. Semantics is expected to
+  // have rejected such a directive already, but it does not catch every case,
+  // and continuing here consumes an empty queue and reads uninitialized state.
+  // Fail deterministically instead: in a release build the fall-through is
+  // undefined behaviour, which shows up as an intermittent crash rather than a
+  // diagnostic. See https://github.com/llvm/llvm-project/issues/211430.
+  if (decompose.output.empty()) {
+    mlir::Location loc = modOp.getLoc();
+    parser::AllCookedSources &cooked = semaCtx.allCookedSources();
+    if (std::optional<parser::ProvenanceRange> provenance =
+            cooked.GetProvenanceRange(source)) {
+      if (std::optional<parser::SourcePosition> pos =
+              cooked.allSources().GetSourcePosition(provenance->start()))
+        loc = mlir::FileLineColLoc::get(modOp.getContext(), pos->path.get(),
+                                        pos->line, pos->column);
     }
-    leafIndex += numLeafs;
+    fir::emitFatalError(
+        loc,
+        llvm::Twine("OpenMP construct decomposition failed: a clause on '") +
+            llvm::omp::getOpenMPDirectiveName(compound,
+                                              llvm::omp::FallbackVersion) +
+            "' cannot be applied to any of its leaf constructs",
+        /*genCrashDiag=*/false);
   }
 
-  return constructs;
+  for (UnitConstruct &uc : decompose.output) {
+    assert(getLeafConstructs(uc.id).empty() && "unexpected compound directive");
+    //  If some clauses are left without source information, use the directive's
+    //  source.
+    for (auto &clause : uc.clauses)
+      if (clause.source.empty())
+        clause.source = source;
+  }
+
+  return decompose.output;
 }
 
-bool isLastItemInQueue(ConstructQueue::iterator item,
+bool matchLeafSequence(ConstructQueue::const_iterator item,
+                       const ConstructQueue &queue,
+                       llvm::omp::Directive directive) {
+  llvm::ArrayRef<llvm::omp::Directive> leafDirs =
+      llvm::omp::getLeafConstructsOrSelf(directive);
+
+  for (auto [dir, leaf] :
+       llvm::zip_longest(leafDirs, llvm::make_range(item, queue.end()))) {
+    if (!dir.has_value() || !leaf.has_value())
+      return false;
+
+    if (*dir != leaf->id)
+      return false;
+  }
+
+  return true;
+}
+
+bool isLastItemInQueue(ConstructQueue::const_iterator item,
                        const ConstructQueue &queue) {
   return std::next(item) == queue.end();
 }

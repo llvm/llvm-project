@@ -20,31 +20,14 @@ class SigtrampUnwind(TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        lldbutil.run_break_set_by_file_and_line(
+        _, process, _, _ = lldbutil.run_to_line_breakpoint(
             self,
-            "main.c",
+            lldb.SBFileSpec("main.c"),
             line_number("main.c", "// Set breakpoint here"),
-            num_expected_locations=1,
         )
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
-
-        if process.GetState() != lldb.eStateStopped:
-            self.fail(
-                "Process should be in the 'stopped' state, "
-                "instead the actual state is: '%s'"
-                % lldbutil.state_type_to_str(process.GetState())
-            )
-
         self.expect(
-            "pro handle  -n false -p true -s false SIGUSR1",
+            "proc handle  -n false -p true -s false SIGUSR1",
             "Have lldb pass SIGUSR1 signals",
             substrs=["SIGUSR1", "true", "false", "false"],
         )

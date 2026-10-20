@@ -35,10 +35,6 @@ enum class ReadGOTPtrMode {
 
 FloatABI getPPCFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 
-std::string getPPCTargetCPU(const Driver &D, const llvm::opt::ArgList &Args,
-                            const llvm::Triple &T);
-std::string getPPCTuneCPU(const llvm::opt::ArgList &Args,
-                          const llvm::Triple &T);
 const char *getPPCAsmModeForCPU(StringRef Name);
 ReadGOTPtrMode getPPCReadGOTPtrMode(const Driver &D, const llvm::Triple &Triple,
                                     const llvm::opt::ArgList &Args);

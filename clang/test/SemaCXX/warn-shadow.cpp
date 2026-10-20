@@ -90,6 +90,29 @@ class A {
   }
 };
 
+class FriendFunction {
+  int x; // expected-note {{previous declaration is here}}
+  friend bool operator==(const FriendFunction &f, int x) {
+    return f.x == x;
+  }
+  void test(int x) { // expected-warning {{declaration shadows a field of 'FriendFunction'}}
+  }
+};
+
+struct NSDMILambda {
+  int a; // expected-note {{previous declaration is here}}
+  int x = [this] {
+    int a = 0; // expected-warning {{declaration shadows a field of 'NSDMILambda'}}
+    return a;
+  }();
+};
+
+class PlainFriendFunction {
+  int x;
+  friend void plainFriend(int x) {
+  }
+};
+
 struct path {
   using value_type = char;
   typedef char value_type2;
@@ -307,3 +330,17 @@ void test4() {
 }
 
 }; // namespace structured_binding_tests
+
+namespace GH62588 {
+class Outer {
+public:
+  char *foo();          // expected-note {{previous declaration is here}} \
+                        // expected-note {{previous definition is here}}
+  enum Outer_E { foo }; // expected-error {{redefinition of 'foo'}} \
+                        // expected-warning {{declaration shadows a static data member of 'GH62588::Outer'}}
+  class Inner {
+  public:
+    enum Inner_E { foo }; // ok
+  };
+};
+} // namespace GH62588

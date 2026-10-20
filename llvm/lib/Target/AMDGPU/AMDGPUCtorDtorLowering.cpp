@@ -77,28 +77,27 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
   auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
   Type *PtrTy = IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS);
+  ArrayType *PtrArrayTy = ArrayType::get(PtrTy, 0);
 
   auto *Begin = M.getOrInsertGlobal(
-      IsCtor ? "__init_array_start" : "__fini_array_start",
-      ArrayType::get(PtrTy, 0), [&]() {
+      IsCtor ? "__init_array_start" : "__fini_array_start", PtrArrayTy, [&]() {
         return new GlobalVariable(
-            M, ArrayType::get(PtrTy, 0),
+            M, PtrArrayTy,
             /*isConstant=*/true, GlobalValue::ExternalLinkage,
             /*Initializer=*/nullptr,
             IsCtor ? "__init_array_start" : "__fini_array_start",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-            /*AddressSpace=*/1);
+            /*AddressSpace=*/AMDGPUAS::GLOBAL_ADDRESS);
       });
   auto *End = M.getOrInsertGlobal(
-      IsCtor ? "__init_array_end" : "__fini_array_end",
-      ArrayType::get(PtrTy, 0), [&]() {
+      IsCtor ? "__init_array_end" : "__fini_array_end", PtrArrayTy, [&]() {
         return new GlobalVariable(
-            M, ArrayType::get(PtrTy, 0),
+            M, PtrArrayTy,
             /*isConstant=*/true, GlobalValue::ExternalLinkage,
             /*Initializer=*/nullptr,
             IsCtor ? "__init_array_end" : "__fini_array_end",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-            /*AddressSpace=*/1);
+            /*AddressSpace=*/AMDGPUAS::GLOBAL_ADDRESS);
       });
 
   // The constructor type is suppoed to allow using the argument vectors, but
@@ -110,15 +109,8 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   // The destructor array must be called in reverse order. Get a constant
   // expression to the end of the array and iterate backwards instead.
   if (!IsCtor) {
-    Type *Int64Ty = IntegerType::getInt64Ty(C);
-    auto *EndPtr = IRB.CreatePtrToInt(End, Int64Ty);
-    auto *BeginPtr = IRB.CreatePtrToInt(Begin, Int64Ty);
-    auto *ByteSize = IRB.CreateSub(EndPtr, BeginPtr);
-    auto *Size = IRB.CreateAShr(ByteSize, ConstantInt::get(Int64Ty, 3));
-    auto *Offset = IRB.CreateSub(Size, ConstantInt::get(Int64Ty, 1));
     Start = IRB.CreateInBoundsGEP(
-        ArrayType::get(IRB.getPtrTy(), 0), Begin,
-        ArrayRef<Value *>({ConstantInt::get(Int64Ty, 0), Offset}));
+        PtrTy, End, ConstantInt::getAllOnesValue(IRB.getInt64Ty()));
     Stop = Begin;
   }
 
@@ -128,8 +120,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
       LoopBB, ExitBB);
   IRB.SetInsertPoint(LoopBB);
   auto *CallBackPHI = IRB.CreatePHI(PtrTy, 2, "ptr");
-  auto *CallBack = IRB.CreateLoad(IRB.getPtrTy(F.getAddressSpace()),
-                                  CallBackPHI, "callback");
+  auto *CallBack = IRB.CreateLoad(F.getType(), CallBackPHI, "callback");
   IRB.CreateCall(CallBackTy, CallBack);
   auto *NewCallBack =
       IRB.CreateConstGEP1_64(PtrTy, CallBackPHI, IsCtor ? 1 : -1, "next");

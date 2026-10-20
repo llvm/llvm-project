@@ -19,9 +19,9 @@
 //   - direct-non-list-initializes acc_ with a.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <type_traits>
 
 #include "test_macros.h"
 

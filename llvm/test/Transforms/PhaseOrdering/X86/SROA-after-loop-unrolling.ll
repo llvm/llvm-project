@@ -50,14 +50,14 @@ entry:
   %__end15 = alloca ptr
   %elt11 = alloca ptr
   store i32 %cnt, ptr %cnt.addr
-  call void @llvm.lifetime.start.p0(i64 24, ptr %arr)
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__range1)
+  call void @llvm.lifetime.start.p0(ptr %arr)
+  call void @llvm.lifetime.start.p0(ptr %__range1)
   store ptr %arr, ptr %__range1
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__begin1)
+  call void @llvm.lifetime.start.p0(ptr %__begin1)
   %0 = load ptr, ptr %__range1
   %call = call ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %0)
   store ptr %call, ptr %__begin1
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__end1)
+  call void @llvm.lifetime.start.p0(ptr %__end1)
   %1 = load ptr, ptr %__range1
   %call1 = call ptr @_ZNSt5arrayIiLm6EE3endEv(ptr %1)
   store ptr %call1, ptr %__end1
@@ -70,13 +70,13 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__end1)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__begin1)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__range1)
+  call void @llvm.lifetime.end.p0(ptr %__end1)
+  call void @llvm.lifetime.end.p0(ptr %__begin1)
+  call void @llvm.lifetime.end.p0(ptr %__range1)
   br label %for.end
 
 for.body:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %elt)
+  call void @llvm.lifetime.start.p0(ptr %elt)
   %4 = load ptr, ptr %__begin1
   store ptr %4, ptr %elt
   %5 = load i32, ptr %cnt.addr
@@ -84,7 +84,7 @@ for.body:
   store i32 %inc, ptr %cnt.addr
   %6 = load ptr, ptr %elt
   store i32 %inc, ptr %6
-  call void @llvm.lifetime.end.p0(i64 8, ptr %elt)
+  call void @llvm.lifetime.end.p0(ptr %elt)
   br label %for.inc
 
 for.inc:
@@ -94,13 +94,13 @@ for.inc:
   br label %for.cond
 
 for.end:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__range12)
+  call void @llvm.lifetime.start.p0(ptr %__range12)
   store ptr %arr, ptr %__range12
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__begin13)
+  call void @llvm.lifetime.start.p0(ptr %__begin13)
   %8 = load ptr, ptr %__range12
   %call4 = call ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %8)
   store ptr %call4, ptr %__begin13
-  call void @llvm.lifetime.start.p0(i64 8, ptr %__end15)
+  call void @llvm.lifetime.start.p0(ptr %__end15)
   %9 = load ptr, ptr %__range12
   %call6 = call ptr @_ZNSt5arrayIiLm6EE3endEv(ptr %9)
   store ptr %call6, ptr %__end15
@@ -113,19 +113,19 @@ for.cond7:
   br i1 %cmp8, label %for.body10, label %for.cond.cleanup9
 
 for.cond.cleanup9:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__end15)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__begin13)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %__range12)
+  call void @llvm.lifetime.end.p0(ptr %__end15)
+  call void @llvm.lifetime.end.p0(ptr %__begin13)
+  call void @llvm.lifetime.end.p0(ptr %__range12)
   br label %for.end14
 
 for.body10:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %elt11)
+  call void @llvm.lifetime.start.p0(ptr %elt11)
   %12 = load ptr, ptr %__begin13
   store ptr %12, ptr %elt11
   %13 = load ptr, ptr %elt11
   %14 = load i32, ptr %13
   call void @_Z3usei(i32 %14)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %elt11)
+  call void @llvm.lifetime.end.p0(ptr %elt11)
   br label %for.inc12
 
 for.inc12:
@@ -135,11 +135,11 @@ for.inc12:
   br label %for.cond7
 
 for.end14:
-  call void @llvm.lifetime.end.p0(i64 24, ptr %arr)
+  call void @llvm.lifetime.end.p0(ptr %arr)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 define linkonce_odr dso_local ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %this) {
 entry:
@@ -160,7 +160,7 @@ entry:
   ret ptr %add.ptr
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare dso_local void @_Z3usei(i32)
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -debug-only=pipeliner < %s -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -debug-only=pipeliner < %s -o - 2>&1 > /dev/null | FileCheck %s
 ; REQUIRES: asserts
 
 ; Fix bug when pipelining xxh benchmark at O3, mv55, and with vectorization.

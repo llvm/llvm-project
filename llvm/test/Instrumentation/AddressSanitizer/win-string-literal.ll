@@ -13,7 +13,7 @@
 ; CHECK:      @"__asan_global_??_C@_04JIHMPGLA@asdf?$AA@" =
 ; CHECK-SAME: private global { i64, i64, i64, i64, i64, i64, i64, i64 }
 ; CHECK-SAME: { i64 ptrtoint (ptr @"??_C@_04JIHMPGLA@asdf?$AA@" to i64),
-; CHECK-SAME:   i64 5, i64 32, i64 ptrtoint (ptr @___asan_gen_.1 to i64), i64 ptrtoint (ptr @___asan_gen_ to i64), i64 0, i64 0, i64 0 }, section ".ASAN$GL",
+; CHECK-SAME:   i64 5, i64 32, i64 ptrtoint (ptr @___asan_gen_global to i64), i64 ptrtoint (ptr @___asan_gen_module to i64), i64 0, i64 0, i64 0 }, section ".ASAN$GL",
 ; CHECK-SAME:   comdat($"??_C@_04JIHMPGLA@asdf?$AA@"), align 64
 
 ; ModuleID = 't.cpp'

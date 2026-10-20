@@ -4,20 +4,18 @@
 define void @phi_pointers(ptr %a, ptr %b, i8 zeroext %M, i8 zeroext %N) {
 ; CHECK-LABEL: @phi_pointers(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[M:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[N:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[M:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], [[N:%.*]]
 ; CHECK-NEXT:    [[BASE:%.*]] = select i1 [[CMP]], ptr [[A:%.*]], ptr [[B:%.*]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = select i1 [[CMP]], ptr [[B]], ptr [[B]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[BASE]], [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[AND]], [[ENTRY]] ], [ [[INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[AND]], [[ENTRY]] ], [ [[INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IDX]], 1
-; CHECK-NEXT:    [[GEP]] = getelementptr inbounds i16, ptr [[PTR]], i32 [[INC]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i8 [[IDX]], 1
+; CHECK-NEXT:    [[GEP]] = getelementptr inbounds i16, ptr [[PTR]], i8 [[INC]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[GEP]], [[OTHER]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -47,11 +45,9 @@ exit:
 define void @phi_pointers_null(ptr %a, ptr %b, i8 zeroext %M, i8 zeroext %N) {
 ; CHECK-LABEL: @phi_pointers_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[M:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[N:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[ADD]], [[TMP1]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[M:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], [[N:%.*]]
 ; CHECK-NEXT:    [[BASE:%.*]] = select i1 [[CMP]], ptr [[A:%.*]], ptr [[B:%.*]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = select i1 [[CMP]], ptr [[B]], ptr [[B]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq ptr [[BASE]], [[OTHER]]
@@ -60,13 +56,13 @@ define void @phi_pointers_null(ptr %a, ptr %b, i8 zeroext %M, i8 zeroext %N) {
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[BASE]], [[ENTRY:%.*]] ], [ null, [[FAIL]] ], [ [[GEP:%.*]], [[IF_THEN:%.*]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[AND]], [[ENTRY]] ], [ 0, [[FAIL]] ], [ [[INC:%.*]], [[IF_THEN]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[AND]], [[ENTRY]] ], [ 0, [[FAIL]] ], [ [[INC:%.*]], [[IF_THEN]] ]
 ; CHECK-NEXT:    [[UNDEF:%.*]] = icmp eq ptr [[PTR]], undef
 ; CHECK-NEXT:    br i1 [[UNDEF]], label [[EXIT:%.*]], label [[IF_THEN]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IDX]], 1
-; CHECK-NEXT:    [[GEP]] = getelementptr inbounds i16, ptr [[PTR]], i32 [[INC]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i8 [[IDX]], 1
+; CHECK-NEXT:    [[GEP]] = getelementptr inbounds i16, ptr [[PTR]], i8 [[INC]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[GEP]], [[OTHER]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:

@@ -30,6 +30,9 @@ TEST_CONSTEXPR_CXX17 void test(It i, typename std::iterator_traits<It>::differen
 TEST_CONSTEXPR_CXX17 bool tests() {
     const char* s = "1234567890";
     test(random_access_iterator<const char*>(s+5), 5, random_access_iterator<const char*>(s+10));
+#if TEST_STD_VER >= 20
+    test(cpp20_random_access_iterator<const char*>(s + 5), 5, cpp20_random_access_iterator<const char*>(s + 10));
+#endif
     test(s+5, 5, s+10);
     return true;
 }

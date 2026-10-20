@@ -6,30 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
+
 #include <optional>
 
 namespace lldb_private {
 class ScriptedThreadPlanPythonInterface : public ScriptedThreadPlanInterface,
-                                          public ScriptedPythonInterface {
+                                          public ScriptedPythonInterface,
+                                          public PluginInterface {
 public:
   ScriptedThreadPlanPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(const llvm::StringRef class_name,
-                     lldb::ThreadPlanSP thread_plan_sp,
-                     const StructuredDataImpl &args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::ThreadPlanSP thread_plan_sp) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
     return {};
+  }
+
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"explains_stop", "should_stop", "is_stale", "should_step",
+            "stop_description"};
   }
 
   llvm::Expected<bool> ExplainsStop(Event *event) override;
@@ -38,11 +42,20 @@ public:
 
   llvm::Expected<bool> IsStale() override;
 
-  lldb::StateType GetRunState() override;
+  llvm::Expected<lldb::StateType> GetRunState() override;
 
   llvm::Error GetStopDescription(lldb::StreamSP &stream) override;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedThreadPlanPythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H

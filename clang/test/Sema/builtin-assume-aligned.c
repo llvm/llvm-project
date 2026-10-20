@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -DSIZE_T_64 -fsyntax-only -Wno-strict-prototypes -triple x86_64-linux -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -triple i386-freebsd -verify %s
+// RUN: %clang_cc1 -DSIZE_T_64 -fsyntax-only -Wno-strict-prototypes -triple x86_64-linux -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -triple i386-freebsd -verify %s -fexperimental-new-constant-interpreter
 
 // __builtin_assume_aligned's second parameter is size_t, which may be 32 bits,
 // so test differently when size_t is 32 bits and when it is 64 bits.
@@ -72,7 +74,7 @@ int test13(int *a) {
 }
 
 int test14(int *a, int b) {
-  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *}}
+  a = (int *)__builtin_assume_aligned(b, 32); // expected-error {{non-pointer argument to '__builtin_assume_aligned' is not allowed}}
 }
 
 int test15(int *b) {
@@ -88,6 +90,14 @@ int val(int x) {
 int test16(int *b) {
   b = (int *)__builtin_assume_aligned(val, 32);
   return b[0];
+}
+
+void test17_enable_if(int x) __attribute__((enable_if(x > 0, "")));
+void test17_pass_object_size(void *p __attribute__((pass_object_size(0))));
+int test17(int *a) {
+  a = __builtin_assume_aligned(test17_enable_if, 32); // expected-error {{cannot take address of function 'test17_enable_if'}}
+  a = __builtin_assume_aligned(test17_pass_object_size, 32); // expected-error {{cannot take address of function 'test17_pass_object_size'}}
+  return a[0];
 }
 
 void test_void_assume_aligned(void) __attribute__((assume_aligned(32))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}

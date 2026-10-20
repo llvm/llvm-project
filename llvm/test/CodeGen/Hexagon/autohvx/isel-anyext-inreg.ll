@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This code causes any_extend_vector_inreg to appear in the selection DAG.
 ; Make sure that it is handled instead of crashing.

@@ -1,31 +1,52 @@
 add_subdirectory(Transforms)
 
+set(LLVM_OPTIONAL_SOURCES
+  IR/LLVMOps.cpp
+  IR/NVVMOps.cpp
+  IR/ROCDLOps.cpp
+  )
+
+set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
+foreach(index RANGE 7)
+  set(LLVM_SHARDED_SRC LLVMOps.${index}.cpp)
+  list(APPEND LLVM_SHARDED_SRCS ${LLVM_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${LLVM_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRLLVMOpsShardGen)
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
-  IR/LLVMInlining.cpp
   IR/LLVMInterfaces.cpp
   IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
+  IR/LLVMDialectBytecode.cpp
+  ${LLVM_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+
   DEPENDS
-  MLIRLLVMOpsIncGen
-  MLIRLLVMTypesIncGen
-  MLIRLLVMIntrinsicOpsIncGen
+  MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen
+  MLIRLLVMIntrinsicOpsIncGen
+  MLIRLLVMAllOpsIncGen
+  MLIRLLVMOpsIncGen
+  MLIRLLVMOpsShardGen
+  MLIRLLVMTranslationDialectInterfaceIncGen
+  MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
+  MLIRLLVMConversionsIncGen
+  MLIRLLVMIntrinsicConversionsIncGen
 
   LINK_COMPONENTS
-  AsmParser
   BinaryFormat
-  BitReader
-  BitWriter
   Core
 
   LINK_LIBS PUBLIC
@@ -33,52 +54,98 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemorySlotInterfaces
+  MLIRPtrMemorySpaceInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   )
 
+set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
+foreach(index RANGE 7)
+  set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
+  list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${NVVM_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRNVVMOpsShardGen)
+
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
+  IR/NVVMRequiresSMTraits.cpp
+  ${NVVM_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/NVVMDialect.h"]]
+
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
+  MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
+  MLIRNVVMRequiresSMTraitsIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
   AsmParser
   Core
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRGPUDialect
+  MLIROpenMPDialect
   MLIRSideEffectInterfaces
+  MLIRInferIntRangeInterface
   )
+
+set(LLVM_TARGET_DEFINITIONS IR/ROCDLOps.cpp)
+foreach(index RANGE 7)
+  set(ROCDL_SHARDED_SRC ROCDLOps.${index}.cpp)
+  list(APPEND ROCDL_SHARDED_SRCS ${ROCDL_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${ROCDL_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRROCDLOpsShardGen)
 
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
+  ${ROCDL_SHARDED_SRCS}
+  IR/ROCDLTargetInfo.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/ROCDLDialect.h"]]
+
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRROCDLOpsIncGen
+  MLIRROCDLOpsShardGen
   MLIRROCDLConversionsIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
   AsmParser
   Core
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -93,7 +160,6 @@ add_mlir_dialect_library(MLIRVCIXDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
-  MLIRGPUCompilationAttrInterfacesIncGen
   MLIRVCIXOpsIncGen
   MLIRVCIXConversionsIncGen
   intrinsics_gen
@@ -107,3 +173,28 @@ add_mlir_dialect_library(MLIRVCIXDialect
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )
+
+add_mlir_dialect_library(MLIRXeVMDialect
+  IR/XeVMDialect.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRXeVMOpsIncGen
+  MLIRXeVMConversionsIncGen
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmParser
+  Core
+  TargetParser
+
+  LINK_LIBS PUBLIC
+  MLIRDialectUtils
+  MLIRIR
+  MLIRLLVMDialect
+  MLIROpenMPDialect
+  MLIRSideEffectInterfaces
+)

@@ -6,7 +6,10 @@
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK1,CHECK %s
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 2 2>&1 | FileCheck --check-prefixes=CHECK2,CHECK %s
 
+// UNSUPPORTED: rtsan
+
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 
 // CHECK: [[SAN:.*Sanitizer]]:DEADLYSIGNAL
@@ -20,7 +23,8 @@ int main(int argc, char **argv) {
   // CHECK1: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-2]]:[[TAB]] in main
 
   if (n == 2)
-    *((volatile int *)0x1) = __LINE__;
+    // Allow for strict-alignment targets that require natural alignment.
+    *((volatile int *)0x8) = __LINE__;
   // CHECK2: #{{[0-9]+ .*}}main {{.*}}signal_line.cpp:[[@LINE-1]]:[[TAB:[0-9]+]]
   // CHECK2: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-2]]:[[TAB]] in main
 }

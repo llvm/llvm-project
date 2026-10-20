@@ -18,6 +18,9 @@
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+
 namespace lldb_private {
 
 // This is a thread list with lots of functionality for use only by the process
@@ -27,12 +30,13 @@ class ThreadList : public ThreadCollection {
   friend class Process;
 
 public:
-  ThreadList(Process *process);
+  ThreadList(Process &process);
 
   ThreadList(const ThreadList &rhs);
 
   ~ThreadList() override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   const ThreadList &operator=(const ThreadList &rhs);
 
   uint32_t GetSize(bool can_update = true);
@@ -100,8 +104,6 @@ public:
 
   lldb::ThreadSP GetThreadSPForThreadPtr(Thread *thread_ptr);
 
-  lldb::ThreadSP GetBackingThread(const lldb::ThreadSP &real_thread);
-
   bool ShouldStop(Event *event_ptr);
 
   Vote ShouldReportStop(Event *event_ptr);
@@ -114,6 +116,10 @@ public:
   /// If a thread can "resume" without having to resume the target, it
   /// will return false for WillResume, and then the process will not be
   /// restarted.
+  /// Sets *direction to the run direction of the thread(s) that will
+  /// be resumed. If threads that we want to run disagree about the
+  /// direction, we execute forwards and pop any of the thread plans
+  /// that requested reverse execution.
   ///
   /// \return
   ///    \b true instructs the process to resume normally,
@@ -121,7 +127,7 @@ public:
   ///    the process will not actually run.  The thread must then return
   ///    the correct StopInfo when asked.
   ///
-  bool WillResume();
+  bool WillResume(lldb::RunDirection &direction);
 
   void DidResume();
 
@@ -135,7 +141,21 @@ public:
 
   std::recursive_mutex &GetMutex() const override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   void Update(ThreadList &rhs);
+
+  /// Called by ThreadPlanStepOverBreakpoint when a thread finishes stepping
+  /// over a breakpoint. This tracks which threads are still stepping over
+  /// each breakpoint address, and only re-enables the breakpoint when ALL
+  /// threads have finished stepping over it.
+  void ThreadFinishedSteppingOverBreakpoint(lldb::addr_t breakpoint_addr,
+                                            lldb::tid_t tid);
+
+  /// Register a thread that is about to step over a breakpoint.
+  /// The breakpoint will be re-enabled only after all registered threads
+  /// have called ThreadFinishedSteppingOverBreakpoint.
+  void RegisterThreadSteppingOverBreakpoint(lldb::addr_t breakpoint_addr,
+                                            lldb::tid_t tid);
 
 protected:
   void SetShouldReportStop(Vote vote);
@@ -143,12 +163,19 @@ protected:
   void NotifySelectedThreadChanged(lldb::tid_t tid);
 
   // Classes that inherit from Process can see and modify these
-  Process *m_process; ///< The process that manages this thread list.
+  Process &m_process; ///< The process that manages this thread list.
   uint32_t
       m_stop_id; ///< The process stop ID that this thread list is valid for.
   lldb::tid_t
       m_selected_tid; ///< For targets that need the notion of a current thread.
   std::vector<lldb::tid_t> m_expression_tid_stack;
+
+  /// Tracks which threads are currently stepping over each breakpoint address.
+  /// Key: breakpoint address, Value: set of thread IDs stepping over it.
+  /// When a thread finishes stepping, it's removed from the set. When the set
+  /// becomes empty, the breakpoint is re-enabled.
+  llvm::DenseMap<lldb::addr_t, llvm::DenseSet<lldb::tid_t>>
+      m_threads_stepping_over_bp;
 
 private:
   ThreadList() = delete;

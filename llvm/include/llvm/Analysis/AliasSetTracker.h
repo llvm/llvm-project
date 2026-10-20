@@ -23,9 +23,10 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <vector>
 
@@ -37,10 +38,11 @@ class AnyMemSetInst;
 class AnyMemTransferInst;
 class BasicBlock;
 class BatchAAResults;
-class LoadInst;
-enum class ModRefInfo : uint8_t;
-class raw_ostream;
+class Function;
+class Instruction;
 class StoreInst;
+class LoadInst;
+class raw_ostream;
 class VAArgInst;
 class Value;
 
@@ -58,25 +60,11 @@ class AliasSet : public ilist_node<AliasSet> {
 
   /// Number of nodes pointing to this AliasSet plus the number of AliasSets
   /// forwarding to it.
-  unsigned RefCount : 27;
+  unsigned RefCount : 30;
 
   // Signifies that this set should be considered to alias any pointer.
   // Use when the tracker holding this set is saturated.
   unsigned AliasAny : 1;
-
-  /// The kinds of access this alias set models.
-  ///
-  /// We keep track of whether this alias set merely refers to the locations of
-  /// memory (and not any particular access), whether it modifies or references
-  /// the memory, or whether it does both. The lattice goes from "NoAccess" to
-  /// either RefAccess or ModAccess, then to ModRefAccess as necessary.
-  enum AccessLattice {
-    NoAccess = 0,
-    RefAccess = 1,
-    ModAccess = 2,
-    ModRefAccess = RefAccess | ModAccess
-  };
-  unsigned Access : 2;
 
   /// The kind of alias relationship between pointers of the set.
   ///
@@ -88,6 +76,9 @@ class AliasSet : public ilist_node<AliasSet> {
     SetMustAlias = 0, SetMayAlias = 1
   };
   unsigned Alias : 1;
+
+  // The kinds of access this alias set models.
+  ModRefInfo Access;
 
   void addRef() { ++RefCount; }
 
@@ -102,8 +93,8 @@ public:
   AliasSet &operator=(const AliasSet &) = delete;
 
   /// Accessors...
-  bool isRef() const { return Access & RefAccess; }
-  bool isMod() const { return Access & ModAccess; }
+  bool isRef() const { return isRefSet(Access); }
+  bool isMod() const { return isModSet(Access); }
   bool isMustAlias() const { return Alias == SetMustAlias; }
   bool isMayAlias()  const { return Alias == SetMayAlias; }
 
@@ -112,7 +103,8 @@ public:
   bool isForwardingAliasSet() const { return Forward; }
 
   /// Merge the specified alias set into this alias set.
-  void mergeSetIn(AliasSet &AS, AliasSetTracker &AST, BatchAAResults &BatchAA);
+  LLVM_ABI void mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
+                           BatchAAResults &BatchAA);
 
   // Alias Set iteration - Allow access to all of the memory locations which are
   // part of this alias set.
@@ -126,17 +118,18 @@ public:
   /// The order matches that of the memory locations, but duplicate pointer
   /// values are omitted.
   using PointerVector = SmallVector<const Value *, 8>;
-  PointerVector getPointers() const;
+  LLVM_ABI PointerVector getPointers() const;
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
 private:
   // Can only be created by AliasSetTracker.
   AliasSet()
-      : RefCount(0), AliasAny(false), Access(NoAccess), Alias(SetMustAlias) {}
+      : RefCount(0), AliasAny(false), Alias(SetMustAlias),
+        Access(ModRefInfo::NoModRef) {}
 
-  void removeFromTracker(AliasSetTracker &AST);
+  LLVM_ABI void removeFromTracker(AliasSetTracker &AST);
 
   void addMemoryLocation(AliasSetTracker &AST, const MemoryLocation &MemLoc,
                          bool KnownMustAlias = false);
@@ -145,11 +138,11 @@ private:
 public:
   /// If the specified memory location "may" (or must) alias one of the members
   /// in the set return the appropriate AliasResult. Otherwise return NoAlias.
-  AliasResult aliasesMemoryLocation(const MemoryLocation &MemLoc,
-                                    BatchAAResults &AA) const;
+  LLVM_ABI AliasResult aliasesMemoryLocation(const MemoryLocation &MemLoc,
+                                             BatchAAResults &AA) const;
 
-  ModRefInfo aliasesUnknownInst(const Instruction *Inst,
-                                BatchAAResults &AA) const;
+  LLVM_ABI ModRefInfo aliasesUnknownInst(const Instruction *Inst,
+                                         BatchAAResults &AA) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {
@@ -182,18 +175,19 @@ public:
   ///   3. If the instruction aliases multiple sets, merge the sets, and add
   ///      the instruction to the result.
   ///
-  void add(const MemoryLocation &Loc);
-  void add(LoadInst *LI);
-  void add(StoreInst *SI);
-  void add(VAArgInst *VAAI);
-  void add(AnyMemSetInst *MSI);
-  void add(AnyMemTransferInst *MTI);
-  void add(Instruction *I);       // Dispatch to one of the other add methods...
-  void add(BasicBlock &BB);       // Add all instructions in basic block
-  void add(const AliasSetTracker &AST); // Add alias relations from another AST
-  void addUnknown(Instruction *I);
+  LLVM_ABI void add(const MemoryLocation &Loc);
+  LLVM_ABI void add(LoadInst *LI);
+  LLVM_ABI void add(StoreInst *SI);
+  LLVM_ABI void addWithoutAATags(StoreInst *SI);
+  LLVM_ABI void add(VAArgInst *VAAI);
+  LLVM_ABI void add(AnyMemSetInst *MSI);
+  LLVM_ABI void add(AnyMemTransferInst *MTI);
+  LLVM_ABI void
+  add(Instruction *I); // Dispatch to one of the other add methods...
+  LLVM_ABI void add(BasicBlock &BB); // Add all instructions in basic block
+  LLVM_ABI void addUnknown(Instruction *I);
 
-  void clear();
+  LLVM_ABI void clear();
 
   /// Return the alias sets that are active.
   const ilist<AliasSet> &getAliasSets() const { return AliasSets; }
@@ -202,7 +196,7 @@ public:
   /// the memory location aliases two or more existing alias sets, will have
   /// the effect of merging those alias sets before the single resulting alias
   /// set is returned.
-  AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
+  LLVM_ABI AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
 
   /// Return the underlying alias analysis object used by this tracker.
   BatchAAResults &getAliasAnalysis() const { return AA; }
@@ -216,8 +210,8 @@ public:
   iterator begin() { return AliasSets.begin(); }
   iterator end()   { return AliasSets.end(); }
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
 private:
   friend class AliasSet;
@@ -248,7 +242,7 @@ private:
     }
   }
 
-  AliasSet &addMemoryLocation(MemoryLocation Loc, AliasSet::AccessLattice E);
+  AliasSet &addMemoryLocation(MemoryLocation Loc, ModRefInfo MR);
   AliasSet *mergeAliasSetsForMemoryLocation(const MemoryLocation &MemLoc,
                                             AliasSet *PtrAS,
                                             bool &MustAliasAll);
@@ -265,13 +259,13 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
   return OS;
 }
 
-class AliasSetsPrinterPass : public PassInfoMixin<AliasSetsPrinterPass> {
+class AliasSetsPrinterPass
+    : public RequiredPassInfoMixin<AliasSetsPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit AliasSetsPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+  LLVM_ABI explicit AliasSetsPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

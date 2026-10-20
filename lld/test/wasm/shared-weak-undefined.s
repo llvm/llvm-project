@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --experimental-pic -shared -o %t.wasm %t.o
+# RUN: wasm-ld -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d %t.wasm | FileCheck %s -check-prefix=ASM
 
@@ -7,10 +7,11 @@
 # This verifies that LazySymbols (those found in library archives) are correctly
 # demoted to undefined symbols in the final link when they are only weakly
 # referenced.
+# RUN: mkdir -p %t.dir
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.ret32.o %p/Inputs/ret32.s
-# RUN: rm -f %T/libret32.a
-# RUN: llvm-ar cru %T/libret32.a %t.ret32.o
-# RUN: wasm-ld --experimental-pic -shared -o %t.ret32.wasm %t.o %T/libret32.a
+# RUN: rm -f %t.dir/libret32.a
+# RUN: llvm-ar cru %t.dir/libret32.a %t.ret32.o
+# RUN: wasm-ld -shared -o %t.ret32.wasm %t.o %t.dir/libret32.a
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d %t.wasm | FileCheck %s -check-prefix=ASM
 
@@ -47,6 +48,7 @@ call_weak_libfunc:
 #      CHECK: Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     MemorySize:      0
 # CHECK-NEXT:     MemoryAlignment: 0
 # CHECK-NEXT:     TableSize:       0

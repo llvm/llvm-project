@@ -3,7 +3,7 @@
 
 // CHECK-NO-FUNC-LABEL: func @br(
 //  CHECK-NO-FUNC-SAME:     %[[t:.*]]: tensor<5xf32>)
-//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_memref %[[t]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
 //       CHECK-NO-FUNC:     cf.br ^[[block:.*]](%[[m]]
 //       CHECK-NO-FUNC:   ^[[block]](%[[arg1:.*]]: memref<5xf32, strided<[?], offset: ?>>):
@@ -23,7 +23,7 @@ func.func @br(%t: tensor<5xf32>) {
 
 // CHECK-NO-FUNC-LABEL: func @cond_br(
 //  CHECK-NO-FUNC-SAME:     %[[t1:.*]]: tensor<5xf32>,
-//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_buffer %[[t1]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK-NO-FUNC:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
 //       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
 //       CHECK-NO-FUNC:     cf.cond_br %{{.*}}, ^[[block1:.*]](%[[m1]] : {{.*}}), ^[[block2:.*]](%[[alloc]] : {{.*}})
@@ -69,4 +69,28 @@ func.func @looping_branches() -> tensor<5xf32> {
 ^bb2(%arg2: tensor<5xf32>):
 // CHECK: return %[[arg2]]
   func.return %arg2 : tensor<5xf32>
+}
+
+// -----
+
+// Both successors of the cond_br target the same block with different
+// forwarded tensors. Both edges must be bufferized.
+// CHECK-NO-FUNC-LABEL: func @cond_br_repeated_successor(
+//  CHECK-NO-FUNC-SAME:     %[[t1:.*]]: tensor<5xf32>, %[[t2:.*]]: tensor<5xf32>
+//  CHECK-NO-FUNC-DAG:      %[[m1:.*]] = bufferization.to_buffer %[[t1]]
+//  CHECK-NO-FUNC-DAG:      %[[m2:.*]] = bufferization.to_buffer %[[t2]]
+//  CHECK-NO-FUNC:          %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
+//  CHECK-NO-FUNC:            cf.cond_br %{{.*}}, ^[[block:.*]](%[[m1]] : {{.*}}), ^[[block]](%[[m2]] : {{.*}})
+//  CHECK-NO-FUNC:          ^[[block]](%[[arg:.*]]: memref<5xf32, strided<[?], offset: ?>>):
+//  CHECK-NO-FUNC:            scf.yield %[[arg]]
+//  CHECK-NO-FUNC:          }
+//  CHECK-NO-FUNC:          return
+func.func @cond_br_repeated_successor(%t1: tensor<5xf32>, %t2: tensor<5xf32>,
+                                      %c: i1) {
+  %0 = scf.execute_region -> tensor<5xf32> {
+    cf.cond_br %c, ^bb1(%t1 : tensor<5xf32>), ^bb1(%t2 : tensor<5xf32>)
+  ^bb1(%arg1 : tensor<5xf32>):
+    scf.yield %arg1 : tensor<5xf32>
+  }
+  return
 }

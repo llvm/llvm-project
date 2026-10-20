@@ -7,19 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/scalblnf16.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
+#include "src/__support/math/scalblnf16.h"
 
-#include "hdr/float_macros.h"
-
-#if FLT_RADIX != 2
-#error "FLT_RADIX != 2 is not supported."
-#endif
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, scalblnf16, (float16 x, long n)) {
-  return fputil::ldexp(x, n);
+  return math::scalblnf16(x, n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

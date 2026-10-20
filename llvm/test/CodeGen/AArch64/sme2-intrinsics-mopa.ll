@@ -39,4 +39,4 @@ define void @mops_f16(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 
   ret void
 }
 
-attributes #0 = {nounwind "target-features" = "+sme,+sme2p1,+bf16,+sme-f16f16,+b16b16" }
+attributes #0 = {nounwind "target-features" = "+sme-b16b16,+sme2p1,+bf16,+sme-f16f16" }

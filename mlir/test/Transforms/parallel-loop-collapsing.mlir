@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(test-scf-parallel-loop-collapsing{collapsed-indices-0=0,3 collapsed-indices-1=1,4 collapsed-indices-2=2}, canonicalize))' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(test-scf-parallel-loop-collapsing{collapsed-indices-0=0,3 collapsed-indices-1=1,4 collapsed-indices-2=2}, canonicalize))' --mlir-print-local-scope | FileCheck %s
 
 // CHECK: func @parallel_many_dims() {
 func.func @parallel_many_dims() {
@@ -33,14 +33,11 @@ func.func @parallel_many_dims() {
 // CHECK-DAG: %[[C12:.*]] = arith.constant 12 : index
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-// CHECK-DAG: %[[C9:.*]] = arith.constant 9 : index
-// CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
 // CHECK: scf.parallel (%[[NEW_I0:.*]]) = (%[[C0]]) to (%[[C4]]) step (%[[C1]]) {
 // CHECK:   %[[V0:.*]] = arith.remsi %[[NEW_I0]], %[[C2]] : index
 // CHECK:   %[[I0:.*]] = arith.divsi %[[NEW_I0]], %[[C2]] : index
-// CHECK:   %[[V2:.*]] = arith.muli %[[V0]], %[[C10]]
-// CHECK:   %[[I3:.*]] = arith.addi %[[V2]], %[[C9]]
+// CHECK:   %[[I3:.*]] = affine.apply affine_map<(d0) -> (d0 * 10 + 9)>(%[[V0]])
 // CHECK:   "magic.op"(%[[I0]], %[[C3]], %[[C6]], %[[I3]], %[[C12]]) : (index, index, index, index, index) -> index
 // CHECK:   scf.reduce

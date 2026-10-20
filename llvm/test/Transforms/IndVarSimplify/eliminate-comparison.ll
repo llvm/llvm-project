@@ -138,13 +138,19 @@ bb20.loopexit:
 ; Indvars should eliminate the icmp here.
 
 
-define void @func_10() nounwind {
+define void @func_10(i1 %arg) nounwind {
 ; CHECK-LABEL: @func_10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    store i64 0, ptr null, align 8
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[RETURN:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[I]], 0
+; CHECK-NEXT:    [[T1:%.*]] = zext i1 [[T0]] to i32
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], [[I]]
+; CHECK-NEXT:    [[U3:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    store i64 [[U3]], ptr null, align 8
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
@@ -159,7 +165,7 @@ loop:
   %u3 = zext i32 %t2 to i64
   store i64 %u3, ptr null
   %i.next = add i32 %i, 1
-  br i1 undef, label %loop, label %return
+  br i1 %arg, label %loop, label %return
 
 return:
   ret void

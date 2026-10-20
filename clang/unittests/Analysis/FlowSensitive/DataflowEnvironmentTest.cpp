@@ -8,7 +8,9 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "TestingSupport.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -21,6 +23,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 
 namespace {
 
@@ -401,8 +404,93 @@ TEST_F(EnvironmentTest,
   // `Target<&S::accessor>`.
   Environment Env(DAContext, *Fun);
   Env.initialize();
-  EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
+  EXPECT_THAT(DAContext.getModeledFields(Context.getCanonicalTagType(Struct)),
               Contains(Member));
+}
+
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct Inner {};
+
+      struct S {
+        S() {}
+
+        Inner i = {};
+      };
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("default_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *DefaultInit =
+      selectFirst<CXXDefaultInitExpr>("default_init_expr", Results);
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+  EXPECT_EQ(&Env.getResultObjectLocation(*DefaultInit),
+            &Env.getResultObjectLocation(*DefaultInit->getExpr()));
+}
+
+// This test verifies the behavior of `getResultObjectLocation()` in
+// scenarios involving inherited constructors.
+// Since the specific AST node of interest `CXXConstructorDecl` is implicitly
+// generated, we cannot annotate any statements inside of it as we do in tests
+// within TransferTest. Thus, the only way to get the right `Environment` is by
+// explicitly initializing it as we do in tests within EnvironmentTest.
+// This is why this test is not inside TransferTest, where most of the tests for
+// `getResultObjectLocation()` are located.
+TEST_F(EnvironmentTest, ResultObjectLocationForInheritedCtorInitExpr) {
+  using namespace ast_matchers;
+
+  std::string Code = R"(
+    struct Base {
+      Base(int b) {}
+    };
+    struct Derived : Base {
+      using Base::Base;
+    };
+
+    Derived d = Derived(0);
+  )";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++20"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("inherited_ctor_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *InheritedCtorInit = selectFirst<CXXInheritedCtorInitExpr>(
+      "inherited_ctor_init_expr", Results);
+
+  EXPECT_EQ(InheritedCtorInit->child_begin(), InheritedCtorInit->child_end());
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+
+  RecordStorageLocation &Loc = Env.getResultObjectLocation(*InheritedCtorInit);
+  EXPECT_NE(&Loc, nullptr);
+
+  EXPECT_EQ(&Loc, Env.getThisPointeeStorageLocation());
 }
 
 TEST_F(EnvironmentTest, Stmt) {
@@ -434,6 +522,254 @@ TEST_F(EnvironmentTest, Stmt) {
   Env.initialize();
   // And don't crash when retrieving the result object location.
   Env.getResultObjectLocation(*Init);
+}
+
+// This is a crash repro.
+TEST_F(EnvironmentTest, LambdaCapturingThisInFieldInitializer) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct S {
+        int f{[this]() { return 1; }()};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *LambdaCallOperator = selectFirst<CXXMethodDecl>(
+      "method", match(cxxMethodDecl(hasName("operator()"),
+                                    ofClass(cxxRecordDecl(isLambda())))
+                          .bind("method"),
+                      Context));
+
+  Environment Env(DAContext, *LambdaCallOperator);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And initialize the captured `this` pointee.
+  ASSERT_NE(nullptr, Env.getThisPointeeStorageLocation());
+}
+
+TEST_F(EnvironmentTest, ThisExprLocInNonMemberIsInitListLoc) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct Other {
+        int i = 0;
+        int j = this->i;
+      };
+      void target(int x) {
+        Other o = {x};
+      }
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Func = selectFirst<FunctionDecl>(
+      "func", match(functionDecl(hasName("target")).bind("func"), Context));
+  ASSERT_NE(Func, nullptr);
+
+  auto Results = match(
+      initListExpr(
+          hasInit(1, hasDescendant(memberExpr(
+                         hasObjectExpression(cxxThisExpr().bind("this_i")),
+                         member(fieldDecl(hasName("i")))))))
+          .bind("init_list"),
+      Context);
+
+  auto *ThisForI = selectFirst<CXXThisExpr>("this_i", Results);
+  ASSERT_NE(ThisForI, nullptr);
+  auto *InitList = selectFirst<InitListExpr>("init_list", Results);
+  ASSERT_NE(InitList, nullptr);
+
+  Environment Env(DAContext, *Func);
+  Env.initialize();
+  auto *DefaultThis = Env.getThisPointeeStorageLocation();
+  EXPECT_EQ(DefaultThis, nullptr);
+
+  RecordStorageLocation &InitListLoc = Env.getResultObjectLocation(*InitList);
+  EXPECT_EQ(&InitListLoc, Env.getThisPointeeStorageLocation(*ThisForI));
+}
+
+TEST_F(EnvironmentTest, ThisExprLocInNonMemberIsParenListInitLoc) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct Other {
+        int i = 0;
+        int j = this->i;
+      };
+      void target(int x) {
+        Other o(x);
+      }
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++20"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Func = selectFirst<FunctionDecl>(
+      "func", match(functionDecl(hasName("target")).bind("func"), Context));
+  ASSERT_NE(Func, nullptr);
+
+  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
+      Stmt, CXXParenListInitExpr>
+      cxxParenListInitExpr;
+
+  auto Results =
+      match(cxxParenListInitExpr(
+                hasDescendant(memberExpr(
+                    hasObjectExpression(cxxThisExpr().bind("this_i")),
+                    member(fieldDecl(hasName("i"))))))
+                .bind("init_list"),
+            Context);
+
+  auto *ThisForI = selectFirst<CXXThisExpr>("this_i", Results);
+  ASSERT_NE(ThisForI, nullptr);
+  auto *InitList = selectFirst<CXXParenListInitExpr>("init_list", Results);
+  ASSERT_NE(InitList, nullptr);
+
+  Environment Env(DAContext, *Func);
+  Env.initialize();
+  auto *DefaultThis = Env.getThisPointeeStorageLocation();
+  EXPECT_EQ(DefaultThis, nullptr);
+
+  RecordStorageLocation &InitListLoc = Env.getResultObjectLocation(*InitList);
+  EXPECT_EQ(&InitListLoc, Env.getThisPointeeStorageLocation(*ThisForI));
+}
+
+TEST_F(EnvironmentTest, ThisExprLocInMemberIsInitListLoc) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct Other {
+        int i = 0;
+        int j = this->i;
+      };
+      struct Foo {
+        void target() {
+          Other o = {this->x};
+        }
+        int x = 0;
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Method = selectFirst<CXXMethodDecl>(
+      "method",
+      match(cxxMethodDecl(hasName("target")).bind("method"), Context));
+  ASSERT_NE(Method, nullptr);
+
+  auto Results = match(
+      initListExpr(
+          hasInit(0, hasDescendant(memberExpr(
+                         hasObjectExpression(cxxThisExpr().bind("this_x")),
+                         member(fieldDecl(hasName("x")))))),
+          hasInit(1, hasDescendant(memberExpr(
+                         hasObjectExpression(cxxThisExpr().bind("this_i")),
+                         member(fieldDecl(hasName("i")))))))
+          .bind("init_list"),
+      Context);
+
+  auto *ThisForX = selectFirst<CXXThisExpr>("this_x", Results);
+  ASSERT_NE(ThisForX, nullptr);
+  auto *ThisForI = selectFirst<CXXThisExpr>("this_i", Results);
+  ASSERT_NE(ThisForI, nullptr);
+  auto *InitList = selectFirst<InitListExpr>("init_list", Results);
+  ASSERT_NE(InitList, nullptr);
+
+  Environment Env(DAContext, *Method);
+  Env.initialize();
+  auto *DefaultThis = Env.getThisPointeeStorageLocation();
+  EXPECT_NE(DefaultThis, nullptr);
+
+  EXPECT_EQ(DefaultThis, Env.getThisPointeeStorageLocation(*ThisForX));
+  RecordStorageLocation &InitListLoc = Env.getResultObjectLocation(*InitList);
+  EXPECT_EQ(&InitListLoc, Env.getThisPointeeStorageLocation(*ThisForI));
+}
+
+TEST_F(EnvironmentTest, ThisExprLocInCtorInitializerIsInitListLoc) {
+  using namespace ast_matchers;
+  std::string Code = R"cc(
+      struct B {
+        int a = 0;
+        int b = this->a;
+      };
+      struct Other {
+        int i = 0;
+        B b = {this->i};
+      };
+      struct target {
+        target() : x(-1) {}
+        int x;
+        Other o = {this->x};
+      };
+    )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Ctor = selectFirst<CXXConstructorDecl>(
+      "ctor",
+      match(cxxConstructorDecl(hasName("target")).bind("ctor"), Context));
+  ASSERT_NE(Ctor, nullptr);
+  Ctor->dump();
+
+  auto Results = match(
+      initListExpr(
+          hasInit(0, hasDescendant(memberExpr(
+                         hasObjectExpression(cxxThisExpr().bind("this_x")),
+                         member(fieldDecl(hasName("x")))))),
+          hasInit(1, hasDescendant(
+                         initListExpr(
+                             hasInit(0, hasDescendant(memberExpr(
+                                            hasObjectExpression(
+                                                cxxThisExpr().bind("this_i")),
+                                            member(fieldDecl(hasName("i")))))),
+                             hasInit(1, hasDescendant(memberExpr(
+                                            hasObjectExpression(
+                                                cxxThisExpr().bind("this_a")),
+                                            member(fieldDecl(hasName("a")))))))
+                             .bind("init_list_inner"))))
+          .bind("init_list_outer"),
+      Context);
+
+  auto *ThisForX = selectFirst<CXXThisExpr>("this_x", Results);
+  ASSERT_NE(ThisForX, nullptr);
+  auto *ThisForI = selectFirst<CXXThisExpr>("this_i", Results);
+  ASSERT_NE(ThisForI, nullptr);
+  auto *ThisForA = selectFirst<CXXThisExpr>("this_a", Results);
+  ASSERT_NE(ThisForA, nullptr);
+  auto *InitListOuter = selectFirst<InitListExpr>("init_list_outer", Results);
+  ASSERT_NE(InitListOuter, nullptr);
+  auto *InitListInner = selectFirst<InitListExpr>("init_list_inner", Results);
+  ASSERT_NE(InitListInner, nullptr);
+
+  Environment Env(DAContext, *Ctor);
+  Env.initialize();
+  auto *DefaultThis = Env.getThisPointeeStorageLocation();
+  EXPECT_NE(DefaultThis, nullptr);
+
+  EXPECT_EQ(DefaultThis, Env.getThisPointeeStorageLocation(*ThisForX));
+  RecordStorageLocation &InitListOuterLoc =
+      Env.getResultObjectLocation(*InitListOuter);
+  EXPECT_EQ(&InitListOuterLoc, Env.getThisPointeeStorageLocation(*ThisForI));
+  RecordStorageLocation &InitListInnerLoc =
+      Env.getResultObjectLocation(*InitListInner);
+  EXPECT_EQ(&InitListInnerLoc, Env.getThisPointeeStorageLocation(*ThisForA));
 }
 
 } // namespace

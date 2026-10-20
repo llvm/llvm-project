@@ -11,6 +11,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
@@ -24,15 +25,16 @@ class SparseTensor_Attr<string name,
 // sparse tensor levels.
 //===----------------------------------------------------------------------===//
 
-def LevelSetAttr :
-    TypedAttrBase<
-      I64, "IntegerAttr",
+def I64BitSetAttr : TypedAttrBase<I64, "IntegerAttr",
       And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
            CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getType().isInteger(64)">]>,
       "LevelSet attribute"> {
-  let returnType = [{::mlir::sparse_tensor::LevelSet}];
-  let convertFromStorage = [{::mlir::sparse_tensor::LevelSet($_self.getValue().getZExtValue())}];
+  let returnType = [{::mlir::sparse_tensor::I64BitSet}];
+  let convertFromStorage = [{::mlir::sparse_tensor::I64BitSet($_self.getValue().getZExtValue())}];
 }
+
+def I64BitSetArrayAttr :
+    TypedArrayAttrBase<I64BitSetAttr, "I64BitSet array attribute">;
 
 //===----------------------------------------------------------------------===//
 // These attributes are just like `IndexAttr` except that they clarify whether
@@ -111,7 +113,7 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
 
 // Sparse tensor encoding attribute.
 def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
-         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding> ] > {
+         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding>, OpAsmAttrInterface ] > {
   let mnemonic = "encoding";
 
   let description = [{
@@ -123,6 +125,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     loops operate on sparse storage formats rather than tensors with a sparsity
     encoding. Compiler passes that run before this sparsifier pass need to be aware
     of the semantics of tensor types with such a sparsity encoding.
+
+    This encoding can only be applied to tensors with supported primary element
+    types (e.g., `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`, `i32`, `i64`, and
+    complex variants of `f32` and `f64`).
 
     In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
     and **level** to refer to the axes of the actual storage format, i.e., the
@@ -542,6 +548,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     void printSymbols(AffineMap &map, AsmPrinter &printer) const;
     void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
     void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::LevelType> lvlTypes) const;
+
+    //
+    // OpAsmAttrInterface methods.
+    //
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "sparse";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
 
   let genVerifyDecl = 1;
@@ -585,10 +600,10 @@ def IsSparseTensorSlicePred
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
 
 class SparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
 class ScalarLikeOf<list<Type> allowedTypes>
   : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;

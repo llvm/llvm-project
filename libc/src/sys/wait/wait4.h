@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SYS_WAIT_WAIT4_H
 #define LLVM_LIBC_SRC_SYS_WAIT_WAIT4_H
 
-#include <sys/wait.h>
+#include "hdr/types/pid_t.h"
+#include "hdr/types/struct_rusage.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 pid_t wait4(pid_t pid, int *waitstatus, int options, struct rusage *usage);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_WAIT_WAIT4_H

@@ -13,7 +13,7 @@
 
 #include "MyExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -29,6 +29,9 @@
 class MyExtension
     : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
+  // The TypeID of this extension.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MyExtension)
+
   // The extension must derive the base constructor.
   using Base::Base;
 

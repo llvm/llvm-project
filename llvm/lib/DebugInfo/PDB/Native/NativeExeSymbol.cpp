@@ -9,7 +9,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
@@ -47,9 +46,16 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
   case PDB_SymType::PointerType:
     return Session.getSymbolCache().createTypeEnumerator(codeview::LF_POINTER);
   case PDB_SymType::UDT:
-    return Session.getSymbolCache().createTypeEnumerator(
-        {codeview::LF_STRUCTURE, codeview::LF_CLASS, codeview::LF_UNION,
-         codeview::LF_INTERFACE});
+    return Session.getSymbolCache().createTypeEnumerator({
+        codeview::LF_STRUCTURE,
+        codeview::LF_STRUCTURE2,
+        codeview::LF_CLASS,
+        codeview::LF_CLASS2,
+        codeview::LF_UNION,
+        codeview::LF_UNION2,
+        codeview::LF_INTERFACE,
+        codeview::LF_INTERFACE2,
+    });
   case PDB_SymType::VTableShape:
     return Session.getSymbolCache().createTypeEnumerator(codeview::LF_VTSHAPE);
   case PDB_SymType::FunctionSig:

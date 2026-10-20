@@ -1,4 +1,4 @@
-//===- GlobalHandler.h - Target independent global & enviroment handling --===//
+//===- GlobalHandler.h - Target independent global & environment handling -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,10 +13,14 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
-#include <string>
+#include <optional>
+#include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
@@ -33,9 +37,14 @@ struct GenericDeviceTy;
 
 using namespace llvm::object;
 
+/// The kinds of symbols that can be enumerated in a device image.
+enum class SymbolKindTy { Kernel, GlobalVariable };
+
 /// Common abstraction for globals that live on the host and device.
 /// It simply encapsulates the symbol name, symbol size, and symbol address
 /// (which might be host or device depending on the context).
+/// Both size and address may be absent (signified by 0/nullptr), and can be
+/// populated with getGlobalMetadataFromDevice/Image.
 class GlobalTy {
   // NOTE: Maybe we can have a pointer to the offload entry name instead of
   // holding a private copy of the name as a std::string.
@@ -44,7 +53,7 @@ class GlobalTy {
   void *Ptr;
 
 public:
-  GlobalTy(const std::string &Name, uint32_t Size, void *Ptr = nullptr)
+  GlobalTy(StringRef Name, uint32_t Size = 0, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
   const std::string &getName() const { return Name; }
@@ -53,6 +62,43 @@ public:
 
   void setSize(int32_t S) { Size = S; }
   void setPtr(void *P) { Ptr = P; }
+};
+
+using IntPtrT = void *;
+struct __llvm_profile_data {
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
+  std::remove_const<Type>::type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+struct __llvm_profile_gpu_sections {
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer)                 \
+  std::remove_const<Type>::type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+extern "C" {
+extern int LLVM_ATTRIBUTE_WEAK __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *UniformCountersBegin,
+    const char *UniformCountersEnd, const char *NamesBegin,
+    const char *NamesEnd, const uint64_t *VersionOverride);
+}
+/// PGO profiling data extracted from a GPU device via __llvm_profile_sections.
+struct GPUProfGlobals {
+  SmallVector<char> NamesSection;
+  SmallVector<char> CountersSection;
+  SmallVector<char> DataSection;
+  /// Distance from __llvm_prf_data to __llvm_prf_cnts on the device. Used to
+  /// adjust CounterPtr label differences when remapping to the host buffer.
+  intptr_t DeviceCountersDelta = 0;
+  Triple TargetTriple;
+  uint64_t Version = INSTR_PROF_RAW_VERSION;
+
+  void dump() const;
+  Error write() const;
+  bool empty() const;
 };
 
 /// Subclass of GlobalTy that holds the memory for a global of \p Ty.
@@ -82,7 +128,7 @@ public:
 
 /// Helper class to do the heavy lifting when it comes to moving globals between
 /// host and device. Through the GenericDeviceTy we access memcpy DtoH and HtoD,
-/// which means the only things specialized by the subclass is the retrival of
+/// which means the only things specialized by the subclass is the retrieval of
 /// global metadata (size, addr) from the device.
 /// \see getGlobalMetadataFromDevice
 class GenericGlobalHandlerTy {
@@ -111,8 +157,11 @@ public:
   bool isSymbolInImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                        StringRef SymName);
 
-  /// Get the address and size of a global in the image. Address and size are
-  /// return in \p ImageGlobal, the global name is passed in \p ImageGlobal.
+  /// Get the address and size of a global in the image. Address is
+  /// returned in \p ImageGlobal and the global name is passed in \p
+  /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the
+  /// global will be stored there. If it is present, it will be validated
+  /// against the real size of the global.
   Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
                                    DeviceImageTy &Image, GlobalTy &ImageGlobal);
 
@@ -121,9 +170,11 @@ public:
   Error readGlobalFromImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                             const GlobalTy &HostGlobal);
 
-  /// Get the address and size of a global from the device. Address is return in
-  /// \p DeviceGlobal, the global name and expected size are passed in
-  /// \p DeviceGlobal.
+  /// Get the address and size of a global from the device. Address is
+  /// returned in \p ImageGlobal and the global name is passed in \p
+  /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the
+  /// global will be stored there. If it is present, it will be validated
+  /// against the real size of the global.
   virtual Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                             DeviceImageTy &Image,
                                             GlobalTy &DeviceGlobal) = 0;
@@ -164,6 +215,27 @@ public:
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
                                           /*D2H=*/false);
   }
+
+  /// Reads profiling data from a GPU image to supplied profdata struct.
+  /// Iterates through the image symbol table and stores global values
+  /// with profiling prefixes.
+  Expected<GPUProfGlobals> readProfilingGlobals(GenericDeviceTy &Device,
+                                                DeviceImageTy &Image);
+
+  /// Enumerate the names of the symbols of the given \p Kind in \p Image,
+  /// stopping early if \p Callback returns false.
+  virtual Error iterateSymbols(DeviceImageTy &Image, SymbolKindTy Kind,
+                               function_ref<bool(StringRef)> Callback);
+
+protected:
+  /// Returns whether a symbol with the given \p Flags is defined by and
+  /// exported from the image, and therefore usable by the runtime.
+  virtual bool isExportedSymbol(uint32_t Flags);
+
+  /// Returns the name \p Symbol is known by if it identifies a symbol of the
+  /// given \p Kind, otherwise std::nullopt.
+  virtual std::optional<StringRef>
+  matchSymbol(const ELFSymbolRef &Symbol, StringRef Name, SymbolKindTy Kind);
 };
 
 } // namespace plugin

@@ -8,17 +8,17 @@ void SingleOnly() {
   int i;
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc parallel default(present) async default(none)
   while(false);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc serial async default(present) copy(i) default(none) self
   while(false);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc kernels async default(present) copy(i) default(none) self
   while(false);
 

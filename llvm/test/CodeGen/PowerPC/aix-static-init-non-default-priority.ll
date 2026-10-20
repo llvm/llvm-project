@@ -1,5 +1,5 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -verify-machineinstrs < %s | FileCheck %s
 
 @llvm.global_ctors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @cf1, ptr null }, { i32, ptr, ptr } { i32 21, ptr @cf2, ptr null }, { i32, ptr, ptr } { i32 81, ptr @cf3, ptr null }, { i32, ptr, ptr } { i32 1125, ptr @cf4, ptr null }, { i32, ptr, ptr } { i32 64512, ptr @cf5, ptr null }]
 @llvm.global_dtors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 20, ptr @df1, ptr null }, { i32, ptr, ptr } { i32 80, ptr @df2, ptr null }, { i32, ptr, ptr } { i32 1124, ptr @df3, ptr null }, { i32, ptr, ptr } { i32 64511, ptr @df4, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @df5, ptr null }]

@@ -27,6 +27,7 @@
 #include "Preamble.h"
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -38,9 +39,9 @@
 #include <vector>
 
 namespace clang {
+class HeuristicResolver;
 class Sema;
 namespace clangd {
-class HeuristicResolver;
 
 /// Stores and provides access to parsed AST.
 class ParsedAST {
@@ -58,6 +59,9 @@ public:
   ParsedAST &operator=(ParsedAST &&Other);
 
   ~ParsedAST();
+
+  ParsedAST(const ParsedAST &Other) = delete;
+  ParsedAST &operator=(const ParsedAST &Other) = delete;
 
   /// Note that the returned ast will not contain decls from the preamble that
   /// were not deserialized during parsing. Clients should expect only decls
@@ -119,6 +123,11 @@ public:
   const HeuristicResolver *getHeuristicResolver() const {
     return Resolver.get();
   }
+
+  /// Cache for constructors called through forwarding, e.g. make_unique
+  llvm::DenseMap<const FunctionDecl *,
+                 SmallVector<const CXXConstructorDecl *, 1>>
+      ForwardingToConstructorCache;
 
 private:
   ParsedAST(PathRef TUPath, llvm::StringRef Version,

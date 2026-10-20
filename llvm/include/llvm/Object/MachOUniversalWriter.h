@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <string>
@@ -46,20 +47,21 @@ class Slice {
         std::string ArchName, uint32_t Align);
 
 public:
-  explicit Slice(const MachOObjectFile &O);
+  LLVM_ABI explicit Slice(const MachOObjectFile &O);
 
-  Slice(const MachOObjectFile &O, uint32_t Align);
+  LLVM_ABI Slice(const MachOObjectFile &O, uint32_t Align);
 
   /// This constructor takes pre-specified \param CPUType , \param CPUSubType ,
   /// \param ArchName , \param Align instead of inferring them from the archive
   /// members.
-  Slice(const Archive &A, uint32_t CPUType, uint32_t CPUSubType,
-        std::string ArchName, uint32_t Align);
+  LLVM_ABI Slice(const Archive &A, uint32_t CPUType, uint32_t CPUSubType,
+                 std::string ArchName, uint32_t Align);
 
-  static Expected<Slice> create(const Archive &A,
-                                LLVMContext *LLVMCtx = nullptr);
+  LLVM_ABI static Expected<Slice> create(const Archive &A,
+                                         LLVMContext *LLVMCtx = nullptr);
 
-  static Expected<Slice> create(const IRObjectFile &IRO, uint32_t Align);
+  LLVM_ABI static Expected<Slice> create(const IRObjectFile &IRO,
+                                         uint32_t Align);
 
   void setP2Alignment(uint32_t Align) { P2Alignment = Align; }
 
@@ -99,10 +101,11 @@ public:
 
 enum class FatHeaderType { FatHeader, Fat64Header };
 
-Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName,
-                           FatHeaderType FatHeader = FatHeaderType::FatHeader);
+LLVM_ABI Error
+writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName,
+                     FatHeaderType FatHeader = FatHeaderType::FatHeader);
 
-Error writeUniversalBinaryToStream(
+LLVM_ABI Error writeUniversalBinaryToStream(
     ArrayRef<Slice> Slices, raw_ostream &Out,
     FatHeaderType FatHeader = FatHeaderType::FatHeader);
 

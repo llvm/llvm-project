@@ -1,4 +1,0 @@
-module MachO.compact_unwind_encoding [system] {
-  header "compact_unwind_encoding.h"
-  export *
-}

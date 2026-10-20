@@ -1,4 +1,4 @@
-//===--- AssignmentInIfConditionCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,6 +39,22 @@ void AssignmentInIfConditionCheck::check(
           return true;
         }
 
+        // Dont traverse into any requires expressions.
+        bool TraverseRequiresExpr(RequiresExpr *,
+                                  DataRecursionQueue * = nullptr) {
+          return true;
+        }
+
+        // Only traverse the result expression of a statement expression,
+        // looking through labels and attributes on the last statement.
+        bool TraverseStmtExpr(StmtExpr *SE,
+                              DataRecursionQueue *Queue = nullptr) {
+          if (auto *Last =
+                  dyn_cast_if_present<ValueStmt>(SE->getSubStmt()->body_back()))
+            return TraverseStmt(Last->getExprStmt(), Queue);
+          return true;
+        }
+
         bool VisitBinaryOperator(BinaryOperator *BO) {
           if (BO->isAssignmentOp())
             Check.report(BO);
@@ -60,7 +76,7 @@ void AssignmentInIfConditionCheck::check(
 }
 
 void AssignmentInIfConditionCheck::report(const Expr *AssignmentExpr) {
-  SourceLocation OpLoc =
+  const SourceLocation OpLoc =
       isa<BinaryOperator>(AssignmentExpr)
           ? cast<BinaryOperator>(AssignmentExpr)->getOperatorLoc()
           : cast<CXXOperatorCallExpr>(AssignmentExpr)->getOperatorLoc();

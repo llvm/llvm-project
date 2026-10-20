@@ -17,10 +17,19 @@ namespace lldb_private {
 
 class ThreadPlanStepOut : public ThreadPlan, public ThreadPlanShouldStopHere {
 public:
+  /// Creates a thread plan to step out from frame_idx, skipping parent frames
+  /// if they are artificial or hidden frames. Also skips frames without debug
+  /// info based on step_out_avoids_code_without_debug_info.
   ThreadPlanStepOut(Thread &thread, SymbolContext *addr_context,
                     bool first_insn, bool stop_others, Vote report_stop_vote,
                     Vote report_run_vote, uint32_t frame_idx,
                     LazyBool step_out_avoids_code_without_debug_info,
+                    bool continue_to_next_branch = false,
+                    bool gather_return_value = true);
+
+  /// Creates a thread plan to step out from frame_idx to frame_idx + 1.
+  ThreadPlanStepOut(Thread &thread, bool stop_others, Vote report_stop_vote,
+                    Vote report_run_vote, uint32_t frame_idx,
                     bool continue_to_next_branch = false,
                     bool gather_return_value = true);
 
@@ -30,6 +39,7 @@ public:
   bool ValidatePlan(Stream *error) override;
   bool ShouldStop(Event *event_ptr) override;
   bool StopOthers() override;
+  void SetStopOthers(bool new_value) override { m_stop_others = new_value; }
   lldb::StateType GetPlanRunState() override;
   bool WillStop() override;
   bool MischiefManaged() override;
@@ -81,6 +91,10 @@ private:
       LazyBool step_out_avoids_code_without_debug_info);
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
+
+  void SetupReturnAddress(lldb::StackFrameSP return_frame_sp,
+                          lldb::StackFrameSP immediate_return_from_sp,
+                          uint32_t frame_idx, bool continue_to_next_branch);
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
 

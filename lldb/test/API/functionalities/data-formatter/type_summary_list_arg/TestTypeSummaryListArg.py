@@ -17,7 +17,7 @@ class TypeSummaryListArgumentTestCase(TestBase):
             "type summary list Foo", substrs=["Category: default", "Category: system"]
         )
         self.expect(
-            "type summary list char", substrs=["char ?(\*|\[\])", "char ?\[[0-9]+\]"]
+            "type summary list char", substrs=[r"char ?(\*|\[\])", r"char ?\[[0-9]+\]"]
         )
 
         self.expect("type summary list -w default", substrs=["system"], matching=False)
@@ -28,6 +28,6 @@ class TypeSummaryListArgumentTestCase(TestBase):
         )
         self.expect(
             "type summary list -w system char",
-            substrs=["char ?(\*|\[\])", "char ?\[[0-9]+\]"],
+            substrs=[r"char ?(\*|\[\])", r"char ?\[[0-9]+\]"],
             matching=True,
         )

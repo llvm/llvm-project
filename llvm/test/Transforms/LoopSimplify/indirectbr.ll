@@ -82,15 +82,15 @@ L1:
   ret i64 %y
 }
 
-define void @pr5502() nounwind {
+define void @pr5502(ptr %arg, i1 %arg2) nounwind {
 entry:
   br label %while.cond
 
 while.cond:
-  br i1 undef, label %while.body, label %while.end
+  br i1 %arg2, label %while.body, label %while.end
 
 while.body:
-  indirectbr ptr undef, [label %end_opcode, label %end_opcode]
+  indirectbr ptr %arg, [label %end_opcode, label %end_opcode]
 
 end_opcode:
   br i1 false, label %end_opcode, label %while.cond

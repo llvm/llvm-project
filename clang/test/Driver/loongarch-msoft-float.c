@@ -11,10 +11,10 @@
 // WARN: warning: ignoring '-mabi=lp64d' as it conflicts with that implied by '-msoft-float' (lp64s)
 // WARN: warning: ignoring '-mfpu=64' as it conflicts with that implied by '-msoft-float' (0)
 
-// CC1: "-target-feature" "-f"{{.*}} "-target-feature" "-d"
+// CC1: "-target-feature" "-f"{{.*}} "-target-feature" "-d" "-target-feature" "-lsx"
 // CC1: "-target-abi" "lp64s"
 
-// IR: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}-d,{{(.*,)?}}-f{{(,.*)?}}"
+// IR: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}-d,{{(.*,)?}}-f,-lsx"
 
 int foo(void) {
   return 3;

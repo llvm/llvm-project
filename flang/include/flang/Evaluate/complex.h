@@ -45,7 +45,7 @@ public:
         im_.Compare(that.im_) == Relation::Equal;
   }
 
-  constexpr bool IsZero() const { return re_.IsZero() || im_.IsZero(); }
+  constexpr bool IsZero() const { return re_.IsZero() && im_.IsZero(); }
 
   constexpr bool IsInfinite() const {
     return re_.IsInfinite() || im_.IsInfinite();
@@ -61,10 +61,11 @@ public:
 
   template <typename INT>
   static ValueWithRealFlags<Complex> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
     ValueWithRealFlags<Complex> result;
-    result.value.re_ =
-        Part::FromInteger(n, rounding).AccumulateFlags(result.flags);
+    result.value.re_ = Part::FromInteger(n, isUnsigned, rounding)
+                           .AccumulateFlags(result.flags);
     return result;
   }
 
@@ -75,6 +76,9 @@ public:
   ValueWithRealFlags<Complex> Multiply(const Complex &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Complex> Divide(const Complex &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Complex> KahanSummation(const Complex &,
+      Complex &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   // ABS/CABS = HYPOT(re_, imag_) = SQRT(re_**2 + im_**2)
@@ -93,6 +97,33 @@ public:
 
   std::string DumpHexadecimal() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind) const;
+
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  /// Note that for COMPLEX(10), this is 32.
+  constexpr static std::size_t bytesStored() { return 2 * Part::bytesStored(); }
+
+  /// De-serializes a complex from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Complex FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    CHECK(bytesStored() == expectedSize);
+    const char *data{static_cast<const char *>(raw)};
+    Part realPart{Part::FromRawBytes(data, Part::bytesStored())};
+    Part imagPart{
+        Part::FromRawBytes(data + Part::bytesStored(), Part::bytesStored())};
+    return {realPart, imagPart};
+  }
+
+  /// Serializes this complex to \p dst. \p expectedSize must match the the
+  /// number of bytes to be written. If \p changed points to a boolean, it will
+  /// be set to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    CHECK(expectedSize == bytesStored());
+    re_.StoreRawBytes(dst, Part::bytesStored(), changed);
+    im_.StoreRawBytes(static_cast<char *>(dst) + Part::bytesStored(),
+        Part::bytesStored(), changed);
+  }
 
   // TODO: unit testing
 

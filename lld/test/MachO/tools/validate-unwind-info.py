@@ -11,7 +11,7 @@ from pprint import pprint
 
 
 def main():
-    hex = "[a-f\d]"
+    hex = r"[a-f\d]"
     hex8 = hex + "{8}"
 
     parser = argparse.ArgumentParser(description=__doc__)

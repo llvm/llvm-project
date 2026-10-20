@@ -8,6 +8,7 @@
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
@@ -185,7 +186,7 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
 
   // Flush the last type/layout, if there is one.
   if (!CurrentType.empty())
-    Layouts[CurrentType] = CurrentLayout;
+    Layouts[CurrentType] = std::move(CurrentLayout);
 }
 
 bool

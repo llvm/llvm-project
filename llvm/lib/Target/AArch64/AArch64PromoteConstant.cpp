@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,7 +32,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -41,20 +41,14 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-promote-const"
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("aarch64-stress-promote-const", cl::Hidden,
-                            cl::desc("Promote all vector constants"));
 
 STATISTIC(NumPromoted, "Number of promoted constants");
 STATISTIC(NumPromotedUses, "Number of promoted constants uses");
@@ -110,9 +104,7 @@ public:
 
   static char ID;
 
-  AArch64PromoteConstant() : ModulePass(ID) {
-    initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PromoteConstant() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "AArch64 Promote Constant"; }
 
@@ -140,7 +132,6 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   /// Type to store a list of Uses.
@@ -250,7 +241,7 @@ static bool isConstantUsingVectorTy(const Type *CstTy) {
   return false;
 }
 
-// Returns true if \p C contains only ConstantData leafs and no global values,
+// Returns true if \p C contains only ConstantData leaves and no global values,
 // block addresses or constant expressions. Traverses ConstantAggregates.
 static bool containsOnlyConstantData(const Constant *C) {
   if (isa<ConstantData>(C))
@@ -346,10 +337,16 @@ static bool shouldConvertImpl(const Constant *Cst) {
   // instances of Cst.
   // Ideally, we could promote this into a global and rematerialize the constant
   // when it was a bad idea.
-  if (Cst->isZeroValue())
+  if (Cst->isNullValue())
     return false;
 
-  if (Stress)
+  // Globals cannot be or contain scalable vectors.
+  if (Cst->getType()->isScalableTy())
+    return false;
+
+  const AArch64Options &CLOpts =
+      Cst->getContext().getLibraryOptions().get<AArch64Options>();
+  if (CLOpts.stress_promote_const)
     return true;
 
   // FIXME: see function \todo

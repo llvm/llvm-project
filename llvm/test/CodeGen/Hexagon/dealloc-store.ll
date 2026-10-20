@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -hexagon-shrink-frame=0 -hexagon-cext-threshold=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -hexagon-shrink-frame=0 -hexagon-cext-threshold=1 < %s | FileCheck %s
 
 target triple = "hexagon"
 

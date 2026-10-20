@@ -55,7 +55,7 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 // computed by summing up all individual 1 byte counters. This can incur an
 // accuracy penalty.
 
-#define HISTOGRAM_GRANULARITY 8U
+#define HISTOGRAM_GRANULARITY 8ULL
 
 #define HISTOGRAM_MAX_COUNTER 255U
 
@@ -126,6 +126,27 @@ inline bool AddrIsInShadow(uptr a) {
 
 inline bool AddrIsAlignedByGranularity(uptr a) {
   return (a & (SHADOW_GRANULARITY - 1)) == 0;
+}
+
+// Accumulates the access count from the shadow for the given pointer and size.
+inline u64 GetShadowCount(uptr p, u32 size) {
+  u64 *shadow = (u64 *)MEM_TO_SHADOW(p);
+  u64 *shadow_end = (u64 *)MEM_TO_SHADOW(p + size - 1);
+  u64 count = 0;
+  for (; shadow <= shadow_end; shadow++)
+    count += *shadow;
+  return count;
+}
+
+// Accumulates the access count from the shadow for the given pointer and size.
+// See the histogram overview above for the counter layout.
+inline u64 GetShadowCountHistogram(uptr p, u32 size) {
+  u8 *shadow = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p);
+  u8 *shadow_end = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p + size - 1);
+  u64 count = 0;
+  for (; shadow <= shadow_end; shadow++)
+    count += *shadow;
+  return count;
 }
 
 inline void RecordAccess(uptr a) {

@@ -82,7 +82,7 @@ int main(int, char**)
     assert(e4() < 0x7fffffffu);
     assert(e4() < 0x7fffffffu);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     // m might overflow. The overflow is not OK, result will be in bounds,
     // and Schrage's algorithm is incompatible here. Need to use 128 bit arithmetic.
     typedef std::linear_congruential_engine<T, 0x100000001ull, 0ull, (1ull << 61) - 1ull> E5;

@@ -20,7 +20,7 @@ class FloatTypesExprTestCase(AbstractBase.GenericTester):
         """Test that float-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("float.cpp", set(["float"]))
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_float_type_from_block(self):
         """Test that float-type variables are displayed correctly from a block."""
         self.build_and_run_expr("float.cpp", set(["float"]), bc=True)

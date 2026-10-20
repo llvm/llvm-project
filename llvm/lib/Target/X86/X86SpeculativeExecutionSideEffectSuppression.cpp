@@ -29,48 +29,25 @@ using namespace llvm;
 
 STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
 
-static cl::opt<bool> EnableSpeculativeExecutionSideEffectSuppression(
-    "x86-seses-enable-without-lvi-cfi",
-    cl::desc("Force enable speculative execution side effect suppression. "
-             "(Note: User must pass -mlvi-cfi in order to mitigate indirect "
-             "branches and returns.)"),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<bool> OneLFENCEPerBasicBlock(
-    "x86-seses-one-lfence-per-bb",
-    cl::desc(
-        "Omit all lfences other than the first to be placed in a basic block."),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<bool> OnlyLFENCENonConst(
-    "x86-seses-only-lfence-non-const",
-    cl::desc("Only lfence before groups of terminators where at least one "
-             "branch instruction has an input to the addressing mode that is a "
-             "register other than %rip."),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<bool>
-    OmitBranchLFENCEs("x86-seses-omit-branch-lfences",
-                      cl::desc("Omit all lfences before branch instructions."),
-                      cl::init(false), cl::Hidden);
-
 namespace {
 
-class X86SpeculativeExecutionSideEffectSuppression
+constexpr StringRef X86SESESPassName =
+    "X86 Speculative Execution Side Effect Suppression";
+
+class X86SpeculativeExecutionSideEffectSuppressionLegacy
     : public MachineFunctionPass {
 public:
-  X86SpeculativeExecutionSideEffectSuppression() : MachineFunctionPass(ID) {}
+  X86SpeculativeExecutionSideEffectSuppressionLegacy()
+      : MachineFunctionPass(ID) {}
 
   static char ID;
-  StringRef getPassName() const override {
-    return "X86 Speculative Execution Side Effect Suppression";
-  }
+  StringRef getPassName() const override { return X86SESESPassName; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-char X86SpeculativeExecutionSideEffectSuppression::ID = 0;
+char X86SpeculativeExecutionSideEffectSuppressionLegacy::ID = 0;
 
 // This function returns whether the passed instruction uses a memory addressing
 // mode that is constant. We treat all memory addressing modes that read
@@ -85,22 +62,23 @@ static bool hasConstantAddressingMode(const MachineInstr &MI) {
   return true;
 }
 
-bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool
+runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
 
   const auto &OptLevel = MF.getTarget().getOptLevel();
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  const X86Options &CLOpts = Subtarget.getCLOpts();
 
   // Check whether SESES needs to run as the fallback for LVI at O0, whether the
   // user explicitly passed an SESES flag, or whether the SESES target feature
   // was set.
-  if (!EnableSpeculativeExecutionSideEffectSuppression &&
+  if (!CLOpts.seses_enable_without_lvi_cfi &&
       !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOptLevel::None) &&
       !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
-                    << " **********\n");
+  LLVM_DEBUG(dbgs() << "********** " << X86SESESPassName << " : "
+                    << MF.getName() << " **********\n");
   bool Modified = false;
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   for (MachineBasicBlock &MBB : MF) {
@@ -125,7 +103,7 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
           NumLFENCEsInserted++;
           Modified = true;
         }
-        if (OneLFENCEPerBasicBlock)
+        if (CLOpts.seses_one_lfence_per_bb)
           break;
       }
       // The following section will be LFENCEing before groups of terminators
@@ -146,13 +124,13 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
 
       // Look for branch instructions that will require an LFENCE to be put
       // before this basic block's terminators.
-      if (!MI.isBranch() || OmitBranchLFENCEs) {
+      if (!MI.isBranch() || CLOpts.seses_omit_branch_lfences) {
         // This isn't a branch or we're not putting LFENCEs before branches.
         PrevInstIsLFENCE = false;
         continue;
       }
 
-      if (OnlyLFENCENonConst && hasConstantAddressingMode(MI)) {
+      if (CLOpts.seses_only_lfence_non_const && hasConstantAddressingMode(MI)) {
         // This is a branch, but it only has constant addressing mode and we're
         // not adding LFENCEs before such branches.
         PrevInstIsLFENCE = false;
@@ -173,10 +151,24 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
   return Modified;
 }
 
-FunctionPass *llvm::createX86SpeculativeExecutionSideEffectSuppression() {
-  return new X86SpeculativeExecutionSideEffectSuppression();
+bool X86SpeculativeExecutionSideEffectSuppressionLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runX86SpeculativeExecutionSideEffectSuppression(MF);
 }
 
-INITIALIZE_PASS(X86SpeculativeExecutionSideEffectSuppression, "x86-seses",
+PreservedAnalyses X86SpeculativeExecutionSideEffectSuppressionPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return runX86SpeculativeExecutionSideEffectSuppression(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}
+
+FunctionPass *
+llvm::createX86SpeculativeExecutionSideEffectSuppressionLegacyPass() {
+  return new X86SpeculativeExecutionSideEffectSuppressionLegacy();
+}
+
+INITIALIZE_PASS(X86SpeculativeExecutionSideEffectSuppressionLegacy, "x86-seses",
                 "X86 Speculative Execution Side Effect Suppression", false,
                 false)

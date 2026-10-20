@@ -1,13 +1,13 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cedar -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=juniper -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=sumo -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=barts -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=caicos -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=turks -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu9.06 < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: not llc -mtriple=r600 -mcpu=cedar < %s
+; RUN: not llc -mtriple=r600 -mcpu=juniper < %s
+; RUN: not llc -mtriple=r600 -mcpu=redwood < %s
+; RUN: not llc -mtriple=r600 -mcpu=sumo < %s
+; RUN: not llc -mtriple=r600 -mcpu=barts < %s
+; RUN: not llc -mtriple=r600 -mcpu=caicos < %s
+; RUN: not llc -mtriple=r600 -mcpu=turks < %s
 
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone
@@ -23,9 +23,13 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; EG: FMA {{\*? *}}[[RES]]
 define amdgpu_kernel void @fma_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                      ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load float, ptr addrspace(1) %in1
-  %r1 = load float, ptr addrspace(1) %in2
-  %r2 = load float, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds float, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds float, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds float, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load float, ptr addrspace(1) %in1.tid
+  %r1 = load float, ptr addrspace(1) %in2.tid
+  %r2 = load float, ptr addrspace(1) %in3.tid
   %r3 = tail call float @llvm.fma.f32(float %r0, float %r1, float %r2)
   store float %r3, ptr addrspace(1) %out
   ret void
@@ -50,9 +54,13 @@ define float @fmac_to_3addr_f32(float %r0, float %r1, float %r2) {
 ; EG-DAG: FMA {{\*? *}}[[RES]].[[CHHI]]
 define amdgpu_kernel void @fma_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                        ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load <2 x float>, ptr addrspace(1) %in1
-  %r1 = load <2 x float>, ptr addrspace(1) %in2
-  %r2 = load <2 x float>, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds <2 x float>, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load <2 x float>, ptr addrspace(1) %in1.tid
+  %r1 = load <2 x float>, ptr addrspace(1) %in2.tid
+  %r2 = load <2 x float>, ptr addrspace(1) %in3.tid
   %r3 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %r0, <2 x float> %r1, <2 x float> %r2)
   store <2 x float> %r3, ptr addrspace(1) %out
   ret void
@@ -75,9 +83,13 @@ define amdgpu_kernel void @fma_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-DAG: FMA {{\*? *}}[[RES]].W
 define amdgpu_kernel void @fma_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
                        ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-  %r0 = load <4 x float>, ptr addrspace(1) %in1
-  %r1 = load <4 x float>, ptr addrspace(1) %in2
-  %r2 = load <4 x float>, ptr addrspace(1) %in3
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in1.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in1, i32 %tid
+  %in2.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in2, i32 %tid
+  %in3.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in3, i32 %tid
+  %r0 = load <4 x float>, ptr addrspace(1) %in1.tid
+  %r1 = load <4 x float>, ptr addrspace(1) %in2.tid
+  %r2 = load <4 x float>, ptr addrspace(1) %in3.tid
   %r3 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %r0, <4 x float> %r1, <4 x float> %r2)
   store <4 x float> %r3, ptr addrspace(1) %out
   ret void
@@ -159,15 +171,15 @@ define float @fold_fmul_distributive(float %x, float %y) {
 define amdgpu_kernel void @vec_mul_scalar_add_fma(<2 x float> %a, <2 x float> %b, float %c1, ptr addrspace(1) %inptr) {
 ; GFX906-LABEL: vec_mul_scalar_add_fma:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_load_dword s8, s[0:1], 0x34
-; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x3c
+; GFX906-NEXT:    s_load_dword s8, s[4:5], 0x34
+; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX906-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x3c
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v1, s8
-; GFX906-NEXT:    v_mov_b32_e32 v2, s6
-; GFX906-NEXT:    v_fmac_f32_e32 v1, s4, v2
-; GFX906-NEXT:    global_store_dword v0, v1, s[2:3] offset:4
+; GFX906-NEXT:    v_mov_b32_e32 v2, s2
+; GFX906-NEXT:    v_fmac_f32_e32 v1, s0, v2
+; GFX906-NEXT:    global_store_dword v0, v1, s[6:7] offset:4
 ; GFX906-NEXT:    s_endpgm
   %gep = getelementptr float, ptr addrspace(1) %inptr, i32 1
   %c = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> zeroinitializer

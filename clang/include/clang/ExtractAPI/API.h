@@ -19,21 +19,14 @@
 #define LLVM_CLANG_EXTRACTAPI_API_H
 
 #include "clang/AST/Availability.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <iterator>
@@ -43,6 +36,15 @@
 
 namespace clang {
 namespace extractapi {
+
+inline std::string getTypeConstraintSpelling(const TypeConstraint *TC,
+                                             const ASTContext &Context) {
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  TC->getNamedConcept().print(OS, Context.getPrintingPolicy(),
+                              TemplateName::Qualified::None);
+  return Name;
+}
 
 class Template {
   struct TemplateParameter {
@@ -78,7 +80,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -96,7 +99,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -114,7 +118,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -327,6 +332,8 @@ public:
   /// Append \p Other children chain into ours and empty out Other's record
   /// chain.
   void stealRecordChain(RecordContext &Other);
+
+  void removeFromRecordChain(APIRecord *Record);
 
   APIRecord::RecordKind getKind() const { return Kind; }
 
@@ -621,7 +628,24 @@ struct TagRecord : APIRecord, RecordContext {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union || K == RK_Enum;
+    switch (K) {
+    case RK_Enum:
+      [[fallthrough]];
+    case RK_Struct:
+      [[fallthrough]];
+    case RK_Union:
+      [[fallthrough]];
+    case RK_CXXClass:
+      [[fallthrough]];
+    case RK_ClassTemplate:
+      [[fallthrough]];
+    case RK_ClassTemplateSpecialization:
+      [[fallthrough]];
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool IsEmbeddedInVarDeclarator;
@@ -690,7 +714,22 @@ struct RecordRecord : TagRecord {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union;
+    switch (K) {
+    case RK_Struct:
+      [[fallthrough]];
+    case RK_Union:
+      [[fallthrough]];
+    case RK_CXXClass:
+      [[fallthrough]];
+    case RK_ClassTemplate:
+      [[fallthrough]];
+    case RK_ClassTemplateSpecialization:
+      [[fallthrough]];
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isAnonymousWithNoTypedef() { return Name.empty(); }
@@ -1353,11 +1392,12 @@ private:
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-                        PresumedLoc Loc, DeclarationFragments Declaration,
+                        PresumedLoc Loc, const DocComment &Comment,
+                        DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         bool IsFromSystemHeader)
       : APIRecord(RK_MacroDefinition, USR, Name, Parent, Loc,
-                  AvailabilityInfo(), LinkageInfo(), {}, Declaration,
+                  AvailabilityInfo(), LinkageInfo(), Comment, Declaration,
                   SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1430,6 +1470,10 @@ public:
     return TopLevelRecords;
   }
 
+  void removeRecord(StringRef USR);
+
+  void removeRecord(APIRecord *Record);
+
   APISet(const llvm::Triple &Target, Language Lang,
          const std::string &ProductName)
       : Target(Target), Lang(Lang), ProductName(ProductName) {}
@@ -1456,7 +1500,7 @@ private:
   // lives in the BumpPtrAllocator.
   using APIRecordStoredPtr = std::unique_ptr<APIRecord, APIRecordDeleter>;
   llvm::DenseMap<StringRef, APIRecordStoredPtr> USRBasedLookupTable;
-  std::vector<const APIRecord *> TopLevelRecords;
+  llvm::SmallVector<const APIRecord *, 32> TopLevelRecords;
 
 public:
   const std::string ProductName;
@@ -1468,7 +1512,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
                      CtorArgsContTy &&...CtorArgs) {
   // Ensure USR refers to a String stored in the allocator.
   auto USRString = copyString(USR);
-  auto Result = USRBasedLookupTable.insert({USRString, nullptr});
+  auto Result = USRBasedLookupTable.try_emplace(USRString);
   RecordTy *Record;
 
   // Create the record if it does not already exist

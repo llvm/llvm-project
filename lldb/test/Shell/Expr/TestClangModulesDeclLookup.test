@@ -1,0 +1,62 @@
+# XFAIL: target-windows
+# XFAIL: system-linux
+# XFAIL: system-windows && remote-linux
+
+# Test that we can successfully locate decls in Clang modules for C++.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.cpp -fmodules -fcxx-modules -o %t.out
+# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -x -b -s %t/commands.input %t.out 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+#include "Module.h"
+
+int main() {
+  foo(10);
+  return 0;
+}
+
+#--- module.modulemap
+
+module Module {
+  header "Module.h"
+  export *
+}
+
+#--- Module.h
+
+// We use nodebug here ensures that LLDB tries to pick the decl out of the module.
+// If debug-info is available, it would use that to construct the decl instead.
+[[gnu::nodebug]] int foo(int x) { return x; }
+
+int bar(int x, int y) { return x + y; }
+
+#--- commands.input
+
+breakpoint set -n foo
+run
+
+expression foo(5)
+
+# FIXME: when we're stopped in a frame without debug-info, the ClangModulesDeclVendor
+# is initialized properly and none of the modules in the CU are compiled (and lookup
+# in the DeclVendor is not enabled).
+# CHECK: expression foo(5)
+# CHECK: error: 'foo' has unknown return type; cast the call to its declared return type
+
+breakpoint set -p return -X main
+continue
+expression foo(50)
+
+# However, once we're back in a frame with debug-info, the ClangModulesDeclVendor infrastructure
+# is back on track.
+
+# CHECK:      expression foo(50)
+# CHECK-NEXT: (int) $0 = 5
+
+target modules dump ast --filter foo
+# CHECK:     (lldb) target modules dump ast --filter foo
+# CHECK-NOT: foo

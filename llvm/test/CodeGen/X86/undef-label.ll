@@ -15,7 +15,7 @@ define dso_local void @xyz() {
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:    jnp .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %foo
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0

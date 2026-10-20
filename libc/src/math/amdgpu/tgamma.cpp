@@ -9,10 +9,10 @@
 #include "src/math/tgamma.h"
 #include "src/__support/common.h"
 
-#include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, tgamma, (double x)) { return __ocml_tgamma_f64(x); }
+LLVM_LIBC_FUNCTION(double, tgamma, (double)) { return 0.0; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

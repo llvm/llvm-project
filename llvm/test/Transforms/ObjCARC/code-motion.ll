@@ -1,4 +1,4 @@
-; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s 2>&1 | FileCheck %s '--implicit-check-not=ignoring invalid debug'
 
 declare void @alterRefCount()
 declare void @use(ptr)
@@ -17,7 +17,7 @@ define i32 @test(ptr %x, ptr %y, i8 %z, i32 %i) {
   store i32 %i, ptr %i.addr, align 4
   %v1 = tail call ptr @llvm.objc.retain(ptr %x)
   store i8 %z, ptr %x
-  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !9, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !11, metadata !DIExpression()), !dbg !10
   call void @alterRefCount()
   tail call void @llvm.objc.release(ptr %x)
   ret i32 %i
@@ -64,7 +64,7 @@ define void @test3(ptr %obj, i1 %cond) {
 ; CHECK-NEXT:    call void @use(ptr [[OBJ]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) {{.*}}, !clang.imprecise_release !2
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) {{.*}}, !clang.imprecise_release ![[EMPTYMETA:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %v0 = call ptr @llvm.objc.retain(ptr %obj)
@@ -102,8 +102,8 @@ define void @test4(ptr %obj0, ptr %obj1, i1 %cond) {
 ; CHECK-NEXT:    call void @use(ptr [[OBJ1]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ0]]) {{.*}}, !clang.imprecise_release !2
-; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) {{.*}}, !clang.imprecise_release !2
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ0]]) {{.*}}, !clang.imprecise_release ![[EMPTYMETA]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) {{.*}}, !clang.imprecise_release ![[EMPTYMETA]]
 ; CHECK-NEXT:    ret void
 ;
   %v0 = call ptr @llvm.objc.retain(ptr %obj0)
@@ -190,6 +190,8 @@ attributes #0 = { readonly }
 
 !llvm.module.flags = !{!0, !1}
 
+; CHECK: ![[EMPTYMETA]] = !{}
+
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !DILocalVariable(name: "i", arg: 1, scope: !3, file: !4, line: 1, type: !7)
@@ -201,3 +203,4 @@ attributes #0 = { readonly }
 !8 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !4, isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, enums: !9, nameTableKind: None)
 !9 = !{}
 !10 = !DILocation(line: 1, column: 14, scope: !3)
+!11 = !DILocalVariable(name: "foo", scope: !3, type: !7)

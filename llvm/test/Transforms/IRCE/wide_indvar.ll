@@ -94,7 +94,7 @@ define i32 @test_increasing_slt_slt_wide_simple_postloop() {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp slt i32 [[NARROW_IV_POSTLOOP]], 100
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone [[META5:![0-9]+]]
 ;
 
 entry:
@@ -175,7 +175,7 @@ define i32 @test_increasing_slt_slt_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp slt i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -268,7 +268,7 @@ define i32 @test_increasing_slt_slt_wide_general(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp slt i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -367,7 +367,7 @@ define i32 @test_increasing_slt_slt_wide_general_preloop(ptr %n_ptr, ptr %m_ptr)
 ; CHECK-NEXT:    [[LATCH_COND_PRELOOP:%.*]] = icmp slt i32 [[NARROW_IV_PRELOOP]], [[N]]
 ; CHECK-NEXT:    [[WIDE_NARROW_IV_PRELOOP:%.*]] = sext i32 [[NARROW_IV_PRELOOP]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i64 [[WIDE_NARROW_IV_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IV_NEXT_PRELOOP_LCSSA:%.*]] = phi i64 [ [[IV_NEXT_PRELOOP]], [[BACKEDGE_PRELOOP]] ]
 ; CHECK-NEXT:    [[NARROW_IV_PRELOOP_LCSSA]] = phi i32 [ [[NARROW_IV_PRELOOP]], [[BACKEDGE_PRELOOP]] ]
@@ -389,7 +389,7 @@ define i32 @test_increasing_slt_slt_wide_general_preloop(ptr %n_ptr, ptr %m_ptr)
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp slt i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -425,33 +425,33 @@ define i32 @test_increasing_slt_slt_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[M2:%.*]] = load i64, ptr [[M2_PTR]], align 4
 ; CHECK-NEXT:    [[M3:%.*]] = load i64, ptr [[M3_PTR]], align 4
 ; CHECK-NEXT:    [[M4:%.*]] = load i64, ptr [[M4_PTR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[M2]], -9223372036854775807
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[M4]], -9223372036854775807
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP0]], i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[M2]], [[SMAX]]
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[M2]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[M4]], [[SMAX]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[M4]], i64 0)
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN]], i64 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[SMAX1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[M1]], -9223372036854775807
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[M3]], -9223372036854775807
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP4]], i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[M1]], [[SMAX2]]
-; CHECK-NEXT:    [[SMIN3:%.*]] = call i64 @llvm.smin.i64(i64 [[M1]], i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[M3]], [[SMAX2]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i64 @llvm.smin.i64(i64 [[M3]], i64 0)
 ; CHECK-NEXT:    [[SMAX4:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN3]], i64 -1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[SMAX4]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[SMIN5:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP3]], i64 [[TMP7]])
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[M3]], -9223372036854775807
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[M2]], -9223372036854775807
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP8]], i64 0)
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[M3]], [[SMAX6]]
-; CHECK-NEXT:    [[SMIN7:%.*]] = call i64 @llvm.smin.i64(i64 [[M3]], i64 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[M2]], [[SMAX6]]
+; CHECK-NEXT:    [[SMIN7:%.*]] = call i64 @llvm.smin.i64(i64 [[M2]], i64 0)
 ; CHECK-NEXT:    [[SMAX8:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN7]], i64 -1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[SMAX8]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[SMIN9:%.*]] = call i64 @llvm.smin.i64(i64 [[SMIN5]], i64 [[TMP11]])
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[M4]], -9223372036854775807
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[M1]], -9223372036854775807
 ; CHECK-NEXT:    [[SMAX10:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP12]], i64 0)
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[M4]], [[SMAX10]]
-; CHECK-NEXT:    [[SMIN11:%.*]] = call i64 @llvm.smin.i64(i64 [[M4]], i64 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[M1]], [[SMAX10]]
+; CHECK-NEXT:    [[SMIN11:%.*]] = call i64 @llvm.smin.i64(i64 [[M1]], i64 0)
 ; CHECK-NEXT:    [[SMAX12:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN11]], i64 -1)
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nsw i64 [[SMAX12]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP13]], [[TMP14]]
@@ -519,7 +519,7 @@ define i32 @test_increasing_slt_slt_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp slt i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -688,7 +688,7 @@ define i32 @test_increasing_ult_ult_wide_simple_postloop() {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp ult i32 [[NARROW_IV_POSTLOOP]], 100
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP13:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP13:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -769,7 +769,7 @@ define i32 @test_increasing_ult_ult_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp ult i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -859,7 +859,7 @@ define i32 @test_increasing_ult_ult_wide_general(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp ult i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:
@@ -895,25 +895,25 @@ define i32 @test_increasing_ult_ult_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[M2:%.*]] = load i64, ptr [[M2_PTR]], align 4
 ; CHECK-NEXT:    [[M3:%.*]] = load i64, ptr [[M3_PTR]], align 4
 ; CHECK-NEXT:    [[M4:%.*]] = load i64, ptr [[M4_PTR]], align 4
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[M2]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[M2]], [[SMIN]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[M4]], i64 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[M4]], [[SMIN]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN]], i64 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[SMIN1:%.*]] = call i64 @llvm.smin.i64(i64 [[M1]], i64 0)
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[M1]], [[SMIN1]]
+; CHECK-NEXT:    [[SMIN1:%.*]] = call i64 @llvm.smin.i64(i64 [[M3]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[M3]], [[SMIN1]]
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN1]], i64 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[SMAX2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP5]])
-; CHECK-NEXT:    [[SMIN3:%.*]] = call i64 @llvm.smin.i64(i64 [[M3]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[M3]], [[SMIN3]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i64 @llvm.smin.i64(i64 [[M2]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[M2]], [[SMIN3]]
 ; CHECK-NEXT:    [[SMAX4:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN3]], i64 -1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[SMAX4]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[UMIN5:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN]], i64 [[TMP8]])
-; CHECK-NEXT:    [[SMIN6:%.*]] = call i64 @llvm.smin.i64(i64 [[M4]], i64 0)
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[M4]], [[SMIN6]]
+; CHECK-NEXT:    [[SMIN6:%.*]] = call i64 @llvm.smin.i64(i64 [[M1]], i64 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[M1]], [[SMIN6]]
 ; CHECK-NEXT:    [[SMAX7:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN6]], i64 -1)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[SMAX7]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP9]], [[TMP10]]
@@ -980,7 +980,7 @@ define i32 @test_increasing_ult_ult_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add i64 [[IV_POSTLOOP]], 1
 ; CHECK-NEXT:    [[NARROW_IV_POSTLOOP]] = trunc i64 [[IV_NEXT_POSTLOOP]] to i32
 ; CHECK-NEXT:    [[LATCH_COND_POSTLOOP:%.*]] = icmp ult i32 [[NARROW_IV_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[LATCH_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 
 entry:

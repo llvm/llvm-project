@@ -45,7 +45,7 @@ export {
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
   using ::mblen _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using ::mbstowcs _LIBCPP_USING_IF_EXISTS;
   using ::mbtowc _LIBCPP_USING_IF_EXISTS;
   using ::wcstombs _LIBCPP_USING_IF_EXISTS;

@@ -4,7 +4,7 @@
     .text
 f0:
     .long 0
-    .align  8, 0x90
+    .align  8
     .long 0
     .align  8
 
@@ -18,7 +18,7 @@ f0:
 //CHECK:          Name: .text
 //CHECK-NEXT:     VirtualSize
 //CHECK-NEXT:     VirtualAddress
-//CHECK-NEXT:     RawDataSize: 16
+//CHECK-NEXT:     RawDataSize: 0x10
 //CHECK-NEXT:     PointerToRawData
 //CHECK-NEXT:     PointerToRelocations
 //CHECK-NEXT:     PointerToLineNumbers
@@ -37,7 +37,7 @@ f0:
 //CHECK:          Name: .data
 //CHECK-NEXT:     VirtualSize:
 //CHECK-NEXT:     VirtualAddress:
-//CHECK-NEXT:     RawDataSize: 16
+//CHECK-NEXT:     RawDataSize: 0x10
 //CHECK-NEXT:     PointerToRawData:
 //CHECK-NEXT:     PointerToRelocations:
 //CHECK-NEXT:     PointerToLineNumbers:

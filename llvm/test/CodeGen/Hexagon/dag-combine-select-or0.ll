@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; Make sure no mux with 0 is generated.
 ; CHECK-NOT: mux{{.*}}#0
 ; CHECK: endloop

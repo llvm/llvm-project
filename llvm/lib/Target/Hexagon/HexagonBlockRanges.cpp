@@ -20,12 +20,10 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <utility>
 
 using namespace llvm;
 
@@ -221,10 +219,10 @@ HexagonBlockRanges::HexagonBlockRanges(MachineFunction &mf)
     TII(*HST.getInstrInfo()), TRI(*HST.getRegisterInfo()),
     Reserved(TRI.getReservedRegs(mf)) {
   // Consider all non-allocatable registers as reserved.
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    if (RC->isAllocatable())
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    if (RC.isAllocatable())
       continue;
-    for (unsigned R : *RC)
+    for (unsigned R : RC)
       Reserved[R] = true;
   }
 }

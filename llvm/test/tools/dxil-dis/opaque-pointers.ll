@@ -1,7 +1,7 @@
 ; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
-define i64 @test(ptr %p) {
+define i64 @test(ptr %p) #0 {
   store i32 0, ptr %p
   %v = load i64, ptr %p
   ret i64 %v
@@ -13,7 +13,7 @@ define i64 @test(ptr %p) {
 ; CHECK-NEXT: %2 = bitcast i8* %p to i64*
 ; CHECK-NEXT: %3 = load i64, i64* %2, align 8
 
-define i64 @test2(ptr %p) {
+define i64 @test2(ptr %p) #0 {
   store i64 0, ptr %p
   %v = load i64, ptr %p
   ret i64 %v
@@ -23,7 +23,7 @@ define i64 @test2(ptr %p) {
 ; CHECK-NEXT: store i64 0, i64* %p, align 8
 ; CHECK-NEXT: %v = load i64, i64* %p, align 8
 
-define i64 @test3(ptr addrspace(1) %p) {
+define i64 @test3(ptr addrspace(1) %p) #0 {
   store i32 0, ptr addrspace(1) %p
   %v = load i64, ptr addrspace(1) %p
   ret i64 %v
@@ -35,7 +35,7 @@ define i64 @test3(ptr addrspace(1) %p) {
 ; CHECK-NEXT: %2 = bitcast i8 addrspace(1)* %p to i64 addrspace(1)*
 ; CHECK-NEXT: %3 = load i64, i64 addrspace(1)* %2, align 8
 
-define i64 @test4(ptr addrspace(1) %p) {
+define i64 @test4(ptr addrspace(1) %p) #0 {
   store i64 0, ptr addrspace(1) %p
   %v = load i64, ptr addrspace(1) %p
   ret i64 %v
@@ -46,7 +46,7 @@ define i64 @test4(ptr addrspace(1) %p) {
 ; CHECK-NEXT: %v = load i64, i64 addrspace(1)* %p, align 8
 
 
-define i64 @test5(ptr %p) {
+define i64 @test5(ptr %p) #0 {
   %casted = addrspacecast ptr %p to ptr addrspace(1)
   store i64 0, ptr addrspace(1) %casted
   %v = load i64, ptr addrspace(1) %casted
@@ -57,3 +57,5 @@ define i64 @test5(ptr %p) {
 ; CHECK-NEXT: %casted = addrspacecast i8* %p to i64 addrspace(1)*
 ; CHECK-NEXT: store i64 0, i64 addrspace(1)* %casted, align 8
 ; CHECK-NEXT: %v = load i64, i64 addrspace(1)* %casted, align 8
+
+attributes #0 = { "hlsl.export" }

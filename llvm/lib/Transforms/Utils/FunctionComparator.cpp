@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
@@ -84,6 +83,13 @@ int FunctionComparator::cmpAPInts(const APInt &L, const APInt &R) const {
   return 0;
 }
 
+int FunctionComparator::cmpConstantRanges(const ConstantRange &L,
+                                          const ConstantRange &R) const {
+  if (int Res = cmpAPInts(L.getLower(), R.getLower()))
+    return Res;
+  return cmpAPInts(L.getUpper(), R.getUpper());
+}
+
 int FunctionComparator::cmpAPFloats(const APFloat &L, const APFloat &R) const {
   // Floats are ordered first by semantics (i.e. float, double, half, etc.),
   // then by value interpreted as a bitstring (aka APInt).
@@ -148,12 +154,22 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (LA.getKindAsEnum() != RA.getKindAsEnum())
           return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
 
-        const ConstantRange &LCR = LA.getRange();
-        const ConstantRange &RCR = RA.getRange();
-        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+        if (int Res = cmpConstantRanges(LA.getRange(), RA.getRange()))
           return Res;
-        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+        continue;
+      } else if (LA.isConstantRangeListAttribute() &&
+                 RA.isConstantRangeListAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        ArrayRef<ConstantRange> CRL = LA.getValueAsConstantRangeList();
+        ArrayRef<ConstantRange> CRR = RA.getValueAsConstantRangeList();
+        if (int Res = cmpNumbers(CRL.size(), CRR.size()))
           return Res;
+
+        for (const auto &[L, R] : zip(CRL, CRR))
+          if (int Res = cmpConstantRanges(L, R))
+            return Res;
         continue;
       }
       if (LA < RA)
@@ -442,9 +458,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
       if (InRangeL) {
         if (!InRangeR)
           return 1;
-        if (int Res = cmpAPInts(InRangeL->getLower(), InRangeR->getLower()))
-          return Res;
-        if (int Res = cmpAPInts(InRangeL->getUpper(), InRangeR->getUpper()))
+        if (int Res = cmpConstantRanges(*InRangeL, *InRangeR))
           return Res;
       } else if (InRangeR) {
         return -1;
@@ -464,7 +478,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::BlockAddressVal: {
     const BlockAddress *LBA = cast<BlockAddress>(L);
     const BlockAddress *RBA = cast<BlockAddress>(R);
-    if (int Res = cmpValues(LBA->getFunction(), RBA->getFunction()))
+    if (int Res =
+            cmpValuesAllowingSelfRef(LBA->getFunction(), RBA->getFunction()))
       return Res;
     if (LBA->getFunction() == RBA->getFunction()) {
       // They are BBs in the same function. Order by which comes first in the
@@ -503,6 +518,20 @@ int FunctionComparator::cmpConstants(const Constant *L,
     const auto *LEquiv = cast<DSOLocalEquivalent>(L);
     const auto *REquiv = cast<DSOLocalEquivalent>(R);
     return cmpGlobalValues(LEquiv->getGlobalValue(), REquiv->getGlobalValue());
+  }
+  case Value::ConstantPtrAuthVal: {
+    // Handle authenticated pointer constants produced by ConstantPtrAuth::get.
+    const ConstantPtrAuth *LPA = cast<ConstantPtrAuth>(L);
+    const ConstantPtrAuth *RPA = cast<ConstantPtrAuth>(R);
+    if (int Res = cmpConstants(LPA->getPointer(), RPA->getPointer()))
+      return Res;
+    if (int Res = cmpConstants(LPA->getKey(), RPA->getKey()))
+      return Res;
+    if (int Res =
+            cmpConstants(LPA->getDiscriminator(), RPA->getDiscriminator()))
+      return Res;
+    return cmpConstants(LPA->getAddrDiscriminator(),
+                        RPA->getAddrDiscriminator());
   }
   default: // Unknown constant, abort.
     LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
@@ -627,10 +656,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (int Res = cmpValues(L, R))
     return Res;
 
-  // Differences from Instruction::isSameOperationAs:
-  //  * replace type comparison with calls to cmpTypes.
-  //  * we test for I->getRawSubclassOptionalData (nuw/nsw/tail) at the top.
-  //  * because of the above, we don't test for the tail bit on calls later on.
   if (int Res = cmpNumbers(L->getOpcode(), R->getOpcode()))
     return Res;
 
@@ -647,10 +672,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return Res;
 
   if (int Res = cmpTypes(L->getType(), R->getType()))
-    return Res;
-
-  if (int Res = cmpNumbers(L->getRawSubclassOptionalData(),
-                           R->getRawSubclassOptionalData()))
     return Res;
 
   // We have two instructions of identical opcode and #operands.  Check to see
@@ -671,6 +692,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (const LoadInst *LI = dyn_cast<LoadInst>(L)) {
     if (int Res = cmpNumbers(LI->isVolatile(), cast<LoadInst>(R)->isVolatile()))
       return Res;
+    if (int Res =
+            cmpNumbers(LI->isElementwise(), cast<LoadInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpAligns(LI->getAlign(), cast<LoadInst>(R)->getAlign()))
       return Res;
     if (int Res =
@@ -684,6 +708,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (const StoreInst *SI = dyn_cast<StoreInst>(L)) {
     if (int Res =
             cmpNumbers(SI->isVolatile(), cast<StoreInst>(R)->isVolatile()))
+      return Res;
+    if (int Res = cmpNumbers(SI->isElementwise(),
+                             cast<StoreInst>(R)->isElementwise()))
       return Res;
     if (int Res = cmpAligns(SI->getAlign(), cast<StoreInst>(R)->getAlign()))
       return Res;
@@ -709,6 +736,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
                      R->getMetadata(LLVMContext::MD_range));
+  }
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
+    for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
+      if (int Res = cmpConstants(LCase.getCaseValue(), RCase.getCaseValue()))
+        return Res;
+    return 0;
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
@@ -743,6 +776,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                              cast<AtomicCmpXchgInst>(R)->isVolatile()))
       return Res;
     if (int Res =
+            cmpAligns(CXI->getAlign(), cast<AtomicCmpXchgInst>(R)->getAlign()))
+      return Res;
+    if (int Res =
             cmpNumbers(CXI->isWeak(), cast<AtomicCmpXchgInst>(R)->isWeak()))
       return Res;
     if (int Res =
@@ -763,6 +799,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpNumbers(RMWI->isVolatile(),
                              cast<AtomicRMWInst>(R)->isVolatile()))
       return Res;
+    if (int Res = cmpNumbers(RMWI->isElementwise(),
+                             cast<AtomicRMWInst>(R)->isElementwise()))
+      return Res;
+    if (int Res =
+            cmpAligns(RMWI->getAlign(), cast<AtomicRMWInst>(R)->getAlign()))
+      return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))
       return Res;
@@ -779,6 +821,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     }
   }
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(L))
+    return cmpNumbers(LP->isCleanup(), cast<LandingPadInst>(R)->isCleanup());
   if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
     const PHINode *PNR = cast<PHINode>(R);
     // Ensure that in addition to the incoming values being identical
@@ -848,23 +892,23 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
   return 0;
 }
 
-/// Compare two values used by the two functions under pair-wise comparison. If
-/// this is the first time the values are seen, they're added to the mapping so
-/// that we will detect mismatches on next use.
-/// See comments in declaration for more details.
-int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
-  // Catch self-reference case.
+int FunctionComparator::cmpValuesAllowingSelfRef(const Value *L,
+                                                 const Value *R) const {
   if (L == FnL) {
     if (R == FnR)
       return 0;
     return -1;
   }
-  if (R == FnR) {
-    if (L == FnL)
-      return 0;
+  if (R == FnR)
     return 1;
-  }
+  return cmpValues(L, R);
+}
 
+/// Compare two values used by the two functions under pair-wise comparison. If
+/// this is the first time the values are seen, they're added to the mapping so
+/// that we will detect mismatches on next use.
+/// See comments in declaration for more details.
+int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   const Constant *ConstL = dyn_cast<Constant>(L);
   const Constant *ConstR = dyn_cast<Constant>(R);
   if (ConstL && ConstR) {
@@ -921,11 +965,19 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
       return Res;
     if (needToCmpOperands) {
       assert(InstL->getNumOperands() == InstR->getNumOperands());
+      const auto *CBL = dyn_cast<CallBase>(&*InstL);
 
       for (unsigned i = 0, e = InstL->getNumOperands(); i != e; ++i) {
         Value *OpL = InstL->getOperand(i);
         Value *OpR = InstR->getOperand(i);
-        if (int Res = cmpValues(OpL, OpR))
+        int Res;
+        if (CBL && CBL->isCallee(&InstL->getOperandUse(i))) {
+          assert(cast<CallBase>(&*InstR)->isCallee(&InstR->getOperandUse(i)));
+          Res = cmpValuesAllowingSelfRef(OpL, OpR);
+        } else {
+          Res = cmpValues(OpL, OpR);
+        }
+        if (Res)
           return Res;
         // cmpValues should ensure this is true.
         assert(cmpTypes(OpL->getType(), OpR->getType()) == 0);
@@ -945,6 +997,10 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
 
 int FunctionComparator::compareSignature() const {
   if (int Res = cmpAttrs(FnL->getAttributes(), FnR->getAttributes()))
+    return Res;
+
+  if (int Res = cmpMDNode(FnL->getMetadata(LLVMContext::MD_kcfi_type),
+                          FnR->getMetadata(LLVMContext::MD_kcfi_type)))
     return Res;
 
   if (int Res = cmpNumbers(FnL->hasGC(), FnR->hasGC()))

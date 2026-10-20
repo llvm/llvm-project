@@ -14,13 +14,40 @@ include "mlir/Pass/PassBase.td"
 def ArithExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
   let dependentDialects = ["vector::VectorDialect"];
-  let options = [
-    Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",
-           "Enable the BF16 expansion patterns">,
+  let options =
+      [Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",
+              "Enable the BF16 expansion patterns">,
+       Option<"includeF8E8M0", "include-f8e8m0", "bool", /*default=*/"false",
+              "Enable the F8E8M0 expansion patterns">,
+       Option<"includeF4E2M1", "include-f4e2m1", "bool", /*default=*/"false",
+              "Enable the F4E2M1 expansion patterns">,
+       Option<"includeF8E5M2", "include-f8e5m2", "bool", /*default=*/"false",
+              "Enable the F8E5M2 expansion patterns">,
+       Option<"includeF8E4M3FN", "include-f8e4m3fn", "bool", /*default=*/"false",
+              "Enable the F8E4M3FN expansion patterns">,
+       Option<"includeFlushDenormals", "include-flush-denormals", "bool",
+              /*default=*/"false",
+              "Enable expansion of `arith.flush_denormals` on IEEE-like "
+              "floating-point types">,
+       Option<"includeMinMaxF", "include-min-max-f", "bool", /*default=*/"false",
+              "Enable expansion of the floating-point min/max ops "
+              "(maximumf/minimumf/maxnumf/minnumf). These ops also have a "
+              "direct arith-to-llvm lowering to the "
+              "`llvm.intr.maximum/minimum/maxnum/minnum` intrinsics; disable "
+              "this so pipelines that run arith-to-llvm can use those "
+              "single-instruction lowerings instead of the cmpf/select "
+              "expansion">,
+       Option<"includeMinMaxI", "include-min-max-i", "bool", /*default=*/"false",
+              "Enable expansion of the signed/unsigned integer min/max ops "
+              "(maxsi/maxui/minsi/minui). These ops also have a direct "
+              "arith-to-llvm lowering to the `llvm.intr.smax/umax/smin/umin` "
+              "intrinsics; disable this so pipelines that run arith-to-llvm "
+              "can use those single-instruction lowerings instead of the "
+              "cmpi/select expansion">,
   ];
 }
 
-def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
+def ArithUnsignedWhenEquivalentPass : Pass<"arith-unsigned-when-equivalent"> {
   let summary = "Replace signed ops with unsigned ones where they are proven equivalent";
   let description = [{
     Replace signed ops with their unsigned equivalents when integer range analysis
@@ -33,7 +60,6 @@ def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
     The affect ops include division, remainder, shifts, min, max, and integer
     comparisons.
   }];
-  let constructor = "mlir::arith::createArithUnsignedWhenEquivalentPass()";
 }
 
 def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
@@ -43,6 +69,28 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
     results. It replaces operations with known-constant results with said constants,
     rewrites `(0 <= %x < D) mod D` to `%x`.
   }];
+  // Explicitly depend on "arith" because this pass could create operations in
+  // `arith` out of thin air in some cases.
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
+}
+
+def ArithIntRangeNarrowing : Pass<"arith-int-range-narrowing"> {
+  let summary = "Reduce integer operations bitwidth based on integer range analysis";
+  let description = [{
+    This pass runs integer range analysis and tries to narrow arith ops to the
+    specified bitwidth based on its results.
+
+    `bitwidthsSupported` assumed to be not wider than `index` type.
+    TODO: get index width from DLTI.
+  }];
+
+  let options = [
+    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
+               "Integer bitwidths supported">,
+  ];
+
   // Explicitly depend on "arith" because this pass could create operations in
   // `arith` out of thin air in some cases.
   let dependentDialects = [
@@ -91,19 +139,5 @@ def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   ];
   let dependentDialects = ["vector::VectorDialect"];
 }
-
-def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
-  let summary = "Reduce integer operation bitwidth";
-  let description = [{
-    Reduce bitwidths of integer types used in arith operations. This pass
-    prefers the narrowest available integer bitwidths that are guaranteed to
-    produce the same results.
-  }];
-  let dependentDialects = ["vector::VectorDialect"];
-  let options = [
-    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
-               "Integer bitwidths supported">,
-  ];
- }
 
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES

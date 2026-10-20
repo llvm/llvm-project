@@ -94,8 +94,8 @@ entry:
 ; CHECK-LABEL: f8:
 ; CHECK: cmp r0, r1
 ; CHECK: blt
-; CHECK: movs
-; CHECK: cmp r0, r1
+; CHECK: mov
+; CHECK: mov
 ; CHECK: blt
 ; CHECK: movs
 ; CHECK: movs

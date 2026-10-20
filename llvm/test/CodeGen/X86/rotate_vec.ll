@@ -162,21 +162,13 @@ define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
 }
 
 define <8 x i16> @or_fshl_v8i16(<8 x i16> %x, <8 x i16> %y) {
-; XOPAVX1-LABEL: or_fshl_v8i16:
-; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpsrlw $11, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; XOPAVX1-NEXT:    retq
-;
-; XOPAVX2-LABEL: or_fshl_v8i16:
-; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vpsllw $5, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vpsrlw $11, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; XOPAVX2-NEXT:    retq
+; XOP-LABEL: or_fshl_v8i16:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOP-NEXT:    vpsrlw $11, %xmm0, %xmm0
+; XOP-NEXT:    vpsllw $5, %xmm1, %xmm1
+; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    retq
 ;
 ; AVX512-LABEL: or_fshl_v8i16:
 ; AVX512:       # %bb.0:
@@ -193,21 +185,13 @@ define <8 x i16> @or_fshl_v8i16(<8 x i16> %x, <8 x i16> %y) {
 }
 
 define <4 x i32> @or_fshl_v4i32(<4 x i32> %x, <4 x i32> %y) {
-; XOPAVX1-LABEL: or_fshl_v4i32:
-; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpsrld $11, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpslld $21, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; XOPAVX1-NEXT:    retq
-;
-; XOPAVX2-LABEL: or_fshl_v4i32:
-; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vpslld $21, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vpsrld $11, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; XOPAVX2-NEXT:    retq
+; XOP-LABEL: or_fshl_v4i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm1
+; XOP-NEXT:    vpsrld $11, %xmm0, %xmm0
+; XOP-NEXT:    vpslld $21, %xmm1, %xmm1
+; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    retq
 ;
 ; AVX512-LABEL: or_fshl_v4i32:
 ; AVX512:       # %bb.0:

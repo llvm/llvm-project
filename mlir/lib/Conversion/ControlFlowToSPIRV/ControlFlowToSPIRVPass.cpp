@@ -17,7 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOSPIRV
+#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -26,8 +26,9 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR ControlFlow operations into the SPIR-V dialect.
 class ConvertControlFlowToSPIRVPass final
-    : public impl::ConvertControlFlowToSPIRVBase<
+    : public impl::ConvertControlFlowToSPIRVPassBase<
           ConvertControlFlowToSPIRVPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -42,6 +43,7 @@ void ConvertControlFlowToSPIRVPass::runOnOperation() {
 
   SPIRVConversionOptions options;
   options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+  options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   // TODO: We should also take care of block argument type conversion.
@@ -51,8 +53,4 @@ void ConvertControlFlowToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<>> mlir::createConvertControlFlowToSPIRVPass() {
-  return std::make_unique<ConvertControlFlowToSPIRVPass>();
 }

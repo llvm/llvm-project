@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LoadUnloadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -62,7 +63,7 @@ class LoadUnloadTestCase(TestBase):
             for f in shlibs:
                 err = lldb.remote_platform.Put(
                     lldb.SBFileSpec(self.getBuildArtifact(f)),
-                    lldb.SBFileSpec(os.path.join(wd, f)),
+                    lldb.SBFileSpec(lldbutil.join_remote_paths(wd, f)),
                 )
                 if err.Fail():
                     raise RuntimeError(
@@ -71,7 +72,7 @@ class LoadUnloadTestCase(TestBase):
             if hidden_dir:
                 shlib = "libloadunload_d." + ext
                 hidden_dir = os.path.join(wd, "hidden")
-                hidden_file = os.path.join(hidden_dir, shlib)
+                hidden_file = lldbutil.join_remote_paths(hidden_dir, shlib)
                 err = lldb.remote_platform.MakeDirectory(hidden_dir)
                 if err.Fail():
                     raise RuntimeError(
@@ -98,7 +99,7 @@ class LoadUnloadTestCase(TestBase):
     # dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @skipIfRemote
-    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @requirePOSIX  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
         if self.platformIsDarwin():
@@ -155,7 +156,7 @@ class LoadUnloadTestCase(TestBase):
     # dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @expectedFailureAndroid  # wrong source file shows up for hidden library
-    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @requirePOSIX  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @skipIfDarwinEmbedded
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""
@@ -243,8 +244,7 @@ class LoadUnloadTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "loadunload_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("loadunload_a")
         localDylibPath = self.getBuildArtifact(dylibName)
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()
@@ -405,8 +405,10 @@ class LoadUnloadTestCase(TestBase):
 
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
+    # The remote lldb server resolves the executable dependencies correctly.
     @expectedFailureAll(
-        oslist=["freebsd", "linux", "netbsd"], triple=no_match("aarch64-.*-android")
+        oslist=["freebsd", "linux", "netbsd"],
+        remote=False,
     )
     @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_static_init_during_load(self):

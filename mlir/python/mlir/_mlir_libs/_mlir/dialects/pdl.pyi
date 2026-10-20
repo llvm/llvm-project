@@ -2,7 +2,6 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Optional
 
 from mlir.ir import Type, Context
 
@@ -26,7 +25,7 @@ class AttributeType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(context: Optional[Context] = None) -> AttributeType: ...
+  def get(context: Context | None = None) -> AttributeType: ...
 
 
 class OperationType(Type):
@@ -34,7 +33,7 @@ class OperationType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(context: Optional[Context] = None) -> OperationType: ...
+  def get(context: Context | None = None) -> OperationType: ...
 
 
 class RangeType(Type):
@@ -53,7 +52,7 @@ class TypeType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(context: Optional[Context] = None) -> TypeType: ...
+  def get(context: Context | None = None) -> TypeType: ...
 
 
 class ValueType(Type):
@@ -61,4 +60,4 @@ class ValueType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(context: Optional[Context] = None) -> ValueType: ...
+  def get(context: Context | None = None) -> ValueType: ...

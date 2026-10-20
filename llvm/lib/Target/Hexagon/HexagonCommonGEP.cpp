@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -37,7 +39,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -58,12 +59,6 @@ static cl::opt<bool> OptEnableInv("commgep-inv", cl::init(true), cl::Hidden);
 
 static cl::opt<bool> OptEnableConst("commgep-const", cl::init(true),
                                     cl::Hidden);
-
-namespace llvm {
-
-  void initializeHexagonCommonGEPPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -98,9 +93,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonCommonGEP() : FunctionPass(ID) {
-      initializeHexagonCommonGEPPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonCommonGEP() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F) override;
     StringRef getPassName() const override { return "Hexagon Common GEP"; }
@@ -279,15 +272,14 @@ namespace {
       OS << *I << ' ' << **I << '\n';
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeVect &S) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const NodeVect &S);
   raw_ostream &operator<< (raw_ostream &OS, const NodeVect &S) {
     dump_node_container(OS, S);
     return OS;
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeToUsesMap &M) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const NodeToUsesMap &M);
   raw_ostream &operator<< (raw_ostream &OS, const NodeToUsesMap &M){
     for (const auto &I : M) {
       const UseSet &Us = I.second;
@@ -337,7 +329,7 @@ bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
   if (!GepI->getType()->isPointerTy())
     return false;
   // No GEPs without any indices.  (Is this possible?)
-  if (GepI->idx_begin() == GepI->idx_end())
+  if (GepI->indices().empty())
     return false;
   return true;
 }
@@ -365,7 +357,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // Collect the list of users of this GEP instruction. Will add it to the
   // last node created for it.
   UseSet Us;
-  for (Value::user_iterator UI = GepI->user_begin(), UE = GepI->user_end();
+  for (Instruction::user_iterator UI = GepI->user_begin(),
+                                  UE = GepI->user_end();
        UI != UE; ++UI) {
     // Check if this gep is used by anything other than other geps that
     // we will process.
@@ -400,7 +393,7 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // After last node has been created, update the use information.
   if (!Us.empty()) {
     PN->Flags |= GepNode::Used;
-    Uses[PN].insert(Us.begin(), Us.end());
+    Uses[PN].insert_range(Us);
   }
 
   // Link the last node with the originating GEP instruction. This is to
@@ -489,7 +482,7 @@ static unsigned node_hash(GepNode *N) {
     FoldingSetNodeID ID;
     ID.AddPointer(N->Idx);
     ID.AddPointer(N->PTy);
-    return ID.ComputeHash();
+    return ID.computeHash();
 }
 
 static bool node_eq(GepNode *N1, GepNode *N2, NodePairSet &Eq,
@@ -605,8 +598,10 @@ void HexagonCommonGEP::common() {
       uint32_t NF = N->Flags;
       // If N is used, append all original values of N to the list of
       // original values of Min.
-      if (NF & GepNode::Used)
-        MinUs.insert(Uses[N].begin(), Uses[N].end());
+      if (NF & GepNode::Used) {
+        auto &U = Uses[N];
+        MinUs.insert_range(U);
+      }
       Flags |= NF;
     }
     if (MinUs.empty())
@@ -919,9 +914,8 @@ namespace {
     const NodeToValueMap &Map;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const LocationAsBlock &Loc) LLVM_ATTRIBUTE_UNUSED ;
-  raw_ostream &operator<< (raw_ostream &OS, const LocationAsBlock &Loc) {
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const LocationAsBlock &Loc) {
     for (const auto &I : Loc.Map) {
       OS << I.first << " -> ";
       if (BasicBlock *B = cast_or_null<BasicBlock>(I.second))

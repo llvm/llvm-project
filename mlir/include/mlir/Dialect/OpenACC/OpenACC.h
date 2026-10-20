@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACC_H_
 #define MLIR_DIALECT_OPENACC_OPENACC_H_
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -20,13 +21,20 @@
 #include "mlir/IR/SymbolTable.h"
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SmallVector.h"
+#include <variant>
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.h.inc"
@@ -43,10 +51,12 @@
   mlir::acc::CopyinOp, mlir::acc::CreateOp, mlir::acc::PresentOp,              \
       mlir::acc::NoCreateOp, mlir::acc::AttachOp, mlir::acc::DevicePtrOp,      \
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
-      mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
-      mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
-      mlir::acc::CacheOp
+      mlir::acc::FirstprivateOp, mlir::acc::FirstprivateMapInitialOp,          \
+      mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
+      mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
+      mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
+#define ACC_DATA_ENTRY_AND_INIT_OPS                                            \
+  ACC_DATA_ENTRY_OPS, mlir::acc::ReductionInitOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
@@ -55,14 +65,13 @@
   mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp
 #define ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::LoopOp
-#define OPENACC_DATA_CONSTRUCT_STRUCTURED_OPS                                  \
-  mlir::acc::DataOp, mlir::acc::DeclareOp
+#define ACC_DATA_CONSTRUCT_STRUCTURED_OPS                                      \
+  mlir::acc::DataOp, mlir::acc::DeclareOp, mlir::acc::HostDataOp
 #define ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS                                    \
   mlir::acc::EnterDataOp, mlir::acc::ExitDataOp, mlir::acc::UpdateOp,          \
-      mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,                        \
-      mlir::acc::DeclareExitOp
+      mlir::acc::DeclareEnterOp, mlir::acc::DeclareExitOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
-  OPENACC_DATA_CONSTRUCT_STRUCTURED_OPS, ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS
+  ACC_DATA_CONSTRUCT_STRUCTURED_OPS, ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_OPS
 #define ACC_COMPUTE_LOOP_AND_DATA_CONSTRUCT_OPS                                \
@@ -82,16 +91,31 @@ namespace acc {
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
 
-/// Used to obtain the `varPtr` from a data clause operation.
+/// Used to obtain the `var` from a data clause operation.
 /// Returns empty value if not a data clause operation or is a data exit
-/// operation with no `varPtr`.
-mlir::Value getVarPtr(mlir::Operation *accDataClauseOp);
+/// operation with no `var`.
+mlir::Value getVar(mlir::Operation *accDataClauseOp);
 
-/// Used to obtain the `accPtr` from a data clause operation.
-/// When a data entry operation, it obtains its result `accPtr` value.
-/// If a data exit operation, it obtains its operand `accPtr` value.
+/// Used to obtain the `var` from a data clause operation if it implements
+/// `PointerLikeType`.
+mlir::TypedValue<mlir::acc::PointerLikeType>
+getVarPtr(mlir::Operation *accDataClauseOp);
+
+/// Used to obtains the `varType` from a data clause operation which records
+/// the type of variable. When `var` is `PointerLikeType`, this returns
+/// the type of the pointer target.
+mlir::Type getVarType(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `accVar` from a data clause operation.
+/// When a data entry operation, it obtains its result `accVar` value.
+/// If a data exit operation, it obtains its operand `accVar` value.
 /// Returns empty value if not a data clause operation.
-mlir::Value getAccPtr(mlir::Operation *accDataClauseOp);
+mlir::Value getAccVar(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `accVar` from a data clause operation if it implements
+/// `PointerLikeType`.
+mlir::TypedValue<mlir::acc::PointerLikeType>
+getAccPtr(mlir::Operation *accDataClauseOp);
 
 /// Used to obtain the `varPtrPtr` from a data clause operation.
 /// Returns empty value if not a data clause operation.
@@ -116,8 +140,18 @@ mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
 /// associated with the async clauses without an async-value.
 mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
 
+/// The clauses of a construct can be given once per device type. Of the values
+/// that reach a given device type, the ones naming it are the most specific,
+/// then the ones naming every device type, then the ones given before any
+/// device_type clause.
+SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
+
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
+
+/// Used to find out whether `op` is a data entry operation or an
+/// `acc.map_info`. `op` may be null.
+bool isDataEntryOp(mlir::Operation *op);
 
 /// Used to obtain the `dataClause` from a data entry operation.
 /// Returns empty optional if not a data entry operation.
@@ -129,11 +163,34 @@ getDataClause(mlir::Operation *accDataEntryOp);
 /// implicit flag.
 bool getImplicitFlag(mlir::Operation *accDataEntryOp);
 
+/// Used to find out whether the implementation created the data operation for
+/// its own bookkeeping, instead of to represent a data attribute of the
+/// program being compiled. Such an operation has no counterpart in that
+/// program, so it must not be described to the user.
+/// Returns false if not a data clause operation or if it is a data clause
+/// operation without the synthetic flag.
+bool getSyntheticFlag(mlir::Operation *accDataClauseOp);
+
 /// Used to get an immutable range iterating over the data operands.
 mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
+
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
+
+/// Used to check whether the provided `type` implements the `PointerLikeType`
+/// interface.
+inline bool isPointerLikeType(mlir::Type type) {
+  return mlir::isa<mlir::acc::PointerLikeType>(type);
+}
+
+/// Used to check whether the provided `type` implements the `MappableType`
+/// interface.
+inline bool isMappableType(mlir::Type type) {
+  return mlir::isa<mlir::acc::MappableType>(type);
+}
 
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
@@ -145,7 +202,52 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
+}
+
+static constexpr StringLiteral getSpecializedRoutineAttrName() {
+  return SpecializedRoutineAttr::name;
+}
+
+/// Used to check whether the current operation is marked with
+/// `acc routine`. The operation passed in should be a function.
+inline bool isAccRoutine(mlir::Operation *op) {
+  return op && op->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
+/// Used to check whether this is a specialized accelerator version of
+/// `acc routine` function.
+inline bool isSpecializedAccRoutine(mlir::Operation *op) {
+  return op &&
+         op->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName());
+}
+
+static constexpr StringLiteral getFromDefaultClauseAttrName() {
+  return StringLiteral("acc.from_default");
+}
+
+/// Name for a unit attribute on a data entry operation stating that nothing in
+/// the region reads the descriptor its variable is reached through, so the
+/// mapping supplies the bounds but needs no device copy of the descriptor.
+static constexpr StringLiteral getNoDeviceDescriptorAttrName() {
+  return StringLiteral("acc.no_device_descriptor");
+}
+
+/// Name for an attribute attached to a loop indicating the number of loops
+/// collapsed to create that loop
+static constexpr StringLiteral getCollapseCountAttrName() {
+  return StringLiteral("acc.collapse_count");
+}
+
+/// Name for a unit attribute attached to the region an unstructured
+/// independent loop was converted to, recording that the loop could not be
+/// represented as a structured loop and is therefore not parallelized.
+static constexpr StringLiteral getUnstructuredIndependentLoopAttrName() {
+  return StringLiteral("acc.unstructured_independent_loop");
+}
+
+static constexpr StringLiteral getVarNameAttrName() {
+  return VarNameAttr::name;
 }
 
 static constexpr StringLiteral getCombinedConstructsAttrName() {
@@ -154,18 +256,47 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
+
+template <typename ComputeOpT>
+bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  // Strip index_cast operations from a value before checking for a constant.
+  auto stripIndexCasts = [](Value val) -> Value {
+    while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+      val = castOp.getIn();
+    return val;
+  };
+
+  auto numGangs = op.getNumGangsValues();
+  if (numGangs.empty())
+    return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
+  Value numWorkers = op.getNumWorkersValue();
+  if (!numWorkers)
+    return false;
+  Value vectorLength = op.getVectorLengthValue();
+  if (!vectorLength)
+    return false;
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+         isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
 
 } // namespace acc
 } // namespace mlir

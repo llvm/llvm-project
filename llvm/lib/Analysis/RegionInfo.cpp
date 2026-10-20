@@ -15,6 +15,7 @@
 #ifndef NDEBUG
 #include "llvm/Analysis/RegionPrinter.h"
 #endif
+#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
@@ -27,9 +28,9 @@ using namespace llvm;
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<Function>>;
-template class RegionNodeBase<RegionTraits<Function>>;
-template class RegionInfoBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionNodeBase<RegionTraits<Function>>;
+template class LLVM_EXPORT_TEMPLATE RegionInfoBase<RegionTraits<Function>>;
 
 } // end namespace llvm
 
@@ -54,6 +55,18 @@ static cl::opt<Region::PrintStyle, true> printStyleX("print-region-style",
                "print regions in detail with block_iterator"),
     clEnumValN(Region::PrintRN, "rn",
                "print regions in detail with element_iterator")));
+
+//===----------------------------------------------------------------------===//
+// RegionTraits<Function> implementation
+//
+
+void RegionTraits<Function>::updateStatistics(Region *R) {
+  ++numRegions;
+
+  // TODO: Slow. Should only be enabled if -stats is used.
+  if (R->isSimple())
+    ++numSimpleRegions;
+}
 
 //===----------------------------------------------------------------------===//
 // Region implementation
@@ -85,14 +98,6 @@ bool RegionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
            PAC.preservedSet<CFGAnalyses>());
 }
 
-void RegionInfo::updateStatistics(Region *R) {
-  ++numRegions;
-
-  // TODO: Slow. Should only be enabled if -stats is used.
-  if (R->isSimple())
-    ++numSimpleRegions;
-}
-
 void RegionInfo::recalculate(Function &F, DominatorTree *DT_,
                              PostDominatorTree *PDT_, DominanceFrontier *DF_) {
   DT = DT_;
@@ -101,7 +106,7 @@ void RegionInfo::recalculate(Function &F, DominatorTree *DT_,
 
   TopLevelRegion = new Region(&F.getEntryBlock(), nullptr,
                               this, DT, nullptr);
-  updateStatistics(TopLevelRegion);
+  RegionTraits<Function>::updateStatistics(TopLevelRegion);
   calculate(F);
 }
 
@@ -115,9 +120,7 @@ void RegionInfo::viewOnly() { viewRegionOnly(this); }
 // RegionInfoPass implementation
 //
 
-RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {
-  initializeRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {}
 
 RegionInfoPass::~RegionInfoPass() = default;
 

@@ -1,7 +1,7 @@
-// RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan %s -o %t && env DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
-// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -no-pie %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -no-pie %s -o %t && env DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 //
 // Tests custom implementations of various glibc functions.
 
@@ -2240,7 +2240,7 @@ void test_sscanf() {
   strcpy(input_buf, "-559038737");
   test_sscanf_chunk(-559038737, "%d", input_ptr, 1);
   strcpy(input_buf, "3735928559");
-  test_sscanf_chunk(3735928559, "%u", input_ptr, 1);
+  test_sscanf_chunk(3735928559, "%lu", input_ptr, 1);
   strcpy(input_buf, "12345");
   test_sscanf_chunk(12345, "%i", input_ptr, 1);
   strcpy(input_buf, "0751");

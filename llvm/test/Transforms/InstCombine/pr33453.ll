@@ -6,7 +6,7 @@
 
 define float @patatino() {
 ; CHECK-LABEL: @patatino(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i8, ptr @g2, i64 2), @g1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @g2, i64 2), @g1
 ; CHECK-NEXT:    [[FMUL:%.*]] = uitofp i1 [[CMP]] to float
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;

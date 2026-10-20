@@ -6,12 +6,12 @@
 @ CHECK:      Num:    Value  Size Type    Bind   Vis      Ndx Name
 @ CHECK-NEXT:   0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND
 @ CHECK-NEXT:   1: 00000000     0 FUNC    LOCAL  DEFAULT    2 arm_func
-@ CHECK-NEXT:   2: 00000000     0 NOTYPE  LOCAL  DEFAULT    2 $a.0
+@ CHECK-NEXT:   2: 00000000     0 NOTYPE  LOCAL  DEFAULT    2 $a
 @ CHECK-NEXT:   3: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func
 @ CHECK-NEXT:   4: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func2
 @ CHECK-NEXT:   5: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func3
 @ CHECK-NEXT:   6: 00000005     0 FUNC    LOCAL  DEFAULT    2 thumb_func
-@ CHECK-NEXT:   7: 00000004     0 NOTYPE  LOCAL  DEFAULT    2 $t.1
+@ CHECK-NEXT:   7: 00000004     0 NOTYPE  LOCAL  DEFAULT    2 $t
 @ CHECK-NEXT:   8: 00000005     0 FUNC    LOCAL  DEFAULT    2 alias_thumb_func
 @ CHECK-NEXT:   9: 5eed1e55     0 FUNC    LOCAL  DEFAULT  ABS seedless
 @ CHECK-NEXT:  10: e665a1ad     0 FUNC    LOCAL  DEFAULT  ABS eggsalad

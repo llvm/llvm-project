@@ -51,6 +51,12 @@ static MachO::CPUSubTypeARM getARMSubType(const Triple &T) {
     return MachO::CPU_SUBTYPE_ARM_V7M;
   case ARM::ArchKind::ARMV7EM:
     return MachO::CPU_SUBTYPE_ARM_V7EM;
+  case ARM::ArchKind::ARMV8MBaseline:
+    return MachO::CPU_SUBTYPE_ARM_V8M_BASE;
+  case ARM::ArchKind::ARMV8MMainline:
+    return MachO::CPU_SUBTYPE_ARM_V8M_MAIN;
+  case ARM::ArchKind::ARMV8_1MMainline:
+    return MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN;
   }
 }
 
@@ -60,6 +66,8 @@ static MachO::CPUSubTypeARM64 getARM64SubType(const Triple &T) {
     return (MachO::CPUSubTypeARM64)MachO::CPU_SUBTYPE_ARM64_32_V8;
   if (T.isArm64e())
     return MachO::CPU_SUBTYPE_ARM64E;
+  if (T.isArm64e_x1())
+    return MachO::CPU_SUBTYPE_ARM64E_X1;
 
   return MachO::CPU_SUBTYPE_ARM64_ALL;
 }
@@ -72,6 +80,10 @@ static Error unsupported(const char *Str, const Triple &T) {
   return createStringError(std::errc::invalid_argument,
                            "Unsupported triple for mach-o cpu %s: %s", Str,
                            T.str().c_str());
+}
+
+static MachO::CPUSubTypeRISCV getRISCVSubType(const Triple &T) {
+  return MachO::CPU_SUBTYPE_RISCV_ALL;
 }
 
 Expected<uint32_t> MachO::getCPUType(const Triple &T) {
@@ -89,6 +101,8 @@ Expected<uint32_t> MachO::getCPUType(const Triple &T) {
     return MachO::CPU_TYPE_POWERPC;
   if (T.getArch() == Triple::ppc64)
     return MachO::CPU_TYPE_POWERPC64;
+  if (T.getArch() == Triple::riscv32)
+    return MachO::CPU_TYPE_RISCV;
   return unsupported("type", T);
 }
 
@@ -103,5 +117,25 @@ Expected<uint32_t> MachO::getCPUSubType(const Triple &T) {
     return getARM64SubType(T);
   if (T.getArch() == Triple::ppc || T.getArch() == Triple::ppc64)
     return getPowerPCSubType(T);
+  if (T.getArch() == Triple::riscv32)
+    return getRISCVSubType(T);
   return unsupported("subtype", T);
+}
+
+Expected<uint32_t> MachO::getCPUSubType(const Triple &T,
+                                        unsigned PtrAuthABIVersion,
+                                        bool PtrAuthKernelABIVersion) {
+  Expected<uint32_t> Result = MachO::getCPUSubType(T);
+  if (!Result)
+    return Result.takeError();
+  if (*Result != MachO::CPU_SUBTYPE_ARM64E)
+    return createStringError(
+        std::errc::invalid_argument,
+        "ptrauth ABI version is only supported on arm64e.");
+  if (PtrAuthABIVersion > 0xF)
+    return createStringError(
+        std::errc::invalid_argument,
+        "The ptrauth ABI version needs to fit within 4 bits.");
+  return CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(PtrAuthABIVersion,
+                                                 PtrAuthKernelABIVersion);
 }

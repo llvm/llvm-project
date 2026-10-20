@@ -15,13 +15,13 @@
 ; CHECK-NOT: phi
 ; CHECK-NOT: icmp
 ; CHECK: ret void
-define void @test() {
+define void @test(i1 %arg) {
 entry:
   %xor1 = xor i32 0, 1
   br label %b17
 
 b17:
-  br i1 undef, label %b22, label %b18
+  br i1 %arg, label %b22, label %b18
 
 b18:
   %phi1 = phi i32 [ %add1, %b18 ], [ %xor1, %b17 ]

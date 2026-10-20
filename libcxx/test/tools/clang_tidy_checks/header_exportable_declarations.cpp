@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+// TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#include "clang/Basic/Version.h"
+#if CLANG_VERSION_MAJOR > 23
+#  include "clang-tidy/ClangTidyModule.h"
+#else
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -77,8 +83,10 @@ header_exportable_declarations::header_exportable_declarations(
 
   list = Options.get("ExtraDeclarations");
   if (list)
-    for (auto decl : std::views::split(*list, ' '))
-      std::cout << "using ::" << std::string_view{decl.data(), decl.size()} << ";\n";
+    for (auto decl : std::views::split(*list, ' ')) {
+      auto common = decl | std::views::common;
+      std::cout << "using ::" << std::string{common.begin(), common.end()} << ";\n";
+    }
 }
 
 header_exportable_declarations::~header_exportable_declarations() {
@@ -99,8 +107,10 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
             // Looks at the common locations where headers store their data
             // * header
             // * __header/*.h
+            // * __header_dir/*.h // Used for transitioning from __header
             // * __fwd/header.h
             anyOf(isExpansionInFileMatching(("v1/__" + filename_ + "/").str()),
+                  isExpansionInFileMatching(("v1/__" + filename_ + "_dir/").str()),
                   isExpansionInFileMatching(extra_header_),
                   isExpansionInFileMatching(("v1/__fwd/" + filename_ + "\\.h$").str()),
                   isExpansionInFileMatching(("v1/" + filename_ + "$").str())),
@@ -120,7 +130,9 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
     [[fallthrough]];
   case FileType::ModulePartition:
   case FileType::CompatModulePartition:
-    finder->addMatcher(namedDecl(isExpansionInFileMatching(filename_)).bind("header_exportable_declarations"), this);
+    finder->addMatcher(namedDecl(anyOf(isExpansionInFileMatching(filename_), isExpansionInFileMatching(extra_header_)))
+                           .bind("header_exportable_declarations"),
+                       this);
     break;
   case FileType::Module:
   case FileType::CompatModule:

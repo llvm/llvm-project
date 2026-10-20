@@ -16,6 +16,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   template <typename T> struct ILogbFunc {
@@ -78,11 +80,11 @@ public:
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType MIN_SUBNORMAL = FPBits::min_subnormal().uintval();
     constexpr StorageType MAX_SUBNORMAL = FPBits::max_subnormal().uintval();
-    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;
@@ -97,11 +99,11 @@ public:
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
     constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
-    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
         continue;
 
       int exponent;

@@ -21,6 +21,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -49,19 +50,19 @@ struct RewriterDiagnosticConsumer : public DiagnosticConsumer {
 class RewriterTestContext {
  public:
    RewriterTestContext()
-       : DiagOpts(new DiagnosticOptions()),
-         Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-                     &*DiagOpts),
-         InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+       : Diagnostics(DiagnosticIDs::create(), DiagOpts),
+         InMemoryFileSystem(
+             llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
          OverlayFileSystem(
-             new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem())),
+             llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+                 llvm::vfs::getRealFileSystem())),
          Files(FileSystemOptions(), OverlayFileSystem),
          Sources(Diagnostics, Files), Rewrite(Sources, Options) {
      Diagnostics.setClient(&DiagnosticPrinter, false);
      // FIXME: To make these tests truly in-memory, we need to overlay the
      // builtin headers.
      OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  }
+   }
 
   ~RewriterTestContext() {}
 
@@ -109,7 +110,6 @@ class RewriterTestContext {
     std::string Result;
     llvm::raw_string_ostream OS(Result);
     Rewrite.getEditBuffer(ID).write(OS);
-    OS.flush();
     return Result;
   }
 
@@ -125,7 +125,7 @@ class RewriterTestContext {
     return std::string((*FileBuffer)->getBuffer());
   }
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics;
   RewriterDiagnosticConsumer DiagnosticPrinter;
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;

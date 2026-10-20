@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGLOOPINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_CGLOOPINFO_H
 
+#include "clang/CodeGenUtils/LoopAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugLoc.h"
@@ -32,59 +33,9 @@ class ASTContext;
 class CodeGenOptions;
 namespace CodeGen {
 
-/// Attributes that may be specified on loops.
-struct LoopAttributes {
-  explicit LoopAttributes(bool IsParallel = false);
-  void clear();
-
-  /// Generate llvm.loop.parallel metadata for loads and stores.
-  bool IsParallel;
-
-  /// State of loop vectorization or unrolling.
-  enum LVEnableState { Unspecified, Enable, Disable, Full };
-
-  /// Value for llvm.loop.vectorize.enable metadata.
-  LVEnableState VectorizeEnable;
-
-  /// Value for llvm.loop.unroll.* metadata (enable, disable, or full).
-  LVEnableState UnrollEnable;
-
-  /// Value for llvm.loop.unroll_and_jam.* metadata (enable, disable, or full).
-  LVEnableState UnrollAndJamEnable;
-
-  /// Value for llvm.loop.vectorize.predicate metadata
-  LVEnableState VectorizePredicateEnable;
-
-  /// Value for llvm.loop.vectorize.width metadata.
-  unsigned VectorizeWidth;
-
-  // Value for llvm.loop.vectorize.scalable.enable
-  LVEnableState VectorizeScalable;
-
-  /// Value for llvm.loop.interleave.count metadata.
-  unsigned InterleaveCount;
-
-  /// llvm.unroll.
-  unsigned UnrollCount;
-
-  /// llvm.unroll.
-  unsigned UnrollAndJamCount;
-
-  /// Value for llvm.loop.distribute.enable metadata.
-  LVEnableState DistributeEnable;
-
-  /// Value for llvm.loop.pipeline.disable metadata.
-  bool PipelineDisabled;
-
-  /// Value for llvm.loop.pipeline.iicount metadata.
-  unsigned PipelineInitiationInterval;
-
-  /// Value for 'llvm.loop.align' metadata.
-  unsigned CodeAlign;
-
-  /// Value for whether the loop is required to make progress.
-  bool MustProgress;
-};
+/// Attributes that may be specified on loops. The state, and how it is
+/// determined from the loop's attributes, is shared with CIR CodeGen.
+using LoopAttributes = clang::CodeGenUtils::LoopAttributes;
 
 /// Information used when generating a structured loop.
 class LoopInfo {
@@ -132,17 +83,19 @@ private:
   /// If this loop has unroll-and-jam metadata, this can be set by the inner
   /// loop's LoopInfo to set the llvm.loop.unroll_and_jam.followup_inner
   /// metadata.
-  llvm::MDNode *UnrollAndJamInnerFollowup = nullptr;
+  std::optional<llvm::SmallVector<llvm::Metadata *, 4>>
+      UnrollAndJamInnerFollowup;
 
-  /// Create a LoopID without any transformations.
+  /// Create a followup MDNode that has @p LoopProperties as its attributes.
   llvm::MDNode *
-  createLoopPropertiesMetadata(llvm::ArrayRef<llvm::Metadata *> LoopProperties);
+  createFollowupMetadata(const char *FollowupName,
+                         llvm::ArrayRef<llvm::Metadata *> LoopProperties);
 
-  /// Create a LoopID for transformations.
+  /// Create a metadata list for transformations.
   ///
   /// The methods call each other in case multiple transformations are applied
-  /// to a loop. The transformation first to be applied will use LoopID of the
-  /// next transformation in its followup attribute.
+  /// to a loop. The transformation first to be applied will use metadata list
+  /// of the next transformation in its followup attribute.
   ///
   /// @param Attrs             The loop's transformations.
   /// @param LoopProperties    Non-transformation properties such as debug
@@ -152,36 +105,37 @@ private:
   /// @param HasUserTransforms [out] Set to true if the returned MDNode encodes
   ///                          at least one transformation.
   ///
-  /// @return A LoopID (metadata node) that can be used for the llvm.loop
-  ///         annotation or followup-attribute.
+  /// @return A metadata list that can be used for the llvm.loop annotation or
+  ///         followup-attribute.
   /// @{
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createPipeliningMetadata(const LoopAttributes &Attrs,
                            llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                            bool &HasUserTransforms);
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createPartialUnrollMetadata(const LoopAttributes &Attrs,
                               llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                               bool &HasUserTransforms);
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createUnrollAndJamMetadata(const LoopAttributes &Attrs,
                              llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                              bool &HasUserTransforms);
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createLoopVectorizeMetadata(const LoopAttributes &Attrs,
                               llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                               bool &HasUserTransforms);
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createLoopDistributeMetadata(const LoopAttributes &Attrs,
                                llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                                bool &HasUserTransforms);
-  llvm::MDNode *
+  llvm::SmallVector<llvm::Metadata *, 4>
   createFullUnrollMetadata(const LoopAttributes &Attrs,
                            llvm::ArrayRef<llvm::Metadata *> LoopProperties,
                            bool &HasUserTransforms);
+
   /// @}
 
-  /// Create a LoopID for this loop, including transformation-unspecific
+  /// Create a metadata list for this loop, including transformation-unspecific
   /// metadata such as debug location.
   ///
   /// @param Attrs             This loop's attributes and transformations.
@@ -191,11 +145,11 @@ private:
   /// @param HasUserTransforms [out] Set to true if the returned MDNode encodes
   ///                          at least one transformation.
   ///
-  /// @return A LoopID (metadata node) that can be used for the llvm.loop
-  ///         annotation.
-  llvm::MDNode *createMetadata(const LoopAttributes &Attrs,
-                               llvm::ArrayRef<llvm::Metadata *> LoopProperties,
-                               bool &HasUserTransforms);
+  /// @return A metadata list that can be used for the llvm.loop annotation.
+  llvm::SmallVector<llvm::Metadata *, 4>
+  createMetadata(const LoopAttributes &Attrs,
+                 llvm::ArrayRef<llvm::Metadata *> LoopProperties,
+                 bool &HasUserTransforms);
 };
 
 /// A stack of loop information corresponding to loop nesting levels.
@@ -248,6 +202,11 @@ public:
   void setDistributeState(bool Enable = true) {
     StagedAttrs.DistributeEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
+  }
+
+  /// Set the next pushed loop LICM disable state.
+  void setLICMDisabled(bool Disabled = true) {
+    StagedAttrs.LICMDisabled = Disabled;
   }
 
   /// Set the next pushed loop unroll state.

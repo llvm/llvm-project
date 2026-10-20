@@ -33,8 +33,6 @@ class GISelWorkList {
 #endif
 
 public:
-  GISelWorkList() : WorklistMap(N) {}
-
   bool empty() const { return WorklistMap.empty(); }
 
   unsigned size() const { return WorklistMap.size(); }
@@ -60,8 +58,8 @@ public:
   // It also asserts if there are any duplicate elements found.
   void finalize() {
     assert(WorklistMap.empty() && "Expecting empty worklistmap");
-    if (Worklist.size() > N)
-      WorklistMap.reserve(Worklist.size());
+    if (!Worklist.empty())
+      WorklistMap.reserve(Worklist.size() > N ? Worklist.size() : N);
     for (unsigned i = 0; i < Worklist.size(); ++i)
       if (!WorklistMap.try_emplace(Worklist[i], i).second)
         llvm_unreachable("Duplicate elements in the list");
@@ -82,7 +80,7 @@ public:
   /// Remove I from the worklist if it exists.
   void remove(const MachineInstr *I) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert((Finalized || WorklistMap.empty()) && "Neither finalized nor empty");
+    assert(Finalized && "GISelWorkList used without finalizing");
 #endif
     auto It = WorklistMap.find(I);
     if (It == WorklistMap.end())

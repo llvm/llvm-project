@@ -452,3 +452,15 @@ define void @PR52032_4(ptr %p, ptr %q) {
   store <4 x i32> %i9, ptr %p2, align 4
   ret void
 }
+
+; Fold sub(32,xor(bsr(x),31)) -> add(xor(bsr(x),-32),33) -> add(or(bsr(x),-32),33) -> add(bsr(x),1)
+define i32 @PR74101(i32 %a0) {
+; CHECK-LABEL: PR74101:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bsrl %edi, %eax
+; CHECK-NEXT:    incl %eax
+; CHECK-NEXT:    retq
+  %lz = call i32 @llvm.ctlz.i32(i32 %a0, i1 true)
+  %add = sub nuw nsw i32 32, %lz
+  ret i32 %add
+}

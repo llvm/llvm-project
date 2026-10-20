@@ -10,7 +10,7 @@ declare void @llvm.experimental.guard(i1,...)
 ; constant fold on first ieration
 define i32 @test1(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test1(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -57,7 +57,7 @@ fail:
 ; Same as test1, but with a floating point IR and fcmp
 define i32 @test_fcmp(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test_fcmp(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -106,7 +106,7 @@ fail:
 ; ule i32 (add nsw i32 %len, -1), %len where len is [0, 512]
 define i32 @test2(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test2(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[IS_NON_POS:%.*]] = icmp eq i32 [[LEN]], 0
@@ -164,7 +164,7 @@ fail:
 ; trivially true for zero
 define i32 @test3(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test3(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
@@ -218,15 +218,15 @@ fail:
 }
 
 ; Same as previous case, with commuted icmp.
-; FIXME: The load should get hoisted here as well.
 define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test3_commuted(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[FAIL:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[INC:%.*]], [[CONTINUE:%.*]] ]
@@ -234,7 +234,6 @@ define i32 @test3_commuted(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-NEXT:    [[R_CHK:%.*]] = icmp uge i32 [[LEN]], [[IV]]
 ; CHECK-NEXT:    br i1 [[R_CHK]], label [[CONTINUE]], label [[FAIL_LOOPEXIT:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I1]], [[ACC]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
@@ -277,7 +276,7 @@ fail:
 ; requires fact length is non-zero
 define i32 @test4(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test4(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
@@ -333,7 +332,7 @@ fail:
 ; variation on test1 with branch swapped
 define i32 @test-brswap(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test-brswap(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -379,7 +378,7 @@ fail:
 
 define i32 @test-nonphi(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test-nonphi(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -427,7 +426,7 @@ fail:
 
 define i32 @test-wrongphi(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test-wrongphi(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -488,7 +487,7 @@ fail:
 ; This works because loop-simplify is run implicitly, but test for it anyways
 define i32 @test-multiple-latch(ptr noalias nocapture readonly %a) nounwind uwtable {
 ; CHECK-LABEL: define i32 @test-multiple-latch(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Make sure we fix up the Phis when we connect the last

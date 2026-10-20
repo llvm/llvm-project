@@ -28,12 +28,13 @@
 
 using namespace __sanitizer;
 
-#if SANITIZER_SOLARIS && defined(__sparcv9)
+#if defined(__sparcv9)
 // FIXME: These tests probably fail because Solaris/sparcv9 uses the full
-// 64-bit address space.  Needs more investigation
-#define SKIP_ON_SOLARIS_SPARCV9(x) DISABLED_##x
+// 64-bit address space.  Same on Linux/sparc64, so probably a general SPARC
+// issue.  Needs more investigation
+#  define SKIP_ON_SPARCV9(x) DISABLED_##x
 #else
-#define SKIP_ON_SOLARIS_SPARCV9(x) x
+#  define SKIP_ON_SPARCV9(x) x
 #endif
 
 // On 64-bit systems with small virtual address spaces (e.g. 39-bit) we can't
@@ -781,7 +782,7 @@ TEST(SanitizerCommon, CombinedAllocator64VeryCompact) {
 }
 #endif
 
-TEST(SanitizerCommon, SKIP_ON_SOLARIS_SPARCV9(CombinedAllocator32Compact)) {
+TEST(SanitizerCommon, SKIP_ON_SPARCV9(CombinedAllocator32Compact)) {
   TestCombinedAllocator<Allocator32Compact>();
 }
 
@@ -1028,7 +1029,7 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedIteration) {
 #endif
 #endif
 
-TEST(SanitizerCommon, SKIP_ON_SOLARIS_SPARCV9(SizeClassAllocator32Iteration)) {
+TEST(SanitizerCommon, SKIP_ON_SPARCV9(SizeClassAllocator32Iteration)) {
   TestSizeClassAllocatorIteration<Allocator32Compact>();
 }
 

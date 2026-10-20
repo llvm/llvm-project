@@ -67,11 +67,11 @@ define <4 x i32> @multiply_2x2(<4 x i32> %a, <4 x i32> %b) {
 ; RM-NEXT:    ret <4 x i32> [[TMP28]]
 ;
 entry:
-  %c = call <4 x i32> @llvm.matrix.multiply.v4f64.v4f64.v4f64(<4 x i32> %a, <4 x i32> %b, i32 2, i32 2, i32 2)
+  %c = call <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b, i32 2, i32 2, i32 2)
   ret <4 x i32> %c
 }
 
-declare <4 x i32> @llvm.matrix.multiply.v4f64.v4f64.v4f64(<4 x i32>, <4 x i32>, i32, i32, i32)
+declare <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32)
 
 define <4 x i32> @multiply_1x2(<2 x i32> %a, <2 x i32> %b) {
 ; RM-LABEL: @multiply_1x2(
@@ -111,11 +111,11 @@ define <4 x i32> @multiply_1x2(<2 x i32> %a, <2 x i32> %b) {
 ; RM-NEXT:    ret <4 x i32> [[TMP16]]
 ;
 entry:
-  %c = call <4 x i32> @llvm.matrix.multiply.v4f64.v2f64.v2f64(<2 x i32> %a, <2 x i32> %b, i32 2, i32 1, i32 2)
+  %c = call <4 x i32> @llvm.matrix.multiply.v4i32.v2i32.v2i32(<2 x i32> %a, <2 x i32> %b, i32 2, i32 1, i32 2)
   ret <4 x i32> %c
 }
 
-declare <4 x i32> @llvm.matrix.multiply.v4f64.v2f64.v2f64(<2 x i32>, <2 x i32>, i32, i32, i32)
+declare <4 x i32> @llvm.matrix.multiply.v4i32.v2i32.v2i32(<2 x i32>, <2 x i32>, i32, i32, i32)
 
 define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; RM-LABEL: @multiply_2x3(
@@ -248,8 +248,8 @@ define <9 x i32> @multiply_2x3(<6 x i32> %a, <6 x i32> %b) {
 ; RM-NEXT:    ret <9 x i32> [[TMP65]]
 ;
 entry:
-  %c = call <9 x i32> @llvm.matrix.multiply.v6f64.v6f64.v6f64(<6 x i32> %a, <6 x i32> %b, i32 3, i32 2, i32 3)
+  %c = call <9 x i32> @llvm.matrix.multiply.v9i32.v6i32.v6i32(<6 x i32> %a, <6 x i32> %b, i32 3, i32 2, i32 3)
   ret <9 x i32> %c
 }
 
-declare <9 x i32> @llvm.matrix.multiply.v6f64.v6f64.v6f64(<6 x i32>, <6 x i32>, i32, i32, i32)
+declare <9 x i32> @llvm.matrix.multiply.v9i32.v6i32.v6i32(<6 x i32>, <6 x i32>, i32, i32, i32)

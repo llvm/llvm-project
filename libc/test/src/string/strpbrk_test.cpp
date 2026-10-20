@@ -60,3 +60,7 @@ TEST(LlvmLibcStrPBrkTest, FindsFirstOfRepeated) {
 TEST(LlvmLibcStrPBrkTest, FindsFirstInBreakset) {
   EXPECT_STREQ(LIBC_NAMESPACE::strpbrk("12345", "34"), "345");
 }
+
+TEST(LlvmLibcStrPBrkTest, TopBitSet) {
+  EXPECT_STREQ(LIBC_NAMESPACE::strpbrk("hello\x80world", "\x80 "), "\x80world");
+}

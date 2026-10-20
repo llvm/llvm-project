@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -46,20 +46,22 @@ done:
 
 ; GCN-LABEL: {{^}}legal_offset_fi_offset:
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
-; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8004
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, 4,
 ; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8004
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 
 define amdgpu_kernel void @legal_offset_fi_offset(ptr addrspace(1) %out, i32 %cond, ptr addrspace(1) %offsets, i32 %if_offset, i32 %else_offset) {
 entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %offsets.tid = getelementptr inbounds i32, ptr addrspace(1) %offsets, i32 %tid
   %scratch0 = alloca [8192 x i32], addrspace(5)
   %scratch1 = alloca [8192 x i32], addrspace(5)
 
-  %offset0 = load i32, ptr addrspace(1) %offsets
+  %offset0 = load i32, ptr addrspace(1) %offsets.tid
   %scratchptr0 = getelementptr [8192 x i32], ptr addrspace(5) %scratch0, i32 0, i32 %offset0
   store i32 %offset0, ptr addrspace(5) %scratchptr0
 
-  %offsetptr1 = getelementptr i32, ptr addrspace(1) %offsets, i32 1
+  %offsetptr1 = getelementptr i32, ptr addrspace(1) %offsets.tid, i32 1
   %offset1 = load i32, ptr addrspace(1) %offsetptr1
   %scratchptr1 = getelementptr [8192 x i32], ptr addrspace(5) %scratch1, i32 0, i32 %offset1
   store i32 %offset1, ptr addrspace(5) %scratchptr1
@@ -84,8 +86,10 @@ done:
 }
 
 ; GCN-LABEL: {{^}}neg_vaddr_offset_inbounds:
-; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
+; GCN: s_add_i32 [[ADD0:s[0-9]+]], s{{[0-9]+}}, 4
+; GCN: s_add_i32 [[ADD1:s[0-9]+]], [[ADD0]], 16
+; GCN: v_mov_b32_e32 [[V_ADD:v[0-9]+]], [[ADD1]]
+; GCN: buffer_store_dword v{{[0-9]+}}, [[V_ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
 define amdgpu_kernel void @neg_vaddr_offset_inbounds(i32 %offset) {
 entry:
   %array = alloca [8192 x i32], addrspace(5)
@@ -96,8 +100,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}neg_vaddr_offset:
-; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
+; GCN: s_add_i32 [[ADD0:s[0-9]+]], s{{[0-9]+}}, 4
+; GCN: s_add_i32 [[ADD1:s[0-9]+]], [[ADD0]], 16
+; GCN: v_mov_b32_e32 [[V_ADD:v[0-9]+]], [[ADD1]]
+; GCN: buffer_store_dword v{{[0-9]+}}, [[V_ADD]], s[{{[0-9]+:[0-9]+}}], 0 offen{{$}}
 define amdgpu_kernel void @neg_vaddr_offset(i32 %offset) {
 entry:
   %array = alloca [8192 x i32], addrspace(5)

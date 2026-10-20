@@ -8,14 +8,19 @@
 
 #include "src/stdio/vsnprintf.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
-#include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/printf_main.h"
+#include "src/__support/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vsnprintf,
                    (char *__restrict buffer, size_t buffsz,
@@ -23,13 +28,31 @@ LLVM_LIBC_FUNCTION(int, vsnprintf,
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
-  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
-  printf_core::Writer writer(&wb);
+  printf_core::Writer writer = printf_core::make_drop_overflow_writer(
+      buffer, (buffsz > 0 ? buffsz - 1 : 0));
 
-  int ret_val = printf_core::printf_main(&writer, format, args);
-  if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  auto ret_val = printf_core::printf_main_modular(&writer, format, args);
+#else
+  auto ret_val = printf_core::printf_main(&writer, format, args);
+#endif
+  if (!ret_val.has_value()) {
+    libc_errno = printf_core::internal_error_to_errno(ret_val.error());
+    return -1;
+  }
+  if (buffsz > 0) { // if the buffsz is 0 the buffer may be a null pointer.
+    printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
     wb.buff[wb.buff_cur] = '\0';
-  return ret_val;
+  }
+
+  if (ret_val.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
+    return -1;
+  }
+
+  return static_cast<int>(ret_val.value());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

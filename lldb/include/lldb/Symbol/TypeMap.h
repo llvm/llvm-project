@@ -29,8 +29,6 @@ public:
   void Dump(Stream *s, bool show_context,
             lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
 
-  TypeMap FindTypes(ConstString name);
-
   void Insert(const lldb::TypeSP &type);
 
   bool Empty() const;
@@ -44,7 +42,8 @@ public:
   lldb::TypeSP FirstType() const;
 
   typedef std::multimap<lldb::user_id_t, lldb::TypeSP> collection;
-  typedef AdaptedIterable<collection, lldb::TypeSP, map_adapter> TypeIterable;
+  typedef llvm::iterator_range<ValueMapIterator<collection::const_iterator>>
+      TypeIterable;
 
   TypeIterable Types() const { return TypeIterable(m_types); }
 

@@ -263,11 +263,13 @@ namespace std {
   template< class T > struct remove_reference<T&>  {typedef T type;};
   template< class T > struct remove_reference<T&&> {typedef T type;};
 
-  template<class T> 
-  typename remove_reference<T>::type&& move(T&& a) {
-    typedef typename remove_reference<T>::type&& RvalRef;
-    return static_cast<RvalRef>(a);
-  }
+  template<typename T> typename remove_reference<T>::type&& move(T&& a);
+  template <typename T> T *__addressof(T &x);
+  template <typename T> T *addressof(T &x);
+  template <typename T> const T& as_const(T& x);
+  template <typename T> T&& forward(T&& x);
+  // FIXME: Declare forward_like
+  // FIXME: Declare move_if_noexcept
 
   template< class T >
   using remove_reference_t = typename remove_reference<T>::type;
@@ -384,6 +386,8 @@ namespace std {
     void assign(std::initializer_list<T> ilist);
 
     void clear();
+    size_t size() const;
+    bool empty() const;
 
     void push_back(const T &value);
     void push_back(T &&value);
@@ -754,7 +758,7 @@ namespace std {
     template<class InputIter, class OutputIter>
     OutputIter __copy(InputIter II, InputIter IE, OutputIter OI) {
       while (II != IE)
-        *OI++ = *II++;
+        *OI++ = *II++; // #system_header_simulator_cxx_std_copy_impl_loop
 
       return OI;
     }
@@ -1000,6 +1004,28 @@ next(ForwardIterator it,
   OutputIterator copy(InputIterator first, InputIterator last,
                       OutputIterator result);
 
+  template<class InputIterator, class OutputIterator>
+  OutputIterator move(InputIterator first, InputIterator last,
+                      OutputIterator result);
+
+  template <typename Container> struct back_insert_iterator {
+    Container *item;
+
+    back_insert_iterator(Container& container) : item(&container) {}
+
+    back_insert_iterator& operator=(const typename Container::value_type& value) {
+      item->push_back(value);
+      return *this;
+    }
+    back_insert_iterator& operator*() {return *this;}
+    back_insert_iterator& operator++() {return *this;}
+    back_insert_iterator operator++(int) {return *this;}
+  };
+
+  template <typename Container>
+  back_insert_iterator<Container> back_inserter(Container& c) {
+    return back_insert_iterator<Container>(c);
+  }
 }
 
 #if __cplusplus >= 201103L
@@ -1242,6 +1268,7 @@ template<
   class Alloc = std::allocator<Key>
 > class unordered_set {
   public:
+    unordered_set() {}
     unordered_set(initializer_list<Key> __list) {}
 
     class iterator {
@@ -1258,6 +1285,9 @@ template<
     Key *val;
     iterator begin() const { return iterator(val); }
     iterator end() const { return iterator(val + 1); }
+
+    template< class InputIt >
+    void insert( InputIt first, InputIt last );
 };
 
 template <typename T>

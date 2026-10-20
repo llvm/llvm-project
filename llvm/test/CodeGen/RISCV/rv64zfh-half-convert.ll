@@ -123,6 +123,8 @@ define signext i16 @bcvt_f16_to_sext_i16(half %a, half %b) nounwind {
 ; RV64IZHINX-LABEL: bcvt_f16_to_sext_i16:
 ; RV64IZHINX:       # %bb.0:
 ; RV64IZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64IZHINX-NEXT:    slli a0, a0, 48
+; RV64IZHINX-NEXT:    srai a0, a0, 48
 ; RV64IZHINX-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = bitcast half %1 to i16

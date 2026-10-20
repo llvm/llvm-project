@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFLegalizerInfo.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bpf-legalinfo"
 
@@ -18,5 +17,4 @@ using namespace llvm;
 using namespace LegalizeActions;
 
 BPFLegalizerInfo::BPFLegalizerInfo(const BPFSubtarget &ST) {
-  getLegacyLegalizerInfo().computeTables();
 }

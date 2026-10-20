@@ -21,6 +21,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -38,23 +39,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
-#include "Options.inc"
-#undef PREFIX
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class DwarfutilOptTable : public opt::GenericOptTable {
+class DwarfutilOptTable : public opt::OptTable {
 public:
-  DwarfutilOptTable() : opt::GenericOptTable(InfoTable) {}
+  DwarfutilOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 

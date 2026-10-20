@@ -17,6 +17,7 @@
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
+class CommandReturnObject;
 class SBCommandReturnObjectImpl;
 namespace python {
 class SWIGBridge;
@@ -42,9 +43,14 @@ public:
 
   bool IsValid() const;
 
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const char *GetCommand();
+
   const char *GetOutput();
 
   const char *GetError();
+  SBStructuredData GetErrorData();
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use PutOutput(SBFile) or PutOutput(FileSP)",
@@ -131,12 +137,15 @@ public:
 
   void SetError(const char *error_cstr);
 
+  lldb::SBValueList GetValues(lldb::DynamicValueType use_dynamic);
+
 protected:
   friend class SBCommandInterpreter;
   friend class SBOptions;
 
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 

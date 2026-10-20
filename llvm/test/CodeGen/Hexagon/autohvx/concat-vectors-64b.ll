@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: concat_8:
 ; CHECK: v[[H00:[0-9]+]]:[[L00:[0-9]+]] = vcombine(v0,v1)

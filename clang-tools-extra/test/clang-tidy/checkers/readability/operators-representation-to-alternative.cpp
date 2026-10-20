@@ -7,47 +7,47 @@ void testAllTokensToAlternative(int a, int b) {
 
   value = a||b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '||' is a traditional token spelling, consider using an alternative token 'or' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a or b;{{$}}
+  // CHECK-FIXES: value = a or b;
 
   value = a&&b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '&&' is a traditional token spelling, consider using an alternative token 'and' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a and b;{{$}}
+  // CHECK-FIXES: value = a and b;
 
   value = a | b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '|' is a traditional token spelling, consider using an alternative token 'bitor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a bitor b;{{$}}
+  // CHECK-FIXES: value = a bitor b;
 
   value = a & b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '&' is a traditional token spelling, consider using an alternative token 'bitand' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a bitand b;{{$}}
+  // CHECK-FIXES: value = a bitand b;
 
   value = !a;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '!' is a traditional token spelling, consider using an alternative token 'not' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = not a;{{$}}
+  // CHECK-FIXES: value = not a;
 
   value = a^b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '^' is a traditional token spelling, consider using an alternative token 'xor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a xor b;{{$}}
+  // CHECK-FIXES: value = a xor b;
 
   value = ~b;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '~' is a traditional token spelling, consider using an alternative token 'compl' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = compl b;{{$}}
+  // CHECK-FIXES: value = compl b;
 
   value &= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '&=' is a traditional token spelling, consider using an alternative token 'and_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value and_eq b;{{$}}
+  // CHECK-FIXES: value and_eq b;
 
   value |= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '|=' is a traditional token spelling, consider using an alternative token 'or_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value or_eq b;{{$}}
+  // CHECK-FIXES: value or_eq b;
 
   value = a != b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '!=' is a traditional token spelling, consider using an alternative token 'not_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a not_eq b;{{$}}
+  // CHECK-FIXES: value = a not_eq b;
 
   value ^= a;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '^=' is a traditional token spelling, consider using an alternative token 'xor_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value xor_eq a;{{$}}
+  // CHECK-FIXES: value xor_eq a;
 }
 
 struct Class {
@@ -70,47 +70,47 @@ void testAllTokensToAlternative(Class a, Class b) {
 
   value = a||b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '||' is a traditional token spelling, consider using an alternative token 'or' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a or b;{{$}}
+  // CHECK-FIXES: value = a or b;
 
   value = a&&b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '&&' is a traditional token spelling, consider using an alternative token 'and' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a and b;{{$}}
+  // CHECK-FIXES: value = a and b;
 
   clval = a | b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '|' is a traditional token spelling, consider using an alternative token 'bitor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a bitor b;{{$}}
+  // CHECK-FIXES: clval = a bitor b;
 
   clval = a & b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '&' is a traditional token spelling, consider using an alternative token 'bitand' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a bitand b;{{$}}
+  // CHECK-FIXES: clval = a bitand b;
 
   value = !a;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '!' is a traditional token spelling, consider using an alternative token 'not' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = not a;{{$}}
+  // CHECK-FIXES: value = not a;
 
   clval = a^b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '^' is a traditional token spelling, consider using an alternative token 'xor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a xor b;{{$}}
+  // CHECK-FIXES: clval = a xor b;
 
   clval = ~b;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '~' is a traditional token spelling, consider using an alternative token 'compl' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = compl b;{{$}}
+  // CHECK-FIXES: clval = compl b;
 
   clval &= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '&=' is a traditional token spelling, consider using an alternative token 'and_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval and_eq b;{{$}}
+  // CHECK-FIXES: clval and_eq b;
 
   clval |= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '|=' is a traditional token spelling, consider using an alternative token 'or_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval or_eq b;{{$}}
+  // CHECK-FIXES: clval or_eq b;
 
   value = a != b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '!=' is a traditional token spelling, consider using an alternative token 'not_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a not_eq b;{{$}}
+  // CHECK-FIXES: value = a not_eq b;
 
   clval ^= a;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '^=' is a traditional token spelling, consider using an alternative token 'xor_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval xor_eq a;{{$}}
+  // CHECK-FIXES: clval xor_eq a;
 }
 
 struct ClassO {};
@@ -133,45 +133,45 @@ void testAllTokensToAlternative(ClassO a, ClassO b) {
 
   value = a||b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '||' is a traditional token spelling, consider using an alternative token 'or' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a or b;{{$}}
+  // CHECK-FIXES: value = a or b;
 
   value = a&&b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '&&' is a traditional token spelling, consider using an alternative token 'and' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a and b;{{$}}
+  // CHECK-FIXES: value = a and b;
 
   clval = a | b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '|' is a traditional token spelling, consider using an alternative token 'bitor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a bitor b;{{$}}
+  // CHECK-FIXES: clval = a bitor b;
 
   clval = a & b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '&' is a traditional token spelling, consider using an alternative token 'bitand' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a bitand b;{{$}}
+  // CHECK-FIXES: clval = a bitand b;
 
   value = !a;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '!' is a traditional token spelling, consider using an alternative token 'not' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = not a;{{$}}
+  // CHECK-FIXES: value = not a;
 
   clval = a^b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: '^' is a traditional token spelling, consider using an alternative token 'xor' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = a xor b;{{$}}
+  // CHECK-FIXES: clval = a xor b;
 
   clval = ~b;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '~' is a traditional token spelling, consider using an alternative token 'compl' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval = compl b;{{$}}
+  // CHECK-FIXES: clval = compl b;
 
   clval &= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '&=' is a traditional token spelling, consider using an alternative token 'and_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval and_eq b;{{$}}
+  // CHECK-FIXES: clval and_eq b;
 
   clval |= b;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '|=' is a traditional token spelling, consider using an alternative token 'or_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval or_eq b;{{$}}
+  // CHECK-FIXES: clval or_eq b;
 
   value = a != b;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: '!=' is a traditional token spelling, consider using an alternative token 'not_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}value = a not_eq b;{{$}}
+  // CHECK-FIXES: value = a not_eq b;
 
   clval ^= a;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: '^=' is a traditional token spelling, consider using an alternative token 'xor_eq' for consistency [readability-operators-representation]
-  // CHECK-FIXES: {{^  }}clval xor_eq a;{{$}}
+  // CHECK-FIXES: clval xor_eq a;
 }

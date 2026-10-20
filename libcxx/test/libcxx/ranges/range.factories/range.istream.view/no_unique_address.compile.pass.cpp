@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: msvc && clang-17
 
 // Test the libc++ extension that the value stored in `std::ranges::istream_view` has been marked
 // as _LIBCPP_NO_UNIQUE_ADDRESS
@@ -21,4 +20,3 @@ struct Empty {
 };
 
 static_assert(sizeof(std::ranges::istream_view<Empty>) == sizeof(void*));
-

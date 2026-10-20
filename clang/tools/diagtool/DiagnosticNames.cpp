@@ -9,57 +9,67 @@
 #include "DiagnosticNames.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
+#include <array>
+#include <cstddef>
+#include <cstdint>
 
 using namespace clang;
 using namespace diagtool;
 
-static const DiagnosticRecord BuiltinDiagnosticsByName[] = {
-#define DIAG_NAME_INDEX(ENUM) { #ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t) },
+struct BuiltinDiagnosticNameStorage {
+#define DIAG_NAME_INDEX(ENUM) char ENUM[sizeof(#ENUM)];
 #include "clang/Basic/DiagnosticIndexName.inc"
 #undef DIAG_NAME_INDEX
 };
+
+static_assert(sizeof(BuiltinDiagnosticNameStorage) <= uint64_t(1) << 24);
+
+static constexpr BuiltinDiagnosticNameStorage BuiltinDiagnosticNames = {
+#define DIAG_NAME_INDEX(ENUM) #ENUM,
+#include "clang/Basic/DiagnosticIndexName.inc"
+#undef DIAG_NAME_INDEX
+};
+
+#define DIAGNOSTIC_RECORD(ENUM)                                                \
+  {diag::ENUM, uint16_t(offsetof(BuiltinDiagnosticNameStorage, ENUM)),         \
+   uint8_t(offsetof(BuiltinDiagnosticNameStorage, ENUM) >> 16),                \
+   STR_SIZE(#ENUM, uint8_t)}
+
+static constexpr DiagnosticRecord BuiltinDiagnosticsByName[] = {
+#define DIAG_NAME_INDEX(ENUM) DIAGNOSTIC_RECORD(ENUM),
+#include "clang/Basic/DiagnosticIndexName.inc"
+#undef DIAG_NAME_INDEX
+};
+static_assert(std::size(BuiltinDiagnosticsByName) < (1U << 16));
+#undef DIAGNOSTIC_RECORD
 
 llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
   return llvm::ArrayRef(BuiltinDiagnosticsByName);
 }
 
+static constexpr auto BuiltinDiagnosticIndexByID = [] {
+  std::array<uint16_t, diag::DIAG_UPPER_LIMIT> Result = {};
+  uint16_t Index = 0;
+#define DIAG_NAME_INDEX(ENUM) Result[diag::ENUM] = ++Index;
+#include "clang/Basic/DiagnosticIndexName.inc"
+#undef DIAG_NAME_INDEX
+  return Result;
+}();
 
-// FIXME: Is it worth having two tables, especially when this one can get
-// out of sync easily?
-static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
-#define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFER, CATEGORY)                 \
-  {#ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t)},
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
-#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
-#undef DIAG
-};
-
-static bool orderByID(const DiagnosticRecord &Left,
-                      const DiagnosticRecord &Right) {
-  return Left.DiagID < Right.DiagID;
+llvm::StringRef DiagnosticRecord::getName() const {
+  const char *Names = reinterpret_cast<const char *>(&BuiltinDiagnosticNames);
+  uint32_t NameOffset =
+      uint32_t(NameOffsetLow) | (uint32_t(NameOffsetHigh) << 16);
+  return llvm::StringRef(Names + NameOffset, NameLen);
 }
 
 const DiagnosticRecord &diagtool::getDiagnosticForID(short DiagID) {
-  DiagnosticRecord Key = {nullptr, DiagID, 0};
-
-  const DiagnosticRecord *Result =
-      llvm::lower_bound(BuiltinDiagnosticsByID, Key, orderByID);
-  assert(Result && "diagnostic not found; table may be out of date");
-  return *Result;
+  assert(DiagID >= 0 &&
+         static_cast<unsigned>(DiagID) < BuiltinDiagnosticIndexByID.size() &&
+         BuiltinDiagnosticIndexByID[DiagID] != 0 && "diagnostic not found");
+  return BuiltinDiagnosticsByName[BuiltinDiagnosticIndexByID[DiagID] - 1];
 }
-
 
 #define GET_DIAG_ARRAYS
 #include "clang/Basic/DiagnosticGroups.inc"
@@ -74,7 +84,7 @@ static const GroupRecord OptionTable[] = {
 };
 
 llvm::StringRef GroupRecord::getName() const {
-  return StringRef(DiagGroupNames + NameOffset + 1, DiagGroupNames[NameOffset]);
+  return DiagGroupNames[NameOffset];
 }
 
 GroupRecord::subgroup_iterator GroupRecord::subgroup_begin() const {

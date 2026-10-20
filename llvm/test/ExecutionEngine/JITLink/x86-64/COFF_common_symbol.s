@@ -1,12 +1,13 @@
 # REQUIRES: asserts
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t
-# RUN: llvm-jitlink --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t 2>&1 \
+# RUN:              | FileCheck %s
 #
 # Check a common symbol is created.
 #
 # CHECK: Creating graph symbols...
 # CHECK:      7: Creating defined graph symbol for COFF symbol "var" in (common) (index: 0)
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000004, linkage: strong, scope: default, dead  -   var
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000004, linkage: weak, scope: default, dead  -   var
 
 	.text
 

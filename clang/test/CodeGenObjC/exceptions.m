@@ -52,23 +52,29 @@ int f2(void) {
   // CHECK-NEXT:   [[CAUGHT:%.*]] = icmp eq i32 [[SETJMP]], 0
   // CHECK-NEXT:   br i1 [[CAUGHT]]
   @try {
-    // Landing pad.  Note that we elide the re-enter.
+    // Landing pad.
     // CHECK:      call void asm sideeffect "", "=*m,=*m"(ptr nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call ptr @objc_exception_extract
     // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[X]]
-    // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
+    // CHECK-NEXT: [[DEC:%.*]] = add nsw i32 [[T1]], -1
 
-    // CHECK: store i32 6, ptr [[X]]
+    // A `longjmp` may re-enter at the setjmp above, so [[X]] can no longer be
+    // assumed unmodified across it: the increment below is a real
+    // load/add/store instead of being folded to a constant store.
+    // CHECK:      [[T2:%.*]] = load i32, ptr [[X]]
+    // CHECK-NEXT: [[INC:%.*]] = add nsw i32 [[T2]], 1
+    // CHECK-NEXT: store i32 [[INC]], ptr [[X]]
     x++;
     // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(ptr nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call void @foo()
     // CHECK-NEXT: call void @objc_exception_try_exit
-    // CHECK-NEXT: [[T:%.*]] = load i32, ptr [[X]]
+    // CHECK-NEXT: [[T3:%.*]] = load i32, ptr [[X]]
     foo();
   } @catch (id) {
     x--;
   }
 
+  // CHECK: {{%.*}} = phi i32 [ [[DEC]], %{{.*}} ], [ [[T3]], %{{.*}} ]
   return x;
 }
 
@@ -79,7 +85,7 @@ void f3(void) {
   extern void f3_helper(int, int*);
 
   // CHECK:      [[X:%.*]] = alloca i32
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
   // CHECK:      store i32 0, ptr [[X]]
   int x = 0;
 
@@ -120,7 +126,7 @@ void f3(void) {
   }
 
   // CHECK:      call void @f3_helper(i32 noundef 4, ptr noundef nonnull [[X]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
   // CHECK-NEXT: ret void
   f3_helper(4, &x);
 }
@@ -144,18 +150,17 @@ void f4(void) {
   // CHECK-NEXT: br label
   //   -> rethrow
 
-  // finally.call-exit:  Predecessors are the @try and @catch fallthroughs
-  // as well as the no-match case in the catch mechanism.  The i1 is whether
-  // to rethrow and should be true only in the last case.
-  // CHECK:      phi ptr
-  // CHECK-NEXT: phi i1
-  // CHECK-NEXT: call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // finally.call-exit:  Predecessor is the no-match case in the catch mechanism
+  // which rethrows.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
   // CHECK-NEXT: call void @f4_help(i32 noundef 2)
-  // CHECK-NEXT: br i1
-  //   -> ret, rethrow
+  // CHECK-NEXT: br label
+  //   -> rethrow
 
-  // ret:
-  // CHECK:      ret void
+  // finally.end.critedge:  Predecessors are the @try and @catch fallthroughs.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // CHECK-NEXT: call void @f4_help(i32 noundef 2)
+  // CHECK-NEXT: ret void
 
   // Catch mechanism:
   // CHECK:      call ptr @objc_exception_extract(ptr nonnull [[EXNDATA]])

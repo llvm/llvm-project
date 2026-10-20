@@ -5,7 +5,7 @@ import gdbremote_testcase
 
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
-    @skipIfWindows  # no SIGSEGV support
+    @requireSignals
     @add_test_categories(["llgs"])
     def test_run(self):
         self.build()
@@ -276,6 +276,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["llgs"])
+    @skipIfWindows  # Sometimes results in '$E37' instead of expected '$OK'
     def test_vCont_then_stop(self):
         self.build()
         self.set_inferior_startup_launch()

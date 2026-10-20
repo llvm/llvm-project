@@ -6,16 +6,10 @@ add_mlir_conversion_library(MLIRControlFlowToSCF
 
   DEPENDS
   MLIRConversionPassIncGen
-  intrinsics_gen
-
-  LINK_COMPONENTS
-  Core
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
   MLIRArithDialect
   MLIRControlFlowDialect
-  MLIRFuncDialect
   MLIRSCFDialect
   MLIRUBDialect
   MLIRPass

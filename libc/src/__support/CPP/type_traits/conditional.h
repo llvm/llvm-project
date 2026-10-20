@@ -9,8 +9,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_CONDITIONAL_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // conditional
 template <bool B, typename T, typename F>
@@ -20,6 +22,7 @@ struct conditional<false, T, F> : type_identity<F> {};
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_CONDITIONAL_H

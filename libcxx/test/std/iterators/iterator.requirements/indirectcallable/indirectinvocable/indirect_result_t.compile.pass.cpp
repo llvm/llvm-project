@@ -34,8 +34,6 @@ static_assert(!has_indirect_result<int, int*>);         // int isn't invocable
 
 // Test ADL-proofing (P2538R1)
 #if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
-// TODO: Enable this on GCC once this bug is fixed: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=111419
-#ifndef TEST_COMPILER_GCC
 struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(std::same_as<std::indirect_result_t<int                (&)(int), int*>, int>);
@@ -44,5 +42,4 @@ static_assert(std::same_as<std::indirect_result_t<Holder<Incomplete>*(&)(int), i
 static_assert(std::same_as<std::indirect_result_t<int                (&)(Holder<Incomplete>*), Holder<Incomplete>**>, int>);
 static_assert(std::same_as<std::indirect_result_t<Holder<Incomplete>&(&)(Holder<Incomplete>*), Holder<Incomplete>**>, Holder<Incomplete>&>);
 static_assert(std::same_as<std::indirect_result_t<Holder<Incomplete>*(&)(Holder<Incomplete>*), Holder<Incomplete>**>, Holder<Incomplete>*>);
-#endif
 #endif

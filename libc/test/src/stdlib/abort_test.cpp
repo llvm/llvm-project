@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/stdlib/abort.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
-#include <stdlib.h>
 
 TEST(LlvmLibcStdlib, abort) {
   // -1 matches against any signal, which is necessary for now until

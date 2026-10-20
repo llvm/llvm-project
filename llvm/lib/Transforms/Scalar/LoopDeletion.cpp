@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
@@ -36,11 +37,6 @@ using namespace llvm;
 STATISTIC(NumDeleted, "Number of loops deleted");
 STATISTIC(NumBackedgesBroken,
           "Number of loops for which we managed to break the backedge");
-
-static cl::opt<bool> EnableSymbolicExecution(
-    "loop-deletion-enable-symbolic-execution", cl::Hidden, cl::init(true),
-    cl::desc("Break backedge through symbolic execution of 1st iteration "
-             "attempting to prove that the backedge is never taken"));
 
 enum class LoopDeletionResult {
   Unmodified,
@@ -216,7 +212,11 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
 static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
                                          LoopInfo &LI) {
   // Disabled by option.
-  if (!EnableSymbolicExecution)
+  if (!L->getHeader()
+           ->getContext()
+           .getLibraryOptions()
+           .get<ScalarOptions>()
+           .loop_deletion_enable_symbolic_execution)
     return false;
 
   BasicBlock *Predecessor = L->getLoopPredecessor();
@@ -404,9 +404,9 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (!L->getLoopLatch())
     return LoopDeletionResult::Unmodified;
 
-  auto *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
+  const SCEV *BTCMax = SE.getConstantMaxBackedgeTakenCount(L);
   if (!BTCMax->isZero()) {
-    auto *BTC = SE.getBackedgeTakenCount(L);
+    const SCEV *BTC = SE.getBackedgeTakenCount(L);
     if (!BTC->isZero()) {
       if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
         return LoopDeletionResult::Unmodified;
@@ -467,8 +467,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     SE.forgetLoop(L);
     // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
-      std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                PoisonValue::get(P.getType()));
+      llvm::fill(P.incoming_values(), PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),
@@ -489,7 +488,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // the situation of needing to be able to solve statically which exit block
   // will be branched to, or trying to preserve the branching logic in a loop
   // invariant manner.
-  if (!ExitBlock && !L->hasNoExitBlocks()) {
+  if (!ExitBlock && !LI.hasNoExitBlocks(*L)) {
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }

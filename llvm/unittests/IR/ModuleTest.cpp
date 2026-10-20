@@ -14,6 +14,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #include <random>
@@ -100,6 +101,36 @@ TEST(ModuleTest, setModuleFlagInt) {
   M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
   auto A2 = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
   EXPECT_EQ(Val2, A2->getZExtValue());
+}
+
+TEST(ModuleTest, setModuleFlagTwoMod) {
+  LLVMContext Context;
+  Module MA("MA", Context);
+  Module MB("MB", Context);
+  StringRef Key = "Key";
+  uint32_t Val1 = 1;
+  uint32_t Val2 = 2;
+
+  // Set a flag to MA
+  EXPECT_EQ(nullptr, MA.getModuleFlag(Key));
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto A1 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val1, A1->getZExtValue());
+
+  // Set a flag to MB
+  EXPECT_EQ(nullptr, MB.getModuleFlag(Key));
+  MB.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto B1 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B1->getZExtValue());
+
+  // Change the flag of MA
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  auto A2 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val2, A2->getZExtValue());
+
+  // MB should keep the original flag value
+  auto B2 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B2->getZExtValue());
 }
 
 const char *IRString = R"IR(
@@ -287,6 +318,30 @@ TEST(ModuleTest, NamedMDList) {
   EXPECT_EQ(M->named_metadata_size(), 2u);
 }
 
+TEST(ModuleTest, ValueToGUIDMap) {
+  LLVMContext Context;
+  Module M("M", Context);
+  Type *Ty = Type::getInt32Ty(Context);
+  Constant *Init = ConstantInt::get(Ty, 0);
+  auto *OldGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "old");
+  auto *NewGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "new");
+
+  constexpr GlobalValue::GUID GUID = 101;
+  M.insertGUID(OldGV, GUID);
+  ASSERT_EQ(M.getGUID(OldGV), GUID);
+
+  // GUID does not follow RAUW.
+  OldGV->replaceAllUsesWith(NewGV);
+  EXPECT_EQ(M.getGUID(OldGV), GUID);
+  EXPECT_FALSE(M.getGUID(NewGV).has_value());
+
+  // Mapping deleted upon Value deletion (no dangling pointer in map)
+  OldGV->eraseFromParent();
+  EXPECT_FALSE(M.getGUID(OldGV).has_value());
+}
+
 TEST(ModuleTest, GlobalList) {
   // This tests all Module's functions that interact with Module::GlobalList.
   LLVMContext C;
@@ -324,6 +379,228 @@ TEST(ModuleTest, GlobalList) {
   M->insertGlobalVariable(NewGV);
   M->eraseGlobalVariable(NewGV);
   EXPECT_EQ(M->global_size(), 1u);
+}
+
+TEST(ModuleTest, MoveAssign) {
+  // This tests that we can move-assign modules, we parse two modules and
+  // move assign the second one to the first one, and check that the print
+  // is equal to what we loaded.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M1 = parseAssemblyString(R"(
+; ModuleID = '<string>'
+source_filename = "<string1>"
+
+@GV1 = external global i32
+
+@GA1 = alias void (), ptr @Foo1
+
+define void @Foo1() {
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+!foo1 = !{!3}
+!bar1 = !{!4}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang1", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "path/to/file1", directory: "/path/to/dir1")
+!3 = !DILocation(line: 12, column: 34, scope: !4)
+!4 = distinct !DISubprogram(name: "foo1", scope: null, type: !5, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
+)",
+                                                   Err, Context);
+  ASSERT_TRUE(M1.get());
+
+  StringLiteral M2Str = R"(
+; ModuleID = '<string>'
+source_filename = "<string2>"
+
+@GV2 = external global i32
+
+@GA2 = alias void (), ptr @Foo2
+
+define void @Foo2() {
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+!foo2 = !{!3}
+!bar2 = !{!4}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang2", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "path/to/file2", directory: "/path/to/dir2")
+!3 = !DILocation(line: 1234, column: 56, scope: !4)
+!4 = distinct !DISubprogram(name: "foo2", scope: null, type: !5, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}
+)";
+  {
+    std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, Context);
+    ASSERT_TRUE(M2.get());
+    auto *GV1 = M1->getNamedValue("GV1");
+    ASSERT_TRUE(GV1);
+    auto *GV2 = M2->getNamedValue("GV2");
+    ASSERT_TRUE(GV2);
+    ASSERT_EQ(GV2->getParent(), &*M2);
+
+    auto *Foo2MD = M2->getNamedMetadata("foo2");
+    auto *Bar2MD = M2->getNamedMetadata("bar2");
+    *M1 = std::move(*M2);
+    ASSERT_EQ(GV2->getParent(), &*M1);
+    ASSERT_EQ(M1->getNamedMetadata("foo2"), Foo2MD);
+    ASSERT_EQ(M1->getNamedMetadata("bar2"), Bar2MD);
+    ASSERT_EQ(M1->getNamedMetadata("foo1"), nullptr);
+
+    for (const NamedMDNode &NMD : M1->named_metadata())
+      ASSERT_EQ(NMD.getParent(), &*M1);
+  }
+
+  M1->renumberMetadataForAssembly();
+  std::string M1Print;
+  {
+    llvm::raw_string_ostream Os(M1Print);
+    Os << "\n" << *M1;
+  }
+  ASSERT_EQ(M2Str, M1Print);
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesContextWideUniqueIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  MDNode *Detached =
+      MDNode::getDistinct(Context, MDString::get(Context, "detached"));
+  MDNode *Attached =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(Attached);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(Detached);
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !2}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesUniqueTemporaryIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  TempMDTuple DetachedA =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-a"));
+  TempMDTuple DetachedB =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-b"));
+  MDNode *AttachedA =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-a"));
+  MDNode *AttachedB =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-b"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(AttachedA);
+  NMD->addOperand(AttachedB);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedA)));
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedB)));
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !1, !4, !5}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
+}
+
+TEST(ModuleTest, FunctionDefinitions) {
+  // Test getFunctionDefs() method which returns only functions with bodies
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+
+define void @Def1() {
+  ret void
+}
+
+define void @Def2() {
+  ret void
+}
+
+declare void @Decl3()
+
+define void @Def3() {
+  ret void
+}
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Count total functions (should be 6: 3 declarations + 3 definitions)
+  size_t TotalFunctions = 0;
+  for (Function &F : *M) {
+    (void)F;
+    ++TotalFunctions;
+  }
+  EXPECT_EQ(TotalFunctions, 6u);
+
+  // Count function definitions only (should be 3)
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    EXPECT_FALSE(F.isDeclaration());
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 3u);
+
+  // Verify the names of the definitions
+  auto DefRange = M->getFunctionDefs();
+  auto It = DefRange.begin();
+  EXPECT_EQ(It->getName(), "Def1");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def2");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def3");
+  ++It;
+  EXPECT_EQ(It, DefRange.end());
+}
+
+TEST(ModuleTest, FunctionDefinitionsEmpty) {
+  // Test getFunctionDefs() with no definitions (only declarations)
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+declare void @Decl3()
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Should have functions
+  EXPECT_FALSE(M->empty());
+  EXPECT_EQ(M->size(), 3u);
+
+  // But no definitions
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    (void)F;
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 0u);
 }
 
 } // end namespace

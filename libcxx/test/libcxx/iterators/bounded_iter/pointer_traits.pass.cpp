@@ -11,9 +11,10 @@
 //
 // std::pointer_traits specialization
 
+#include <__iterator/bounded_iter.h>
 #include <cassert>
 #include <cstddef>
-#include <iterator>
+#include <memory>
 #include <type_traits>
 
 #include "test_iterators.h"

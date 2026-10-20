@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -92,7 +93,7 @@ ENTRY("" /*FIXME*/,          S_ATTR_LOC_RELOC)
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
                                unsigned TAA, unsigned reserved2, SectionKind K,
                                MCSymbol *Begin)
-    : MCSection(SV_MachO, Section, K.isText(),
+    : MCSection(Section, K.isText(),
                 MachO::isVirtualSection(TAA & MachO::SECTION_TYPE), Begin),
       TypeAndAttributes(TAA), Reserved2(reserved2) {
   assert(Segment.size() <= 16 && Section.size() <= 16 &&
@@ -105,19 +106,20 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
   }
 }
 
-void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                          raw_ostream &OS,
-                                          uint32_t Subsection) const {
-  OS << "\t.section\t" << getSegmentName() << ',' << getName();
+void MCAsmInfoDarwin::printSwitchToSection(const MCSection &Section, uint32_t,
+                                           const Triple &T,
+                                           raw_ostream &OS) const {
+  auto &Sec = static_cast<const MCSectionMachO &>(Section);
+  OS << "\t.section\t" << Sec.getSegmentName() << ',' << Sec.getName();
 
   // Get the section type and attributes.
-  unsigned TAA = getTypeAndAttributes();
+  unsigned TAA = Sec.getTypeAndAttributes();
   if (TAA == 0) {
     OS << '\n';
     return;
   }
 
-  MachO::SectionType SectionType = getType();
+  MachO::SectionType SectionType = Sec.getType();
   assert(SectionType <= MachO::LAST_KNOWN_SECTION_TYPE &&
          "Invalid SectionType specified!");
 
@@ -135,8 +137,8 @@ void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (SectionAttrs == 0) {
     // If we have a S_SYMBOL_STUBS size specified, print it along with 'none' as
     // the attribute specifier.
-    if (Reserved2 != 0)
-      OS << ",none," << Reserved2;
+    if (Sec.Reserved2 != 0)
+      OS << ",none," << Sec.Reserved2;
     OS << '\n';
     return;
   }
@@ -164,13 +166,9 @@ void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   assert(SectionAttrs == 0 && "Unknown section attributes!");
 
   // If we have a S_SYMBOL_STUBS size specified, print it.
-  if (Reserved2 != 0)
-    OS << ',' << Reserved2;
+  if (Sec.Reserved2 != 0)
+    OS << ',' << Sec.Reserved2;
   OS << '\n';
-}
-
-bool MCSectionMachO::useCodeAlign() const {
-  return hasAttribute(MachO::S_ATTR_PURE_INSTRUCTIONS);
 }
 
 /// ParseSectionSpecifier - Parse the section specifier indicated by "Spec".

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
 
 ; Check that the parsing succeeded.
 ; CHECK: r{{[0-9]+:[0-9]+}} = xor(r{{[0-9]+:[0-9]+}},r{{[0-9]+:[0-9]+}})
@@ -34,4 +34,4 @@ polly.loop_body:                                  ; preds = %entry, %polly.loop_
   br i1 %0, label %polly.loop_body, label %polly.loop_after
 }
 
-attributes #0 = { nounwind "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind "frame-pointer"="non-leaf" "realign-stack" }

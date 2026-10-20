@@ -46,7 +46,6 @@ struct SISchedulerCandidate {
 
   SISchedulerCandidate() = default;
 
-  bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
 };
 
@@ -81,8 +80,8 @@ class SIScheduleBlock {
   // Note that some registers are not 32 bits,
   // and thus the pressure is not equal
   // to the number of live registers.
-  std::set<unsigned> LiveInRegs;
-  std::set<unsigned> LiveOutRegs;
+  std::set<Register> LiveInRegs;
+  std::set<Register> LiveOutRegs;
 
   bool Scheduled = false;
   bool HighLatencyBlock = false;
@@ -120,8 +119,8 @@ public:
   ArrayRef<std::pair<SIScheduleBlock*, SIScheduleBlockLinkKind>>
     getSuccs() const { return Succs; }
 
-  unsigned Height;  // Maximum topdown path length to block without outputs
-  unsigned Depth;   // Maximum bottomup path length to block without inputs
+  unsigned Height = 0;  // Maximum topdown path length to block without outputs
+  unsigned Depth = 0;   // Maximum bottomup path length to block without inputs
 
   unsigned getNumHighLatencySuccessors() const {
     return NumHighLatencySuccessors;
@@ -151,14 +150,8 @@ public:
 
   bool isScheduled() { return Scheduled; }
 
-  // Needs the block to be scheduled inside
-  // TODO: find a way to compute it.
-  std::vector<unsigned> &getInternalAdditionalRegUsage() {
-    return InternalAdditionalPressure;
-  }
-
-  std::set<unsigned> &getInRegs() { return LiveInRegs; }
-  std::set<unsigned> &getOutRegs() { return LiveOutRegs; }
+  std::set<Register> &getInRegs() { return LiveInRegs; }
+  std::set<Register> &getOutRegs() { return LiveOutRegs; }
 
   void printDebug(bool Full);
 
@@ -200,7 +193,6 @@ private:
 
   void nodeScheduled(SUnit *SU);
   void tryCandidateTopDown(SISchedCandidate &Cand, SISchedCandidate &TryCand);
-  void tryCandidateBottomUp(SISchedCandidate &Cand, SISchedCandidate &TryCand);
   SUnit* pickNode();
   void traceCandidate(const SISchedCandidate &Cand);
   void initRegPressure(MachineBasicBlock::iterator BeginBlock,
@@ -277,21 +269,9 @@ private:
   // (TODO: else if all their users depend on the same group, put them there)
   void colorMergeConstantLoadsNextGroup();
 
-  // Merge SUs that have all their users into another group to the group
-  void colorMergeIfPossibleNextGroup();
-
   // Merge SUs that have all their users into another group to the group,
   // but only for Reserved groups.
   void colorMergeIfPossibleNextGroupOnlyForReserved();
-
-  // Merge SUs that have all their users into another group to the group,
-  // but only if the group is no more than a few SUs.
-  void colorMergeIfPossibleSmallGroupsToNextGroup();
-
-  // Divides Blocks with important size.
-  // Idea of implementation: attribute new colors depending on topdown and
-  // bottom up links to other blocks.
-  void cutHugeBlocks();
 
   // Put in one group all instructions with no users in this scheduling region
   // (we'd want these groups be at the end).
@@ -320,10 +300,10 @@ class SIScheduleBlockScheduler {
   SISchedulerBlockSchedulerVariant Variant;
   std::vector<SIScheduleBlock*> Blocks;
 
-  std::vector<std::map<unsigned, unsigned>> LiveOutRegsNumUsages;
-  std::set<unsigned> LiveRegs;
+  std::vector<std::map<Register, unsigned>> LiveOutRegsNumUsages;
+  std::set<Register> LiveRegs;
   // Num of schedulable unscheduled blocks reading the register.
-  std::map<unsigned, unsigned> LiveRegsConsumers;
+  std::map<Register, unsigned> LiveRegsConsumers;
 
   std::vector<unsigned> LastPosHighLatencyParentScheduled;
   int LastPosWaitedHighLatency;
@@ -389,17 +369,15 @@ private:
                             SIBlockSchedCandidate &TryCand);
   SIScheduleBlock *pickBlock();
 
-  void addLiveRegs(std::set<unsigned> &Regs);
-  void decreaseLiveRegs(SIScheduleBlock *Block, std::set<unsigned> &Regs);
+  void addLiveRegs(std::set<VirtRegOrUnit> &Regs);
+  void decreaseLiveRegs(SIScheduleBlock *Block, std::set<Register> &Regs);
   void releaseBlockSuccs(SIScheduleBlock *Parent);
   void blockScheduled(SIScheduleBlock *Block);
 
   // Check register pressure change
   // by scheduling a block with these LiveIn and LiveOut.
-  std::vector<int> checkRegUsageImpact(std::set<unsigned> &InRegs,
-                                       std::set<unsigned> &OutRegs);
-
-  void schedule();
+  std::vector<int> checkRegUsageImpact(std::set<Register> &InRegs,
+                                       std::set<Register> &OutRegs);
 };
 
 struct SIScheduleBlockResult {
@@ -452,8 +430,6 @@ public:
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
   ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
-  SUnit &getEntrySU() { return EntrySU; }
-  SUnit& getExitSU() { return ExitSU; }
 
   void restoreSULinksLeft();
 
@@ -462,18 +438,18 @@ public:
                                                      unsigned &VgprUsage,
                                                      unsigned &SgprUsage);
 
-  std::set<unsigned> getInRegs() {
-    std::set<unsigned> InRegs;
+  std::set<VirtRegOrUnit> getInRegs() {
+    std::set<VirtRegOrUnit> InRegs;
     for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
-      InRegs.insert(RegMaskPair.RegUnit);
+      InRegs.insert(RegMaskPair.VRegOrUnit);
     }
     return InRegs;
   }
 
-  std::set<unsigned> getOutRegs() {
-    std::set<unsigned> OutRegs;
+  std::set<VirtRegOrUnit> getOutRegs() {
+    std::set<VirtRegOrUnit> OutRegs;
     for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
-      OutRegs.insert(RegMaskPair.RegUnit);
+      OutRegs.insert(RegMaskPair.VRegOrUnit);
     }
     return OutRegs;
   };

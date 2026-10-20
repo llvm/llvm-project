@@ -167,8 +167,7 @@ __attribute__((objc_root_class))
 // CHECK-LABEL: define hidden ptr @"\01-[Root objectProperty]"(
 // CHECK-LABEL: objc_direct_method.cont:
 // CHECK-NEXT: [[SELFVAL:%.*]] = load {{.*}} %self.addr,
-// CHECK-NEXT: [[IVAR:%.*]] = load {{.*}} @"OBJC_IVAR_$_Root._objectProperty",
-// CHECK-NEXT: call ptr @objc_getProperty(ptr noundef [[SELFVAL]], ptr noundef poison, i64 noundef [[IVAR]], {{.*}})
+// CHECK-NEXT: call ptr @objc_getProperty(ptr noundef [[SELFVAL]], ptr noundef poison, i64 noundef 8, {{.*}})
 
 @interface Foo : Root {
   id __strong _cause_cxx_destruct;

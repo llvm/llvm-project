@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-suspicious-call-argument %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s readability-suspicious-call-argument %t -- -- -std=c++11-or-later
 
 void foo_1(int aaaaaa, int bbbbbb) {}
 
@@ -15,6 +15,8 @@ void foo_6(const int dddddd, bool &eeeeee) {}
 void foo_7(int aaaaaa, int bbbbbb, int cccccc, int ffffff = 7) {}
 
 void foo_8(int frobble1, int frobble2) {}
+
+void foo_9(int distance, int bbbbbb) {}
 
 // Test functions for convertible argument--parameter types.
 void fun(const int &m);
@@ -382,7 +384,7 @@ enum opcode { Foo,
               Bar };
 static value *SimplifyRightShift(
     opcode Opcode, value *Op0, value *Op1, bool isExact,
-    const type1 &Q, unsigned MaxRecurse) {}
+    const type1 &Q, unsigned MaxRecurse) { return nullptr; }
 static value *SimplifyLShrInst(value *Op0, value *Op1, bool isExact,
                                const type1 &Q, unsigned MaxRecurse) {
   if (value *V = SimplifyRightShift(Foo, Op0, Op1, isExact, Q, MaxRecurse))
@@ -408,6 +410,10 @@ int main() {
   int src = 0;
   foo_2(aaaaaa, src);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 1st argument 'aaaaaa' (passed to 'source') looks like it might be swapped with the 2nd, 'src' (passed to 'aaaaaa')
+
+  int dst = 0;
+  foo_9(cccccc, dst);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 1st argument 'cccccc' (passed to 'distance') looks like it might be swapped with the 2nd, 'dst' (passed to 'bbbbbb')
 
   // Levenshtein test.
   int aaaabb = 0;

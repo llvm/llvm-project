@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64                       -std=c++20 -fsyntax-only -verify -disable-llvm-passes %s
+// RUN: %clang_cc1 -triple x86_64                       -std=c++20 -fsyntax-only -verify -disable-llvm-passes -fexperimental-new-constant-interpreter %s
 
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -std=c++20 -fsyntax-only -verify -disable-llvm-passes %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -std=c++20 -fsyntax-only -verify -disable-llvm-passes -fexperimental-new-constant-interpreter %s
 
 template <typename T>
 using VecT __attribute__((vector_size(16))) = T;
@@ -37,6 +39,33 @@ void test_builtin_vectorelements() {
   constexpr int i4p8 = __builtin_vectorelements(veci4) + 8;
 }
 
+
+namespace GH216997 {
+// Reproducer from GH216997.
+using vec __attribute__((vector_size(16))) = int &bar; // expected-error {{type-id cannot have a name}}
+int baz = __builtin_vectorelements(vec); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+
+typedef int veci4 __attribute__((vector_size(16)));
+int a = __builtin_vectorelements(veci4 &); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+int b = __builtin_vectorelements(veci4 &&); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+int c = __builtin_vectorelements(const veci4 &); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+
+veci4 v;
+int d = __builtin_vectorelements(decltype((v))); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+
+template <typename T>
+int f() {
+  return __builtin_vectorelements(T); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
+}
+int e = f<veci4>();
+int g = f<veci4 &>(); // expected-note {{in instantiation of function template specialization}}
+
+void ok(veci4 &r, veci4 &&rr) {
+  (void)__builtin_vectorelements(r);
+  (void)__builtin_vectorelements(rr);
+  (void)__builtin_vectorelements(const veci4);
+}
+} // namespace GH216997
 
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>

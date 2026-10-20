@@ -3,8 +3,17 @@
 
 // Test that the -fconvergent-functions flag works
 
-// CHECK: attributes #0 = {
+// CHECK: define {{.*}} @func() #[[ATTR:[0-9]+]]
+void func(void) { }
+
+// CONVFUNC: define {{.*}} @nofunc() #[[NOATTR:[0-9]+]]
+__attribute__((noconvergent)) void nofunc(void) { }
+
+// CHECK: attributes #[[ATTR]] = {
 // NOCONVFUNC-NOT: convergent
 // CONVFUNC-SAME: convergent
 // CHECK-SAME: }
-void func(void) { }
+
+// CONVFUNC: attributes #[[NOATTR]] = {
+// CONVFUNC-NOT: convergent
+// CONVFUNC-SAME: }

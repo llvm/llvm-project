@@ -3,7 +3,7 @@
 # RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-subprogram-multiple-ranges-main.s -o %t1.o
 # RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-subprogram-multiple-ranges-other.s -o %t2.o
 # RUN: %clang %cflags %t1.o %t2.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-objdump %t.bolt --disassemble > %t1.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t1.txt
 # RUN: cat %t1.txt | FileCheck --check-prefix=POSTCHECK %s

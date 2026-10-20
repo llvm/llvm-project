@@ -19,7 +19,7 @@ void test1(void) {
   extern void test1_help(void (^x)(void));
 
   // CHECK:      [[N:%.*]] = alloca [[N_T:%.*]], align 8
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[N_T]], ptr [[N]], i32 0, i32 4
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[N_T]], ptr [[N]], i32 0, i32 4
   // CHECK-NEXT: store double 1.000000e+{{0?}}01, ptr [[T0]], align 8
   __block double n = 10;
 

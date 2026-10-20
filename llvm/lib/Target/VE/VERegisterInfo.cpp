@@ -14,16 +14,12 @@
 #include "VE.h"
 #include "VESubtarget.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -96,12 +92,6 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-const TargetRegisterClass *
-VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                   unsigned Kind) const {
-  return &VE::I64RegClass;
-}
-
 static unsigned offsetToDisp(MachineInstr &MI) {
   // Default offset in instruction's operands (reg+reg+imm).
   unsigned OffDisp = 2;
@@ -163,7 +153,7 @@ class EliminateFrameIndex {
                         int64_t Bytes = 0);
   // Replace the frame index in \p MI with a frame register and a given offset
   // if it fits in the immediate field.  Otherwise, use pre-calculated address
-  // in a clobber regsiter.
+  // in a clobber register.
   void replaceFI(MachineInstr &MI, Register FrameReg, int64_t Offset,
                  int FIOperandNum);
 

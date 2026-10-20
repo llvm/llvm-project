@@ -14,11 +14,10 @@
 #include <concepts>
 
 #include <array>
+#include <cstddef>
 #include <deque>
 #include <forward_list>
 #include <list>
-#include <map>
-#include <memory>
 #include <optional>
 #include <set>
 #include <unordered_map>
@@ -56,7 +55,10 @@ static_assert(models_totally_ordered<unsigned char&&>());
 static_assert(models_totally_ordered<unsigned short const&&>());
 static_assert(models_totally_ordered<unsigned int volatile&&>());
 static_assert(models_totally_ordered<unsigned long const volatile&&>());
+// Array comparisons are ill-formed in C++26
+#if TEST_STD_VER <= 23
 static_assert(models_totally_ordered<int[5]>());
+#endif
 static_assert(models_totally_ordered<int (*)(int)>());
 static_assert(models_totally_ordered<int (&)(int)>());
 static_assert(models_totally_ordered<int (*)(int) noexcept>());

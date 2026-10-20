@@ -27,14 +27,14 @@ using namespace lldb_private;
 
 bool RegisterContextPOSIX_arm64::IsGPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::GPRegSet)
+      RegisterInfo_arm64::GPRegSet)
     return true;
   return false;
 }
 
 bool RegisterContextPOSIX_arm64::IsFPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::FPRegSet)
+      RegisterInfo_arm64::FPRegSet)
     return true;
   return false;
 }
@@ -59,9 +59,21 @@ bool RegisterContextPOSIX_arm64::IsMTE(unsigned reg) const {
   return m_register_info_up->IsMTEReg(reg);
 }
 
+bool RegisterContextPOSIX_arm64::IsFPMR(unsigned reg) const {
+  return m_register_info_up->IsFPMRReg(reg);
+}
+
+bool RegisterContextPOSIX_arm64::IsGCS(unsigned reg) const {
+  return m_register_info_up->IsGCSReg(reg);
+}
+
+bool RegisterContextPOSIX_arm64::IsPOE(unsigned reg) const {
+  return m_register_info_up->IsPOEReg(reg);
+}
+
 RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
+    std::unique_ptr<RegisterInfo_arm64> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 

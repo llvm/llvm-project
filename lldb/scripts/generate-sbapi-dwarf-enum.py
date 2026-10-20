@@ -16,6 +16,8 @@ HEADER = """\
 #ifndef LLDB_API_SBLANGUAGE_H
 #define LLDB_API_SBLANGUAGE_H
 
+#include <cstdint>
+
 namespace lldb {
 /// Used by \\ref SBExpressionOptions.
 /// These enumerations use the same language enumerations as the DWARF

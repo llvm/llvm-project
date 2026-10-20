@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-expand-condsets=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-expand-condsets=0 < %s | FileCheck %s
 
 ; In the IR, the i1 value is zero-extended first, then passed to add.
 ; Check that in the final code, the mux happens after the add.

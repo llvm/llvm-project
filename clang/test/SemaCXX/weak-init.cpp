@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fexperimental-new-constant-interpreter
 
 extern const int W1 __attribute__((weak)) = 10; // expected-note {{declared here}}
 

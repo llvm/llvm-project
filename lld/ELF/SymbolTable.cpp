@@ -17,19 +17,17 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/Parallel.h"
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
-
-SymbolTable elf::symtab;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
@@ -51,6 +49,15 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
     // keep sym if it was defined, otherwise it's unused and can be dropped.
     sym->isUsedInRegularObj = false;
 
+  if (ctx.hasDynDbg) {
+    if (sym->isDynDbgRef)
+      wrap->isDynDbgRef = true;
+    if (real->isDynDbgRef)
+      sym->isDynDbgRef = true;
+    else if (!sym->isDefined())
+      sym->isDynDbgRef = false;
+  }
+
   // Now renaming is complete, and no one refers to real. We drop real from
   // .symtab and .dynsym. If real is undefined, it is important that we don't
   // leave it in .dynsym, because otherwise it might lead to an undefined symbol
@@ -58,7 +65,7 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // alias for sym, but that could degrade the user experience of some tools
   // that can print out only one symbol for each location: sym is a preferred
   // name than real, but they might print out real instead.
-  memcpy(real, sym, sizeof(SymbolUnion));
+  memcpy(static_cast<void *>(real), sym, sizeof(SymbolUnion));
   real->isUsedInRegularObj = false;
 }
 
@@ -88,10 +95,9 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Initialize all Symbol fields.
-  memset(sym, 0, sizeof(Symbol));
+  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
+  // are zero. Set the ones that need a non-zero value.
   sym->setName(name);
-  sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
@@ -100,11 +106,11 @@ Symbol *SymbolTable::insert(StringRef name) {
 
 // This variant of addSymbol is used by BinaryFile::parse to check duplicate
 // symbol errors.
-Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
+Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
   Symbol *sym = insert(newSym.getName());
   if (sym->isDefined())
-    sym->checkDuplicate(newSym);
-  sym->resolve(newSym);
+    sym->checkDuplicate(ctx, newSym);
+  sym->resolve(ctx, newSym);
   sym->isUsedInRegularObj = true;
   return sym;
 }
@@ -123,39 +129,21 @@ static bool canBeVersioned(const Symbol &sym) {
   return sym.isDefined() || sym.isCommon() || sym.isLazy();
 }
 
-// Initialize demangledSyms with a map from demangled symbols to symbol
-// objects. Used to handle "extern C++" directive in version scripts.
-//
-// The map will contain all demangled symbols. That can be very large,
-// and in LLD we generally want to avoid do anything for each symbol.
-// Then, why are we doing this? Here's why.
-//
-// Users can use "extern C++ {}" directive to match against demangled
-// C++ symbols. For example, you can write a pattern such as
-// "llvm::*::foo(int, ?)". Obviously, there's no way to handle this
-// other than trying to match a pattern against all demangled symbols.
-// So, if "extern C++" feature is used, we need to demangle all known
-// symbols.
+static std::string demangleForVersion(StringRef name) {
+  auto [base, ver] = name.split('@');
+  std::string s = demangle(base);
+  if (!ver.empty() && !ver.starts_with('@'))
+    s += ("@" + ver).str();
+  return s;
+}
+
+// Map from demangled name to symbols, for exact lookups in extern "C++" blocks.
 StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
-    std::string demangled;
     for (Symbol *sym : symVector)
-      if (canBeVersioned(*sym)) {
-        StringRef name = sym->getName();
-        size_t pos = name.find('@');
-        std::string substr;
-        if (pos == std::string::npos)
-          demangled = demangle(name);
-        else if (pos + 1 == name.size() || name[pos + 1] == '@') {
-          substr = name.substr(0, pos);
-          demangled = demangle(substr);
-        } else {
-          substr = name.substr(0, pos);
-          demangled = (demangle(substr) + name.substr(pos)).str();
-        }
-        (*demangledSyms)[demangled].push_back(sym);
-      }
+      if (canBeVersioned(*sym))
+        (*demangledSyms)[demangleForVersion(sym->getName())].push_back(sym);
   }
   return *demangledSyms;
 }
@@ -169,69 +157,26 @@ SmallVector<Symbol *, 0> SymbolTable::findByVersion(SymbolVersion ver) {
   return {};
 }
 
-SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
-                                                       bool includeNonDefault) {
-  SmallVector<Symbol *, 0> res;
-  SingleStringMatcher m(ver.name);
-  auto check = [&](const Symbol &sym) -> bool {
-    if (!includeNonDefault)
-      return !sym.hasVersionSuffix;
-    StringRef name = sym.getName();
-    size_t pos = name.find('@');
-    return !(pos + 1 < name.size() && name[pos + 1] == '@');
-  };
-
-  if (ver.isExternCpp) {
-    for (auto &p : getDemangledSyms())
-      if (m.match(p.first()))
-        for (Symbol *sym : p.second)
-          if (check(*sym))
-            res.push_back(sym);
-    return res;
-  }
-
-  for (Symbol *sym : symVector)
-    if (canBeVersioned(*sym) && check(*sym) && m.match(sym->getName()))
-      res.push_back(sym);
-  return res;
-}
-
-void SymbolTable::handleDynamicList() {
-  SmallVector<Symbol *, 0> syms;
-  for (SymbolVersion &ver : config->dynamicList) {
-    if (ver.hasWildcard)
-      syms = findAllByVersion(ver, /*includeNonDefault=*/true);
-    else
-      syms = findByVersion(ver);
-
-    for (Symbol *sym : syms)
-      sym->inDynamicList = true;
-  }
-}
-
 // Set symbol versions to symbols. This function handles patterns containing no
 // wildcard characters. Return false if no symbol definition matches ver.
-bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
-                                     StringRef versionName,
-                                     bool includeNonDefault) {
+bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId) {
   // Get a list of symbols which we need to assign the version to.
   SmallVector<Symbol *, 0> syms = findByVersion(ver);
 
-  auto getName = [](uint16_t ver) -> std::string {
+  auto getName = [&ctx = ctx](uint16_t ver) -> std::string {
     if (ver == VER_NDX_LOCAL)
       return "VER_NDX_LOCAL";
     if (ver == VER_NDX_GLOBAL)
       return "VER_NDX_GLOBAL";
-    return ("version '" + config->versionDefinitions[ver].name + "'").str();
+    return ("version '" + ctx.arg.versionDefinitions[ver].name + "'").str();
   };
 
   // Assign the version.
   for (Symbol *sym : syms) {
-    // For a non-local versionId, skip symbols containing version info because
-    // symbol versions specified by symbol names take precedence over version
-    // scripts. See parseSymbolVersion().
-    if (!includeNonDefault && versionId != VER_NDX_LOCAL &&
-        sym->getName().contains('@'))
+    // Skip symbols containing version info because symbol versions specified
+    // by symbol names take precedence over version scripts. See
+    // parseSymbolVersion(ctx).
+    if (sym->hasVersionSuffix)
       continue;
 
     // If the version has not been assigned, assign versionId to the symbol.
@@ -242,23 +187,21 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
     if (sym->versionId == versionId)
       continue;
 
-    warn("attempt to reassign symbol '" + ver.name + "' of " +
-         getName(sym->versionId) + " to " + getName(versionId));
+    Warn(ctx) << "attempt to reassign symbol '" << ver.name << "' of "
+              << getName(sym->versionId) << " to " << getName(versionId);
   }
   return !syms.empty();
 }
 
-void SymbolTable::assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
-                                        bool includeNonDefault) {
-  // Exact matching takes precedence over fuzzy matching,
-  // so we set a version to a symbol only if no version has been assigned
-  // to the symbol. This behavior is compatible with GNU.
-  for (Symbol *sym : findAllByVersion(ver, includeNonDefault))
-    if (!sym->versionScriptAssigned) {
-      sym->versionScriptAssigned = true;
-      sym->versionId = versionId;
-    }
-}
+namespace {
+struct WildcardPattern {
+  SingleStringMatcher matcher;
+  bool isExternCpp;
+  uint16_t versionId;
+  WildcardPattern(const SymbolVersion &ver, uint16_t versionId)
+      : matcher(ver.name), isExternCpp(ver.isExternCpp), versionId(versionId) {}
+};
+} // namespace
 
 // This function processes version scripts by updating the versionId
 // member of symbols.
@@ -269,17 +212,19 @@ void SymbolTable::scanVersionScript() {
   SmallString<128> buf;
   // First, we assign versions to exact matching symbols,
   // i.e. version definitions not containing any glob meta-characters.
-  for (VersionDefinition &v : config->versionDefinitions) {
+  for (VersionDefinition &v : ctx.arg.versionDefinitions) {
     auto assignExact = [&](SymbolVersion pat, uint16_t id, StringRef ver) {
-      bool found =
-          assignExactVersion(pat, id, ver, /*includeNonDefault=*/false);
+      bool found = assignExactVersion(pat, id);
+      // A definition foo@v1 is keyed by "foo@v1"; look it up so that the
+      // pattern is not reported as undefined. Its version is governed by
+      // parseSymbolVersion instead.
       buf.clear();
-      found |= assignExactVersion({(pat.name + "@" + v.name).toStringRef(buf),
-                                   pat.isExternCpp, /*hasWildCard=*/false},
-                                  id, ver, /*includeNonDefault=*/true);
-      if (!found && !config->undefinedVersion)
-        errorOrWarn("version script assignment of '" + ver + "' to symbol '" +
-                    pat.name + "' failed: symbol not defined");
+      found |= !findByVersion({(pat.name + "@" + v.name).toStringRef(buf),
+                               pat.isExternCpp, /*hasWildCard=*/false})
+                    .empty();
+      if (!found && !ctx.arg.undefinedVersion)
+        Err(ctx) << "version script assignment of '" << ver << "' to symbol '"
+                 << pat.name << "' failed: symbol not defined";
     };
     for (SymbolVersion &pat : v.nonLocalPatterns)
       if (!pat.hasWildcard)
@@ -289,49 +234,91 @@ void SymbolTable::scanVersionScript() {
         assignExact(pat, VER_NDX_LOCAL, "local");
   }
 
-  // Next, assign versions to wildcards that are not "*". Note that because the
-  // last match takes precedence over previous matches, we iterate over the
-  // definitions in the reverse order.
-  auto assignWildcard = [&](SymbolVersion pat, uint16_t id, StringRef ver) {
-    assignWildcardVersion(pat, id, /*includeNonDefault=*/false);
-    buf.clear();
-    assignWildcardVersion({(pat.name + "@" + ver).toStringRef(buf),
-                           pat.isExternCpp, /*hasWildCard=*/true},
-                          id,
-                          /*includeNonDefault=*/true);
+  // Next, collect wildcards in precedence order, where "*" patterns have the
+  // lowest precedence in GNU ld. Because the last match takes precedence over
+  // previous matches, we iterate over the definitions in the reverse order.
+  SmallVector<WildcardPattern, 0> pats, asterisks;
+  bool globalAsteriskFound = false;
+  bool localAsteriskFound = false;
+  bool asteriskReported = false;
+  for (VersionDefinition &v : llvm::reverse(ctx.arg.versionDefinitions)) {
+    for (bool isLocal : {false, true}) {
+      uint16_t id = isLocal ? VER_NDX_LOCAL : v.id;
+      for (SymbolVersion &pat :
+           isLocal ? v.localPatterns : v.nonLocalPatterns) {
+        if (!pat.hasWildcard)
+          continue;
+        if (pat.name != "*") {
+          pats.emplace_back(pat, id);
+          continue;
+        }
+        if (!asteriskReported) {
+          if ((isLocal && globalAsteriskFound) ||
+              (!isLocal && localAsteriskFound)) {
+            Warn(ctx)
+                << "wildcard pattern '*' is used for both 'local' and 'global' "
+                   "scopes in version script";
+            asteriskReported = true;
+          } else if (!isLocal && globalAsteriskFound) {
+            Warn(ctx) << "wildcard pattern '*' is used for multiple version "
+                         "definitions in version script";
+            asteriskReported = true;
+          } else {
+            localAsteriskFound = isLocal;
+            globalAsteriskFound = !isLocal;
+          }
+        }
+        asterisks.emplace_back(pat, id);
+      }
+    }
+  }
+  pats.append(asterisks);
+
+  auto findFirstMatch = [&](ArrayRef<WildcardPattern> pats,
+                            StringRef name) -> const WildcardPattern * {
+    std::optional<std::string> demangled;
+    for (auto &pat : pats) {
+      if (pat.isExternCpp && !demangled)
+        demangled = demangleForVersion(name);
+      if (pat.matcher.match(pat.isExternCpp ? StringRef(*demangled) : name))
+        return &pat;
+    }
+    return nullptr;
   };
-  for (VersionDefinition &v : llvm::reverse(config->versionDefinitions)) {
-    for (SymbolVersion &pat : v.nonLocalPatterns)
-      if (pat.hasWildcard && pat.name != "*")
-        assignWildcard(pat, v.id, v.name);
-    for (SymbolVersion &pat : v.localPatterns)
-      if (pat.hasWildcard && pat.name != "*")
-        assignWildcard(pat, VER_NDX_LOCAL, v.name);
+
+  // Exact matching takes precedence over wildcard matching, so a wildcard
+  // assigns a version only if none has been assigned.
+  if (!pats.empty()) {
+    parallelForEach(symVector, [&](Symbol *sym) {
+      if (sym->versionScriptAssigned || sym->hasVersionSuffix ||
+          !canBeVersioned(*sym))
+        return;
+      if (auto *pat = findFirstMatch(pats, sym->getName()))
+        sym->versionId = pat->versionId;
+    });
   }
 
-  // Then, assign versions to "*". In GNU linkers they have lower priority than
-  // other wildcards.
-  for (VersionDefinition &v : llvm::reverse(config->versionDefinitions)) {
-    for (SymbolVersion &pat : v.nonLocalPatterns)
-      if (pat.hasWildcard && pat.name == "*")
-        assignWildcard(pat, v.id, v.name);
-    for (SymbolVersion &pat : v.localPatterns)
-      if (pat.hasWildcard && pat.name == "*")
-        assignWildcard(pat, VER_NDX_LOCAL, v.name);
+  // Handle --dynamic-list. If a specified symbol is also matched by local: in a
+  // version script, the version script takes precedence.
+  SmallVector<Symbol *, 0> syms;
+  pats.clear();
+  for (SymbolVersion &ver : ctx.arg.dynamicList) {
+    if (ver.hasWildcard) {
+      pats.emplace_back(ver, 0);
+    } else {
+      for (Symbol *sym : findByVersion(ver))
+        sym->isExported = sym->inDynamicList = true;
+    }
   }
-
-  // Symbol themselves might know their versions because symbols
-  // can contain versions in the form of <name>@<version>.
-  // Let them parse and update their names to exclude version suffix.
-  for (Symbol *sym : symVector)
-    if (sym->hasVersionSuffix)
-      sym->parseSymbolVersion();
-
-  // isPreemptible is false at this point. To correctly compute the binding of a
-  // Defined (which is used by includeInDynsym()), we need to know if it is
-  // VER_NDX_LOCAL or not. Compute symbol versions before handling
-  // --dynamic-list.
-  handleDynamicList();
+  if (!pats.empty()) {
+    parallelForEach(symVector, [&](Symbol *sym) {
+      if (!canBeVersioned(*sym))
+        return;
+      StringRef name = sym->getName();
+      if (findFirstMatch(pats, name))
+        sym->isExported = sym->inDynamicList = true;
+    });
+  }
 }
 
 Symbol *SymbolTable::addUnusedUndefined(StringRef name, uint8_t binding) {

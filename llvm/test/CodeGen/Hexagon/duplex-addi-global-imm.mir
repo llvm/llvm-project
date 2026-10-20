@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -start-after if-converter %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -start-after if-converter %s -o - | FileCheck %s
 # This used to crash.
 # CHECK: add(r0,##g)
 

@@ -1,7 +1,7 @@
-; RUN: opt -O0 -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=OPTNONE %s
-; RUN: opt -passes='default<O0>' -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=OPTNONE %s
-; RUN: opt -O1 -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ASAN_NO_INTERNALIZE %s
-; RUN: opt -passes='default<O1>' -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ASAN_NO_INTERNALIZE %s
+; RUN: opt -O0 -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=OPTNONE %s
+; RUN: opt -passes='default<O0>' -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=OPTNONE %s
+; RUN: opt -O1 -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ASAN_NO_INTERNALIZE %s
+; RUN: opt -passes='default<O1>' -S -mtriple=amdgpu-unknown-amdhsa -amdgpu-internalize-symbols < %s | FileCheck -check-prefix=ASAN_NO_INTERNALIZE %s
 
 ; OPTNONE: define void @__asan_no_explicit_linkage(
 ; ASAN_NO_INTERNALIZE: define void @__asan_no_explicit_linkage(

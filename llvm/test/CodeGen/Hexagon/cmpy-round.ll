@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ; r2 = round(r1:0):sat
 ; r3 = cmpyiwh(r1:0, r2):<<1:rnd:sat
 ; r0 = cmpyiwh(r1:0, r2*):<<1:rnd:sat

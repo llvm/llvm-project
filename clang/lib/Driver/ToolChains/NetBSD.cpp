@@ -10,12 +10,12 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -274,7 +274,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -326,9 +326,10 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
@@ -465,7 +466,7 @@ void NetBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
@@ -494,27 +495,6 @@ void NetBSD::AddClangSystemIncludeArgs(
                           concat(D.SysRoot, "/usr/include"));
 }
 
-void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args) const {
-  const std::string Candidates[] = {
-    // directory relative to build tree
-    concat(getDriver().Dir, "/../include/c++/v1"),
-    // system install with full upstream path
-    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
-    // system install from src
-    concat(getDriver().SysRoot, "/usr/include/c++"),
-  };
-
-  for (const auto &IncludePath : Candidates) {
-    if (!getVFS().exists(IncludePath + "/__config"))
-      continue;
-
-    // Use the first candidate that looks valid.
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
-    return;
-  }
-}
-
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
   addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "", "",
@@ -527,13 +507,15 @@ llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
   if (TArch == llvm::Triple::arm || TArch == llvm::Triple::armeb ||
       TArch == llvm::Triple::thumb || TArch == llvm::Triple::thumbeb)
     return llvm::ExceptionHandling::DwarfCFI;
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
-SanitizerMask NetBSD::getSupportedSanitizers() const {
+SanitizerMask
+NetBSD::getSupportedSanitizers(BoundArch BA,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
@@ -558,23 +540,9 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
 }
 
 void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                   ArgStringList &CC1Args,
+                                   ArgStringList &CC1Args, BoundArch BA,
                                    Action::OffloadKind) const {
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
-
-  VersionTuple OsVersion = getTriple().getOSVersion();
-  bool UseInitArrayDefault =
-      OsVersion >= VersionTuple(9) || OsVersion.getMajor() == 0 ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getArch() == llvm::Triple::aarch64_be ||
-      getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::armeb ||
-      getTriple().getArch() == llvm::Triple::riscv32 ||
-      getTriple().getArch() == llvm::Triple::riscv64;
-
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, UseInitArrayDefault))
-    CC1Args.push_back("-fno-use-init-array");
 }

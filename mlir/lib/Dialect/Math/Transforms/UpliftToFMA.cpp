@@ -31,7 +31,7 @@ static bool isValidForFMA(Op op) {
 namespace {
 
 struct UpliftFma final : OpRewritePattern<arith::AddFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::AddFOp op,
                                 PatternRewriter &rewriter) const override {
@@ -66,8 +66,7 @@ struct MathUpliftToFMA final
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateUpliftToFMAPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

@@ -47,7 +47,7 @@ entry:
   %res2 = extractvalue [2 x i32] [i32 1, i32 2], 0
   
 ;const vector
-; CHECK-NEXT: %res3 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
+; CHECK-NEXT: %res3 = add <2 x i32> splat (i32 1)
   %res3 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   
 ;zeroinitializer
@@ -109,11 +109,11 @@ entry:
   icmp eq i32 1, 0
   ; CHECK-NEXT: fcmp oeq float 1.000000e+00, 0.000000e+00
   fcmp oeq float 1.0, 0.0
-  ; CHECK-NEXT: extractelement <2 x i32> <i32 1, i32 1>, i32 1
+  ; CHECK-NEXT: extractelement <2 x i32> splat (i32 1)
   extractelement <2 x i32> <i32 1, i32 1>, i32 1
-  ; CHECK-NEXT: insertelement <2 x i32> <i32 1, i32 1>, i32 0, i32 1
+  ; CHECK-NEXT: insertelement <2 x i32> splat (i32 1), i32 0, i32 1
   insertelement <2 x i32> <i32 1, i32 1>, i32 0, i32 1
-  ; CHECK-NEXT: shufflevector <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ; CHECK-NEXT: shufflevector <2 x i32> splat (i32 1), <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   shufflevector <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ; CHECK-NEXT: extractvalue { i32, float } { i32 1, float 2.000000e+00 }, 0
   extractvalue { i32, float } { i32 1, float 2.0 }, 0

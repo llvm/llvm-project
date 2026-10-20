@@ -204,10 +204,11 @@ define i32 @f12(i32 %x, i32 %y) {
 define i32 @f13(i32 %x, i32 %y) {
 ; CHECK-LABEL: f13:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    and r2, r0, #4
-; CHECK-NEXT:    bic r0, r1, #255
-; CHECK-NEXT:    cmp r2, #42
-; CHECK-NEXT:    orrne r0, r0, #16
+; CHECK-NEXT:    and r0, r0, #4
+; CHECK-NEXT:    bic r1, r1, #255
+; CHECK-NEXT:    cmp r0, #42
+; CHECK-NEXT:    orrne r1, r1, #16
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
   %y2 = and i32 %y, 4294967040 ; 0xFFFFFF00
   %and = and i32 %x, 4

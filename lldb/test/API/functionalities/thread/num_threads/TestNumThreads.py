@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@requireThreadSupport
 class NumberOfThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -123,19 +124,42 @@ class NumberOfThreadsTestCase(TestBase):
                 continue
 
             # If we aren't stopped out the thread breakpoint try to resume.
+            index_id = thread.GetIndexID()
             if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-                self.runCmd("thread continue %d" % (i + 1))
+                self.runCmd("thread continue %d" % index_id)
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
 
-            expect_threads += " #%d" % (i + 1)
+            expect_threads += " #%d" % index_id
 
         # Construct our expected back trace string
         expect_string = "10 thread(s)%s" % (expect_threads)
 
+        # There was a bug where if you used 'thread backtrace unique'
+        # we would switch all future backtraces to use the
+        # "frame-format-unique" not the "frame-format".  Make
+        # sure we don't do that...
+        setting_data = self.dbg.GetSetting("frame-format-unique")
+        setting_str = setting_data.GetStringValue(1000)
+        setting_str = "UNIQUE: " + setting_str
+        lldb.SBDebugger.SetInternalVariable(
+            "frame-format-unique", setting_str, self.dbg.GetInstanceName()
+        )
         # Now that we are stopped, we should have 10 threads waiting in the
         # thread3 function. All of these threads should show as one stack.
         self.expect(
             "thread backtrace unique",
             "Backtrace with unique stack shown correctly",
-            substrs=[expect_string, "main.cpp:%d" % self.thread3_before_lock_line],
+            substrs=[
+                expect_string,
+                "UNIQUE:",
+                "main.cpp:%d" % self.thread3_before_lock_line,
+            ],
+        )
+        # Make sure setting the unique flag in the command isn't
+        # persistent:
+        self.expect(
+            "thread backtrace",
+            "Backtrace unique is not sticky",
+            substrs=["UNIQUE:"],
+            matching=False,
         )

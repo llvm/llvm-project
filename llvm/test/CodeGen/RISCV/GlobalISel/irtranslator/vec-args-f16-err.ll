@@ -1,6 +1,6 @@
-; RUN: not --crash llc -mtriple=riscv32 -mattr=+v -global-isel -stop-after=irtranslator \
+; RUN: not --crash llc -mtriple=riscv32 -mattr=+v -global-isel -stop-after=ir-translator \
 ; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+v -global-isel -stop-after=irtranslator \
+; RUN: not --crash llc -mtriple=riscv64 -mattr=+v -global-isel -stop-after=ir-translator \
 ; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
 ; The purpose of this test is to show that the compiler throws an error when
@@ -11,6 +11,6 @@ entry:
   ret void
 }
 
-; CHECK: LLVM ERROR: unable to lower arguments: ptr (in function: test_args_nxv1f16)
+; CHECK: LLVM ERROR: unable to lower arguments: void (<vscale x 1 x half>) (in function: test_args_nxv1f16)
 
 

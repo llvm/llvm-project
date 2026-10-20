@@ -1,9 +1,9 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
-; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
-; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
-; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
 
 @_ZTIi = external constant ptr
 @_ZTIf = external constant ptr
@@ -66,18 +66,19 @@ try.cont:                                         ; preds = %entry, %catch.start
 
 ; CHECK-LABEL: test1:
 ; In static linking, we load GCC_except_table as a constant directly.
-; NOPIC:      i[[PTR]].const  $push[[CONTEXT:.*]]=, __wasm_lpad_context
+; NOPIC:                call  $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
+; NOPIC-NEXT:      local.tee  $push[[CONTEXT_LOCAL:.*]]=, $1=, $pop[[CONTEXT]]
 ; NOPIC-NEXT: i[[PTR]].const  $push[[EXCEPT_TABLE:.*]]=, GCC_except_table1
-; NOPIC-NEXT: i[[PTR]].store  {{[48]}}($pop[[CONTEXT]]), $pop[[EXCEPT_TABLE]]
+; NOPIC-NEXT: i[[PTR]].store  {{[48]}}($pop[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; In case of PIC, we make GCC_except_table symbols a relative on based on
 ; __memory_base.
-; PIC:        global.get  $push[[CONTEXT:.*]]=, __wasm_lpad_context@GOT
-; PIC-NEXT:   local.tee  $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
-; PIC:        global.get  $push[[MEMORY_BASE:.*]]=, __memory_base
+; PIC:        global.get  $[[MEMORY_BASE:.*]]=, __memory_base
+; PIC-NEXT:   call  $push[[CONTEXT:.*]]=, _Unwind_GetWasmLPadContext
+; PIC-NEXT:   local.tee  $push[[CONTEXT_LOCAL:.*]]=, $2=, $pop[[CONTEXT]]
 ; PIC-NEXT:   i[[PTR]].const  $push[[EXCEPT_TABLE_REL:.*]]=, GCC_except_table1@MBREL
-; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $pop[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
-; PIC-NEXT:   i[[PTR]].store  {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
+; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
+; PIC-NEXT:   i[[PTR]].store  {{[48]}}($pop[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; CHECK: .section  .rodata.gcc_except_table,"",@
 ; CHECK-NEXT:   .p2align  2
@@ -251,6 +252,6 @@ declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @__cxa_rethrow()
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 
 attributes #0 = { nounwind }

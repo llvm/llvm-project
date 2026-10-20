@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=cplusplus.ArrayDelete -std=c++11 -verify -analyzer-output=text %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.ArrayDelete -std=c++11 -verify -analyzer-output=text %s
 
 struct Base {
     virtual ~Base() = default;

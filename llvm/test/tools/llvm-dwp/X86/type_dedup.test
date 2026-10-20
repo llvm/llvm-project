@@ -1,10 +1,10 @@
 RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %p/../Inputs/type_dedup/b.dwo -o %t
 RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix=CHECK %s
-RUN: llvm-dwarfdump -v -manaully-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
+RUN: llvm-dwarfdump -v -manually-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
 RUN: llvm-dwp %p/../Inputs/type_dedup/b.dwo -o %tb.dwp
 RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %tb.dwp -o %t
 RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix=CHECK %s
-RUN: llvm-dwarfdump -v -manaully-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
+RUN: llvm-dwarfdump -v -manually-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
 
 a.cpp:
   struct common { };

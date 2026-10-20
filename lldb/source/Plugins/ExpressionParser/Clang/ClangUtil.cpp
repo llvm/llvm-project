@@ -19,7 +19,7 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
   if (!ct)
     return false;
 
-  if (!ct.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>())
+  if (!ct.GetTypeSystem<TypeSystemClang>())
     return false;
 
   if (!ct.GetOpaqueQualType())
@@ -74,7 +74,6 @@ std::string ClangUtil::DumpDecl(const clang::Decl *d) {
   bool deserialize = false;
   d->dump(stream, deserialize);
 
-  stream.flush();
   return result;
 }
 

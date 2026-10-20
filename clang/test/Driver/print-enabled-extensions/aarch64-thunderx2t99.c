@@ -6,11 +6,11 @@
 // CHECK-NEXT:     Architecture Feature(s)                                Description
 // CHECK-NEXT:     FEAT_AES, FEAT_PMULL                                   Enable AES support
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
-// CHECK-NEXT:     FEAT_CRC32                                             Enable ARMv8 CRC-32 checksum instructions
-// CHECK-NEXT:     FEAT_FP                                                Enable ARMv8
-// CHECK-NEXT:     FEAT_LOR                                               Enables ARM v8.1 Limited Ordering Regions extension
-// CHECK-NEXT:     FEAT_LSE                                               Enable ARMv8.1 Large System Extension (LSE) atomic instructions
-// CHECK-NEXT:     FEAT_PAN                                               Enables ARM v8.1 Privileged Access-Never extension
-// CHECK-NEXT:     FEAT_RDM                                               Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions
+// CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
+// CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
+// CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension
+// CHECK-NEXT:     FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
+// CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
+// CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
-// CHECK-NEXT:     FEAT_VHE                                               Enables ARM v8.1 Virtual Host extension
+// CHECK-NEXT:     FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension

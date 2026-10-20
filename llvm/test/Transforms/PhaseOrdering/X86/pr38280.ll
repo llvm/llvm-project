@@ -23,8 +23,8 @@ define void @apply_delta(ptr nocapture noundef %dst, ptr nocapture noundef reado
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ADD_PTR]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add <8 x i8> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    store <8 x i8> [[ADD]], ptr [[DST_ADDR_024]], align 1
-; CHECK-NEXT:    [[ADD_PTR1]] = getelementptr inbounds i8, ptr [[DST_ADDR_024]], i64 8
-; CHECK-NEXT:    [[ADD_PTR2]] = getelementptr inbounds i8, ptr [[SRC_ADDR_023]], i64 8
+; CHECK-NEXT:    [[ADD_PTR1]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_024]], i64 8
+; CHECK-NEXT:    [[ADD_PTR2]] = getelementptr inbounds nuw i8, ptr [[SRC_ADDR_023]], i64 8
 ; CHECK-NEXT:    [[SUB]] = add i64 [[COUNT_ADDR_022]], -8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SUB]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_COND3_PREHEADER]]
@@ -32,16 +32,16 @@ define void @apply_delta(ptr nocapture noundef %dst, ptr nocapture noundef reado
 ; CHECK-NEXT:    [[DST_ADDR_130:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY4]] ], [ [[DST_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_129:%.*]] = phi ptr [ [[INCDEC_PTR8:%.*]], [[WHILE_BODY4]] ], [ [[SRC_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT_ADDR_128:%.*]] = phi i64 [ [[DEC:%.*]], [[WHILE_BODY4]] ], [ [[COUNT_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
-; CHECK-NEXT:    [[DEC]] = add i64 [[COUNT_ADDR_128]], -1
+; CHECK-NEXT:    [[DEC]] = add nsw i64 [[COUNT_ADDR_128]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[SRC_ADDR_129]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST_ADDR_130]], i64 [[NEG_OFFS]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD6:%.*]] = add i8 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store i8 [[ADD6]], ptr [[DST_ADDR_130]], align 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[DST_ADDR_130]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR8]] = getelementptr inbounds i8, ptr [[SRC_ADDR_129]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_130]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR8]] = getelementptr inbounds nuw i8, ptr [[SRC_ADDR_129]], i64 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[WHILE_END9]], label [[WHILE_BODY4]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[WHILE_END9]], label [[WHILE_BODY4]]
 ; CHECK:       while.end9:
 ; CHECK-NEXT:    ret void
 ;

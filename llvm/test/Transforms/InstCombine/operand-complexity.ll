@@ -60,7 +60,7 @@ define i8 @not(i8 %x) {
 define <2 x i8> @not_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_vec(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 42, i8 -42>
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i8> [[X]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i8> [[X]], splat (i8 -1)
 ; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[BO]], [[NOTX]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;

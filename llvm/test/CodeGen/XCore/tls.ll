@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore -mcpu=xs1b-generic | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -mcpu=xs1b-generic | FileCheck %s
 
 define ptr @addr_G() {
 entry:

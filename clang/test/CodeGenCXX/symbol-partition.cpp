@@ -2,8 +2,8 @@
 
 // CHECK: @gv = {{.*}}, partition "foo"
 // CHECK: @_ZTV1S = {{.*}}, partition "foo"
-// CHECK: @_ZTS1S = {{.*}}, partition "foo"
 // CHECK: @_ZTI1S = {{.*}}, partition "foo"
+// CHECK: @_ZTS1S = {{.*}}, partition "foo"
 
 // CHECK: @_Z5ifuncv = {{.*}}, partition "foo"
 

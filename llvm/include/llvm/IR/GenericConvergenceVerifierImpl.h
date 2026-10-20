@@ -102,9 +102,6 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
     SeenFirstConvOp = true;
 
   if (TokenDef || ConvOp != CONV_NONE) {
-    Check(isConvergent(I),
-          "Convergence control token can only be used in a convergent call.",
-          {Context.print(&I)});
     Check(ConvergenceKind != UncontrolledConvergence,
           "Cannot mix controlled and uncontrolled convergence in the same "
           "function.",
@@ -135,7 +132,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
   const auto &F = *Context.getFunction();
 
   DenseMap<const BlockT *, SmallVector<const InstructionT *, 8>> LiveTokenMap;
-  DenseMap<const CycleT *, const InstructionT *> CycleHearts;
+  DenseMap<CycleRef, const InstructionT *> CycleHearts;
 
   // Just like the DominatorTree, compute the CycleInfo locally so that we
   // can run the verifier outside of a pass manager and we don't rely on
@@ -156,12 +153,12 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
 
     // Check static rules about cycles.
     auto *BB = User->getParent();
-    auto *BBCycle = CI.getCycle(BB);
+    CycleRef BBCycle = CI.getCycle(BB);
     if (!BBCycle)
       return;
 
     auto *DefBB = Token->getParent();
-    if (DefBB == BB || BBCycle->contains(DefBB)) {
+    if (DefBB == BB || CI.contains(BBCycle, DefBB)) {
       // degenerate occurrence of a loop intrinsic
       return;
     }
@@ -173,13 +170,13 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
           {Context.print(User), CI.print(BBCycle)});
 
     while (true) {
-      auto *Parent = BBCycle->getParentCycle();
-      if (!Parent || Parent->contains(DefBB))
+      CycleRef Parent = CI.getParentCycle(BBCycle);
+      if (!Parent || CI.contains(Parent, DefBB))
         break;
       BBCycle = Parent;
     };
 
-    Check(BBCycle->isReducible() && BB == BBCycle->getHeader(),
+    Check(CI.isReducible(BBCycle) && BB == CI.getHeader(BBCycle),
           "Cycle heart must dominate all blocks in the cycle.",
           {Context.print(User), Context.printAsOperand(BB), CI.print(BBCycle)});
     Check(!CycleHearts.count(BBCycle),
@@ -210,11 +207,10 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
     // Propagate token liveness
     for (auto *Succ : successors(BB)) {
       auto *SuccNode = DT.getNode(Succ);
-      auto LTIt = LiveTokenMap.find(Succ);
-      if (LTIt == LiveTokenMap.end()) {
+      auto [LTIt, Inserted] = LiveTokenMap.try_emplace(Succ);
+      if (Inserted) {
         // We're the first predecessor: all tokens which dominate the
         // successor are live for now.
-        LTIt = LiveTokenMap.try_emplace(Succ).first;
         for (auto LiveToken : LiveTokens) {
           if (!DT.dominates(DT.getNode(LiveToken->getParent()), SuccNode))
             break;

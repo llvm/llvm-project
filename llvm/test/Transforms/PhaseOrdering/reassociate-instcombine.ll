@@ -8,7 +8,7 @@ define i4 @not_reassociate_and_and_not(i4 %a, i4 %b, i4 %c, i4 %d) {
 ; CHECK-LABEL: @not_reassociate_and_and_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[TMP1]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i4 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i4 [[A:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[AND3:%.*]] = and i4 [[AND2]], [[D:%.*]]
 ; CHECK-NEXT:    ret i4 [[AND3]]
 ;
@@ -25,7 +25,7 @@ define i32 @not_reassociate_or_or_not(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @not_reassociate_or_or_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    [[B2:%.*]] = or i32 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[B2:%.*]] = or i32 [[A:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[B3:%.*]] = or i32 [[B2]], [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[B3]]
 ;

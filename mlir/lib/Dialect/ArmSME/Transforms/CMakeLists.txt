@@ -11,11 +11,12 @@ add_mlir_dialect_library(MLIRArmSMETransforms
   MLIRArmSMETransformsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRPass
   MLIRArmSMEDialect
   MLIRFuncDialect
-  MLIRLLVMCommonConversion
   MLIRVectorDialect
+  MLIRIndexDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRFuncTransforms

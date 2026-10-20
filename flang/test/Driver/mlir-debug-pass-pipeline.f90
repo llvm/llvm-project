@@ -6,7 +6,7 @@
 ! RUN: %flang -g -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -g1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -gline-tables-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
-! RUN: %flang -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-DIRECTIVES %s
+! RUN: %flang -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -g2 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
 ! RUN: %flang -g3 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
 
@@ -17,23 +17,37 @@
 end program
 
 ! DEBUG-CONSTRUCT: warning: Unsupported debug option: constructor
-! DEBUG-DIRECTIVES: warning: Unsupported debug option: line-directives-only
 !
 ! DEBUG-ERR: error: invalid value 'invalid' in '-debug-info-kind=invalid'
 ! DEBUG-ERR-NOT: Pass statistics report
 
 ! ALL: Pass statistics report
+! ALL: Fortran::lower::VerifierPass
+
+! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
+! ALL-NEXT: 'omp.declare_mapper' Pipeline
+! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
@@ -46,11 +60,12 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   ArrayValueCopy
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   CharacterConversion
@@ -64,6 +79,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   CudaHeapAllocPromotion
 ! ALL-NEXT:   MemoryAllocationOpt
 
 ! ALL-NEXT: Inliner
@@ -73,13 +89,20 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT: SelectOpsConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! ALL-NEXT: LowerRepackArraysPass
+! ALL-NEXT: SimplifyFIROperations
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'func.func' Pipeline
+! ALL-NEXT:     StackReclaim
+! ALL-NEXT:     CFGConversion
+! ALL-NEXT:   'omp.declare_mapper' Pipeline
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
@@ -89,17 +112,28 @@ end program
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! ALL-NEXT: O0CanonicalizerPass
 ! ALL-NEXT: SimplifyRegionLite
+! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
+! ALL-NEXT:     AbstractResultOpt
+! ALL-NEXT:     RematerializeFIRBoxOpsPass
+! ALL-NEXT:   'gpu.module' Pipeline
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
+! ALL-NEXT:   'func.func' Pipeline
+! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   'gpu.func' Pipeline
+! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   'omp.declare_mapper' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
@@ -108,9 +142,10 @@ end program
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
-! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugInfo
 ! NO-DEBUG-NOT: AddDebugInfo
+! ALL-NEXT: TargetRewrite
+! ALL-NEXT: CompilerGeneratedNamesConversion
 ! ALL: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

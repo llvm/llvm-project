@@ -9,8 +9,21 @@
 import os
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+from urllib.parse import urlparse, urlunparse
 
 from dex import __version__
+
+
+def sanitize_repo_url(repo):
+    parsed = urlparse(repo)
+    # No username present, repo URL is fine.
+    if parsed.username is None:
+        return repo
+    # Otherwise, strip the login details from the URL by reconstructing the netloc from just `<hostname>(:<port>)?`.
+    sanitized_netloc = parsed.hostname
+    if parsed.port:
+        sanitized_netloc = f"{sanitized_netloc}:{parsed.port}"
+    return urlunparse(parsed._replace(netloc=sanitized_netloc))
 
 
 def _git_version():
@@ -28,7 +41,7 @@ def _git_version():
             .rstrip()
             .decode("utf-8")
         )
-        repo = (
+        repo = sanitize_repo_url(
             check_output(
                 ["git", "remote", "get-url", "origin"], stderr=STDOUT, cwd=dir_
             )

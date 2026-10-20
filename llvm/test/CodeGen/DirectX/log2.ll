@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for log2 are generated for float and half.
 
@@ -15,6 +15,10 @@ entry:
   %elt.log2 = call half @llvm.log2.f16(half %a)
   ret half %elt.log2
 }
+
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare half @llvm.log2.f16(half)
 declare float @llvm.log2.f32(float)

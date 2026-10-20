@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses pcsections metadata correctly.
 
 --- |
@@ -27,7 +27,7 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: test
-    ; CHECK: MOV{{.*}} pcsections !0
+    ; CHECK: MOV{{.*}} pcsections !{{[0-9]+}}
     renamable $al = MOV8rm killed renamable $rdi, 1, $noreg, 0, $noreg, pcsections !0
     RET64 implicit killed $al
 

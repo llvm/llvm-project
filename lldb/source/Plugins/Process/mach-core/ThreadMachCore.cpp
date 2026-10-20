@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "RegisterContextUnifiedCore.h"
 #include "ThreadMachCore.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/AppleArm64ExceptionClass.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -22,6 +28,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "ProcessMachCore.h"
 //#include "RegisterContextKDP_arm.h"
@@ -70,27 +77,50 @@ lldb::RegisterContextSP ThreadMachCore::GetRegisterContext() {
 
 lldb::RegisterContextSP
 ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
-  lldb::RegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
+  if (concrete_frame_idx > 0)
+    return GetUnwinder().CreateRegisterContextForFrame(frame);
 
-  if (concrete_frame_idx == 0) {
-    if (!m_thread_reg_ctx_sp) {
-      ProcessSP process_sp(GetProcess());
+  if (m_thread_reg_ctx_sp)
+    return m_thread_reg_ctx_sp;
 
-      ObjectFile *core_objfile =
-          static_cast<ProcessMachCore *>(process_sp.get())->GetCoreObjectFile();
-      if (core_objfile)
-        m_thread_reg_ctx_sp = core_objfile->GetThreadContextAtIndex(
-            m_objfile_lc_thread_idx, *this);
+  ProcessSP process_sp(GetProcess());
+  assert(process_sp);
+
+  ObjectFile *core_objfile =
+      static_cast<ProcessMachCore *>(process_sp.get())->GetCoreObjectFile();
+  if (!core_objfile)
+    return {};
+
+  RegisterContextSP core_thread_regctx_sp =
+      core_objfile->GetThreadContextAtIndex(m_objfile_lc_thread_idx, *this);
+
+  if (!core_thread_regctx_sp)
+    return {};
+
+  StructuredData::ObjectSP process_md_sp =
+      core_objfile->GetCorefileProcessMetadata();
+
+  StructuredData::ObjectSP thread_md_sp;
+  if (process_md_sp && process_md_sp->GetAsDictionary() &&
+      process_md_sp->GetAsDictionary()->HasKey("threads")) {
+    StructuredData::Array *threads = process_md_sp->GetAsDictionary()
+                                         ->GetValueForKey("threads")
+                                         ->GetAsArray();
+    if (threads && threads->GetSize() == core_objfile->GetNumThreadContexts()) {
+      StructuredData::ObjectSP thread_sp =
+          threads->GetItemAtIndex(m_objfile_lc_thread_idx);
+      if (thread_sp && thread_sp->GetAsDictionary())
+        thread_md_sp = thread_sp;
     }
-    reg_ctx_sp = m_thread_reg_ctx_sp;
-  } else {
-    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
-  return reg_ctx_sp;
+  m_thread_reg_ctx_sp = std::make_shared<RegisterContextUnifiedCore>(
+      *this, concrete_frame_idx, core_thread_regctx_sp, thread_md_sp);
+
+  return m_thread_reg_ctx_sp;
 }
 
 static bool IsCrashExceptionClass(AppleArm64ExceptionClass EC) {

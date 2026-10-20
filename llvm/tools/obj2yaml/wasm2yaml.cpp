@@ -37,6 +37,7 @@ static WasmYAML::Limits makeLimits(const wasm::WasmLimits &Limits) {
   L.Flags = Limits.Flags;
   L.Minimum = Limits.Minimum;
   L.Maximum = Limits.Maximum;
+  L.PageSize = Limits.PageSize;
   return L;
 }
 
@@ -61,10 +62,12 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     DylinkSec->TableSize = Info.TableSize;
     DylinkSec->TableAlignment = Info.TableAlignment;
     DylinkSec->Needed = Info.Needed;
+    DylinkSec->RuntimePath = Info.RuntimePath;
     for (const auto &Imp : Info.ImportInfo)
       DylinkSec->ImportInfo.push_back({Imp.Module, Imp.Field, Imp.Flags});
     for (const auto &Exp : Info.ExportInfo)
       DylinkSec->ExportInfo.push_back({Exp.Name, Exp.Flags});
+    DylinkSec->TargetArch = Info.TargetArch;
     CustomSec = std::move(DylinkSec);
   } else if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec =
@@ -133,7 +136,12 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       Info.Flags = Symbol.Flags;
       switch (Symbol.Kind) {
       case wasm::WASM_SYMBOL_TYPE_DATA:
-        Info.DataRef = Symbol.DataRef;
+        if ((Symbol.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+            wasm::WASM_SYMBOL_BINDING_COMMON) {
+          Info.CommonRef = Symbol.CommonRef;
+        } else {
+          Info.DataRef = Symbol.DataRef;
+        }
         break;
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
@@ -153,6 +161,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       LinkingSec->InitFunctions.emplace_back(F);
     }
 
+    LinkingSec->TargetArch = Obj.linkingData().TargetArch;
     CustomSec = std::move(LinkingSec);
   } else if (WasmSec.Name == "producers") {
     std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =

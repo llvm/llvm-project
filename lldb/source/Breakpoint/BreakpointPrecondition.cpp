@@ -20,7 +20,6 @@ void BreakpointPrecondition::GetDescription(Stream &stream,
                                             lldb::DescriptionLevel level) {}
 
 Status BreakpointPrecondition::ConfigurePrecondition(Args &args) {
-  Status error;
-  error.SetErrorString("Base breakpoint precondition has no options.");
-  return error;
+  return Status::FromErrorString(
+      "Base breakpoint precondition has no options.");
 }

@@ -1,20 +1,18 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap setExceptionBreakpoints request
 """
 
-
-import dap_server
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
+@skipIfTargetDoesNotSupportSharedLibraries()
+class TestDAP_setExceptionBreakpoints(DAPTestCaseBase):
     @skipIfWindows
     def test_functionality(self):
         """Tests setting and clearing exception breakpoints.
-        This packet is a bit tricky on the debug adaptor side since there
+        This packet is a bit tricky on the debug adapter side since there
         is no "clear exception breakpoints" packet. Exception breakpoints
         are set by sending a "setExceptionBreakpoints" packet with zero or
         more exception filters. If exception breakpoints have been set
@@ -26,16 +24,26 @@ class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         and the functionality of each breakpoint, like 'conditions' and
         x'hitCondition' settings.
         """
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        session = self.build_and_create_session()
 
-        filters = ["cpp_throw", "cpp_catch"]
-        response = self.dap_server.request_setExceptionBreakpoints(filters)
-        if response:
-            self.assertTrue(response["success"])
+        with session.configure(LaunchArgs(program)) as ctx:
+            response = session.set_exception_breakpoints(
+                filters=["cpp_throw", "cpp_catch"]
+            )
+            breakpoints = self.expect_not_none(response.body.breakpoints)
+            for bp in breakpoints:
+                self.assertTrue(bp.verified, True)
 
-        self.continue_to_exception_breakpoint("C++ Throw")
-        self.continue_to_exception_breakpoint("C++ Catch")
+        session.verify_stopped_on_exception(
+            expected_description=r"breakpoint 1\.1",
+            expected_text=r"C\+\+ Throw",
+            after=ctx.process_event,
+        )
+        session.continue_to_exception_breakpoint(
+            expected_description=r"breakpoint 2\.1", expected_text=r"C\+\+ Catch"
+        )
+        session.continue_to_exit()

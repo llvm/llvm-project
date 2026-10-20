@@ -44,6 +44,8 @@ int testThatDumperWorks(int x, int y, int z) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <IntegralToBoolean>
 // CHECK-NEXT: `-ImplicitCastExpr {{.*}} <LValueToRValue>
 // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'x' 'int'
+// CHECK-EMPTY:
+// CHECK-EMPTY:
 // CHECK: [ B4 (live expressions at block exit) ]
 // CHECK-EMPTY:
 // CHECK-NEXT: DeclRefExpr {{.*}} 'y' 'int'
@@ -193,3 +195,299 @@ void test_lambda_refcapture() {
 // CHECK-NEXT: [ B2 (live expressions at block exit) ]
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+
+int logicalOpInTernary(bool b) {
+  return (b || b) ? 0 : 1;
+}
+
+// [B6 (ENTRY)]
+//    |
+//    V
+// [B5 (b || ...)]
+//   |            \
+//   |             |
+//   V             V
+// [B4 (b||b)] ? [B2 (0)] : [B3 (1)]
+//                \        /
+//                 ---|----
+//                    V
+//                   [B1] --> [B0 (EXIT)]
+//                  return
+
+// CHECK: [ B0 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B1 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B2 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: BinaryOperator {{.*}} '_Bool' '||'
+// CHECK: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B3 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: BinaryOperator {{.*}} '_Bool' '||'
+// CHECK: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B4 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: BinaryOperator {{.*}} '_Bool' '||'
+// CHECK: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B5 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: BinaryOperator {{.*}} '_Bool' '||'
+// CHECK: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK: [ B6 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK: IntegerLiteral {{.*}} 'int' 1
+
+int shortCircuitingBinaryOperator(bool b) {
+  bool condition = (b && b || b && b);
+  int y = condition ? 0 : 1;
+  return 1 / y;
+}
+
+// CHECK: [ B0 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B1 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B2 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue Var {{.*}} 'condition' '_Bool'
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B3 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue Var {{.*}} 'condition' '_Bool'
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B4 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue Var {{.*}} 'condition' '_Bool'
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B5 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B6 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B7 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B8 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: [ B9 (live expressions at block exit) ]
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: BinaryOperator {{.*}} '_Bool' '&&'
+// CHECK-NEXT: |-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT: | `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-NEXT: `-ImplicitCastExpr {{.*}} '_Bool' <LValueToRValue>
+// CHECK-NEXT:   `-DeclRefExpr {{.*}} '_Bool' lvalue ParmVar {{.*}} 'b' '_Bool'
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+// CHECK-EMPTY:
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1

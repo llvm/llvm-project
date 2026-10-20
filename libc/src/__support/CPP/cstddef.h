@@ -10,11 +10,17 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_CSTDDEF_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "type_traits.h" // For enable_if_t, is_integral_v.
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
-enum class byte : unsigned char {};
+// Clang grants the [basic.lval]/11.3 char-aliasing privilege only to the named
+// `::std::byte` type (see `Type::isStdByteType()`), so `cpp::byte` would
+// otherwise get its own TBAA node. `may_alias` makes accesses through
+// `cpp::byte *` char-aliasing as callers expect.
+enum class [[gnu::may_alias]] byte : unsigned char {};
 
 template <class IntegerType>
 LIBC_INLINE constexpr enable_if_t<is_integral_v<IntegerType>, byte>
@@ -66,6 +72,7 @@ to_integer(byte b) noexcept {
   return static_cast<IntegerType>(b);
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_CSTDDEF_H

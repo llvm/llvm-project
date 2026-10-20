@@ -183,6 +183,25 @@ void ScalarEnumerationTraits<COFF::RelocationTypeAMD64>::enumeration(
   ECase(IMAGE_REL_AMD64_SSPAN32);
 }
 
+void ScalarEnumerationTraits<COFF::RelocationTypesMips>::enumeration(
+    IO &IO, COFF::RelocationTypesMips &Value) {
+  ECase(IMAGE_REL_MIPS_ABSOLUTE);
+  ECase(IMAGE_REL_MIPS_REFHALF);
+  ECase(IMAGE_REL_MIPS_REFWORD);
+  ECase(IMAGE_REL_MIPS_JMPADDR);
+  ECase(IMAGE_REL_MIPS_REFHI);
+  ECase(IMAGE_REL_MIPS_REFLO);
+  ECase(IMAGE_REL_MIPS_GPREL);
+  ECase(IMAGE_REL_MIPS_LITERAL);
+  ECase(IMAGE_REL_MIPS_SECTION);
+  ECase(IMAGE_REL_MIPS_SECREL);
+  ECase(IMAGE_REL_MIPS_SECRELLO);
+  ECase(IMAGE_REL_MIPS_SECRELHI);
+  ECase(IMAGE_REL_MIPS_JMPADDR16);
+  ECase(IMAGE_REL_MIPS_REFWORDNB);
+  ECase(IMAGE_REL_MIPS_PAIR);
+}
+
 void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
     IO &IO, COFF::RelocationTypesARM &Value) {
   ECase(IMAGE_REL_ARM_ABSOLUTE);
@@ -427,6 +446,10 @@ void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
     MappingNormalization<NType<COFF::RelocationTypeAMD64>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
+  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_R4000) {
+    MappingNormalization<NType<COFF::RelocationTypesMips>, uint16_t> NT(
+        IO, Rel.Type);
+    IO.mapRequired("Type", NT->Type);
   } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
     MappingNormalization<NType<COFF::RelocationTypesARM>, uint16_t> NT(
         IO, Rel.Type);
@@ -669,18 +692,21 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   IO.mapOptional("VirtualSize", Sec.Header.VirtualSize, 0U);
   IO.mapOptional("Alignment", Sec.Alignment, 0U);
 
-  // If this is a .debug$S .debug$T .debug$P, or .debug$H section parse the
-  // semantic representation of the symbols/types.  If it is any other kind
-  // of section, just deal in raw bytes.
+  // If the section has a semantic representation, parse it. Otherwise, deal in
+  // raw bytes.
   IO.mapOptional("SectionData", Sec.SectionData);
-  if (Sec.Name == ".debug$S")
+  if (Sec.Name == ".debug$S") {
     IO.mapOptional("Subsections", Sec.DebugS);
-  else if (Sec.Name == ".debug$T")
+  } else if (Sec.Name == ".debug$T") {
     IO.mapOptional("Types", Sec.DebugT);
-  else if (Sec.Name == ".debug$P")
+  } else if (Sec.Name == ".debug$P") {
     IO.mapOptional("PrecompTypes", Sec.DebugP);
-  else if (Sec.Name == ".debug$H")
+  } else if (Sec.Name == ".debug$H") {
     IO.mapOptional("GlobalHashes", Sec.DebugH);
+  } else if (Sec.Name == ".llvm_bb_addr_map") {
+    IO.mapOptional("Entries", Sec.BBAddrMapEntries);
+    IO.mapOptional("PGOAnalyses", Sec.PGOAnalyses);
+  }
 
   IO.mapOptional("StructuredData", Sec.StructuredData);
 
@@ -693,6 +719,16 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
 
   if (!Sec.StructuredData.empty() && Sec.Header.SizeOfRawData) {
     IO.setError("StructuredData and SizeOfRawData can't be used together");
+    return;
+  }
+
+  // Entries describes the whole BBAddrMap section content and derives
+  // SizeOfRawData.
+  if (Sec.BBAddrMapEntries &&
+      (Sec.SectionData.binary_size() || !Sec.StructuredData.empty() ||
+       Sec.Header.SizeOfRawData)) {
+    IO.setError("Entries can't be used with SectionData, StructuredData or "
+                "SizeOfRawData");
     return;
   }
 

@@ -33,6 +33,7 @@ template <typename> class CanQual;
 class CXXConstructorDecl;
 class CXXMethodDecl;
 class CodeGenOptions;
+class FunctionDecl;
 class FunctionProtoType;
 class QualType;
 class RecordDecl;
@@ -57,11 +58,6 @@ class CodeGenTypes {
   ASTContext &Context;
   llvm::Module &TheModule;
   const TargetInfo &Target;
-  CGCXXABI &TheCXXABI;
-
-  // This should not be moved earlier, since its initialization depends on some
-  // of the previous reference members being already initialized
-  const ABIInfo &TheABIInfo;
 
   /// The opaque type map for Objective-C interfaces. All direct
   /// manipulation is done by the runtime interfaces, which are
@@ -94,8 +90,17 @@ class CodeGenTypes {
   llvm::DenseMap<const Type *, llvm::Type *> RecordsWithOpaqueMemberPointers;
 
   static constexpr unsigned FunctionInfosLog2InitSize = 9;
+
   /// Helper for ConvertType.
   llvm::Type *ConvertFunctionTypeInternal(QualType FT);
+
+  // Helper to insert CGFunctionInfo objects
+  CGFunctionInfo *findOrInsertCGFunctionInfo(
+      bool isInstanceMethod, bool isChainCall, bool isDelegateCall,
+      unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
+      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+      RequiredArgs required, CanQualType resultType,
+      ArrayRef<CanQualType> argTypes);
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
@@ -106,9 +111,8 @@ public:
   }
   CodeGenModule &getCGM() const { return CGM; }
   ASTContext &getContext() const { return Context; }
-  const ABIInfo &getABIInfo() const { return TheABIInfo; }
   const TargetInfo &getTarget() const { return Target; }
-  CGCXXABI &getCXXABI() const { return TheCXXABI; }
+  CGCXXABI &getCXXABI() const;
   llvm::LLVMContext &getLLVMContext() { return TheModule.getContext(); }
   const CodeGenOptions &getCodeGenOpts() const;
 
@@ -126,7 +130,30 @@ public:
   /// ConvertType in that it is used to convert to the memory representation for
   /// a type.  For example, the scalar representation for _Bool is i1, but the
   /// memory representation is usually i8 or i32, depending on the target.
-  llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
+  llvm::Type *ConvertTypeForMem(QualType T);
+
+  /// Check whether the given type needs to be laid out in memory
+  /// using an opaque byte-array type because its load/store type
+  /// does not have the correct alloc size in the LLVM data layout.
+  /// If this is false, the load/store type (convertTypeForLoadStore)
+  /// and memory representation type (ConvertTypeForMem) will
+  /// be the same type.
+  bool typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
+
+  /// Given that T is a scalar type, return the IR type that should
+  /// be used for load and store operations.  For example, this might
+  /// be i8 for _Bool or i96 for _BitInt(65).  The store size of the
+  /// load/store type (as reported by LLVM's data layout) is always
+  /// the same as the alloc size of the memory representation type
+  /// returned by ConvertTypeForMem.
+  ///
+  /// As an optimization, if you already know the scalar value type
+  /// for T (as would be returned by ConvertType), you can pass
+  /// it as the second argument so that it does not need to be
+  /// recomputed in common cases where the value type and
+  /// load/store type are the same.
+  llvm::Type *convertTypeForLoadStore(QualType T, llvm::Type *LLVMTy = nullptr);
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
   llvm::FunctionType *GetFunctionType(const CGFunctionInfo &Info);
@@ -186,14 +213,16 @@ public:
   ///
   /// Often this will be able to simply return the declaration info.
   const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
-                                    const CallArgList &args);
+                                    const CallArgList &args,
+                                    const FunctionDecl *ABIInfoFD);
 
   /// Free functions are functions that are compatible with an ordinary
   /// C function pointer type.
-  const CGFunctionInfo &arrangeFunctionDeclaration(const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFunctionDeclaration(const GlobalDecl GD);
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
-                                                bool ChainCall);
+                                                bool ChainCall,
+                                                const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty);
   const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty);
 
@@ -212,13 +241,20 @@ public:
   const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                    const CallArgList &args);
 
+  /// A device kernel caller function is an offload device entry point function
+  /// with a target device dependent calling convention such as amdgpu_kernel,
+  /// ptx_kernel, or spir_kernel.
+  const CGFunctionInfo &
+  arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                       const FunctionArgList &args);
+
   /// Objective-C methods are C functions with some implicit parameters.
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);
   const CGFunctionInfo &arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                                         QualType receiverType);
-  const CGFunctionInfo &arrangeUnprototypedObjCMessageSend(
-                                                     QualType returnType,
-                                                     const CallArgList &args);
+  const CGFunctionInfo &
+  arrangeUnprototypedObjCMessageSend(QualType returnType,
+                                     const CallArgList &args);
 
   /// Block invocation functions are C functions with an implicit parameter.
   const CGFunctionInfo &arrangeBlockFunctionDeclaration(
@@ -230,17 +266,16 @@ public:
   /// C++ methods have some special rules and also have implicit parameters.
   const CGFunctionInfo &arrangeCXXMethodDeclaration(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeCXXStructorDeclaration(GlobalDecl GD);
-  const CGFunctionInfo &arrangeCXXConstructorCall(const CallArgList &Args,
-                                                  const CXXConstructorDecl *D,
-                                                  CXXCtorType CtorKind,
-                                                  unsigned ExtraPrefixArgs,
-                                                  unsigned ExtraSuffixArgs,
-                                                  bool PassProtoArgs = true);
+  const CGFunctionInfo &arrangeCXXConstructorCall(
+      const CallArgList &Args, const CXXConstructorDecl *D,
+      CXXCtorType CtorKind, unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs,
+      const FunctionDecl *ABIInfoFD, bool PassProtoArgs = true);
 
   const CGFunctionInfo &arrangeCXXMethodCall(const CallArgList &args,
                                              const FunctionProtoType *type,
                                              RequiredArgs required,
-                                             unsigned numPrefixArgs);
+                                             unsigned numPrefixArgs,
+                                             const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &
   arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeMSCtorClosure(const CXXConstructorDecl *CD,
@@ -259,7 +294,7 @@ public:
       CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
       FunctionType::ExtInfo info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-      RequiredArgs args);
+      RequiredArgs args, const FunctionDecl *ABIInfoFD);
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,

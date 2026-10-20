@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_ENVIRON_H
 #define LLVM_LIBC_SRC_UNISTD_ENVIRON_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
 
-extern "C" char **environ;
+namespace LIBC_NAMESPACE_DECL {
 
-} // namespace LIBC_NAMESPACE
+extern char **environ;
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_ENVIRON_H

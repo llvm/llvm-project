@@ -29,4 +29,4 @@ define void @dynalloc(i32 %N) #0 {
   ret void
 }
 
-attributes #0 = { "frame-pointer"="all" }
+attributes #0 = { "frame-pointer"="none" }

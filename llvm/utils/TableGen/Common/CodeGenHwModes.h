@@ -8,14 +8,16 @@
 // Classes to parse and store HW mode information for instruction selection.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
-#define LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
 
+#include "SubtargetFeatureInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <map>
-#include <string>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -27,17 +29,30 @@ class RecordKeeper;
 
 struct CodeGenHwModes;
 
+struct HwModePredicates {
+  std::set<SubtargetFeatureLiteral> FeaturesSet;
+  std::set<std::set<SubtargetFeatureLiteral>> AnyOfFeatureSets;
+  bool HasNonAsmPredicates = false;
+
+  HwModePredicates() = default;
+  HwModePredicates(ArrayRef<const Record *> Preds);
+
+  static HwModePredicates createForDefaultMode(const CodeGenHwModes &CGH);
+  void add(const HwModePredicates &Other);
+  bool isSelfContradictory();
+  bool conflictsWith(const HwModePredicates &Other) const;
+};
+
 struct HwMode {
-  HwMode(Record *R);
+  HwMode(const Record *R);
   StringRef Name;
-  std::string Features;
-  std::string Predicates;
+  std::vector<const Record *> Predicates;
   void dump() const;
 };
 
 struct HwModeSelect {
-  HwModeSelect(Record *R, CodeGenHwModes &CGH);
-  typedef std::pair<unsigned, Record *> PairType;
+  HwModeSelect(const Record *R, CodeGenHwModes &CGH);
+  using PairType = std::pair<unsigned, const Record *>;
   std::vector<PairType> Items;
   void dump() const;
 };
@@ -46,8 +61,8 @@ struct CodeGenHwModes {
   enum : unsigned { DefaultMode = 0 };
   static StringRef DefaultModeName;
 
-  CodeGenHwModes(RecordKeeper &R);
-  unsigned getHwModeId(Record *R) const;
+  CodeGenHwModes(const RecordKeeper &R);
+  unsigned getHwModeId(const Record *R) const;
   const HwMode &getMode(unsigned Id) const {
     assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
     return Modes[Id - 1];
@@ -57,19 +72,23 @@ struct CodeGenHwModes {
       return DefaultModeName;
     return getMode(Id).Name;
   }
-  const HwModeSelect &getHwModeSelect(Record *R) const;
-  const std::map<Record *, HwModeSelect> &getHwModeSelects() const {
+  const HwModeSelect &getHwModeSelect(const Record *R) const;
+  const HwModePredicates &getModePredicates(unsigned ModeId) const;
+  const Record *resolveModeSelect(const Record *SelectRec,
+                                  ArrayRef<const Record *> PatPreds) const;
+  const std::map<const Record *, HwModeSelect> &getHwModeSelects() const {
     return ModeSelects;
   }
   unsigned getNumModeIds() const { return Modes.size() + 1; }
   void dump() const;
 
 private:
-  RecordKeeper &Records;
-  DenseMap<Record *, unsigned> ModeIds; // HwMode Record -> HwModeId
+  const RecordKeeper &Records;
+  DenseMap<const Record *, unsigned> ModeIds; // HwMode Record -> HwModeId
   std::vector<HwMode> Modes;
-  std::map<Record *, HwModeSelect> ModeSelects;
+  std::map<const Record *, HwModeSelect> ModeSelects;
+  mutable std::vector<HwModePredicates> PredicatesByMode;
 };
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H

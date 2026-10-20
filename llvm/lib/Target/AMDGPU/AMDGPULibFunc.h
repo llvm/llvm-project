@@ -150,8 +150,11 @@ public:
     EI_NORMALIZE,
     EI_POPCOUNT,
     EI_POW,
+    EI_POW_FAST,
     EI_POWN,
+    EI_POWN_FAST,
     EI_POWR,
+    EI_POWR_FAST,
     EI_PREFETCH,
     EI_RADIANS,
     EI_RECIP,
@@ -162,6 +165,7 @@ public:
     EI_RHADD,
     EI_RINT,
     EI_ROOTN,
+    EI_ROOTN_FAST,
     EI_ROTATE,
     EI_ROUND,
     EI_RSQRT,
@@ -251,24 +255,24 @@ public:
     HALF
   };
 
-  enum EType {
-    B8  = 1,
+  enum EType : unsigned char {
+    B8 = 1,
     B16 = 2,
     B32 = 3,
     B64 = 4,
     SIZE_MASK = 7,
     FLOAT = 0x10,
-    INT   = 0x20,
-    UINT  = 0x30,
+    INT = 0x20,
+    UINT = 0x30,
     BASE_TYPE_MASK = 0x30,
-    U8  =  UINT | B8,
-    U16 =  UINT | B16,
-    U32 =  UINT | B32,
-    U64 =  UINT | B64,
-    I8  =   INT | B8,
-    I16 =   INT | B16,
-    I32 =   INT | B32,
-    I64 =   INT | B64,
+    U8 = UINT | B8,
+    U16 = UINT | B16,
+    U32 = UINT | B32,
+    U64 = UINT | B64,
+    I8 = INT | B8,
+    I16 = INT | B16,
+    I32 = INT | B32,
+    I64 = INT | B64,
     F16 = FLOAT | B16,
     F32 = FLOAT | B32,
     F64 = FLOAT | B64,
@@ -308,17 +312,14 @@ public:
     }
 
     static Param getFromTy(Type *Ty, bool Signed);
-
-    template <typename Stream>
-    void mangleItanium(Stream& os);
   };
   static bool isMangled(EFuncId Id) {
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
   }
 
-  static unsigned getEPtrKindFromAddrSpace(unsigned AS) {
+  static unsigned char getEPtrKindFromAddrSpace(unsigned AS) {
     assert(((AS + 1) & ~ADDR_SPACE) == 0);
-    return AS + 1;
+    return static_cast<unsigned char>(AS + 1);
   }
 
   static unsigned getAddrSpaceFromEPtrKind(unsigned Kind) {
@@ -352,7 +353,7 @@ public:
   void setName(StringRef N) { Name = std::string(N); }
   void setPrefix(ENamePrefix pfx) { FKind = pfx; }
 
-  virtual FunctionType *getFunctionType(Module &M) const = 0;
+  virtual FunctionType *getFunctionType(const Module &M) const = 0;
 
 protected:
   EFuncId FuncId;
@@ -391,8 +392,22 @@ public:
     return Impl->parseFuncName(MangledName);
   }
 
+  /// Return true if it's legal to splat a scalar value passed in parameter \p
+  /// ArgIdx to a vector argument.
+  bool allowsImplicitVectorSplat(int ArgIdx) const {
+    switch (getId()) {
+    case EI_LDEXP:
+      return ArgIdx == 1;
+    case EI_FMIN:
+    case EI_FMAX:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   // Validate the call type matches the expected libfunc type.
-  bool isCompatibleSignature(const FunctionType *FuncTy) const;
+  bool isCompatibleSignature(const Module &M, const FunctionType *FuncTy) const;
 
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
@@ -401,7 +416,7 @@ public:
   void setName(StringRef N) { Impl->setName(N); }
   void setPrefix(ENamePrefix PFX) { Impl->setPrefix(PFX); }
 
-  FunctionType *getFunctionType(Module &M) const {
+  FunctionType *getFunctionType(const Module &M) const {
     return Impl->getFunctionType(M);
   }
   static Function *getFunction(llvm::Module *M, const AMDGPULibFunc &fInfo);
@@ -428,8 +443,7 @@ public:
 
   std::string getName() const override;
   unsigned getNumArgs() const override;
-  FunctionType *getFunctionType(Module &M) const override;
-  static StringRef getUnmangledName(StringRef MangledName);
+  FunctionType *getFunctionType(const Module &M) const override;
 
   bool parseFuncName(StringRef &mangledName) override;
 
@@ -441,7 +455,6 @@ public:
 private:
   std::string mangleNameItanium() const;
 
-  std::string mangleName(StringRef Name) const;
   bool parseUnmangledName(StringRef MangledName);
 
   template <typename Stream> void writeName(Stream &OS) const;
@@ -458,7 +471,9 @@ public:
   }
   std::string getName() const override { return Name; }
   unsigned getNumArgs() const override;
-  FunctionType *getFunctionType(Module &M) const override { return FuncTy; }
+  FunctionType *getFunctionType(const Module &M) const override {
+    return FuncTy;
+  }
 
   bool parseFuncName(StringRef &Name) override;
 

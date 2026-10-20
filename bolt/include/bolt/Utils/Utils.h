@@ -41,6 +41,11 @@ std::string getEscapedName(const StringRef &Name);
 /// Return the unescaped name
 std::string getUnescapedName(const StringRef &Name);
 
+/// Return a common part for a given \p Name wrt a given \p Suffixes list.
+/// Preserve the suffix if \p KeepSuffix is set, only dropping characters
+/// following it, otherwise drop the suffix as well.
+std::optional<StringRef> getCommonName(const StringRef Name, bool KeepSuffix,
+                                       ArrayRef<StringRef> Suffixes);
 /// LTO-generated function names take a form:
 ///
 ///   <function_name>.lto_priv.<decimal_number>/...
@@ -70,6 +75,20 @@ std::optional<StringRef> getLTOCommonName(const StringRef Name);
 // Determines which register a given DWARF expression is being assigned to.
 // If the expression is defining the CFA, return std::nullopt.
 std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);
+
+void safePWrite(raw_fd_ostream &OS, const char *Src, size_t Size,
+                uint64_t Offset);
+
+/// Ask the OS to reclaim the pages backing the mapped range starting at
+/// \p Addr and spanning \p Size bytes. Intended for data read in a streaming
+/// fashion, where keeping the pages resident only adds memory pressure. The
+/// range is trimmed to whole pages, and the request is silently ignored if
+/// \p Addr is not page-aligned. No-op on platforms without MADV_PAGEOUT.
+void pageOutMemory(const void *Addr, size_t Size);
+
+/// Evict any page-cache pages still held for the file at \p Path. Only takes
+/// effect once every mapping of the file is gone. No-op on non-Linux platforms.
+void dropFileFromPageCache(StringRef Path);
 
 } // namespace bolt
 

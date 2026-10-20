@@ -1,9 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
-  MC
-  MCJIT
-  RuntimeDyld
+  ORCJIT
   Support
   Target
   nativecodegen
@@ -16,6 +14,6 @@ endif()
 
 add_llvm_example(ExceptionDemo
   ExceptionDemo.cpp
-  )
 
-export_executable_symbols(ExceptionDemo)
+  EXPORT_SYMBOLS
+  )

@@ -14,7 +14,7 @@ define double @test_reassoc_fadd1(double %a0, double %a1, double %a2, double %a3
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FADD_D:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[COPY3]], [[COPY2]], 7, implicit $frm
   ; CHECK-NEXT:   [[FADD_D1:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[COPY1]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D killed [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FADD_D2]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fadd nsz reassoc double %a0, %a1
@@ -34,7 +34,7 @@ define double @test_reassoc_fmul1(double %a0, double %a1, double %a2, double %a3
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FMUL_D:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FMUL_D [[COPY3]], [[COPY2]], 7, implicit $frm
   ; CHECK-NEXT:   [[FMUL_D1:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FMUL_D [[COPY1]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FMUL_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FMUL_D killed [[FMUL_D]], killed [[FMUL_D1]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FMUL_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FMUL_D [[FMUL_D]], killed [[FMUL_D1]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FMUL_D2]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fmul nsz reassoc double %a0, %a1
@@ -55,7 +55,7 @@ define double @test_reassoc_flags1(double %a0, double %a1, double %a2, double %a
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FADD_D:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[COPY3]], [[COPY2]], 7, implicit $frm
   ; CHECK-NEXT:   [[FADD_D1:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[COPY1]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D killed [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FADD_D2]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fadd nsz reassoc double %a0, %a1
@@ -76,7 +76,7 @@ define double @test_reassoc_flags2(double %a0, double %a1, double %a2, double %a
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FADD_D:%[0-9]+]]:fpr64 = nsz reassoc nofpexcept FADD_D [[COPY3]], [[COPY2]], 7, implicit $frm
   ; CHECK-NEXT:   [[FADD_D1:%[0-9]+]]:fpr64 = nsz contract reassoc nofpexcept FADD_D [[COPY1]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz contract reassoc nofpexcept FADD_D killed [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FADD_D2:%[0-9]+]]:fpr64 = nsz contract reassoc nofpexcept FADD_D [[FADD_D]], killed [[FADD_D1]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FADD_D2]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fadd nsz reassoc double %a0, %a1
@@ -96,7 +96,7 @@ define double @test_fmadd(double %a0, double %a1, double %a2) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FMUL_D:%[0-9]+]]:fpr64 = contract nofpexcept FMUL_D [[COPY2]], [[COPY1]], 7, implicit $frm
   ; CHECK-NEXT:   [[FMADD_D:%[0-9]+]]:fpr64 = contract nofpexcept FMADD_D [[COPY2]], [[COPY1]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D killed [[FMADD_D]], [[FMUL_D]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D [[FMADD_D]], [[FMUL_D]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FDIV_D]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fmul contract double %a0, %a1
@@ -104,3 +104,45 @@ define double @test_fmadd(double %a0, double %a1, double %a2) {
   %t2 = fdiv double %t1, %t0
   ret double %t2
 }
+
+
+define i64 @test_or_flags(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
+  ; CHECK-LABEL: name: test_or_flags
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:gpr = OR [[COPY3]], [[COPY2]]
+  ; CHECK-NEXT:   [[OR1:%[0-9]+]]:gpr = OR [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[OR2:%[0-9]+]]:gpr = OR [[OR]], killed [[OR1]]
+  ; CHECK-NEXT:   $x10 = COPY [[OR2]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  %t0 = or i64 %a0, %a1
+  %t1 = or disjoint i64 %t0, %a2
+  %t2 = or disjoint i64 %t1, %a3
+  ret i64 %t2
+}
+
+define i64 @test_add_flags(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
+  ; CHECK-LABEL: name: test_add_flags
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY3]], [[COPY2]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:gpr = ADD [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:gpr = ADD [[ADD]], killed [[ADD1]]
+  ; CHECK-NEXT:   $x10 = COPY [[ADD2]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  %t0 = add i64 %a0, %a1
+  %t1 = add nsw i64 %t0, %a2
+  %t2 = add nuw i64 %t1, %a3
+  ret i64 %t2
+}
+

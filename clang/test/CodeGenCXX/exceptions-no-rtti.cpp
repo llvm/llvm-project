@@ -3,8 +3,8 @@
 // CHECK: @_ZTIN5test11AE = linkonce_odr constant
 // CHECK: @_ZTIN5test11BE = linkonce_odr constant
 // CHECK: @_ZTIN5test11CE = linkonce_odr constant
-// CHECK: @_ZTIN5test11DE = linkonce_odr constant
 // CHECK: @_ZTIPN5test11DE = linkonce_odr constant {{.*}} @_ZTIN5test11DE
+// CHECK: @_ZTIN5test11DE = linkonce_odr constant
 
 // PR6974: this shouldn't crash
 namespace test0 {

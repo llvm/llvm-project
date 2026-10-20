@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -31,6 +32,53 @@ struct CastOpInterface
   }
 };
 
+struct CollapseShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<CollapseShapeOpInterface,
+                                                   CollapseShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto collapseOp = cast<CollapseShapeOp>(op);
+    assert(value == collapseOp.getResult() && "invalid value");
+
+    // Multiply the expressions for the dimensions in the reassociation group.
+    const ReassociationIndices reassocIndices =
+        collapseOp.getReassociationIndices()[dim];
+    AffineExpr productExpr =
+        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+    for (size_t i = 1; i < reassocIndices.size(); ++i) {
+      productExpr =
+          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+    }
+    cstr.bound(value)[dim] == productExpr;
+  }
+};
+
+struct ConcatOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ConcatOpInterface,
+                                                   ConcatOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto concatOp = cast<ConcatOp>(op);
+    assert(value == concatOp.getResult() && "invalid value");
+
+    ValueRange inputs = concatOp.getInputs();
+    if (dim != static_cast<int64_t>(concatOp.getDim())) {
+      // All inputs have the same size as the result in a dimension that is not
+      // concatenated. Relate the result to every input: relating it to a single
+      // input loses the bound when that input is the unbounded one.
+      for (Value input : inputs)
+        cstr.bound(value)[dim] == cstr.getExpr(input, dim);
+      return;
+    }
+
+    // The concatenated dimension is the sum of the input sizes.
+    AffineExpr sum = cstr.getExpr(inputs.front(), dim);
+    for (Value input : inputs.drop_front())
+      sum = sum + cstr.getExpr(input, dim);
+    cstr.bound(value)[dim] == sum;
+  }
+};
+
 struct DimOpInterface
     : public ValueBoundsOpInterface::ExternalModel<DimOpInterface, DimOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -38,6 +86,7 @@ struct DimOpInterface
     auto dimOp = cast<DimOp>(op);
     assert(value == dimOp.getResult() && "invalid value");
 
+    cstr.bound(value) >= 0;
     auto constIndex = dimOp.getConstantIndex();
     if (!constIndex.has_value())
       return;
@@ -53,6 +102,17 @@ struct EmptyOpInterface
     assert(value == emptyOp.getResult() && "invalid value");
 
     cstr.bound(value)[dim] == emptyOp.getMixedSizes()[dim];
+  }
+};
+
+struct ExpandShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ExpandShapeOpInterface,
+                                                   ExpandShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto expandOp = cast<ExpandShapeOp>(op);
+    assert(value == expandOp.getResult() && "invalid value");
+    cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
   }
 };
 
@@ -72,6 +132,27 @@ struct ExtractSliceOpInterface
         ++ctr;
       if (ctr == dim) {
         cstr.bound(value)[dim] == extractSliceOp.getMixedSizes()[i];
+        int64_t staticStride = extractSliceOp.getStaticStrides()[i];
+        if (staticStride > 0) {
+          // Force analysis of the size value to get a better bound. Example:
+          //   %size  = affine.min affine_map<(d0) -> (5, -d0 + 24)>(%iv)
+          //   %slice = tensor.extract_slice %source[%iv][%size][1]
+          //          : tensor<24xf32> to tensor<?xf32>
+          // Here we get a bound of 24 immediately, so %size is skipped under
+          // the default stop condition unless we force its analysis.
+          if (auto sizeValue =
+                  llvm::dyn_cast<Value>(extractSliceOp.getMixedSizes()[i]))
+            cstr.populateConstraints(sizeValue, std::nullopt);
+          // Encode in-bounds slice constraint:
+          OpFoldResult offset = extractSliceOp.getMixedOffsets()[i];
+          AffineExpr offsetExpr = cstr.getExpr(offset);
+          AffineExpr sourceDimExpr =
+              cstr.getExpr(extractSliceOp.getSource(), i);
+          cstr.bound(value)[dim] <=
+              (sourceDimExpr - offsetExpr).ceilDiv(staticStride);
+          cstr.bound(value)[dim] <= sourceDimExpr - offsetExpr;
+          cstr.bound(value)[dim] <= sourceDimExpr;
+        }
         return;
       }
     }
@@ -108,6 +189,20 @@ struct RankOpInterface
   }
 };
 
+struct SplatOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<SplatOpInterface, SplatOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto splatOp = cast<SplatOp>(op);
+    assert(value == splatOp.getAggregate() && "invalid value");
+
+    RankedTensorType type = splatOp.getType();
+    SmallVector<OpFoldResult> sizes = getMixedValues(
+        type.getShape(), splatOp.getDynamicSizes(), type.getContext());
+    cstr.bound(value)[dim] == sizes[dim];
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -116,12 +211,18 @@ void mlir::tensor::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
     tensor::CastOp::attachInterface<tensor::CastOpInterface>(*ctx);
+    tensor::CollapseShapeOp::attachInterface<tensor::CollapseShapeOpInterface>(
+        *ctx);
+    tensor::ConcatOp::attachInterface<tensor::ConcatOpInterface>(*ctx);
     tensor::DimOp::attachInterface<tensor::DimOpInterface>(*ctx);
     tensor::EmptyOp::attachInterface<tensor::EmptyOpInterface>(*ctx);
+    tensor::ExpandShapeOp::attachInterface<tensor::ExpandShapeOpInterface>(
+        *ctx);
     tensor::ExtractSliceOp::attachInterface<tensor::ExtractSliceOpInterface>(
         *ctx);
     tensor::PadOp::attachInterface<tensor::PadOpInterface>(*ctx);
     tensor::RankOp::attachInterface<tensor::RankOpInterface>(*ctx);
+    tensor::SplatOp::attachInterface<tensor::SplatOpInterface>(*ctx);
     // Note: ValueBoundsOpInterface implementation is not required for ops that
     // implement `DestinationStyleOpInterface` (for querying shaped OpResults).
   });

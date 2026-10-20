@@ -4,25 +4,25 @@
 ; the loop, and the loop has exits with predecessors not within the loop
 ; (and btw these edges are unsplittable due to the indirectbr).
 ; PR5437
-define i32 @test0() nounwind {
+define i32 @test0(i1 %arg) nounwind {
 ; CHECK-LABEL: @test0
 entry:
-  br i1 undef, label %"4", label %"3"
+  br i1 %arg, label %"4", label %"3"
 
 "3":                                              ; preds = %entry
   ret i32 0
 
 "4":                                              ; preds = %entry
-  br i1 undef, label %"6", label %"5"
+  br i1 %arg, label %"6", label %"5"
 
 "5":                                              ; preds = %"4"
   unreachable
 
 "6":                                              ; preds = %"4"
-  br i1 undef, label %"10", label %"13"
+  br i1 %arg, label %"10", label %"13"
 
 "10":                                             ; preds = %"6"
-  br i1 undef, label %"22", label %"15"
+  br i1 %arg, label %"22", label %"15"
 
 "13":                                             ; preds = %"6"
   unreachable
@@ -393,7 +393,7 @@ entry:
   unreachable
 
 "1566":                                           ; preds = %"23"
-  br i1 undef, label %"1569", label %"1568"
+  br i1 %arg, label %"1569", label %"1568"
 
 "1568":                                           ; preds = %"1566"
   unreachable
@@ -545,13 +545,13 @@ entry:
 ; create PHIs in one of such exits we are also inserting PHIs in L2 header. This
 ; could break LCSSA form for L2 because these inserted PHIs can also have uses
 ; in L2 exits. Test that we don't assert/crash on that.
-define void @test1() {
+define void @test1(i1 %arg) {
 ; CHECK-LABEL: @test1
   br label %lab1
 
 lab1:
   %tmp21 = add i32 undef, 677038203
-  br i1 undef, label %lab2, label %exit
+  br i1 %arg, label %lab2, label %exit
 
 lab2:
   indirectbr ptr undef, [label %lab1, label %lab3]
@@ -559,7 +559,7 @@ lab2:
 lab3:
 ; CHECK: %tmp21.lcssa1 = phi i32 [ %tmp21.lcssa1, %lab4 ], [ %tmp21, %lab2 ]
   %tmp12 = phi i32 [ %tmp21, %lab2 ], [ %tmp12, %lab4 ]
-  br i1 undef, label %lab5, label %lab4
+  br i1 %arg, label %lab5, label %lab4
 
 lab4:
   br label %lab3

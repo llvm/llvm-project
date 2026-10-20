@@ -1,10 +1,6 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
-
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s --implicit-check-not=DBG
-
 ;; Test a variety of block inputs and lattice configurations for the assignment
 ;; tracking analysis (debug-ata). This is the same as nested-loop.ll except each
 ;; alloca holds a fragment of a variable instead of a whole variable.
@@ -257,7 +253,7 @@ if.then:                                          ; preds = %do.body1
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
 ; CHECK-NEXT:    %5:gr32 = MOV32rm
-; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, killed %5
+; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, %5
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref
 ; CHECK-NEXT:    MOV32mi %stack.4.e.addr, 1, $noreg, 0, $noreg, 8
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)

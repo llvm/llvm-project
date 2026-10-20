@@ -8,6 +8,9 @@
 //
 // REQUIRES: long_tests
 
+// Missing lgammar_r
+// XFAIL: LLVM-LIBC-FIXME
+
 // <random>
 
 // template<class IntType = int>
@@ -16,6 +19,7 @@
 // template<class _URNG> result_type operator()(_URNG& g);
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <numeric>
 #include <random>

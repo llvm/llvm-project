@@ -12,7 +12,7 @@ define void @f0() "patchable-function"="prologue-short-redirect" {
 ; CHECK-LABEL: _f0{{>?}}:
 ; CHECK-NEXT:  66 90 	nop
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _f0:
 
 ; X86: f0:
@@ -35,7 +35,7 @@ define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"
 ; CHECK-NEXT: 66 90     nop
 ; CHECK-NEXT: 55		pushq	%rbp
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _f1:
 
 ; X86: f1:
@@ -58,7 +58,7 @@ define void @f2() "patchable-function"="prologue-short-redirect" {
 ; CHECK-LABEL: _f2
 ; CHECK-NEXT: 48 81 ec a8 00 00 00 	subq	$168, %rsp
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _f2:
 
 ; X86: f2:
@@ -82,7 +82,7 @@ define void @f3() "patchable-function"="prologue-short-redirect" optsize {
 ; CHECK-LABEL: _f3
 ; CHECK-NEXT: 66 90 	nop
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _f3:
 
 ; X86: f3:
@@ -140,7 +140,7 @@ bb21:
 ; CHECK-LABEL: _emptyfunc
 ; CHECK-NEXT: 0f 0b 	ud2
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _emptyfunc:
 
 ; X86: emptyfunc:
@@ -166,7 +166,7 @@ define i32 @emptyfunc() "patchable-function"="prologue-short-redirect" {
 ;   } while ((++(*b++)));
 ; }
 
-; CHECK-ALIGN: 	.p2align	4, 0x90
+; CHECK-ALIGN: 	.p2align	4
 ; CHECK-ALIGN: _jmp_to_start:
 
 ; X86: jmp_to_start:

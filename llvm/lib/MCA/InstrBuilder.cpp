@@ -17,6 +17,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MCA/Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,6 +28,8 @@ namespace llvm {
 namespace mca {
 
 char RecycledInstErr::ID = 0;
+
+template class LLVM_EXPORT_TEMPLATE InstructionError<MCInst>;
 
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
@@ -75,19 +78,22 @@ static void initializeUsedResources(InstrDesc &ID,
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
           << PR.Name << "\n";
-      WithColor::note() << "found in scheduling class " << SCDesc.Name
+      WithColor::note() << "found in scheduling class "
+                        << SM.getSchedClassName(ID.SchedClassID)
                         << " (write index #" << I << ")\n";
 #endif
       continue;
     }
 
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
-    if (PR.BufferSize < 0) {
+    // Reservation station scaling preserves whether a size is -1, 0, or 1.
+    const int BufferSize = PR.BufferSize;
+    if (BufferSize < 0) {
       AllInOrderResources = false;
     } else {
       Buffers.setBit(getResourceStateIndex(Mask));
-      AnyDispatchHazards |= (PR.BufferSize == 0);
-      AllInOrderResources &= (PR.BufferSize <= 1);
+      AnyDispatchHazards |= (BufferSize == 0);
+      AllInOrderResources &= (BufferSize <= 1);
     }
 
     CycleSegment RCy(0, PRE->ReleaseAtCycle, false);
@@ -183,10 +189,9 @@ static void initializeUsedResources(InstrDesc &ID,
   }
 
   // Identify extra buffers that are consumed through super resources.
-  for (const std::pair<uint64_t, unsigned> &SR : SuperResources) {
+  for (const auto &SR : SuperResources) {
     for (unsigned I = 1, E = NumProcResources; I < E; ++I) {
-      const MCProcResourceDesc &PR = *SM.getProcResource(I);
-      if (PR.BufferSize == -1)
+      if (SM.getProcResource(I)->BufferSize == -1)
         continue;
 
       uint64_t Mask = ProcResourceMasks[I];
@@ -219,11 +224,10 @@ static void initializeUsedResources(InstrDesc &ID,
   });
 }
 
-static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
-                              const MCSchedClassDesc &SCDesc,
-                              const MCSubtargetInfo &STI,
-                              unsigned CallLatency) {
-  if (MCDesc.isCall()) {
+static void computeMaxLatency(InstrDesc &ID, const MCSchedClassDesc &SCDesc,
+                              const MCSubtargetInfo &STI, unsigned CallLatency,
+                              bool IsCall) {
+  if (IsCall) {
     // We cannot estimate how long this call will take.
     // Artificially set an arbitrarily high latency.
     ID.MaxLatency = CallLatency;
@@ -338,10 +342,6 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
       OptionalDefIdx = CurrentDef++;
       continue;
     }
-    if (MRI.isConstant(Op.getReg())) {
-      CurrentDef++;
-      continue;
-    }
 
     WriteDescriptor &Write = ID.Writes[CurrentDef];
     Write.OpIndex = i;
@@ -420,8 +420,6 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     const MCOperand &Op = MCI.getOperand(OpIndex);
     if (!Op.isReg())
       continue;
-    if (MRI.isConstant(Op.getReg()))
-      continue;
 
     WriteDescriptor &Write = ID.Writes[CurrentDef];
     Write.OpIndex = OpIndex;
@@ -457,8 +455,6 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     const MCOperand &Op = MCI.getOperand(OpIndex);
     if (!Op.isReg())
       continue;
-    if (MRI.isConstant(Op.getReg()))
-      continue;
 
     ReadDescriptor &Read = ID.Reads[CurrentUse];
     Read.OpIndex = OpIndex;
@@ -476,8 +472,6 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.OpIndex = ~I;
     Read.UseIndex = NumExplicitUses + I;
     Read.RegisterID = MCDesc.implicit_uses()[I];
-    if (MRI.isConstant(Read.RegisterID))
-      continue;
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << ", RegisterID="
@@ -563,7 +557,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
          "Itineraries are not yet supported!");
 
   // Obtain the instruction descriptor from the opcode.
-  unsigned short Opcode = MCI.getOpcode();
+  unsigned Opcode = MCI.getOpcode();
   const MCInstrDesc &MCDesc = MCII.get(Opcode);
   const MCSchedModel &SM = STI.getSchedModel();
 
@@ -599,7 +593,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   ID->NumMicroOps = SCDesc.NumMicroOps;
   ID->SchedClassID = SchedClassID;
 
-  if (MCDesc.isCall() && FirstCallInst) {
+  bool IsCall = MCIA->isCall(MCI);
+  if (IsCall && FirstCallInst) {
     // We don't correctly model calls.
     WithColor::warning() << "found a call in the input assembly sequence.\n";
     WithColor::note() << "call instructions are not correctly modeled. "
@@ -607,7 +602,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     FirstCallInst = false;
   }
 
-  if (MCDesc.isReturn() && FirstReturnInst) {
+  if (MCIA->isReturn(MCI) && FirstReturnInst) {
     WithColor::warning() << "found a return instruction in the input"
                          << " assembly sequence.\n";
     WithColor::note() << "program counter updates are ignored.\n";
@@ -615,7 +610,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   }
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
-  computeMaxLatency(*ID, MCDesc, SCDesc, STI, CallLatency);
+  computeMaxLatency(*ID, SCDesc, STI, CallLatency, IsCall);
 
   if (Error Err = verifyOperands(MCDesc, MCI))
     return std::move(Err);
@@ -631,19 +626,23 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     return std::move(Err);
 
   // Now add the new descriptor.
+
+  if (IM.canCustomize(IVec)) {
+    IM.customize(IVec, *ID);
+    return *CustomDescriptors.emplace_back(std::move(ID));
+  }
+
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
-    Descriptors[DKey] = std::move(ID);
-    return *Descriptors[DKey];
+    return *(Descriptors[DKey] = std::move(ID));
   }
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   assert(
       !VariantDescriptors.contains(VDKey) &&
       "Expected VariantDescriptors to not already have a value for this key.");
-  VariantDescriptors[VDKey] = std::move(ID);
-  return *VariantDescriptors[VDKey];
+  return *(VariantDescriptors[VDKey] = std::move(ID));
 }
 
 Expected<const InstrDesc &>
@@ -665,8 +664,9 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   SchedClassID = *VariantSchedClassIDOrErr;
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
-  if (VariantDescriptors.contains(VDKey))
-    return *VariantDescriptors[VDKey];
+  auto It = VariantDescriptors.find(VDKey);
+  if (It != VariantDescriptors.end())
+    return *It->second;
 
   return createInstrDescImpl(MCI, IVec);
 }
@@ -676,7 +676,9 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
                                 const SmallVector<Instrument *> &IVec) {
-  Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
+  Expected<const InstrDesc &> DescOrErr = IM.canCustomize(IVec)
+                                              ? createInstrDescImpl(MCI, IVec)
+                                              : getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
@@ -734,7 +736,10 @@ InstrBuilder::createInstruction(const MCInst &MCI,
       // Skip non-register operands.
       if (!Op.isReg())
         continue;
-      RegID = Op.getReg();
+      // Skip constant register operands.
+      if (MRI.isConstant(Op.getReg()))
+        continue;
+      RegID = Op.getReg().id();
     } else {
       // Implicit read.
       RegID = RD.RegisterID;
@@ -800,7 +805,7 @@ InstrBuilder::createInstruction(const MCInst &MCI,
   Idx = 0U;
   for (const WriteDescriptor &WD : D.Writes) {
     RegID = WD.isImplicitWrite() ? WD.RegisterID
-                                 : MCI.getOperand(WD.OpIndex).getReg();
+                                 : MCI.getOperand(WD.OpIndex).getReg().id();
     // Check if this is a optional definition that references NoReg or a write
     // to a constant register.
     if ((WD.IsOptionalDef && !RegID) || MRI.isConstant(RegID)) {

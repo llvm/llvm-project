@@ -311,8 +311,10 @@ if.end:
 !0 = !{ !"an example type tree" }
 !1 = !{ !"int", !0 }
 !2 = !{ !"float", !0 }
-!3 = !{ !"const float", !2, i64 0 }
-!4 = !{ !"special float", !2, i64 1 }
+!3 = !{!5, !5, i64 0, i64 0}
+!4 = !{!6, !6, i64 0, i64 1}
+!5 = !{!"const float", !2}
+!6 = !{!"special float", !2}
 
 ; CHECK-LABEL: test13
 ; CHECK-DAG: select
@@ -762,13 +764,13 @@ if.end:
 ; CHECK-LABEL: test_pr36954
 ; CHECK-NOT: xor
 ; PR36954 reproducer containing self referencing instruction shouldn't crash GVNSink pass.
-define void @test_pr36954() {
+define void @test_pr36954(i1 %arg) {
 bb1:
   %i2 = trunc i32 undef to i8
   br label %bb2
 
 bb2:
-  br i1 undef, label %bb2, label %exit
+  br i1 %arg, label %bb2, label %exit
 
 bb4.critedge:
   %i6 = sub i8 %i2, undef

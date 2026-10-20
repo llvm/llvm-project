@@ -10,7 +10,6 @@
 #include "TypesInternal.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileEntry.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -48,7 +47,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
 llvm::StringRef Header::resolvedPath() const {
   switch (kind()) {
   case include_cleaner::Header::Physical:
-    return physical().getFileEntry().tryGetRealPathName();
+    return physical().getName();
   case include_cleaner::Header::Standard:
     return standard().name().trim("<>\"");
   case include_cleaner::Header::Verbatim:
@@ -101,14 +100,12 @@ std::string Include::quote() const {
       .str();
 }
 
-static llvm::SmallString<128> normalizePath(llvm::StringRef Path) {
+llvm::SmallString<128> normalizePath(llvm::StringRef Path) {
   namespace path = llvm::sys::path;
 
   llvm::SmallString<128> P = Path;
   path::remove_dots(P, /*remove_dot_dot=*/true);
   path::native(P, path::Style::posix);
-  while (!P.empty() && P.back() == '/')
-    P.pop_back();
   return P;
 }
 

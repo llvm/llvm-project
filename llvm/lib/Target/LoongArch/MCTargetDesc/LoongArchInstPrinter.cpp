@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchInstPrinter.h"
-#include "LoongArchBaseInfo.h"
 #include "LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
@@ -26,6 +24,11 @@ using namespace llvm;
 // Include the auto-generated portion of the assembly writer.
 #define PRINT_ALIAS_INSTR
 #include "LoongArchGenAsmWriter.inc"
+
+static cl::opt<bool>
+    NoAliases("loongarch-no-aliases",
+              cl::desc("Disable the emission of assembler pseudo instructions"),
+              cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
     NumericReg("loongarch-numeric-reg",
@@ -39,6 +42,11 @@ static cl::opt<bool>
 // be an easier way to allow these options in all these tools, without doing it
 // this way.
 bool LoongArchInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
+  if (Opt == "no-aliases") {
+    PrintAliases = false;
+    return true;
+  }
+
   if (Opt == "numeric") {
     NumericReg = true;
     return true;
@@ -51,13 +59,13 @@ void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                      StringRef Annot,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  if (!printAliasInstr(MI, Address, STI, O))
+  if (!PrintAliases || NoAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
   printAnnotation(O, Annot);
 }
 
-void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
-  O << '$' << getRegisterName(Reg);
+void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
+  markup(O, Markup::Register) << '$' << getRegisterName(Reg);
 }
 
 void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -71,12 +79,12 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    O << MO.getImm();
+    markup(O, Markup::Immediate) << MO.getImm();
     return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
@@ -85,6 +93,27 @@ void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   const MCOperand &MO = MI->getOperand(OpNo);
   assert(MO.isReg() && "printAtomicMemOp can only print register operands");
   printRegName(O, MO.getReg());
+}
+
+void LoongArchInstPrinter::printCFRSetDest(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  printRegName(O, MI->getOperand(OpNo).getReg());
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+}
+
+void LoongArchInstPrinter::printBranchOperand(const MCInst *MI,
+                                              uint64_t Address, unsigned OpNo,
+                                              const MCSubtargetInfo &STI,
+                                              raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
+  return printOperand(MI, OpNo, STI, O);
 }
 
 const char *LoongArchInstPrinter::getRegisterName(MCRegister Reg) {

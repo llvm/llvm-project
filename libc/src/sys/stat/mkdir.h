@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_MKDIR_H
 #define LLVM_LIBC_SRC_SYS_STAT_MKDIR_H
 
-#include <sys/stat.h>
+#include "hdr/types/mode_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int mkdir(const char *path, mode_t mode);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_MKDIR_H

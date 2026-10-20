@@ -45,6 +45,16 @@ test(Iter first, Iter last, const T& value)
         assert(std::greater<int>()(value, *j));
 }
 
+struct Val {
+    int val;
+};
+
+struct Comparator {
+    bool operator()(Val const& t, int x) const {
+        return t.val < x;
+    }
+};
+
 template <class Iter>
 void
 test()
@@ -62,6 +72,14 @@ test()
     std::sort(v.begin(), v.end(), std::greater<int>());
     for (x = 0; x <= M; ++x)
         test(Iter(v.data()), Iter(v.data()+v.size()), x);
+
+    // Make sure upper_bound works with a value that differs from the sequence's element type
+    {
+        int array[] = {1, 2, 3};
+        Val val = {2};
+        Iter result = std::upper_bound(Iter(array), Iter(array + 3), val, Comparator());
+        assert(result == Iter(array + 2));
+    }
 }
 
 int main(int, char**)

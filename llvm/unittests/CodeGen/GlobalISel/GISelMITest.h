@@ -53,11 +53,9 @@ std::ostream &
 operator<<(std::ostream &OS, const MachineFunction &MF);
 }
 
-static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                        std::unique_ptr<MIRParser> &MIR,
-                                        const TargetMachine &TM,
-                                        StringRef MIRCode, const char *FuncName,
-                                        MachineModuleInfo &MMI) {
+static std::unique_ptr<Module>
+parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
+         const TargetMachine &TM, StringRef MIRCode, MachineModuleInfo &MMI) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
@@ -68,7 +66,7 @@ static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   if (MIR->parseMachineFunctions(*M, MMI))
     return nullptr;
@@ -76,12 +74,11 @@ static std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   return M;
 }
 static std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
+createDummyModule(LLVMContext &Context, const TargetMachine &TM,
                   StringRef MIRString, const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
   auto MMI = std::make_unique<MachineModuleInfo>(&TM);
-  std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, TM, MIRString, FuncName, *MMI);
+  std::unique_ptr<Module> M = parseMIR(Context, MIR, TM, MIRString, *MMI);
   return make_pair(std::move(M), std::move(MMI));
 }
 
@@ -105,8 +102,8 @@ class GISelMITest : public ::testing::Test {
 protected:
   GISelMITest() : ::testing::Test() {}
 
-  /// Prepare a target specific LLVMTargetMachine.
-  virtual std::unique_ptr<LLVMTargetMachine> createTargetMachine() const = 0;
+  /// Prepare a target specific TargetMachine.
+  virtual std::unique_ptr<TargetMachine> createTargetMachine() const = 0;
 
   /// Get the stub sample MIR test function.
   virtual void getTargetTestModuleString(SmallString<512> &S,
@@ -127,10 +124,15 @@ protected:
     B.setMF(*MF);
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
+    RTLCI.emplace(TM->getTargetTriple());
+    const TargetSubtargetInfo &STI = MF->getSubtarget();
+    LibcallLowering.emplace(*RTLCI, [&STI](LibcallLoweringInfo &Info) {
+      STI.initLibcallLoweringInfo(Info);
+    });
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
       ModuleMMIPair;
@@ -138,16 +140,18 @@ protected:
   MachineBasicBlock *EntryMBB;
   MachineIRBuilder B;
   MachineRegisterInfo *MRI;
+  std::optional<RTLIB::RuntimeLibcallsInfo> RTLCI;
+  std::optional<LibcallLoweringInfo> LibcallLowering;
 };
 
 class AArch64GISelMITest : public GISelMITest {
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  std::unique_ptr<TargetMachine> createTargetMachine() const override;
   void getTargetTestModuleString(SmallString<512> &S,
                                  StringRef MIRFunc) const override;
 };
 
 class AMDGPUGISelMITest : public GISelMITest {
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  std::unique_ptr<TargetMachine> createTargetMachine() const override;
   void getTargetTestModuleString(SmallString<512> &S,
                                  StringRef MIRFunc) const override;
 };
@@ -167,9 +171,16 @@ class AMDGPUGISelMITest : public GISelMITest {
       (void)s64;                                                               \
       const LLT s128 = LLT::scalar(128);                                       \
       (void)s128;                                                              \
+      const LLT f16 = LLT::float16();                                          \
+      (void)f16;                                                               \
+      const LLT f32 = LLT::float32();                                          \
+      (void)f32;                                                               \
+      const LLT f64 = LLT::float64();                                          \
+      (void)f64;                                                               \
+      const LLT f128 = LLT::float128();                                        \
+      (void)f128;                                                              \
       do                                                                       \
         SettingUpActionsBlock while (0);                                       \
-      getLegacyLegalizerInfo().computeTables();                                \
       verify(*ST.getInstrInfo());                                              \
     }                                                                          \
   };

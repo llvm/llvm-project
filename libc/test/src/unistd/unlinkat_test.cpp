@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/fcntl/openat.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlinkat.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/stat.h>
+using LlvmLibcUnlinkatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
+TEST_F(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "testdata";
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
@@ -34,7 +35,7 @@ TEST(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
 }
 
-TEST(LlvmLibcUnlinkatTest, UnlinkatNonExistentFile) {
+TEST_F(LlvmLibcUnlinkatTest, UnlinkatNonExistentFile) {
   constexpr const char *FILENAME = "testdata";
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);

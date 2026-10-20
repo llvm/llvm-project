@@ -1,0 +1,10 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+c < %s 2>&1 | FileCheck %s --check-prefix=RV32
+# RUN: llvm-mc -disassemble -triple=riscv64 -mattr=+c < %s 2>&1 | FileCheck %s --check-prefix=RV64
+
+[0x13,0x9b,0xdb,0x02]
+# RV32: warning: invalid instruction encoding
+# RV64: slli    s6, s7, 45
+
+[0xfd,0x92]
+# RV32: warning: invalid instruction encoding
+# RV64: srli    a3, a3, 63

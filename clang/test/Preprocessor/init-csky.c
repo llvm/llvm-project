@@ -66,18 +66,23 @@
 // CSKY: #define __GNUC__ {{.*}}
 // CSKY: #define __GXX_ABI_VERSION {{.*}}
 // CSKY: #define __ILP32__ 1
+// CSKY: #define __INT16_C(c) c
 // CSKY: #define __INT16_C_SUFFIX__
 // CSKY: #define __INT16_MAX__ 32767
 // CSKY: #define __INT16_TYPE__ short
+// CSKY: #define __INT32_C(c) c
 // CSKY: #define __INT32_C_SUFFIX__
 // CSKY: #define __INT32_MAX__ 2147483647
 // CSKY: #define __INT32_TYPE__ int
+// CSKY: #define __INT64_C(c) c##LL
 // CSKY: #define __INT64_C_SUFFIX__ LL
 // CSKY: #define __INT64_MAX__ 9223372036854775807LL
 // CSKY: #define __INT64_TYPE__ long long int
+// CSKY: #define __INT8_C(c) c
 // CSKY: #define __INT8_C_SUFFIX__
 // CSKY: #define __INT8_MAX__ 127
 // CSKY: #define __INT8_TYPE__ signed char
+// CSKY: #define __INTMAX_C(c) c##LL
 // CSKY: #define __INTMAX_C_SUFFIX__ LL
 // CSKY: #define __INTMAX_MAX__ 9223372036854775807LL
 // CSKY: #define __INTMAX_TYPE__ long long int
@@ -152,18 +157,23 @@
 // CSKY: #define __STDC_UTF_32__ 1
 // CSKY: #define __STDC_VERSION__ 201710L
 // CSKY: #define __STDC__ 1
+// CSKY: #define __UINT16_C(c) c
 // CSKY: #define __UINT16_C_SUFFIX__
 // CSKY: #define __UINT16_MAX__ 65535
 // CSKY: #define __UINT16_TYPE__ unsigned short
+// CSKY: #define __UINT32_C(c) c##U
 // CSKY: #define __UINT32_C_SUFFIX__ U
 // CSKY: #define __UINT32_MAX__ 4294967295U
 // CSKY: #define __UINT32_TYPE__ unsigned int
+// CSKY: #define __UINT64_C(c) c##ULL
 // CSKY: #define __UINT64_C_SUFFIX__ ULL
 // CSKY: #define __UINT64_MAX__ 18446744073709551615ULL
 // CSKY: #define __UINT64_TYPE__ long long unsigned int
+// CSKY: #define __UINT8_C(c) c
 // CSKY: #define __UINT8_C_SUFFIX__
 // CSKY: #define __UINT8_MAX__ 255
 // CSKY: #define __UINT8_TYPE__ unsigned char
+// CSKY: #define __UINTMAX_C(c) c##ULL
 // CSKY: #define __UINTMAX_C_SUFFIX__ ULL
 // CSKY: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // CSKY: #define __UINTMAX_TYPE__ long long unsigned int

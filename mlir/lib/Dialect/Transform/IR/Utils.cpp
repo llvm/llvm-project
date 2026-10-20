@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/Utils.h"
+#include "mlir/Analysis/CallGraph.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -28,8 +33,8 @@ static bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
 /// Merge `func1` into `func2`. The two ops must be inside the same parent op
 /// and mergable according to `canMergeInto`. The function erases `func1` such
 /// that only `func2` exists when the function returns.
-static InFlightDiagnostic mergeInto(FunctionOpInterface func1,
-                                    FunctionOpInterface func2) {
+static LogicalResult mergeInto(FunctionOpInterface func1,
+                               FunctionOpInterface func2) {
   assert(canMergeInto(func1, func2));
   assert(func1->getParentOp() == func2->getParentOp() &&
          "expected func1 and func2 to be in the same parent op");
@@ -72,10 +77,41 @@ static InFlightDiagnostic mergeInto(FunctionOpInterface func1,
   assert(func1.isExternal());
   func1->erase();
 
-  return InFlightDiagnostic();
+  return success();
 }
 
-InFlightDiagnostic
+LogicalResult transform::detail::verifyNoRecursionInCallGraph(Operation *root) {
+  const mlir::CallGraph callgraph(root);
+  for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {
+    if (!scc.hasCycle())
+      continue;
+
+    // Need to check this here additionally because this verification may run
+    // before we check the nested operations.
+    if ((*scc->begin())->isExternal())
+      return root->emitOpError() << "contains a call to an external "
+                                    "operation, which is not allowed";
+
+    Operation *first = (*scc->begin())->getCallableRegion()->getParentOp();
+    InFlightDiagnostic diag = emitError(first->getLoc())
+                              << "recursion not allowed in named sequences";
+    for (auto it = std::next(scc->begin()); it != scc->end(); ++it) {
+      // Need to check this here additionally because this verification may
+      // run before we check the nested operations.
+      if ((*it)->isExternal()) {
+        return root->emitOpError() << "contains a call to an external "
+                                      "operation, which is not allowed";
+      }
+
+      Operation *current = (*it)->getCallableRegion()->getParentOp();
+      diag.attachNote(current->getLoc()) << "operation on recursion stack";
+    }
+    return diag;
+  }
+  return success();
+}
+
+LogicalResult
 transform::detail::mergeSymbolsInto(Operation *target,
                                     OwningOpRef<Operation *> other) {
   assert(target->hasTrait<OpTrait::SymbolTable>() &&
@@ -90,7 +126,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
   //
   // Rename private symbols in both ops in order to resolve conflicts that can
   // be resolved that way.
-  LLVM_DEBUG(DBGS() << "renaming private symbols to resolve conflicts:\n");
+  LDBG() << "renaming private symbols to resolve conflicts:";
   // TODO: Do we *actually* need to test in both directions?
   for (auto &&[symbolTable, otherSymbolTable] : llvm::zip(
            SmallVector<SymbolTable *, 2>{&targetSymbolTable, &otherSymbolTable},
@@ -102,7 +138,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       if (!symbolOp)
         continue;
       StringAttr name = symbolOp.getNameAttr();
-      LLVM_DEBUG(DBGS() << "  found @" << name.getValue() << "\n");
+      LDBG() << "  found @" << name.getValue();
 
       // Check if there is a colliding op in the other module.
       auto collidingOp =
@@ -110,30 +146,29 @@ transform::detail::mergeSymbolsInto(Operation *target,
       if (!collidingOp)
         continue;
 
-      LLVM_DEBUG(DBGS() << "    collision found for @" << name.getValue());
+      LDBG() << "    collision found for @" << name.getValue();
 
-      // Collisions are fine if both opt are functions and can be merged.
+      // Collisions are fine if both ops are functions and can be merged.
       if (auto funcOp = dyn_cast<FunctionOpInterface>(op),
           collidingFuncOp =
               dyn_cast<FunctionOpInterface>(collidingOp.getOperation());
           funcOp && collidingFuncOp) {
         if (canMergeInto(funcOp, collidingFuncOp) ||
             canMergeInto(collidingFuncOp, funcOp)) {
-          LLVM_DEBUG(llvm::dbgs() << " but both ops are functions and "
-                                     "will be merged\n");
+          LDBG() << " but both ops are functions and will be merged";
           continue;
         }
 
         // If they can't be merged, proceed like any other collision.
-        LLVM_DEBUG(llvm::dbgs() << " and both ops are function definitions");
+        LDBG() << " and both ops are function definitions";
       }
 
       // Collision can be resolved by renaming if one of the ops is private.
       auto renameToUnique =
           [&](SymbolOpInterface op, SymbolOpInterface otherOp,
               SymbolTable &symbolTable,
-              SymbolTable &otherSymbolTable) -> InFlightDiagnostic {
-        LLVM_DEBUG(llvm::dbgs() << ", renaming\n");
+              SymbolTable &otherSymbolTable) -> LogicalResult {
+        LDBG() << ", renaming";
         FailureOr<StringAttr> maybeNewName =
             symbolTable.renameToUnique(op, {&otherSymbolTable});
         if (failed(maybeNewName)) {
@@ -142,26 +177,23 @@ transform::detail::mergeSymbolsInto(Operation *target,
               << "attempted renaming due to collision with this op";
           return diag;
         }
-        LLVM_DEBUG(DBGS() << "      renamed to @" << maybeNewName->getValue()
-                          << "\n");
-        return InFlightDiagnostic();
+        LDBG() << "      renamed to @" << maybeNewName->getValue();
+        return success();
       };
 
       if (symbolOp.isPrivate()) {
-        InFlightDiagnostic diag = renameToUnique(
-            symbolOp, collidingOp, *symbolTable, *otherSymbolTable);
-        if (failed(diag))
-          return diag;
+        if (failed(renameToUnique(symbolOp, collidingOp, *symbolTable,
+                                  *otherSymbolTable)))
+          return failure();
         continue;
       }
       if (collidingOp.isPrivate()) {
-        InFlightDiagnostic diag = renameToUnique(
-            collidingOp, symbolOp, *otherSymbolTable, *symbolTable);
-        if (failed(diag))
-          return diag;
+        if (failed(renameToUnique(collidingOp, symbolOp, *otherSymbolTable,
+                                  *symbolTable)))
+          return failure();
         continue;
       }
-      LLVM_DEBUG(llvm::dbgs() << ", emitting error\n");
+      LDBG() << ", emitting error";
       InFlightDiagnostic diag = symbolOp.emitError()
                                 << "doubly defined symbol @" << name.getValue();
       diag.attachNote(collidingOp->getLoc()) << "previously defined here";
@@ -169,76 +201,131 @@ transform::detail::mergeSymbolsInto(Operation *target,
     }
   }
 
-  // TODO: This duplicates pass infrastructure. We should split this pass into
-  //       several and let the pass infrastructure do the verification.
+  // We only modified symbols above, so there is no need to verify everything
+  // again, just the symbol table.
   for (auto *op : SmallVector<Operation *>{target, *other}) {
-    if (failed(mlir::verify(op)))
-      return op->emitError() << "failed to verify input op after renaming";
+    if (failed(mlir::detail::verifySymbolTable(op)))
+      return op->emitError()
+             << "failed to verify symbol table after symbol renaming";
   }
 
   // Step 2:
   //
   // Move all ops from `other` into target and merge public symbols.
-  LLVM_DEBUG(DBGS() << "moving all symbols into target\n");
-  {
-    SmallVector<SymbolOpInterface> opsToMove;
-    for (Operation &op : other->getRegion(0).front()) {
-      if (auto symbol = dyn_cast<SymbolOpInterface>(op))
-        opsToMove.push_back(symbol);
-    }
-
-    for (SymbolOpInterface op : opsToMove) {
-      // Remember potentially colliding op in the target module.
-      auto collidingOp = cast_or_null<SymbolOpInterface>(
-          targetSymbolTable.lookup(op.getNameAttr()));
-
-      // Move op even if we get a collision.
-      LLVM_DEBUG(DBGS() << "  moving @" << op.getName());
-      op->moveBefore(&target->getRegion(0).front(),
-                     target->getRegion(0).front().end());
-
-      // If there is no collision, we are done.
-      if (!collidingOp) {
-        LLVM_DEBUG(llvm::dbgs() << " without collision\n");
-        continue;
-      }
-
-      // The two colliding ops must both be functions because we have already
-      // emitted errors otherwise earlier.
-      auto funcOp = cast<FunctionOpInterface>(op.getOperation());
-      auto collidingFuncOp =
-          cast<FunctionOpInterface>(collidingOp.getOperation());
-
-      // Both ops are in the target module now and can be treated
-      // symmetrically, so w.l.o.g. we can reduce to merging `funcOp` into
-      // `collidingFuncOp`.
-      if (!canMergeInto(funcOp, collidingFuncOp)) {
-        std::swap(funcOp, collidingFuncOp);
-      }
-      assert(canMergeInto(funcOp, collidingFuncOp));
-
-      LLVM_DEBUG(llvm::dbgs() << " with collision, trying to keep op at "
-                              << collidingFuncOp.getLoc() << ":\n"
-                              << collidingFuncOp << "\n");
-
-      // Update symbol table. This works with or without the previous `swap`.
-      targetSymbolTable.remove(funcOp);
-      targetSymbolTable.insert(collidingFuncOp);
-      assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
-
-      // Do the actual merging.
-      {
-        InFlightDiagnostic diag = mergeInto(funcOp, collidingFuncOp);
-        if (failed(diag))
-          return diag;
-      }
-    }
+  LDBG() << "moving all symbols into target";
+  SmallVector<SymbolOpInterface> processedSymbols;
+  for (Operation &op : other->getRegion(0).front()) {
+    if (auto symbol = dyn_cast<SymbolOpInterface>(op))
+      processedSymbols.push_back(symbol);
   }
 
-  if (failed(mlir::verify(target)))
-    return target->emitError()
-           << "failed to verify target op after merging symbols";
+  for (SymbolOpInterface &op : processedSymbols) {
+    // Remember potentially colliding op in the target module.
+    auto collidingOp = cast_or_null<SymbolOpInterface>(
+        targetSymbolTable.lookup(op.getNameAttr()));
 
-  LLVM_DEBUG(DBGS() << "done merging ops\n");
-  return InFlightDiagnostic();
+    // Move op even if we get a collision.
+    LDBG() << "  moving @" << op.getName();
+    op->moveBefore(&target->getRegion(0).front(),
+                   target->getRegion(0).front().end());
+
+    // If there is no collision, we are done -- keep the target symbol
+    // table in sync with the moved op so that subsequent lookups (and the
+    // post-merge validation below) remain efficient.
+    if (!collidingOp) {
+      LDBG() << " without collision";
+      targetSymbolTable.insert(op);
+      continue;
+    }
+
+    // The two colliding ops must both be functions because we have already
+    // emitted errors otherwise earlier.
+    auto funcOp = cast<FunctionOpInterface>(op.getOperation());
+    auto collidingFuncOp =
+        cast<FunctionOpInterface>(collidingOp.getOperation());
+
+    // Both ops are in the target module now and can be treated
+    // symmetrically, so w.l.o.g. we can reduce to merging `funcOp` into
+    // `collidingFuncOp`.
+    if (!canMergeInto(funcOp, collidingFuncOp)) {
+      std::swap(funcOp, collidingFuncOp);
+    }
+    assert(canMergeInto(funcOp, collidingFuncOp));
+
+    LDBG() << " with collision, trying to keep op at "
+           << collidingFuncOp.getLoc() << ":\n"
+           << collidingFuncOp;
+
+    // Update symbol table. This works with or without the previous `swap`.
+    targetSymbolTable.remove(funcOp);
+    targetSymbolTable.insert(collidingFuncOp);
+    assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
+
+    // Do the actual merging.
+    if (failed(mergeInto(funcOp, collidingFuncOp)))
+      return failure();
+
+    // After merging, only collidingFuncOp exists, update the list to reflect
+    // this.
+    op = collidingFuncOp;
+  }
+
+  // Symbol merging only moves callable ops between symbol tables; it does not
+  // alter the bodies that were already valid in the source modules. The only
+  // invariants that may newly be violated after merging are:
+  //   1. a call now refers to a callee whose body is structurally not legal to
+  //      inline at the call site (caught by the transform dialect's
+  //      `DialectInlinerInterface` implementation), or
+  //   2. the merged call graph contains a recursive cycle, which is forbidden
+  //      for `transform.named_sequence` callables (caught by the shared
+  //      `verifyNoRecursionInCallGraph` helper).
+  // Use the inliner interface methods directly (without running the inlining
+  // pass) to validate (1), and reuse the dialect's call-graph verifier for
+  // (2). The call graph builder requires call/callable ops to be well-formed,
+  // so pre-verify them here without recursing into their bodies.
+  WalkResult preVerify = target->walk([](Operation *nested) {
+    if (!isa<CallableOpInterface, CallOpInterface>(nested))
+      return WalkResult::advance();
+    if (failed(mlir::verify(nested, /*verifyRecursively=*/false)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (preVerify.wasInterrupted())
+    return failure();
+
+  InlinerInterface inliner(target->getContext());
+  WalkResult inlineCheck = target->walk([&](CallOpInterface call) {
+    Operation *callable = nullptr;
+    CallInterfaceCallable callee = call.getCallableForCallee();
+    if (auto symRef = dyn_cast<SymbolRefAttr>(callee)) {
+      // Fall back to full resolution for nested symbols, the table is
+      // one-level only.
+      if (isa<FlatSymbolRefAttr>(symRef))
+        callable = targetSymbolTable.lookup(symRef.getLeafReference());
+      else
+        callable = SymbolTable::lookupNearestSymbolFrom(call, symRef);
+    } else if (auto value = dyn_cast<Value>(callee)) {
+      callable = value.getDefiningOp();
+    }
+
+    if (!callable)
+      return WalkResult::advance();
+
+    // Only check symbols that we actually moved.
+    if (!llvm::is_contained(processedSymbols, callable))
+      return WalkResult::advance();
+    if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
+      InFlightDiagnostic diag =
+          call->emitError()
+          << "merged call is not legal to inline into its caller";
+      diag.attachNote(callable->getLoc()) << "callee defined here";
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  if (inlineCheck.wasInterrupted())
+    return failure();
+
+  LDBG() << "done merging ops";
+  return verifyNoRecursionInCallGraph(target);
 }

@@ -19,7 +19,7 @@ define void @test_nopair_st(ptr %ptr, <2 x double> %v1, <2 x double> %v2) {
 ; SLOW-NOT: ldp
 ; FAST: ldp
 define <2 x i64> @test_nopair_ld(ptr %p) {
-  %tmp1 = load <2 x i64>, < 2 x i64>* %p, align 8
+  %tmp1 = load <2 x i64>, ptr %p, align 8
   %add.ptr2 = getelementptr inbounds i64, ptr %p, i64 2
   %tmp2 = load <2 x i64>, ptr %add.ptr2, align 8
   %add = add nsw <2 x i64> %tmp1, %tmp2

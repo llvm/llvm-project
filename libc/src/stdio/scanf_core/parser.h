@@ -1,23 +1,30 @@
-//===-- Format string parser for scanf -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Format string parser for scanf.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/scanf_config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 #ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
@@ -77,7 +84,7 @@ public:
       if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
         section.max_width = result.value;
-        cur_pos = cur_pos + result.parsed_len;
+        cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
 
       // TODO(michaelrj): add posix allocate flag support.
@@ -145,14 +152,14 @@ public:
             // Technically there is no requirement to correct the ordering of
             // the range, but since the range operator is entirely
             // implementation defined it seems like a good convenience.
-            char a = str[cur_pos - 1];
-            char b = str[cur_pos + 1];
-            char start = (a < b ? a : b);
-            char end = (a < b ? b : a);
+            uint8_t a = static_cast<uint8_t>(str[cur_pos - 1]);
+            uint8_t b = static_cast<uint8_t>(str[cur_pos + 1]);
+            uint8_t start = cpp::min(a, b);
+            uint8_t end = cpp::max(a, b);
             scan_set.set_range(start, end);
             cur_pos += 2;
           } else {
-            scan_set.set(str[cur_pos]);
+            scan_set.set(static_cast<uint8_t>(str[cur_pos]));
             ++cur_pos;
           }
         }
@@ -236,10 +243,10 @@ private:
   LIBC_INLINE size_t parse_index(size_t *local_pos) {
     if (internal::isdigit(str[*local_pos])) {
       auto result = internal::strtointeger<int>(str + *local_pos, 10);
-      size_t index = result.value;
-      if (str[*local_pos + result.parsed_len] != '$')
+      size_t index = static_cast<size_t>(result.value);
+      if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
-      *local_pos = 1 + result.parsed_len + *local_pos;
+      *local_pos = static_cast<size_t>(1 + result.parsed_len) + *local_pos;
       return index;
     }
     return 0;
@@ -279,6 +286,6 @@ private:
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H

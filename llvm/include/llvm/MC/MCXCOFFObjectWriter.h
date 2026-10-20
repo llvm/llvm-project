@@ -15,7 +15,7 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
-class MCXCOFFObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCXCOFFObjectTargetWriter : public MCObjectTargetWriter {
 protected:
   MCXCOFFObjectTargetWriter(bool Is64Bit);
 
@@ -39,7 +39,20 @@ private:
   bool Is64Bit;
 };
 
-std::unique_ptr<MCObjectWriter>
+class XCOFFObjectWriter : public MCObjectWriter {
+  // AIX specific CPU type.
+  std::string CPUType;
+
+public:
+  virtual void addExceptionEntry(const MCSymbol *Symbol, const MCSymbol *Trap,
+                                 unsigned LanguageCode, unsigned ReasonCode,
+                                 unsigned FunctionSize, bool hasDebug) = 0;
+  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) = 0;
+  StringRef getCPUType() const { return CPUType; }
+  void setCPU(StringRef TargetCPU) { CPUType = TargetCPU; }
+};
+
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createXCOFFObjectWriter(std::unique_ptr<MCXCOFFObjectTargetWriter> MOTW,
                         raw_pwrite_stream &OS);
 

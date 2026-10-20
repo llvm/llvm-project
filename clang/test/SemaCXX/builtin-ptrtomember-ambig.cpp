@@ -18,7 +18,7 @@ struct C : B {
 
 void foo(C c, int A::* pmf) {
 	int i = c->*pmf; 	// expected-error {{use of overloaded operator '->*' is ambiguous}} \
-				// expected-note {{built-in candidate operator->*(const struct A *, int struct A::*)}} \
-				// expected-note {{built-in candidate operator->*(struct A *, int struct A::*)}}
+				// expected-note {{built-in candidate operator->*(const struct A *, int A::*)}} \
+				// expected-note {{built-in candidate operator->*(struct A *, int A::*)}}
 }
 

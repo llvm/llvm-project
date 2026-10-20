@@ -13,9 +13,11 @@
 // propagate_const(propagate_const&&)=default;
 
 #include <experimental/propagate_const>
+#include <cassert>
+#include <utility>
+
 #include "test_macros.h"
 #include "propagate_const_helpers.h"
-#include <cassert>
 
 using std::experimental::propagate_const;
 

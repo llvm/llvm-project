@@ -51,22 +51,22 @@ vector_uint4 vui4;
 void foo(void) {
   vc8 = 1 << vc8;
 // CHECK: [[t0:%.+]] = load <8 x i8>, ptr {{@.+}},
-// CHECK: shl <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[t0]]
+// CHECK: shl <8 x i8> splat (i8 1), [[t0]]
   vuc8 = 1 << vuc8;
 // CHECK: [[t1:%.+]] = load <8 x i8>, ptr {{@.+}},
-// CHECK: shl <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[t1]]
+// CHECK: shl <8 x i8> splat (i8 1), [[t1]]
   vi8 = 1 << vi8;
 // CHECK: [[t2:%.+]] = load <8 x i32>, ptr {{@.+}},
-// CHECK: shl <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[t2]]
+// CHECK: shl <8 x i32> splat (i32 1), [[t2]]
   vui8 = 1 << vui8;
 // CHECK: [[t3:%.+]] = load <8 x i32>, ptr {{@.+}},
-// CHECK: shl <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[t3]]
+// CHECK: shl <8 x i32> splat (i32 1), [[t3]]
   vs8 = 1 << vs8;
 // CHECK: [[t4:%.+]] = load <8 x i16>, ptr {{@.+}},
-// CHECK: shl <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, [[t4]]
+// CHECK: shl <8 x i16> splat (i16 1), [[t4]]
   vus8 = 1 << vus8;
 // CHECK: [[t5:%.+]] = load <8 x i16>, ptr {{@.+}},
-// CHECK: shl <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, [[t5]]
+// CHECK: shl <8 x i16> splat (i16 1), [[t5]]
 
   vc8 = c << vc8;
 // CHECK: [[t6:%.+]] = load i8, ptr @c,
@@ -104,7 +104,7 @@ void foo(void) {
 // CHECK: shl <8 x i16> [[splat_splat20]], [[t15]]
   vus8 = 1 << vus8;
 // CHECK: [[t16:%.+]] = load <8 x i16>, ptr {{@.+}},
-// CHECK: [[shl22:%.+]] = shl <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, [[t16]]
+// CHECK: [[shl22:%.+]] = shl <8 x i16> splat (i16 1), [[t16]]
 
  vc8 = vc8 << vc8;
 // CHECK: [[t17:%.+]] = load <8 x i8>, ptr {{@.+}},

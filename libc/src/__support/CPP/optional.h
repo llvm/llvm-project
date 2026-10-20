@@ -12,8 +12,9 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // Trivial nullopt_t struct.
@@ -130,9 +131,20 @@ public:
   LIBC_INLINE constexpr T &&operator*() && {
     return move(storage.stored_value);
   }
+
+  template <typename U>
+  LIBC_INLINE constexpr T value_or(U &&default_value) const & {
+    return has_value() ? storage.stored_value
+                       : static_cast<T>(forward<U>(default_value));
+  }
+
+  template <typename U> LIBC_INLINE constexpr T value_or(U &&default_value) && {
+    return has_value() ? move(storage.stored_value)
+                       : static_cast<T>(forward<U>(default_value));
+  }
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_OPTIONAL_H

@@ -12,6 +12,7 @@
 
 #include <iterator>
 
+#include <algorithm>
 #include <cassert>
 
 #include "test_iterators.h"
@@ -32,12 +33,16 @@ constexpr void check(int* first, std::iter_difference_t<It> n, int* expected) {
 
   // Count operations
   if constexpr (Count) {
-    auto it = stride_counting_iterator(It(first));
+    IteratorOpCounts ops;
+    auto it = operation_counting_iterator(It(first), &ops);
     std::ranges::advance(it, n);
     if constexpr (std::random_access_iterator<It>) {
-      assert(it.stride_count() <= 1);
+      assert(ops.increments + ops.decrements <= 1);
     } else {
-      assert(it.stride_count() == abs(M));
+      const auto big   = std::max(ops.increments, ops.decrements);
+      const auto small = std::min(ops.increments, ops.decrements);
+      assert(big == std::size_t(abs(M)));
+      assert(small == 0);
     }
   }
 }

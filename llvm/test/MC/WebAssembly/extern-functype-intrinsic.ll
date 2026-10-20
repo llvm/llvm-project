@@ -1,5 +1,5 @@
-; RUN: llc %s -o - | FileCheck %s
-; RUN: llc %s -o - | llvm-mc -triple=wasm32-unknown-unknown | FileCheck %s
+; RUN: llc %s -mattr=-bulk-memory,-bulk-memory-opt -o - | FileCheck %s
+; RUN: llc %s -mattr=-bulk-memory,-bulk-memory-opt -o - | llvm-mc -triple=wasm32-unknown-unknown | FileCheck %s
 
 ; ModuleID = 'test.c'
 source_filename = "test.c"

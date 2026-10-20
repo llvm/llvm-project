@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 #define LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 
-#include <sys/random.h>
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H

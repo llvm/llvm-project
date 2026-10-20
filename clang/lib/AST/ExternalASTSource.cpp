@@ -16,10 +16,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <optional>
@@ -38,6 +36,10 @@ ExternalASTSource::getSourceDescriptor(unsigned ID) {
 ExternalASTSource::ExtKind
 ExternalASTSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
+}
+
+bool ExternalASTSource::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return false;
 }
 
 void ExternalASTSource::FindFileRegionDecls(FileID File, unsigned Offset,
@@ -92,9 +94,18 @@ ExternalASTSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   return nullptr;
 }
 
-bool
-ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                  DeclarationName Name) {
+bool ExternalASTSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(const Decl *D, bool) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(
+    const Decl *D, ArrayRef<TemplateArgument>) {
   return false;
 }
 
@@ -107,19 +118,27 @@ void ExternalASTSource::FindExternalLexicalDecls(
 void ExternalASTSource::getMemoryBufferSizes(MemoryBufferSizes &sizes) const {}
 
 uint32_t ExternalASTSource::incrementGeneration(ASTContext &C) {
-  uint32_t OldGeneration = CurrentGeneration;
-
   // Make sure the generation of the topmost external source for the context is
   // incremented. That might not be us.
   auto *P = C.getExternalSource();
-  if (P && P != this)
+  if (P && P != this) {
+    // The call itself returns the OldGeneration of the topmost external source.
     CurrentGeneration = P->incrementGeneration(C);
-  else {
-    // FIXME: Only bump the generation counter if the current generation number
-    // has been observed?
-    if (!++CurrentGeneration)
-      llvm::report_fatal_error("generation counter overflowed", false);
   }
 
+  uint32_t OldGeneration = CurrentGeneration;
+
+  // FIXME: Only bump the generation counter if the current generation number
+  // has been observed?
+  if (!++CurrentGeneration)
+    llvm::reportFatalUsageError("generation counter overflowed");
+
   return OldGeneration;
+}
+
+LazyGenerationalDeclPtr::ValueType
+LazyGenerationalDeclPtr::makeValue(const ASTContext &Ctx, Decl *Value) {
+  if (auto *Source = Ctx.getExternalSource())
+    return new (Ctx) LazyData(Source, Value);
+  return Value;
 }

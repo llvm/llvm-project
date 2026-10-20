@@ -1,5 +1,5 @@
-; RUN: llc  < %s -march=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=32R2
-; RUN: llc  < %s -march=mips -mattr=mips16 | FileCheck %s -check-prefix=16
+; RUN: llc  < %s -mtriple=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=32R2
+; RUN: llc  < %s -mtriple=mips -mattr=mips16 | FileCheck %s -check-prefix=16
 
 define i32 @ext0_5_9(i32 %s, i32 %pos, i32 %sz) nounwind readnone {
 entry:
@@ -21,4 +21,22 @@ entry:
   %or = or i32 %and5, %shl
   store i32 %or, ptr %d, align 4
   ret void
+}
+
+; Sink the shared shift to combine it with the mask in a successor block.
+define i32 @ext_in_successor(i32 %s, i1 zeroext %cond) {
+; 32R2-LABEL: ext_in_successor:
+; 32R2: ext ${{[0-9]+}}, $4, 5, 9
+; 16-LABEL: ext_in_successor:
+; 16-NOT: ext ${{[0-9]+}}
+entry:
+  %shr = lshr i32 %s, 5
+  br i1 %cond, label %extract, label %full
+
+extract:
+  %masked = and i32 %shr, 511
+  ret i32 %masked
+
+full:
+  ret i32 %shr
 }

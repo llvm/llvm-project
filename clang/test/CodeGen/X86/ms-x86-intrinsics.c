@@ -158,20 +158,20 @@ __int64 test__mulh(__int64 a, __int64 b) {
   return __mulh(a, b);
 }
 // CHECK-X64-LABEL: define dso_local range(i64 -4611686018427387904, 4611686018427387905) i64 @test__mulh(i64 noundef %a, i64 noundef %b)
-// CHECK-X64: = mul nsw i128 %
+// CHECK-X64: = tail call i64 @llvm.smulh.i64(i64 %a, i64 %b)
 
 unsigned __int64 test__umulh(unsigned __int64 a, unsigned __int64 b) {
   return __umulh(a, b);
 }
 // CHECK-X64-LABEL: define dso_local range(i64 0, -1) i64 @test__umulh(i64 noundef %a, i64 noundef %b)
-// CHECK-X64: = mul nuw i128 %
+// CHECK-X64: = tail call i64 @llvm.umulh.i64(i64 %a, i64 %b)
 
 __int64 test_mul128(__int64 Multiplier,
                     __int64 Multiplicand,
                     __int64 *HighProduct) {
   return _mul128(Multiplier, Multiplicand, HighProduct);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test_mul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{[a-z_ ]*}}%HighProduct)
+// CHECK-X64-LABEL: define dso_local i64 @test_mul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{.*}} initializes((0, 8)) %HighProduct)
 // CHECK-X64: = sext i64 %Multiplier to i128
 // CHECK-X64: = sext i64 %Multiplicand to i128
 // CHECK-X64: = mul nsw i128 %
@@ -183,7 +183,7 @@ unsigned __int64 test_umul128(unsigned __int64 Multiplier,
                               unsigned __int64 *HighProduct) {
   return _umul128(Multiplier, Multiplicand, HighProduct);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test_umul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{[a-z_ ]*}}%HighProduct)
+// CHECK-X64-LABEL: define dso_local i64 @test_umul128(i64 noundef %Multiplier, i64 noundef %Multiplicand, ptr{{.*}} initializes((0, 8)) %HighProduct)
 // CHECK-X64: = zext i64 %Multiplier to i128
 // CHECK-X64: = zext i64 %Multiplicand to i128
 // CHECK-X64: = mul nuw i128 %

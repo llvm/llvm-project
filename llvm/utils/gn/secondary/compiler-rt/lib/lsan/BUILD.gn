@@ -1,7 +1,6 @@
 source_set("common_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "UBSAN_CAN_USE_CXXABI" ]
   deps = [
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/sanitizer_common:sources",
@@ -18,7 +17,6 @@ source_set("common_sources") {
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  defines = [ "UBSAN_CAN_USE_CXXABI" ]
   deps = [
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/sanitizer_common:sources",

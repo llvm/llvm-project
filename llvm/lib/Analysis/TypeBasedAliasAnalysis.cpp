@@ -15,13 +15,7 @@
 // typical C/C++ TBAA, but it can also be used to implement custom alias
 // analysis behavior for other languages.
 //
-// We now support two types of metadata format: scalar TBAA and struct-path
-// aware TBAA. After all testing cases are upgraded to use struct-path aware
-// TBAA and we can auto-upgrade existing bc files, the support for scalar TBAA
-// can be dropped.
-//
-// The scalar TBAA metadata format is very simple. TBAA MDNodes have up to
-// three fields, e.g.:
+// Scalar type nodes have up to three fields, e.g.:
 //   !0 = !{ !"an example type tree" }
 //   !1 = !{ !"int", !0 }
 //   !2 = !{ !"float", !0 }
@@ -44,8 +38,8 @@
 // should return true; see
 // http://llvm.org/docs/AliasAnalysis.html#OtherItfs).
 //
-// With struct-path aware TBAA, the MDNodes attached to an instruction using
-// "!tbaa" are called path tag nodes.
+// The MDNodes attached to an instruction using "!tbaa" are not plain type
+// nodes, but path tag nodes.
 //
 // The path tag node has 4 fields with the last field being optional.
 //
@@ -115,6 +109,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -173,18 +168,6 @@ public:
       return TBAANodeImpl<MDNodeTy>();
     // Ok, this node has a valid parent. Return it.
     return TBAANodeImpl<MDNodeTy>(P);
-  }
-
-  /// Test if this TBAANode represents a type for objects which are
-  /// not modified (by any means) in the context where this
-  /// AliasAnalysis is relevant.
-  bool isTypeImmutable() const {
-    if (Node->getNumOperands() < 3)
-      return false;
-    ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(2));
-    if (!CI)
-      return false;
-    return CI->getValue()[0];
   }
 };
 
@@ -363,19 +346,10 @@ public:
 
 } // end anonymous namespace
 
-/// Check the first operand of the tbaa tag node, if it is a MDNode, we treat
-/// it as struct-path aware TBAA format, otherwise, we treat it as scalar TBAA
-/// format.
-static bool isStructPathTBAA(const MDNode *MD) {
-  // Anonymous TBAA root starts with a MDNode and dragonegg uses it as
-  // a TBAA tag.
-  return isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3;
-}
-
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
                                      AAQueryInfo &AAQI, const Instruction *) {
-  if (!EnableTBAA)
+  if (!shouldUseTBAA())
     return AliasResult::MayAlias;
 
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
@@ -385,10 +359,30 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
   return AliasResult::NoAlias;
 }
 
+AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
+                                          const Instruction *CtxI) {
+  if (!shouldUseTBAA())
+    return AliasResult::MayAlias;
+
+  const auto *N = Loc.AATags.TBAA;
+  if (!N)
+    return AliasResult::MayAlias;
+
+  // There cannot be any alias with errno if TBAA proves the given memory
+  // location does not alias errno.
+  const auto *ErrnoTBAAMD =
+      CtxI->getModule()->getNamedMetadata("llvm.errno.tbaa");
+  if (!ErrnoTBAAMD || any_of(ErrnoTBAAMD->operands(), [&](const auto *Node) {
+        return Aliases(N, Node);
+      }))
+    return AliasResult::MayAlias;
+  return AliasResult::NoAlias;
+}
+
 ModRefInfo TypeBasedAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                                 AAQueryInfo &AAQI,
                                                 bool IgnoreLocals) {
-  if (!EnableTBAA)
+  if (!shouldUseTBAA())
     return ModRefInfo::ModRef;
 
   const MDNode *M = Loc.AATags.TBAA;
@@ -397,8 +391,7 @@ ModRefInfo TypeBasedAAResult::getModRefInfoMask(const MemoryLocation &Loc,
 
   // If this is an "immutable" type, we can assume the pointer is pointing
   // to constant memory.
-  if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
-      (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
+  if (TBAAStructTagNode(M).isTypeImmutable())
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
@@ -406,13 +399,12 @@ ModRefInfo TypeBasedAAResult::getModRefInfoMask(const MemoryLocation &Loc,
 
 MemoryEffects TypeBasedAAResult::getMemoryEffects(const CallBase *Call,
                                                   AAQueryInfo &AAQI) {
-  if (!EnableTBAA)
+  if (!shouldUseTBAA())
     return MemoryEffects::unknown();
 
   // If this is an "immutable" type, the access is not observable.
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
-    if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
-        (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
+    if (TBAAStructTagNode(M).isTypeImmutable())
       return MemoryEffects::none();
 
   return MemoryEffects::unknown();
@@ -426,7 +418,7 @@ MemoryEffects TypeBasedAAResult::getMemoryEffects(const Function *F) {
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
                                             const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI) {
-  if (!EnableTBAA)
+  if (!shouldUseTBAA())
     return ModRefInfo::ModRef;
 
   if (const MDNode *L = Loc.AATags.TBAA)
@@ -440,7 +432,7 @@ ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
                                             const CallBase *Call2,
                                             AAQueryInfo &AAQI) {
-  if (!EnableTBAA)
+  if (!shouldUseTBAA())
     return ModRefInfo::ModRef;
 
   if (const MDNode *M1 = Call1->getMetadata(LLVMContext::MD_tbaa))
@@ -452,16 +444,6 @@ ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call1,
 }
 
 bool MDNode::isTBAAVtableAccess() const {
-  if (!isStructPathTBAA(this)) {
-    if (getNumOperands() < 1)
-      return false;
-    if (MDString *Tag1 = dyn_cast<MDString>(getOperand(0))) {
-      if (Tag1->getString() == "vtable pointer")
-        return true;
-    }
-    return false;
-  }
-
   // For struct-path aware TBAA, we use the access type of the tag.
   TBAAStructTagNode Tag(this);
   TBAAStructTypeNode AccessType(Tag.getAccessType());
@@ -525,6 +507,8 @@ AAMDNodes AAMDNodes::merge(const AAMDNodes &Other) const {
   Result.TBAAStruct = nullptr;
   Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
   Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
+  Result.NoAliasAddrSpace = MDNode::getMostGenericNoaliasAddrspace(
+      NoAliasAddrSpace, Other.NoAliasAddrSpace);
   return Result;
 }
 
@@ -533,6 +517,8 @@ AAMDNodes AAMDNodes::concat(const AAMDNodes &Other) const {
   Result.TBAA = Result.TBAAStruct = nullptr;
   Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
   Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
+  Result.NoAliasAddrSpace = MDNode::getMostGenericNoaliasAddrspace(
+      NoAliasAddrSpace, Other.NoAliasAddrSpace);
   return Result;
 }
 
@@ -613,12 +599,24 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
     }
 
     if (BaseType.getNode() == SubobjectTag.getBaseType()) {
-      bool SameMemberAccess = OffsetInBase == SubobjectTag.getOffset();
+      MayAlias = OffsetInBase == SubobjectTag.getOffset() ||
+                 BaseType.getNode() == BaseTag.getAccessType() ||
+                 SubobjectTag.getBaseType() == SubobjectTag.getAccessType();
       if (GenericTag) {
-        *GenericTag = SameMemberAccess ? SubobjectTag.getNode() :
-                                         createAccessTag(CommonType);
+        if (!MayAlias) {
+          *GenericTag = createAccessTag(CommonType);
+        } else if (SubobjectTag.isTypeImmutable() &&
+                   !BaseTag.isTypeImmutable()) {
+          // The generic tag can only be immutable if both accesses are, so
+          // drop the flag and keep the rest of the tag.
+          const MDNode *Tag = SubobjectTag.getNode();
+          unsigned FlagOpNo = SubobjectTag.isNewFormat() ? 4 : 3;
+          SmallVector<Metadata *, 4> Ops(Tag->operands().take_front(FlagOpNo));
+          *GenericTag = MDNode::get(Tag->getContext(), Ops);
+        } else {
+          *GenericTag = SubobjectTag.getNode();
+        }
       }
-      MayAlias = SameMemberAccess;
       return true;
     }
 
@@ -666,11 +664,6 @@ static bool matchAccessTags(const MDNode *A, const MDNode *B,
     return true;
   }
 
-  // Verify that both input nodes are struct-path aware.  Auto-upgrade should
-  // have taken care of this.
-  assert(isStructPathTBAA(A) && "Access A is not struct-path aware!");
-  assert(isStructPathTBAA(B) && "Access B is not struct-path aware!");
-
   TBAAStructTagNode TagA(A), TagB(B);
   const MDNode *CommonType = getLeastCommonType(TagA.getAccessType(),
                                                 TagB.getAccessType());
@@ -704,10 +697,14 @@ bool TypeBasedAAResult::Aliases(const MDNode *A, const MDNode *B) const {
   return matchAccessTags(A, B);
 }
 
+bool TypeBasedAAResult::shouldUseTBAA() const {
+  return EnableTBAA && !UsingTypeSanitizer;
+}
+
 AnalysisKey TypeBasedAA::Key;
 
 TypeBasedAAResult TypeBasedAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return TypeBasedAAResult();
+  return TypeBasedAAResult(F.hasFnAttribute(Attribute::SanitizeType));
 }
 
 char TypeBasedAAWrapperPass::ID = 0;
@@ -718,12 +715,10 @@ ImmutablePass *llvm::createTypeBasedAAWrapperPass() {
   return new TypeBasedAAWrapperPass();
 }
 
-TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {
-  initializeTypeBasedAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {}
 
 bool TypeBasedAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new TypeBasedAAResult());
+  Result.reset(new TypeBasedAAResult(/*UsingTypeSanitizer=*/false));
   return false;
 }
 
@@ -740,9 +735,6 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;
-  // Fast path if there's no path tbaa node (and thus scalar)
-  if (!isStructPathTBAA(MD))
-    return MD;
 
   // The correct behavior here is to add the offset into the TBAA
   // struct node offset. The base type, however may not have defined
@@ -753,6 +745,17 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   //
   // This, however, should be revisited in the future.
   return MD;
+}
+
+// Read a !tbaa.struct field entry (an offset or a size) as a 64-bit value.
+// Returns std::nullopt if it does not fit in 64 bits.
+static std::optional<uint64_t> getTBAAStructFieldAsInt64(const MDOperand &Op) {
+  return mdconst::extract<ConstantInt>(Op)->getValue().tryZExtValue();
+}
+
+static bool isScalarAccessTag(const MDNode *Tag) {
+  TBAAStructTagNode T(Tag);
+  return T.getAccessType() == T.getBaseType();
 }
 
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
@@ -790,11 +793,6 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
   if (Len == 0)
     return nullptr;
 
-  // Regular TBAA is invariant of length, so we only need to consider
-  // struct-path TBAA.
-  if (!isStructPathTBAA(MD))
-    return MD;
-
   TBAAStructTagNode Tag(MD);
 
   // Only new format TBAA has a size
@@ -807,7 +805,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 
   // Otherwise, create TBAA with the new Len
   ArrayRef<MDOperand> MDOperands = MD->operands();
-  SmallVector<Metadata *, 4> NextNodes(MDOperands.begin(), MDOperands.end());
+  SmallVector<Metadata *, 4> NextNodes(MDOperands);
   ConstantInt *PreviousSize = mdconst::extract<ConstantInt>(NextNodes[3]);
 
   // Don't create a new MDNode if it is the same length.
@@ -822,16 +820,31 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (M && M->getNumOperands() >= 3 && M->getOperand(0) &&
-      mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
-      M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
-          AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2))) {
-    New.TBAAStruct = nullptr;
-    New.TBAA = cast<MDNode>(M->getOperand(2));
+
+  // The access may cover several !tbaa.struct fields (e.g. a {int, int} copy
+  // widened to an i64 load/store). If those fields share a single tag and tile
+  // [0, AccessSize) with no gaps, that tag still describes the whole access.
+  New.TBAAStruct = nullptr;
+  if (New.TBAA || !M)
+    return New;
+  MDNode *CommonTag = nullptr;
+  uint64_t Offset = 0;
+  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E && Offset < AccessSize;
+       I += 3) {
+    std::optional<uint64_t> FieldOffset =
+        getTBAAStructFieldAsInt64(M->getOperand(I));
+    std::optional<uint64_t> FieldSize =
+        getTBAAStructFieldAsInt64(M->getOperand(I + 1));
+    MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
+    if (!FieldOffset || !FieldSize || !FieldTag ||
+        !isScalarAccessTag(FieldTag) || *FieldOffset != Offset ||
+        (CommonTag && FieldTag != CommonTag))
+      break;
+    CommonTag = FieldTag;
+    Offset += *FieldSize;
   }
+  if (Offset == AccessSize)
+    New.TBAA = CommonTag;
   return New;
 }
 

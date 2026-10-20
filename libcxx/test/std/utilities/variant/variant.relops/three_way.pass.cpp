@@ -148,18 +148,18 @@ concept has_three_way_op = requires (T& t, U& u) { t <=> u; };
 using std::three_way_comparable;
 
 struct HasSimpleOrdering {
-  constexpr bool operator==(const HasSimpleOrdering&) const;
-  constexpr bool operator<(const HasSimpleOrdering&) const;
+  bool operator==(const HasSimpleOrdering&) const;
+  bool operator<(const HasSimpleOrdering&) const;
 };
 
 struct HasOnlySpaceship {
-  constexpr bool operator==(const HasOnlySpaceship&) const = delete;
-  constexpr std::weak_ordering operator<=>(const HasOnlySpaceship&) const;
+  bool operator==(const HasOnlySpaceship&) const = delete;
+  std::weak_ordering operator<=>(const HasOnlySpaceship&) const;
 };
 
 struct HasFullOrdering {
-  constexpr bool operator==(const HasFullOrdering&) const;
-  constexpr std::weak_ordering operator<=>(const HasFullOrdering&) const;
+  bool operator==(const HasFullOrdering&) const;
+  std::weak_ordering operator<=>(const HasFullOrdering&) const;
 };
 
 // operator<=> must resolve the return types of all its union types'

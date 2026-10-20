@@ -248,6 +248,7 @@ public:
   bool VisitUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D);
   bool VisitStaticAssertDecl(StaticAssertDecl *D);
   bool VisitFriendDecl(FriendDecl *D);
+  bool VisitFriendTemplateDecl(FriendTemplateDecl *D);
   bool VisitDecompositionDecl(DecompositionDecl *D);
   bool VisitConceptDecl(ConceptDecl *D);
   bool VisitTypeConstraint(const TypeConstraint &TC);
@@ -255,12 +256,12 @@ public:
 
   // Name visitor
   bool VisitDeclarationNameInfo(DeclarationNameInfo Name);
-  bool VisitNestedNameSpecifier(NestedNameSpecifier *NNS, SourceRange Range);
   bool VisitNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
 
   // Template visitors
   bool VisitTemplateParameters(const TemplateParameterList *Params);
-  bool VisitTemplateName(TemplateName Name, SourceLocation Loc);
+  bool VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
+                         NestedNameSpecifierLoc NNS);
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL);
 
   // Type visitors

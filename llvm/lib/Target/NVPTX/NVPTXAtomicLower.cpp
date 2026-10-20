@@ -10,11 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXAtomicLower.h"
+#include "NVPTX.h"
 #include "llvm/CodeGen/StackProtector.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
@@ -22,27 +20,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 using namespace llvm;
 
-namespace {
-// Hoisting the alloca instructions in the non-entry blocks to the entry
-// block.
-class NVPTXAtomicLower : public FunctionPass {
-public:
-  static char ID; // Pass ID
-  NVPTXAtomicLower() : FunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-  }
-
-  StringRef getPassName() const override {
-    return "NVPTX lower atomics of local memory";
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-} // namespace
-
-bool NVPTXAtomicLower::runOnFunction(Function &F) {
+static bool lowerLocalMemoryAtomics(Function &F) {
   SmallVector<AtomicRMWInst *> LocalMemoryAtomics;
   for (Instruction &I : instructions(F))
     if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I))
@@ -55,16 +33,39 @@ bool NVPTXAtomicLower::runOnFunction(Function &F) {
   return Changed;
 }
 
-char NVPTXAtomicLower::ID = 0;
+namespace {
+class NVPTXAtomicLowerLegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass ID
+  NVPTXAtomicLowerLegacyPass() : FunctionPass(ID) {}
 
-namespace llvm {
-void initializeNVPTXAtomicLowerPass(PassRegistry &);
-}
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
 
-INITIALIZE_PASS(NVPTXAtomicLower, "nvptx-atomic-lower",
+  StringRef getPassName() const override {
+    return "NVPTX lower atomics of local memory";
+  }
+
+  bool runOnFunction(Function &F) override {
+    return lowerLocalMemoryAtomics(F);
+  }
+};
+} // namespace
+
+char NVPTXAtomicLowerLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXAtomicLowerLegacyPass, "nvptx-atomic-lower",
                 "Lower atomics of local memory to simple load/stores", false,
                 false)
 
-FunctionPass *llvm::createNVPTXAtomicLowerPass() {
-  return new NVPTXAtomicLower();
+FunctionPass *llvm::createNVPTXAtomicLowerLegacyPass() {
+  return new NVPTXAtomicLowerLegacyPass();
+}
+
+PreservedAnalyses NVPTXAtomicLowerPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  if (!lowerLocalMemoryAtomics(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

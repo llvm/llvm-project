@@ -22,6 +22,8 @@
 #include <string>
 #include <unordered_map>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(cuInit, 1)
@@ -31,29 +33,44 @@ DLWRAP(cuDeviceGet, 2)
 DLWRAP(cuDeviceGetAttribute, 3)
 DLWRAP(cuDeviceGetCount, 1)
 DLWRAP(cuFuncGetAttribute, 3)
+DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
+DLWRAP(cuDeviceGetUuid, 2)
 DLWRAP(cuDeviceTotalMem, 2)
 DLWRAP(cuDriverGetVersion, 1)
 
 DLWRAP(cuGetErrorString, 2)
-DLWRAP(cuLaunchKernel, 11)
+DLWRAP(cuLaunchKernelEx, 4)
+DLWRAP(cuLaunchHostFunc, 3)
 
 DLWRAP(cuMemAlloc, 2)
 DLWRAP(cuMemAllocHost, 2)
 DLWRAP(cuMemAllocManaged, 3)
 DLWRAP(cuMemAllocAsync, 3)
 
+DLWRAP(cuMemcpyAsync, 4)
 DLWRAP(cuMemcpyDtoDAsync, 4)
 DLWRAP(cuMemcpyDtoH, 3)
 DLWRAP(cuMemcpyDtoHAsync, 4)
 DLWRAP(cuMemcpyHtoD, 3)
 DLWRAP(cuMemcpyHtoDAsync, 4)
 
+DLWRAP(cuMemsetD8Async, 4)
+DLWRAP(cuMemsetD16Async, 4)
+DLWRAP(cuMemsetD32Async, 4)
+DLWRAP(cuMemsetD2D8Async, 6)
+DLWRAP(cuMemsetD2D16Async, 6)
+DLWRAP(cuMemsetD2D32Async, 6)
+
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
 DLWRAP(cuMemFreeAsync, 2)
+
+DLWRAP(cuMemPrefetchAsync, 4)
+DLWRAP(cuPointerGetAttribute, 3)
+DLWRAP(cuPointerGetAttributes, 4)
 
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
@@ -63,12 +80,15 @@ DLWRAP(cuStreamCreate, 2)
 DLWRAP(cuStreamDestroy, 1)
 DLWRAP(cuStreamSynchronize, 1)
 DLWRAP(cuStreamQuery, 1)
+DLWRAP(cuStreamAddCallback, 4)
 DLWRAP(cuCtxSetCurrent, 1)
 DLWRAP(cuDevicePrimaryCtxRelease, 1)
 DLWRAP(cuDevicePrimaryCtxGetState, 3)
 DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
+DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
+DLWRAP(cuOccupancyMaxActiveBlocksPerMultiprocessor, 4)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)
@@ -79,11 +99,11 @@ DLWRAP(cuCtxSetLimit, 2)
 
 DLWRAP(cuEventCreate, 2)
 DLWRAP(cuEventRecord, 2)
+DLWRAP(cuEventQuery, 1)
 DLWRAP(cuStreamWaitEvent, 3)
 DLWRAP(cuEventSynchronize, 1)
+DLWRAP(cuEventElapsedTime, 3)
 DLWRAP(cuEventDestroy, 1)
-
-DLWRAP_FINALIZE()
 
 DLWRAP(cuMemUnmap, 2)
 DLWRAP(cuMemRelease, 1)
@@ -94,6 +114,8 @@ DLWRAP(cuMemMap, 5)
 DLWRAP(cuMemCreate, 4)
 DLWRAP(cuMemSetAccess, 4)
 DLWRAP(cuMemGetAllocationGranularity, 3)
+
+DLWRAP_FINALIZE()
 
 #ifndef DYNAMIC_CUDA_PATH
 #define DYNAMIC_CUDA_PATH "libcuda.so"
@@ -106,9 +128,7 @@ DLWRAP(cuMemGetAllocationGranularity, 3)
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #endif
 
-static bool checkForCUDA() {
-  // return true if dlopen succeeded and all functions found
-
+static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
   // Prefer _v2 versions of functions if found in the library
   std::unordered_map<std::string, const char *> TryFirst = {
       {"cuMemAlloc", "cuMemAlloc_v2"},
@@ -117,6 +137,7 @@ static bool checkForCUDA() {
       {"cuMemcpyHtoD", "cuMemcpyHtoD_v2"},
       {"cuStreamDestroy", "cuStreamDestroy_v2"},
       {"cuModuleGetGlobal", "cuModuleGetGlobal_v2"},
+      {"cuMemcpyAsync", "cuMemcpyAsync_v2"},
       {"cuMemcpyDtoHAsync", "cuMemcpyDtoHAsync_v2"},
       {"cuMemcpyDtoDAsync", "cuMemcpyDtoDAsync_v2"},
       {"cuMemcpyHtoDAsync", "cuMemcpyHtoDAsync_v2"},
@@ -124,40 +145,53 @@ static bool checkForCUDA() {
       {"cuDevicePrimaryCtxSetFlags", "cuDevicePrimaryCtxSetFlags_v2"},
   };
 
-  const char *CudaLib = DYNAMIC_CUDA_PATH;
-  std::string ErrMsg;
-  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
-      llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
-  if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
-    return false;
-  }
-
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
     auto It = TryFirst.find(Sym);
     if (It != TryFirst.end()) {
       const char *First = It->second;
-      void *P = DynlibHandle->getAddressOfSymbol(First);
+      void *P = Lib.getAddressOfSymbol(First);
       if (P) {
-        DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
+        ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << First
+                        << ") -> " << P;
         *dlwrap::pointer(I) = P;
         continue;
       }
     }
 
-    void *P = DynlibHandle->getAddressOfSymbol(Sym);
+    void *P = Lib.getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }
 
   return true;
+}
+
+static bool checkForCUDA() {
+  // Resolve through the process rather than the library handle so that
+  // definitions already in the global scope take precedence like a normal link.
+  auto Process = llvm::sys::DynamicLibrary::getPermanentLibrary(nullptr);
+  if (resolveSymbols(Process, "<process>"))
+    return true;
+
+  const char *CudaLib = DYNAMIC_CUDA_PATH;
+  std::string ErrMsg;
+  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+      llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    ODBG(OLDT_Init) << "Unable to load library ' " << CudaLib << "': " << ErrMsg
+                    << "!";
+    return false;
+  }
+
+  return resolveSymbols(Process, CudaLib);
 }
 
 CUresult cuInit(unsigned X) {

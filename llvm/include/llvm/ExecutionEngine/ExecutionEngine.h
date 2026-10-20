@@ -25,6 +25,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -88,7 +89,7 @@ public:
   /// Erase an entry from the mapping table.
   ///
   /// \returns The address that \p ToUnmap was mapped to.
-  uint64_t RemoveMapping(StringRef Name);
+  LLVM_ABI uint64_t RemoveMapping(StringRef Name);
 };
 
 using FunctionCreator = std::function<void *(const std::string &)>;
@@ -96,7 +97,7 @@ using FunctionCreator = std::function<void *(const std::string &)>;
 /// Abstract interface for implementation execution of LLVM modules,
 /// designed to support both interpreter and just-in-time (JIT) compiler
 /// implementations.
-class ExecutionEngine {
+class LLVM_ABI ExecutionEngine {
   /// The state object holding the global address mapping, which must be
   /// accessed synchronously.
   //
@@ -550,13 +551,13 @@ private:
 
 public:
   /// Default constructor for EngineBuilder.
-  EngineBuilder();
+  LLVM_ABI EngineBuilder();
 
   /// Constructor for EngineBuilder.
-  EngineBuilder(std::unique_ptr<Module> M);
+  LLVM_ABI EngineBuilder(std::unique_ptr<Module> M);
 
   // Out-of-line since we don't have the def'n of RTDyldMemoryManager here.
-  ~EngineBuilder();
+  LLVM_ABI ~EngineBuilder();
 
   /// setEngineKind - Controls whether the user wants the interpreter, the JIT,
   /// or whichever engine works.  This option defaults to EngineKind::Either.
@@ -571,12 +572,14 @@ public:
   /// to create anything other than MCJIT will cause a runtime error. If create()
   /// is called and is successful, the created engine takes ownership of the
   /// memory manager. This option defaults to NULL.
-  EngineBuilder &setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager> mcjmm);
+  LLVM_ABI EngineBuilder &
+  setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager> mcjmm);
 
-  EngineBuilder&
+  LLVM_ABI EngineBuilder &
   setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM);
 
-  EngineBuilder &setSymbolResolver(std::unique_ptr<LegacyJITSymbolResolver> SR);
+  LLVM_ABI EngineBuilder &
+  setSymbolResolver(std::unique_ptr<LegacyJITSymbolResolver> SR);
 
   /// setErrorStr - Set the error string to write to on error.  This option
   /// defaults to NULL.
@@ -645,20 +648,19 @@ public:
     this->EmulatedTLS = EmulatedTLS;
   }
 
-  TargetMachine *selectTarget();
+  LLVM_ABI TargetMachine *selectTarget();
 
   /// selectTarget - Pick a target either via -march or by guessing the native
   /// arch.  Add any CPU features specified via -mcpu or -mattr.
-  TargetMachine *selectTarget(const Triple &TargetTriple,
-                              StringRef MArch,
-                              StringRef MCPU,
-                              const SmallVectorImpl<std::string>& MAttrs);
+  LLVM_ABI TargetMachine *
+  selectTarget(const Triple &TargetTriple, StringRef MArch, StringRef MCPU,
+               const SmallVectorImpl<std::string> &MAttrs);
 
   ExecutionEngine *create() {
     return create(selectTarget());
   }
 
-  ExecutionEngine *create(TargetMachine *TM);
+  LLVM_ABI ExecutionEngine *create(TargetMachine *TM);
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

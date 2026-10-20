@@ -11,6 +11,8 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 
+#include <cerrno>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -27,12 +29,12 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec,
                                     File::OpenOptions flags, uint32_t mode,
                                     Status &error) {
   if (!file_spec) {
-    error.SetErrorString("empty path");
+    error = Status::FromErrorString("empty path");
     return UINT64_MAX;
   }
   auto file = FileSystem::Instance().Open(file_spec, flags, mode);
   if (!file) {
-    error = file.takeError();
+    error = Status::FromError(file.takeError());
     return UINT64_MAX;
   }
   lldb::user_id_t fd = file.get()->GetDescriptor();
@@ -42,17 +44,18 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec,
 
 bool FileCache::CloseFile(lldb::user_id_t fd, Status &error) {
   if (fd == UINT64_MAX) {
-    error.SetErrorString("invalid file descriptor");
+    error = Status::FromErrorString("invalid file descriptor");
     return false;
   }
   FDToFileMap::iterator pos = m_cache.find(fd);
   if (pos == m_cache.end()) {
-    error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
+    error = Status::FromErrorStringWithFormat(
+        "invalid host file descriptor %" PRIu64, fd);
     return false;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {
-    error.SetErrorString("invalid host backing file");
+    error = Status::FromErrorString("invalid host backing file");
     return false;
   }
   error = file_up->Close();
@@ -64,22 +67,28 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
                               const void *src, uint64_t src_len,
                               Status &error) {
   if (fd == UINT64_MAX) {
-    error.SetErrorString("invalid file descriptor");
+    error = Status::FromErrorString("invalid file descriptor");
     return UINT64_MAX;
   }
   FDToFileMap::iterator pos = m_cache.find(fd);
   if (pos == m_cache.end()) {
-    error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
-    return false;
+    error = Status::FromErrorStringWithFormat(
+        "invalid host file descriptor %" PRIu64, fd);
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {
-    error.SetErrorString("invalid host backing file");
+    error = Status::FromErrorString("invalid host backing file");
     return UINT64_MAX;
   }
   if (static_cast<uint64_t>(file_up->SeekFromStart(offset, &error)) != offset ||
-      error.Fail())
-    return UINT64_MAX;
+      error.Fail()) {
+    // A pipe cannot seek, so the seek fails on it with ESPIPE. The offset
+    // means nothing there, so write at the pipe's end instead.
+    if (error.GetError() != ESPIPE)
+      return UINT64_MAX;
+    error.Clear();
+  }
   size_t bytes_written = src_len;
   error = file_up->Write(src, bytes_written);
   if (error.Fail())
@@ -90,17 +99,18 @@ uint64_t FileCache::WriteFile(lldb::user_id_t fd, uint64_t offset,
 uint64_t FileCache::ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
                              uint64_t dst_len, Status &error) {
   if (fd == UINT64_MAX) {
-    error.SetErrorString("invalid file descriptor");
+    error = Status::FromErrorString("invalid file descriptor");
     return UINT64_MAX;
   }
   FDToFileMap::iterator pos = m_cache.find(fd);
   if (pos == m_cache.end()) {
-    error.SetErrorStringWithFormat("invalid host file descriptor %" PRIu64, fd);
-    return false;
+    error = Status::FromErrorStringWithFormat(
+        "invalid host file descriptor %" PRIu64, fd);
+    return UINT64_MAX;
   }
   FileUP &file_up = pos->second;
   if (!file_up) {
-    error.SetErrorString("invalid host backing file");
+    error = Status::FromErrorString("invalid host backing file");
     return UINT64_MAX;
   }
   if (static_cast<uint64_t>(file_up->SeekFromStart(offset, &error)) != offset ||

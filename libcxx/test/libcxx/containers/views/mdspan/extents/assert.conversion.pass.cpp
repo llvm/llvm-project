@@ -4,10 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -50,7 +48,7 @@ int main(int, char**) {
   }
   // value out of range
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e(arg); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<signed char, D, 5> e(arg); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   return 0;

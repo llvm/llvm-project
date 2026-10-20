@@ -8,10 +8,15 @@
 ## We do not add PAC support when the inputs don't have the .note.gnu.property
 ## field.
 
-# RUN: ld.lld %tno.o %t3.o --shared -o %tno.so
-# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOPAC %s
-# RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
-# RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
+# RUN: ld.lld %tno.o %t3.o --shared -o %tno1.so
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno1.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-readelf -x .got.plt %tno1.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf --dynamic-table %tno1.so | FileCheck --check-prefix NOPACDYN %s
+
+# RUN: ld.lld %tno.o %t3.o --shared -o %tno2.so -z pac-plt -znopac-plt
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno2.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-readelf -x .got.plt %tno2.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf --dynamic-table %tno2.so | FileCheck --check-prefix NOPACDYN %s
 
 # NOPAC: 00000000000102b8 <func2>:
 # NOPAC-NEXT:    102b8: bl      0x102f0 <func3@plt>
@@ -76,12 +81,14 @@
 # PACDYN-NOT:      0x0000000070000001 (AARCH64_BTI_PLT)
 # PACDYN-NOT:      0x0000000070000003 (AARCH64_PAC_PLT)
 
-## Turn on PAC entries with the -z pac-plt command line option. There are no
-## warnings in this case as the choice to use PAC in PLT entries is orthogonal
-## to the choice of using PAC in relocatable objects. The presence of the PAC
-## .note.gnu.property is an indication of preference by the relocatable object.
+## Turn on PAC entries with the -z pac-plt command line option. For files w/o
+## GNU_PROPERTY_AARCH64_FEATURE_1_PAC set in GNU_PROPERTY_AARCH64_FEATURE_1_AND
+## property, emit a warning.
 
-# RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe
+# RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe 2>&1 | FileCheck -DFILE=%t2.o --check-prefix WARN %s
+
+# WARN: warning: [[FILE]]: -z pac-plt: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid PAuth core info present for this link job
+
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
 # RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN2 %s
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s

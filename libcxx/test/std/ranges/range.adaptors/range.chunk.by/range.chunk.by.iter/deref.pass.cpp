@@ -17,13 +17,12 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <concepts>
 #include <functional>
-#include <utility>
 
 #include "../types.h"
 #include "test_iterators.h"
-#include "test_macros.h"
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {

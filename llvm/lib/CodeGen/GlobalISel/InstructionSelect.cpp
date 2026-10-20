@@ -12,26 +12,33 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CodeGenCoverage.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "instruction-select"
@@ -50,31 +57,87 @@ static cl::opt<std::string>
 static const std::string CoveragePrefix;
 #endif
 
-char InstructionSelect::ID = 0;
-INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
+char InstructionSelectLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(InstructionSelectLegacy, DEBUG_TYPE,
                       "Select target instructions out of generic instructions",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
-INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
+INITIALIZE_PASS_END(InstructionSelectLegacy, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect(CodeGenOptLevel OL)
-    : MachineFunctionPass(ID), OptLevel(OL) {}
+InstructionSelectLegacy::InstructionSelectLegacy(CodeGenOptLevel OL,
+                                                 bool RequireRegBankSelection,
+                                                 char &PassID)
+    : MachineFunctionPass(PassID), OptLevel(OL),
+      RequireRegBankSelection(RequireRegBankSelection) {}
 
-// In order not to crash when calling getAnalysis during testing with -run-pass
-// we use the default opt level here instead of None, so that the addRequired()
-// calls are made in getAnalysisUsage().
-InstructionSelect::InstructionSelect()
-    : MachineFunctionPass(ID), OptLevel(CodeGenOptLevel::Default) {}
+InstructionSelectPass::InstructionSelectPass(CodeGenOptLevel OL,
+                                             bool RequireRegBankSelection)
+    : OptLevel(OL), RequireRegBankSelection(RequireRegBankSelection) {}
 
-void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
+InstructionSelectImpl::InstructionSelectImpl(CodeGenOptLevel OL)
+    : OptLevel(OL) {}
+
+/// This class observes instruction insertions/removals.
+/// InstructionSelect stores an iterator of the instruction prior to the one
+/// that is currently being selected to determine which instruction to select
+/// next. Previously this meant that selecting multiple instructions at once was
+/// illegal behavior due to potential invalidation of this iterator. This is
+/// a non-obvious limitation for selector implementers. Therefore, to allow
+/// deletion of arbitrary instructions, we detect this case and continue
+/// selection with the predecessor of the deleted instruction.
+class InstructionSelectImpl::MIIteratorMaintainer : public GISelChangeObserver {
+#ifndef NDEBUG
+  SmallSetVector<const MachineInstr *, 32> CreatedInstrs;
+#endif
+public:
+  MachineBasicBlock::reverse_iterator MII;
+
+  void changingInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+  void changedInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+
+  void createdInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Creating:  " << MI; CreatedInstrs.insert(&MI));
+  }
+
+  void erasingInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Erasing:   " << MI; CreatedInstrs.remove(&MI));
+    if (MII.getInstrIterator().getNodePtr() == &MI) {
+      // If the iterator points to the MI that will be erased (i.e. the MI prior
+      // to the MI that is currently being selected), the iterator would be
+      // invalidated. Continue selection with its predecessor.
+      ++MII;
+      LLVM_DEBUG(dbgs() << "Instruction removal updated iterator.\n");
+    }
+  }
+
+  void reportFullyCreatedInstrs() {
+    LLVM_DEBUG({
+      if (CreatedInstrs.empty()) {
+        dbgs() << "Created no instructions.\n";
+      } else {
+        dbgs() << "Created:\n";
+        for (const auto *MI : CreatedInstrs) {
+          dbgs() << "  " << *MI;
+        }
+        CreatedInstrs.clear();
+      }
+    });
+  }
+};
+
+void InstructionSelectLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
 
   if (OptLevel != CodeGenOptLevel::None) {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -84,37 +147,42 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
+bool InstructionSelectImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<GISelValueTracking *()> GetVT,
+    function_ref<ProfileSummaryInfo *()> GetPSI,
+    function_ref<BlockFrequencyInfo *()> GetBFI) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
-  LLVM_DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
+  ISel = MF.getSubtarget().getInstructionSelector();
 
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
-  ISel->setTargetPassConfig(&TPC);
-
+  // FIXME: Properly override OptLevel in TargetMachine. See OptLevelChanger
   CodeGenOptLevel OldOptLevel = OptLevel;
-  auto RestoreOptLevel = make_scope_exit([=]() { OptLevel = OldOptLevel; });
+  llvm::scope_exit RestoreOptLevel([=]() { OptLevel = OldOptLevel; });
   OptLevel = MF.getFunction().hasOptNone() ? CodeGenOptLevel::None
                                            : MF.getTarget().getOptLevel();
 
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  VT = GetVT();
   if (OptLevel != CodeGenOptLevel::None) {
-    PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    PSI = GetPSI();
     if (PSI && PSI->hasProfileSummary())
-      BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
+      BFI = GetBFI();
   }
 
-  CodeGenCoverage CoverageInfo;
+  return selectMachineFunction(MF);
+}
+
+bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, KB, &CoverageInfo, PSI, BFI);
+
+  CodeGenCoverage CoverageInfo;
+  ISel->setupMF(MF, VT, &CoverageInfo, PSI, BFI);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
-  ISel->setRemarkEmitter(&MORE);
+  ISel->MORE = &MORE;
 
   // FIXME: There are many other MF/MFI fields we need to initialize.
 
@@ -126,91 +194,48 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // property check already is.
   if (!DisableGISelLegalityCheck)
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, TPC, MORE, "gisel-select",
-                         "instruction is not legal", *MI);
+      reportGISelFailure(MF, MORE, "gisel-select", "instruction is not legal",
+                         *MI);
       return false;
     }
-  // FIXME: We could introduce new blocks and will need to fix the outer loop.
-  // Until then, keep track of the number of blocks to assert that we don't.
+  // NumBlocks is an invariant to ensure the number of blocks doesn't change.
   const size_t NumBlocks = MF.size();
 #endif
   // Keep track of selected blocks, so we can delete unreachable ones later.
   DenseSet<MachineBasicBlock *> SelectedBlocks;
 
-  for (MachineBasicBlock *MBB : post_order(&MF)) {
-    ISel->CurMBB = MBB;
-    SelectedBlocks.insert(MBB);
-    if (MBB->empty())
-      continue;
+  {
+    // Observe IR insertions and removals during selection.
+    // We only install a MachineFunction::Delegate instead of a
+    // GISelChangeObserver, because we do not want notifications about changed
+    // instructions. This prevents significant compile-time regressions from
+    // e.g. constrainOperandRegClass().
+    GISelObserverWrapper AllObservers;
+    MIIteratorMaintainer MIIMaintainer;
+    AllObservers.addObserver(&MIIMaintainer);
+    RAIIDelegateInstaller DelInstaller(MF, &AllObservers);
+    ISel->AllObservers = &AllObservers;
 
-    // Select instructions in reverse block order. We permit erasing so have
-    // to resort to manually iterating and recognizing the begin (rend) case.
-    bool ReachedBegin = false;
-    for (auto MII = std::prev(MBB->end()), Begin = MBB->begin();
-         !ReachedBegin;) {
-#ifndef NDEBUG
-      // Keep track of the insertion range for debug printing.
-      const auto AfterIt = std::next(MII);
-#endif
-      // Select this instruction.
-      MachineInstr &MI = *MII;
+    for (MachineBasicBlock *MBB : post_order(&MF)) {
+      ISel->CurMBB = MBB;
+      SelectedBlocks.insert(MBB);
 
-      // And have our iterator point to the next instruction, if there is one.
-      if (MII == Begin)
-        ReachedBegin = true;
-      else
-        --MII;
+      // Select instructions in reverse block order.
+      MIIMaintainer.MII = MBB->rbegin();
+      for (auto End = MBB->rend(); MIIMaintainer.MII != End;) {
+        MachineInstr &MI = *MIIMaintainer.MII;
+        // Increment early to skip instructions inserted by select().
+        ++MIIMaintainer.MII;
 
-      LLVM_DEBUG(dbgs() << "Selecting: \n  " << MI);
-
-      // We could have folded this instruction away already, making it dead.
-      // If so, erase it.
-      if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << "Is dead; erasing.\n");
-        salvageDebugInfo(MRI, MI);
-        MI.eraseFromParent();
-        continue;
+        LLVM_DEBUG(dbgs() << "\nSelect:  " << MI);
+        if (!selectInstr(MI)) {
+          LLVM_DEBUG(dbgs() << "Selection failed!\n";
+                     MIIMaintainer.reportFullyCreatedInstrs());
+          reportGISelFailure(MF, MORE, "gisel-select", "cannot select", MI);
+          return false;
+        }
+        LLVM_DEBUG(MIIMaintainer.reportFullyCreatedInstrs());
       }
-
-      // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
-      if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
-          MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
-        auto [DstReg, SrcReg] = MI.getFirst2Regs();
-
-        // At this point, the destination register class of the op may have
-        // been decided.
-        //
-        // Propagate that through to the source register.
-        const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
-        if (DstRC)
-          MRI.setRegClass(SrcReg, DstRC);
-        assert(canReplaceReg(DstReg, SrcReg, MRI) &&
-               "Must be able to replace dst with src!");
-        MI.eraseFromParent();
-        MRI.replaceRegWith(DstReg, SrcReg);
-        continue;
-      }
-
-      if (MI.getOpcode() == TargetOpcode::G_INVOKE_REGION_START) {
-        MI.eraseFromParent();
-        continue;
-      }
-
-      if (!ISel->select(MI)) {
-        // FIXME: It would be nice to dump all inserted instructions.  It's
-        // not obvious how, esp. considering select() can insert after MI.
-        reportGISelFailure(MF, TPC, MORE, "gisel-select", "cannot select", MI);
-        return false;
-      }
-
-      // Dump the range of instructions that MI expanded into.
-      LLVM_DEBUG({
-        auto InsertedBegin = ReachedBegin ? MBB->begin() : std::next(MII);
-        dbgs() << "Into:\n";
-        for (auto &InsertedMI : make_range(InsertedBegin, AfterIt))
-          dbgs() << "  " << InsertedMI;
-        dbgs() << '\n';
-      });
     }
   }
 
@@ -228,27 +253,23 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
     // Try to find redundant copies b/w vregs of the same register class.
-    bool ReachedBegin = false;
-    for (auto MII = std::prev(MBB.end()), Begin = MBB.begin(); !ReachedBegin;) {
-      // Select this instruction.
+    for (auto MII = MBB.rbegin(), End = MBB.rend(); MII != End;) {
       MachineInstr &MI = *MII;
+      ++MII;
 
-      // And have our iterator point to the next instruction, if there is one.
-      if (MII == Begin)
-        ReachedBegin = true;
-      else
-        --MII;
       if (MI.getOpcode() != TargetOpcode::COPY)
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
-      if (SrcReg.isVirtual() && DstReg.isVirtual()) {
-        auto SrcRC = MRI.getRegClass(SrcReg);
-        auto DstRC = MRI.getRegClass(DstReg);
-        if (SrcRC == DstRC) {
-          MRI.replaceRegWith(DstReg, SrcReg);
-          MI.eraseFromParent();
-        }
+      unsigned SrcSubIdx = MI.getOperand(1).getSubReg();
+      if (!SrcReg.isVirtual() || !DstReg.isVirtual() || SrcSubIdx)
+        continue;
+
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      if (SrcRC == DstRC) {
+        MRI.replaceRegWith(DstReg, SrcReg);
+        MI.eraseFromParent();
       }
     }
   }
@@ -275,7 +296,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
     const TargetRegisterClass *RC = MRI.getRegClassOrNull(VReg);
     if (!RC) {
-      reportGISelFailure(MF, TPC, MORE, "gisel-select",
+      reportGISelFailure(MF, MORE, "gisel-select",
                          "VReg has no regclass after selection", *MI);
       return false;
     }
@@ -284,7 +305,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     if (Ty.isValid() &&
         TypeSize::isKnownGT(Ty.getSizeInBits(), TRI.getRegSizeInBits(*RC))) {
       reportGISelFailure(
-          MF, TPC, MORE, "gisel-select",
+          MF, MORE, "gisel-select",
           "VReg's low-level type and register class have different sizes", *MI);
       return false;
     }
@@ -295,14 +316,14 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                                       MF.getFunction().getSubprogram(),
                                       /*MBB=*/nullptr);
     R << "inserting blocks is not supported yet";
-    reportGISelFailure(MF, TPC, MORE, R);
+    reportGISelFailure(MF, MORE, R);
     return false;
   }
 #endif
 
   if (!DebugCounter::shouldExecute(GlobalISelCounter)) {
     dbgs() << "Falling back for function " << MF.getName() << "\n";
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    MF.getProperties().setFailedISel();
     return false;
   }
 
@@ -321,7 +342,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // FIXME: FinalizeISel pass calls finalizeLowering, so it's called twice.
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
 
@@ -341,4 +361,80 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: Should we accurately track changes?
   return true;
+}
+
+bool InstructionSelectImpl::selectInstr(MachineInstr &MI) {
+  MachineRegisterInfo &MRI = ISel->MF->getRegInfo();
+
+  // We could have folded this instruction away already, making it dead.
+  // If so, erase it.
+  if (isTriviallyDead(MI, MRI)) {
+    LLVM_DEBUG(dbgs() << "Is dead.\n");
+    salvageDebugInfo(MRI, MI);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
+  if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
+      MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
+    auto [DstReg, SrcReg] = MI.getFirst2Regs();
+
+    // At this point, the destination register class of the op may have
+    // been decided.
+    //
+    // Propagate that through to the source register.
+    const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
+    const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+    if (DstRC && SrcRC)
+      MRI.constrainRegClass(SrcReg, DstRC);
+    else if (DstRC)
+      MRI.setRegClass(SrcReg, DstRC);
+    MI.eraseFromParent();
+    MRI.replaceRegWith(DstReg, SrcReg);
+    return true;
+  }
+
+  if (MI.getOpcode() == TargetOpcode::G_INVOKE_REGION_START) {
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return ISel->select(MI);
+}
+
+bool InstructionSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
+  InstructionSelectImpl Impl(OptLevel);
+  return Impl.runOnMachineFunction(
+      MF,
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() { return &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(); },
+      [&]() { return &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI(); });
+}
+
+PreservedAnalyses
+InstructionSelectPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  InstructionSelectImpl Impl(OptLevel);
+  bool Changed = Impl.runOnMachineFunction(
+      MF, [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+      [&]() {
+        ProfileSummaryInfo *PSI =
+            MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<ProfileSummaryAnalysis>(
+                    *MF.getFunction().getParent());
+        if (!PSI)
+          reportFatalUsageError("instruction-select requires profile-summary");
+        return PSI;
+      },
+      [&]() {
+        return &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                    .getManager()
+                    .getResult<BlockFrequencyAnalysis>(MF.getFunction());
+      });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }

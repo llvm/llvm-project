@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -pedantic -verify %s
+// RUN: %clang_cc1 -pedantic -verify %s -Wno-error=incompatible-pointer-types
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -pedantic -fobjc-arc -fixit -x objective-c %t
-// RUN: %clang_cc1 -pedantic -fobjc-arc -Werror -x objective-c %t
+// RUN: not %clang_cc1 -pedantic -fobjc-arc -fixit -x objective-c %t -Wno-error=incompatible-pointer-types
+// RUN: %clang_cc1 -pedantic -fobjc-arc -Werror -x objective-c %t -Wno-error=incompatible-pointer-types
 
 @class A;
 @class NSString;

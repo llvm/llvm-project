@@ -72,7 +72,7 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
                   "supported languages:\n",
                   option_arg.str().c_str());
       Language::PrintSupportedLanguagesForExpressions(sstr, " ", "\n");
-      error.SetErrorString(sstr.GetString());
+      error = Status(sstr.GetString().str());
     }
     break;
   }
@@ -89,8 +89,8 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
   case 's':
     error = watch_size.SetValueFromString(option_arg);
     if (watch_size.GetCurrentValue() == 0)
-      error.SetErrorStringWithFormat("invalid --size option value '%s'",
-                                     option_arg.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid --size option value '%s'", option_arg.str().c_str());
     break;
 
   default:

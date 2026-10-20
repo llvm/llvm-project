@@ -1,0 +1,33 @@
+//===-- HLSLIntangibleTypes.def - HLSL standard intangible types ----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===--------------------------------------------------------------------------===//
+//
+// This file defines HLSL standard intangible types. These are implementation-
+// defined types such as handle types that have no defined object 
+// representation or value representation and their size is unknown at compile
+// time.
+//
+// The macro is:
+//
+//    HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)
+//
+// where:
+//
+//  - Name is the name of the builtin type.
+//
+//  - BuiltinType::Id is the enumerator defining the type.
+//
+//  - Context.SingletonId is the global singleton of this type.
+//
+// To include this file, define HLSL_INTANGIBLE_TYPE.
+// The macro will be undefined after inclusion.
+//
+//===----------------------------------------------------------------------===//
+
+HLSL_INTANGIBLE_TYPE(__hlsl_resource_t, HLSLResource, HLSLResourceTy)
+
+#undef HLSL_INTANGIBLE_TYPE

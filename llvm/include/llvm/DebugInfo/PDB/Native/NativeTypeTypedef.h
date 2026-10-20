@@ -22,7 +22,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeTypeTypedef : public NativeRawSymbol {
+class LLVM_ABI NativeTypeTypedef : public NativeRawSymbol {
 public:
   // Create a pointer record for a non-simple type.
   NativeTypeTypedef(NativeSession &Session, SymIndexId Id,

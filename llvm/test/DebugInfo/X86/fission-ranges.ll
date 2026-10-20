@@ -5,7 +5,7 @@
 ; RUN: llc -dwarf-version=5 -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=V5RNGLISTS %s
 
-; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -stop-after=livedebugvalues -o - | FileCheck --check-prefix=CHECK-MIR %s
+; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -stop-after=live-debug-values -o - | FileCheck --check-prefix=CHECK-MIR %s
 
 ; LiveDebugValues should produce DBG_VALUEs for variable "b" in successive
 ; blocks once we recognize that it is spilled.
@@ -81,7 +81,7 @@
 ; V5RNGLISTS-NOT:  DW_TAG
 ; V5RNGLISTS:      DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
 ; V5RNGLISTS:      .debug_rnglists contents:
-; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005,
+; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000018, format = DWARF32, version = 0x0005,
 ; V5RNGLISTS-SAME: addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
 ; V5RNGLISTS-NEXT: offsets: [
 ; V5RNGLISTS-NEXT: => 0x00000010
@@ -187,7 +187,7 @@ for.end18:                                        ; preds = %for.inc16
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/utils.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using UINT = uintptr_t;
 
@@ -46,14 +47,14 @@ TEST(LlvmLibcUtilsTest, DistanceToAlignDown) {
 TEST(LlvmLibcUtilsTest, Adjust2) {
   char a, b;
   const size_t base_size = 10;
-  for (ptrdiff_t I = -2; I < 2; ++I) {
+  for (uintptr_t i = 0; i < 4; ++i) {
     auto *p1 = &a;
     auto *p2 = &b;
     size_t size = base_size;
-    adjust(I, p1, p2, size);
-    EXPECT_EQ(intptr_t(p1), intptr_t(&a + I));
-    EXPECT_EQ(intptr_t(p2), intptr_t(&b + I));
-    EXPECT_EQ(size, base_size - I);
+    adjust(static_cast<ptrdiff_t>(i), p1, p2, size);
+    EXPECT_EQ(intptr_t(p1), intptr_t(&a + i));
+    EXPECT_EQ(intptr_t(p2), intptr_t(&b + i));
+    EXPECT_EQ(size, base_size - i);
   }
 }
 
@@ -137,4 +138,22 @@ TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+TEST(LlvmLibcUtilsTest, LoadStoreAlignedOddAddress) {
+  const uint8_t inbuf[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+  uint8_t outbuf[8];
+
+  const uint32_t loaded = load_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(
+      reinterpret_cast<CPtr>(inbuf + 1));
+  if constexpr (Endian::IS_LITTLE) {
+    EXPECT_EQ(loaded, uint32_t(0x89674523));
+  } else if constexpr (Endian::IS_BIG) {
+    EXPECT_EQ(loaded, uint32_t(0x23456789));
+  }
+  store_aligned<uint32_t, uint8_t, uint16_t, uint8_t>(
+      loaded, reinterpret_cast<Ptr>(outbuf + 1));
+
+  for (size_t i = 1; i < 5; ++i)
+    EXPECT_EQ(outbuf[i], inbuf[i]);
+}
+
+} // namespace LIBC_NAMESPACE_DECL

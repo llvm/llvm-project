@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 ; RUN: llc < %s -mtriple=avr -mcpu=attiny10 | FileCheck --check-prefix=TINY %s
 
 declare void @f1(i8)
@@ -297,4 +297,37 @@ define i16 @cmp_i16_gt_1023(i16 %0) {
   %2 = icmp sgt i16 %0, 1023
   %3 = zext i1 %2 to i16
   ret i16 %3
+}
+
+define void @cmp_issue152097(i16 %a) addrspace(1) {
+; See: https://github.com/llvm/llvm-project/issues/152097
+; CHECK-LABEL: cmp_issue152097
+; CHECK:      ldi r18, -1
+; CHECK-NEXT: cpi r24, -2
+; CHECK-NEXT: cpc r25, r18
+; CHECK-NEXT: ret
+  %cmp = icmp ugt i16 -2, %a
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  ret void
+if.else:
+  ret void
+}
+
+define i1 @cmp_issue181504(i128 %0) {
+; See: https://github.com/llvm/llvm-project/issues/181504
+;
+; This generates too much code to reasonably assert, so this test exists mostly
+; to make sure we don't crash.
+;
+; CHECK-LABEL: cmp_issue181504
+; CHECK:      ldi r30, -1
+; CHECK-NEXT: ldi r26, 255
+; CHECK-NEXT: ldi r27, 255
+; CHECK-NEXT: ldi r31, 1
+; CHECK-NEXT: cp r30, r10
+bb0:
+  %1 = icmp ugt i128 %0, 18446744073709551615 ; 2^64-1
+
+  ret i1 %1
 }

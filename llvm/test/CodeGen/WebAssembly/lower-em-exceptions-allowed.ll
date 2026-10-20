@@ -1,4 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -emscripten-cxx-exceptions-allowed=do_catch -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -emscripten-cxx-exceptions-allowed=do_catch -S | FileCheck %s
+; RUN: opt < %s -passes=wasm-lower-em-ehsjlj -emscripten-cxx-exceptions-allowed=do_catch -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -38,7 +39,7 @@ entry:
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
 ; CHECK-NEXT: store i32 0, ptr
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void(ptr @foo)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void(ptr @foo)
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont
@@ -63,3 +64,6 @@ declare void @foo()
 declare i32 @__gxx_personality_v0(...)
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"emscripten"}

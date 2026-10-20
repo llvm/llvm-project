@@ -7,42 +7,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommandReturnObject.h"
+#include "SBCommandReturnObjectImpl.h"
 #include "Utils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
+#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Host/File.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;
 
-class lldb_private::SBCommandReturnObjectImpl {
-public:
-  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
-  SBCommandReturnObjectImpl(CommandReturnObject &ref)
-      : m_ptr(&ref), m_owned(false) {}
-  SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
-      : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
-  SBCommandReturnObjectImpl &operator=(const SBCommandReturnObjectImpl &rhs) {
-    SBCommandReturnObjectImpl copy(rhs);
-    std::swap(*this, copy);
-    return *this;
-  }
-  // rvalue ctor+assignment are not used by SBCommandReturnObject.
-  ~SBCommandReturnObjectImpl() {
-    if (m_owned)
-      delete m_ptr;
-  }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl()
+    : m_ptr(new CommandReturnObject(false)), m_owned(true) {}
 
-  CommandReturnObject &operator*() const { return *m_ptr; }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(CommandReturnObject &ref)
+    : m_ptr(&ref), m_owned(false) {}
 
-private:
-  CommandReturnObject *m_ptr;
-  bool m_owned = true;
-};
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
+    const SBCommandReturnObjectImpl &rhs)
+    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(true) {}
+
+SBCommandReturnObjectImpl &
+SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
+  // After the copy-and-swap, `copy` holds the previous state of `this`.
+  // `copy` will be destroyed when it goes out of scope.
+  SBCommandReturnObjectImpl copy(rhs);
+  std::swap(this->m_ptr, copy.m_ptr);
+  std::swap(this->m_owned, copy.m_owned);
+  return *this;
+}
+
+SBCommandReturnObjectImpl::~SBCommandReturnObjectImpl() {
+  if (m_owned)
+    delete m_ptr;
+}
 
 SBCommandReturnObject::SBCommandReturnObject()
     : m_opaque_up(new SBCommandReturnObjectImpl()) {
@@ -82,30 +90,46 @@ SBCommandReturnObject::operator bool() const {
   return true;
 }
 
+const char *SBCommandReturnObject::GetCommand() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ConstString output(ref().GetCommand());
+  return output.AsCString(/*value_if_empty*/ "");
+}
+
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetOutputData());
+  ConstString output(ref().GetOutputString());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetError() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetErrorData());
+  ConstString output(ref().GetErrorString());
   return output.AsCString(/*value_if_empty*/ "");
+}
+
+SBStructuredData SBCommandReturnObject::GetErrorData() {
+  LLDB_INSTRUMENT_VA(this);
+
+  StructuredData::ObjectSP data(ref().GetErrorData());
+  SBStructuredData sb_data;
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetOutputData().size();
+  return ref().GetOutputString().size();
 }
 
 size_t SBCommandReturnObject::GetErrorSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetErrorData().size();
+  return ref().GetErrorString().size();
 }
 
 size_t SBCommandReturnObject::PutOutput(FILE *fh) {
@@ -199,19 +223,19 @@ void SBCommandReturnObject::AppendWarning(const char *message) {
 }
 
 CommandReturnObject *SBCommandReturnObject::operator->() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject *SBCommandReturnObject::get() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::operator*() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::ref() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 bool SBCommandReturnObject::GetDescription(SBStream &description) {
@@ -254,14 +278,16 @@ void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh) {
 void SBCommandReturnObject::SetImmediateOutputFile(FILE *fh,
                                                    bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateOutputFile(file);
 }
 
 void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh,
                                                   bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateErrorFile(file);
 }
 
@@ -291,8 +317,8 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
   if (len == 0 || string == nullptr || *string == 0) {
     return;
   } else if (len > 0) {
-    std::string buffer(string, len);
-    ref().AppendMessage(buffer.c_str());
+    const llvm::StringRef buffer(string, static_cast<size_t>(len));
+    ref().AppendMessage(buffer);
   } else
     ref().AppendMessage(string);
 }
@@ -326,10 +352,10 @@ void SBCommandReturnObject::SetError(lldb::SBError &error,
                                      const char *fallback_error_cstr) {
   LLDB_INSTRUMENT_VA(this, error, fallback_error_cstr);
 
-  if (error.IsValid())
-    ref().SetError(error.ref(), fallback_error_cstr);
+  if (error.IsValid() && !error.Fail())
+    ref().SetError(error.ref().Clone());
   else if (fallback_error_cstr)
-    ref().SetError(Status(), fallback_error_cstr);
+    ref().SetError(Status::FromErrorString(fallback_error_cstr));
 }
 
 void SBCommandReturnObject::SetError(const char *error_cstr) {
@@ -337,4 +363,19 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
 
   if (error_cstr)
     ref().AppendError(error_cstr);
+}
+
+SBValueList
+SBCommandReturnObject::GetValues(lldb::DynamicValueType use_dynamic) {
+  LLDB_INSTRUMENT_VA(this, use_dynamic);
+
+  SBValueList value_list;
+  for (ValueObjectSP value_object_sp :
+       ref().GetValueObjectList().GetObjects()) {
+    SBValue value_sb;
+    value_sb.SetSP(value_object_sp, use_dynamic);
+    value_list.Append(value_sb);
+  }
+
+  return value_list;
 }

@@ -20,9 +20,7 @@
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -58,7 +56,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -75,8 +72,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EmitJalrReloc;
-
 namespace {
 
 class MipsFastISel final : public FastISel {
@@ -84,7 +79,7 @@ class MipsFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -241,15 +236,15 @@ private:
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
 
-  const MipsABIInfo &getABI() const {
-    return static_cast<const MipsTargetMachine &>(TM).getABI();
-  }
+  const MipsABIInfo &getABI() const { return Subtarget->getABI(); }
 
 public:
   // Backend specific FastISel code.
   explicit MipsFastISel(FunctionLoweringInfo &funcInfo,
-                        const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo), TM(funcInfo.MF->getTarget()),
+                        const TargetLibraryInfo *libInfo,
+                        const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering),
+        TM(funcInfo.MF->getTarget()),
         Subtarget(&funcInfo.MF->getSubtarget<MipsSubtarget>()),
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
@@ -257,8 +252,8 @@ public:
     UnsupportedFPMode = Subtarget->isFP64bit() || Subtarget->useSoftFloat();
   }
 
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
   bool fastSelectInstruction(const Instruction *I) override;
 
 #include "MipsGenFastISel.inc"
@@ -266,22 +261,26 @@ public:
 
 } // end anonymous namespace
 
-static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
-                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                     CCValAssign::LocInfo LocInfo,
+                                     ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                     CCState &State);
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
 static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
 CCAssignFn *MipsFastISel::CCAssignFnForCall(CallingConv::ID CC) const {
@@ -329,12 +328,11 @@ unsigned MipsFastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
   return ResultReg;
 }
 
-unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&Mips::GPR32RegClass);
@@ -345,7 +343,7 @@ unsigned MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 unsigned MipsFastISel::materializeInt(const Constant *C, MVT VT) {
@@ -362,10 +360,10 @@ unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
 
   if (isInt<16>(Imm)) {
     unsigned Opc = Mips::ADDiu;
-    emitInst(Opc, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Opc, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   } else if (isUInt<16>(Imm)) {
-    emitInst(Mips::ORi, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Mips::ORi, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   }
   unsigned Lo = Imm & 0xFFFF;
@@ -417,8 +415,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
@@ -439,12 +436,12 @@ unsigned MipsFastISel::materializeExternalCallSym(MCSymbol *Sym) {
 
 // Materialize a constant into a register, and return the register
 // number (or zero if we failed to handle it).
-unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
+Register MipsFastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
   if (!CEVT.isSimple())
-    return 0;
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
@@ -454,7 +451,7 @@ unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
   else if (isa<ConstantInt>(C))
     return materializeInt(C, VT);
 
-  return 0;
+  return Register();
 }
 
 bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
@@ -464,7 +461,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -524,8 +521,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -653,7 +649,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   case CmpInst::ICMP_NE: {
     Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
-    emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
+    emitInst(Mips::SLTu, ResultReg).addReg(Mips::R0).addReg(TempReg);
     break;
   }
   case CmpInst::ICMP_UGT:
@@ -735,8 +731,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     }
     Register RegWithZero = createResultReg(&Mips::GPR32RegClass);
     Register RegWithOne = createResultReg(&Mips::GPR32RegClass);
-    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
-    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
+    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::R0).addImm(0);
+    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::R0).addImm(1);
     emitInst(Opc).addReg(Mips::FCC0, RegState::Define).addReg(LeftReg)
                  .addReg(RightReg);
     emitInst(CondMovOpc, ResultReg)
@@ -881,38 +877,52 @@ bool MipsFastISel::selectLogicalOp(const Instruction *I) {
 }
 
 bool MipsFastISel::selectLoad(const Instruction *I) {
+  const LoadInst *LI = cast<LoadInst>(I);
+
   // Atomic loads need special handling.
-  if (cast<LoadInst>(I)->isAtomic())
+  if (LI->isAtomic())
     return false;
 
   // Verify we have a legal type before going any further.
   MVT VT;
-  if (!isLoadTypeLegal(I->getType(), VT))
+  if (!isLoadTypeLegal(LI->getType(), VT))
+    return false;
+
+  // Underaligned loads need special handling.
+  if (LI->getAlign() < VT.getFixedSizeInBits() / 8 &&
+      !Subtarget->systemSupportsUnalignedAccess())
     return false;
 
   // See if we can handle this address.
   Address Addr;
-  if (!computeAddress(I->getOperand(0), Addr))
+  if (!computeAddress(LI->getOperand(0), Addr))
     return false;
 
   unsigned ResultReg;
   if (!emitLoad(VT, ResultReg, Addr))
     return false;
-  updateValueMap(I, ResultReg);
+  updateValueMap(LI, ResultReg);
   return true;
 }
 
 bool MipsFastISel::selectStore(const Instruction *I) {
-  Value *Op0 = I->getOperand(0);
+  const StoreInst *SI = cast<StoreInst>(I);
+
+  Value *Op0 = SI->getOperand(0);
   unsigned SrcReg = 0;
 
   // Atomic stores need special handling.
-  if (cast<StoreInst>(I)->isAtomic())
+  if (SI->isAtomic())
     return false;
 
   // Verify we have a legal type before going any further.
   MVT VT;
-  if (!isLoadTypeLegal(I->getOperand(0)->getType(), VT))
+  if (!isLoadTypeLegal(SI->getOperand(0)->getType(), VT))
+    return false;
+
+  // Underaligned stores need special handling.
+  if (SI->getAlign() < VT.getFixedSizeInBits() / 8 &&
+      !Subtarget->systemSupportsUnalignedAccess())
     return false;
 
   // Get the value to be stored into a register.
@@ -922,7 +932,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
 
   // See if we can handle this address.
   Address Addr;
-  if (!computeAddress(I->getOperand(1), Addr))
+  if (!computeAddress(SI->getOperand(1), Addr))
     return false;
 
   if (!emitStore(VT, SrcReg, Addr))
@@ -933,7 +943,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
 // This can cause a redundant sltiu to be generated.
 // FIXME: try and eliminate this in a future patch.
 bool MipsFastISel::selectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   //
   // TBB is the basic block for the case where the comparison is true.
@@ -942,8 +952,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
   // goto FBB
   // TBB:
   //
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Fold the common case of a conditional branch with a comparison
   // in the same block.
@@ -969,7 +979,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
   BuildMI(*BrBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::BGTZ))
       .addReg(ZExtCondReg)
-      .addMBB(TBB);
+      .addMBB(TBB)
+      .setOperandDead(2); // implicit-def $at
   finishCondBranch(BI->getParent(), TBB, FBB);
   return true;
 }
@@ -1132,8 +1143,12 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
                                    unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> ArgTys;
+  for (const ArgListEntry &Arg : CLI.Args)
+    ArgTys.push_back(Arg.Val->getType());
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, ArgTys,
+                             CCAssignFnForCall(CC));
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
   // This is the minimum argument area used for A0-A3.
@@ -1175,16 +1190,16 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
         VA.isMemLoc()) {
       switch (VA.getLocMemOffset()) {
       case 0:
-        VA.convertToReg(Mips::A0);
+        VA.convertToReg(getABI().getArgReg(0, false));
         break;
       case 4:
-        VA.convertToReg(Mips::A1);
+        VA.convertToReg(getABI().getArgReg(1, false));
         break;
       case 8:
-        VA.convertToReg(Mips::A2);
+        VA.convertToReg(getABI().getArgReg(2, false));
         break;
       case 12:
-        VA.convertToReg(Mips::A3);
+        VA.convertToReg(getABI().getArgReg(3, false));
         break;
       default:
         break;
@@ -1275,9 +1290,7 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     SmallVector<CCValAssign, 16> RVLocs;
     MipsCCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
 
-    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips, CLI.RetTy,
-                             CLI.Symbol ? CLI.Symbol->getName().data()
-                                        : nullptr);
+    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips);
 
     // Only handle a single return value.
     if (RVLocs.size() != 1)
@@ -1322,8 +1335,7 @@ bool MipsFastISel::fastLowerArguments() {
     return false;
   }
 
-  std::array<MCPhysReg, 4> GPR32ArgRegs = {{Mips::A0, Mips::A1, Mips::A2,
-                                           Mips::A3}};
+  ArrayRef<MCPhysReg> GPR32ArgRegs = getABI().getArgRegs(false);
   std::array<MCPhysReg, 2> FGR32ArgRegs = {{Mips::F12, Mips::F14}};
   std::array<MCPhysReg, 2> AFGR64ArgRegs = {{Mips::D6, Mips::D7}};
   auto NextGPR32 = GPR32ArgRegs.begin();
@@ -1461,9 +1473,9 @@ bool MipsFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(Allocation[ArgNo].RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&FormalArg, ResultReg);
   }
 
@@ -1474,7 +1486,7 @@ bool MipsFastISel::fastLowerArguments() {
   // Account for the reserved argument area on ABI's that have one (O32).
   // It seems strange to do this on the caller side but it's necessary in
   // SelectionDAG's implementation.
-  IncomingArgSizeInBytes = std::min(getABI().GetCalleeAllocdArgSizeInBytes(CC),
+  IncomingArgSizeInBytes = std::max(getABI().GetCalleeAllocdArgSizeInBytes(CC),
                                     IncomingArgSizeInBytes);
 
   MF->getInfo<MipsFunctionInfo>()->setFormalArgInfo(IncomingArgSizeInBytes,
@@ -1548,10 +1560,11 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     DestAddress = materializeExternalCallSym(Symbol);
   else
     DestAddress = materializeGV(Addr.getGlobalValue(), MVT::i32);
-  emitInst(TargetOpcode::COPY, Mips::T9).addReg(DestAddress);
-  MachineInstrBuilder MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::JALR),
-              Mips::RA).addReg(Mips::T9);
+  emitInst(TargetOpcode::COPY, getABI().getTempReg(9, false))
+      .addReg(DestAddress);
+  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                    TII.get(Mips::JALR), Mips::RA)
+                                .addReg(getABI().getTempReg(9, false));
 
   // Add implicit physical register uses to the call.
   for (auto Reg : CLI.OutRegs)
@@ -1563,14 +1576,13 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   CLI.Call = MIB;
 
-  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+  if (Subtarget->getMCCLOpts().jalr_reloc && !Subtarget->inMips16Mode()) {
     // Attach callee address to the instruction, let asm printer emit
     // .reloc R_MIPS_JALR.
     if (Symbol)
       MIB.addSym(Symbol, MipsII::MO_JALR);
     else
-      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
-	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+      MIB.addSym(TM.getSymbol(Addr.getGlobalValue()), MipsII::MO_JALR);
   }
 
   // Finish off the call including any return values.
@@ -1608,8 +1620,8 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         }
         emitInst(Mips::SLL, TempReg[0]).addReg(SrcReg).addImm(8);
         emitInst(Mips::SRL, TempReg[1]).addReg(SrcReg).addImm(8);
-        emitInst(Mips::OR, TempReg[2]).addReg(TempReg[0]).addReg(TempReg[1]);
-        emitInst(Mips::ANDi, DestReg).addReg(TempReg[2]).addImm(0xFFFF);
+        emitInst(Mips::ANDi, TempReg[2]).addReg(TempReg[1]).addImm(0xFF);
+        emitInst(Mips::OR, DestReg).addReg(TempReg[0]).addReg(TempReg[2]);
         updateValueMap(II, DestReg);
         return true;
       }
@@ -1763,8 +1775,8 @@ bool MipsFastISel::selectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
   MachineInstrBuilder MIB = emitInst(Mips::RetRA);
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned Reg : RetRegs)
+    MIB.addReg(Reg, RegState::Implicit);
   return true;
 }
 
@@ -1935,7 +1947,11 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!Subtarget->getMCCLOpts().mno_check_zero_division &&
+      (!isa<ConstantInt>(I->getOperand(1)) ||
+       dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::R0).addImm(7);
+  }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)
@@ -2057,7 +2073,7 @@ bool MipsFastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Or:
   case Instruction::Xor:
     return selectLogicalOp(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBranch(I);
   case Instruction::Ret:
     return selectRet(I);
@@ -2128,10 +2144,10 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
     Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
     Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-      .addReg(Op0)
-      .addReg(Op1)
-      .addReg(Mips::HI0, RegState::ImplicitDefine | RegState::Dead)
-      .addReg(Mips::LO0, RegState::ImplicitDefine | RegState::Dead);
+        .addReg(Op0)
+        .addReg(Op1)
+        .setOperandDead(3)  // implicit-def $hi0
+        .setOperandDead(4); // implicit-def $lo0
     return ResultReg;
   }
 
@@ -2141,8 +2157,9 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 namespace llvm {
 
 FastISel *Mips::createFastISel(FunctionLoweringInfo &funcInfo,
-                               const TargetLibraryInfo *libInfo) {
-  return new MipsFastISel(funcInfo, libInfo);
+                               const TargetLibraryInfo *libInfo,
+                               const LibcallLoweringInfo *libcallLowering) {
+  return new MipsFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 } // end namespace llvm

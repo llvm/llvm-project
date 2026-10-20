@@ -27,6 +27,24 @@ TEST(FunctionRefTest, Null) {
   EXPECT_FALSE(F);
 }
 
+TEST(FunctionRefTest, DefaultConstructedCopy) {
+  function_ref<int()> Empty;
+  function_ref<int()> Copy = Empty;
+  EXPECT_FALSE(Empty);
+  EXPECT_FALSE(Copy);
+#if LLVM_MEMORY_SANITIZER_BUILD
+  __msan_check_mem_is_initialized(&Copy, sizeof(Copy));
+#endif
+
+  function_ref<int()> Null = nullptr;
+  EXPECT_FALSE(Null);
+
+  auto L = [] { return 1; };
+  function_ref<int()> Assigned = L;
+  Assigned = Empty;
+  EXPECT_FALSE(Assigned);
+}
+
 // Ensure that copies of a function_ref copy the underlying state rather than
 // causing one function_ref to chain to the next.
 TEST(FunctionRefTest, Copy) {

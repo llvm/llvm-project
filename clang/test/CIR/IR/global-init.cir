@@ -1,0 +1,63 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+!s64i = !cir.int<s, 64>
+
+!rec_NeedsCtor = !cir.struct<"NeedsCtor" {pad !u8i}>
+!rec_NeedsDtor = !cir.struct<"NeedsDtor" {pad !u8i}>
+!rec_NeedsCtorDtor = !cir.struct<"NeedsCtorDtor" {pad !u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZN9NeedsCtorC1Ev(!cir.ptr<!rec_NeedsCtor>)
+  cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor ctor {
+    %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
+    cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor>) -> ()
+  }
+  // CHECK: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor ctor {
+  // CHECK:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
+  // CHECK:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor>) -> ()
+  // CHECK: }
+
+  cir.func private @_ZN9NeedsDtorD1Ev(!cir.ptr<!rec_NeedsDtor>)
+  cir.global external dso_local @needsDtor = #cir.zero : !rec_NeedsDtor dtor {
+    %0 = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
+    cir.call @_ZN9NeedsDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsDtor>) -> ()
+  }
+  // CHECK: cir.global external dso_local @needsDtor = #cir.zero : !rec_NeedsDtor dtor {
+  // CHECK:   %0 = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
+  // CHECK:   cir.call @_ZN9NeedsDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsDtor>) -> ()
+  // CHECK: }
+
+  cir.func private @_ZN13NeedsCtorDtorC1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  cir.func private @_ZN13NeedsCtorDtorD1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  cir.global external dso_local @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor ctor {
+    %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+    cir.call @_ZN13NeedsCtorDtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  } dtor {
+    %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+    cir.call @_ZN13NeedsCtorDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  }
+  // CHECK: cir.func private @_ZN13NeedsCtorDtorC1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  // CHECK: cir.func private @_ZN13NeedsCtorDtorD1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  // CHECK: cir.global external dso_local @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor ctor {
+  // CHECK:   %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+  // CHECK:   cir.call @_ZN13NeedsCtorDtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  // CHECK: } dtor {
+  // CHECK:   %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+  // CHECK:   cir.call @_ZN13NeedsCtorDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  // CHECK: }
+
+  // The initial value is kept alongside the ctor even when it is not zero,
+  // e.g. a null data member pointer after CXX ABI lowering.
+  cir.func private @_Z9getMemberv() -> !s64i
+  cir.global external @memberPtr = #cir.int<-1> : !s64i ctor {
+    %0 = cir.get_global @memberPtr : !cir.ptr<!s64i>
+    %1 = cir.call @_Z9getMemberv() : () -> !s64i
+    cir.store %1, %0 : !s64i, !cir.ptr<!s64i>
+  }
+  // CHECK: cir.global external @memberPtr = #cir.int<-1> : !s64i ctor {
+  // CHECK:   %0 = cir.get_global @memberPtr : !cir.ptr<!s64i>
+  // CHECK:   %1 = cir.call @_Z9getMemberv() : () -> !s64i
+  // CHECK:   cir.store %1, %0 : !s64i, !cir.ptr<!s64i>
+  // CHECK: }
+}

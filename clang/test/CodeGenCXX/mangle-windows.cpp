@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-mingw32 | \
 // RUN:     FileCheck --check-prefix=ITANIUM %s
 
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-cygwin | \
+// RUN:     FileCheck --check-prefix=ITANIUM %s
+
 void __stdcall f1(void) {}
 // WIN: define dso_local x86_stdcallcc void @"?f1@@YGXXZ"
 // ITANIUM: define dso_local x86_stdcallcc void @"\01__Z2f1v@0"

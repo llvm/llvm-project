@@ -11,11 +11,9 @@
 // template<class T>
 // struct incrementable_traits;
 
-#include <iterator>
-
 #include <concepts>
-
-#include "test_macros.h"
+#include <cstddef>
+#include <iterator>
 
 template <class T>
 concept check_has_difference_type = requires {

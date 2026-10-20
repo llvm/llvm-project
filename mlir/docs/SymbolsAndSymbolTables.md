@@ -21,14 +21,14 @@ into the system.
 The `Symbol` infrastructure essentially provides a non-SSA mechanism in which to
 refer to an operation symbolically with a name. This allows for referring to
 operations defined above regions that were defined as `IsolatedFromAbove` in a
-safe way. It also allows for symbolically referencing operations define below
+safe way. It also allows for symbolically referencing operations defined below
 other regions as well.
 
 ## Symbol
 
 A `Symbol` is a named operation that resides immediately within a region that
 defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
-within the parent `SymbolTable`. This name is semantically similarly to an SSA
+within the parent `SymbolTable`. This name is semantically similar to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
 [`func.func`](Dialects/Builtin.md/#func-mlirfuncop). `func.func` defines a
@@ -42,13 +42,18 @@ necessary verification and accessors; it also supports operations, such as
 `builtin.module`, that conditionally define a symbol. `Symbol`s must have the
 following properties:
 
-*   A `StringAttr` attribute named
-    'SymbolTable::getSymbolAttrName()'(`sym_name`).
-    -   This attribute defines the symbolic 'name' of the operation.
-*   An optional `StringAttr` attribute named
-    'SymbolTable::getVisibilityAttrName()'(`sym_visibility`)
-    -   This attribute defines the [visibility](#symbol-visibility) of the
-        symbol, or more specifically in-which scopes it may be accessed.
+*   A `StringAttr` name exposed by `SymbolOpInterface::getNameAttr`. The
+    `SymbolName` trait provides the conventional implementation backed by an
+    inherent `StringAttr` named `sym_name`.
+*   A [visibility](#symbol-visibility) (`getVisibility`/`setVisibility`)
+    -   The visibility defines in which scopes the symbol may be accessed.
+    -   The `SymbolVisibility` trait provides the conventional implementation,
+        stored in an optional inherent `StringAttr` named
+        `SymbolOpInterface::getDefaultVisibilityAttrName()` (`sym_visibility`),
+        where the absence of the attribute means public visibility. Operations
+        may instead implement `getVisibility`/`setVisibility` using a different
+        representation. Client code should not make any assumptions about the
+        presence of a visibility attribute.
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.
@@ -125,7 +130,7 @@ Using an attribute, as opposed to an SSA value, has several benefits:
 
     -   If we were to use SSA values, we would need to create some mechanism in
         which to opt-out of certain properties of it such as dominance.
-        Attributes allow for referencing the operations irregardless of the
+        Attributes allow for referencing the operations regardless of the
         order in which they were defined.
     -   Attributes simplify referencing operations within nested symbol tables,
         which are traditionally not visible outside of the parent region.

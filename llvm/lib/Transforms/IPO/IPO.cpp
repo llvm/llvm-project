@@ -13,17 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/InitializePasses.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/AlwaysInliner.h"
-#include "llvm/Transforms/IPO/FunctionAttrs.h"
 
 using namespace llvm;
 
 void llvm::initializeIPO(PassRegistry &Registry) {
-  initializeDAEPass(Registry);
-  initializeDAHPass(Registry);
   initializeAlwaysInlinerLegacyPassPass(Registry);
-  initializeLoopExtractorLegacyPassPass(Registry);
-  initializeSingleLoopExtractorPass(Registry);
   initializeBarrierNoopPass(Registry);
+  initializeDAEPass(Registry);
+  initializeExpandVariadicsPass(Registry);
+  initializeGlobalDCELegacyPassPass(Registry);
 }

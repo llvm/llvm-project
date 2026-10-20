@@ -1,0 +1,21 @@
+{
+    "Opcodes": {
+        "ADD": [],
+        "SUB": [],
+        "MUL": [],
+        "MOV": [],
+        "CMP": [],
+        "JMP": [],
+        "CALL": [],
+        "RET": []
+    },
+    "CommonOperands": {
+        "Immediate": []
+    },
+    "PhysicalRegisters": {
+        "GR32": []
+    },
+    "VirtualRegisters": {
+        "GR32": []
+    }
+}

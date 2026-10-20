@@ -18,7 +18,7 @@ linear search of the basic block the instruction is contained in... just
 to insert an instruction before another instruction, or to delete an 
 instruction!  This complicates algorithms that should be very simple (like 
 simple constant propagation), because they aren't actually sparse anymore,
-they have to traverse basic blocks to remove constant propogated 
+they have to traverse basic blocks to remove constant propagated
 instructions.
 
 Additionally, adding or removing instructions to a basic block 

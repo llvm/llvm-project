@@ -1,9 +1,9 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASLW
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASRW
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-LSRW
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASLH
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASRH
-; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-LSRH
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASLW
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASRW
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-LSRW
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASLH
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-ASRH
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-LSRH
 ;
 ; Make sure that the instructions with immediate operands are generated.
 ; CHECK-ASLW: vaslw({{.*}},#9)

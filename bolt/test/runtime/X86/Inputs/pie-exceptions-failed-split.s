@@ -1,4 +1,4 @@
-# Assembly generated from building the followingC++ code with the following
+# Assembly generated from building the following C++ code with the following
 # command using trunk clang. Then, basic block at .LBB1_7 was moved before the
 # landing pad.
 #

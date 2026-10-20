@@ -1,6 +1,6 @@
 #include <cassert>
-#include <iostream>
 #include <thread>
+thread_local size_t lf = 42;
 
 void g() { assert(false); }
 
@@ -19,10 +19,8 @@ size_t h() {
 int main() {
   std::thread t1(f);
 
-  size_t x = h();
+  h();
 
   t1.join();
-
-  std::cout << "X is " << x << "\n";
   return 0;
 }

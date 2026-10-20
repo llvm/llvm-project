@@ -7,8 +7,8 @@
 target triple = "x86_64-grtev4-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(ptr) #1 align 2 {
-  br i1 undef, label %exit, label %2
+define void @foo(ptr, i1 %arg) #1 align 2 {
+  br i1 %arg, label %exit, label %2
 
 ; <label>:2:
   %3 = tail call ptr @_Znwm(i64 56) #10

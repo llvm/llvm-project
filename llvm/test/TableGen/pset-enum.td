@@ -5,7 +5,7 @@ include "reg-with-subregs-common.td"
 
 // CHECK-LABEL:    // Register pressure sets enum.
 // NAMESPACE-NEXT: namespace TestNamespace {
-// CHECK-NEXT:     enum RegisterPressureSets {
+// CHECK:          enum RegisterPressureSets {
 // CHECK-NEXT:       GPR32 = 0,
 // CHECK-NEXT:     };
-// NAMESPACE-NEXT: } // end namespace TestNamespace
+// NAMESPACE:      } // namespace TestNamespace

@@ -1,0 +1,240 @@
+//===--- Context.h - Context for the constexpr VM ---------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines the constexpr execution context.
+//
+// The execution context manages cached bytecode and the global context.
+// It invokes the compiler and interpreter, propagating errors.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_AST_INTERP_CONTEXT_H
+#define LLVM_CLANG_AST_INTERP_CONTEXT_H
+
+#include "FrameAllocator.h"
+#include "InterpStack.h"
+#include "clang/AST/ASTContext.h"
+
+namespace clang {
+class LangOptions;
+class FunctionDecl;
+class VarDecl;
+class APValue;
+class BlockExpr;
+
+namespace interp {
+class Function;
+class Program;
+class State;
+enum PrimType : uint8_t;
+struct EvalSettings;
+
+struct ParamOffset {
+  unsigned Offset;
+  bool IsPtr;
+};
+
+struct FuncParam {
+  unsigned Index;
+  bool IsPtr;
+};
+
+class EvalIDScope;
+/// Holds all information required to evaluate constexpr code in a module.
+class Context final {
+public:
+  /// Initialises the constexpr VM.
+  explicit Context(ASTContext &Ctx);
+
+  /// Cleans up the constexpr VM.
+  ~Context();
+
+  /// Checks if a function is a potential constant expression.
+  bool isPotentialConstantExpr(const EvalSettings &Settings,
+                               const FunctionDecl *FD);
+  void isPotentialConstantExprUnevaluated(const EvalSettings &Settings,
+                                          const Expr *E,
+                                          const FunctionDecl *FD);
+
+  /// Evaluates a toplevel expression as an rvalue.
+  bool evaluateAsRValue(const EvalSettings &Settings, const Expr *E,
+                        APValue &Result);
+
+  /// Like evaluateAsRvalue(), but does no implicit lvalue-to-rvalue conversion.
+  bool evaluate(const EvalSettings &Settings, const Expr *E, APValue &Result);
+
+  /// Evaluates a toplevel initializer.
+  bool evaluateAsInitializer(const EvalSettings &Settings, const VarDecl *VD,
+                             const Expr *Init, APValue &Result);
+  void registerRedecl(const VarDecl *VD, const APValue &V);
+
+  /// Evaluates the destruction of a variable.
+  bool evaluateDestruction(const EvalSettings &Settings, const VarDecl *VD,
+                           APValue Value);
+
+  bool evaluateCharRange(const EvalSettings &Settings, const Expr *SizeExpr,
+                         const Expr *PtrExpr, APValue &Result);
+  bool evaluateCharRange(const EvalSettings &Settings, const Expr *SizeExpr,
+                         const Expr *PtrExpr, std::string &Result);
+
+  /// Evaluate \param E and if it can be evaluated to a null-terminated string,
+  /// copy the result into \param Result.
+  bool evaluateString(const EvalSettings &Settings, const Expr *E,
+                      std::string &Result);
+
+  /// Evalute \param E and if it can be evaluated to a string literal,
+  /// run strlen() on it.
+  std::optional<uint64_t> evaluateStrlen(const EvalSettings &Settings,
+                                         const Expr *E);
+
+  /// If \param E evaluates to a pointer the number of accessible bytes
+  /// past the pointer is estimated in \param Result as if evaluated by
+  /// the builtin function __builtin_object_size. This is a best effort
+  /// approximation, when Kind & 2 == 0 the object size is less
+  /// than or equal to the estimated size, when Kind & 2 == 1 the
+  /// true value is greater than or equal to the estimated size.
+  /// When Kind & 1 == 1 only bytes belonging to the same subobject
+  /// as the one referred to by E are considered, when Kind & 1 == 0
+  /// bytes belonging to the same storage (stack, heap allocation,
+  /// global variable) are considered.
+  std::optional<uint64_t> tryEvaluateObjectSize(const EvalSettings &Settings,
+                                                const Expr *E, unsigned Kind,
+                                                bool IsDynamic);
+
+  std::optional<bool> evaluateWithSubstitution(const EvalSettings &Settings,
+                                               const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition);
+
+  /// Returns the AST context.
+  ASTContext &getASTContext() const { return Ctx; }
+  /// Returns the language options.
+  const LangOptions &getLangOpts() const;
+  /// Returns CHAR_BIT.
+  unsigned getCharBit() const;
+  /// Return the floating-point semantics for T.
+  const llvm::fltSemantics &getFloatSemantics(QualType T) const;
+  /// Return the size of T in bits.
+  uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
+
+  /// Classifies a type.
+  OptPrimType classify(QualType T) const;
+
+  /// Classifies an expression.
+  OptPrimType classify(const Expr *E) const {
+    assert(E);
+    if (E->isGLValue())
+      return PT_Ptr;
+
+    return classify(E->getType());
+  }
+
+  bool canClassify(QualType T) const {
+    T = T.getCanonicalType();
+    if (const auto *BT = dyn_cast<BuiltinType>(T)) {
+      if (BT->isInteger() || BT->isFloatingPoint())
+        return true;
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
+        return true;
+    }
+    if (T->isPointerOrReferenceType())
+      return true;
+
+    if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+        T->isVectorType())
+      return false;
+
+    if (T->isEnumeralType())
+      return true;
+
+    return classify(T) != std::nullopt;
+  }
+  bool canClassify(const Expr *E) const {
+    if (E->isGLValue())
+      return true;
+    return canClassify(E->getType());
+  }
+
+  const CXXMethodDecl *
+  getOverridingFunction(const CXXRecordDecl *DynamicDecl,
+                        const CXXRecordDecl *StaticDecl,
+                        const CXXMethodDecl *InitialFunction) const;
+
+  const Function *getOrCreateFunction(const FunctionDecl *FuncDecl);
+  const Function *getOrCreateObjCBlock(const BlockExpr *E);
+
+  /// Returns whether we should create a global variable for the
+  /// given ValueDecl.
+  static bool shouldBeGloballyIndexed(const ValueDecl *VD) {
+    if (const auto *V = dyn_cast<VarDecl>(VD))
+      return V->hasGlobalStorage() || V->isConstexpr();
+
+    return false;
+  }
+
+  /// Returns the program. This is only needed for unittests.
+  Program &getProgram() const { return *P; }
+
+  unsigned collectBaseOffset(const RecordDecl *BaseDecl,
+                             const RecordDecl *DerivedDecl) const;
+
+  const Record *getRecord(const RecordDecl *D) const;
+
+  unsigned getEvalID() const { return EvalID; }
+
+  /// Unevaluated builtins don't get their arguments put on the stack
+  /// automatically. They instead operate on the AST of their Call
+  /// Expression.
+  /// Similar information is available via ASTContext::BuiltinInfo,
+  /// but that is not correct for our use cases.
+  static bool isUnevaluatedBuiltin(unsigned ID);
+
+private:
+  friend class EvalIDScope;
+  /// Runs a function.
+  bool Run(const EvalSettings &Settings, const Function *Func);
+
+  template <typename ResultT>
+  bool evaluateStringRepr(const EvalSettings &Settings, const Expr *SizeExpr,
+                          const Expr *PtrExpr, ResultT &Result);
+
+  /// Current compilation context.
+  ASTContext &Ctx;
+  /// Interpreter stack, shared across invocations.
+  InterpStack Stk;
+  /// (Function) frame allocator, also shared.
+  FrameAllocator FrameAlloc;
+  /// Constexpr program.
+  std::unique_ptr<Program> P;
+  /// ID identifying an evaluation.
+  unsigned EvalID = 0;
+  /// Cached widths (in bits) of common types, for a faster classify().
+  unsigned ShortWidth;
+  unsigned IntWidth;
+  unsigned LongWidth;
+  unsigned LongLongWidth;
+};
+
+class EvalIDScope {
+public:
+  EvalIDScope(Context &Ctx) : Ctx(Ctx), OldID(Ctx.EvalID) { ++Ctx.EvalID; }
+  ~EvalIDScope() { Ctx.EvalID = OldID; }
+  EvalIDScope(const EvalIDScope &) = delete;
+  EvalIDScope &operator=(const EvalIDScope &) = delete;
+
+private:
+  Context &Ctx;
+  const unsigned OldID;
+};
+
+} // namespace interp
+} // namespace clang
+
+#endif

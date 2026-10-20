@@ -1,7 +1,13 @@
 RUN: llvm-remarkutil instruction-count --parser=yaml %p/Inputs/instruction-count.yaml | FileCheck %s
+RUN: llvm-remarkutil instruction-count %p/Inputs/instruction-count.yaml | FileCheck %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count --parser=bitstream | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count | FileCheck %s
 RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --remark-name="InstructionCount" %p/Inputs/instruction-count.yaml | FileCheck %s --check-prefix=COUNT-CHECK
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml  | llvm-remarkutil count --parser=bitstream --count-by=arg --group-by=function --remark-name="InstructionCount" | FileCheck %s --check-prefix=COUNT-CHECK
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rremark-name=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR-REPOPERATOR -DARG=rremark-name
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rpass-name=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR-REPOPERATOR -DARG=rpass-name
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rfilter-arg-by=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR-REPOPERATOR -DARG=rfilter-arg-by
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rremark-name=InstCombine --remark-name=InstCombine %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR-BOTHFILTERS -DARG=rremark-name
 
 ; CHECK-LABEL: Function,InstructionCount
 ; CHECK: func1,1
@@ -12,3 +18,6 @@ RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml  | llvm-rem
 ; COUNT-CHECK: func1,1
 ; COUNT-CHECK: func2,2
 ; COUNT-CHECK: func3,3
+
+; ERROR-REPOPERATOR: error: invalid argument '--[[ARG]]=*': repetition-operator operand invalid
+; ERROR-BOTHFILTERS: error: conflicting arguments: --remark-name and --rremark-name

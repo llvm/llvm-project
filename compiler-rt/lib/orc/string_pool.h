@@ -22,7 +22,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class PooledStringPtr;
 
@@ -156,14 +156,14 @@ inline bool StringPool::empty() const {
   return Pool.empty();
 }
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 namespace std {
 
 // Make PooledStringPtrs hashable.
-template <> struct hash<__orc_rt::PooledStringPtr> {
-  size_t operator()(const __orc_rt::PooledStringPtr &A) const {
-    return hash<__orc_rt::PooledStringPtr::PoolEntryPtr>()(A.S);
+template <> struct hash<orc_rt::PooledStringPtr> {
+  size_t operator()(const orc_rt::PooledStringPtr &A) const {
+    return hash<orc_rt::PooledStringPtr::PoolEntryPtr>()(A.S);
   }
 };
 

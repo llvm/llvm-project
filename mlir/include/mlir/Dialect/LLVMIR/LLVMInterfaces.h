@@ -15,7 +15,13 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
+#include <type_traits>
+
 namespace mlir {
+
+class LLVMTypeConverter;
+class RewriterBase;
+
 namespace LLVM {
 namespace detail {
 
@@ -27,6 +33,13 @@ LogicalResult verifyAccessGroupOpInterface(Operation *op);
 /// the alias analysis interface.
 LogicalResult verifyAliasAnalysisOpInterface(Operation *op);
 
+/// Verifies that the operation implementing the dereferenceable interface has
+/// exactly one result of LLVM pointer type.
+LogicalResult verifyDereferenceableOpInterface(Operation *op);
+
+/// Verifies that the range of an operation implementing the range interface
+/// matches the bitwidth of its single integer (element) result.
+LogicalResult verifyRangeOpInterface(Operation *op);
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir

@@ -61,44 +61,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "speculative-execution"
-
-// The risk that speculation will not pay off increases with the
-// number of instructions speculated, so we put a limit on that.
-static cl::opt<unsigned> SpecExecMaxSpeculationCost(
-    "spec-exec-max-speculation-cost", cl::init(7), cl::Hidden,
-    cl::desc("Speculative execution is not applied to basic blocks where "
-             "the cost of the instructions to speculatively execute "
-             "exceeds this limit."));
-
-// Speculating just a few instructions from a larger block tends not
-// to be profitable and this limit prevents that. A reason for that is
-// that small basic blocks are more likely to be candidates for
-// further optimization.
-static cl::opt<unsigned> SpecExecMaxNotHoisted(
-    "spec-exec-max-not-hoisted", cl::init(5), cl::Hidden,
-    cl::desc("Speculative execution is not applied to basic blocks where the "
-             "number of instructions that would not be speculatively executed "
-             "exceeds this limit."));
-
-static cl::opt<bool> SpecExecOnlyIfDivergentTarget(
-    "spec-exec-only-if-divergent-target", cl::init(false), cl::Hidden,
-    cl::desc("Speculative execution is applied only to targets with divergent "
-             "branches, even if the pass was configured to apply only to all "
-             "targets."));
 
 namespace {
 
@@ -106,8 +82,7 @@ class SpeculativeExecutionLegacyPass : public FunctionPass {
 public:
   static char ID;
   explicit SpeculativeExecutionLegacyPass(bool OnlyIfDivergentTarget = false)
-      : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
-                                                SpecExecOnlyIfDivergentTarget),
+      : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget),
         Impl(OnlyIfDivergentTarget) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -149,10 +124,10 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
   return Impl.runImpl(F, TTI);
 }
 
-namespace llvm {
-
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
-  if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence(&F)) {
+  Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
+  if ((OnlyIfDivergentTarget || Opts->spec_exec_only_if_divergent_target) &&
+      !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "
                          "TTI->hasBranchDivergence() is false.\n");
     return false;
@@ -167,12 +142,10 @@ bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
 }
 
 bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
-  BranchInst *BI = dyn_cast<BranchInst>(B.getTerminator());
-  if (BI == nullptr)
+  CondBrInst *BI = dyn_cast<CondBrInst>(B.getTerminator());
+  if (!BI)
     return false;
 
-  if (BI->getNumSuccessors() != 2)
-    return false;
   BasicBlock &Succ0 = *BI->getSuccessor(0);
   BasicBlock &Succ1 = *BI->getSuccessor(1);
 
@@ -229,6 +202,7 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
     case Instruction::Call:
     case Instruction::BitCast:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::AddrSpaceCast:
     case Instruction::FPToUI:
@@ -295,10 +269,6 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   };
   auto AllPrecedingUsesFromBlockHoisted =
       [&HasNoUnhoistedInstr](const User *U) {
-        // Do not hoist any debug info intrinsics.
-        if (isa<DbgInfoIntrinsic>(U))
-          return false;
-
         return HasNoUnhoistedInstr(U->operand_values());
       };
 
@@ -309,13 +279,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
-      if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
+      if (TotalSpeculationCost > Opts->spec_exec_max_speculation_cost)
         return false;  // too much to hoist
     } else {
-      // Debug info intrinsics should not be counted for threshold.
-      if (!isa<DbgInfoIntrinsic>(I))
-        NotHoistedInstCount++;
-      if (NotHoistedInstCount > SpecExecMaxNotHoisted)
+      NotHoistedInstCount++;
+      if (NotHoistedInstCount > Opts->spec_exec_max_not_hoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
     }
@@ -327,24 +295,23 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBefore(ToBlock.getTerminator()->getIterator());
       Current->dropLocation();
     }
   }
   return true;
 }
 
-FunctionPass *createSpeculativeExecutionPass() {
+FunctionPass *llvm::createSpeculativeExecutionPass() {
   return new SpeculativeExecutionLegacyPass();
 }
 
-FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass() {
+FunctionPass *llvm::createSpeculativeExecutionIfHasBranchDivergencePass() {
   return new SpeculativeExecutionLegacyPass(/* OnlyIfDivergentTarget = */ true);
 }
 
 SpeculativeExecutionPass::SpeculativeExecutionPass(bool OnlyIfDivergentTarget)
-    : OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
-                            SpecExecOnlyIfDivergentTarget) {}
+    : OnlyIfDivergentTarget(OnlyIfDivergentTarget) {}
 
 PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
@@ -368,4 +335,3 @@ void SpeculativeExecutionPass::printPipeline(
     OS << "only-if-divergent-target";
   OS << '>';
 }
-}  // namespace llvm

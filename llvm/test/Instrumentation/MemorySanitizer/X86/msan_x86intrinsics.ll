@@ -1,8 +1,5 @@
-; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
-; RUN: %s
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
-; RUN: -passes=msan 2>&1 | FileCheck -check-prefix=CHECK                       \
-; RUN: -check-prefix=CHECK-ORIGINS %s
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS %s
 ; REQUIRES: x86-registered-target
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -66,7 +63,7 @@ declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a, <8 x i16> %b) nounwind
 ; CHECK-ORIGINS: = bitcast <8 x i16> {{.*}} to i128
 ; CHECK-ORIGINS-NEXT: = icmp ne i128 {{.*}}, 0
 ; CHECK-ORIGINS-NEXT: = select i1 {{.*}}, i32 {{.*}}, i32
-; CHECK-NEXT: call <8 x i16> @llvm.x86.sse2.pmulhu.w
+; CHECK-NEXT: call <8 x i16> @llvm.umulh.v8i16
 ; CHECK-NEXT: store <8 x i16> {{.*}} @__msan_retval_tls
 ; CHECK-ORIGINS: store i32 {{.*}} @__msan_retval_origin_tls
 ; CHECK-NEXT: ret <8 x i16>

@@ -72,6 +72,7 @@ def define : MLJoinedOrSeparate<"D">, MetaVarName<"<macro>=<value>">,
              HelpText<"Define <macro> to <value> (or blank if <value> "
                       "omitted)">;
 def no_logo : MLFlag<"nologo">, HelpText<"">;
+def quiet : MLFlag<"quiet">, HelpText<"">;
 def output_file : MLJoinedOrSeparate<"Fo">, HelpText<"Names the output file">;
 def include_path : MLJoinedOrSeparate<"I">,
                    HelpText<"Sets path for include files">;
@@ -80,6 +81,9 @@ def safeseh : MLFlag<"safeseh">,
                        "exception handlers or containing exception handlers "
                        "that are all declared with .SAFESEH. Only available in "
                        "32-bit.">;
+def unwindv3 : MLFlag<"unwindv3">,
+               HelpText<"Use V3 unwind information format for x64 exception "
+                        "handling.">;
 def assembly_file : MLJoinedOrSeparate<"Ta">,
                     HelpText<"Assemble source file with the given name. Used "
                              "if the filename begins with a forward slash.">;

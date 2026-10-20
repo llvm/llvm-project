@@ -55,7 +55,7 @@ define i16 @n2(i8 %x) {
 
 define <2 x i16> @t3_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    call void @usevec(<2 x i8> [[A]])
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
@@ -142,6 +142,17 @@ define i24 @wide_source_matching_signbits(i32 %x) {
   %b = trunc i32 %a to i8
   %c = sext i8 %b to i24
   ret i24 %c
+}
+
+define i32 @wide_source_matching_signbits_has_nsw_flag(i64 %i) {
+; CHECK-LABEL: define i32 @wide_source_matching_signbits_has_nsw_flag(
+; CHECK-SAME: i64 [[I:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = trunc nsw i64 [[I]] to i32
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = trunc nsw i64 %i to i16
+  %b = sext i16 %a to i32
+  ret i32 %b
 }
 
 ; negative test - not enough sign-bits

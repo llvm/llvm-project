@@ -1,8 +1,8 @@
 // RUN: %clangxx_msan -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
-// RUN: %clangxx_msan -O0 %s -o %t && MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -O0 %s -o %t && env MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -O0 %s -o %t && MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -O0 %s -o %t && env MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
 
 // Test how -fsanitize-recover=memory and MSAN_OPTIONS=keep_going affect reports
@@ -12,9 +12,9 @@
 
 // RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=keep_going=0 not %run %t >%t.out 2>&1
 // FileCheck %s <%t.out
-// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-recover=memory -O0 %s -o %t && env MSAN_OPTIONS=keep_going=1 not %run %t >%t.out 2>&1
 // FileCheck --check-prefix=CHECK-RECOVER %s <%t.out
 
 // Test how legacy -mllvm -msan-keep-going and MSAN_OPTIONS=keep_going affect

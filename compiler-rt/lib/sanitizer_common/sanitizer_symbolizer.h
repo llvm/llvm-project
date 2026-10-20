@@ -139,6 +139,14 @@ class Symbolizer final {
   // Returns a list of symbolized frames for a given address (containing
   // all inlined functions, if necessary).
   SymbolizedStack *SymbolizePC(uptr address);
+  // Returns a list of symbolized frames given a module separate from the
+  // current executing process, such as an offloading device.
+  SymbolizedStack* SymbolizeModuleOffset(const char* module_name,
+                                         uptr module_offset);
+  // Like SymbolizeData, but the module is not mapped in this process
+  // (offload device images).
+  bool SymbolizeModuleData(const char* module_name, uptr module_offset,
+                           DataInfo* info);
   bool SymbolizeData(uptr address, DataInfo *info);
   bool SymbolizeFrame(uptr address, FrameInfo *info);
 
@@ -185,17 +193,17 @@ class Symbolizer final {
   class ModuleNameOwner {
    public:
     explicit ModuleNameOwner(Mutex *synchronized_by)
-        : last_match_(nullptr), mu_(synchronized_by) {
+        : mu_(synchronized_by), last_match_(nullptr) {
       storage_.reserve(kInitialCapacity);
     }
     const char *GetOwnedCopy(const char *str);
 
    private:
     static const uptr kInitialCapacity = 1000;
-    InternalMmapVector<const char*> storage_;
-    const char *last_match_;
 
     Mutex *mu_;
+    const char *last_match_ SANITIZER_GUARDED_BY(mu_);
+    InternalMmapVector<const char *> storage_ SANITIZER_GUARDED_BY(*mu_);
   } module_names_;
 
   /// Platform-specific function for creating a Symbolizer object.
@@ -220,7 +228,7 @@ class Symbolizer final {
   // always synchronized.
   Mutex mu_;
 
-  IntrusiveList<SymbolizerTool> tools_;
+  IntrusiveList<SymbolizerTool> tools_ SANITIZER_GUARDED_BY(mu_);
 
   explicit Symbolizer(IntrusiveList<SymbolizerTool> tools);
 

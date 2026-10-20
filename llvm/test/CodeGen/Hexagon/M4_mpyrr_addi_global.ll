@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r{{[0-9]+}} = add(##g0{{.*}},mpyi(r{{[0-9]+}},r{{[0-9]+}}))
 
 %s.0 = type { %s.1, ptr }

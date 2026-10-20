@@ -9,31 +9,33 @@
 
 // RV32-LABEL: @test_vlenb(
 // RV32-NEXT:  entry:
-// RV32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.read_register.i32(metadata [[META3:![0-9]+]])
+// RV32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.read_register.i32(metadata [[META4:![0-9]+]])
 // RV32-NEXT:    ret i32 [[TMP0]]
 //
 // RV64-LABEL: @test_vlenb(
 // RV64-NEXT:  entry:
-// RV64-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.read_register.i64(metadata [[META3:![0-9]+]])
+// RV64-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.read_register.i64(metadata [[META4:![0-9]+]])
 // RV64-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long test_vlenb(void) {
   return __riscv_vlenb();
 }
 //.
-// RV32: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(read) vscale_range(2,1024) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+32bit,+d,+f,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
+// RV32: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(read) vscale_range(2,1024) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+32bit,+d,+f,+i,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
 // RV32: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(read) }
 //.
-// RV64: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(read) vscale_range(2,1024) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
+// RV64: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(read) vscale_range(2,1024) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+i,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
 // RV64: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(read) }
 //.
-// RV32: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// RV32: [[META1:![0-9]+]] = !{i32 1, !"target-abi", !"ilp32d"}
-// RV32: [[META2:![0-9]+]] = !{i32 8, !"SmallDataLimit", i32 0}
-// RV32: [[META3]] = !{!"vlenb"}
+// RV32: [[META0:![0-9]+]] = !{i32 1, !"target-abi", !"ilp32d"}
+// RV32: [[META1:![0-9]+]] = !{i32 6, !"riscv-isa", [[META2:![0-9]+]]}
+// RV32: [[META2]] = !{!"rv32i2p1_f2p2_d2p2_v1p0_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"}
+// RV32: [[META3:![0-9]+]] = !{i32 8, !"SmallDataLimit", i32 0}
+// RV32: [[META4]] = !{!"vlenb"}
 //.
-// RV64: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// RV64: [[META1:![0-9]+]] = !{i32 1, !"target-abi", !"lp64d"}
-// RV64: [[META2:![0-9]+]] = !{i32 8, !"SmallDataLimit", i32 0}
-// RV64: [[META3]] = !{!"vlenb"}
+// RV64: [[META0:![0-9]+]] = !{i32 1, !"target-abi", !"lp64d"}
+// RV64: [[META1:![0-9]+]] = !{i32 6, !"riscv-isa", [[META2:![0-9]+]]}
+// RV64: [[META2]] = !{!"rv64i2p1_f2p2_d2p2_v1p0_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"}
+// RV64: [[META3:![0-9]+]] = !{i32 8, !"SmallDataLimit", i32 0}
+// RV64: [[META4]] = !{!"vlenb"}
 //.

@@ -3,7 +3,7 @@ add_header_library(
   HDRS
     stdc_errors.h
   DEPENDS
-    libc.include.errno
+    libc.hdr.errno_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -12,7 +12,7 @@ add_header_library(
   HDRS
     posix_errors.h
   DEPENDS
-    libc.include.errno
+    libc.src.errno.errno
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -21,8 +21,8 @@ add_header_library(
   HDRS
     linux_extension_errors.h
   DEPENDS
-    libc.include.errno
     libc.src.__support.StringUtil.message_mapper
+    libc.src.errno.errno
 )
 
 add_header_library(
@@ -48,7 +48,7 @@ add_header_library(
   HDRS
     stdc_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -57,7 +57,7 @@ add_header_library(
   HDRS
     posix_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -66,7 +66,7 @@ add_header_library(
   HDRS
     linux_extension_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 

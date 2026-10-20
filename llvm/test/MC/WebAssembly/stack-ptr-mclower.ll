@@ -7,7 +7,7 @@ define hidden void @bar() #0 {
   ret void
 }
 
-; Function that uses explict stack, and should generate a reference to
+; Function that uses explicit stack, and should generate a reference to
 ; __stack_pointer, along with the corresponding relocation entry.
 define hidden void @foo() #0 {
 entry:
@@ -15,8 +15,7 @@ entry:
   ret void
 }
 
-; CHECK:              .text
-; CHECK-NEXT:         .file   "stack-ptr-mclower.ll"
+; CHECK:              .file   "stack-ptr-mclower.ll"
 ; CHECK-NEXT:         .globaltype     __stack_pointer, [[PTR]]
 ; CHECK-NEXT:         .functype bar () -> ()
 ; CHECK-NEXT:         .functype foo () -> ()

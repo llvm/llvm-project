@@ -1,25 +1,22 @@
-# RUN: %{python} %s %{libcxx-dir}/utils %{include-dir}
-
-import sys
-
-sys.path.append(sys.argv[1])
+# RUN: %{python} %s %{libcxx-dir}/utils %{include-dir} %{target-include-dir}
 
 import pathlib
 import sys
-from libcxx.header_information import is_modulemap_header, is_header
+sys.path.append(sys.argv[1])
+from libcxx.header_information import all_headers
 
-headers = list(pathlib.Path(sys.argv[2]).rglob("*"))
-modulemap = open(f"{sys.argv[2]}/module.modulemap").read()
+# Check both the generic modulemap and the target-specific modulemap, if there is one.
+include = pathlib.Path(sys.argv[2])
+target_include = pathlib.Path(sys.argv[3])
+with open(include / "module.modulemap") as f:
+    modulemap = f.read()
+if target_include.resolve() != include.resolve():
+    with open(target_include / "module.modulemap") as f:
+        modulemap += f.read()
 
 isHeaderMissing = False
-
-for header in headers:
-    if not is_header(header):
-        continue
-
-    header = header.relative_to(pathlib.Path(sys.argv[2])).as_posix()
-
-    if not is_modulemap_header(header):
+for header in all_headers:
+    if not header.is_in_modulemap():
         continue
 
     if not str(header) in modulemap:

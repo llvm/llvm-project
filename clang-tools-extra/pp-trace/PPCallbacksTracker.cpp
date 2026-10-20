@@ -44,7 +44,7 @@ static std::string getSourceLocationString(Preprocessor &PP,
     std::string Result = SS.str();
 
     // YAML treats backslash as escape, so use forward slashes.
-    std::replace(Result.begin(), Result.end(), '\\', '/');
+    llvm::replace(Result, '\\', '/');
 
     return Result;
   }
@@ -60,8 +60,9 @@ static const char *const FileChangeReasonStrings[] = {
 };
 
 // CharacteristicKind strings.
-static const char *const CharacteristicKindStrings[] = { "C_User", "C_System",
-                                                         "C_ExternCSystem" };
+static const char *const CharacteristicKindStrings[] = {
+    "C_User", "C_System", "C_ExternCSystem", "C_User_ModuleMap",
+    "C_System_ModuleMap"};
 
 // MacroDirective::Kind strings.
 static const char *const MacroDirectiveKindStrings[] = {
@@ -547,8 +548,8 @@ void PPCallbacksTracker::appendArgument(const char *Name, ModuleIdPath Value) {
     if (I)
       SS << ", ";
     SS << "{"
-       << "Name: " << Value[I].first->getName() << ", "
-       << "Loc: " << getSourceLocationString(PP, Value[I].second) << "}";
+       << "Name: " << Value[I].getIdentifierInfo()->getName() << ", "
+       << "Loc: " << getSourceLocationString(PP, Value[I].getLoc()) << "}";
   }
   SS << "]";
   appendArgument(Name, SS.str());
@@ -653,7 +654,7 @@ void PPCallbacksTracker::appendFilePathArgument(const char *Name,
                                                 llvm::StringRef Value) {
   std::string Path(Value);
   // YAML treats backslash as escape, so use forward slashes.
-  std::replace(Path.begin(), Path.end(), '\\', '/');
+  llvm::replace(Path, '\\', '/');
   appendQuotedArgument(Name, Path);
 }
 

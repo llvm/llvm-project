@@ -12,6 +12,7 @@
 
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/NameResolver.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -66,6 +67,11 @@ std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
         .append(hashInteger(BinaryExpr.getOpcode()))
         .append(hashExpr(BC, *BinaryExpr.getRHS()));
   }
+  case MCExpr::Specifier: {
+    const auto &SpecExpr = cast<MCSpecifierExpr>(Expr);
+    return hashInteger(SpecExpr.getSpecifier())
+        .append(hashExpr(BC, *SpecExpr.getSubExpr()));
+  }
   case MCExpr::Target:
     return std::string();
   }
@@ -111,7 +117,7 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
       HashString.push_back(0);
     } else {
       StringRef OpcodeName = BC.InstPrinter->getOpcodeName(Opcode);
-      HashString.append(OpcodeName.str());
+      HashString.append(OpcodeName.begin(), OpcodeName.end());
     }
 
     for (const MCOperand &Op : MCPlus::primeOperands(Inst))
@@ -144,7 +150,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
       continue;
     }
 
-    std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
+    std::string Mnemonic = BC.InstPrinter->getMnemonic(Inst).first;
     llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
     Opcodes.insert(Mnemonic);
   }
@@ -152,6 +158,50 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   std::string HashString;
   for (const std::string &Opcode : Opcodes)
     HashString.append(Opcode);
+  return HashString;
+}
+
+/// An even looser hash level relative to $ hashBlockLoose to use with stale
+/// profile matching, composed of the names of a block's called functions in
+/// lexicographic order.
+std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // called function names.
+  SmallVector<StringRef, 8> FunctionNames;
+  for (const MCInst &Instr : BB) {
+    // Skip non-call instructions.
+    if (!BC.MIB->isCall(Instr))
+      continue;
+    const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+    if (!CallSymbol)
+      continue;
+    FunctionNames.push_back(CallSymbol->getName());
+  }
+  llvm::sort(FunctionNames);
+  std::string HashString;
+  for (StringRef FunctionName : FunctionNames)
+    HashString.append(FunctionName.begin(), FunctionName.end());
+
+  return HashString;
+}
+
+/// The same as the $hashBlockCalls function, but for profiled functions.
+std::string
+hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+                   &IdToYamlFunction,
+               const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+  SmallVector<StringRef, 8> FunctionNames;
+  for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
+    auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
+    if (It == IdToYamlFunction.end())
+      continue;
+    FunctionNames.push_back(NameResolver::dropNumNames(It->second->Name));
+  }
+  llvm::sort(FunctionNames);
+  std::string HashString;
+  for (StringRef FunctionName : FunctionNames)
+    HashString.append(FunctionName.begin(), FunctionName.end());
+
   return HashString;
 }
 

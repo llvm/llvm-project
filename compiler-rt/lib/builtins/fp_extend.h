@@ -37,16 +37,7 @@ static const int srcSigFracBits = 52;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 11;
 
-static inline int src_rep_t_clz_impl(src_rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int src_rep_t_clz_impl(src_rep_t a) { return __builtin_clzll(a); }
 #define src_rep_t_clz src_rep_t_clz_impl
 
 #elif defined SRC_80
@@ -166,13 +157,29 @@ static inline dst_rep_t construct_dst_rep(dst_rep_t sign, dst_rep_t exp, dst_rep
   return (sign << (dstBits - 1)) | (exp << (dstBits - 1 - dstExpBits)) | sigFrac;
 }
 
-// Two helper routines for conversion to and from the representation of
+// Helper routines for conversion to and from the representation of
 // floating-point data as integer values follow.
 
 static inline src_rep_t srcToRep(src_t x) {
   const union {
     src_t f;
     src_rep_t i;
+  } rep = {.f = x};
+  return rep.i;
+}
+
+static inline src_t srcFromRep(src_rep_t x) {
+  const union {
+    src_t f;
+    src_rep_t i;
+  } rep = {.i = x};
+  return rep.f;
+}
+
+static inline dst_rep_t dstToRep(dst_t x) {
+  const union {
+    dst_t f;
+    dst_rep_t i;
   } rep = {.f = x};
   return rep.i;
 }

@@ -30,7 +30,6 @@ using namespace llvm;
 namespace {
 class AArch64StorePairSuppress : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
   MachineTraceMetrics *Traces;
@@ -38,9 +37,7 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
-    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
@@ -53,8 +50,8 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineTraceMetrics>();
-    AU.addPreserved<MachineTraceMetrics>();
+    AU.addRequired<MachineTraceMetricsWrapperPass>();
+    AU.addPreserved<MachineTraceMetricsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -96,8 +93,8 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
       SingleSCDesc->isValid() && !SingleSCDesc->isVariant()) {
     // Compute the new critical resource length after replacing 2 separate
     // STRDui with one STPDi.
-    unsigned ResLenWithSTP = BBTrace.getResourceLength(
-        std::nullopt, PairSCDesc, {SingleSCDesc, SingleSCDesc});
+    unsigned ResLenWithSTP =
+        BBTrace.getResourceLength({}, PairSCDesc, {SingleSCDesc, SingleSCDesc});
     if (ResLenWithSTP > ResLength) {
       LLVM_DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
                         << " resources " << ResLength << " -> " << ResLenWithSTP
@@ -135,11 +132,10 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.enableStorePairSuppress())
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
-  TRI = ST.getRegisterInfo();
+  TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
 
   LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');
@@ -162,8 +158,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *BaseOp;
       int64_t Offset;
       bool OffsetIsScalable;
-      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
-                                       TRI) &&
+      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable) &&
           BaseOp->isReg()) {
         Register BaseReg = BaseOp->getReg();
         if (PrevBaseReg == BaseReg) {

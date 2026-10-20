@@ -1,0 +1,26 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("LLVMExegesisRISCVTests") {
+  deps = [
+    "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/RISCV",
+
+    # Exegesis reaches inside the Target/RISCV tablegen internals and must
+    # depend on these Target/RISCV-internal build targets.
+    "//llvm/lib/Target/RISCV/MCTargetDesc",
+    "//llvm/tools/llvm-exegesis/lib",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
+  ]
+  include_dirs = [
+    "//llvm/lib/Target/RISCV",
+    "//llvm/tools/llvm-exegesis/lib",
+  ]
+  sources = [
+    "SnippetGeneratorTest.cpp",
+    "TargetTest.cpp",
+  ]
+}

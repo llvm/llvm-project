@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple %itanium_abi_triple -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=GENERIC
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-linux-gnu -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=GENERIC
 
-// RUN: %clang_cc1 -target-feature +avx512f -verify -fopenmp -x c -triple %itanium_abi_triple -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=WITHFEATURE
-// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=45 %s
-// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=WITHFEATURE
+// RUN: %clang_cc1 -target-feature +avx512f -verify -fopenmp -x c -triple x86_64-linux-gnu -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=WITHFEATURE
+// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix=WITHFEATURE
 
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s --check-prefix=GENERIC
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=GENERIC
 
-// RUN: %clang_cc1 -target-feature +avx512f -verify -fopenmp -x c -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s --check-prefix=WITHFEATURE
-// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=WITHFEATURE
+// RUN: %clang_cc1 -target-feature +avx512f -verify -fopenmp -x c -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=WITHFEATURE
+// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -target-feature +avx512f -fopenmp -x c++ -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=WITHFEATURE
 
 // expected-no-diagnostics
 

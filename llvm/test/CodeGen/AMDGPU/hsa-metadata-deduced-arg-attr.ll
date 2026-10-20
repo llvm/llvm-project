@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 
 ; CHECK: amdhsa.kernels:
 ; CHECK-NEXT:  - .args:

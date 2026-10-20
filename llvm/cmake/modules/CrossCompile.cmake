@@ -12,6 +12,14 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     message(STATUS "Setting native build dir to " ${${project_name}_${target_name}_BUILD})
   endif(NOT DEFINED ${project_name}_${target_name}_BUILD)
 
+  if(NOT DEFINED ${project_name}_${target_name}_STAMP)
+    set(${project_name}_${target_name}_STAMP
+      "${CMAKE_CURRENT_BINARY_DIR}/${target_name}-stamps")
+    set(${project_name}_${target_name}_STAMP
+      ${${project_name}_${target_name}_STAMP} PARENT_SCOPE)
+    message(STATUS "Setting native stamp dir to " ${${project_name}_${target_name}_STAMP})
+  endif(NOT DEFINED ${project_name}_${target_name}_STAMP)
+
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake)
     set(CROSS_TOOLCHAIN_FLAGS_INIT
       -DCMAKE_TOOLCHAIN_FILE=\"${LLVM_MAIN_SRC_DIR}/cmake/platforms/${toolchain}.cmake\")
@@ -39,12 +47,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
   endif()
 
-  add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}
+  set(${project_name}_${target_name}_CREATE_STAMP
+    "${${project_name}_${target_name}_BUILD}/created.stamp")
+  add_custom_command(OUTPUT ${${project_name}_${target_name}_CREATE_STAMP}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${${project_name}_${target_name}_BUILD}
+    COMMAND ${CMAKE_COMMAND} -E touch ${${project_name}_${target_name}_CREATE_STAMP}
     COMMENT "Creating ${${project_name}_${target_name}_BUILD}...")
 
   add_custom_target(CREATE_${project_name}_${target_name}
-    DEPENDS ${${project_name}_${target_name}_BUILD})
+    DEPENDS ${${project_name}_${target_name}_CREATE_STAMP})
   get_subproject_title(subproject_title)
   set_target_properties(CREATE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
@@ -55,12 +66,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" experimental_targets_to_build_arg
          "${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}")
 
+  # Forward only requested roots; the cross build re-adds dependencies.
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_projects_arg
-         "${LLVM_ENABLE_PROJECTS}")
+         "${LLVM_REQUESTED_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_runtimes_arg
          "${LLVM_ENABLE_RUNTIMES}")
+  string(REPLACE ";" "$<SEMICOLON>" llvm_tablegen_flags
+         "${LLVM_TABLEGEN_FLAGS}")
 
   set(external_project_source_dirs)
   foreach(project ${LLVM_EXTERNAL_PROJECTS})
@@ -69,15 +83,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
 
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND NOT LIBC_HDRGEN_EXE)
-    set(libc_flags -DLLVM_LIBC_FULL_BUILD=ON -DLIBC_HDRGEN_ONLY=ON)
+  if(PYTHON_EXECUTABLE)
+    set(python_executable_flag "-DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
   endif()
 
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
-        -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
-        -DCMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER}"
-        -DCMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER}"
+        "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+        "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
+        "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_CURRENT_SOURCE_DIR}
         ${CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name}}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
@@ -88,11 +102,17 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_ENABLE_PROJECTS="${llvm_enable_projects_arg}"
         -DLLVM_EXTERNAL_PROJECTS="${llvm_external_projects_arg}"
         -DLLVM_ENABLE_RUNTIMES="${llvm_enable_runtimes_arg}"
+        # Forward options used to derive implicit project dependencies.
+        -DCLANG_ENABLE_CIR="${CLANG_ENABLE_CIR}"
         ${external_project_source_dirs}
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
-        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
+        -DLLVM_INCLUDE_DOCS=OFF
+        -DLLVM_INCLUDE_EXAMPLES=OFF
+        -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
+        ${python_executable_flag}
+        ${build_type_flags} ${linker_flag} ${external_clang_dir}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}
@@ -130,13 +150,16 @@ function(build_native_tool target output_path_var)
     set_property(GLOBAL APPEND PROPERTY ${PROJECT_NAME}_HOST_TARGETS ${output_path})
   endif()
 
-  llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
+  llvm_ExternalProject_BuildCmd(build_cmd ${target}
+                                ${${PROJECT_NAME}_NATIVE_BUILD}
+                                ${${PROJECT_NAME}_NATIVE_STAMP}
                                 CONFIGURATION Release)
   add_custom_command(OUTPUT "${output_path}"
                      COMMAND ${build_cmd}
                      DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS} ${host_targets}
                      WORKING_DIRECTORY "${${PROJECT_NAME}_NATIVE_BUILD}"
                      COMMENT "Building native ${target}..."
-                     USES_TERMINAL)
+                     USES_TERMINAL
+                     VERBATIM)
   set(${output_path_var} "${output_path}" PARENT_SCOPE)
 endfunction()

@@ -10,7 +10,6 @@
 #include "AVRTargetMachine.h"
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
@@ -19,8 +18,9 @@
 #include "AVR.h"
 
 namespace llvm {
-void AVRTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
-  Base::Initialize(Ctx, TM);
+void AVRTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                     const Module &M) {
+  Base::initialize(Ctx, TM, M);
   ProgmemDataSection =
       Ctx.getELFSection(".progmem.data", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
   Progmem1DataSection =

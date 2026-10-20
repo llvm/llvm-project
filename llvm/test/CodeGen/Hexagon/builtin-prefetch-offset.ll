@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check for the immediate offset.  It must be a multiple of 8.
 ; CHECK: dcfetch({{.*}}+#8)
 ; In 6.2 (which supports v4+ only), we generate indexed dcfetch in all cases

@@ -143,27 +143,27 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::SmallPtrSet&lt;*,*&gt;">
-    <DisplayString Condition="CurArray == SmallArray">{{ [Small Mode] size={NumNonEmpty}, capacity={CurArraySize} }}</DisplayString>
-    <DisplayString Condition="CurArray != SmallArray">{{ [Big Mode] size={NumNonEmpty}, capacity={CurArraySize} }}</DisplayString>
+    <DisplayString Condition="IsSmall">{{ [Small Mode] size={NumEntries}, capacity={CurArraySize} }}</DisplayString>
+    <DisplayString Condition="!IsSmall">{{ [Big Mode] size={NumEntries}, capacity={CurArraySize} }}</DisplayString>
     <Expand>
-      <Item Name="[size]">NumNonEmpty</Item>
+      <Item Name="[size]">NumEntries</Item>
       <Item Name="[capacity]">CurArraySize</Item>
       <ArrayItems>
-        <Size>NumNonEmpty</Size>
+        <Size>NumEntries</Size>
         <ValuePointer>($T1*)CurArray</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
 
   <Type Name="llvm::DenseMap&lt;*,*,*&gt;">
-    <DisplayString Condition="NumEntries == 0">empty</DisplayString>
-    <DisplayString Condition="NumEntries != 0">{{ size={NumEntries}, buckets={NumBuckets} }}</DisplayString>
+    <DisplayString Condition="Storage.NumEntries == 0">empty</DisplayString>
+    <DisplayString Condition="Storage.NumEntries != 0">{{ size={Storage.NumEntries}, buckets={Storage.NumBuckets} }}</DisplayString>
     <Expand>
-      <Item Name="[size]">NumEntries</Item>
-      <Item Name="[buckets]">NumBuckets</Item>
+      <Item Name="[size]">Storage.NumEntries</Item>
+      <Item Name="[buckets]">Storage.NumBuckets</Item>
       <ArrayItems>
-        <Size>NumBuckets</Size>
-        <ValuePointer>Buckets</ValuePointer>
+        <Size>Storage.NumBuckets</Size>
+        <ValuePointer>Storage.Buckets</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
@@ -191,14 +191,6 @@ For later versions of Visual Studio, no setup is required.
 
   <Type Name="llvm::Triple">
     <DisplayString>{Data}</DisplayString>
-  </Type>
-
-  <Type Name="llvm::Optional&lt;*&gt;">
-    <DisplayString Condition="!Storage.hasVal">None</DisplayString>
-    <DisplayString Condition="Storage.hasVal">{Storage.value}</DisplayString>
-    <Expand>
-      <Item Name="[underlying]" Condition="Storage.hasVal">Storage.value</Item>
-    </Expand>
   </Type>
 
   <Type Name="llvm::Expected&lt;*&gt;">
@@ -318,7 +310,7 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::ConstantInt">
-    <DisplayString>i{Val.BitWidth} {Val.VAL}</DisplayString>
+    <DisplayString>i{Val.BitWidth} {Val}</DisplayString>
   </Type>
 
   <Type Name="llvm::IntegerType">

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -30,24 +31,18 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
-/// Utility iterator used for filtering records for a specific dialect.
-namespace {
-using DialectFilterIterator =
-    llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
-                          std::function<bool(const llvm::Record *)>>;
-} // namespace
-
 static void populateDiscardableAttributes(
-    Dialect &dialect, llvm::DagInit *discardableAttrDag,
+    Dialect &dialect, const llvm::DagInit *discardableAttrDag,
     SmallVector<std::pair<std::string, std::string>> &discardableAttributes) {
   for (int i : llvm::seq<int>(0, discardableAttrDag->getNumArgs())) {
-    llvm::Init *arg = discardableAttrDag->getArg(i);
+    const llvm::Init *arg = discardableAttrDag->getArg(i);
 
     StringRef givenName = discardableAttrDag->getArgNameStr(i);
     if (givenName.empty())
@@ -56,18 +51,6 @@ static void populateDiscardableAttributes(
     discardableAttributes.push_back(
         {givenName.str(), arg->getAsUnquotedString()});
   }
-}
-
-/// Given a set of records for a T, filter the ones that correspond to
-/// the given dialect.
-template <typename T>
-static iterator_range<DialectFilterIterator>
-filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
-  auto filterFn = [&](const llvm::Record *record) {
-    return T(record).getDialect() == dialect;
-  };
-  return {DialectFilterIterator(records.begin(), records.end(), filterFn),
-          DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
 std::optional<Dialect>
@@ -204,25 +187,25 @@ static const char *const discardableAttrHelperDecl = R"(
       static constexpr ::llvm::StringLiteral getNameStr() {{
         return "{4}.{1}";
       }
-      constexpr ::mlir::StringAttr getName() {{
+      constexpr ::mlir::StringAttr getName() const {{
         return name;
       }
 
-      {0}AttrHelper(::mlir::MLIRContext *ctx)
+      explicit {0}AttrHelper(::mlir::MLIRContext *ctx)
         : name(::mlir::StringAttr::get(ctx, getNameStr())) {{}
 
-     {2} getAttr(::mlir::Operation *op) {{
-       return op->getAttrOfType<{2}>(name);
+     {2} getAttr(::mlir::Operation *op) const {{
+       return op->getDiscardableAttrOfType<{2}>(name);
      }
-     void setAttr(::mlir::Operation *op, {2} val) {{
-       op->setAttr(name, val);
+     void setAttr(::mlir::Operation *op, {2} val) const {{
+       op->setDiscardableAttr(name, val);
      }
-     bool isAttrPresent(::mlir::Operation *op) {{
-       return op->hasAttrOfType<{2}>(name);
+     bool isAttrPresent(::mlir::Operation *op) const {{
+       return op->hasDiscardableAttrOfType<{2}>(name);
      }
-     void removeAttr(::mlir::Operation *op) {{
-       assert(op->hasAttrOfType<{2}>(name));
-       op->removeAttr(name);
+     void removeAttr(::mlir::Operation *op) const {{
+       assert(op->hasDiscardableAttrOfType<{2}>(name));
+       op->removeDiscardableAttr(name);
      }
    };
    {0}AttrHelper get{0}AttrHelper() {
@@ -237,12 +220,16 @@ static const char *const discardableAttrHelperDecl = R"(
 static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
   // Emit all nested namespaces.
   {
-    NamespaceEmitter nsEmitter(os, dialect);
+    DialectNamespaceEmitter nsEmitter(os, dialect);
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
     StringRef superClassName =
         dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
+
+    tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
+                                       dialect.getDescription(),
+                                       /*terminateCmment=*/false);
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
                         superClassName);
 
@@ -269,7 +256,8 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     if (dialect.hasOperationInterfaceFallback())
       os << operationInterfaceFallbackDecl;
 
-    llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
+    const llvm::DagInit *discardableAttrDag =
+        dialect.getDiscardableAttributes();
     SmallVector<std::pair<std::string, std::string>> discardableAttributes;
     populateDiscardableAttributes(dialect, discardableAttrDag,
                                   discardableAttributes);
@@ -295,11 +283,10 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
-static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
-                             raw_ostream &os) {
-  emitSourceFileHeader("Dialect Declarations", os, recordKeeper);
+static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Dialect Declarations", os, records);
 
-  auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
+  auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())
     return false;
 
@@ -340,8 +327,7 @@ static const char *const dialectDestructorStr = R"(
 
 )";
 
-static void emitDialectDef(Dialect &dialect,
-                           const llvm::RecordKeeper &recordKeeper,
+static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
                            raw_ostream &os) {
   std::string cppClassName = dialect.getCppClassName();
 
@@ -351,7 +337,7 @@ static void emitDialectDef(Dialect &dialect,
        << "::" << cppClassName << ")\n";
 
   // Emit all nested namespaces.
-  NamespaceEmitter nsEmitter(os, dialect);
+  DialectNamespaceEmitter nsEmitter(os, dialect);
 
   /// Build the list of dependent dialects.
   std::string dependentDialectRegistrations;
@@ -370,7 +356,7 @@ static void emitDialectDef(Dialect &dialect,
   StringRef superClassName =
       dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
 
-  llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
+  const llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
   SmallVector<std::pair<std::string, std::string>> discardableAttributes;
   populateDiscardableAttributes(dialect, discardableAttrDag,
                                 discardableAttributes);
@@ -389,11 +375,10 @@ static void emitDialectDef(Dialect &dialect,
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
 
-static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
-                            raw_ostream &os) {
-  emitSourceFileHeader("Dialect Definitions", os, recordKeeper);
+static bool emitDialectDefs(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Dialect Definitions", os, records);
 
-  auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
+  auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())
     return false;
 
@@ -401,7 +386,7 @@ static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
   std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
-  emitDialectDef(*dialect, recordKeeper, os);
+  emitDialectDef(*dialect, records, os);
   return false;
 }
 
@@ -411,12 +396,12 @@ static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
 
 static mlir::GenRegistration
     genDialectDecls("gen-dialect-decls", "Generate dialect declarations",
-                    [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                    [](const RecordKeeper &records, raw_ostream &os) {
                       return emitDialectDecls(records, os);
                     });
 
 static mlir::GenRegistration
     genDialectDefs("gen-dialect-defs", "Generate dialect definitions",
-                   [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                   [](const RecordKeeper &records, raw_ostream &os) {
                      return emitDialectDefs(records, os);
                    });

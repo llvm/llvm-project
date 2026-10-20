@@ -52,6 +52,8 @@ int main(int argc, char const *argv[]) {
 
 	CCC ccc = {111, 222, 333};
 
+        int bar_int = 20;
+
         Empty1 e1;
         Empty2 e2;
 

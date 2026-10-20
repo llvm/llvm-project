@@ -14,15 +14,17 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
-LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE constexpr void
+normalize(int &exponent, FPBits<long double>::StorageType &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
+      static_cast<size_t>(cpp::countl_zero(static_cast<uint64_t>(mantissa))) -
       (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
   exponent -= shift;
   mantissa <<= shift;
@@ -30,16 +32,16 @@ LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
 
 // if constexpr statement in sqrt.h still requires x86::sqrt to be declared
 // even when it's not used.
-LIBC_INLINE long double sqrt(long double x);
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-LIBC_INLINE long double sqrt(long double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
-  constexpr auto LDNAN = LDBits::quiet_nan().get_val();
+  LIBC_BIT_CAST_CONSTEXPR_VAR auto LDNAN = LDBits::quiet_nan().get_val();
 
   LDBits bits(x);
 
@@ -108,7 +110,11 @@ LIBC_INLINE long double sqrt(long double x) {
     // Append the exponent field.
     x_exp = ((x_exp >> 1) + LDBits::EXP_BIAS);
     y |= (static_cast<StorageType>(x_exp) << (LDBits::FRACTION_LEN + 1));
-
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    // Round to nearest, ties to even
+    if (rb && (lsb || (r != 0)))
+      ++y;
+#else
     switch (quick_get_round()) {
     case FE_TONEAREST:
       // Round to nearest, ties to even
@@ -120,6 +126,7 @@ LIBC_INLINE long double sqrt(long double x) {
         ++y;
       break;
     }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     // Extract output
     FPBits<long double> out(0.0L);
@@ -134,6 +141,6 @@ LIBC_INLINE long double sqrt(long double x) {
 
 } // namespace x86
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H

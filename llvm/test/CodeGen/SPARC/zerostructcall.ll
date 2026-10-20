@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
 
 ; CHECK-LABEL: struct_ptr_test
 ; CHECK:       call struct_ptr_fn

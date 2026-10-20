@@ -1,0 +1,55 @@
+REQUIRES: x86-registered-target,ld.lld,llvm-ar
+
+# Test that a DTLTO link succeeds when there are two archive member files with
+# the same filename path component.
+
+# Split this file into several sources.
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c start.c
+
+# Create first archive.
+RUN: mkdir archive1 && cd archive1
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c ../t1.c ../t3.c
+RUN: llvm-ar rc archive.a t3.o t1.o
+RUN: cd ..
+
+# Create second archive.
+RUN: mkdir archive2 && cd archive2
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c ../t1.c ../t3.c
+RUN: llvm-ar rc archive.a t3.o t1.o
+RUN: cd ..
+
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld \
+RUN:   -nostdlib -Wl,--undefined=t1,--undefined=t3 \
+RUN:    start.o archive1/archive.a archive2/archive.a -o main.elf \
+RUN:   -Wl,--save-temps \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang
+
+# Check that the required output files have been created.
+RUN: ls | FileCheck %s --check-prefix=OUTPUTS
+
+# JSON jobs description.
+OUTPUTS-DAG: {{^}}main.[[#PID:]].dist-file.json
+
+# Sources.
+OUTPUTS-DAG: {{^}}start.1.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}start.1.[[#PID]].native.o.thinlto.bc{{$}}
+
+# Archive members.
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+OUTPUTS-DAG: {{^}}archive.a(t3.o at [[#T3_OFFSET:]]).2.[[#%X,HEXPID:]].2.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t3.o at [[#T3_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t1.o at [[#T1_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(t1.o at [[#T1_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
+
+#--- t1.c
+__attribute__((retain)) void t1() { }
+
+#--- start.c
+__attribute__((retain)) void _start() { }
+
+#--- t3.c
+__attribute__((retain)) void t3() { }

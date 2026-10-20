@@ -33,3 +33,6 @@
 //
 // RUN: %clang --target=riscv64 -### -S -mno-implicit-float %s 2>&1 | FileCheck -check-prefix=TEST11 %s
 // TEST11: "-no-implicit-float"
+//
+// RUN: %clang --target=ppc64le -### -S -mno-red-zone %s 2>&1 | FileCheck -check-prefix=TEST12 %s
+// TEST12: "-disable-red-zone"

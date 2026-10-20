@@ -206,6 +206,21 @@ const SourceFile *AllSources::ReadStandardInput(llvm::raw_ostream &error) {
   return nullptr;
 }
 
+std::vector<std::string> AllSources::GetIncludedFilePaths() const {
+  std::vector<std::string> paths;
+  std::set<std::string> seen;
+  for (const auto &source : ownedSourceFiles_) {
+    const std::string &path{source->path()};
+    if (path.empty() || path == "-") {
+      continue;
+    }
+    if (seen.insert(path).second) {
+      paths.push_back(path);
+    }
+  }
+  return paths;
+}
+
 ProvenanceRange AllSources::AddIncludedFile(
     const SourceFile &source, ProvenanceRange from, bool isModule) {
   ProvenanceRange covers{range_.NextAfter(), source.bytes()};
@@ -244,6 +259,27 @@ static void EmitPrefix(llvm::raw_ostream &o, llvm::raw_ostream::Colors color,
   if (showColors) {
     o.resetColor();
   }
+}
+
+std::optional<ProvenanceRange> AllSources::GetInclusionInfo(
+    const std::optional<ProvenanceRange> &range) const {
+  if (!range || !IsValid(range->start()))
+    return std::nullopt;
+  const Origin &origin{MapToOrigin(range->start())};
+
+  return common::visit(
+      common::visitors{
+          [&](const Inclusion &inc) -> std::optional<ProvenanceRange> {
+            if (IsValid(origin.replaces) &&
+                range_.Contains(origin.replaces.start()))
+              return origin.replaces;
+            return std::nullopt;
+          },
+          [&](const auto &) -> std::optional<ProvenanceRange> {
+            return std::nullopt;
+          },
+      },
+      origin.u);
 }
 
 void AllSources::EmitMessage(llvm::raw_ostream &o,
@@ -321,14 +357,19 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 }
 
 const SourceFile *AllSources::GetSourceFile(
-    Provenance at, std::size_t *offset) const {
+    Provenance at, std::size_t *offset, bool topLevel) const {
   const Origin &origin{MapToOrigin(at)};
   return common::visit(common::visitors{
                            [&](const Inclusion &inc) {
-                             if (offset) {
-                               *offset = origin.covers.MemberOffset(at);
+                             if (topLevel && !origin.replaces.empty()) {
+                               return GetSourceFile(
+                                   origin.replaces.start(), offset, topLevel);
+                             } else {
+                               if (offset) {
+                                 *offset = origin.covers.MemberOffset(at);
+                               }
+                               return &inc.source;
                              }
-                             return &inc.source;
                            },
                            [&](const Macro &) {
                              return GetSourceFile(
@@ -380,9 +421,9 @@ std::optional<ProvenanceRange> AllSources::GetFirstFileProvenance() const {
   return std::nullopt;
 }
 
-std::string AllSources::GetPath(Provenance at) const {
+std::string AllSources::GetPath(Provenance at, bool topLevel) const {
   std::size_t offset{0};
-  const SourceFile *source{GetSourceFile(at, &offset)};
+  const SourceFile *source{GetSourceFile(at, &offset, topLevel)};
   return source ? *source->GetSourcePosition(offset).path : ""s;
 }
 

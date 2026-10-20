@@ -14,9 +14,11 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using testing::UnorderedElementsAre;
 
 TEST(SmallPtrSetTest, Assignment) {
   int buf[8];
@@ -55,7 +57,7 @@ TEST(SmallPtrSetTest, GrowthTest) {
 
 
   SmallPtrSet<int *, 4> s;
-  typedef SmallPtrSet<int *, 4>::iterator iter;
+  using iter = SmallPtrSet<int *, 4>::iterator;
 
   s.insert(&buf[0]);
   s.insert(&buf[1]);
@@ -408,3 +410,125 @@ TEST(SmallPtrSetTest, RemoveIf) {
   Removed = Set.remove_if([](int *Ptr) { return false; });
   EXPECT_FALSE(Removed);
 }
+
+TEST(SmallPtrSetTest, CtorRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  int *Args[] = {&V2, &V0, &V1};
+  SmallPtrSet<int *, 4> Set(llvm::from_range, Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
+TEST(SmallPtrSetTest, InsertRange) {
+  int V0 = 0;
+  int V1 = 1;
+  int V2 = 2;
+  SmallPtrSet<int *, 4> Set;
+  int *Args[] = {&V2, &V0, &V1};
+  Set.insert_range(Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&V0, &V1, &V2));
+}
+
+TEST(SmallPtrSetTest, Reserve) {
+  // Check that we don't do anything silly when using reserve().
+  SmallPtrSet<int *, 4> Set;
+  int Vals[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+  Set.insert(&Vals[0]);
+
+  // We shouldn't reallocate when this happens.
+  Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
+
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[2]);
+  Set.insert(&Vals[3]);
+
+  // We shouldn't reallocate this time either.
+  Set.reserve(4);
+  EXPECT_EQ(Set.capacity(), 4u);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+
+  // Reserving further should lead to a reallocation. And matching the existing
+  // insertion approach, we immediately allocate up to 128 elements.
+  Set.reserve(5);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 4u);
+  EXPECT_THAT(Set,
+              UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3]));
+
+  // And we should be able to insert another two or three elements without
+  // reallocating.
+  Set.insert(&Vals[4]);
+  Set.insert(&Vals[5]);
+
+  // Calling a smaller reserve size should have no effect.
+  Set.reserve(1);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 6u);
+
+  // Reserving zero should have no effect either.
+  Set.reserve(0);
+  EXPECT_EQ(Set.capacity(), 128u);
+  EXPECT_EQ(Set.size(), 6u);
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
+
+  // Reserving 192 should result in 512 buckets: 192 * 3 / 2 = 288, rounded
+  // up to the next power of two.
+  Set.reserve(192);
+  EXPECT_EQ(Set.capacity(), 512u);
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(SmallPtrSetTest, SwapInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Set.swap(Other);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveConstructInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, IteratorComparability) {
+  SmallPtrSet<int *, 4>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set1, Set2;
+  Set1.insert(&Vals[0]);
+  Set2.insert(&Vals[1]);
+  EXPECT_DEATH((void)(Set1.begin() == Set2.begin()), "incomparable iterators");
+}
+
+TEST(SmallPtrSetTest, InsertInvalidatesIteratorComparison) {
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set;
+  Set.insert(&Vals[0]);
+  auto It = Set.begin();
+  Set.insert(&Vals[1]);
+  EXPECT_DEATH((void)(It == Set.end()), "incomparable iterators");
+}
+#endif

@@ -1,6 +1,5 @@
 """Test stepping over and into inlined functions."""
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -14,23 +13,38 @@ class TestInlineStepping(TestBase):
         compiler="icc",
         bugnumber="# Not really a bug.  ICC combines two inlined functions.",
     )
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
         self.inline_stepping()
 
     @add_test_categories(["pyapi"])
+    @skipIf(oslist=["windows"], archs=["aarch64"])  # Flaky on buildbot
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_step_over_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
         self.inline_stepping_step_over()
 
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr32343"
+    )
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+    )
     def test_step_in_template_with_python_api(self):
         """Test stepping in to templated functions."""
         self.build()
         self.step_in_template()
+
+    @add_test_categories(["pyapi"])
+    def test_virtual_inline_stepping(self):
+        """Test stepping through a virtual inlined call stack"""
+        self.build()
+        self.virtual_inline_stepping()
 
     def setUp(self):
         # Call super's setUp().
@@ -148,32 +162,11 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// Stop here and step over to set up stepping over.", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "// Stop here and step over to set up stepping over.",
+            self.main_source_spec,
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         # Step over the inline_value = 0 line to get us to inline_trivial_1 called from main.  Doing it this way works
         # around a bug in lldb where the breakpoint on the containing line of an inlined function with no return value
@@ -277,32 +270,9 @@ class TestInlineStepping(TestBase):
 
     def inline_stepping_step_over(self):
         """Use Python APIs to test stepping over and hitting breakpoints."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// At second call of caller_ref_1 in main.", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// At second call of caller_ref_1 in main.", self.main_source_spec
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         step_sequence = [
             ["// In caller_ref_1.", "into"],
@@ -311,38 +281,34 @@ class TestInlineStepping(TestBase):
         ]
         self.run_step_sequence(step_sequence)
 
+        # Now make sure that next to a virtual inlined call stack
+        # gets the call stack depth correct.
+        break_2_in_main = target.BreakpointCreateBySourceRegex(
+            "// Call max_value specialized", self.main_source_spec
+        )
+        self.assertGreater(break_2_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
+        threads = lldbutil.continue_to_breakpoint(self.process, break_2_in_main)
+        self.assertEqual(len(threads), 1, "Hit our second breakpoint")
+        self.assertEqual(threads[0].id, self.thread.id, "Stopped at right thread")
+        self.thread.StepOver()
+        frame_0 = self.thread.frames[0]
+        line_entry = frame_0.line_entry
+        self.assertEqual(
+            line_entry.file.basename, self.main_source_spec.basename, "File matches"
+        )
+        target_line = line_number("calling.cpp", "// At caller_trivial_inline_1")
+        self.assertEqual(line_entry.line, target_line, "Lines match as well.")
+
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
-            "// Call max_value template", self.main_source_spec
+        target, self.process, self.thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Call max_value template", self.main_source_spec
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
 
         break_2_in_main = target.BreakpointCreateBySourceRegex(
             "// Call max_value specialized", self.main_source_spec
         )
         self.assertTrue(break_2_in_main, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertTrue(self.process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, break_1_in_main
-        )
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        self.thread = threads[0]
 
         step_sequence = [["// In max_value template", "into"]]
         self.run_step_sequence(step_sequence)
@@ -357,3 +323,76 @@ class TestInlineStepping(TestBase):
 
         step_sequence = [["// In max_value specialized", "into"]]
         self.run_step_sequence(step_sequence)
+
+    def run_to_call_site_and_step(
+        self, source_regex, func_name, start_pos, one_more_step_loc=None
+    ):
+        main_spec = lldb.SBFileSpec("calling.cpp")
+        # Set the breakpoint by file and line, not sourced regex because
+        # we want to make sure we can set breakpoints on call sites:
+        call_site_line_num = line_number(self.main_source, source_regex)
+        target, process, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, main_spec, call_site_line_num
+        )
+
+        # Make sure that the location is at the call site (run_to_line_breakpoint already asserted
+        # that there's one location.):
+        bkpt_loc = bkpt.location[0]
+        strm = lldb.SBStream()
+        result = bkpt_loc.GetDescription(strm, lldb.eDescriptionLevelFull)
+
+        self.assertTrue(result, "Got a location description")
+        desc = strm.GetData()
+        self.assertIn(f"calling.cpp:{call_site_line_num}", desc, "Right line listed")
+        # We don't get the function name right yet - so we omit it in printing.
+        # Turn on this test when that is working.
+        # self.assertIn(func_name, desc, "Right function listed")
+
+        pc = thread.frame[0].pc
+        for i in range(start_pos, 3):
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+
+            trivial_line_num = line_number(
+                self.main_source, f"In caller_trivial_inline_{i}."
+            )
+            self.assertEqual(
+                frame_0.line_entry.line,
+                trivial_line_num,
+                f"Stepped into the caller_trivial_inline_{i}",
+            )
+            if pc != frame_0.pc:
+                # If we get here, we stepped to the expected line number, but
+                # the compiler on this system has decided to insert an instruction
+                # between the call site of an inlined function with no arguments,
+                # returning void, and its immediate call to another void inlined function
+                # with no arguments.  We aren't going to be testing virtual inline
+                # stepping for this function...
+                break
+
+        if one_more_step_loc:
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+            self.assertEqual(
+                frame_0.line_entry.line,
+                line_number(self.main_source, one_more_step_loc),
+                "Was able to step one more time",
+            )
+        process.Kill()
+        target.Clear()
+
+    def virtual_inline_stepping(self):
+        """Use the Python API's to step through a virtual inlined stack"""
+        self.run_to_call_site_and_step("At caller_trivial_inline_1", "main", 1)
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_1", "caller_trivial_inline_1", 2
+        )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_2", "caller_trivial_inline_2", 3
+        )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_3",
+            "caller_trivial_inline_3",
+            4,
+            "After caller_trivial_inline_3",
+        )

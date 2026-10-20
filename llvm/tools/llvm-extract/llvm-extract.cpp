@@ -19,6 +19,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -41,7 +42,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory ExtractCat("llvm-extract Options");
+static cl::OptionCategory ExtractCat("llvm-extract Options");
 
 // InputFilename - The filename to read from.
 static cl::opt<std::string> InputFilename(cl::Positional,
@@ -56,6 +57,10 @@ static cl::opt<std::string> OutputFilename("o",
 
 static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
                            cl::cat(ExtractCat));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the verifier"),
+                              cl::cat(ExtractCat), cl::Hidden);
 
 static cl::opt<bool> DeleteFn("delete",
                               cl::desc("Delete specified Globals from Module"),
@@ -90,10 +95,13 @@ static cl::list<std::string> ExtractBlocks(
         "Each pair will create a function.\n"
         "If multiple basic blocks are specified in one pair,\n"
         "the first block in the sequence should dominate the rest.\n"
+        "If an unnamed basic block is to be extracted,\n"
+        "'%' should be added before the basic block variable names.\n"
         "eg:\n"
         "  --bb=f:bb1;bb2 will extract one function with both bb1 and bb2;\n"
         "  --bb=f:bb1 --bb=f:bb2 will extract two functions, one with bb1, one "
-        "with bb2."),
+        "with bb2.\n"
+        "  --bb=f:%1 will extract one function with basic block 1;"),
     cl::value_desc("function:bb1[;bb2...]"), cl::cat(ExtractCat));
 
 // ExtractAlias - The alias to extract from the module.
@@ -126,22 +134,13 @@ static cl::opt<bool> OutputAssembly("S",
                                     cl::desc("Write output as LLVM assembly"),
                                     cl::Hidden, cl::cat(ExtractCat));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(ExtractCat));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(ExtractCat));
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   LLVMContext Context;
   cl::HideUnrelatedOptions(ExtractCat);
-  cl::ParseCommandLineOptions(argc, argv, "llvm extractor\n");
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm extractor\n");
 
   // Use lazy loading, since we only care about selected global values.
   SMDiagnostic Err;
@@ -149,6 +148,12 @@ int main(int argc, char **argv) {
 
   if (!M) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*M, &errs())) {
+    errs() << argv[0] << ": " << InputFilename
+           << ": error: input module is broken!\n";
     return 1;
   }
 
@@ -297,9 +302,8 @@ int main(int argc, char **argv) {
           Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
-          if (CF->isDeclaration() || GVs.count(CF))
+          if (CF->isDeclaration() || !GVs.insert(CF))
             continue;
-          GVs.insert(CF);
           Workqueue.push_back(CF);
         }
       }
@@ -314,7 +318,7 @@ int main(int argc, char **argv) {
       Materialize(*GVs[i]);
   } else {
     // Deleting. Materialize every GV that's *not* in GVs.
-    SmallPtrSet<GlobalValue *, 8> GVSet(GVs.begin(), GVs.end());
+    SmallPtrSet<GlobalValue *, 8> GVSet(llvm::from_range, GVs);
     for (auto &F : *M) {
       if (!GVSet.count(&F))
         Materialize(F);
@@ -328,7 +332,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB;
+    PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -357,7 +361,7 @@ int main(int argc, char **argv) {
         // The function has been materialized, so add its matching basic blocks
         // to the block extractor list, or fail if a name is not found.
         auto Res = llvm::find_if(*P.first, [&](const BasicBlock &BB) {
-          return BB.getName() == BBName;
+          return BB.getNameOrAsOperand() == BBName;
         });
         if (Res == P.first->end()) {
           errs() << argv[0] << ": function " << P.first->getName()
@@ -375,7 +379,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB;
+    PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -396,7 +400,7 @@ int main(int argc, char **argv) {
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB;
+  PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -409,6 +413,7 @@ int main(int argc, char **argv) {
     PM.addPass(GlobalDCEPass());
   PM.addPass(StripDeadDebugInfoPass());
   PM.addPass(StripDeadPrototypesPass());
+  PM.addPass(StripDeadCGProfilePass());
 
   std::error_code EC;
   ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_None);
@@ -418,9 +423,13 @@ int main(int argc, char **argv) {
   }
 
   if (OutputAssembly)
-    PM.addPass(PrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
+    PM.addPass(PrintModulePass(Out.os(), "",
+                               /*ShouldPreserveUseListOrder=*/false,
+                               /*EmitSummaryIndex=*/false,
+                               /*ShouldRenumberMetadata=*/true));
   else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
-    PM.addPass(BitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
+    PM.addPass(
+        BitcodeWriterPass(Out.os(), /* ShouldPreserveUseListOrder */ true));
 
   PM.run(*M, MAM);
 

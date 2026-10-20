@@ -13,17 +13,24 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_GCOVPROFILER_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
+#include <optional>
 
 namespace llvm {
 /// The gcov-style instrumentation pass
-class GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
+class GCOVProfilerPass : public OptionalPassInfoMixin<GCOVProfilerPass> {
 public:
-  GCOVProfilerPass(const GCOVOptions &Options = GCOVOptions::getDefault()) : GCOVOpts(Options) { }
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  GCOVProfilerPass(
+      std::optional<GCOVOptions> Options = std::nullopt,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem())
+      : GCOVOpts(Options), VFS(std::move(VFS)) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
-  GCOVOptions GCOVOpts;
+  std::optional<GCOVOptions> GCOVOpts;
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 };
 
 } // namespace llvm

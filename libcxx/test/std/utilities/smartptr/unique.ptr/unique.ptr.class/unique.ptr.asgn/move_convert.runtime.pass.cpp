@@ -89,7 +89,7 @@ void test_sfinae() {
     static_assert(!std::is_assignable<UAC, const UA&>::value, "");
   }
   { // cannot move if the deleter-types cannot convert
-    static_assert(std::is_assignable<UACD, UAD&&>::value, "");
+    static_assert(!std::is_assignable<UACD, UAD&&>::value, "");
     static_assert(!std::is_assignable<UACD, UAC&&>::value, "");
     static_assert(!std::is_assignable<UAC, UACD&&>::value, "");
   }
@@ -102,6 +102,12 @@ void test_sfinae() {
     using UA1 = std::unique_ptr<A[], const DA&>;
     using UA2 = std::unique_ptr<A[], const DAC&>;
     static_assert(!std::is_assignable<UA1, UA2&&>::value, "");
+  }
+  { // cannot move-convert with reference deleters with different qualifiers
+    using UA1 = std::unique_ptr<A[], DA&>;
+    using UA2 = std::unique_ptr<A[], const DA&>;
+    static_assert(!std::is_assignable<UA1, UA2&&>::value, "");
+    static_assert(!std::is_assignable<UA2, UA1&&>::value, "");
   }
   { // cannot move-convert from unique_ptr<Single>
     using UA1 = std::unique_ptr<A[]>;

@@ -28,7 +28,7 @@
 #include <string>
 #include <type_traits>
 
-int main(int, const char**) {
+int main(int, char**) {
   static_assert(std::is_aggregate_v<std::chrono::sys_info>);
 
   std::chrono::sys_info sys_info{

@@ -1,7 +1,7 @@
-; RUN: llc -march=mips64el -mcpu=mips4    -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mips64el -mcpu=mips64r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
+; RUN: llc -mtriple=mips64el-elf -mcpu=mips4    -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mips64el-elf -mcpu=mips64   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mips64el-elf -mcpu=mips64r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mips64el-elf -mcpu=mips64r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
 declare void @llvm.eh.return.i64(i64, ptr)
 declare void @foo(...)
@@ -72,8 +72,8 @@ entry:
 ; CHECK:        .cfi_offset 7, -32
 
 ; check that stack adjustment and handler are put in $v1 and $v0.
-; CHECK:        move    $3, $4
 ; CHECK:        move    $2, $5
+; CHECK:        move    $3, $4
 
 ; check that $a0-$a3 are restored from stack.
 ; CHECK:        ld      $4, [[offset0]]($sp)

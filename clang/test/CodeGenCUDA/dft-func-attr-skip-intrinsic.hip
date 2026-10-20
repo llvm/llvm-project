@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -x ir -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm-bc -disable-llvm-passes -o %t.bc %S/Inputs/device-lib-code.ll
-// RUN: %clang_cc1 -x hip -fcuda-is-device -triple amdgcn-amd-amdhsa -mlink-builtin-bitcode %t.bc -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -x ir -fcuda-is-device -triple amdgpu-amd-amdhsa -emit-llvm-bc -disable-llvm-passes -o %t.bc %S/Inputs/device-lib-code.ll
+// RUN: %clang_cc1 -x hip -fcuda-is-device -triple amdgpu-amd-amdhsa -mlink-builtin-bitcode %t.bc -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"
 

@@ -10,6 +10,13 @@ def IsTargetXPLINK64      : Predicate<"Subtarget->isTargetXPLINK64()">;
 def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
 
 //===----------------------------------------------------------------------===//
+// Compiler fence
+//===----------------------------------------------------------------------===//
+
+let hasNoSchedulingInfo = 1 in
+  def FENCE : Pseudo<(outs), (ins), []>;
+
+//===----------------------------------------------------------------------===//
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
@@ -109,20 +116,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 }
 
 // NOPs.  These are again variants of the conditional branches, with the
-// condition mask set to "never".  NOP_bare can't be an InstAlias since it
-// would need R0D hard coded which is not part of ADDR64BitRegClass.
-def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
-let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
-  def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
-def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
-def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
-
-// An alias of BRC 0, label
-def JNOP : InstAlias<"jnop\t$RI2", (BRCAsm 0, brtarget16:$RI2), 0>;
-
-// An alias of BRCL 0, label
-// jgnop on att ; jlnop on hlasm
-def JGNOP : InstAlias<"{jgnop|jlnop}\t$RI2", (BRCLAsm 0, brtarget32:$RI2), 0>;
+// condition mask set to "never".
+defm NOP  : NeverCondBranchRX<"nop", 0x47>;
+defm NOPR : NeverCondBranchRR<"nopr", 0x07>;
+def JNOP  : NeverCondBranchRI<"jnop", 0xA74>;
+def JGNOP : NeverCondBranchRIL<"j{g|l}nop", 0xC04>;
 
 // Fused compare-and-branch instructions.
 //
@@ -298,13 +296,13 @@ let Predicates = [IsTargetXPLINK64] in {
   }
 
   let hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+    def ADA_ENTRY : Alias<12, (outs ADDR64:$Reg), (ins adasym:$addr,
                               ADDR64:$ADA, imm64:$Offset),
                             [(set i64:$Reg, (z_ada_entry i64:$addr,
                               i64:$ADA, i64:$Offset))]>;
   }
   let mayLoad = 1, AddedComplexity = 20, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY_VALUE : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+    def ADA_ENTRY_VALUE : Alias<12, (outs ADDR64:$Reg), (ins adasym:$addr,
                               ADDR64:$ADA, imm64:$Offset),
                             [(set i64:$Reg, (z_load (z_ada_entry
                               iPTR:$addr, iPTR:$ADA, i64:$Offset)))]>;
@@ -433,8 +431,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;
@@ -464,9 +464,12 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def LLILF : UnaryRIL<"llilf", 0xC0F, bitconvert, GR64, imm64lf32>;
   def LLIHF : UnaryRIL<"llihf", 0xC0E, bitconvert, GR64, imm64hf32>;
 }
+def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
+def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
-let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
+    isReMaterializable = 1 in {
   // Expands to L, LY or LFH, depending on the choice of register.
   def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
              Requires<[FeatureHighWord]>;
@@ -487,7 +490,7 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTG : UnaryRXY<"ltg", 0xE302, z_load, GR64, 8>;
 }
 
-let canFoldAsLoad = 1 in {
+let canFoldAsLoad = 1, isReMaterializable =1 in {
   def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_z_load, GR32>;
   def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_z_load, GR64>;
 }
@@ -526,6 +529,44 @@ let SimpleBDXStore = 1, mayStore = 1 in {
                        [(store GR128:$src, bdxaddr20only128:$dst)]>;
   }
 }
+
+let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
+  // Load the TLS block's address for the purpose of loading the stack guard.
+  def LOAD_TLS_BLOCK_ADDR : Pseudo<(outs ADDR64:$grdaddr),
+                                            (ins), []>;
+  // Load the address of a global variable holding the stack guard.
+  def LOAD_GLOBAL_STACKGUARD_ADDR : Pseudo<(outs ADDR64:$grdaddr),
+                                               (ins), []>;
+
+  let mayStore = 1 in {
+    // Move the stack guard to the stack.
+    let usesCustomInserter = 1 in
+      def MOV_STACKGUARD_DAG : Pseudo<(outs),
+                                        (ins bdaddr12only:$grdloc), [
+                                          (z_mov_stackguard 
+                                            bdaddr12only:$grdloc
+                                          )
+                                     ]>;
+    let Constraints = "@earlyclobber $grdaddr" in
+      def MOV_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+                                    (ins bdaddr12only:$grdloc), []>;
+  }
+  let Defs = [CC] in {
+    // Compare the stack guard against the one on the stack.
+    let usesCustomInserter = 1 in
+      def CMP_STACKGUARD_DAG : Pseudo<(outs),
+                                           (ins bdaddr12only:$grdloc), 
+                                           [(set CC, 
+                                             (z_cmp_stackguard
+                                              (load bdaddr12only:$grdloc)
+                                             )
+                                            )]>;
+    let Constraints = "@earlyclobber $grdaddr" in
+      def CMP_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+                                       (ins bdaddr12only:$grdloc), []>;
+  }
+}
+
 def STRL  : StoreRILPC<"strl", 0xC4F, aligned_store, GR32>;
 def STGRL : StoreRILPC<"stgrl", 0xC4B, aligned_store, GR64>;
 
@@ -552,10 +593,16 @@ def MemsetImmReg : MemsetPseudo<imm64, GR32>;
 def MemsetRegImm : MemsetPseudo<ADDR64, imm32zx8trunc>;
 def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
 
-// Move right.
-let Predicates = [FeatureMiscellaneousExtensions3],
-    mayLoad = 1, mayStore = 1, Uses = [R0L] in
-  def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+// Move right to left.
+let Predicates = [FeatureMiscellaneousExtensions3], mayLoad = 1,
+    mayStore = 1 in {
+  let Uses = [R0L] in
+    def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC, R0L] in
+    def MemmoveImm : Pseudo<(outs),
+                        (ins ADDR64:$dest, ADDR64:$src, imm64:$length),
+                        [(z_memmove ADDR64:$dest, ADDR64:$src, imm64:$length)]>;
+}
 
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in
@@ -687,29 +734,31 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
 def : Pat<(sext_inreg GR64:$src, i32),
           (LGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
-// depending on the choice of register.
-def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+let isReMaterializable = 1 in {
+  // 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
+  // depending on the choice of register.
+  def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+              Requires<[FeatureHighWord]>;
+  def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
+  def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
             Requires<[FeatureHighWord]>;
-def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
-def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
-          Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
-// depending on the choice of register.
-def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
-            Requires<[FeatureHighWord]>;
-defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
-def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
+  // depending on the choice of register.
+  def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
+              Requires<[FeatureHighWord]>;
+  defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
+  def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
-def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
-def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
-def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
-def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
+  def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
+  def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
+  def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
+  def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+}
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
   def LTGF : UnaryRXY<"ltgf", 0xE332, z_asextloadi32, GR64, 4>;
 
@@ -738,29 +787,31 @@ def LLGFR : UnaryRRE<"llgfr", 0xB916, zext32, GR64, GR32>;
 def : Pat<(and GR64:$src, 0xffffffff),
           (LLGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
-// depending on the choice of register.
-def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+let isReMaterializable = 1 in {
+  // 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
+  // depending on the choice of register.
+  def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+               Requires<[FeatureHighWord]>;
+  def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
+  def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
              Requires<[FeatureHighWord]>;
-def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
-def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
-           Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
-// depending on the choice of register.
-def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
-             Requires<[FeatureHighWord]>;
-def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
-def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
+  // depending on the choice of register.
+  def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
+               Requires<[FeatureHighWord]>;
+  def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
+  def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
-def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
-def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
-def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
-def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
+  def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
+  def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
+  def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
+  def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
+}
 
 // 31-to-64-bit zero extensions.
 def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
@@ -891,6 +942,39 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in
 def GOT : Alias<6, (outs GR64:$R1), (ins),
                 [(set GR64:$R1, (global_offset_table))]>;
 
+// Load (logical) indexed address.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  defm LXAB  : LoadIndexedAddressRXY<"lxab",  0xE360, sext32>;
+  defm LXAH  : LoadIndexedAddressRXY<"lxah",  0xE362, sext32, shl1>;
+  defm LXAF  : LoadIndexedAddressRXY<"lxaf",  0xE364, sext32, shl2>;
+  defm LXAG  : LoadIndexedAddressRXY<"lxag",  0xE366, sext32, shl3>;
+  defm LXAQ  : LoadIndexedAddressRXY<"lxaq",  0xE368, sext32, shl4>;
+  defm LLXAB : LoadIndexedAddressRXY<"llxab", 0xE361, zext32>;
+  defm LLXAH : LoadIndexedAddressRXY<"llxah", 0xE363, zext32, shl1>;
+  defm LLXAF : LoadIndexedAddressRXY<"llxaf", 0xE365, zext32, shl2>;
+  defm LLXAG : LoadIndexedAddressRXY<"llxag", 0xE367, zext32, shl3>;
+  defm LLXAQ : LoadIndexedAddressRXY<"llxaq", 0xE369, zext32, shl4>;
+
+  // Peepholes to use load (logical) indexed address to implement
+  // add + shift of an already extended value.
+  def : Pat<(add ADDR64:$base, (shl1 (assertsext32 ADDR64:$index))),
+            (LXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertsext32 ADDR64:$index))),
+            (LXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertsext32 ADDR64:$index))),
+            (LXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertsext32 ADDR64:$index))),
+            (LXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl1 (assertzext32 ADDR64:$index))),
+            (LLXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertzext32 ADDR64:$index))),
+            (LLXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertzext32 ADDR64:$index))),
+            (LLXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertzext32 ADDR64:$index))),
+            (LLXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Absolute and Negation
 //===----------------------------------------------------------------------===//
@@ -958,10 +1042,10 @@ def IILL : BinaryRI<"iill", 0xA53, insertll, GR32, imm32ll16>;
 def IILH : BinaryRI<"iilh", 0xA52, insertlh, GR32, imm32lh16>;
 def IIHL : BinaryRI<"iihl", 0xA51, insertll, GRH32, imm32ll16>;
 def IIHH : BinaryRI<"iihh", 0xA50, insertlh, GRH32, imm32lh16>;
-def IILL64 : BinaryAliasRI<insertll, GR64, imm64ll16>;
-def IILH64 : BinaryAliasRI<insertlh, GR64, imm64lh16>;
-def IIHL64 : BinaryAliasRI<inserthl, GR64, imm64hl16>;
-def IIHH64 : BinaryAliasRI<inserthh, GR64, imm64hh16>;
+def IILL64 : BinaryAliasRI<insertll64, GR64, imm64ll16>;
+def IILH64 : BinaryAliasRI<insertlh64, GR64, imm64lh16>;
+def IIHL64 : BinaryAliasRI<inserthl64, GR64, imm64hl16>;
+def IIHH64 : BinaryAliasRI<inserthh64, GR64, imm64hh16>;
 
 // ...likewise for 32-bit immediates.  For GR32s this is a general
 // full-width move.  (We use IILF rather than something like LLILF
@@ -973,6 +1057,7 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
   def IILF : UnaryRIL<"iilf", 0xC09, bitconvert, GR32, uimm32>;
   def IIHF : UnaryRIL<"iihf", 0xC08, bitconvert, GRH32, uimm32>;
 }
+def LFI : InstAlias<"lfi\t$R1, $RI1", (IILF GR32:$R1, uimm32:$RI1)>;
 def IILF64 : BinaryAliasRIL<insertlf, GR64, imm64lf32>;
 def IIHF64 : BinaryAliasRIL<inserthf, GR64, imm64hf32>;
 
@@ -1244,8 +1329,8 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
-defm : RMWIByte<and, bdaddr12pair, NI>;
-defm : RMWIByte<and, bdaddr20pair, NIY>;
+defm : RMWIByte<and, NI, NIY, imm16ll8c, imm32ll8c,
+                imm16ll8c_i64, imm32ll8c_i64, imm64ll8c>;
 
 //===----------------------------------------------------------------------===//
 // OR
@@ -1301,8 +1386,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
-defm : RMWIByte<or, bdaddr12pair, OI>;
-defm : RMWIByte<or, bdaddr20pair, OIY>;
+defm : RMWIByte<or,  OI, OIY>;
 
 //===----------------------------------------------------------------------===//
 // XOR
@@ -1341,8 +1425,7 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
-defm : RMWIByte<xor, bdaddr12pair, XI>;
-defm : RMWIByte<xor, bdaddr20pair, XIY>;
+defm : RMWIByte<xor, XI, XIY>;
 
 //===----------------------------------------------------------------------===//
 // Combined logical operations
@@ -1372,6 +1455,10 @@ let Predicates = [FeatureMiscellaneousExtensions3],
   let isCommutable = 1, CCValues = 0xC, CompareZeroCCMask = 0x8 in {
     def NORK : BinaryRRFa<"nork", 0xB976, nor, GR32, GR32, GR32>;
     def NOGRK : BinaryRRFa<"nogrk", 0xB966, nor, GR64, GR64, GR64>;
+    let isAsmParserOnly = 1 in {
+      def NOTR : UnaryRRFa<"notr", 0xB976, nor, GR32, GR32>;
+      def NOTGR : UnaryRRFa<"notgr", 0xB966, nor, GR64, GR64>;
+    }
   }
 
   // NXOR.
@@ -1525,34 +1612,38 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 // end bits (operands 2 and 3) are in the range [32, 64).
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
-    def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
-  let CCValues = 0xE, CompareZeroCCMask = 0xE in
-    def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    defm RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
+  let CCValues = 0xE, CompareZeroCCMask = 0xE in {
+    defm RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    defm RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+  }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
-let Predicates = [FeatureMiscellaneousExtensions] in
-  def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+let Predicates = [FeatureMiscellaneousExtensions] in {
+  defm RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  defm RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+}
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
 let Predicates = [FeatureHighWord] in {
-  def RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
-  def RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
-  def RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
-  def RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
-  def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
-  def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
-  def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  def  RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
+  defm RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
+  defm RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
+  defm RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
+  defm RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
+  defm RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
+  defm RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
 // bits of the first operand.  The CC result only describes the selected bits,
 // so isn't useful for a full comparison against zero.
 let Defs = [CC] in {
-  def RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
-  def ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
-  def RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  defm RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
+  defm ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
+  defm RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1819,6 +1910,19 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LPDG : BinarySSF<"lpdg", 0xC85, GR128>;
 }
 
+// Compare and load.
+let Predicates = [FeatureConcurrentFunctions], Defs = [CC] in {
+  def CAL   : BinarySSF<"cal", 0xC86, GR32>;
+  def CALGF : BinarySSF<"calgf", 0xC8F, GR64>;
+  def CALG  : BinarySSF<"calg", 0xC87, GR64>;
+}
+
+// Perform function with concurrent results.
+let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
+    mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+  def PFCR : BinaryRSY<"pfcr", 0xEB16, null_frag, GR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
@@ -1860,6 +1964,23 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   }
 }
 
+//--------------------------------------------------------------------------
+// Setjmp/Longjmp.
+//--------------------------------------------------------------------------
+let isBarrier = 1,  hasNoSchedulingInfo = 1 in {
+  let hasSideEffects = 1, usesCustomInserter = 1 in {
+    def EH_SjLj_SetJmp : Pseudo<(outs GR32:$dst), (ins ADDR64:$R2), 
+                        [(set GR32:$dst, (z_eh_sjlj_setjmp ADDR64:$R2))]>;
+    let isTerminator = 1 in {
+      def EH_SjLj_LongJmp : Pseudo<(outs), (ins ADDR64:$R2), 
+                           [(z_eh_sjlj_longjmp  ADDR64:$R2)]>;
+    }
+  }
+  let isTerminator = 1, isCodeGenOnly = 1, Size = 0 in {
+    def EH_SjLj_Setup : Pseudo<(outs), (ins brtarget32:$dst), []>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Message-security assist
 //===----------------------------------------------------------------------===//
@@ -1891,6 +2012,11 @@ let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
 
   let Predicates = [FeatureMessageSecurityAssist9] in
     def KDSA : SideEffectBinaryMemRRE<"kdsa", 0xB93A, GR64, GR128>;
+
+  let Predicates = [FeatureMessageSecurityAssist12] in {
+    def KIMDOpt : SideEffectTernaryMemMemRRFc<"kimd", 0xB93E, GR64, GR128, imm32zx4>;
+    def KLMDOpt : SideEffectTernaryMemMemRRFc<"klmd", 0xB93F, GR64, GR128, imm32zx4>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2062,6 +2188,12 @@ let Predicates = [FeatureProcessorAssist] in {
 // Miscellaneous Instructions.
 //===----------------------------------------------------------------------===//
 
+// Count leading/trailing zeros.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def CLZG : UnaryRRE<"clzg", 0xB968, ctlz, GR64, GR64>;
+  def CTZG : UnaryRRE<"ctzg", 0xB969, cttz, GR64, GR64>;
+}
+
 // Find leftmost one, AKA count leading zeros.  The instruction actually
 // returns a pair of GR64s, the first giving the number of leading zeros
 // and the second giving a copy of the source with the leftmost one bit
@@ -2079,6 +2211,12 @@ let Predicates = [FeatureMiscellaneousExtensions3] in {
 }
 let Predicates = [FeaturePopulationCount], Defs = [CC] in
   def POPCNT : UnaryRRE<"popcnt", 0xB9E1, z_popcnt, GR64, GR64>;
+
+// Bit deposit and bit extract.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def BDEPG : BinaryRRFa<"bdepg", 0xB96D, int_s390_bdepg, GR64, GR64, GR64>;
+  def BEXTG : BinaryRRFa<"bextg", 0xB96C, int_s390_bextg, GR64, GR64, GR64>;
+}
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in
@@ -2101,7 +2239,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
 
 // Checksum.
 let mayLoad = 1, Defs = [CC] in
-  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR32, GR128>;
 
 // Compression call.
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in
@@ -2135,123 +2273,418 @@ let hasSideEffects = 1 in {
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
+//
+// Enables encoding of instructions not directly supported by the assembler:
+//    .insn <format>, <opcode encoding>, <operands>
+//
+// Rules for these definitions:
+// - Each subformat has its own .insn directive.
+// - Operands are ordered by index (e.g. V1, I2, V3 not V1, V3, I2), since
+//   individual instructions within a format may use a different order.
+// - When instructions in a format interpret the same immediate field with
+//   different signedness, the directive uses an 'X'-type immediate, whose
+//   range is the union of the signed and unsigned cases (e.g. -128..255
+//   for imm32xx8).
+// - Where the format contains an operand not used by all instructions, it
+//   is implemented as an optional operand, *if it is trailing*. To specify
+//   a trailing optional operand, all optional operands to its left must
+//   be specified as well. Formats with optional operands are listed grouped
+//   by optional operand count after the main list of formats.
+//
+// Exceptions:
+// - Where legacy .insn directives existed that break the above rules, they
+//   have been kept for compatibility (see below)
+// - The RRF-b and RRF-e subformats have specified operand orderings in the
+//   Principles of Operation, so those orderings were used. This is kept inline.
 //===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
 
-let isCodeGenOnly = 1, hasSideEffects = 1 in {
-  def InsnE   : DirectiveInsnE<(outs), (ins imm64zx16:$enc), ".insn e,$enc", []>;
-  def InsnRI  : DirectiveInsnRI<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
-                                             imm32sx16:$I2),
-                                ".insn ri,$enc,$R1,$I2", []>;
-  def InsnRIE : DirectiveInsnRIE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              AnyReg:$R3, brtarget16:$I2),
-                                 ".insn rie,$enc,$R1,$R3,$I2", []>;
-  def InsnRIL : DirectiveInsnRIL<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              brtarget32:$I2),
-                                 ".insn ril,$enc,$R1,$I2", []>;
-  def InsnRILU : DirectiveInsnRIL<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                               uimm32:$I2),
-                                  ".insn rilu,$enc,$R1,$I2", []>;
-  def InsnRIS : DirectiveInsnRIS<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      imm32sx8:$I2, imm32zx4:$M3,
-                                      (bdaddr12only $B4, $D4):$BD4),
-                                 ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
-  def InsnRR : DirectiveInsnRR<(outs),
-                               (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
-                               ".insn rr,$enc,$R1,$R2", []>;
-  def InsnRRE : DirectiveInsnRRE<(outs), (ins imm64zx32:$enc,
-                                              AnyReg:$R1, AnyReg:$R2),
-                                 ".insn rre,$enc,$R1,$R2", []>;
-  def InsnRRF : DirectiveInsnRRF<(outs),
-                                 (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2,
-                                      AnyReg:$R3, imm32zx4:$M4),
-                                 ".insn rrf,$enc,$R1,$R2,$R3,$M4", []>;
-  def InsnRRS : DirectiveInsnRRS<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R2, imm32zx4:$M3,
-                                      (bdaddr12only $B4, $D4):$BD4),
-                                 ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
-  def InsnRS  : DirectiveInsnRS<(outs),
-                                (ins imm64zx32:$enc, AnyReg:$R1,
-                                     AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
-                                ".insn rs,$enc,$R1,$R3,$BD2", []>;
-  def InsnRSE : DirectiveInsnRSE<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
-                                 ".insn rse,$enc,$R1,$R3,$BD2", []>;
-  def InsnRSI : DirectiveInsnRSI<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, brtarget16:$RI2),
-                                 ".insn rsi,$enc,$R1,$R3,$RI2", []>;
-  def InsnRSY : DirectiveInsnRSY<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, (bdaddr20only $B2, $D2):$BD2),
-                                 ".insn rsy,$enc,$R1,$R3,$BD2", []>;
-  def InsnRX  : DirectiveInsnRX<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
-                                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                                ".insn rx,$enc,$R1,$XBD2", []>;
-  def InsnRXE : DirectiveInsnRXE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                                 ".insn rxe,$enc,$R1,$XBD2", []>;
-  def InsnRXF : DirectiveInsnRXF<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, (bdxaddr12only $B2, $D2, $X2):$XBD2),
-                                 ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
-  def InsnRXY : DirectiveInsnRXY<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              (bdxaddr20only $B2, $D2, $X2):$XBD2),
-                                 ".insn rxy,$enc,$R1,$XBD2", []>;
-  def InsnS : DirectiveInsnS<(outs),
-                             (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
-                             ".insn s,$enc,$BD2", []>;
-  def InsnSI : DirectiveInsnSI<(outs),
-                               (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1,
-                                    imm32sx8:$I2),
-                               ".insn si,$enc,$BD1,$I2", []>;
-  def InsnSIY : DirectiveInsnSIY<(outs),
-                                 (ins imm64zx48:$enc,
-                                      (bdaddr20only $B1, $D1):$BD1, imm32zx8:$I2),
-                                 ".insn siy,$enc,$BD1,$I2", []>;
-  def InsnSIL : DirectiveInsnSIL<(outs),
-                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
-                                      imm32zx16:$I2),
-                                 ".insn sil,$enc,$BD1,$I2", []>;
-  def InsnSS : DirectiveInsnSS<(outs),
-                               (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
-                                    (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                               ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
-  def InsnSSE : DirectiveInsnSSE<(outs),
-                                 (ins imm64zx48:$enc,
-                                      (bdaddr12only $B1, $D1):$BD1,(bdaddr12only $B2, $D2):$BD2),
-                                 ".insn sse,$enc,$BD1,$BD2", []>;
-  def InsnSSF : DirectiveInsnSSF<(outs),
-                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
-                                      (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
-                                 ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
-  def InsnVRI : DirectiveInsnVRI<(outs),
-                                 (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
-                                  imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
-                                 ".insn vri,$enc,$V1,$V2,$I3,$M4,$M5", []>;
-  def InsnVRR : DirectiveInsnVRR<(outs),
-                                 (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
-                                  VR128:$V3, imm32zx4:$M4, imm32zx4:$M5,
-                                  imm32zx4:$M6),
-                                  ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
-  def InsnVRS : DirectiveInsnVRS<(outs),
-                                 (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
-                                  (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
-                                 ".insn vrs,$enc,$BD2,$M4", []>;
-  def InsnVRV : DirectiveInsnVRV<(outs),
-                                 (ins imm64zx48:$enc, VR128:$V1,
-                                      (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
-                                 ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
-  def InsnVRX : DirectiveInsnVRX<(outs),
-                                 (ins imm64zx48:$enc, VR128:$V1,
-                                  (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
-                                 ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
-  def InsnVSI : DirectiveInsnVSI<(outs),
-                                 (ins imm64zx48:$enc, VR128:$V1,
-                                  (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
-                                  ".insn vsi,$enc,$V1,$BD2,$I3", []>;
+  // First, we list all of the instruction formats that follow all of the rules
+  // and do not contain any optional operands.
+
+  def InsnE : InstE<0, (outs),
+                    (ins imm64zx16:$enc), ".insn e,$enc", []>;
+  def InsnI : InstI<0, (outs),
+                    (ins imm64zx16:$enc, imm32zx8:$I1),
+                    ".insn i,$enc,$I1", []>;
+  def InsnIE : InstIE<0, (outs),
+                      (ins imm64zx32:$enc, imm32zx4:$I1, imm32zx4:$I2),
+                      ".insn ie,$enc,$I1,$I2", []>;
+  def InsnMII : InstMII<0, (outs),
+                        (ins imm64zx48:$enc, imm32zx4:$M1, brtarget12bpp:$RI2,
+                             brtarget24bpp:$RI3),
+                        ".insn mii,$enc,$M1,$RI2,$RI3", []>;
+  def InsnRI : InstRIa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1, imm32sx16:$I2),
+                       ".insn ri,$enc,$R1,$I2", []>;
+  def InsnRIa : InstRIa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, imm32xx16:$I2),
+                        ".insn ri_a,$enc,$R1,$I2", []>;
+  def InsnRIb : InstRIb<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, brtarget16:$RI2),
+                        ".insn ri_b,$enc,$R1,$RI2", []>;
+  def InsnRIc : InstRIc<0, (outs),
+                        (ins imm64zx32:$enc, imm32zx4:$M1, brtarget16:$RI2),
+                        ".insn ri_c,$enc,$M1,$RI2", []>;
+  def InsnRIEa : InstRIEa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32xx16:$I2, imm32zx4:$M3),
+                          ".insn rie_a,$enc,$R1,$I2,$M3", []>;
+  def InsnRIEb : InstRIEb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
+                               imm32zx4:$M3, brtarget16:$RI4),
+                          ".insn rie_b,$enc,$R1,$R2,$M3,$RI4", []>;
+  def InsnRIEc : InstRIEc<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
+                               imm32zx4:$M3, brtarget16:$RI4),
+                               ".insn rie_c,$enc,$R1,$I2,$M3,$RI4", []>;
+  def InsnRIEd : InstRIEd<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, AnyReg:$R3),
+                          ".insn rie_d,$enc,$R1,$I2,$R3", []>;
+  def InsnRIEe : InstRIEe<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, brtarget16:$RI2, AnyReg:$R3),
+                          ".insn rie_e,$enc,$R1,$RI2,$R3", []>;
+  def InsnRIEf : InstRIEf<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2,
+                               imm32zx8:$I3, imm32zx8:$I4, imm32zx8:$I5),
+                          ".insn rie_f,$enc,$R1,$R2,$I3,$I4,$I5", []>;
+  def InsnRIEg : InstRIEg<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm32sx16:$I2, imm32zx4:$M3),
+                          ".insn rie_g,$enc,$R1,$I2,$M3", []>;
+  def InsnRIL : InstRILa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$I2),
+                         ".insn ril,$enc,$R1,$I2", []>;
+  def InsnRILa : InstRILa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, imm64xx32:$I2),
+                          ".insn ril_a,$enc,$R1,$I2", []>;
+  def InsnRILb : InstRILb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, brtarget32:$RI2),
+                          ".insn ril_b,$enc,$R1,$RI2", []>;
+  def InsnRILc : InstRILc<0, (outs),
+                          (ins imm64zx48:$enc, imm32zx4:$M1, brtarget32:$RI2),
+                          ".insn ril_c,$enc,$M1,$RI2", []>;
+  def InsnRIS : InstRIS<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, imm32xx8:$I2,
+                             imm32zx4:$M3, (bdaddr12only $B4, $D4):$BD4),
+                        ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
+  def InsnRRFd : InstRRFd<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M4),
+                            ".insn rrf_d,$enc,$R1,$R2,$M4", []>;
+  def InsnRRD : InstRRD<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3),
+                        ".insn rrd,$enc,$R1,$R2,$R3", []>;
+  def InsnRRS : InstRRS<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3,
+                             (bdaddr12only $B4, $D4):$BD4),
+                        ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
+  def InsnRSb : InstRSb<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M3),
+                        ".insn rs_b,$enc,$R1,$BD2,$M3", []>;
+  def InsnRSLa : InstRSLa<0, (outs),
+                         (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1),
+                         ".insn rsl_a,$enc,$BDL1", []>;
+  def InsnRSLb : InstRSLb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                              (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2, imm32zx4:$M3),
+                          ".insn rsl_b,$enc,$R1,$BDL2,$M3", []>;
+  def InsnRSYa : InstRSYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdaddr20only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn rsy_a,$enc,$R1,$BD2,$R3", []>;
+  def InsnRSYb : InstRSYb<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdaddr20only $B2, $D2):$BD2, imm32zx4:$M3),
+                          ".insn rsy_b,$enc,$R1,$BD2,$M3", []>;
+  def InsnRXa : InstRXa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rx_a,$enc,$R1,$XBD2", []>;
+  def InsnRXb : InstRXb<0, (outs),
+                        (ins imm64zx32:$enc, imm32zx4:$M1,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rx_b,$enc,$M1,$XBD2", []>;
+  def InsnRXY : InstRXYa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1,
+                              (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                         ".insn rxy,$enc,$R1,$XBD2", []>;
+  def InsnRXYa : InstRXYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_a,$enc,$R1,$XBD2", []>;
+  def InsnRXYb : InstRXYb<0, (outs),
+                          (ins imm64zx48:$enc, imm32zx4:$M1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_b,$enc,$M1,$XBD2", []>;
+  // There is no InstRXYc - it is identical to InstRXYa.
+  def InsnRXYc : InstRXYa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
+                          ".insn rxy_c,$enc,$R1,$XBD2", []>;
+  def InsnSIL : InstSIL<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx16:$I2),
+                        ".insn sil,$enc,$BD1,$I2", []>;
+  def InsnSMI : InstSMI<0, (outs),
+                        (ins imm64zx48:$enc, imm32zx4:$M1, brtarget16bpp:$RI2,
+                             (bdaddr12only $B3, $D3):$BD3),
+                        ".insn smi,$enc,$M1,$RI2,$BD3", []>;
+  def InsnSSa : InstSSa<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen8 $B1, $D1, $L1):$BDL1,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn ss_a,$enc,$BDL1,$BD2", []>;
+  def InsnSSb : InstSSb<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
+                             (bdladdr12onlylen4 $B2, $D2, $L2):$BDL2),
+                        ".insn ss_b,$enc,$BDL1,$BDL2", []>;
+  def InsnSSc : InstSSc<0, (outs),
+                        (ins imm64zx48:$enc, (bdladdr12onlylen4 $B1, $D1, $L1):$BDL1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx4:$I3),
+                        ".insn ss_c,$enc,$BDL1,$BD2,$I3", []>;
+  def InsnSSd : InstSSd<0, (outs),
+                        (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
+                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                        ".insn ss_d,$enc,$RBD1,$BD2,$R3", []>;
+  def InsnSSe : InstSSe<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
+                             AnyReg:$R3, (bdaddr12only $B4, $D4):$BD4),
+                        ".insn ss_e,$enc,$R1,$BD2,$R3,$BD4", []>;
+  def InsnSSf : InstSSf<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdladdr12onlylen8 $B2, $D2, $L2):$BDL2),
+                        ".insn ss_f,$enc,$BD1,$BDL2", []>;
+  def InsnSSE : InstSSE<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn sse,$enc,$BD1,$BD2", []>;
+  def InsnSSF : InstSSF<0, (outs),
+                        (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                             (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                        ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
+  def InsnVRIb : InstVRIb<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx8:$I2,
+                               imm32zx8:$I3, imm32zx4:$M4),
+                          ".insn vri_b,$enc,$V1,$I2,$I3,$M4", []>;
+  def InsnVRIc : InstVRIc<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
+                               VR128:$V3, imm32zx4:$M4),
+                          ".insn vri_c,$enc,$V1,$I2,$V3,$M4", []>;
+  def InsnVRIe : InstVRIe<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
+                               imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
+                          ".insn vri_e,$enc,$V1,$V2,$I3,$M4,$M5", []>;
+  def InsnVRIf : InstVRIf<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx8:$I4, imm32zx4:$M5),
+                          ".insn vri_f,$enc,$V1,$V2,$V3,$I4,$M5", []>;
+  def InsnVRIg : InstVRIg<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
+                               imm32zx8:$I4, imm32zx4:$M5),
+                          ".insn vri_g,$enc,$V1,$V2,$I3,$I4,$M5", []>;
+  def InsnVRIh : InstVRIh<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2,
+                               imm32zx4:$I3),
+                          ".insn vri_h,$enc,$V1,$I2,$I3", []>;
+  def InsnVRIi : InstVRIi<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2,
+                               imm32zx8:$I3, imm32zx4:$M4),
+                          ".insn vri_i,$enc,$V1,$R2,$I3,$M4", []>;
+  def InsnVRIj : InstVRIj<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx8:$I3,
+                               imm32zx4:$M4),
+                          ".insn vri_j,$enc,$V1,$V2,$I3,$M4", []>;
+  def InsnVRIk : InstVRIk<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               VR128:$V4, imm32zx8:$I5),
+                          ".insn vri_k,$enc,$V1,$V2,$V3,$V4,$I5", []>;
+  def InsnVRIl : InstVRIl<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx16:$I3),
+                          ".insn vri_l,$enc,$V1,$V2,$I3", []>;
+
+  def InsnVRRf : InstVRRf<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, AnyReg:$R2, AnyReg:$R3),
+                          ".insn vrr_f,$enc,$V1,$R2,$R3", []>;
+  def InsnVRRj : InstVRRj<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                               imm32zx4:$M4),
+                          ".insn vrr_j,$enc,$V1,$V2,$V3,$M4", []>;
+  def InsnVRRk : InstVRRk<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                          ".insn vrr_k,$enc,$V1,$V2,$M3", []>;
+  def InsnVRSc : InstVRSc<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, (bdaddr12only $B2, $D2):$BD2,
+                               VR128:$V3, imm32zx4:$M4),
+                          ".insn vrs_c,$enc,$R1,$BD2,$V3,$M4", []>;
+  def InsnVRSd : InstVRSd<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn vrs_d,$enc,$V1,$BD2,$R3", []>;
+  def InsnVSI : InstVSI<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1,
+                             (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
+                        ".insn vsi,$enc,$V1,$BD2,$I3", []>;
+
+  // The following .insn directive definitions contain one or more optional
+  // operands, i.e. operands that are not used by all of the instructions
+  // following that format.
+
+  let NumOptionalOperands = 1 in {
+    def InsnRR : InstRR<0, (outs),
+                        (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
+                        ".insn rr,$enc,$R1,$R2", []>;
+    def InsnRRFb : InstRRFb<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, AnyReg:$R2,
+                                 imm32zx4:$M4),
+                            ".insn rrf_b,$enc,$R1,$R3,$R2,$M4", []>;
+    // Contrary to the instruction format description, RRF-c and RRF-e
+    // only allow a single optional operand.
+    def InsnRRFc : InstRRFc<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, imm32zx4:$M3),
+                            ".insn rrf_c,$enc,$R1,$R2,$M3", []>;
+    // For RRF-e, the POP explicitly defines a non-index operand order.
+    def InsnRRFe : InstRRFe<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, imm32zx4:$M3,
+                                 AnyReg:$R2, imm32zx4:$M4),
+                            ".insn rrf_e,$enc,$R1,$M3,$R2,$M4", []>;
+    def InsnRSa : InstRSa<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1,
+                               (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                          ".insn rs_a,$enc,$R1,$BD2,$R3", []>;
+    def InsnRXE : InstRXE<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1,
+                               (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                          ".insn rxe,$enc,$R1,$XBD2,$M3", []>;
+    def InsnS : InstS<0, (outs),
+                  (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
+                  ".insn s,$enc,$BD2", []>;
+    def InsnSI : InstSI<0, (outs),
+                        (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1, imm32xx8:$I2),
+                        ".insn si,$enc,$BD1,$I2", []>;
+    def InsnSIY : InstSIY<0, (outs),
+                          (ins imm64zx48:$enc, (bdaddr20only $B1, $D1):$BD1, imm32xx8:$I2),
+                          ".insn siy,$enc,$BD1,$I2", []>;
+    def InsnVRIa : InstVRIa<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, imm32xx16:$I2, imm32zx4:$M3),
+                            ".insn vri_a,$enc,$V1,$I2,$M3", []>;
+    def InsnVRId : InstVRId<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx8:$I4, imm32zx4:$M5),
+                        ".insn vri_d,$enc,$V1,$V2,$V3,$I4,$M5", []>;
+    def InsnVRRg : InstVRRg<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, imm32zx16:$I2),
+                            ".insn vrr_g,$enc,$V1,$I2", []>;
+    def InsnVRRh : InstVRRh<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3),
+                            ".insn vrr_h,$enc,$V1,$V2,$M3", []>;
+    def InsnVRRi : InstVRRi<0, (outs),
+                            (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V2,
+                                  imm32zx4:$M3, imm32zx4:$M4),
+                            ".insn vrr_i,$enc,$R1,$V2,$M3,$M4", []>;
+    def InsnVRSa : InstVRSa<0, (outs),
+                           (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                                VR128:$V3, imm32zx4:$M4),
+                           ".insn vrs_a,$enc,$V1,$BD2,$V3,$M4", []>;
+    def InsnVRSb : InstVRSb<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, (bdaddr12only $B2, $D2):$BD2,
+                                 AnyReg:$R3, imm32zx4:$M4),
+                            ".insn vrs_b,$enc,$V1,$BD2,$R3,$M4", []>;
+    def InsnVRV : InstVRV<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
+                          ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
+    def InsnVRX : InstVRX<0, (outs),
+                          (ins imm64zx48:$enc, VR128:$V1,
+                               (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
+                          ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
+  }
+
+  let NumOptionalOperands = 2 in {
+    def InsnRRE : InstRRE<0, (outs),
+                          (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2),
+                          ".insn rre,$enc,$R1,$R2", []>;
+    // For RRF-a, the POP explicitly defines a non-index operand order.
+    // Contrary to the instruction format description, RRF-a considers
+    // R3 to be optional.
+    def InsnRRFa : InstRRFa<0, (outs),
+                            (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
+                                 imm32zx4:$M4),
+                            ".insn rrf_a,$enc,$R1,$R2,$R3,$M4", []>;
+    def InsnVRRb : InstVRRb<0, (outs),
+                        (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx4:$M4, imm32zx4:$M5),
+                        ".insn vrr_b,$enc,$V1,$V2,$V3,$M4,$M5", []>;
+    def InsnVRRd : InstVRRd<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                  VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_d,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+    def InsnVRRe : InstVRRe<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                 VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_e,$enc,$V1,$V2,$V3,$V4,$M5,$M6", []>;
+  }
+
+  let NumOptionalOperands = 3 in {
+    def InsnVRRa : InstVRRa<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx4:$M3,
+                                 imm32zx4:$M4, imm32zx4:$M5),
+                            ".insn vrr_a,$enc,$V1,$V2,$M3,$M4,$M5", []>;
+    def InsnVRRc : InstVRRc<0, (outs),
+                            (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                                 imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
+                            ".insn vrr_c,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  }
+
+  // The following .insn directive definitions do not follow the rule for
+  // operand order, and/or reference the base instruction format even where
+  // that format has subformats. They are kept for backwards compatibility.
+
+  def InsnRIE : InstRIEd<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$I2),
+                         ".insn rie,$enc,$R1,$R3,$I2", []>;
+  def InsnRILU : InstRILa<0, (outs),
+                          (ins imm64zx48:$enc, AnyReg:$R1, uimm32:$I2),
+                          ".insn rilu,$enc,$R1,$I2", []>;
+  def InsnRRF : InstRRFa<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2, AnyReg:$R3,
+                             imm32zx4:$M4),
+                        ".insn rrf,$enc,$R1,$R2,$R3,$M4", []>;
+  def InsnRS : InstRSa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3,
+                            (bdaddr12only $B2, $D2):$BD2),
+                      ".insn rs,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSE : InstRSE<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                             (bdaddr12only $B2, $D2):$BD2),
+                        ".insn rse,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSI : InstRSI<0, (outs),
+                        (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R3, brtarget16:$RI2),
+                        ".insn rsi,$enc,$R1,$R3,$RI2", []>;
+  def InsnRSY : InstRSYa<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                              (bdaddr20only $B2, $D2):$BD2),
+                        ".insn rsy,$enc,$R1,$R3,$BD2", []>;
+  def InsnRX : InstRXa<0, (outs),
+                       (ins imm64zx32:$enc, AnyReg:$R1,
+                            (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                       ".insn rx,$enc,$R1,$XBD2", []>;
+  def InsnRXF : InstRXF<0, (outs),
+                        (ins imm64zx48:$enc, AnyReg:$R1, AnyReg:$R3,
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
+  def InsnSS : InstSSd<0, (outs),
+                       (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
+                            (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
+                       ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
+  def InsnVRI : InstVRIe<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, imm32zx12:$I3,
+                              imm32zx4:$M4, imm32zx4:$M5),
+                         ".insn vri,$enc,$V1,$V2,$I3,$M4,$M5", []>;
+  def InsnVRR : InstVRRc<0, (outs),
+                         (ins imm64zx48:$enc, VR128:$V1, VR128:$V2, VR128:$V3,
+                              imm32zx4:$M4, imm32zx4:$M5, imm32zx4:$M6),
+                         ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  def InsnVRS : InstVRSc<0, (outs),
+                         (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
+                              (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
+                         ".insn vrs,$enc,$R1,$V3,$BD2,$M4", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2330,6 +2763,8 @@ defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 def JCT   : MnemonicAlias<"jct", "brct">;
 def JCTG  : MnemonicAlias<"jctg", "brctg">;
+def JC    : MnemonicAlias<"jc", "brc">;
+def JCTH  : MnemonicAlias<"jcth", "brcth">;
 def JAS   : MnemonicAlias<"jas", "bras">;
 def JASL  : MnemonicAlias<"jasl", "brasl">;
 def JXH   : MnemonicAlias<"jxh", "brxh">;
@@ -2338,12 +2773,12 @@ def JXHG  : MnemonicAlias<"jxhg", "brxhg">;
 def JXLEG : MnemonicAlias<"jxleg", "brxlg">;
 
 def BRU   : MnemonicAlias<"bru", "j">;
-def BRUL  : MnemonicAlias<"brul", "jg", "att">;
+def BRUL  : MnemonicAlias<"brul", "jg", "gnu">;
 def BRUL_HLASM  : MnemonicAlias<"brul", "jlu", "hlasm">;
 
 foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
               "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
   defm BRUAsm#V  : MnemonicCondBranchAlias <CV<V>, "br#", "j#">;
-  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "att">;
+  defm BRULAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jg#", "gnu">;
   defm BRUL_HLASMAsm#V : MnemonicCondBranchAlias <CV<V>, "br#l", "jl#", "hlasm">;
 }

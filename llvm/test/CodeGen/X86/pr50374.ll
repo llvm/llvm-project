@@ -4,7 +4,7 @@
 define void @PR50374() {
 ; CHECK-LABEL: PR50374:
 ; CHECK:       # %bb.0: # %while.84.body.preheader
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %vector.body1999
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1
@@ -17,7 +17,7 @@ while.84.body.preheader:
   %3 = select i1 %.not14.2.2, i1 %.not14.1.2, i1 false
   %.not14.2361 = icmp eq i8 0, 0
   %4 = select i1 %3, i1 %.not14.2361, i1 false
-  %add.10961.i.2.2 = select reassoc nsz contract i1 %4, float 0.000000e+00, float 0x7FF8000000000000
+  %add.10961.i.2.2 = select reassoc nsz contract i1 %4, float 0.000000e+00, float +qnan
   %broadcast.splatinsert2024 = insertelement <8 x float> poison, float %add.10961.i.2.2, i32 0
   %broadcast.splat2025 = shufflevector <8 x float> %broadcast.splatinsert2024, <8 x float> poison, <8 x i32> zeroinitializer
   %broadcast.splatinsert2049 = insertelement <8 x i8> poison, i8 %1, i32 0

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 define i64 @add64(i64 %a, i64 %b) {
 	%result = add i64 %a, %b
 	ret i64 %result

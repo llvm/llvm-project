@@ -23,14 +23,19 @@ def DLTI_Dialect : Dialect {
   }];
 
   let extraClassDeclaration = [{
-    // Top level attribute name.
+    // Top-level attribute name for arbitrary description.
+    constexpr const static ::llvm::StringLiteral
+    kMapAttrName = "dlti.map";
+
+    // Top-level attribute name for data layout description.
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAttrName = "dlti.dl_spec";
 
-    // Top level attribute name for target system description
+    // Top-level attribute name for target system description.
     constexpr const static ::llvm::StringLiteral
     kTargetSystemDescAttrName = "dlti.target_system_spec";
 
+    // Top-level attribute name for target device description.
     constexpr const static ::llvm::StringLiteral
     kTargetDeviceDescAttrName = "dlti.target_device_spec";
 
@@ -44,9 +49,16 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kDataLayoutEndiannessLittle = "little";
 
+    // Mangling mode, a.k.a mangling style used to mangle llvm names.
+    constexpr const static ::llvm::StringLiteral
+    kDataLayoutManglingModeKey = "dlti.mangling_mode";
+
+    constexpr const static ::llvm::StringLiteral
+    kDataLayoutDefaultMemorySpaceKey = "dlti.default_memory_space";
+
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAllocaMemorySpaceKey = "dlti.alloca_memory_space";
-    
+
     constexpr const static ::llvm::StringLiteral
     kDataLayoutProgramMemorySpaceKey = "dlti.program_memory_space";
 
@@ -55,6 +67,12 @@ def DLTI_Dialect : Dialect {
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutStackAlignmentKey = "dlti.stack_alignment";
+
+    constexpr const static ::llvm::StringLiteral
+    kDataLayoutFunctionPointerAlignmentKey = "dlti.function_pointer_alignment";
+
+    constexpr const static ::llvm::StringLiteral
+    kDataLayoutLegalIntWidthsKey = "dlti.legal_int_widths";
   }];
 
   let useDefaultAttributePrinterParser = 1;

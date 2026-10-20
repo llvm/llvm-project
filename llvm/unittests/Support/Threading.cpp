@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/thread.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"

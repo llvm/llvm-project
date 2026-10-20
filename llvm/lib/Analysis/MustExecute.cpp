@@ -12,7 +12,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -20,7 +19,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,12 +28,17 @@ using namespace llvm;
 
 const DenseMap<BasicBlock *, ColorVector> &
 LoopSafetyInfo::getBlockColors() const {
-  return BlockColors;
+  computeBlockColors();
+  return *BlockColors;
 }
 
 void LoopSafetyInfo::copyColors(BasicBlock *New, BasicBlock *Old) {
-  ColorVector &ColorsForNewBlock = BlockColors[New];
-  ColorVector &ColorsForOldBlock = BlockColors[Old];
+  // Nothing to update if colors have not been computed yet.
+  if (!BlockColors)
+    return;
+
+  ColorVector &ColorsForNewBlock = (*BlockColors)[New];
+  ColorVector &ColorsForOldBlock = (*BlockColors)[Old];
   ColorsForNewBlock = ColorsForOldBlock;
 }
 
@@ -48,7 +51,7 @@ bool SimpleLoopSafetyInfo::anyBlockMayThrow() const {
   return MayThrow;
 }
 
-void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
+void SimpleLoopSafetyInfo::computeLoopSafetyInfo() {
   assert(CurLoop != nullptr && "CurLoop can't be null");
   BasicBlock *Header = CurLoop->getHeader();
   // Iterate over header and compute safety info.
@@ -64,8 +67,6 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
     if (MayThrow)
       break;
   }
-
-  computeBlockColors(CurLoop);
 }
 
 bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
@@ -76,7 +77,7 @@ bool ICFLoopSafetyInfo::anyBlockMayThrow() const {
   return MayThrow;
 }
 
-void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
+void ICFLoopSafetyInfo::computeLoopSafetyInfo() {
   assert(CurLoop != nullptr && "CurLoop can't be null");
   ICF.clear();
   MW.clear();
@@ -87,7 +88,6 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
       MayThrow = true;
       break;
     }
-  computeBlockColors(CurLoop);
 }
 
 void ICFLoopSafetyInfo::insertInstructionTo(const Instruction *Inst,
@@ -101,7 +101,11 @@ void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   MW.removeInstruction(Inst);
 }
 
-void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
+void LoopSafetyInfo::computeBlockColors() const {
+  if (BlockColors)
+    return;
+  BlockColors.emplace();
+
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
   Function *Fn = CurLoop->getHeader()->getParent();
@@ -122,8 +126,8 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
     // expect unique exits
     return false;
   assert(CurLoop->contains(CondExitBlock) && "meaning of exit block");
-  auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(CondExitBlock->getTerminator());
+  if (!BI)
     return false;
   // If condition is constant and false leads to ExitBlock then we always
   // execute the true branch.
@@ -135,21 +139,33 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   // todo: this would be a lot more powerful if we used scev, but all the
   // plumbing is currently missing to pass a pointer in from the pass
   // Check for cmp (phi [x, preheader] ...), y where (pred x, y is known
+  ICmpInst::Predicate Pred = Cond->getPredicate();
   auto *LHS = dyn_cast<PHINode>(Cond->getOperand(0));
   auto *RHS = Cond->getOperand(1);
-  if (!LHS || LHS->getParent() != CurLoop->getHeader())
+  if (!LHS || LHS->getParent() != CurLoop->getHeader()) {
+    Pred = Cond->getSwappedPredicate();
+    LHS = dyn_cast<PHINode>(Cond->getOperand(1));
+    RHS = Cond->getOperand(0);
+    if (!LHS || LHS->getParent() != CurLoop->getHeader())
+      return false;
+  }
+
+  // The induction variable starts at the value coming into the header from
+  // outside the loop. A loop that is not in simplified form has no preheader,
+  // but the header can still have a single predecessor outside the loop.
+  BasicBlock *Predecessor = CurLoop->getLoopPredecessor();
+  if (!Predecessor)
     return false;
+
   auto DL = ExitBlock->getDataLayout();
-  auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-  auto *SimpleValOrNull = simplifyCmpInst(Cond->getPredicate(),
-                                          IVStart, RHS,
-                                          {DL, /*TLI*/ nullptr,
-                                              DT, /*AC*/ nullptr, BI});
+  auto *IVStart = LHS->getIncomingValueForBlock(Predecessor);
+  auto *SimpleValOrNull = simplifyCmpInst(
+      Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
   if (!SimpleCst)
     return false;
   if (ExitBlock == BI->getSuccessor(0))
-    return SimpleCst->isZeroValue();
+    return SimpleCst->isNullValue();
   assert(ExitBlock == BI->getSuccessor(1) && "implied by above");
   return SimpleCst->isAllOnesValue();
 }
@@ -157,6 +173,9 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
 /// Collect all blocks from \p CurLoop which lie on all possible paths from
 /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
 /// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+/// Note: It's possible that we encounter Irreducible control flow, due to
+/// which, we may find that a few predecessors of \p BB are not a part of the
+/// \p CurLoop. We only return Predecessors that are a part of \p CurLoop.
 static void collectTransitivePredecessors(
     const Loop *CurLoop, const BasicBlock *BB,
     SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
@@ -166,6 +185,8 @@ static void collectTransitivePredecessors(
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
   for (const auto *Pred : predecessors(BB)) {
+    if (!CurLoop->contains(Pred))
+      continue;
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -182,13 +203,12 @@ static void collectTransitivePredecessors(
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
     for (const auto *PredPred : predecessors(Pred))
-      if (Predecessors.insert(PredPred).second)
+      if (CurLoop->contains(PredPred) && Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
 }
 
-bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
-                                             const BasicBlock *BB,
+bool LoopSafetyInfo::allLoopPathsLeadToBlock(const BasicBlock *BB,
                                              const DominatorTree *DT) const {
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
 
@@ -196,6 +216,14 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   if (BB == CurLoop->getHeader())
     return true;
 
+  auto [It, Inserted] = GuaranteedToExecute.try_emplace(BB, false);
+  if (Inserted)
+    It->second = allLoopPathsLeadToBlockImpl(BB, DT);
+  return It->second;
+}
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlockImpl(
+    const BasicBlock *BB, const DominatorTree *DT) const {
   // Collect all transitive predecessors of BB in the same loop. This set will
   // be a subset of the blocks within the loop.
   SmallPtrSet<const BasicBlock *, 4> Predecessors;
@@ -255,9 +283,8 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
 
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
-bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
-                                                 const DominatorTree *DT,
-                                                 const Loop *CurLoop) const {
+bool SimpleLoopSafetyInfo::isGuaranteedToExecute(
+    const Instruction &Inst, const DominatorTree *DT) const {
   // If the instruction is in the header block for the loop (which is very
   // common), it is always guaranteed to dominate the exit blocks.  Since this
   // is a common case, and can save some work, check it now.
@@ -267,22 +294,20 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !HeaderMayThrow ||
-           Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+           &*Inst.getParent()->getFirstNonPHIOrPseudoProbe() == &Inst;
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.
-  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  return allLoopPathsLeadToBlock(Inst.getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
-                                              const DominatorTree *DT,
-                                              const Loop *CurLoop) const {
+                                              const DominatorTree *DT) const {
   return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
-         allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+         allLoopPathsLeadToBlock(Inst.getParent(), DT);
 }
 
-bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
-                                                 const Loop *CurLoop) const {
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB) const {
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
 
   // Fast path: there are no instructions before header.
@@ -301,22 +326,20 @@ bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
   return true;
 }
 
-bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I,
-                                                 const Loop *CurLoop) const {
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I) const {
   auto *BB = I.getParent();
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
   return !MW.isDominatedByMemoryWriteFromSameBlock(&I) &&
-         doesNotWriteMemoryBefore(BB, CurLoop);
+         doesNotWriteMemoryBefore(BB);
 }
 
 static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
   // TODO: merge these two routines.  For the moment, we display the best
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
-  SimpleLoopSafetyInfo LSI;
-  LSI.computeLoopSafetyInfo(L);
-  return LSI.isGuaranteedToExecute(I, DT, L) ||
-    isGuaranteedToExecuteForEveryIteration(&I, L);
+  SimpleLoopSafetyInfo LSI(L);
+  return LSI.isGuaranteedToExecute(I, DT) ||
+         isGuaranteedToExecuteForEveryIteration(&I, L);
 }
 
 namespace {

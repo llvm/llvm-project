@@ -11,7 +11,6 @@
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsplti32dx vs1, 0, 940572664
 ; CHECK-NEXT:    xxsplti32dx vs1, 1, 1073741824
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: FloatConstantPool:
@@ -28,7 +27,6 @@ entry:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsplti32dx vs1, 0, 1048574
 ; CHECK-NEXT:    xxsplti32dx vs1, 1, 780229072
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: DoubleConstantPool:
@@ -47,8 +45,6 @@ entry:
 ; CHECK-NEXT:    xxsplti32dx vs2, 0, -2146625897
 ; CHECK-NEXT:    xxsplti32dx vs1, 1, -609716532
 ; CHECK-NEXT:    xxsplti32dx vs2, 1, 1339675259
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: LongDoubleConstantPool:
@@ -224,13 +220,11 @@ define double @two_constants_two_bb(i32 %m, double %a) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xxsplti32dx vs1, 0, 1074935889
 ; CHECK-NEXT:    xxsplti32dx vs1, 1, -343597384
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB12_2: # %if.end
 ; CHECK-NEXT:    xxsplti32dx vs0, 0, 1076085391
 ; CHECK-NEXT:    xxsplti32dx vs0, 1, 1546188227
 ; CHECK-NEXT:    xsadddp f1, f1, f0
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: two_constants_two_bb:
@@ -369,12 +363,10 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-NEXT:    stxv vs63, 32(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    xxsplti32dx vs63, 0, 1074935889
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
-; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
 ; CHECK-NEXT:    xxsplti32dx vs3, 0, 1074935889
 ; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -1719329096
-; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
 ; CHECK-NEXT:    xxsplti32dx vs63, 1, 8724152
 ; CHECK-NEXT:    xxlxor f4, f4, f4

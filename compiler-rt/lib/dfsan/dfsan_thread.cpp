@@ -5,7 +5,7 @@
 #include "dfsan.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
-namespace __dfsan {
+using namespace __dfsan;
 
 DFsanThread *DFsanThread::Create(thread_callback_t start_routine, void *arg,
                                  bool track_origins) {
@@ -21,13 +21,8 @@ DFsanThread *DFsanThread::Create(thread_callback_t start_routine, void *arg,
 }
 
 void DFsanThread::SetThreadStackAndTls() {
-  uptr tls_size = 0;
-  uptr stack_size = 0;
-  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_.top = stack_.bottom + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
-
+  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_.top, &tls_begin_,
+                       &tls_end_);
   int local;
   CHECK(AddrIsInStack((uptr)&local));
 }
@@ -99,7 +94,7 @@ bool DFsanThread::AddrIsInStack(uptr addr) {
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
 
-void DFsanTSDInit(void (*destructor)(void *tsd)) {
+void __dfsan::DFsanTSDInit(void (*destructor)(void *tsd)) {
   CHECK(!tsd_key_inited);
   tsd_key_inited = true;
   CHECK_EQ(0, pthread_key_create(&tsd_key, destructor));
@@ -107,9 +102,9 @@ void DFsanTSDInit(void (*destructor)(void *tsd)) {
 
 static THREADLOCAL DFsanThread *dfsan_current_thread;
 
-DFsanThread *GetCurrentThread() { return dfsan_current_thread; }
+DFsanThread *__dfsan::GetCurrentThread() { return dfsan_current_thread; }
 
-void SetCurrentThread(DFsanThread *t) {
+void __dfsan::SetCurrentThread(DFsanThread *t) {
   // Make sure we do not reset the current DFsanThread.
   CHECK_EQ(0, dfsan_current_thread);
   dfsan_current_thread = t;
@@ -118,7 +113,7 @@ void SetCurrentThread(DFsanThread *t) {
   pthread_setspecific(tsd_key, t);
 }
 
-void DFsanTSDDtor(void *tsd) {
+void __dfsan::DFsanTSDDtor(void *tsd) {
   DFsanThread *t = (DFsanThread *)tsd;
   if (t->destructor_iterations_ > 1) {
     t->destructor_iterations_--;
@@ -130,5 +125,3 @@ void DFsanTSDDtor(void *tsd) {
   atomic_signal_fence(memory_order_seq_cst);
   DFsanThread::TSDDtor(tsd);
 }
-
-}  // namespace __dfsan

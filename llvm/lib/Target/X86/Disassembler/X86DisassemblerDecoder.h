@@ -97,7 +97,7 @@ namespace X86Disassembler {
 #define mmmFromEVEX2of4(evex) threeBitsFromOffset0(evex)
 #define wFromEVEX3of4(evex) bitFromOffset7(evex)
 #define vvvvFromEVEX3of4(evex) invertedFourBitsFromOffset3(evex)
-#define x2FromEVEX3of4(evex) invertedBitFromOffset2(evex)
+#define uFromEVEX3of4(evex) invertedBitFromOffset2(evex)
 #define ppFromEVEX3of4(evex) twoBitsFromOffset0(evex)
 #define oszcFromEVEX3of4(evex) fourBitsFromOffset3(evex)
 #define zFromEVEX4of4(evex) bitFromOffset7(evex)

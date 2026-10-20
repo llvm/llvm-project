@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/SSAContext.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -69,6 +68,10 @@ bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   return false;
 }
 
+template <> bool SSAContext::isAlwaysUniform(const Value *V) {
+  return !isa<Instruction>(V) && !isa<Argument>(V);
+}
+
 template <> Intrinsic::ID SSAContext::getIntrinsicID(const Instruction &I) {
   if (auto *CB = dyn_cast<CallBase>(&I))
     return CB->getIntrinsicID();
@@ -90,7 +93,7 @@ template <> Printable SSAContext::print(const BasicBlock *BB) const {
     return Printable([BB](raw_ostream &Out) { Out << BB->getName(); });
 
   return Printable([BB](raw_ostream &Out) {
-    ModuleSlotTracker MST{BB->getParent()->getParent(), false};
+    ModuleSlotTracker MST{BB->getParent()->getParent()};
     MST.incorporateFunction(*BB->getParent());
     Out << MST.getLocalSlot(BB);
   });

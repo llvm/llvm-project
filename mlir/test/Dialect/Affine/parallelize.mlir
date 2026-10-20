@@ -195,6 +195,25 @@ func.func @iter_args(%in: memref<10xf32>) {
   return
 }
 
+// CHECK-LABEL: @iter_args_max
+// REDUCE-LABEL: @iter_args_max
+func.func @iter_args_max(%in: memref<10xi32>) {
+  // REDUCE: %[[init:.*]] = arith.constant
+  %c0 = arith.constant 0 : i32
+  // CHECK-NOT: affine.parallel
+  // REDUCE: %[[reduced:.*]] = affine.parallel (%{{.*}}) = (0) to (10) reduce ("maxs") -> (i32)
+  %final_red = affine.for %i = 0 to 10 iter_args(%red_iter = %c0) -> (i32) {
+    // REDUCE: %[[red_value:.*]] = affine.load
+    %ld = affine.load %in[%i] : memref<10xi32>
+    // REDUCE-NOT: arith.maxsi
+    %max = arith.maxsi %red_iter, %ld : i32
+    // REDUCE: affine.yield %[[red_value]]
+    affine.yield %max : i32
+  }
+  // REDUCE: arith.maxsi %[[init]], %[[reduced]]
+  return
+}
+
 // CHECK-LABEL: @nested_iter_args
 // REDUCE-LABEL: @nested_iter_args
 func.func @nested_iter_args(%in: memref<20x10xf32>) {
@@ -320,6 +339,44 @@ func.func @iter_arg_memrefs(%in: memref<10xf32>) {
   // CHECK: affine.for
   %mo = affine.for %i = 0 to 10 iter_args(%m_arg = %mi) -> (memref<f32>) {
     affine.yield %m_arg : memref<f32>
+  }
+  return
+}
+
+// Test affine analysis machinery to ensure it generates valid IR and doesn't
+// crash on this combination of ops.
+
+// CHECK-LABEL: @test_add_inv_or_terminal_symbol
+func.func @test_add_inv_or_terminal_symbol(%arg0: memref<9x9xi32>, %arg1: i1) {
+  %idx0 = index.constant 1
+  %29 = tensor.empty() : tensor<10xf16>
+  memref.alloca_scope {
+    %dim_30 = tensor.dim %29, %idx0 : tensor<10xf16>
+    %alloc_31 = memref.alloc(%idx0, %idx0) alignment = 64 : memref<?x?xf16>
+    affine.for %arg3 = 0 to %dim_30 {
+      %207 = affine.load %alloc_31[%idx0, %idx0] : memref<?x?xf16>
+      affine.store %207, %alloc_31[%idx0, %idx0] : memref<?x?xf16>
+    }
+  }
+  return
+}
+
+// Ensure that outer parallel loops are taken into account when computing the
+// loop depth in dependency analysis during parallelization. With correct
+// depth, the analysis should see the inner loop as sequential due to reads and
+// writes to the same address indexed by the outer (parallel) loop.
+//
+// CHECK-LABEL: @explicit_parallel
+func.func @explicit_parallel(%arg0: memref<1x123x194xf64>, %arg5: memref<34x99x194xf64>) {
+  // CHECK: affine.parallel
+  affine.parallel (%arg7, %arg8) = (0, 0) to (85, 180) {
+    // CHECK: affine.for
+    affine.for %arg9 = 0 to 18 {
+      %0 = affine.load %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+      %1 = affine.load %arg5[%arg9 + 8, %arg7 + 7, %arg8 + 7] : memref<34x99x194xf64>
+      %2 = arith.addf %0, %1 {fastmathFlags = #llvm.fastmath<none>} : f64
+      affine.store %1, %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+    }
   }
   return
 }

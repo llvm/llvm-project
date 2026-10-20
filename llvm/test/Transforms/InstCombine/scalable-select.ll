@@ -5,13 +5,11 @@
 ; Constant::getUniqueInteger would crash for a scalable-vector zeroinitializer.
 define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %m) {
 ; CHECK-LABEL: @select_opt(
-; CHECK-NEXT:    [[C:%.*]] = add nsw <vscale x 1 x i32> [[B:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> undef, i32 2, i32 0), <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[C:%.*]] = add nsw <vscale x 1 x i32> [[B:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[D:%.*]] = select <vscale x 1 x i1> [[M:%.*]], <vscale x 1 x i32> [[C]], <vscale x 1 x i32> [[B]]
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[D]]
 ;
-  %head = insertelement <vscale x 1 x i32> undef, i32 2, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
-  %c = add nsw <vscale x 1 x i32> %b, %splat
+  %c = add nsw <vscale x 1 x i32> %b, splat (i32 2)
   %d = select <vscale x 1 x i1> %m, <vscale x 1 x i32> %c, <vscale x 1 x i32> %b
   ret <vscale x 1 x i32> %d
 }
@@ -19,8 +17,8 @@ define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %
 define <vscale x 2 x i64> @load_scalable_of_selected_ptrs(ptr %p0, ptr %p1, i64 %idx) {
 ; CHECK-LABEL: @load_scalable_of_selected_ptrs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P0:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P1:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds [4 x i8], ptr [[P0:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P1:%.*]], i64 [[IDX]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX0]], align 4
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[L0]], [[L1]]

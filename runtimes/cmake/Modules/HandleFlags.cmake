@@ -85,12 +85,6 @@ macro(config_define_if condition def)
   endif()
 endmacro()
 
-macro(config_define_if_not condition def)
-  if (NOT ${condition})
-    set(${def} ON)
-  endif()
-endmacro()
-
 macro(config_define value def)
   set(${def} ${value})
 endmacro()

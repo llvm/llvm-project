@@ -17,24 +17,23 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
 #define LLVM_LIB_TARGET_AMDGPU_MCA_AMDGPUCUSTOMBEHAVIOUR_H
 
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/CustomBehaviour.h"
-#include "llvm/TargetParser/TargetParser.h"
 
 namespace llvm {
 namespace mca {
 
 class AMDGPUInstrPostProcess : public InstrPostProcess {
-  void processWaitCnt(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
+  void processWaitCnt(Instruction &Inst, const MCInst &MCI);
 
 public:
   AMDGPUInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}
 
-  ~AMDGPUInstrPostProcess() = default;
+  ~AMDGPUInstrPostProcess() override = default;
 
-  void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
-                              const MCInst &MCI) override;
+  void postProcessInstruction(Instruction &Inst, const MCInst &MCI) override;
 };
 
 struct WaitCntInfo {
@@ -66,13 +65,9 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   void generateWaitCntInfo();
   /// Helper function used in generateWaitCntInfo()
   bool hasModifiersSet(const std::unique_ptr<Instruction> &Inst,
-                       unsigned OpName) const;
+                       AMDGPU::OpName OpName) const;
   /// Helper function used in generateWaitCntInfo()
-  bool isGWS(uint16_t Opcode) const;
-  /// Helper function used in generateWaitCntInfo()
-  bool isAlwaysGDS(uint16_t Opcode) const;
-  /// Helper function used in generateWaitCntInfo()
-  bool isVMEM(const MCInstrDesc &MCID);
+  bool isAlwaysGDS(uint32_t Opcode) const;
   /// This method gets called from checkCustomHazard when mca is attempting to
   /// dispatch an s_waitcnt instruction (or one of its variants). The method
   /// looks at each of the instructions that are still executing in the pipeline
@@ -88,7 +83,7 @@ public:
   AMDGPUCustomBehaviour(const MCSubtargetInfo &STI,
                         const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII);
 
-  ~AMDGPUCustomBehaviour() = default;
+  ~AMDGPUCustomBehaviour() override = default;
   /// This method is used to determine if an instruction
   /// should be allowed to be dispatched. The return value is
   /// how many cycles until the instruction can be dispatched.

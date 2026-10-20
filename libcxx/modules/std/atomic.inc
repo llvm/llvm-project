@@ -50,6 +50,12 @@ export namespace std {
   using std::atomic_fetch_sub_explicit _LIBCPP_USING_IF_EXISTS;
   using std::atomic_fetch_xor _LIBCPP_USING_IF_EXISTS;
   using std::atomic_fetch_xor_explicit _LIBCPP_USING_IF_EXISTS;
+#if _LIBCPP_STD_VER >= 26
+  using std::atomic_fetch_max _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_max_explicit _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_min _LIBCPP_USING_IF_EXISTS;
+  using std::atomic_fetch_min_explicit _LIBCPP_USING_IF_EXISTS;
+#endif
   using std::atomic_notify_all _LIBCPP_USING_IF_EXISTS;
   using std::atomic_notify_one _LIBCPP_USING_IF_EXISTS;
   using std::atomic_wait _LIBCPP_USING_IF_EXISTS;
@@ -60,7 +66,7 @@ export namespace std {
   using std::atomic_char _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;
   using std::atomic_char32_t _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
   using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
 #endif
   using std::atomic_int _LIBCPP_USING_IF_EXISTS;
@@ -73,7 +79,7 @@ export namespace std {
   using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
   using std::atomic_ushort _LIBCPP_USING_IF_EXISTS;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::atomic_wchar_t _LIBCPP_USING_IF_EXISTS;
 #endif
 

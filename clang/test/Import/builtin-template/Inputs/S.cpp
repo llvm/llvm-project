@@ -14,3 +14,19 @@ using TypePackElement = __type_pack_element<i, T...>;
 
 template <int i>
 struct X;
+
+using X0 = X<0>;
+template <int I>
+using SameAsX = X<I>;
+
+template <template <class...> class Templ, class...Types>
+using TypePackDedup = Templ<__builtin_dedup_pack<Types...>...>;
+
+template <template <class...> class Templ, class...Types>
+using TypePackSort = Templ<__builtin_sort_pack<Types...>...>;
+
+struct A {};
+struct B {};
+
+template <class ...Ts>
+struct TypeList {};

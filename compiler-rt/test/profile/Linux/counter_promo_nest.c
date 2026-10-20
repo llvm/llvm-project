@@ -10,7 +10,9 @@
 // RUN: %run %t.nopromo.gen
 // RUN: llvm-profdata merge -o %t.nopromo.profdata %t.nopromo.prof/
 // RUN: llvm-profdata show --counts --all-functions %t.nopromo.profdata  > %t.nopromo.dump
-// RUN: diff <(llvm-profdata show %t.promo.profdata) <(llvm-profdata show %t.nopromo.profdata)
+// RUN: llvm-profdata show %t.promo.profdata > %t.promo.dump
+// RUN: llvm-profdata show %t.nopromo.profdata > %t.nopromo.dump
+// RUN: diff %t.promo.dump %t.nopromo.dump
 int g;
 __attribute__((noinline)) void bar() {
  g++;

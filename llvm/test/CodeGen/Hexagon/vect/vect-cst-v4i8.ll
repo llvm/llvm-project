@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; Make sure we can build the constant vector <1, 2, 3, 4>
 ; CHECK-DAG: ##B
 ; CHECK-DAG: ##A

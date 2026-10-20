@@ -13,9 +13,36 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/RegisterValue.h"
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sys/ptrace.h>
 #include <sys/uio.h>
+
+#ifndef PTRACE_GETREGS
+#define PTRACE_GETREGS 12
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_GETFPREGS
+#define PTRACE_GETFPREGS 14
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -28,7 +55,8 @@ Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,
                                                    RegisterValue &reg_value) {
   const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
   if (!reg_info)
-    return Status("register %" PRIu32 " not found", reg_index);
+    return Status::FromErrorStringWithFormat("register %" PRIu32 " not found",
+                                             reg_index);
 
   return DoReadRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
                              reg_info->byte_size, reg_value);
@@ -88,9 +116,10 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
   assert(register_to_write_info_p &&
          "register to write does not have valid RegisterInfo");
   if (!register_to_write_info_p)
-    return Status("NativeRegisterContextLinux::%s failed to get RegisterInfo "
-                  "for write register index %" PRIu32,
-                  __FUNCTION__, reg_to_write);
+    return Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux::%s failed to get RegisterInfo "
+        "for write register index %" PRIu32,
+        __FUNCTION__, reg_to_write);
 
   return DoWriteRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
                               reg_value);

@@ -4,7 +4,7 @@
 // mode to a new platform, but is not in and of itself a test of the profiling
 // runtime.
 
-// REQUIRES: darwin
+// REQUIRES: darwin, target={{arm64.*}}
 
 // Align counters and data to the maximum expected page size (16K).
 // RUN: %clang -g -o %t %s \
@@ -44,8 +44,8 @@ int create_tmpfile(char *path) {
     return EXIT_FAILURE;
   }
 
-  // Write the data first (at offset 0x4000, after the counters).
-  if (data_len != pwrite(fd, &data, data_len, 0x4000)) {
+  // Write the data first (at offset 0x1000, after the counters).
+  if (data_len != pwrite(fd, &data, data_len, cnts_len)) {
     perror("write");
     return EXIT_FAILURE;
   }
@@ -55,8 +55,8 @@ int create_tmpfile(char *path) {
   // Requirements (on Darwin):
   // - &cnts_start must be page-aligned.
   // - The length and offset-into-fd must be page-aligned.
-  int *counter_map = (int *)mmap(&cnts_start, 0x4000, PROT_READ | PROT_WRITE,
-      MAP_FIXED | MAP_SHARED, fd, 0);
+  int *counter_map = (int *)mmap(&cnts_start, cnts_len, PROT_READ | PROT_WRITE,
+                                 MAP_FIXED | MAP_SHARED, fd, 0);
   if (counter_map != &cnts_start) {
     perror("mmap");
     return EXIT_FAILURE;
@@ -97,7 +97,7 @@ int validate_tmpfile(char *path) {
   }
 
   // Verify that the rest of the counters (after counter 9) are 0.
-  const int num_cnts = 0x4000 / sizeof(int);
+  const int num_cnts = cnts_len / sizeof(int);
   for (int i = 10; i < num_cnts; ++i) {
     if (buf[i] != 0) {
       fprintf(stderr,
@@ -131,8 +131,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "__pcnts is not page-aligned: 0x%lx.\n", cnts_start_int);
     return EXIT_FAILURE;
   }
-  if (data_start_int % pagesz != 0) {
-    fprintf(stderr, "__pdata is not page-aligned: 0x%lx.\n", data_start_int);
+  if (data_start_int % 0x4000 != 0) {
+    fprintf(stderr, "__pdata is not correctly aligned: 0x%lx.\n",
+            data_start_int);
     return EXIT_FAILURE;
   }
   if (cnts_start_int + 0x4000 != data_start_int) {

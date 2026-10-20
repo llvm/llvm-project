@@ -3,7 +3,6 @@
 # CHECK-NEXT: ---
 # CHECK-NEXT: name:            foo
 # CHECK: body:             |
-# CHECK-EMPTY:
 # CHECK-NEXT: ...
 ---
 name: foo

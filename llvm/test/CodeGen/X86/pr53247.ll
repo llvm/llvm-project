@@ -5,18 +5,12 @@
 define i32 @PR53247(){
 ; SSE-LABEL: PR53247:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    phaddd %xmm0, %xmm0
-; SSE-NEXT:    phaddd %xmm0, %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR53247:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    retq
 entry:
   %0 = call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> zeroinitializer, <4 x i32> zeroinitializer)

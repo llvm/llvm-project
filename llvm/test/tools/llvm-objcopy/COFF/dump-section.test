@@ -4,7 +4,7 @@
 # RUN: llvm-objcopy --dump-section .text.f=%t.txt %t.obj
 # RUN: od -t x1 %t.txt | FileCheck %s --ignore-case -check-prefix CHECK-TEXT-F
 # RUN: not llvm-objcopy --dump-section non-existent=/dev/null %t.obj 2>&1 | FileCheck %s -check-prefix CHECK-NO-SECTION
-# RUN: not llvm-objcopy --dump-section .text=%T %t.obj 2>&1 | FileCheck -DOBJ=%t.obj -DMSG=%errc_EISDIR %s -check-prefix CHECK-INVALID-DESTINATION
+# RUN: not llvm-objcopy --dump-section .text=%S %t.obj 2>&1 | FileCheck -DOBJ=%t.obj -DMSG=%errc_EISDIR %s -check-prefix CHECK-INVALID-DESTINATION
 
 # CHECK-EMPTY-SIZE: 0
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-cgp-delete-phis < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -cgp-delete-phis=0 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that this testcase compiles successfully.

@@ -40,12 +40,9 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __sort_heap {
-
-struct __fn {
+struct __sort_heap {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __sort_heap_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  constexpr static _Iter __sort_heap_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
     auto&& __projected_comp = std::__make_projected(__comp, __proj);
@@ -56,23 +53,19 @@ struct __fn {
 
   template <random_access_iterator _Iter, sentinel_for<_Iter> _Sent, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<_Iter, _Comp, _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter
-  operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
+  constexpr _Iter operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     return __sort_heap_fn_impl(std::move(__first), std::move(__last), __comp, __proj);
   }
 
   template <random_access_range _Range, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
-  operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
+  constexpr borrowed_iterator_t<_Range> operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     return __sort_heap_fn_impl(ranges::begin(__r), ranges::end(__r), __comp, __proj);
   }
 };
 
-} // namespace __sort_heap
-
 inline namespace __cpo {
-inline constexpr auto sort_heap = __sort_heap::__fn{};
+inline constexpr auto sort_heap = __sort_heap{};
 } // namespace __cpo
 } // namespace ranges
 

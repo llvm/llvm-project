@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 ; Check that we don't crash.
 ; CHECK: call printf
 target triple = "hexagon"

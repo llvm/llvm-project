@@ -4,7 +4,7 @@
 ; Verify that prevailing weak for linker symbol is kept.
 ; Note that gold picks the first copy of a function as the prevailing one,
 ; so listing %t.o first is sufficient to ensure that its copies are prevailing.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -shared \
@@ -80,7 +80,7 @@ entry:
   ret void
 }
 ; IMPORT: define weak void @linkoncefunc()
-; IMPORT2: declare void @linkoncefunc()
+; IMPORT2: declare !guid !{{[0-9]+}} void @linkoncefunc()
 define linkonce void @linkoncefunc() #0 {
 entry:
   ret void
@@ -92,7 +92,7 @@ entry:
   ret void
 }
 ; IMPORT: define weak void @weakfunc()
-; IMPORT2: declare void @weakfunc()
+; IMPORT2: declare !guid !{{[0-9]+}} void @weakfunc()
 define weak void @weakfunc() #0 {
 entry:
   ret void

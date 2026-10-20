@@ -4,6 +4,7 @@
 ; RUN: opt < %s -passes=dse -dse-memoryssa-scanlimit=0 -S | FileCheck --check-prefix=LIMIT-0 %s
 ; RUN: opt < %s -passes=dse -dse-memoryssa-scanlimit=2 -S | FileCheck --check-prefix=LIMIT-2 %s
 ; RUN: opt < %s -passes=dse -dse-memoryssa-scanlimit=3 -S | FileCheck --check-prefix=LIMIT-3 %s
+; RUN: opt < %s -passes=dse -dse-memoryssa-scanlimit=4 -S | FileCheck --check-prefix=LIMIT-4 %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -69,5 +70,49 @@ bb3:
   store i32 0, ptr %Q
   store i32 0, ptr %R
   store i32 0, ptr %P
+  ret void
+}
+
+define void @duplicate_worklist_endoffunction(ptr %ptr.0, ptr %ptr.1) {
+; LIMIT-4-LABEL: @duplicate_worklist_endoffunction(
+; LIMIT-4-NEXT:  entry:
+; LIMIT-4-NEXT:    [[STACK_0:%.*]] = alloca [768 x i8], align 16
+; LIMIT-4-NEXT:    [[VAL_0:%.*]] = load i16, ptr [[PTR_1:%.*]], align 8
+; LIMIT-4-NEXT:    [[COND:%.*]] = icmp ugt i16 [[VAL_0]], 24
+; LIMIT-4-NEXT:    br i1 [[COND]], label [[BB_1:%.*]], label [[EXIT:%.*]]
+; LIMIT-4:       bb.1:
+; LIMIT-4-NEXT:    br label [[LOOP:%.*]]
+; LIMIT-4:       loop:
+; LIMIT-4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[BB_1]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; LIMIT-4-NEXT:    [[PTR_3:%.*]] = getelementptr i8, ptr [[STACK_0]], i64 [[IV]]
+; LIMIT-4-NEXT:    store ptr [[PTR_0:%.*]], ptr [[PTR_3]], align 2
+; LIMIT-4-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; LIMIT-4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 10
+; LIMIT-4-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]]
+; LIMIT-4:       exit:
+; LIMIT-4-NEXT:    ret void
+;
+entry:
+  %stack.0 = alloca [768 x i8], align 16
+  %stack.1 = alloca [20 x i8], align 8
+  %val.0 = load i16, ptr %ptr.1, align 8
+  %cond = icmp ugt i16 %val.0, 24
+  br i1 %cond, label %bb.1, label %exit
+
+bb.1:                                             ; preds = %entry
+  %ptr.2 = getelementptr inbounds i8, ptr %ptr.1, i64 8
+  %val.1 = load i64, ptr %ptr.2, align 8
+  store i64 %val.1, ptr %stack.1, align 8
+  br label %loop
+
+loop:                                             ; preds = %loop, %bb.1
+  %iv = phi i64 [ 0, %bb.1 ], [ %iv.next, %loop ]
+  %ptr.3 = getelementptr i8, ptr %stack.0, i64 %iv
+  store ptr %ptr.0, ptr %ptr.3, align 2
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 10
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                             ; preds = %loop, %entry
   ret void
 }

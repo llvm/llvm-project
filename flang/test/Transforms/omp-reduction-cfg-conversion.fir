@@ -8,7 +8,7 @@ omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.a
   %0 = fir.alloca !fir.box<!fir.array<3xi32>>
   %1 = fir.alloca !fir.array<3xi32> {bindc_name = "omp.reduction.array.init"}
   %2 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %3 = fir.declare %1(%2) {uniq_name = "omp.reduction.array.init"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xi32>>
+  %3 = fir.declare %1(%2) uniq_name("omp.reduction.array.init") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<3xi32>>
   %4 = fir.embox %3(%2) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
   %5 = fir.alloca i32
   fir.store %c0_i32 to %5 : !fir.ref<i32>
@@ -18,7 +18,7 @@ omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.a
   %8 = fir.convert %0 : (!fir.ref<!fir.box<!fir.array<3xi32>>>) -> !fir.ref<!fir.box<none>>
   %9 = fir.convert %6 : (!fir.box<i32>) -> !fir.box<none>
   %10 = fir.convert %7 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<i8>
-  %11 = fir.call @_FortranAAssign(%8, %9, %10, %c4_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAssign(%8, %9, %10, %c4_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   %12 = fir.alloca !fir.box<!fir.array<3xi32>>
   fir.store %4 to %12 : !fir.ref<!fir.box<!fir.array<3xi32>>>
   omp.yield(%12 : !fir.ref<!fir.box<!fir.array<3xi32>>>)

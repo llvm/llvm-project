@@ -3,10 +3,12 @@ Test platform process launch.
 """
 
 from textwrap import dedent
-from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil, lldbutil
+from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import TestBase
 
 
+@skipIf(remote=True, oslist=lldbplatformutil.getDarwinOSTriples())
 class ProcessLaunchTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

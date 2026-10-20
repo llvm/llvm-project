@@ -128,3 +128,12 @@ void template_inst(int n) {
   // expected-note@+1 {{in instantiation of function template specialization 'templated_func<int, -1>' requested here}}
   templated_func<int, -1>(n);
 }
+
+namespace GH139267 {
+void f(void) {
+  // This would previously crash with follow-on recovery after issuing the error.
+#pragma omp unroll partial(a) // expected-error {{use of undeclared identifier 'a'}}
+  for (int i = 0; i < 10; i++)
+    ;
+}
+}

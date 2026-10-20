@@ -11,14 +11,14 @@
 
 namespace std { // purposefully not versioned
 
-#ifndef __GLIBCXX__
+#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_VCRUNTIME)
 const nothrow_t nothrow{};
-#endif
+#endif // !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_VCRUNTIME)
 
 #ifndef LIBSTDCXX
 
 void __throw_bad_alloc() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_alloc();
 #  else
   _LIBCPP_VERBOSE_ABORT("bad_alloc was thrown in -fno-exceptions mode");

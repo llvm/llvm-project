@@ -21,13 +21,24 @@ public:
   void testSpecialNumbers(FrexpFunc func) {
     int exponent;
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(aNaN, &exponent));
-    EXPECT_FP_EQ_ALL_ROUNDING(inf, func(inf, &exponent));
-    EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
 
-    EXPECT_FP_EQ_ALL_ROUNDING(0.0, func(0.0, &exponent));
+    EXPECT_FP_EQ_ALL_ROUNDING(inf, func(inf, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
+
+    EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
+
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(zero, &exponent));
     EXPECT_EQ(exponent, 0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(-0.0, func(-0.0, &exponent));
+    EXPECT_FP_EQ_ALL_ROUNDING(-zero, func(-zero, &exponent));
     EXPECT_EQ(exponent, 0);
   }
 
@@ -85,9 +96,9 @@ public:
   }
 };
 
-#define LIST_FREXP_TESTS(T, func)                                              \
-  using LlvmLibcFrexpTest = FrexpTest<T>;                                      \
-  TEST_F(LlvmLibcFrexpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcFrexpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }         \
+#define LIST_FREXP_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = FrexpTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { testSomeIntegers(&func); }      \
   static_assert(true, "Require semicolon.")

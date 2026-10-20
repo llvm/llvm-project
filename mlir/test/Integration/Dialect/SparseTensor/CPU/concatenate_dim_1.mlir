@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
-// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run} = mlir-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -56,28 +57,28 @@ module {
 
   // Concats all sparse matrices (with different encodings) to a sparse matrix.
   func.func @concat_sparse_sparse_dim1(%arg0: tensor<4x2xf64, #MAT_C_C>, %arg1: tensor<4x3xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<4x9xf64, #MAT_C_C> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 1 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 1
          : tensor<4x2xf64, #MAT_C_C>, tensor<4x3xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<4x9xf64, #MAT_C_C>
     return %0 : tensor<4x9xf64, #MAT_C_C>
   }
 
   // Concats all sparse matrices (with different encodings) to a dense matrix.
   func.func @concat_sparse_dense_dim1(%arg0: tensor<4x2xf64, #MAT_C_C>, %arg1: tensor<4x3xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<4x9xf64> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 1 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 1
          : tensor<4x2xf64, #MAT_C_C>, tensor<4x3xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<4x9xf64>
     return %0 : tensor<4x9xf64>
   }
 
   // Concats mix sparse and dense matrices to a sparse matrix.
   func.func @concat_mix_sparse_dim1(%arg0: tensor<4x2xf64>, %arg1: tensor<4x3xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<4x9xf64, #MAT_C_C> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 1 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 1
          : tensor<4x2xf64>, tensor<4x3xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<4x9xf64, #MAT_C_C>
     return %0 : tensor<4x9xf64, #MAT_C_C>
   }
 
   // Concats mix sparse and dense matrices to a dense matrix.
   func.func @concat_mix_dense_dim1(%arg0: tensor<4x2xf64>, %arg1: tensor<4x3xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<4x9xf64> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 1 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 1
          : tensor<4x2xf64>, tensor<4x3xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<4x9xf64>
     return %0 : tensor<4x9xf64>
   }

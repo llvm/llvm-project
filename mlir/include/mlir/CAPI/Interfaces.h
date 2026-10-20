@@ -15,4 +15,13 @@
 #ifndef MLIR_CAPI_INTERFACES_H
 #define MLIR_CAPI_INTERFACES_H
 
+#include "mlir-c/Interfaces.h"
+#include "mlir/CAPI/Wrap.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+
+DEFINE_C_API_PTR_METHODS(MlirMemoryEffect, mlir::MemoryEffects::Effect)
+DEFINE_C_API_PTR_METHODS(MlirMemoryEffectInstance,
+                         mlir::MemoryEffects::EffectInstance)
+DEFINE_C_API_PTR_METHODS(MlirSideEffectResource, mlir::SideEffects::Resource)
+
 #endif // MLIR_CAPI_INTERFACES_H

@@ -33,6 +33,12 @@
 
 namespace Fortran::evaluate::value {
 
+// Computes decimal range in the sense of SELECTED_INT_KIND
+static constexpr int DecimalRange(int bits) {
+  // This magic value is LOG10(2.)*1E12.
+  return static_cast<int>((bits * 301029995664) / 1000000000000);
+}
+
 // Implements an integer as an assembly of smaller host integer parts
 // that constitute the digits of a large-radix fixed-point number.
 // For best performance, the type of these parts should be half of the
@@ -68,6 +74,7 @@ public:
   static_assert(std::is_unsigned_v<BigPart>);
   static_assert(CHAR_BIT * sizeof(BigPart) >= 2 * partBits);
   static constexpr bool littleEndian{IS_LITTLE_ENDIAN};
+  static constexpr int alignment{ALIGNMENT};
 
 private:
   static constexpr int maxPartBits{CHAR_BIT * sizeof(Part)};
@@ -367,9 +374,8 @@ public:
   static constexpr int DIGITS{bits - 1}; // don't count the sign bit
   static constexpr Integer HUGE() { return MASKR(bits - 1); }
   static constexpr Integer Least() { return MASKL(1); }
-  static constexpr int RANGE{// in the sense of SELECTED_INT_KIND
-      // This magic value is LOG10(2.)*1E12.
-      static_cast<int>(((bits - 1) * 301029995664) / 1000000000000)};
+  static constexpr int RANGE{DecimalRange(bits - 1)};
+  static constexpr int UnsignedRANGE{DecimalRange(bits)};
 
   constexpr bool IsZero() const {
     for (int j{0}; j < parts; ++j) {
@@ -828,9 +834,9 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-#if defined __GNUC__ && __GNUC__ < 8
-            // && to < (2 * parts) was added to avoid GCC < 8 build failure on
-            // -Werror=array-bounds. This can be removed if -Werror is disable.
+#if defined __GNUC__ && __GNUC__ < 8 || __GNUC__ >= 12
+            // && to < (2 * parts) was added to avoid GCC build failure on
+            // -Werror=array-bounds. This can be removed if -Werror is disabled.
             for (int to{j + k}; xy != 0 && to < (2 * parts); ++to) {
 #else
             for (int to{j + k}; xy != 0; ++to) {
@@ -1011,6 +1017,34 @@ public:
     return result;
   }
 
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  static constexpr std::size_t bytesStored() { return sizeof(Integer{}); }
+
+  /// De-serializes an integer from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Integer FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    CHECK(expectedSize == bytesStored());
+    Integer result;
+    std::memcpy(&result, raw, bytesStored());
+    return result;
+  }
+
+  /// Serializes this integer to \p dst. \p expectedSize must match the the
+  /// number of bytes to be written. If \p changed points to a boolean, it will
+  /// be set to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    CHECK(expectedSize == bytesStored());
+    if (changed) {
+      if (std::memcmp(dst, this, bytesStored()) == 0) {
+        return;
+      }
+      *changed = true;
+    }
+    std::memcpy(dst, this, bytesStored());
+  }
+
 private:
   // A private constructor, selected by the use of nullptr,
   // that is used by member functions when it would be a waste
@@ -1056,8 +1090,9 @@ extern template class Integer<16>;
 extern template class Integer<32>;
 extern template class Integer<64>;
 using X87IntegerContainer =
-    Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
-extern template class Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
+    Integer<80, isHostLittleEndian, 16, std::uint16_t, std::uint32_t, 128>;
+extern template class Integer<80, isHostLittleEndian, 16, std::uint16_t,
+    std::uint32_t, 128>;
 extern template class Integer<128>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

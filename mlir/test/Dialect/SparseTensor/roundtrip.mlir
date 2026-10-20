@@ -95,10 +95,10 @@ func.func @sparse_convert_3d_from_sparse(%arg0: tensor<8x8x8xf64, #SparseTensor>
 
 // CHECK-LABEL: func @sparse_positions(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[T:.*]] = sparse_tensor.positions %[[A]] {level = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.positions %[[A]] level = 0 : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_positions(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.positions %arg0 {level = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.positions %arg0 level = 0 : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -121,10 +121,10 @@ func.func @sparse_indices_buffer(%arg0: tensor<?x?xf64, #COO>) -> memref<?xindex
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[T:.*]] = sparse_tensor.coordinates %[[A]] {level = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.coordinates %[[A]] level = 0 : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.coordinates %arg0 {level = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.coordinates %arg0 level = 0 : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -555,7 +555,7 @@ func.func @sparse_select(%arg0: f64) -> f64 {
 //  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64
 //  CHECK-SAME:   %[[A1:.*]]: tensor<3x4xf64
 //  CHECK-SAME:   %[[A2:.*]]: tensor<4x4xf64
-//       CHECK:   %[[TMP0:.*]] = sparse_tensor.concatenate %[[A0]], %[[A1]], %[[A2]] {dimension = 0 : index} :
+//       CHECK:   %[[TMP0:.*]] = sparse_tensor.concatenate %[[A0]], %[[A1]], %[[A2]] dimension = 0 :
 //  CHECK-SAME:   tensor<2x4xf64
 //  CHECK-SAME:   tensor<3x4xf64
 //  CHECK-SAME:   tensor<4x4xf64
@@ -564,7 +564,7 @@ func.func @sparse_select(%arg0: f64) -> f64 {
 func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
                                 %arg1: tensor<3x4xf64, #SparseMatrix>,
                                 %arg2: tensor<4x4xf64, #SparseMatrix>) -> tensor<9x4xf64, #SparseMatrix> {
-  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
        : tensor<2x4xf64, #SparseMatrix>,
          tensor<3x4xf64, #SparseMatrix>,
          tensor<4x4xf64, #SparseMatrix> to tensor<9x4xf64, #SparseMatrix>
@@ -613,10 +613,10 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 // CHECK-LABEL: func @sparse_sort_coo(
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
-//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] {ny = 1 : index, perm_map = #{{.*}}} : memref<?xindex>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] perm_map = #{{.*}} ny = 1 : memref<?xindex>
 //       CHECK: return %[[B]]
 func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xindex>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 perm_map = #ID_MAP ny = 1: memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 
@@ -628,10 +628,10 @@ func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xin
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xi64>,
 //  CHECK-SAME: %[[C:.*]]: memref<?xf32>)
-//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] {ny = 1 : index, perm_map = #{{.*}}}
+//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] perm_map = #{{.*}} ny = 1
 //       CHECK: return %[[B]], %[[C]]
 func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: memref<?xf32>) -> (memref<?xi64>, memref<?xf32>) {
-  sparse_tensor.sort insertion_sort_stable %arg0, %arg1 jointly %arg2 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xi64> jointly memref<?xf32>
+  sparse_tensor.sort insertion_sort_stable %arg0, %arg1 jointly %arg2 perm_map = #ID_MAP ny = 1: memref<?xi64> jointly memref<?xf32>
   return %arg1, %arg2 : memref<?xi64>, memref<?xf32>
 }
 
@@ -748,6 +748,27 @@ func.func @sparse_has_runtime() -> i1 {
   )
 }>
 
+// CHECK-LABEL:   func.func @sparse_extract_value(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x8xf32, #sparse>,
+// CHECK-SAME:      %[[VAL_1:.*]]: !sparse_tensor.iterator<#sparse, lvls = 1>) -> f32 {
+// CHECK:           %[[VAL_2:.*]] = sparse_tensor.extract_value %[[VAL_0]] at %[[VAL_1]] : tensor<4x8xf32, #sparse>, !sparse_tensor.iterator<#sparse, lvls = 1>
+// CHECK:           return %[[VAL_2]] : f32
+// CHECK:         }
+func.func @sparse_extract_value(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 1>) -> f32 {
+  %f = sparse_tensor.extract_value %sp at %it1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 1>
+  return %f : f32
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
 // CHECK-LABEL:   func.func @sparse_extract_iter_space(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x8xf32, #sparse{{[0-9]*}}>,
 // CHECK-SAME:      %[[VAL_1:.*]]: !sparse_tensor.iterator<#sparse{{[0-9]*}}, lvls = 0>)
@@ -780,7 +801,7 @@ func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse
 // CHECK-SAME:      %[[VAL_1:.*]]: index,
 // CHECK-SAME:      %[[VAL_2:.*]]: index) -> index {
 // CHECK:           %[[VAL_3:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] lvls = 0 : tensor<4x8xf32, #sparse{{[0-9]*}}>
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.iterate %[[VAL_5:.*]] in %[[VAL_3]] at(%[[VAL_6:.*]]) iter_args(%[[VAL_7:.*]] = %[[VAL_1]]) : !sparse_tensor.iter_space<#sparse{{[0-9]*}}, lvls = 0> -> (index) {
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.iterate %[[VAL_5:.*]] in %[[VAL_3]] at(%[[VAL_6:.*]]) iter_args(%[[VAL_7:.*]] = %[[VAL_1]]) : !sparse_tensor.iter_space<#sparse{{[0-9]*}}, lvls = 0> -> index {
 // CHECK:             sparse_tensor.yield %[[VAL_7]] : index
 // CHECK:           }
 // CHECK:           return %[[VAL_4]] : index
@@ -791,4 +812,37 @@ func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -
     sparse_tensor.yield %outer : index
   }
   return %r1 : index
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+// CHECK-LABEL:   func.func @sparse_coiteration(
+// CHECK-SAME:      %[[SP1:.*]]: !sparse_tensor.iter_space<#sparse, lvls = 0>,
+// CHECK-SAME:      %[[SP2:.*]]: !sparse_tensor.iter_space<#sparse, lvls = 1>) -> index {
+// CHECK:           %[[INIT:.*]] = arith.constant 0 : index
+// CHECK:           %[[RET:.*]] = sparse_tensor.coiterate (%[[SP1]], %[[SP2]]) at(%[[COORD:.*]]) iter_args(%[[ARG:.*]] = %[[INIT]])
+// CHECK:           case %[[VAL_6:.*]], _ {
+// CHECK:             sparse_tensor.yield %[[ARG]] : index
+// CHECK:           }
+// CHECK:           return %[[RET]] : index
+// CHECK:         }
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  return %ret : index
 }

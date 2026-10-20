@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -20,6 +21,7 @@
 #define DEBUG_TYPE "gi-match-table-executor"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 GIMatchTableExecutor::MatcherState::MatcherState(unsigned MaxRenderers)
     : Renderers(MaxRenderers) {}
@@ -47,29 +49,48 @@ bool GIMatchTableExecutor::isBaseWithConstantOffset(
   if (!Root.isReg())
     return false;
 
-  MachineInstr *RootI = MRI.getVRegDef(Root.getReg());
-  if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
-    return false;
-
-  MachineOperand &RHS = RootI->getOperand(2);
-  MachineInstr *RHSI = MRI.getVRegDef(RHS.getReg());
-  if (RHSI->getOpcode() != TargetOpcode::G_CONSTANT)
-    return false;
-
-  return true;
+  GConstant *RHSI;
+  return mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(), m_GConstant(RHSI)));
 }
 
 bool GIMatchTableExecutor::isObviouslySafeToFold(MachineInstr &MI,
                                                  MachineInstr &IntoMI) const {
+  auto IntoMIIter = IntoMI.getIterator();
+
   // Immediate neighbours are already folded.
   if (MI.getParent() == IntoMI.getParent() &&
-      std::next(MI.getIterator()) == IntoMI.getIterator())
+      std::next(MI.getIterator()) == IntoMIIter)
     return true;
 
   // Convergent instructions cannot be moved in the CFG.
   if (MI.isConvergent() && MI.getParent() != IntoMI.getParent())
     return false;
 
-  return !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
-         !MI.hasUnmodeledSideEffects() && MI.implicit_operands().empty();
+  if (MI.isLoadFoldBarrier())
+    return false;
+
+  // If the load is simple, check instructions between MI and IntoMI
+  if (MI.mayLoad() && MI.getParent() == IntoMI.getParent()) {
+    if (MI.memoperands_empty())
+      return false;
+    auto &MMO = **(MI.memoperands_begin());
+    if (MMO.isAtomic() || MMO.isVolatile())
+      return false;
+
+    // Ensure instructions between MI and IntoMI are not affected when combined
+    unsigned Iter = 0;
+    const unsigned MaxIter = 20;
+    for (auto &CurrMI :
+         instructionsWithoutDebug(MI.getIterator(), IntoMI.getIterator())) {
+      if (CurrMI.isLoadFoldBarrier())
+        return false;
+
+      if (Iter++ == MaxIter)
+        return false;
+    }
+
+    return true;
+  }
+
+  return !MI.mayLoad();
 }

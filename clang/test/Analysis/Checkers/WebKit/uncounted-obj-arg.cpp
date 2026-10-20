@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
+// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
 #include "mock-system-header.h"
@@ -6,6 +6,7 @@
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
 void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
+void WTFReportBacktrace(void);
 
 void WTFCrash(void);
 void WTFCrashWithSecurityImplication(void);
@@ -73,8 +74,10 @@ T* addressof(T& arg);
 template<typename T>
 T&& forward(T& arg);
 
-template<typename T>
-T&& move( T&& t );
+template<typename ToType, typename FromType>
+ToType bit_cast(FromType from);
+
+#define offsetof(t, d) __builtin_offsetof(t, d)
 
 } // namespace std
 
@@ -193,6 +196,10 @@ public:
   ComplexNumber& operator+();
 
   const Number& real() const { return realPart; }
+  const Number& complex() const;
+
+  void ref() const;
+  void deref() const;
 
 private:
   Number realPart;
@@ -223,6 +230,34 @@ private:
   Number n;
 };
 
+class BaseType {
+public:
+  BaseType() : n(0) { }
+  BaseType(int v) : n(v) { }
+  BaseType(const char*);
+private:
+  Number n;
+};
+
+class SomeType : public BaseType {
+public:
+  using BaseType::BaseType;
+};
+
+struct OtherObj {
+  unsigned v { 0 };
+  OtherObj* children[4] { nullptr };
+};
+
+void __libcpp_verbose_abort(const char *__format, ...);
+
+struct ComparedObj {
+  unsigned v { 0 };
+  float m { -1 };
+  bool operator==(const ComparedObj& other) const { return v == other.v && m == other.m; }
+  bool operator==(int x) const;
+};
+
 class RefCounted {
 public:
   void ref() const;
@@ -243,6 +278,15 @@ public:
 
   void mutuallyRecursive8() { mutuallyRecursive9(); someFunction(); }
   void mutuallyRecursive9() { mutuallyRecursive8(); }
+
+  int recursiveCost() {
+    unsigned totalCost = 0;
+    for (unsigned i = 0; i < sizeof(children)/sizeof(*children); ++i) {
+      if (auto* child = children[i])
+        totalCost += child->recursiveCost();
+    }
+    return totalCost;
+  }
 
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
@@ -334,8 +378,36 @@ public:
   }
   unsigned trivial60() { return ObjectWithNonTrivialDestructor { 5 }.value(); }
   unsigned trivial61() { return DerivedNumber('7').value(); }
+  void trivial62() { WTFReportBacktrace(); }
+  SomeType trivial63() { return SomeType(0); }
+  SomeType trivial64() { return SomeType(); }
+  void trivial65() {
+    __libcpp_verbose_abort("%s", "aborting");
+  }
+  RefPtr<RefCounted> trivial66() { return children[0]; }
+  Ref<RefCounted> trivial67() { return *children[0]; }
+  struct point {
+    double x;
+    double y;
+  };
+  void trivial68() { point pt = { 1.0 }; }
+  unsigned trivial69() { return offsetof(OtherObj, children); }
+  DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
+  unsigned trivial71() { return std::bit_cast<unsigned>(nullptr); }
+  unsigned trivial72() { Number n { 5 }; return WTF::move(n).value(); }
+  bool trivial73(const ComparedObj& a, const ComparedObj& b) { return a != b; }
+
+  unsigned [[clang::annotate_type("webkit.nodelete")]] nodelete1();
+  void [[clang::annotate_type("webkit.nodelete")]] nodelete2();
+  virtual void [[clang::annotate_type("webkit.nodelete")]] nodelete3();
 
   static RefCounted& singleton() {
+    static RefCounted s_RefCounted;
+    s_RefCounted.ref();
+    return s_RefCounted;
+  }
+
+  static RefCounted& otherSingleton() {
     static RefCounted s_RefCounted;
     s_RefCounted.ref();
     return s_RefCounted;
@@ -408,21 +480,35 @@ public:
 
   int nonTrivial13() { return ~otherFunction(); }
   int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
-  void nonTrivial15() { ++complex; }
-  void nonTrivial16() { complex++; }
-  ComplexNumber nonTrivial17() { return complex << 2; }
-  ComplexNumber nonTrivial18() { return +complex; }
-  ComplexNumber* nonTrivial19() { return new ComplexNumber(complex); }
+  void nonTrivial15() { ++complex; } // expected-warning{{Function argument 'this->complex' (parameter 'this' to 'ComplexNumber::operator++') is a raw pointer to RefPtr-capable type 'ComplexNumber'}}
+  void nonTrivial16() { complex++; } // expected-warning{{Function argument 'this->complex' (parameter 'this' to 'ComplexNumber::operator++') is a raw pointer to RefPtr-capable type 'ComplexNumber'}}
+  ComplexNumber nonTrivial17() {
+    return complex << 2; // expected-warning{{Function argument 'this->complex << 2' (to 'ComplexNumber::ComplexNumber') is a raw reference to RefPtr-capable type 'ComplexNumber'}}
+    // expected-warning@-1{{Function argument 'this->complex' (parameter 'this' to 'ComplexNumber::operator<<') is a raw pointer to RefPtr-capable type 'ComplexNumber'}}
+  }
+  ComplexNumber nonTrivial18() {
+    return +complex; // expected-warning{{Function argument 'this->complex' (parameter 'this' to 'ComplexNumber::operator+') is a raw pointer to RefPtr-capable type}}
+    // expected-warning@-1{{Function argument '+ this->complex' (to 'ComplexNumber::ComplexNumber') is a raw reference to RefPtr-capable type 'ComplexNumber'}}
+  }
+  ComplexNumber* nonTrivial19() {
+    return new ComplexNumber(complex);
+    // expected-warning@-1{{Function argument 'this->complex' (to 'ComplexNumber::ComplexNumber') is a raw reference to RefPtr-capable type 'ComplexNumber'}}
+  }
   unsigned nonTrivial20() { return ObjectWithMutatingDestructor { 7 }.value(); }
   unsigned nonTrivial21() { return Number("123").value(); }
   unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }
   unsigned nonTrivial23() { return DerivedNumber("123").value(); }
+  SomeType nonTrivial24() { return SomeType("123"); }
+  virtual void nonTrivial25() { }
+  virtual ComplexNumber* operator->() { return nullptr; }
+  bool nonTrivial26(const ComparedObj& a) { return 3 == a; }
 
   static unsigned s_v;
   unsigned v { 0 };
   Number* number { nullptr };
   ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
+  RefCounted* children[4];
 };
 
 unsigned RefCounted::s_v = 0;
@@ -432,7 +518,7 @@ RefCounted* refCountedObj();
 void test()
 {
   refCountedObj()->someFunction();
-  // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  // expected-warning@-1{{Function argument 'refCountedObj()' (parameter 'this' to 'RefCounted::someFunction') is a raw pointer to RefPtr-capable type 'RefCounted'}}
 }
 
 class UnrelatedClass {
@@ -506,77 +592,108 @@ public:
     getFieldTrivial().trivial59(); // no-warning
     getFieldTrivial().trivial60(); // no-warning
     getFieldTrivial().trivial61(); // no-warning
+    getFieldTrivial().trivial62(); // no-warning
+    getFieldTrivial().trivial63(); // no-warning
+    getFieldTrivial().trivial64(); // no-warning
+    getFieldTrivial().trivial65(); // no-warning
+    getFieldTrivial().trivial66()->trivial6(); // no-warning
+    getFieldTrivial().trivial67()->trivial6(); // no-warning
+    getFieldTrivial().trivial68(); // no-warning
+    getFieldTrivial().trivial69(); // no-warning
+    getFieldTrivial().trivial70(); // no-warning
+    getFieldTrivial().trivial71(); // no-warning
+    // FIXME: Missing test case for trivial72.
+    getFieldTrivial().trivial73(ComparedObj { }, ComparedObj { }); // no-warning
+
+    getFieldTrivial().nodelete1(); // no-warning
+    getFieldTrivial().nodelete2(); // no-warning
+    getFieldTrivial().nodelete3(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
+    RefCounted::otherSingleton().trivial18(); // no-warning
+    RefCounted::otherSingleton().someFunction(); // no-warning
 
     getFieldTrivial().recursiveTrivialFunction(7); // no-warning
     getFieldTrivial().recursiveComplexFunction(9);
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::recursiveComplexFunction') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().mutuallyRecursiveFunction1(11); // no-warning
     getFieldTrivial().mutuallyRecursiveFunction2(13); // no-warning
     getFieldTrivial().mutuallyRecursiveFunction3(17);
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::mutuallyRecursiveFunction3') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().mutuallyRecursiveFunction4(19);
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::mutuallyRecursiveFunction4') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().recursiveFunction5(23); // no-warning
     getFieldTrivial().recursiveFunction6(29); // no-warning
     getFieldTrivial().recursiveFunction7(31); // no-warning
 
     getFieldTrivial().mutuallyRecursive8();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::mutuallyRecursive8') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().mutuallyRecursive9();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::mutuallyRecursive9') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+
+    getFieldTrivial().recursiveCost(); // no-warning
 
     getFieldTrivial().someFunction();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::someFunction') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial1();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial1') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial2();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial2') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial3();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial3') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial4();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial4') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial5();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial5') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial6();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial6') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial7();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial7') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial8();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial8') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial9();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial9') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial10();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial10') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial11();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial11') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial12();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial12') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial13();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial13') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial14();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial14') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial15();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial15') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial16();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial16') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial17();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial17') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial18();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial18') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial19();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial19') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial20();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial20') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial21();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial21') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial22();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial22') is a raw pointer to RefPtr-capable type 'RefCounted'}}
     getFieldTrivial().nonTrivial23();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial23') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+    getFieldTrivial().nonTrivial24();
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial24') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+    getFieldTrivial().nonTrivial25();
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial25') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+    getFieldTrivial()->complex();
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'ComplexNumber::complex') is a raw pointer to RefPtr-capable type 'ComplexNumber'}}
+    // expected-warning@-2{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::operator->') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+    getFieldTrivial().nonTrivial26(ComparedObj { });
+    // expected-warning@-1{{Function argument 'this->getFieldTrivial()' (parameter 'this' to 'RefCounted::nonTrivial26') is a raw pointer to RefPtr-capable type 'RefCounted'}}
   }
+
+  void setField(RefCounted*);
 };
 
 class UnrelatedClass2 {
@@ -587,11 +704,24 @@ public:
   RefCounted &getFieldTrivialRecursively() { return getFieldTrivial().getFieldTrivial(); }
   RefCounted *getFieldTrivialTernary() { return Field ? Field->getFieldTernary() : nullptr; }
 
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::forward<AdditionalArgs>(args)...);
+  }
+
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField2(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::move<AdditionalArgs>(args)...);
+  }
+
   void test() {
     getFieldTrivialRecursively().trivial1(); // no-warning
     getFieldTrivialTernary()->trivial2(); // no-warning
     getFieldTrivialRecursively().someFunction();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'this->getFieldTrivialRecursively()' (parameter 'this' to 'RefCounted::someFunction') is a raw pointer to RefPtr-capable type 'RefCounted'}}
+    callSetField(getFieldTrivial(), refCountedObj()); // no-warning
   }
 };
 
@@ -599,9 +729,13 @@ RefPtr<RefCounted> object();
 void someFunction(const RefCounted&);
 
 void test2() {
-    someFunction(*object());
+  someFunction(*object());
 }
 
 void system_header() {
   callMethod<RefCountable>(object);
+}
+
+void log(RefCountable* obj) {
+  os_log_msg(os_log_create("WebKit", "DOM"), OS_LOG_TYPE_INFO, "obj: %p next: %p", obj, obj->next());
 }

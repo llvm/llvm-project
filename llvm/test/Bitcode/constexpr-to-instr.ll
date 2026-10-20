@@ -1,4 +1,4 @@
-; RUN: llvm-dis -expand-constant-exprs < %s.bc | FileCheck %s
+; RUN: opt -expand-constant-exprs -S %s.bc | FileCheck %s
 
 @g = extern_weak global i32
 @g2 = extern_weak global i32
@@ -225,7 +225,7 @@ define i64 @test_phi_multiple_identical_predecessors(i32 %x) {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: br label %join
 ; CHECK: join:
-; CHECK-NEXT: %phi = phi i64 [ %constexpr, %phi.constexpr ], [ %constexpr, %phi.constexpr ], [ 0, %default ]
+; CHECK-NEXT: %phi = phi i64 [ %constexpr, %phi.constexpr ], [ 0, %default ]
 ; CHECK-NEXT: ret i64 %phi
 entry:
   switch i32 %x, label %default [

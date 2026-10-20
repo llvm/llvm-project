@@ -111,6 +111,11 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
+  bool runs_as_top_level_code = options.GetREPLEnabled();
+  if (runs_as_top_level_code)
+    m_error_backstop_runtime =
+        m_process.GetLanguageRuntime(options.GetLanguage().AsLanguageType());
+
   lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
   lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
   ABI *abi = nullptr;
@@ -174,8 +179,20 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
   Log *log = GetLog(LLDBLog::Step);
+  Thread &thread = GetThread();
 
   if (!m_valid) {
+    // If ConstructorSetup was succesfull but PrepareTrivialCall was not,
+    // we will have a saved register state and potentially modified registers.
+    // Restore those.
+    if (m_stored_thread_state.register_backup_sp)
+      if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state))
+        LLDB_LOGF(
+            log,
+            "ThreadPlanCallFunction(%p): Failed to restore register state from "
+            "invalid plan that contained a saved register state.",
+            static_cast<void *>(this));
+
     // Don't call DoTakedown if we were never valid to begin with.
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): Log called on "
@@ -185,7 +202,6 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 
   if (!m_takedown_done) {
-    Thread &thread = GetThread();
     if (success) {
       SetReturnValue();
     }
@@ -220,7 +236,7 @@ void ThreadPlanCallFunction::DidPop() { DoTakedown(PlanSucceeded()); }
 
 void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
-    s->Printf("Function call thread plan");
+    s->PutCString("Function call thread plan");
   } else {
     s->Printf("Thread plan to call 0x%" PRIx64,
               m_function_addr.GetLoadAddress(&GetTarget()));
@@ -339,6 +355,16 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // say we explain the stop but aren't done and everything will continue on
     // from there.
 
+    // Fork events are not handled by this plan — let them fall through
+    // to ThreadPlanBase. DidFork is called via PerformAction when the
+    // event is delivered.
+    if (m_real_stop_info_sp) {
+      StopReason reason = m_real_stop_info_sp->GetStopReason();
+      if (reason == eStopReasonFork || reason == eStopReasonVFork ||
+          reason == eStopReasonVForkDone)
+        return false;
+    }
+
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {
       SetPlanComplete(false);
@@ -418,6 +444,9 @@ void ThreadPlanCallFunction::SetBreakpoints() {
       m_objc_language_runtime->SetExceptionBreakpoints();
     }
   }
+  if (m_error_backstop_runtime)
+    m_error_backstop_bp_sp =
+        m_error_backstop_runtime->CreateErrorBackstopBreakpoint();
 }
 
 void ThreadPlanCallFunction::ClearBreakpoints() {
@@ -427,6 +456,8 @@ void ThreadPlanCallFunction::ClearBreakpoints() {
     if (m_objc_language_runtime && m_should_clear_objc_exception_bp)
       m_objc_language_runtime->ClearExceptionBreakpoints();
   }
+  if (m_error_backstop_bp_sp)
+    GetTarget().RemoveBreakpointByID(m_error_backstop_bp_sp->GetID());
 }
 
 bool ThreadPlanCallFunction::BreakpointsExplainStop() {
@@ -450,6 +481,21 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
       // can't let that happen, so force the ShouldStop here.
       stop_info_sp->OverrideShouldStop(true);
       return true;
+    }
+  }
+  if (m_error_backstop_bp_sp && stop_info_sp &&
+      stop_info_sp->GetStopReason() == eStopReasonBreakpoint &&
+      m_process.GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
+          stop_info_sp->GetValue(), m_error_backstop_bp_sp->GetID())) {
+    // This was top-level code that threw an error.
+    SetPlanComplete(true);
+    if (StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0)) {
+      m_return_valobj_sp =
+          m_error_backstop_runtime->GetErrorValueAtBackstop(*frame_sp);
+      if (m_return_valobj_sp) {
+        m_hit_error_backstop = true;
+        return true;
+      }
     }
   }
 

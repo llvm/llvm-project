@@ -20,12 +20,8 @@ void __init_cpu_features_resolver() {
     setCPUFeature(FEAT_FP);
   if (features & ZX_ARM64_FEATURE_ISA_ASIMD)
     setCPUFeature(FEAT_SIMD);
-  if (features & ZX_ARM64_FEATURE_ISA_AES)
-    setCPUFeature(FEAT_AES);
   if (features & ZX_ARM64_FEATURE_ISA_PMULL)
     setCPUFeature(FEAT_PMULL);
-  if (features & ZX_ARM64_FEATURE_ISA_SHA1)
-    setCPUFeature(FEAT_SHA1);
   if (features & ZX_ARM64_FEATURE_ISA_SHA256)
     setCPUFeature(FEAT_SHA2);
   if (features & ZX_ARM64_FEATURE_ISA_CRC32)
@@ -38,14 +34,18 @@ void __init_cpu_features_resolver() {
     setCPUFeature(FEAT_SM4);
   if (features & ZX_ARM64_FEATURE_ISA_DP)
     setCPUFeature(FEAT_DOTPROD);
-  if (features & ZX_ARM64_FEATURE_ISA_FHM)
+  if (features & ZX_ARM64_FEATURE_ISA_FHM) {
     setCPUFeature(FEAT_FP16FML);
+    setCPUFeature(FEAT_FP16);
+  }
   if (features & ZX_ARM64_FEATURE_ISA_SHA512)
     setCPUFeature(FEAT_SHA3);
   if (features & ZX_ARM64_FEATURE_ISA_I8MM)
     setCPUFeature(FEAT_I8MM);
-  if (features & ZX_ARM64_FEATURE_ISA_SVE)
+  if (features & ZX_ARM64_FEATURE_ISA_SVE) {
     setCPUFeature(FEAT_SVE);
+    setCPUFeature(FEAT_FP16);
+  }
 
   setCPUFeature(FEAT_INIT);
 

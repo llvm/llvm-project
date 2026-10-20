@@ -28,13 +28,15 @@ class NarrowTypeEmulationConverter;
 /// types into supported ones. This is done by splitting original power-of-two
 /// i2N integer types into two iN halves.
 void populateArithWideIntEmulationPatterns(
-    WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns);
+    const WideIntEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Adds patterns to emulate narrow Arith and Function ops into wide
 /// supported types. Users need to add conversions about the computation
 /// domain of narrow types.
 void populateArithNarrowTypeEmulationPatterns(
-    NarrowTypeEmulationConverter &typeConverter, RewritePatternSet &patterns);
+    const NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Populate the type conversions needed to emulate the unsupported
 /// `sourceTypes` with `destType`
@@ -45,35 +47,74 @@ void populateEmulateUnsupportedFloatsConversions(TypeConverter &converter,
 /// Add rewrite patterns for converting operations that use illegal float types
 /// to ones that use legal ones.
 void populateEmulateUnsupportedFloatsPatterns(RewritePatternSet &patterns,
-                                              TypeConverter &converter);
+                                              const TypeConverter &converter);
 
 /// Set up a dialect conversion to reject arithmetic operations on unsupported
 /// float types.
 void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
-                                              TypeConverter &converter);
-/// Add patterns to expand Arith ceil/floor division ops.
-void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
-
+                                              const TypeConverter &converter);
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
+void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand Arith f8e5m2 patterns to lower level bitcasts/shifts.
+void populateExpandF8E5M2Patterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand Arith f8e4m3fn patterns to lower level
+/// bitcasts/shifts.
+void populateExpandF8E4M3FNPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand Arith f8e8m0 patterns to lower level bitcasts/shifts.
+void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
+void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the floating-point min/max ops (`arith.maximumf`/
+/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences.
+void populateExpandMinMaxFPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the signed/unsigned integer min/max ops
+/// (`arith.maxsi`/`maxui`/`minsi`/`minui`) into `cmpi` + `select` sequences.
+void populateExpandMinMaxIPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand both the floating-point and integer min/max ops into
+/// `cmpf`/`cmpi` + `select` sequences. These ops also have a direct
+/// arith-to-llvm lowering, so pipelines that run arith-to-llvm may prefer to
+/// skip this expansion.
+void populateExpandMinMaxPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand `arith.flush_denormals` into integer arithmetic
+/// (bitcast + bit masks + compare + select). Only matches IEEE-like
+/// floating-point types.
+void populateExpandFlushDenormalsPatterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
-
-/// Create a pass to replace signed ops with unsigned ones where they are proven
-/// equivalent.
-std::unique_ptr<Pass> createArithUnsignedWhenEquivalentPass();
 
 /// Add patterns for int range based optimizations.
 void populateIntRangeOptimizationsPatterns(RewritePatternSet &patterns,
                                            DataFlowSolver &solver);
 
+/// Replace signed ops with unsigned ones where they are proven equivalent.
+void populateUnsignedWhenEquivalentPatterns(RewritePatternSet &patterns,
+                                            DataFlowSolver &solver);
+
 /// Create a pass which do optimizations based on integer range analysis.
 std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 
-/// Add patterns for integer bitwidth narrowing.
-void populateArithIntNarrowingPatterns(RewritePatternSet &patterns,
-                                       const ArithIntNarrowingOptions &options);
+/// Add patterns for int range based narrowing.
+void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
+                                       DataFlowSolver &solver,
+                                       ArrayRef<unsigned> bitwidthsSupported);
+
+/// Add patterns for narrowing control flow values (loop bounds, steps, etc.)
+/// based on int range analysis.
+void populateControlFlowValuesNarrowingPatterns(
+    RewritePatternSet &patterns, DataFlowSolver &solver,
+    ArrayRef<unsigned> bitwidthsSupported);
 
 //===----------------------------------------------------------------------===//
 // Registration

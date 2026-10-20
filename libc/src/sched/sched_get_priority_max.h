@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MAX_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MAX_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int sched_get_priority_max(int policy);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MAX_H

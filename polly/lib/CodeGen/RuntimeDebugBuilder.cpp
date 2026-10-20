@@ -23,11 +23,11 @@ llvm::Value *RuntimeDebugBuilder::getPrintableString(PollyIRBuilder &Builder,
   // because CPU backends typically ignore the address space. For constant
   // strings as returned by getPrintableString, the format string should instead
   // directly spell out the string.
-  return Builder.CreateGlobalStringPtr(Str, "", 4);
+  return Builder.CreateGlobalString(Str, "", 4);
 }
 
 Function *RuntimeDebugBuilder::getVPrintF(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "vprintf";
   Function *F = M->getFunction(Name);
 
@@ -115,7 +115,7 @@ void RuntimeDebugBuilder::createCPUPrinterT(PollyIRBuilder &Builder,
 }
 
 Function *RuntimeDebugBuilder::getPrintF(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "printf";
   Function *F = M->getFunction(Name);
 
@@ -131,7 +131,7 @@ Function *RuntimeDebugBuilder::getPrintF(PollyIRBuilder &Builder) {
 void RuntimeDebugBuilder::createPrintF(PollyIRBuilder &Builder,
                                        std::string Format,
                                        ArrayRef<Value *> Values) {
-  Value *FormatString = Builder.CreateGlobalStringPtr(Format);
+  Value *FormatString = Builder.CreateGlobalString(Format);
   std::vector<Value *> Arguments;
 
   Arguments.push_back(FormatString);
@@ -140,7 +140,7 @@ void RuntimeDebugBuilder::createPrintF(PollyIRBuilder &Builder,
 }
 
 void RuntimeDebugBuilder::createFlush(PollyIRBuilder &Builder) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   const char *Name = "fflush";
   Function *F = M->getFunction(Name);
 

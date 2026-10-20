@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-C
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -x c -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +12,7 @@ void fixed_len_array(int k) {
   // CHECK-NEXT: [[SMULOFLOW:%.*]] = extractvalue { i64, i1 } [[SMUL]], 1, !nosanitize
   // CHECK-NEXT: [[OR:%.+]] = or i1 [[SMULOFLOW]], false, !nosanitize
   // CHECK-NEXT: [[SMULVAL:%.*]] = extractvalue { i64, i1 } [[SMUL]], 0, !nosanitize
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[ARR]] to i64, !nosanitize
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoaddr ptr [[ARR]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], [[SMULVAL]], !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}, i64 [[BASE]], i64 [[COMPGEP]]){{.*}}, !nosanitize
 
@@ -84,7 +84,7 @@ struct S1 {
 // CHECK-LABEL: define{{.*}} void @struct_index
 void struct_index(struct S1 *p) {
   // CHECK: getelementptr inbounds %struct.S1, ptr [[P:%.*]], i64 10
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[P]] to i64, !nosanitize
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoaddr ptr [[P]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], 240, !nosanitize
   // CHECK: select
   // CHECK: @__ubsan_handle_pointer_overflow{{.*}} i64 [[BASE]], i64 [[COMPGEP]]) {{.*}}, !nosanitize
@@ -110,8 +110,7 @@ void function_pointer_arith(funcptr_t *p, int k) {
 }
 
 // CHECK-LABEL: define{{.*}} void @dont_emit_checks_for_no_op_GEPs
-// CHECK-C: __ubsan_handle_pointer_overflow
-// CHECK-CPP-NOT: __ubsan_handle_pointer_overflow
+// CHECK-NOT: __ubsan_handle_pointer_overflow
 void dont_emit_checks_for_no_op_GEPs(char *p) {
   &p[0];
 

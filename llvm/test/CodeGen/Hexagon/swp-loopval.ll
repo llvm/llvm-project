@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Check that we correctly rename instructions that use a Phi's loop value,

@@ -10,8 +10,10 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_EXECUTORSHAREDMEMORYMAPPERSERVICE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #include <mutex>
@@ -24,10 +26,10 @@ namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
 
-class ExecutorSharedMemoryMapperService final
+class LLVM_ABI ExecutorSharedMemoryMapperService final
     : public ExecutorBootstrapService {
 public:
-  ~ExecutorSharedMemoryMapperService(){};
+  ~ExecutorSharedMemoryMapperService() override = default;
 
   Expected<std::pair<ExecutorAddr, std::string>> reserve(uint64_t Size);
   Expected<ExecutorAddr> initialize(ExecutorAddr Reservation,
@@ -54,16 +56,16 @@ private:
   };
   using ReservationMap = DenseMap<void *, Reservation>;
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   reserveWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   initializeWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   deinitializeWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   releaseWrapper(const char *ArgData, size_t ArgSize);
 
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)

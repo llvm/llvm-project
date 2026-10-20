@@ -21,6 +21,10 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   Core
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRAffineTransformsTestPasses PUBLIC
   MLIRArithTransforms
   MLIRAffineAnalysis
   MLIRAffineTransforms
@@ -30,7 +34,6 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   MLIRSupport
   MLIRMemRefDialect
   MLIRTensorDialect
-  MLIRTestDialect
   MLIRVectorUtils
   )
 

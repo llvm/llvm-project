@@ -2,28 +2,21 @@
 ; RUN: opt -S -passes=openmp-opt-postlink < %s | FileCheck %s --check-prefix=POSTLINK
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s --check-prefix=PRELINK
 
-@client = internal addrspace(1) global i64 zeroinitializer, align 8
-@__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+@__llvm_rpc_client = internal addrspace(1) global i64 zeroinitializer, align 8
 
 ;.
-; POSTLINK: @client = internal addrspace(1) global i64 0, align 8
-; POSTLINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
-;.
-; PRELINK: @client = internal addrspace(1) global i64 0, align 8
-; PRELINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; PRELINK: @__llvm_rpc_client = internal addrspace(1) global i64 0, align 8
 ;.
 define i64 @a() {
 ; POSTLINK-LABEL: define {{[^@]+}}@a
 ; POSTLINK-SAME: () #[[ATTR0:[0-9]+]] {
-; POSTLINK-NEXT:    [[RETVAL:%.*]] = load i64, ptr addrspace(1) @client, align 8
-; POSTLINK-NEXT:    ret i64 [[RETVAL]]
+; POSTLINK-NEXT:    ret i64 0
 ;
 ; PRELINK-LABEL: define {{[^@]+}}@a
 ; PRELINK-SAME: () #[[ATTR0:[0-9]+]] {
-; PRELINK-NEXT:    [[RETVAL:%.*]] = load i64, ptr addrspace(1) @client, align 8
-; PRELINK-NEXT:    ret i64 [[RETVAL]]
+; PRELINK-NEXT:    ret i64 0
 ;
-  %retval = load i64, ptr addrspace(1) @client, align 8
+  %retval = load i64, ptr addrspace(1) @__llvm_rpc_client, align 8
   ret i64 %retval
 }
 

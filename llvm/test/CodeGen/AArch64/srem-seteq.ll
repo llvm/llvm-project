@@ -166,10 +166,9 @@ define i32 @test_srem_odd_setne(i32 %X) nounwind {
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    movk w9, #6553, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #13106 // =0x3332
-; CHECK-NEXT:    movk w9, #13107, lsl #16
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 5
   %cmp = icmp ne i32 %srem, 0
@@ -186,10 +185,9 @@ define i32 @test_srem_negative_odd(i32 %X) nounwind {
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    movk w9, #6553, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #13106 // =0x3332
-; CHECK-NEXT:    movk w9, #13107, lsl #16
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, -5
   %cmp = icmp ne i32 %srem, 0

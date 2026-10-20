@@ -27,6 +27,12 @@ public:
   }
   void vappend(const char *Format, va_list &Args);
   void append(const char *Format, ...) FORMAT(2, 3);
+  void append(const s32);
+  void append(const s64);
+  void append(const u32);
+  void append(const u64);
+  void append(const bool);
+  void ensureNullTerminated();
   void output() const { outputRaw(String.data()); }
   void reserve(size_t Size) { String.reserve(Size + 1); }
   uptr capacity() { return String.capacity() - 1; }
@@ -40,7 +46,7 @@ private:
   void appendString(int Width, int MaxChars, const char *S);
   void appendPointer(u64 ptr_value);
 
-  Vector<char> String;
+  Vector<char, 256> String;
 };
 
 void Printf(const char *Format, ...) FORMAT(1, 2);

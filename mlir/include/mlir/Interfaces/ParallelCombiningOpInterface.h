@@ -19,7 +19,7 @@
 namespace mlir {
 namespace detail {
 // TODO: Single region single block interface on interfaces ?
-LogicalResult verifyParallelCombiningOpInterface(Operation *op);
+LogicalResult verifyInParallelOpInterface(Operation *op);
 } // namespace detail
 } // namespace mlir
 

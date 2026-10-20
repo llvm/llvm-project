@@ -9,3 +9,7 @@ __attribute__((swift_attr))
 __attribute__((swift_attr(1)))
 @interface J
 @end
+
+@interface Error<T: __attribute__((swift_attr(1))) id>
+// expected-error@-1 {{expected string literal as argument of 'swift_attr' attribute}}
+@end

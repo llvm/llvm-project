@@ -247,6 +247,9 @@ public:
     return static_cast<ObjCDeclQualifier>(ObjCMethodDeclBits.objcDeclQualifier);
   }
 
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
+
   void setObjCDeclQualifier(ObjCDeclQualifier QV) {
     ObjCMethodDeclBits.objcDeclQualifier = QV;
   }
@@ -371,7 +374,7 @@ public:
   // ArrayRef access to formal parameters.  This should eventually
   // replace the iterator interface above.
   ArrayRef<ParmVarDecl*> parameters() const {
-    return llvm::ArrayRef(const_cast<ParmVarDecl **>(getParams()), NumParams);
+    return {const_cast<ParmVarDecl **>(getParams()), NumParams};
   }
 
   ParmVarDecl *getParamDecl(unsigned Idx) {
@@ -386,7 +389,7 @@ public:
   /// If the method is implicit (not coming from source) \p SelLocs is
   /// ignored.
   void setMethodParams(ASTContext &C, ArrayRef<ParmVarDecl *> Params,
-                       ArrayRef<SourceLocation> SelLocs = std::nullopt);
+                       ArrayRef<SourceLocation> SelLocs = {});
 
   // Iterator access to parameter types.
   struct GetTypeFn {
@@ -643,6 +646,9 @@ public:
   /// from the explicitly-specified bound.
   SourceLocation getColonLoc() const { return ColonLoc; }
 
+  using TypeDecl::getTypeForDecl;
+  using TypeDecl::setTypeForDecl;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCTypeParam; }
@@ -678,7 +684,7 @@ public:
   /// Iterate through the type parameters in the list.
   using iterator = ObjCTypeParamDecl **;
 
-  iterator begin() { return getTrailingObjects<ObjCTypeParamDecl *>(); }
+  iterator begin() { return getTrailingObjects(); }
 
   iterator end() { return begin() + size(); }
 
@@ -688,9 +694,7 @@ public:
   // Iterate through the type parameters in the list.
   using const_iterator = ObjCTypeParamDecl * const *;
 
-  const_iterator begin() const {
-    return getTrailingObjects<ObjCTypeParamDecl *>();
-  }
+  const_iterator begin() const { return getTrailingObjects(); }
 
   const_iterator end() const {
     return begin() + size();
@@ -791,6 +795,9 @@ public:
                                   PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }
@@ -1747,6 +1754,7 @@ private:
   static bool isKnownExtension(ObjCCategoryDecl *Cat);
 
 public:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
@@ -2134,6 +2142,7 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
   void setHasODRHash(bool HasHash);
 
 public:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;

@@ -13,7 +13,10 @@
 #ifndef LLVM_C_TEST_H
 #define LLVM_C_TEST_H
 
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
+
 #include "llvm-c/Core.h"
 
 #ifdef __cplusplus
@@ -24,7 +27,7 @@ extern "C" {
 void llvm_tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
-LLVMModuleRef llvm_load_module(bool Lazy, bool New);
+LLVMModuleRef llvm_load_module(LLVMContextRef C, bool Lazy, bool New);
 int llvm_module_dump(bool Lazy, bool New);
 int llvm_module_list_functions(void);
 int llvm_module_list_globals(void);
@@ -45,6 +48,7 @@ int llvm_add_named_metadata_operand(void);
 int llvm_set_metadata(void);
 int llvm_replace_md_operand(void);
 int llvm_is_a_value_as_metadata(void);
+int llvm_add_globaldebuginfo(void);
 
 // object.c
 int llvm_object_list_sections(void);

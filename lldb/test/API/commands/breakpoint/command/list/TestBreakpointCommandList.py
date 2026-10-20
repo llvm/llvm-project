@@ -52,5 +52,5 @@ class TestCase(TestBase):
         self.expect(
             "breakpoint command list 2",
             error=True,
-            startstr="error: '2' is not a currently valid breakpoint ID.",
+            startstr="error: '2' is not a currently valid breakpoint ID",
         )

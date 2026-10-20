@@ -72,7 +72,10 @@
 // || `[0x2000000000, 0x23ffffffff]` || LowShadow  ||
 // || `[0x0000000000, 0x1fffffffff]` || LowMem     ||
 //
-// Default Linux/RISCV64 Sv39 mapping:
+// Default Linux/RISCV64 Sv39 mapping with SHADOW_OFFSET == 0xd55550000;
+// (the exact location of SHADOW_OFFSET may vary depending the dynamic probing
+//  by FindDynamicShadowStart).
+//
 // || `[0x1555550000, 0x3fffffffff]` || HighMem    ||
 // || `[0x0fffffa000, 0x1555555fff]` || HighShadow ||
 // || `[0x0effffa000, 0x0fffff9fff]` || ShadowGap  ||
@@ -80,18 +83,29 @@
 // || `[0x0000000000, 0x0d5554ffff]` || LowMem     ||
 //
 // Default Linux/AArch64 (39-bit VMA) mapping:
-// || `[0x2000000000, 0x7fffffffff]` || highmem    ||
-// || `[0x1400000000, 0x1fffffffff]` || highshadow ||
-// || `[0x1200000000, 0x13ffffffff]` || shadowgap  ||
-// || `[0x1000000000, 0x11ffffffff]` || lowshadow  ||
-// || `[0x0000000000, 0x0fffffffff]` || lowmem     ||
+// TODO: this mapping is ok, but the allocator size is too large on non-Android
+//       AArch64 platforms (see asan_allocator.h)
+// || `[0x2000000000, 0x7fffffffff]` || highmem    || 384GB
+// || `[0x1400000000, 0x1fffffffff]` || highshadow || 48GB
+// || `[0x1200000000, 0x13ffffffff]` || shadowgap  || 8GB
+// || `[0x1000000000, 0x11ffffffff]` || lowshadow  || 8GB
+// || `[0x0000000000, 0x0fffffffff]` || lowmem     || 64GB
 //
 // Default Linux/AArch64 (42-bit VMA) mapping:
-// || `[0x10000000000, 0x3ffffffffff]` || highmem    ||
-// || `[0x0a000000000, 0x0ffffffffff]` || highshadow ||
-// || `[0x09000000000, 0x09fffffffff]` || shadowgap  ||
-// || `[0x08000000000, 0x08fffffffff]` || lowshadow  ||
-// || `[0x00000000000, 0x07fffffffff]` || lowmem     ||
+// TODO: this mapping is ok, but the allocator size is too large on non-Android
+//       AArch64 platforms (see asan_allocator.h)
+// || `[0x09000000000, 0x03ffffffffff]` || highmem    || 3520GB
+// || `[0x02200000000, 0x008fffffffff]` || highshadow || 440GB
+// || `[0x01200000000, 0x0021ffffffff]` || shadowgap  || 64GB
+// || `[0x01000000000, 0x0011ffffffff]` || lowshadow  || 8GB
+// || `[0x00000000000, 0x000fffffffff]` || lowmem     || 64GB
+//
+// Default Linux/AArch64 (48-bit VMA) mapping:
+// || `[0x201000000000, 0xffffffffffff]` || HighMem    || 229312GB
+// || `[0x041200000000, 0x200fffffffff]` || HighShadow || 28664GB
+// || `[0x001200000000, 0x0411ffffffff]` || ShadowGap  || 4096GB
+// || `[0x001000000000, 0x0011ffffffff]` || LowShadow  || 8GB
+// || `[0x000000000000, 0x000fffffffff]` || LowMem     || 64GB
 //
 // Default Linux/S390 mapping:
 // || `[0x30000000, 0x7fffffff]` || HighMem    ||
@@ -157,11 +171,18 @@
 // || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
+//
+// Default Hexagon/Linux mapping (32-bit, 4 GB VA):
+// || `[0x40000000, 0xffffffff]` || HighMem    ||
+// || `[0x28000000, 0x3fffffff]` || HighShadow ||
+// || `[0x24000000, 0x27ffffff]` || ShadowGap  ||
+// || `[0x20000000, 0x23ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x1fffffff]` || LowMem     ||
 
 #define ASAN_SHADOW_SCALE 3
 
 #if SANITIZER_FUCHSIA
-#  define ASAN_SHADOW_OFFSET_CONST (0)
+#  define ASAN_SHADOW_OFFSET_DYNAMIC
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
@@ -175,6 +196,10 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif SANITIZER_AIX
+#    define ASAN_SHADOW_OFFSET_CONST 0x40000000
+#  elif defined(__hexagon__)
+#    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  else
 #    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  endif
@@ -186,11 +211,17 @@
 #  elif SANITIZER_FREEBSD && defined(__aarch64__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000800000000000
 #  elif SANITIZER_RISCV64
-#    define ASAN_SHADOW_OFFSET_CONST 0x0000000d55550000
+#    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif SANITIZER_ALPHA
+#    define ASAN_SHADOW_OFFSET_CONST 0x70000000000
 #  elif defined(__aarch64__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000001000000000
 #  elif defined(__powerpc64__)
-#    define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
+#    if SANITIZER_AIX
+#      define ASAN_SHADOW_OFFSET_CONST 0x0a01000000000000
+#    else
+#      define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
+#    endif
 #  elif defined(__s390x__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0010000000000000
 #  elif SANITIZER_FREEBSD
@@ -269,9 +300,11 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #  if defined(__sparc__) && SANITIZER_WORDSIZE == 64
 #    include "asan_mapping_sparc64.h"
+#  elif SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+#    include "asan_mapping_aix64.h"
 #  else
 #    define MEM_TO_SHADOW(mem) \
-      (((mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
+      ((STRIP_MTE_TAG(mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
 #    define SHADOW_TO_MEM(mem) \
       (((mem) - (ASAN_SHADOW_OFFSET)) << (ASAN_SHADOW_SCALE))
 
@@ -288,6 +321,15 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #    define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
 #    define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
+
+// If the first byte of shadow can be placed after the last byte of app mem,
+// we don't need a gap since the shadow's shadow won't be in the middle
+// of app mem.
+#    if SANITIZER_APPLE
+#      define kGaplessShadow (kLowShadowBeg > kHighMemEnd)
+#    else
+#      define kGaplessShadow (false)
+#    endif
 
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.
@@ -363,6 +405,7 @@ static inline uptr MemToShadowSize(uptr size) {
 
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||
          (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
 }
@@ -375,6 +418,7 @@ static inline uptr MemToShadow(uptr p) {
 
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
 }
 

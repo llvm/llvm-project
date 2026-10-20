@@ -73,7 +73,7 @@ static MCSubtargetInfo *createM68kMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createM68kMCAsmInfo(const MCRegisterInfo &MRI,
                                       const Triple &TT,
                                       const MCTargetOptions &TO) {
-  MCAsmInfo *MAI = new M68kELFMCAsmInfo(TT);
+  MCAsmInfo *MAI = new M68kELFMCAsmInfo(TT, TO);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing

@@ -13,10 +13,10 @@ void test(int a, int b, int c) {
     return;
   clang_analyzer_printState();
   // CHECK:      "constraints": [
-  // CHECK-NEXT:   { "symbol": "((reg_$0<int a>) + (reg_$1<int b>)) != (reg_$2<int c>)", "range": "{ [0, 0] }" }
+  // CHECK-NEXT:   { "symbol": "((reg_$0<int a>) + (reg_$2<int b>)) != (reg_$5<int c>)", "range": "{ [0, 0] }" }
   // CHECK-NEXT: ],
   // CHECK-NEXT: "equivalence_classes": [
-  // CHECK-NEXT:   [ "(reg_$0<int a>) + (reg_$1<int b>)", "reg_$2<int c>" ]
+  // CHECK-NEXT:   [ "(reg_$0<int a>) + (reg_$2<int b>)", "reg_$5<int c>" ]
   // CHECK-NEXT: ],
   // CHECK-NEXT: "disequality_info": null,
 
@@ -25,12 +25,12 @@ void test(int a, int b, int c) {
     return;
   clang_analyzer_printState();
   // CHECK:        "constraints": [
-  // CHECK-NEXT:     { "symbol": "(reg_$0<int a>) != (reg_$2<int c>)", "range": "{ [0, 0] }" },
-  // CHECK-NEXT:     { "symbol": "reg_$1<int b>", "range": "{ [0, 0] }" }
+  // CHECK-NEXT:     { "symbol": "(reg_$0<int a>) != (reg_$5<int c>)", "range": "{ [0, 0] }" },
+  // CHECK-NEXT:     { "symbol": "reg_$2<int b>", "range": "{ [0, 0] }" }
   // CHECK-NEXT:   ],
   // CHECK-NEXT:   "equivalence_classes": [
-  // CHECK-NEXT:     [ "(reg_$0<int a>) != (reg_$2<int c>)" ],
-  // CHECK-NEXT:     [ "reg_$0<int a>", "reg_$2<int c>" ]
+  // CHECK-NEXT:     [ "(reg_$0<int a>) != (reg_$5<int c>)" ],
+  // CHECK-NEXT:     [ "reg_$0<int a>", "reg_$5<int c>" ]
   // CHECK-NEXT:   ],
   // CHECK-NEXT: "disequality_info": null,
 

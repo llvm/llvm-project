@@ -110,10 +110,10 @@ define <2 x i32> @test2_vector(<2 x i32> %arg) {
 define <2 x i32> @test2_vector_poison(<2 x i32> %arg) {
 ; CHECK-LABEL: @test2_vector_poison(
 ; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[ARG:%.*]], <i32 24, i32 poison>
-; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], <i32 8, i32 8>
+; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], splat (i32 8)
 ; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 16711680, i32 poison>
 ; CHECK-NEXT:    [[T6:%.*]] = or disjoint <2 x i32> [[T2]], [[T5]]
-; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], <i32 8, i32 8>
+; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 8)
 ; CHECK-NEXT:    [[T9:%.*]] = and <2 x i32> [[T8]], <i32 65280, i32 poison>
 ; CHECK-NEXT:    [[T10:%.*]] = or disjoint <2 x i32> [[T6]], [[T9]]
 ; CHECK-NEXT:    [[T12:%.*]] = lshr <2 x i32> [[ARG]], <i32 24, i32 poison>
@@ -683,6 +683,32 @@ define i32 @shuf_bitcast_twice_4bytes(i32 %x) {
   %bswap = shufflevector <4 x i8> %cast1, <4 x i8> poison, <4 x i32> <i32 poison, i32 2, i32 1, i32 0>
   %cast2 = bitcast <4 x i8> %bswap to i32
   ret i32 %cast2
+}
+
+define i64 @shuf_reverse_of_op1_crash(i16 %call, ptr %coerce, <2 x i8> %vec) {
+; CHECK-LABEL: @shuf_reverse_of_op1_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i16 [[CALL:%.*]], ptr [[COERCE:%.*]], align 2
+; CHECK-NEXT:    br label [[LBL_CONT1:%.*]]
+; CHECK:       lbl_cont1:
+; CHECK-NEXT:    store i16 poison, ptr null, align 2
+; CHECK-NEXT:    br label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[LBL_CONT1]]
+;
+entry:
+  store i16 %call, ptr %coerce, align 2
+  %load = load <2 x i8>, ptr %coerce, align 2
+  store <2 x i8> %load, ptr null, align 2
+  br label %lbl_cont1
+
+lbl_cont1:                                        ; preds = %if.then, %entry
+  br label %if.then
+
+if.then:                                          ; preds = %lbl_cont1
+  %shuffle = shufflevector <2 x i8> %vec, <2 x i8> zeroinitializer, <2 x i32> <i32 3, i32 2>
+  store <2 x i8> %shuffle, ptr null, align 2
+  br label %lbl_cont1
 }
 
 ; Negative test - extra use

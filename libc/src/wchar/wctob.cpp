@@ -8,19 +8,21 @@
 
 #include "src/wchar/wctob.h"
 #include "src/__support/common.h"
-#include "src/__support/wctype_utils.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h> // for EOF.
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/wint_t.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, wctob, (wint_t c)) {
-  auto result = internal::wctob(c);
-  if (result.has_value()) {
-    return result.value();
-  } else {
+  // The standard states that wint_t may either be an alias of wchar_t or
+  // an alias of an integer type, different platforms define this type with
+  // different signedness. This is equivalent to `(c > 127) || (c < 0)` but also
+  // works without -Wtype-limits warnings when `wint_t` is unsigned.
+  if ((c & ~127) != 0)
     return EOF;
-  }
+  return static_cast<int>(c);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -13,8 +13,8 @@
 
 using namespace llvm;
 
-TEST(AMDGPU, ExecMayBeModifiedBeforeAnyUse) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx906", "");
+TEST_F(AMDGPUTestBase, ExecMayBeModifiedBeforeAnyUse) {
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu9.06-amd-"), "", "");
   if (!TM)
     GTEST_SKIP();
 
@@ -23,13 +23,14 @@ TEST(AMDGPU, ExecMayBeModifiedBeforeAnyUse) {
 
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
-  Mod.setDataLayout(TM->createDataLayout());
+  Mod.setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   auto *Type = FunctionType::get(Type::getVoidTy(Ctx), false);
   auto *F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);
 
   MachineModuleInfo MMI(TM.get());
-  auto MF = std::make_unique<MachineFunction>(*F, *TM, ST, 42, MMI);
+  auto MF =
+      std::make_unique<MachineFunction>(*F, *TM, ST, MMI.getContext(), 42);
   auto *BB = MF->CreateMachineBasicBlock();
   MF->push_back(BB);
 

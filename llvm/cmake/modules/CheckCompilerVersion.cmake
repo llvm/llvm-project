@@ -12,9 +12,9 @@ set(APPLECLANG_MIN 10.0)
 set(APPLECLANG_SOFT_ERROR 10.0)
 
 # https://en.wikipedia.org/wiki/Microsoft_Visual_C#Internal_version_numbering
-# _MSC_VER == 1927 MSVC++ 14.27 Visual Studio 2019 Version 16.7
-set(MSVC_MIN 19.27)
-set(MSVC_SOFT_ERROR 19.27)
+# _MSC_VER == 1928 MSVC++ 19.27 Visual Studio 2019 Version 16.8 + 16.9
+set(MSVC_MIN 19.28)
+set(MSVC_SOFT_ERROR 19.28)
 
 set(LIBSTDCXX_MIN 7)
 set(LIBSTDCXX_SOFT_ERROR 7)

@@ -1,5 +1,3 @@
-# UNSUPPORTED: lldb-repro
-#
 # RUN: rm -rf %t.stderr %t.stdout
 # RUN: cat %s | %lldb --script-language lua 2> %t.stderr > %t.stdout
 # RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT

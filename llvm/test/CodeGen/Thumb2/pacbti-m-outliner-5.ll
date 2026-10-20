@@ -88,11 +88,11 @@ entry:
   ret i32 %add7
 }
 
-attributes #0 = { minsize nofree norecurse nounwind optsize }
-attributes #1 = { minsize nofree norecurse nounwind optsize "sign-return-address"="none" }
+attributes #0 = { minsize nofree norecurse nounwind optsize "sign-return-address"="non-leaf" }
+attributes #1 = { minsize nofree norecurse nounwind optsize }
 
 !llvm.module.flags = !{!0, !1, !2}
 
 !0 = !{i32 8, !"branch-target-enforcement", i32 0}
-!1 = !{i32 8, !"sign-return-address", i32 1}
+!1 = !{i32 8, !"sign-return-address", i32 2}
 !2 = !{i32 8, !"sign-return-address-all", i32 0}

@@ -6,11 +6,11 @@
 
 // RUN: not ld.lld %ta.o %tb.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=A-AND-B %s
-// A-AND-B: b.o is incompatible with {{.*}}a.o
+// A-AND-B: error: {{.*}}b.o is incompatible with {{.*}}a.o
 
-// RUN: not ld.lld %tb.o %tc.o -o /dev/null 2>&1 | \
+// RUN: ld.lld --noinhibit-exec %tb.o %tc.o -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=B-AND-C %s
-// B-AND-C: c.o is incompatible with {{.*}}b.o
+// B-AND-C: warning: {{.*}}c.o is incompatible with {{.*}}b.o
 
 // RUN: not ld.lld %ta.o %ti686.so -o /dev/null 2>&1 | \
 // RUN:   FileCheck --check-prefix=A-AND-SO %s
@@ -69,8 +69,8 @@
 // RUN: rm -f %t.a
 // RUN: llvm-ar rc %t.a %tc.o
 // RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %td.o
-// RUN: not ld.lld %t.a %td.o 2>&1 -o /dev/null | FileCheck --check-prefix=ARCHIVE %s
-// ARCHIVE: {{.*}}d.o is incompatible
+// RUN: ld.lld --noinhibit-exec %t.a %td.o 2>&1 -o /dev/null | FileCheck --check-prefix=ARCHIVE %s
+// ARCHIVE: warning: {{.*}}d.o is incompatible{{$}}
 .global _start
 _start:
 .data

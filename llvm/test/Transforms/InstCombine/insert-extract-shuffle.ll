@@ -781,7 +781,7 @@ define <5 x float> @insert_demanded_element_unequal_length_op1(<4 x float> %x, <
 define <4 x float> @splat_constant(<4 x float> %x) {
 ; CHECK-LABEL: @splat_constant(
 ; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x float> [[X:%.*]], float 3.000000e+00, i64 3
-; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[INS3]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[INS3]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %ins3 = insertelement <4 x float> %x, float 3.0, i32 3
@@ -803,4 +803,96 @@ define <4 x i32> @infloop_D151807(<4 x float> %arg) {
   %i3 = extractelement <2 x i32> %i1, i64 0
   %i4 = insertelement <4 x i32> zeroinitializer, i32 %i3, i64 0
   ret <4 x i32> %i4
+}
+
+; Make sure we don't crash in this case.
+
+define i64 @pr160507(ptr %arg, i32 %arg1, i1 %arg2, i8 %arg3, i64 %arg4) {
+; CHECK-LABEL: @pr160507(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB6:%.*]], label [[BB8:%.*]]
+; CHECK:       bb6:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb8:
+; CHECK-NEXT:    br label [[BB10:%.*]]
+; CHECK:       bb10:
+; CHECK-NEXT:    br label [[BB12:%.*]]
+; CHECK:       bb12:
+; CHECK-NEXT:    store i64 0, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    br label [[BB5]]
+;
+bb:
+  br label %bb5
+
+bb5:
+  %phi = phi i8 [ 0, %bb ], [ %extractelement, %bb6 ], [ 0, %bb12 ]
+  br i1 %arg2, label %bb6, label %bb8
+
+bb6:
+  %extractelement = extractelement <2 x i8> zeroinitializer, i64 %arg4
+  br label %bb5
+
+bb8:
+  %insertelement9 = insertelement <2 x i8> <i8 poison, i8 0>, i8 %phi, i64 0
+  %zext = zext <2 x i8> %insertelement9 to <2 x i64>
+  %shufflevector = shufflevector <2 x i64> %zext, <2 x i64> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 1>
+  br label %bb10
+
+bb10:
+  br label %bb12
+
+bb12:
+  %extractelement11 = extractelement <2 x i64> %zext, i64 1
+  %insertelement13 = insertelement <4 x i64> %shufflevector, i64 %extractelement11, i64 0
+  %extractelement14 = extractelement <4 x i64> %insertelement13, i32 %arg1
+  store i64 %extractelement14, ptr %arg, align 8
+  br label %bb5
+}
+
+; The three subsequent test should result in the same mask
+
+; Insert into an integer zero vector
+define <4 x i32> @insert_into_integer_zero_vector(<4 x i32> %vec) {
+; CHECK-LABEL: @insert_into_integer_zero_vector(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[VECINS]]
+;
+  %vecext = extractelement <4 x i32> %vec, i32 0
+  %vecins = insertelement <4 x i32> zeroinitializer, i32 %vecext, i32 0
+  ret <4 x i32> %vecins
+}
+
+; Insert into an float zero vector
+define <4 x float> @insert_into_float_zero_vector(<4 x float> %vec) {
+; CHECK-LABEL: @insert_into_float_zero_vector(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x float> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[VECINS]]
+;
+  %vecext = extractelement <4 x float> %vec, i32 0
+  %vecins = insertelement <4 x float> zeroinitializer, float %vecext, i32 0
+  ret <4 x float> %vecins
+}
+
+; Insert into an null ptr vector
+define <4 x ptr> @insert_into_null_ptr_vector(<4 x ptr> %vec) {
+; CHECK-LABEL: @insert_into_null_ptr_vector(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x ptr> <ptr null, ptr poison, ptr poison, ptr poison>, <4 x ptr> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x ptr> [[VECINS]]
+;
+  %vecext = extractelement <4 x ptr> %vec, i32 0
+  %vecins = insertelement <4 x ptr> zeroinitializer, ptr %vecext, i32 0
+  ret <4 x ptr> %vecins
+}
+
+; Negative Test - Insert into a zero vector with poison in lane 0
+define <4 x i32> @insert_into_integer_zero_vector_poison(<4 x i32> %vec) {
+; CHECK-LABEL: @insert_into_integer_zero_vector_poison(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> [[VEC:%.*]], <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[VECINS]]
+;
+  %vecext = extractelement <4 x i32> %vec, i32 0
+  %vecins = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 %vecext, i32 0
+  ret <4 x i32> %vecins
 }

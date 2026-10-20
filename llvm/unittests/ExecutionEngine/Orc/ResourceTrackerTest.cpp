@@ -50,7 +50,7 @@ public:
   SimpleResourceManager(SimpleResourceManager &&) = delete;
   SimpleResourceManager &operator=(SimpleResourceManager &&) = delete;
 
-  ~SimpleResourceManager() { ES.deregisterResourceManager(*this); }
+  ~SimpleResourceManager() override { ES.deregisterResourceManager(*this); }
 
   /// Set the HandleRemove function object.
   void setHandleRemove(HandleRemoveFunction HandleRemove) {

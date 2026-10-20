@@ -139,6 +139,12 @@ module MetadataKind = struct
     | DIMacroMetadataKind
     | DIMacroFileMetadataKind
     | DICommonBlockMetadataKind
+    | DIStringTypeMetadataKind
+    | DIGenericSubrangeMetadataKind
+    | DIArgListMetadataKind
+    | DIAssignIDMetadataKind
+    | DISubrangeTypeMetadataKind
+    | DIFixedPointTypeMetadataKind
 end
 
 (** The amount of debug information to emit. *)
@@ -398,7 +404,7 @@ external dibuild_create_member_pointer_type :
   = "llvm_dibuild_create_member_pointer_type_bytecode" "llvm_dibuild_create_member_pointer_type_native"
 
 external dibuild_create_object_pointer_type :
-  lldibuilder -> Llvm.llmetadata -> Llvm.llmetadata
+  lldibuilder -> Llvm.llmetadata -> implicit:bool -> Llvm.llmetadata
   = "llvm_dibuild_create_object_pointer_type"
 
 external dibuild_create_qualified_type :

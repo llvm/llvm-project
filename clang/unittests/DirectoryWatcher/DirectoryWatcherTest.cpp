@@ -138,7 +138,7 @@ struct VerifyingConsumer {
 
   void consumeInitial(DirectoryWatcher::Event E) {
     std::unique_lock<std::mutex> L(Mtx);
-    auto It = std::find(ExpectedInitial.begin(), ExpectedInitial.end(), E);
+    auto It = llvm::find(ExpectedInitial, E);
     if (It == ExpectedInitial.end()) {
       UnexpectedInitial.push_back(E);
     } else {
@@ -152,11 +152,9 @@ struct VerifyingConsumer {
 
   void consumeNonInitial(DirectoryWatcher::Event E) {
     std::unique_lock<std::mutex> L(Mtx);
-    auto It =
-        std::find(ExpectedNonInitial.begin(), ExpectedNonInitial.end(), E);
+    auto It = llvm::find(ExpectedNonInitial, E);
     if (It == ExpectedNonInitial.end()) {
-      auto OptIt =
-          std::find(OptionalNonInitial.begin(), OptionalNonInitial.end(), E);
+      auto OptIt = llvm::find(OptionalNonInitial, E);
       if (OptIt != OptionalNonInitial.end()) {
         OptionalNonInitial.erase(OptIt);
       } else {

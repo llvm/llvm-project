@@ -22,7 +22,7 @@ define void @_Z4testPcl(ptr %out, i64 %size) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_0]], [[SIZE:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 [[I_0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT:%.*]], i64 [[I_0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[OUT]], i64 [[I_0]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[SIZE]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
@@ -61,5 +61,5 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture reado
 
 !1 = distinct !{!1, !2, !3, !{!"llvm.loop.parallel_accesses", !4}}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 !4 = distinct !{} ; access group

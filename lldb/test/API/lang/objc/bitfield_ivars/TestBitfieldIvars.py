@@ -6,10 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestBitfieldIvars(TestBase):
     def test(self):
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.m")
-        )
+        self.build_and_run()
 
         self.expect_expr(
             "chb->hb->field1", result_type="unsigned int", result_value="0"
@@ -42,7 +39,7 @@ class TestBitfieldIvars(TestBase):
 
     # This test is meant to be xfailed, but running the test triggers an ASan
     # issue, so it must be skipped for now.
-    @skipIf
+    @skip
     def testExprWholeObject(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

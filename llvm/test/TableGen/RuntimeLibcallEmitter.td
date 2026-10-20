@@ -1,0 +1,427 @@
+// RUN: llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s
+
+include "llvm/IR/RuntimeLibcallsImpl.td"
+
+
+def SHL_I32 : RuntimeLibcall;
+def SRL_I64 : RuntimeLibcall;
+
+def SQRT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
+def SQRT_F80 : RuntimeLibcall;
+def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
+
+def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
+def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
+
+def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
+def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
+
+// Ignore non-default in initDefaultLibCallNames.
+def bzero : RuntimeLibcallImpl<BZERO>;
+
+def ___memset : RuntimeLibcallImpl<MEMSET, "___memset">;
+def ___memcpy : RuntimeLibcallImpl<MEMCPY, "___memcpy">;
+
+def calloc  : RuntimeLibcallImpl<CALLOC, "calloc">;
+
+def CompilerRTLibcalls : LibcallImpls<(add __ashlsi3, __lshrdi3)>;
+def LibmLibcalls : LibcallImpls<(add sqrtl_f80)>;
+
+def IsSimpleArch : LibcallPredicate<[{TT.getArch() == Triple::simple}]>;
+def IsFooArch : LibcallPredicate<[{TT.getArch() == Triple::foo}]>;
+def IsZOS : LibcallPredicate<[{TT.getOS() == Triple::zos}]>;
+def IsPPCLeaf : LibcallPredicate<[{TT.getArch().isPPC()}]>;
+def IsPPC64Leaf : LibcallPredicate<[{TT.getArch().isPPC64()}]>;
+def IsFoo : LibcallPredicate<[{isFOO()}]>;
+def IsBarOS : LibcallPredicate<[{TT.getOS() == Triple::bar}]>;
+def IsBuzzArch : LibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
+def IsBlahArch : LibcallPredicate<[{TT.getArch() == Triple::blah}]>;
+def HasCompilerRT : LibcallPredicate<[{TT.hasCompilerRT()}]>;
+
+def isSimpleArch : RuntimeLibcallAvailability<(all_of IsSimpleArch)>;
+def isFooArch : RuntimeLibcallAvailability<(all_of IsFooArch)>;
+
+
+def isZOS : RuntimeLibcallAvailability<(all_of IsZOS)>;
+def isPPC : RuntimeLibcallAvailability<(all_of IsPPCLeaf)>;
+def isPPC64 : RuntimeLibcallAvailability<(all_of IsPPC64Leaf)>;
+
+
+def isFoo : RuntimeLibcallAvailability<(all_of IsFoo)>;
+def isBarOS : RuntimeLibcallAvailability<(all_of IsBarOS)>;
+def isBuzzArch : RuntimeLibcallAvailability<(all_of IsBuzzArch)>;
+def isBlahArch : RuntimeLibcallAvailability<(all_of IsBlahArch)>;
+
+def hasCompilerRT : RuntimeLibcallAvailability<(all_of HasCompilerRT)>;
+
+
+def SimpleLibc : LibcallLibrary<"libc",
+  (add LibmLibcalls, calloc, CompilerRTLibcalls), isSimpleArch>;
+def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch, (add SimpleLibc)>;
+
+
+def LibraryWithConditionalFunc : LibcallImpls<(add sqrtl_f128, bzero, AvailableIf<___memset, isBarOS>)>;
+
+def FooLibc : LibcallLibrary<"libc", (add LibraryWithConditionalFunc), isFooArch>;
+def FooLibrary : SystemRuntimeLibrary<isFooArch, (add FooLibc)>;
+
+def BuzzLibc : LibcallLibrary<"libc", (add sqrtl_f80, CompilerRTLibcalls),
+                           isBuzzArch>;
+def BuzzLibrary : SystemRuntimeLibrary<isBuzzArch, (add BuzzLibc)>;
+
+
+
+def LibraryWithConditionalSet : LibcallImpls<(add sqrtl_f128, bzero,
+  LibcallImpls<(add CompilerRTLibcalls), hasCompilerRT>)>;
+
+
+
+def BlahLibc : LibcallLibrary<"libc",
+  (add calloc, LibraryWithConditionalSet, AvailableIf<___memset, isBarOS>),
+  isBlahArch>;
+def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add BlahLibc)>;
+
+
+
+// All entries should be emitted in Libcall enum.
+// CHECK: #ifdef GET_RUNTIME_LIBCALL_ENUM
+// CHECK-NEXT: #undef GET_RUNTIME_LIBCALL_ENUM
+// CHECK-EMPTY:
+// CHECK-NEXT: namespace llvm {
+// CHECK-NEXT: namespace RTLIB {
+// CHECK-NEXT: enum Libcall : unsigned short {
+// CHECK-NEXT: BZERO = 0,
+// CHECK-NEXT: CALLOC = 1,
+// CHECK-NEXT: MEMCPY = 2,
+// CHECK-NEXT: MEMSET = 3,
+// CHECK-NEXT: SHL_I32 = 4,
+// CHECK-NEXT: SQRT_F80 = 5,
+// CHECK-NEXT: SQRT_F128 = 6,
+// CHECK-NEXT: SRL_I64 = 7,
+// CHECK-NEXT: UNKNOWN_LIBCALL = 8
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT:enum LibcallImpl : unsigned short {
+// CHECK-NEXT:  Unsupported = 0,
+// CHECK-NEXT:  impl____memcpy = 1, // ___memcpy
+// CHECK-NEXT:  impl____memset = 2, // ___memset
+// CHECK-NEXT:  impl___ashlsi3 = 3, // __ashlsi3
+// CHECK-NEXT:  impl___lshrdi3 = 4, // __lshrdi3
+// CHECK-NEXT:  bzero = 5, // bzero
+// CHECK-NEXT:  calloc = 6, // calloc
+// CHECK-NEXT:  sqrtl_f128 = 7, // sqrtl
+// CHECK-NEXT:  sqrtl_f80 = 8, // sqrtl
+// CHECK-NEXT: };
+// CHECK-NEXT: constexpr size_t NumLibcallImpls = 9;
+// CHECK-EMPTY:
+// CHECK-NEXT:enum FuncArgTypeID : char {
+// CHECK-NEXT:  NoFuncArgType = 0,
+// CHECK-NEXT:  Bool,
+// CHECK-NEXT:  Dbl,
+// CHECK-NEXT:  Ellip,
+// CHECK-NEXT:  Floating,
+// CHECK-NEXT:  Flt,
+// CHECK-NEXT:  Int,
+// CHECK-NEXT:  Int16,
+// CHECK-NEXT:  Int32,
+// CHECK-NEXT:  Int64,
+// CHECK-NEXT:  IntPlus,
+// CHECK-NEXT:  IntX,
+// CHECK-NEXT:  LDbl,
+// CHECK-NEXT:  LLong,
+// CHECK-NEXT:  Long,
+// CHECK-NEXT:  NXV2F64,
+// CHECK-NEXT:  NXV2I1,
+// CHECK-NEXT:  NXV2I32,
+// CHECK-NEXT:  NXV4F32,
+// CHECK-NEXT:  NXV4I1,
+// CHECK-NEXT:  NXV4I32,
+// CHECK-NEXT:  Ptr,
+// CHECK-NEXT:  SSizeT,
+// CHECK-NEXT:  Same,
+// CHECK-NEXT:  SizeT,
+// CHECK-NEXT:  Struct,
+// CHECK-NEXT:  UInt,
+// CHECK-NEXT:  UInt16,
+// CHECK-NEXT:  UInt32,
+// CHECK-NEXT:  UInt64,
+// CHECK-NEXT:  UIntPlus,
+// CHECK-NEXT:  UIntX,
+// CHECK-NEXT:  ULLong,
+// CHECK-NEXT:  ULong,
+// CHECK-NEXT:  V2F32,
+// CHECK-NEXT:  V2F64,
+// CHECK-NEXT:  V2I32,
+// CHECK-NEXT:  V4F32,
+// CHECK-NEXT:  V4F64,
+// CHECK-NEXT:  V4I32,
+// CHECK-NEXT:  V8F32,
+// CHECK-NEXT:  V8F64,
+// CHECK-NEXT:  V8I32,
+// CHECK-NEXT:  V16F32,
+// CHECK-NEXT:  V16I32,
+// CHECK-NEXT:  Void,
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
+// CHECK-NEXT:   UnknownLibrary = 0,
+// CHECK-NEXT:   libc,
+// CHECK-NEXT: };
+// CHECK-NEXT: } // End namespace RTLIB
+// CHECK-NEXT: } // End namespace llvm
+// CHECK-EMPTY:
+// CHECK-NEXT: #endif // GET_RUNTIME_LIBCALL_ENUM
+
+// CHECK: #ifdef GET_INIT_RUNTIME_LIBCALL_NAMES
+// CHECK-NEXT: #undef GET_INIT_RUNTIME_LIBCALL_NAMES
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: #ifdef __GNUC__
+// CHECK-NEXT: #pragma GCC diagnostic push
+// CHECK-NEXT: #pragma GCC diagnostic ignored "-Woverlength-strings"
+// CHECK-NEXT: #endif
+// CHECK-NEXT:  constexpr char RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTableStorage[] =
+// CHECK-NEXT:   "\0"
+// CHECK-NEXT:   "___memcpy\0"
+// CHECK-NEXT:   "___memset\0"
+// CHECK-NEXT:   "__ashlsi3\0"
+// CHECK-NEXT:   "__lshrdi3\0"
+// CHECK-NEXT:   "bzero\0"
+// CHECK-NEXT:   "calloc\0"
+// CHECK-NEXT:   "sqrtl\0"
+// CHECK-NEXT:   ;
+// CHECK-NEXT: #ifdef __GNUC__
+// CHECK-NEXT: #pragma GCC diagnostic pop
+// CHECK-NEXT: #endif
+// CHECK-EMPTY:
+// CHECK-NEXT: const llvm::StringTable
+// CHECK-NEXT: RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTable = RuntimeLibcallImplNameTableStorage;
+// CHECK-EMPTY:
+// CHECK-NEXT: const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
+// CHECK-NEXT:   0, //
+// CHECK-NEXT:   1, // ___memcpy
+// CHECK-NEXT:   11, // ___memset
+// CHECK-NEXT:   21, // __ashlsi3
+// CHECK-NEXT:   31, // __lshrdi3
+// CHECK-NEXT:   41, // bzero
+// CHECK-NEXT:   47, // calloc
+// CHECK-NEXT:   54, // sqrtl
+// CHECK-NEXT:   54, // sqrtl
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
+// CHECK-NEXT:   0,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   9,
+// CHECK-NEXT:   5,
+// CHECK-NEXT:   6,
+// CHECK-NEXT:   5,
+// CHECK-NEXT:   5,
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::ImplToLibcall[RTLIB::NumLibcallImpls] = {
+// CHECK-NEXT: RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported
+// CHECK-NEXT: RTLIB::MEMCPY, // RTLIB::impl____memcpy
+// CHECK-NEXT: RTLIB::MEMSET, // RTLIB::impl____memset
+// CHECK-NEXT: RTLIB::SHL_I32, // RTLIB::impl___ashlsi3
+// CHECK-NEXT: RTLIB::SRL_I64, // RTLIB::impl___lshrdi3
+// CHECK-NEXT: RTLIB::BZERO, // RTLIB::impl_bzero
+// CHECK-NEXT: RTLIB::CALLOC, // RTLIB::impl_calloc
+// CHECK-NEXT: RTLIB::SQRT_F128, // RTLIB::impl_sqrtl_f128
+// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::impl_sqrtl_f80
+// CHECK-NEXT: };
+
+// CHECK: #ifdef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
+// CHECK-NEXT: #undef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
+// CHECK-EMPTY:
+// CHECK-NEXT: size_t Size = Name.size();
+// CHECK-NEXT: if (Size == 0 || Size > 9)
+// CHECK-NEXT:   return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+// CHECK-NEXT: return lookupLibcallImplNameImpl(Name);
+// CHECK-EMPTY:
+// CHECK-NEXT: #endif // GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
+
+// CHECK: #ifdef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+// CHECK-NEXT: #undef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+// CHECK-EMPTY:
+// CHECK-NEXT: static inline uint64_t hash(StringRef Str) {
+// CHECK-NEXT: return static_cast<uint32_t>(xxh3_64bits(Str));
+// CHECK-NEXT: }
+
+// CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
+// CHECK: static constexpr uint16_t HashTableNameToEnum[16] = {
+// CHECK: 2,
+// CHECK: 0,
+// CHECK: 6,
+// CHECK: 0,
+// CHECK: };
+
+// CHECK: unsigned Idx = (hash(Name) % 8) * 2;
+// CHECK: for (int I = 0; I != 2; ++I) {
+// CHECK: return libcallImplNameHit(Entry, StrOffset);
+
+// CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+// CHECK-NEXT: }
+
+// CHECK:#ifdef GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+// CHECK-NEXT:#undef GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT:const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
+// CHECK-NEXT:  /* 0 */ LDbl, LDbl, NoFuncArgType,
+// CHECK-NEXT:  /* 3 */ Ptr, Ptr, Int, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 8 */ Ptr, Ptr, Ptr, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 13 */ Void, Ptr, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 17 */ Ptr, SizeT, SizeT, NoFuncArgType,
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
+// CHECK-NEXT:  13, // BZERO
+// CHECK-NEXT:  17, // CALLOC
+// CHECK-NEXT:  8, // MEMCPY
+// CHECK-NEXT:  3, // MEMSET
+// CHECK-NEXT:  2, // SHL_I32
+// CHECK-NEXT:  2, // SQRT_F80
+// CHECK-NEXT:  0, // SQRT_F128
+// CHECK-NEXT:  2, // SRL_I64
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+
+// CHECK:      RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getUnmaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getMaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_bzero, // bzero
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f128, // sqrtl
+// CHECK-NEXT:     };
+// CHECK-EMPTY:
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:     if (TT.hasCompilerRT()) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_hasCompilerRT[] = {
+// CHECK-NEXT:           RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:           RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:       };
+// CHECK-EMPTY:
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_hasCompilerRT) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
+// CHECK-EMPTY:
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:     if (TT.getOS() == Triple::bar) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
+// CHECK-NEXT:           RTLIB::impl____memset, // ___memset
+// CHECK-NEXT:       };
+// CHECK-EMPTY:
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
+// CHECK-EMPTY:
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
+// CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:     };
+// CHECK-EMPTY:
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_bzero, // bzero
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f128, // sqrtl
+// CHECK-NEXT:     };
+// CHECK-EMPTY:
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:     if (TT.getOS() == Triple::bar) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
+// CHECK-NEXT:           RTLIB::impl____memset, // ___memset
+// CHECK-NEXT:       };
+// CHECK-EMPTY:
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
+// CHECK-EMPTY:
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
+// CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:     };
+// CHECK-EMPTY:
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK-EMPTY:
+// CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
+// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-EMPTY:
+// CHECK-NEXT:     return;
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
+// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-EMPTY:
+// CHECK-NEXT:     return;
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
+// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-EMPTY:
+// CHECK-NEXT:     return;
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
+// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
+// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-EMPTY:
+// CHECK-NEXT:     return;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   LLVM_DEBUG(dbgs() << "no system runtime library applied to target \'" << TT.str() << "\'\n");
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK: #endif

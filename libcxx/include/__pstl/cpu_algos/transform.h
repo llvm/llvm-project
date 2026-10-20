@@ -12,13 +12,14 @@
 #include <__algorithm/transform.h>
 #include <__assert>
 #include <__config>
+#include <__execution/is_execution_policy.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
-#include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,6 +27,8 @@
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -82,9 +85,8 @@ struct __cpu_parallel_transform {
           __first,
           __last - __first,
           __result,
-          [&](__iter_reference<_ForwardIterator> __in_value, __iter_reference<_ForwardOutIterator> __out_value) {
-            __out_value = __op(__in_value);
-          });
+          [&](__iterator_reference<_ForwardIterator> __in_value,
+              __iterator_reference<_ForwardOutIterator> __out_value) { __out_value = __op(__in_value); });
     } else {
       return std::transform(__first, __last, __result, __op);
     }
@@ -136,9 +138,9 @@ struct __cpu_parallel_transform_binary {
           __last1 - __first1,
           __first2,
           __result,
-          [&](__iter_reference<_ForwardIterator1> __in1,
-              __iter_reference<_ForwardIterator2> __in2,
-              __iter_reference<_ForwardOutIterator> __out_value) { __out_value = __op(__in1, __in2); });
+          [&](__iterator_reference<_ForwardIterator1> __in1,
+              __iterator_reference<_ForwardIterator2> __in2,
+              __iterator_reference<_ForwardOutIterator> __out_value) { __out_value = __op(__in1, __in2); });
     } else {
       return std::transform(__first1, __last1, __first2, __result, __op);
     }
@@ -147,6 +149,8 @@ struct __cpu_parallel_transform_binary {
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

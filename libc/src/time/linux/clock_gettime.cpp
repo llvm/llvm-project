@@ -8,14 +8,14 @@
 
 #include "src/time/clock_gettime.h"
 #include "src/__support/common.h"
-#include "src/__support/time/linux/clock_gettime.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/time/clock_gettime.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
-LLVM_LIBC_FUNCTION(int, clock_gettime,
-                   (clockid_t clockid, struct timespec *ts)) {
+LLVM_LIBC_FUNCTION(int, clock_gettime, (clockid_t clockid, timespec *ts)) {
   auto result = internal::clock_gettime(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, clock_gettime,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

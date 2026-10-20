@@ -63,10 +63,18 @@ public:
   /// @param[in] filename
   ///     Name of the source file that should be used when rendering
   ///     diagnostics (i.e. errors, warnings or notes from Clang).
+  ///
+  /// \param[in] force_disable_ptrauth_codegen
+  ///     Force pointer authentication code generation to be disabled for this
+  ///     expression.  Normally the decision of whether to generate ptrauth
+  ///     codegen or not is determined by the ArchSpec or ABI; this is for
+  ///     overriding the normal codegen.
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
+                        DiagnosticManager &diagnostic_manager,
                         std::vector<std::string> include_directories = {},
-                        std::string filename = "<clang expression>");
+                        std::string filename = "<clang expression>",
+                        bool force_disable_ptrauth_codegen = false);
 
   /// Destructor
   ~ClangExpressionParser() override;
@@ -118,15 +126,6 @@ public:
       lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
       bool &can_interpret,
       lldb_private::ExecutionPolicy execution_policy) override;
-
-  /// Returns a string representing current ABI.
-  ///
-  /// \param[in] target_arch
-  ///     The target architecture.
-  ///
-  /// \return
-  ///     A string representing target ABI for the current architecture.
-  std::string GetClangTargetABI(const ArchSpec &target_arch);
 
 private:
   /// Parses the expression.

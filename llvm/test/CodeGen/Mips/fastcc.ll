@@ -1,8 +1,6 @@
-; RUN: llc < %s -march=mipsel -relocation-model=pic | FileCheck %s
-; RUN: llc < %s -mtriple=mipsel-none-nacl-gnu -relocation-model=pic -mips-tail-calls=1\
-; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
-; RUN: llc < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg -relocation-model=pic -mips-tail-calls=1| FileCheck %s -check-prefix=NOODDSPREG
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg -relocation-model=pic -mips-tail-calls=1 | FileCheck %s -check-prefix=FP64-NOODDSPREG
+; RUN: llc < %s -mtriple=mipsel -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32 -mattr=+nooddspreg -relocation-model=pic -mips-tail-calls=1| FileCheck %s -check-prefix=NOODDSPREG
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg -relocation-model=pic -mips-tail-calls=1 | FileCheck %s -check-prefix=FP64-NOODDSPREG
 
 
 @gi0 = external global i32
@@ -103,11 +101,6 @@ entry:
 ; CHECK: lw  $5
 ; CHECK: lw  $4
 
-; t6, t7 and t8 are reserved in NaCl and cannot be used for fastcc.
-; CHECK-NACL-NOT: lw  $14
-; CHECK-NACL-NOT: lw  $15
-; CHECK-NACL-NOT: lw  $24
-
   %0 = load i32, ptr @gi0, align 4
   %1 = load i32, ptr @gi1, align 4
   %2 = load i32, ptr @gi2, align 4
@@ -145,11 +138,6 @@ entry:
 ; CHECK-DAG: sw  $15
 ; CHECK-DAG: sw  $24
 ; CHECK-DAG: sw  $3
-
-; t6, t7 and t8 are reserved in NaCl and cannot be used for fastcc.
-; CHECK-NACL-NOT: sw  $14
-; CHECK-NACL-NOT: sw  $15
-; CHECK-NACL-NOT: sw  $24
 
   store i32 %a0, ptr @g0, align 4
   store i32 %a1, ptr @g1, align 4

@@ -1,0 +1,388 @@
+//==------------------------------------------------------------------------==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/CodeGen/SDNodeInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+
+using namespace llvm;
+
+static void reportNodeError(const SelectionDAG &DAG, const SDNode *N,
+                            const Twine &Msg) {
+  std::string S;
+  raw_string_ostream SS(S);
+  SS << "invalid node: " << Msg << '\n';
+  N->printrWithDepth(SS, &DAG, 2);
+  report_fatal_error(StringRef(S));
+}
+
+static void checkResultType(const SelectionDAG &DAG, const SDNode *N,
+                            unsigned ResIdx, EVT ExpectedVT) {
+  EVT ActualVT = N->getValueType(ResIdx);
+  if (ActualVT != ExpectedVT)
+    reportNodeError(
+        DAG, N,
+        "result #" + Twine(ResIdx) + " has invalid type; expected " +
+            ExpectedVT.getEVTString() + ", got " + ActualVT.getEVTString());
+}
+
+static void checkOperandType(const SelectionDAG &DAG, const SDNode *N,
+                             unsigned OpIdx, EVT ExpectedVT) {
+  EVT ActualVT = N->getOperand(OpIdx).getValueType();
+  if (ActualVT != ExpectedVT)
+    reportNodeError(
+        DAG, N,
+        "operand #" + Twine(OpIdx) + " has invalid type; expected " +
+            ExpectedVT.getEVTString() + ", got " + ActualVT.getEVTString());
+}
+
+namespace {
+
+/// Similar to SDValue, but also records whether it is a result or an operand
+/// of a node so we can provide more precise diagnostics.
+class SDNodeValue {
+  const SDNode *N;
+  unsigned Idx;
+  bool IsRes;
+
+public:
+  SDNodeValue(const SDNode *N, unsigned Idx, bool IsRes)
+      : N(N), Idx(Idx), IsRes(IsRes) {}
+
+  SDValue getValue() const {
+    return IsRes ? SDValue(const_cast<SDNode *>(N), Idx) : N->getOperand(Idx);
+  }
+
+  EVT getValueType() const { return getValue().getValueType(); }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const SDNodeValue &Op) {
+    return OS << (Op.IsRes ? "result" : "operand") << " #" << Op.Idx;
+  }
+};
+
+} // namespace
+
+void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
+  const SDNodeDesc &Desc = getDesc(N->getOpcode());
+  bool HasChain = Desc.hasProperty(SDNPHasChain);
+  bool HasOutGlue = Desc.hasProperty(SDNPOutGlue);
+  bool HasInGlue = Desc.hasProperty(SDNPInGlue);
+  bool HasOptInGlue = Desc.hasProperty(SDNPOptInGlue);
+  bool IsVariadic = Desc.hasProperty(SDNPVariadic);
+
+  unsigned ActualNumResults = N->getNumValues();
+  unsigned ExpectedNumResults = Desc.NumResults + HasChain + HasOutGlue;
+
+  if (ActualNumResults != ExpectedNumResults)
+    reportNodeError(DAG, N,
+                    "invalid number of results; expected " +
+                        Twine(ExpectedNumResults) + ", got " +
+                        Twine(ActualNumResults));
+
+  // Chain result comes after all normal results.
+  if (HasChain) {
+    unsigned ChainResIdx = Desc.NumResults;
+    checkResultType(DAG, N, ChainResIdx, MVT::Other);
+  }
+
+  // Glue result comes last.
+  if (HasOutGlue) {
+    unsigned GlueResIdx = Desc.NumResults + HasChain;
+    checkResultType(DAG, N, GlueResIdx, MVT::Glue);
+  }
+
+  // In the most general case, the operands of a node go in the following order:
+  //   chain, fix#0, ..., fix#M-1, var#0, ... var#N-1, glue
+  // If the number of operands is < 0, M can be any;
+  // If the node has SDNPVariadic property, N can be any.
+  bool HasOptionalOperands = Desc.NumOperands < 0 || IsVariadic;
+
+  unsigned ActualNumOperands = N->getNumOperands();
+  unsigned ExpectedMinNumOperands =
+      (Desc.NumOperands >= 0 ? Desc.NumOperands : 0) + HasChain + HasInGlue;
+
+  // Check the lower bound.
+  if (ActualNumOperands < ExpectedMinNumOperands) {
+    StringRef How = HasOptionalOperands ? "at least " : "";
+    reportNodeError(DAG, N,
+                    "invalid number of operands; expected " + How +
+                        Twine(ExpectedMinNumOperands) + ", got " +
+                        Twine(ActualNumOperands));
+  }
+
+  // Check the upper bound. We can only do this if the number of fixed operands
+  // is known and there are no variadic operands.
+  if (Desc.NumOperands >= 0 && !IsVariadic) {
+    // Account for optional input glue.
+    unsigned ExpectedMaxNumOperands = ExpectedMinNumOperands + HasOptInGlue;
+    if (ActualNumOperands > ExpectedMaxNumOperands) {
+      StringRef How = HasOptInGlue ? "at most " : "";
+      reportNodeError(DAG, N,
+                      "invalid number of operands; expected " + How +
+                          Twine(ExpectedMaxNumOperands) + ", got " +
+                          Twine(ActualNumOperands));
+    }
+  }
+
+  // Chain operand comes first.
+  if (HasChain)
+    checkOperandType(DAG, N, 0, MVT::Other);
+
+  // Glue operand comes last.
+  if (HasInGlue)
+    checkOperandType(DAG, N, ActualNumOperands - 1, MVT::Glue);
+  if (HasOptInGlue && ActualNumOperands >= 1 &&
+      N->getOperand(ActualNumOperands - 1).getValueType() == MVT::Glue)
+    HasInGlue = true;
+
+  // Check variadic operands. These should be Register or RegisterMask.
+  if (IsVariadic && Desc.NumOperands >= 0) {
+    unsigned VarOpStart = HasChain + Desc.NumOperands;
+    unsigned VarOpEnd = ActualNumOperands - HasInGlue;
+    for (unsigned OpIdx = VarOpStart; OpIdx != VarOpEnd; ++OpIdx) {
+      unsigned OpOpcode = N->getOperand(OpIdx).getOpcode();
+      if (OpOpcode != ISD::Register && OpOpcode != ISD::RegisterMask)
+        reportNodeError(DAG, N,
+                        "variadic operand #" + Twine(OpIdx) +
+                            " must be Register or RegisterMask");
+    }
+  }
+
+  unsigned VTHwMode =
+      DAG.getSubtarget().getHwMode(MCSubtargetInfo::HwMode_ValueType);
+
+  // Returns a constrained or constraining value (result or operand) of a node.
+  // ValIdx is the index of a node's value, as defined by SDTypeConstraint;
+  // that is, it indexes a node's operands after its results and ignores
+  // chain/glue values.
+  auto GetConstraintValue = [&](unsigned ValIdx) {
+    if (ValIdx < Desc.NumResults)
+      return SDNodeValue(N, ValIdx, /*IsRes=*/true);
+    return SDNodeValue(N, HasChain + (ValIdx - Desc.NumResults),
+                       /*IsRes=*/false);
+  };
+
+  auto GetConstraintVT = [&](const SDTypeConstraint &C) {
+    if (!C.NumHwModes)
+      return static_cast<MVT::SimpleValueType>(C.VT);
+    for (auto [Mode, VT] : ArrayRef(&VTByHwModeTable[C.VT], C.NumHwModes))
+      if (Mode == VTHwMode)
+        return VT;
+    llvm_unreachable("No value type for this HW mode");
+  };
+
+  SmallString<128> ES;
+  raw_svector_ostream SS(ES);
+
+  // Reports an error unless SmallVT is strictly smaller than the type of
+  // BigVal. SmallVal is only used to describe SmallVT in error messages.
+  auto CheckSmallerThan = [&](const SDNodeValue &SmallVal, EVT SmallVT,
+                              const SDNodeValue &BigVal) {
+    EVT BigVT = BigVal.getValueType();
+
+    if (SmallVT.isInteger() != BigVT.isInteger() ||
+        SmallVT.isFloatingPoint() != BigVT.isFloatingPoint()) {
+      SS << SmallVal << " type " << SmallVT
+         << " must be the same kind of type as " << BigVal << " (" << BigVT
+         << ")";
+      reportNodeError(DAG, N, SS.str());
+    }
+    if (SmallVT.isVector() != BigVT.isVector()) {
+      SS << SmallVal << " type " << SmallVT << " and " << BigVal << " ("
+         << BigVT << ") must both be vectors or both be scalars";
+      reportNodeError(DAG, N, SS.str());
+    }
+
+    // Compare scalar sizes first; only if they match compare total sizes.
+    uint64_t SmallScalarSize = SmallVT.getScalarSizeInBits();
+    uint64_t BigScalarSize = BigVT.getScalarSizeInBits();
+    bool IsSmaller;
+    if (SmallScalarSize != BigScalarSize) {
+      IsSmaller = SmallScalarSize < BigScalarSize;
+    } else {
+      TypeSize SmallSize = SmallVT.getSizeInBits();
+      TypeSize BigSize = BigVT.getSizeInBits();
+      if (SmallVT.isScalableVector() != BigVT.isScalableVector()) {
+        SS << SmallVal << " type " << SmallVT << " and " << BigVal << " ("
+           << BigVT << ") cannot be compared; one is scalable and the "
+           << "other is fixed";
+        reportNodeError(DAG, N, SS.str());
+      }
+      IsSmaller = SmallSize.getKnownMinValue() < BigSize.getKnownMinValue();
+    }
+    if (!IsSmaller) {
+      SS << SmallVal << " type " << SmallVT << " must be smaller than "
+         << BigVal << " (" << BigVT << ")";
+      reportNodeError(DAG, N, SS.str());
+    }
+  };
+
+  for (const SDTypeConstraint &C : getConstraints(N->getOpcode())) {
+    SDNodeValue Val = GetConstraintValue(C.ConstrainedValIdx);
+    EVT VT = Val.getValueType();
+
+    switch (C.Kind) {
+    case SDTCisVT: {
+      EVT ExpectedVT = GetConstraintVT(C);
+
+      bool IsPtr = ExpectedVT == MVT::iPTR;
+      if (IsPtr)
+        ExpectedVT =
+            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+
+      if (VT != ExpectedVT) {
+        SS << Val << " must have type " << ExpectedVT;
+        if (IsPtr)
+          SS << " (iPTR)";
+        SS << ", but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisPtrTy: {
+      unsigned AS = 0;
+      if (const auto *MemSD = dyn_cast<MemSDNode>(N))
+        AS = MemSD->getAddressSpace();
+      EVT PtrVT =
+          DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout(), AS);
+      if (VT != PtrVT) {
+        SS << Val << " must have pointer type " << PtrVT << ", but has type "
+           << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisInt:
+      if (!VT.isInteger()) {
+        SS << Val << " must have integer type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    case SDTCisFP:
+      if (!VT.isFloatingPoint()) {
+        SS << Val << " must have floating-point type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    case SDTCisVec:
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    case SDTCisSameAs:
+      break;
+    case SDTCisVTSmallerThanOp: {
+      const auto *VTNode = dyn_cast<VTSDNode>(Val.getValue().getNode());
+      if (!VTNode) {
+        SS << Val << " must be a VT node";
+        reportNodeError(DAG, N, SS.str());
+      }
+      EVT SmallVT = VTNode->getVT();
+
+      CheckSmallerThan(Val, SmallVT, GetConstraintValue(C.ConstrainingValIdx));
+      break;
+    }
+    case SDTCisOpSmallerThanOp:
+      CheckSmallerThan(Val, VT, GetConstraintValue(C.ConstrainingValIdx));
+      break;
+    case SDTCisEltOfVec: {
+      SDNodeValue VecVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT VecVT = VecVal.getValueType();
+
+      if (!VecVT.isVector()) {
+        SS << VecVal << " must have vector type, but has type " << VecVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (!VecVT.isVectorOf(VT)) {
+        SS << Val << " must have " << VecVT.getVectorElementType()
+           << " type (element type of " << VecVal << "), but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisSubVecOfVec: {
+      SDNodeValue VecVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT VecVT = VecVal.getValueType();
+
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (!VecVT.isVector()) {
+        SS << VecVal << " must have vector type, but has type " << VecVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (VT.getVectorElementType() != VecVT.getVectorElementType()) {
+        SS << Val << " must have the same element type as " << VecVal << " ("
+           << VecVT.getVectorElementType() << "), but has element type "
+           << VT.getVectorElementType();
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (VT.isScalableVector() && !VecVT.isScalableVector()) {
+        SS << Val << " is a scalable vector, but " << VecVal
+           << " is not; a scalable vector cannot be a sub-vector of a fixed "
+              "length vector";
+        reportNodeError(DAG, N, SS.str());
+      }
+      // We can't compare elements when the subvector is fixed and the vector
+      // is scalable. We would need to take into account vscale.
+      if (VT.isScalableVector() == VecVT.isScalableVector() &&
+          VT.getVectorMinNumElements() >= VecVT.getVectorMinNumElements()) {
+        SS << Val << " must have fewer elements than " << VecVal;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCVecEltisVT: {
+      EVT ExpectedVT = GetConstraintVT(C);
+
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type";
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (VT.getVectorElementType() != ExpectedVT) {
+        SS << Val << " must have " << ExpectedVT << " element type, but has "
+           << VT.getVectorElementType() << " element type";
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisSameNumEltsAs: {
+      SDNodeValue OtherVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT OtherVT = OtherVal.getValueType();
+
+      // Scalars are treated as having the same "number of elements" as any
+      // other scalar, so this only requires equal element counts when both
+      // are vectors.
+      if (VT.isVector() != OtherVT.isVector() ||
+          (VT.isVector() &&
+           VT.getVectorElementCount() != OtherVT.getVectorElementCount())) {
+        SS << Val << " and " << OtherVal
+           << " must have the same number of elements, but have " << VT
+           << " and " << OtherVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisSameSizeAs: {
+      SDNodeValue OtherVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT OtherVT = OtherVal.getValueType();
+
+      if (VT.getSizeInBits() != OtherVT.getSizeInBits()) {
+        SS << Val << " must have the same size as " << OtherVal << " ("
+           << OtherVT << "), but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    }
+  }
+}

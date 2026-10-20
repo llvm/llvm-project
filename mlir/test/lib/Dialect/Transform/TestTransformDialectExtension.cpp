@@ -18,9 +18,12 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtensionOps.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -346,8 +349,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
-  for (Operation *op : state.getPayloadOps(getTarget()))
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (!op->getUses().empty())
+      return emitSilenceableError() << "cannot erase an op that has uses";
     rewriter.eraseOp(op);
+  }
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
@@ -485,18 +491,18 @@ mlir::test::TestAddToParamOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformState &state) {
   SmallVector<uint32_t> values(/*Size=*/1, /*Value=*/0);
   if (Value param = getParam()) {
-    values = llvm::to_vector(
-        llvm::map_range(state.getParams(param), [](Attribute attr) -> uint32_t {
+    values = llvm::map_to_vector(
+        state.getParams(param), [](Attribute attr) -> uint32_t {
           return llvm::cast<IntegerAttr>(attr).getValue().getLimitedValue(
               UINT32_MAX);
-        }));
+        });
   }
 
   Builder builder(getContext());
-  SmallVector<Attribute> result = llvm::to_vector(
-      llvm::map_range(values, [this, &builder](uint32_t value) -> Attribute {
+  SmallVector<Attribute> result = llvm::map_to_vector(
+      values, [this, &builder](uint32_t value) -> Attribute {
         return builder.getI32IntegerAttr(value + getAddendum());
-      }));
+      });
   results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
@@ -506,16 +512,16 @@ mlir::test::TestProduceParamWithNumberOfTestOps::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   Builder builder(getContext());
-  SmallVector<Attribute> result = llvm::to_vector(
-      llvm::map_range(state.getPayloadOps(getHandle()),
-                      [&builder](Operation *payload) -> Attribute {
-                        int32_t count = 0;
-                        payload->walk([&count](Operation *op) {
-                          if (op->getName().getDialectNamespace() == "test")
-                            ++count;
-                        });
-                        return builder.getI32IntegerAttr(count);
-                      }));
+  SmallVector<Attribute> result =
+      llvm::map_to_vector(state.getPayloadOps(getHandle()),
+                          [&builder](Operation *payload) -> Attribute {
+                            int32_t count = 0;
+                            payload->walk([&count](Operation *op) {
+                              if (op->getName().getDialectNamespace() == "test")
+                                ++count;
+                            });
+                            return builder.getI32IntegerAttr(count);
+                          });
   results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
@@ -731,9 +737,9 @@ mlir::test::TestReEnterRegionOp::apply(transform::TransformRewriter &rewriter,
 
   SmallVector<SmallVector<transform::MappedValue>> mappings;
   for (BlockArgument arg : getBody().front().getArguments()) {
-    mappings.emplace_back(llvm::to_vector(llvm::map_range(
+    mappings.emplace_back(llvm::map_to_vector(
         state.getPayloadOps(getOperand(arg.getArgNumber())),
-        [](Operation *op) -> transform::MappedValue { return op; })));
+        [](Operation *op) -> transform::MappedValue { return op; }));
   }
 
   for (int i = 0; i < 4; ++i) {
@@ -793,8 +799,8 @@ DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
     transform::TransformState &state) {
   // Provide some IR that does not verify.
   rewriter.setInsertionPointToStart(&target->getRegion(0).front());
-  rewriter.create<TestDummyPayloadOp>(target->getLoc(), TypeRange(),
-                                      ValueRange(), /*failToVerify=*/true);
+  TestDummyPayloadOp::create(rewriter, target->getLoc(), TypeRange(),
+                             ValueRange(), /*fail_to_verify=*/true);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -802,6 +808,28 @@ void mlir::test::TestProduceInvalidIR::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestInitializerExtensionOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  std::string opName =
+      this->getOperationName().str() + "_" + getTypeAttr().str();
+  TransformStateInitializerExtension *initExt =
+      state.getExtension<TransformStateInitializerExtension>();
+  if (!initExt) {
+    emitRemark() << "\nSpecified extension not found, adding a new one!\n";
+    SmallVector<std::string> opCollection = {opName};
+    state.addExtension<TransformStateInitializerExtension>(1, opCollection);
+  } else {
+    initExt->setNumOp(initExt->getNumOp() + 1);
+    initExt->pushRegisteredOps(opName);
+    InFlightDiagnostic diag = emitRemark()
+                              << "Number of currently registered op: "
+                              << initExt->getNumOp() << "\n"
+                              << initExt->printMessage() << "\n";
+  }
+  return DiagnosedSilenceableFailure::success();
 }
 
 namespace {
@@ -849,10 +877,11 @@ public:
     });
     auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
                                        ValueRange inputs,
-                                       Location loc) -> std::optional<Value> {
+                                       Location loc) -> Value {
       if (inputs.size() != 1)
-        return std::nullopt;
-      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        return Value();
+      return UnrealizedConversionCastOp::create(builder, loc, resultType,
+                                                inputs)
           .getResult(0);
     };
     addSourceMaterialization(unrealizedCastConverter);
@@ -866,6 +895,56 @@ mlir::test::TestTypeConverterOp::getTypeConverter() {
   return std::make_unique<TestTypeConverter>();
 }
 
+DiagnosedSilenceableFailure
+mlir::transform::TestSingleBlockNormalFormAttr::checkOperation(
+    Operation *op) const {
+  auto check = [](Operation *nested) {
+    for (Region &region : nested->getRegions())
+      if (!region.hasOneBlock())
+        return failure();
+
+    return success();
+  };
+
+  auto wrapResult = [&](Location loc, LogicalResult result) {
+    if (failed(result)) {
+      return emitSilenceableFailure(loc)
+             << "normal form " << getMnemonic()
+             << " requires payload operations to have a single region";
+    }
+    return DiagnosedSilenceableFailure::success();
+  };
+
+  if (!getCheckNested().getValue())
+    return wrapResult(op->getLoc(), check(op));
+
+  Location loc = op->getLoc();
+  WalkResult walkResult = op->walk<WalkOrder::PreOrder>([&](Operation *nested) {
+    if (failed(check(nested))) {
+      loc = nested->getLoc();
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return wrapResult(loc, failure(walkResult.wasInterrupted()));
+}
+
+DiagnosedSilenceableFailure
+mlir::transform::TestCountingNormalFormAttr::checkOperation(
+    Operation *op) const {
+  // Record the number of invocations of this check on `op` as a discardable
+  // integer attribute. Tests that need to detect redundant checks can simply
+  // `FileCheck` the printed IR for the expected count.
+  Builder builder(op->getContext());
+  StringAttr counterName =
+      builder.getStringAttr("test.counting_normal_form_count");
+  unsigned count = 0;
+  if (auto prev = op->getAttrOfType<IntegerAttr>(counterName))
+    count = prev.getValue().getZExtValue();
+  op->setDiscardableAttr(counterName, builder.getI64IntegerAttr(count + 1));
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
@@ -874,6 +953,8 @@ class TestTransformDialectExtension
     : public transform::TransformDialectExtension<
           TestTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTransformDialectExtension)
+
   using Base::Base;
 
   void init() {
@@ -883,6 +964,10 @@ public:
 #define GET_OP_LIST
 #include "TestTransformDialectExtension.cpp.inc"
                          >();
+    registerAttributes<
+#define GET_ATTRDEF_LIST
+#include "TestTransformDialectExtensionAttrs.cpp.inc"
+        >();
     registerTypes<
 #define GET_TYPEDEF_LIST
 #include "TestTransformDialectExtensionTypes.cpp.inc"
@@ -910,10 +995,18 @@ public:
 
 // These are automatically generated by ODS but are not used as the Transform
 // dialect uses a different dispatch mechanism to support dialect extensions.
-LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+[[maybe_unused]] static OptionalParseResult
 generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
-LLVM_ATTRIBUTE_UNUSED static LogicalResult
-generatedTypePrinter(Type def, AsmPrinter &printer);
+[[maybe_unused]] static LogicalResult generatedTypePrinter(Type def,
+                                                           AsmPrinter &printer);
+[[maybe_unused]] static OptionalParseResult
+generatedAttributeParser(AsmParser &parser, StringRef *mnemonic, Type type,
+                         Attribute &value);
+[[maybe_unused]] static LogicalResult
+generatedAttributePrinter(Attribute def, AsmPrinter &printer);
+
+#define GET_ATTRDEF_CLASSES
+#include "TestTransformDialectExtensionAttrs.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTransformDialectExtensionTypes.cpp.inc"

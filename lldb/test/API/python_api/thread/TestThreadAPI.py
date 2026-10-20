@@ -10,6 +10,8 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
         self.build()
@@ -29,7 +31,7 @@ class ThreadAPITestCase(TestBase):
         self.run_to_address(self.exe_name)
 
     @skipIfAsan  # The output looks different under ASAN.
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr45892")
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr45892")
     @expectedFailureAll(oslist=["windows"])
     def test_step_out_of_malloc_into_function_b(self):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
@@ -52,7 +54,7 @@ class ThreadAPITestCase(TestBase):
         self.build()
         self.validate_negative_indexing()
  
-    @expectedFailureAll(oslist=["windows"])
+    @skipIfWasm  # the test calls a function with an expression
     def test_StepInstruction(self):
         """Test that StepInstruction preserves the plan stack."""
         self.build()
@@ -80,22 +82,10 @@ class ThreadAPITestCase(TestBase):
 
     def get_process(self):
         """Test Python SBThread.GetProcess() API."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.break_line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        self.runCmd("breakpoint list")
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.break_line
         )
+        self.runCmd("breakpoint list")
         self.runCmd("process status")
 
         proc_of_thread = thread.GetProcess()
@@ -104,21 +94,8 @@ class ThreadAPITestCase(TestBase):
 
     def get_stop_description(self):
         """Test Python SBThread.GetStopDescription() API."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.break_line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        # self.runCmd("breakpoint list")
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.break_line
         )
 
         # Get the stop reason. GetStopDescription expects that we pass in the size of the description
@@ -139,18 +116,18 @@ class ThreadAPITestCase(TestBase):
             "breakpoint 1.1", thread.GetStopDescription(len("breakpoint 1.1") + 100)
         )
 
+        # Test the stream variation
+        stream = lldb.SBStream()
+        self.assertTrue(thread.GetStopDescription(stream))
+        self.assertEqual("breakpoint 1.1", stream.GetData())
+
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
-        exe = self.getBuildArtifact(exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByName("malloc")
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        # On ELF platforms malloc lives in the C library, which is only loaded
+        # once the process is running, so the breakpoint has no location yet.
+        target, process, _, breakpoint = lldbutil.run_to_name_breakpoint(
+            self, "malloc", exe_name=exe_name, has_locations_before_run=False
+        )
 
         while True:
             thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
@@ -189,29 +166,15 @@ class ThreadAPITestCase(TestBase):
 
     def step_over_3_times(self, exe_name):
         """Test Python SBThread.StepOver() API."""
-        exe = self.getBuildArtifact(exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(
-            "main2.cpp", self.step_out_of_malloc
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self,
+            lldb.SBFileSpec("main2.cpp"),
+            self.step_out_of_malloc,
+            exe_name=exe_name,
         )
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
         self.runCmd("breakpoint list")
 
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be on self.step_out_of_malloc.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
-        )
         self.runCmd("thread backtrace")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
@@ -236,29 +199,15 @@ class ThreadAPITestCase(TestBase):
 
     def run_to_address(self, exe_name):
         """Test Python SBThread.RunToAddress() API."""
-        exe = self.getBuildArtifact(exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(
-            "main2.cpp", self.step_out_of_malloc
+        target, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self,
+            lldb.SBFileSpec("main2.cpp"),
+            self.step_out_of_malloc,
+            exe_name=exe_name,
         )
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
         self.runCmd("breakpoint list")
 
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be on self.step_out_of_malloc.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
-        )
         self.runCmd("thread backtrace")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
@@ -287,22 +236,10 @@ class ThreadAPITestCase(TestBase):
         # self.runCmd("thread backtrace")
 
     def validate_negative_indexing(self):
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.break_line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        self.runCmd("breakpoint list")
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.break_line
         )
+        self.runCmd("breakpoint list")
         self.runCmd("process status")
 
         pos_range = range(thread.num_frames)
@@ -324,34 +261,40 @@ class ThreadAPITestCase(TestBase):
         self.assertGreater(
             call_me_bkpt.GetNumLocations(), 0, "Got at least one location in call_me"
         )
+
+        # On Windows this may be the full name "void __cdecl call_me(bool)",
+        # elsewhere it's just "call_me(bool)".
+        expected_name = r".*call_me\(bool\)$"
+
         # Now run the expression, this will fail because we stopped at a breakpoint:
         self.runCmd("expr -i 0 -- call_me(true)", check=False)
         # Now we should be stopped in call_me:
-        self.assertEqual(
-            thread.frames[0].name, "call_me(bool)", "Stopped in call_me(bool)"
+        self.assertRegex(
+            thread.frames[0].name, expected_name, "Stopped in call_me(bool)"
         )
+
         # Now do a various API steps.  These should not cause the expression context to get unshipped:
         thread.StepInstruction(False)
-        self.assertEqual(
+        self.assertRegex(
             thread.frames[0].name,
-            "call_me(bool)",
+            expected_name,
             "Still in call_me(bool) after StepInstruction",
         )
         thread.StepInstruction(True)
-        self.assertEqual(
+        self.assertRegex(
             thread.frames[0].name,
-            "call_me(bool)",
+            expected_name,
             "Still in call_me(bool) after NextInstruction",
         )
         thread.StepInto()
-        self.assertEqual(
+        self.assertRegex(
             thread.frames[0].name,
-            "call_me(bool)",
+            expected_name,
             "Still in call_me(bool) after StepInto",
         )
         thread.StepOver(False)
-        self.assertEqual(
+        self.assertRegex(
             thread.frames[0].name,
-            "call_me(bool)",
+            expected_name,
             "Still in call_me(bool) after StepOver",
         )

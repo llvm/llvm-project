@@ -6,112 +6,122 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// For all alloca instructions, and add a pair of cast to local address for
-// each of them. For example,
+// Replace each generic alloca with an equivalent alloca in the local address
+// space, followed by an addrspacecast back to generic for its users. For
+// example,
 //
 //   %A = alloca i32
-//   store i32 0, i32* %A ; emits st.u32
+//   store i32 0, ptr %A ; emits st.u32
 //
-// will be transformed to
+// is transformed to
 //
-//   %A = alloca i32
-//   %Local = addrspacecast i32* %A to i32 addrspace(5)*
-//   %Generic = addrspacecast i32 addrspace(5)* %A to i32*
-//   store i32 0, i32 addrspace(5)* %Generic ; emits st.local.u32
+//   %A = alloca i32, addrspace(5)
+//   %A.generic = addrspacecast ptr addrspace(5) %A to ptr
+//   store i32 0, ptr %A.generic
 //
-// And we will rely on NVPTXInferAddressSpaces to combine the last two
-// instructions.
+// This gives the alloca a local frame index, which stack lowering addresses
+// through the local frame pointer (%SPL). When NVPTXInferAddressSpaces runs
+// after this pass, it propagates the local address space into the users and
+// folds the cast away where possible (so the store above becomes st.local.u32).
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTX.h"
-#include "NVPTXUtilities.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTX.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerAllocaPass(PassRegistry &);
+// =============================================================================
+// Main function for this pass.
+// =============================================================================
+static bool lowerAllocas(Function &F) {
+  // Mandatory lowering: later stack lowering relies on local allocas, so run
+  // even for optnone functions (optnone is intentionally not honored).
+  SmallVector<AllocaInst *, 8> GenericAllocas;
+  for (auto &BB : F)
+    for (auto &I : BB)
+      if (auto *AI = dyn_cast<AllocaInst>(&I);
+          AI && AI->getAddressSpace() == ADDRESS_SPACE_GENERIC)
+        GenericAllocas.push_back(AI);
+
+  for (AllocaInst *AI : GenericAllocas) {
+    // Create an equivalent alloca in the local address space.
+    auto *LocalAlloca = new AllocaInst(AI->getAllocatedType(),
+                                       ADDRESS_SPACE_LOCAL, AI->getArraySize(),
+                                       AI->getAlign(), "", AI->getIterator());
+    LocalAlloca->copyMetadata(*AI);
+    LocalAlloca->setUsedWithInAlloca(AI->isUsedWithInAlloca());
+    LocalAlloca->setSwiftError(AI->isSwiftError());
+
+    // Debug records and lifetime markers have to reference the alloca itself,
+    // not a cast of it, so retarget them to the local alloca before rewriting
+    // the remaining users through a generic addrspacecast below:
+    //   - the verifier requires an alloca operand for lifetime markers, and
+    //   - pointing debug records at the alloca keeps the variable described by
+    //     its (stable) stack slot rather than the cvta.local result.
+    SmallVector<DbgVariableRecord *, 2> DbgUsers;
+    findDbgUsers(AI, DbgUsers);
+    for (DbgVariableRecord *DVR : DbgUsers)
+      DVR->replaceVariableLocationOp(AI, LocalAlloca);
+
+    for (Use &U : llvm::make_early_inc_range(AI->uses())) {
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      if (!II || !isLifetimeIntrinsic(II->getIntrinsicID()))
+        continue;
+      U.set(LocalAlloca);
+      Function *Decl = Intrinsic::getOrInsertDeclaration(
+          II->getModule(), II->getIntrinsicID(), {LocalAlloca->getType()});
+      II->setCalledFunction(Decl);
+    }
+
+    // Everything else can go through a single generic addrspacecast.
+    // replaceAllUsesWith leaves the (already retargeted) lifetime markers and
+    // debug records untouched. NVPTXInferAddressSpaces folds the cast into the
+    // users that can operate on local memory directly.
+    auto *GenericPtr = new AddrSpaceCastInst(LocalAlloca, AI->getType(), "",
+                                             AI->getIterator());
+    GenericPtr->setDebugLoc(AI->getDebugLoc());
+    AI->replaceAllUsesWith(GenericPtr);
+    LocalAlloca->takeName(AI);
+    AI->eraseFromParent();
+  }
+
+  return !GenericAllocas.empty();
 }
 
 namespace {
-class NVPTXLowerAlloca : public FunctionPass {
-  bool runOnFunction(Function &F) override;
+class NVPTXLowerAllocaLegacyPass : public FunctionPass {
+  bool runOnFunction(Function &F) override { return lowerAllocas(F); }
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerAlloca() : FunctionPass(ID) {}
+  NVPTXLowerAllocaLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
   }
 };
 } // namespace
 
-char NVPTXLowerAlloca::ID = 1;
+char NVPTXLowerAllocaLegacyPass::ID = 0;
 
-INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca",
+INITIALIZE_PASS(NVPTXLowerAllocaLegacyPass, "nvptx-lower-alloca",
                 "Lower Alloca", false, false)
 
-// =============================================================================
-// Main function for this pass.
-// =============================================================================
-bool NVPTXLowerAlloca::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  bool Changed = false;
-  for (auto &BB : F)
-    for (auto &I : BB) {
-      if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
-        Changed = true;
-        auto ETy = allocaInst->getAllocatedType();
-        auto LocalAddrTy = PointerType::get(ETy, ADDRESS_SPACE_LOCAL);
-        auto NewASCToLocal = new AddrSpaceCastInst(allocaInst, LocalAddrTy, "");
-        auto GenericAddrTy = PointerType::get(ETy, ADDRESS_SPACE_GENERIC);
-        auto NewASCToGeneric =
-            new AddrSpaceCastInst(NewASCToLocal, GenericAddrTy, "");
-        NewASCToLocal->insertAfter(allocaInst);
-        NewASCToGeneric->insertAfter(NewASCToLocal);
-        for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
-          // Check Load, Store, GEP, and BitCast Uses on alloca and make them
-          // use the converted generic address, in order to expose non-generic
-          // addrspacecast to NVPTXInferAddressSpaces. For other types
-          // of instructions this is unnecessary and may introduce redundant
-          // address cast.
-          auto LI = dyn_cast<LoadInst>(AllocaUse.getUser());
-          if (LI && LI->getPointerOperand() == allocaInst &&
-              !LI->isVolatile()) {
-            LI->setOperand(LI->getPointerOperandIndex(), NewASCToGeneric);
-            continue;
-          }
-          auto SI = dyn_cast<StoreInst>(AllocaUse.getUser());
-          if (SI && SI->getPointerOperand() == allocaInst &&
-              !SI->isVolatile()) {
-            SI->setOperand(SI->getPointerOperandIndex(), NewASCToGeneric);
-            continue;
-          }
-          auto GI = dyn_cast<GetElementPtrInst>(AllocaUse.getUser());
-          if (GI && GI->getPointerOperand() == allocaInst) {
-            GI->setOperand(GI->getPointerOperandIndex(), NewASCToGeneric);
-            continue;
-          }
-          auto BI = dyn_cast<BitCastInst>(AllocaUse.getUser());
-          if (BI && BI->getOperand(0) == allocaInst) {
-            BI->setOperand(0, NewASCToGeneric);
-            continue;
-          }
-        }
-      }
-    }
-  return Changed;
+FunctionPass *llvm::createNVPTXLowerAllocaLegacyPass() {
+  return new NVPTXLowerAllocaLegacyPass();
 }
 
-FunctionPass *llvm::createNVPTXLowerAllocaPass() {
-  return new NVPTXLowerAlloca();
+PreservedAnalyses NVPTXLowerAllocaPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  if (!lowerAllocas(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

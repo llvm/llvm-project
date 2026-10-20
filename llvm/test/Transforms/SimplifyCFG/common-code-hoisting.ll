@@ -39,8 +39,8 @@ declare void @f0()
 declare void @f1()
 declare void @f2()
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @_Z4loopi(i1 %cmp) {
 ; HOIST-LABEL: @_Z4loopi(

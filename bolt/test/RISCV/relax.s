@@ -5,13 +5,14 @@
 // RUN: llvm-objdump -d %t.bolt | FileCheck --check-prefix=OBJDUMP %s
 
 // CHECK:      Binary Function "_start" after building cfg {
-// CHECK:      jal ra, near_f
+// CHECK:      jal near_f
 // CHECK-NEXT: auipc ra, far_f
-// CHECK-NEXT: jalr ra, 0xc(ra)
+// CHECK-NEXT: jalr 0xc(ra)
 // CHECK-NEXT: j near_f
 
 // CHECK:      Binary Function "_start" after fix-riscv-calls {
 // CHECK:      call near_f
+// CHECK-NEXT: nop
 // CHECK-NEXT: call far_f
 // CHECK-NEXT: tail near_f
 

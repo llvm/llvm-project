@@ -11,6 +11,7 @@
 #include "OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
@@ -18,7 +19,9 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
@@ -28,9 +31,13 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::formatv;
+using llvm::Record;
+using llvm::StringMap;
 
 //===----------------------------------------------------------------------===//
 // VariableElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents an instance of an op variable element. A variable
@@ -45,7 +52,7 @@ public:
   OpVariableElement(const VarT *var) : var(var) {}
 
   /// Get the variable.
-  const VarT *getVar() { return var; }
+  const VarT *getVar() const { return var; }
 
 protected:
   /// The op variable, e.g. a type or attribute constraint.
@@ -64,11 +71,6 @@ struct AttributeVariable
     return attrType ? attrType->getBuilderCall() : std::nullopt;
   }
 
-  /// Return if this attribute refers to a UnitAttr.
-  bool isUnitAttr() const {
-    return var->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
-  }
-
   /// Indicate if this attribute is printed "qualified" (that is it is
   /// prefixed with the `#dialect.mnemonic`).
   bool shouldBeQualified() { return shouldBeQualifiedFlag; }
@@ -76,8 +78,13 @@ struct AttributeVariable
     shouldBeQualifiedFlag = qualified;
   }
 
+  /// Indicate if this attribute is formatted using its underlying enum value.
+  bool shouldFormatAsEnum() const { return shouldFormatAsEnumFlag; }
+  void setShouldFormatAsEnum() { shouldFormatAsEnumFlag = true; }
+
 private:
   bool shouldBeQualifiedFlag = false;
+  bool shouldFormatAsEnumFlag = false;
 };
 
 /// This class represents a variable that refers to an operand argument.
@@ -98,10 +105,50 @@ using SuccessorVariable =
 /// This class represents a variable that refers to a property argument.
 using PropertyVariable =
     OpVariableElement<NamedProperty, VariableElement::Property>;
+
+/// LLVM RTTI helper for attribute-like variables, that is, attributes or
+/// properties. This allows for common handling of attributes and properties in
+/// parts of the code that are oblivious to whether something is stored as an
+/// attribute or a property.
+struct AttributeLikeVariable : public VariableElement {
+  enum { AttributeLike = 1 << 0 };
+
+  static bool classof(const VariableElement *ve) {
+    return ve->getKind() == VariableElement::Attribute ||
+           ve->getKind() == VariableElement::Property;
+  }
+
+  static bool classof(const FormatElement *fe) {
+    return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
+  }
+
+  /// Returns true if the variable is a UnitAttr or a UnitProp.
+  bool isUnit() const {
+    if (const auto *attr = dyn_cast<AttributeVariable>(this))
+      return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
+    if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
+      StringRef baseDefName =
+          prop->getVar()->prop.getBaseProperty().getPropertyDefName();
+      // Note: remove the `UnitProperty` case once the deprecation period is
+      // over.
+      return baseDefName == "UnitProp" || baseDefName == "UnitProperty";
+    }
+    llvm_unreachable("Type that wasn't listed in classof()");
+  }
+
+  StringRef getName() const {
+    if (const auto *attr = dyn_cast<AttributeVariable>(this))
+      return attr->getVar()->name;
+    if (const auto *prop = dyn_cast<PropertyVariable>(this))
+      return prop->getVar()->name;
+    llvm_unreachable("Type that wasn't listed in classof()");
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents the `operands` directive. This directive represents
@@ -183,22 +230,25 @@ private:
 };
 
 /// This class represents a group of order-independent optional clauses. Each
-/// clause starts with a literal element and has a coressponding parsing
-/// element. A parsing element is a continous sequence of format elements.
-/// Each clause can appear 0 or 1 time.
+/// clause starts with a literal element and has a corresponding parsing
+/// element. A parsing element is a continuous sequence of format elements.
+/// Each clause can appear 0 or 1 time. An optional literal separates clauses.
 class OIListElement : public DirectiveElementBase<DirectiveElement::OIList> {
 public:
-  OIListElement(std::vector<FormatElement *> &&literalElements,
+  OIListElement(LiteralElement *separator,
+                std::vector<FormatElement *> &&literalElements,
                 std::vector<std::vector<FormatElement *>> &&parsingElements)
-      : literalElements(std::move(literalElements)),
+      : separator(separator), literalElements(std::move(literalElements)),
         parsingElements(std::move(parsingElements)) {}
+
+  /// Returns the optional separator between clauses.
+  LiteralElement *getSeparator() const { return separator; }
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    function_ref<LiteralElement *(FormatElement * el)>
-        literalElementCastConverter =
-            [](FormatElement *el) { return cast<LiteralElement>(el); };
-    return llvm::map_range(literalElements, literalElementCastConverter);
+    return llvm::map_range(literalElements, [](FormatElement *el) {
+      return cast<LiteralElement>(el);
+    });
   }
 
   /// Returns a range to iterate over the parsing elements corresponding to the
@@ -214,17 +264,20 @@ public:
 
   /// If the parsing element is a single UnitAttr element, then it returns the
   /// attribute variable. Otherwise, returns nullptr.
-  AttributeVariable *
-  getUnitAttrParsingElement(ArrayRef<FormatElement *> pelement) {
+  AttributeLikeVariable *
+  getUnitVariableParsingElement(ArrayRef<FormatElement *> pelement) {
     if (pelement.size() == 1) {
-      auto *attrElem = dyn_cast<AttributeVariable>(pelement[0]);
-      if (attrElem && attrElem->isUnitAttr())
+      auto *attrElem = dyn_cast<AttributeLikeVariable>(pelement[0]);
+      if (attrElem && attrElem->isUnit())
         return attrElem;
     }
     return nullptr;
   }
 
 private:
+  /// An optional literal printed and parsed between clauses.
+  LiteralElement *separator;
+
   /// A vector of `LiteralElement` objects. Each element stores the keyword
   /// for one case of oilist element. For example, an oilist element along with
   /// the `literalElements` vector:
@@ -279,6 +332,10 @@ struct OperationFormat {
     std::optional<StringRef> getVarTransformer() const {
       return variableTransformer;
     }
+    /// Returns true if the type is parsed directly from the assembly format.
+    bool isDirectlyParsed() const {
+      return !builderIdx && !getVariable() && !getAttribute();
+    }
     void setResolver(ConstArgument arg, std::optional<StringRef> transformer) {
       resolver = arg;
       variableTransformer = transformer;
@@ -297,17 +354,23 @@ struct OperationFormat {
     std::optional<StringRef> variableTransformer;
   };
 
-  /// The context in which an element is generated.
+  /// The context used to generate an element's parser. This controls whether
+  /// attribute variables are parsed optionally; it does not change the parsing
+  /// of other element kinds.
   enum class GenContext {
-    /// The element is generated at the top-level or with the same behaviour.
+    /// Use the default parsing behaviour: an ODS optional attribute may be
+    /// absent. Used at the top level and by callers using the default context.
     Normal,
-    /// The element is generated inside an optional group.
+    /// Generate an element in a selected branch of an optional group. Attribute
+    /// variables must be present, even if they are optional in ODS. The group
+    /// is optional, but its contents are required once the branch is selected.
+    /// The group's first element is parsed separately to select the branch.
     Optional
   };
 
   OperationFormat(const Operator &op)
-      : useProperties(op.getDialect().usePropertiesForAttributes() &&
-                      !op.getAttributes().empty()),
+      : useStrictPropertiesInAssemblyFormat(
+            op.getDialect().useStrictPropertiesInAssemblyFormat()),
         opCppClassName(op.getCppClassName()) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
@@ -317,11 +380,18 @@ struct OperationFormat {
     });
 
     hasSingleBlockTrait = op.getTrait("::mlir::OpTrait::SingleBlock");
+
+    for (const NamedAttribute &attr : op.getAttributes()) {
+      if (!attr.attr.isDerivedAttr())
+        inherentAttrNames.push_back(attr.name);
+    }
   }
 
   /// Generate the operation parser from this format.
   void genParser(Operator &op, OpClass &opClass);
   /// Generate the parser code for a specific format element.
+  /// `genCtx`, together with ODS optionality, determines whether attribute
+  /// variables may be absent at this position.
   void genElementParser(FormatElement *element, MethodBody &body,
                         FmtContext &attrTypeCtx,
                         GenContext genCtx = GenContext::Normal);
@@ -363,17 +433,20 @@ struct OperationFormat {
   /// A flag indicating if this operation has the SingleBlock trait.
   bool hasSingleBlockTrait;
 
-  /// Indicate whether attribute are stored in properties.
-  bool useProperties;
+  /// Indicate whether the dialect uses strict properties in assembly formats.
+  bool useStrictPropertiesInAssemblyFormat;
 
   /// Indicate whether prop-dict is used in the format
-  bool hasPropDict;
+  bool hasPropDict = false;
 
   /// The Operation class name
   StringRef opCppClassName;
 
+  /// The names of inherent attributes for this operation.
+  SmallVector<StringRef> inherentAttrNames;
+
   /// A map of buildable types to indices.
-  llvm::MapVector<StringRef, int, llvm::StringMap<int>> buildableTypes;
+  llvm::MapVector<StringRef, int, StringMap<int>> buildableTypes;
 
   /// The index of the buildable type, if valid, for every operand and result.
   std::vector<TypeResolution> operandTypes, resultTypes;
@@ -389,24 +462,66 @@ struct OperationFormat {
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
+//===----------------------------------------------------------------------===//
 
-/// Returns true if we can format the given attribute as an EnumAttr in the
+/// Returns the Record to use when constructing an EnumInfo for the given
+/// attribute. For legacy EnumAttrInfo-based attributes, this is the attribute
+/// def itself (which extends both EnumInfo and Attr). For newer EnumAttr-based
+/// attributes (which extend AttrDef), this is the `enum` sub-field.
+static const llvm::Record *getEnumInfoRecord(const Attribute &attr) {
+  if (attr.isSubClassOf("EnumAttr"))
+    return attr.getDef().getValueAsDef("enum");
+  return &attr.getDef();
+}
+
+/// Returns true if we can format the given attribute as an enum in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
-  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
-  if (!enumAttr)
+  if (!baseAttr.isEnumAttr())
+    return false;
+
+  // New-style EnumAttr-based attributes have a custom AttrDef parser and
+  // printer. Only format their symbolic value directly when requested with an
+  // `enum` directive.
+  if (baseAttr.isSubClassOf("EnumAttr"))
     return false;
 
   // The attribute must have a valid underlying type and a constant builder.
-  return !enumAttr->getUnderlyingType().empty() &&
-         !enumAttr->getConstBuilderTemplate().empty();
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+  return !enumInfo.getUnderlyingType().empty() &&
+         !baseAttr.getConstBuilderTemplate().empty();
+}
+
+/// Returns true if a keyed `prop-dict` field should use the underlying enum
+/// syntax instead of the default EnumAttr body syntax. Custom EnumAttr formats
+/// continue to use their own parser and printer.
+static bool shouldStripEnumAttrInPropDict(const NamedAttribute *attr) {
+  Attribute baseAttr = attr->attr.getBaseAttr();
+  return baseAttr.isSubClassOf("EnumAttr") &&
+         baseAttr.getDef().getValueAsString("assemblyFormat") ==
+             "`<` $value `>`";
+}
+
+/// Returns true if a stripped EnumAttr field needs brackets to disambiguate
+/// commas in an unquoted bit enum from commas separating `prop-dict` fields.
+static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
+  if (!shouldStripEnumAttrInPropDict(attr))
+    return false;
+  EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
+  return enumInfo.isBitEnum() &&
+         enumInfo.getDef().getValueAsString("separator").trim() == ",";
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
 static bool shouldFormatSymbolNameAttr(const NamedAttribute *attr) {
   return attr->attr.getBaseAttr().getAttrDefName() == "SymbolNameAttr";
 }
+
+/// The code snippet used to get properties from the operation state.
+/// {0}: The C++ class name of the operation.
+const char *const getPropertiesCode =
+    "result.getOrAddProperties<{0}::Properties>()";
 
 /// The code snippet used to generate a parser call for an attribute.
 ///
@@ -488,6 +603,76 @@ const char *const enumAttrParserCode = R"(
   }
 )";
 
+/// The code snippet used to generate a parser call for an unquoted bit enum
+/// attribute.
+///
+/// {0}: The name of the attribute.
+/// {1}: The C++ namespace for the enum symbolize functions.
+/// {2}: The function to symbolize a string of the enum.
+/// {3}: The constant builder call to create an attribute of the enum type.
+/// {4}: The set of allowed enum keywords.
+/// {5}: The error message on failure when the enum isn't present.
+/// {6}: The attribute assignment expression.
+/// {7}: The C++ enum type.
+/// {8}: The optional parser for the enum separator.
+const char *const unquotedBitEnumAttrParserCode = R"(
+  {
+    ::llvm::StringRef attrStr;
+    auto loc = parser.getCurrentLocation();
+    if (parser.parseOptionalKeyword(&attrStr, {4})) {
+      {5}
+    } else {
+      {7} flags = {{};
+      while (true) {
+        auto flag = {1}::{2}(attrStr);
+        if (!flag)
+          return parser.emitError(loc, "invalid ")
+                 << "{0} attribute specification: \"" << attrStr << '"';;
+        flags = flags | *flag;
+        if (failed(parser.{8}()))
+          break;
+        if (parser.parseKeyword(&attrStr))
+          return ::mlir::failure();
+      }
+      auto attrOptional = ::std::optional<{7}>(flags);
+      {0}Attr = {3};
+      {6}
+    }
+  }
+)";
+
+/// The code snippet used to generate a parser call for a property.
+/// {0}: The name of the property
+/// {1}: The property access expression
+/// (result.getOrAddProperties<Op::Properties>()) {2}: The property's parser
+/// code with appropriate substitutions performed {3}: The description of the
+/// expected property for the error message.
+const char *const propertyParserCode = R"(
+  auto {0}PropLoc = parser.getCurrentLocation();
+  auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::ParseResult {{
+    {2}
+    return ::mlir::success();
+  }({1}.{0});
+  if (failed({0}PropParseResult)) {{
+    return parser.emitError({0}PropLoc, "invalid value for property {0}, expected {3}");
+  }
+)";
+
+/// The code snippet used to generate a parser call for a property.
+/// {0}: The name of the property
+/// {1}: The property access expression
+/// (result.getOrAddProperties<Op::Properties>()) {2}: The property's parser
+/// code with appropriate substitutions performed
+const char *const optionalPropertyParserCode = R"(
+  auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::OptionalParseResult {{
+    {2}
+    return ::mlir::success();
+  }({1}.{0});
+  if ({0}PropParseResult.has_value() && failed(*{0}PropParseResult)) {{
+    return ::mlir::failure();
+  }
+)";
+
 /// The code snippet used to generate a parser call for an operand.
 ///
 /// {0}: The name of the operand.
@@ -497,17 +682,9 @@ const char *const variadicOperandParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalOperandParserCode = R"(
-  {
-    {0}OperandsLoc = parser.getCurrentLocation();
-    ::mlir::OpAsmParser::UnresolvedOperand operand;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalOperand(operand);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Operands.push_back(operand);
-    }
-  }
+  {0}OperandsLoc = parser.getCurrentLocation();
+  if (::mlir::detail::parseOptionalOperandInto(parser, {0}Operands))
+    return ::mlir::failure();
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
@@ -551,16 +728,8 @@ const char *const variadicTypeParserCode = R"(
     return ::mlir::failure();
 )";
 const char *const optionalTypeParserCode = R"(
-  {
-    ::mlir::Type optionalType;
-    ::mlir::OptionalParseResult parseResult =
-                                    parser.parseOptionalType(optionalType);
-    if (parseResult.has_value()) {
-      if (failed(*parseResult))
-        return ::mlir::failure();
-      {0}Types.push_back(optionalType);
-    }
-  }
+  if (::mlir::detail::parseOptionalTypeInto(parser, {0}Types))
+    return ::mlir::failure();
 )";
 const char *const typeParserCode = R"(
   {
@@ -604,7 +773,7 @@ const char *const inferReturnTypesParserCode = R"(
 /// The code snippet used to generate a parser call for a region list.
 ///
 /// {0}: The name for the region list.
-const char *regionListParserCode = R"(
+static const char *regionListParserCode = R"(
   {
     std::unique_ptr<::mlir::Region> region;
     auto firstRegionResult = parser.parseOptionalRegion(region);
@@ -627,7 +796,7 @@ const char *regionListParserCode = R"(
 /// The code snippet used to ensure a list of regions have terminators.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureTerminatorParserCode = R"(
+static const char *regionListEnsureTerminatorParserCode = R"(
   for (auto &region : {0}Regions)
     ensureTerminator(*region, parser.getBuilder(), result.location);
 )";
@@ -635,7 +804,7 @@ const char *regionListEnsureTerminatorParserCode = R"(
 /// The code snippet used to ensure a list of regions have a block.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureSingleBlockParserCode = R"(
+static const char *regionListEnsureSingleBlockParserCode = R"(
   for (auto &region : {0}Regions)
     if (region->empty()) region->emplaceBlock();
 )";
@@ -643,7 +812,7 @@ const char *regionListEnsureSingleBlockParserCode = R"(
 /// The code snippet used to generate a parser call for an optional region.
 ///
 /// {0}: The name of the region.
-const char *optionalRegionParserCode = R"(
+static const char *optionalRegionParserCode = R"(
   {
      auto parseResult = parser.parseOptionalRegion(*{0}Region);
      if (parseResult.has_value() && failed(*parseResult))
@@ -654,7 +823,7 @@ const char *optionalRegionParserCode = R"(
 /// The code snippet used to generate a parser call for a region.
 ///
 /// {0}: The name of the region.
-const char *regionParserCode = R"(
+static const char *regionParserCode = R"(
   if (parser.parseRegion(*{0}Region))
     return ::mlir::failure();
 )";
@@ -662,21 +831,21 @@ const char *regionParserCode = R"(
 /// The code snippet used to ensure a region has a terminator.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureTerminatorParserCode = R"(
+static const char *regionEnsureTerminatorParserCode = R"(
   ensureTerminator(*{0}Region, parser.getBuilder(), result.location);
 )";
 
 /// The code snippet used to ensure a region has a block.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureSingleBlockParserCode = R"(
+static const char *regionEnsureSingleBlockParserCode = R"(
   if ({0}Region->empty()) {0}Region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for a successor list.
 ///
 /// {0}: The name for the successor list.
-const char *successorListParserCode = R"(
+static const char *successorListParserCode = R"(
   {
     ::mlir::Block *succ;
     auto firstSucc = parser.parseOptionalSuccessor(succ);
@@ -698,7 +867,7 @@ const char *successorListParserCode = R"(
 /// The code snippet used to generate a parser call for a successor.
 ///
 /// {0}: The name of the successor.
-const char *successorParserCode = R"(
+static const char *successorParserCode = R"(
   if (parser.parseSuccessor({0}Successor))
     return ::mlir::failure();
 )";
@@ -706,7 +875,7 @@ const char *successorParserCode = R"(
 /// The code snippet used to generate a parser for OIList
 ///
 /// {0}: literal keyword corresponding to a case for oilist
-const char *oilistParserCode = R"(
+static const char *oilistParserCode = R"(
   if ({0}Clause) {
     return parser.emitError(parser.getNameLoc())
           << "`{0}` clause can appear at most once in the expansion of the "
@@ -784,38 +953,40 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
               .Case("]", "RSquare()")
               .Case("?", "Question()")
               .Case("+", "Plus()")
+              .Case("-", "Minus()")
               .Case("*", "Star()")
               .Case("...", "Ellipsis()");
 }
 
 /// Generate the storage code required for parsing the given element.
 static void genElementParserStorage(FormatElement *element, const Operator &op,
-                                    MethodBody &body) {
+                                    MethodBody &body,
+                                    bool groupOperandStorage) {
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
     ArrayRef<FormatElement *> elements = optional->getThenElements();
 
     // If the anchor is a unit attribute, it won't be parsed directly so elide
     // it.
-    auto *anchor = dyn_cast<AttributeVariable>(optional->getAnchor());
+    auto *anchor = dyn_cast<AttributeLikeVariable>(optional->getAnchor());
     FormatElement *elidedAnchorElement = nullptr;
-    if (anchor && anchor != elements.front() && anchor->isUnitAttr())
+    if (anchor && anchor != elements.front() && anchor->isUnit())
       elidedAnchorElement = anchor;
     for (FormatElement *childElement : elements)
       if (childElement != elidedAnchorElement)
-        genElementParserStorage(childElement, op, body);
+        genElementParserStorage(childElement, op, body, groupOperandStorage);
     for (FormatElement *childElement : optional->getElseElements())
-      genElementParserStorage(childElement, op, body);
+      genElementParserStorage(childElement, op, body, groupOperandStorage);
 
   } else if (auto *oilist = dyn_cast<OIListElement>(element)) {
     for (ArrayRef<FormatElement *> pelement : oilist->getParsingElements()) {
-      if (!oilist->getUnitAttrParsingElement(pelement))
+      if (!oilist->getUnitVariableParsingElement(pelement))
         for (FormatElement *element : pelement)
-          genElementParserStorage(element, op, body);
+          genElementParserStorage(element, op, body, groupOperandStorage);
     }
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
-    for (FormatElement *paramElement : custom->getArguments())
-      genElementParserStorage(paramElement, op, body);
+    for (FormatElement *paramElement : custom->getElements())
+      genElementParserStorage(paramElement, op, body, groupOperandStorage);
 
   } else if (isa<OperandsDirective>(element)) {
     body << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
@@ -830,15 +1001,26 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
 
   } else if (auto *attr = dyn_cast<AttributeVariable>(element)) {
     const NamedAttribute *var = attr->getVar();
-    body << llvm::formatv("  {0} {1}Attr;\n", var->attr.getStorageType(),
-                          var->name);
+    body << formatv("  {0} {1}Attr;\n", var->attr.getStorageType(), var->name);
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     StringRef name = operand->getVar()->name;
     if (operand->getVar()->isVariableLength()) {
-      body
-          << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
-          << name << "Operands;\n";
+      if (groupOperandStorage) {
+        unsigned index = 0;
+        for (const NamedTypeConstraint &candidate : op.getOperands()) {
+          if (&candidate == operand->getVar())
+            break;
+          if (candidate.isVariableLength())
+            ++index;
+        }
+        body << "  auto &" << name << "Operands = odsOperandVectors[" << index
+             << "];\n";
+      } else {
+        body
+            << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
+            << name << "Operands;\n";
+      }
       if (operand->getVar()->isVariadicOfVariadic()) {
         body << "    llvm::SmallVector<int32_t> " << name
              << "OperandGroupSizes;\n";
@@ -849,31 +1031,31 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
            << "  ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand> "
            << name << "Operands(&" << name << "RawOperand, 1);";
     }
-    body << llvm::formatv("  ::llvm::SMLoc {0}OperandsLoc;\n"
-                          "  (void){0}OperandsLoc;\n",
-                          name);
+    body << formatv("  ::llvm::SMLoc {0}OperandsLoc;\n"
+                    "  (void){0}OperandsLoc;\n",
+                    name);
 
   } else if (auto *region = dyn_cast<RegionVariable>(element)) {
     StringRef name = region->getVar()->name;
     if (region->getVar()->isVariadic()) {
-      body << llvm::formatv(
+      body << formatv(
           "  ::llvm::SmallVector<std::unique_ptr<::mlir::Region>, 2> "
           "{0}Regions;\n",
           name);
     } else {
-      body << llvm::formatv("  std::unique_ptr<::mlir::Region> {0}Region = "
-                            "std::make_unique<::mlir::Region>();\n",
-                            name);
+      body << formatv("  std::unique_ptr<::mlir::Region> {0}Region = "
+                      "std::make_unique<::mlir::Region>();\n",
+                      name);
     }
 
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     StringRef name = successor->getVar()->name;
     if (successor->getVar()->isVariadic()) {
-      body << llvm::formatv("  ::llvm::SmallVector<::mlir::Block *, 2> "
-                            "{0}Successors;\n",
-                            name);
+      body << formatv("  ::llvm::SmallVector<::mlir::Block *, 2> "
+                      "{0}Successors;\n",
+                      name);
     } else {
-      body << llvm::formatv("  ::mlir::Block *{0}Successor = nullptr;\n", name);
+      body << formatv("  ::mlir::Block *{0}Successor = nullptr;\n", name);
     }
 
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
@@ -883,8 +1065,8 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
       body << "  ::llvm::SmallVector<::mlir::Type, 1> " << name << "Types;\n";
     else
       body
-          << llvm::formatv("  ::mlir::Type {0}RawType{{};\n", name)
-          << llvm::formatv(
+          << formatv("  ::mlir::Type {0}RawType{{};\n", name)
+          << formatv(
                  "  ::llvm::ArrayRef<::mlir::Type> {0}Types(&{0}RawType, 1);\n",
                  name);
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
@@ -897,7 +1079,8 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
 }
 
 /// Generate the parser for a parameter to a custom directive.
-static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
+static void genCustomParameterParser(FormatElement *param, MethodBody &body,
+                                     StringRef opCppClassName) {
   if (auto *attr = dyn_cast<AttributeVariable>(param)) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(param)) {
@@ -908,40 +1091,40 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     StringRef name = operand->getVar()->name;
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
     if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
-      body << llvm::formatv("{0}OperandGroups", name);
+      body << formatv("{0}OperandGroups", name);
     else if (lengthKind == ArgumentLengthKind::Variadic)
-      body << llvm::formatv("{0}Operands", name);
+      body << formatv("{0}Operands", name);
     else if (lengthKind == ArgumentLengthKind::Optional)
-      body << llvm::formatv("{0}Operand", name);
+      body << formatv("{0}Operand", name);
     else
       body << formatv("{0}RawOperand", name);
 
   } else if (auto *region = dyn_cast<RegionVariable>(param)) {
     StringRef name = region->getVar()->name;
     if (region->getVar()->isVariadic())
-      body << llvm::formatv("{0}Regions", name);
+      body << formatv("{0}Regions", name);
     else
-      body << llvm::formatv("*{0}Region", name);
+      body << formatv("*{0}Region", name);
 
   } else if (auto *successor = dyn_cast<SuccessorVariable>(param)) {
     StringRef name = successor->getVar()->name;
     if (successor->getVar()->isVariadic())
-      body << llvm::formatv("{0}Successors", name);
+      body << formatv("{0}Successors", name);
     else
-      body << llvm::formatv("{0}Successor", name);
+      body << formatv("{0}Successor", name);
 
   } else if (auto *dir = dyn_cast<RefDirective>(param)) {
-    genCustomParameterParser(dir->getArg(), body);
+    genCustomParameterParser(dir->getArg(), body, opCppClassName);
 
   } else if (auto *dir = dyn_cast<TypeDirective>(param)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getArg(), lengthKind);
     if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
-      body << llvm::formatv("{0}TypeGroups", listName);
+      body << formatv("{0}TypeGroups", listName);
     else if (lengthKind == ArgumentLengthKind::Variadic)
-      body << llvm::formatv("{0}Types", listName);
+      body << formatv("{0}Types", listName);
     else if (lengthKind == ArgumentLengthKind::Optional)
-      body << llvm::formatv("{0}Type", listName);
+      body << formatv("{0}Type", listName);
     else
       body << formatv("{0}RawType", listName);
 
@@ -952,8 +1135,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     body << tgfmt(string->getValue(), &ctx);
 
   } else if (auto *property = dyn_cast<PropertyVariable>(param)) {
-    body << llvm::formatv("result.getOrAddProperties<Properties>().{0}",
-                          property->getVar()->name);
+    body << formatv(getPropertiesCode, opCppClassName) << "."
+         << property->getVar()->name;
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -961,7 +1144,6 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
 
 /// Generate the parser for a custom directive.
 static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
-                                     bool useProperties,
                                      StringRef opCppClassName,
                                      bool isOptional = false) {
   body << "  {\n";
@@ -970,30 +1152,30 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   // * Add a local variable for optional operands and types. This provides a
   //   better API to the user defined parser methods.
   // * Set the location of operand variables.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *operand = dyn_cast<OperandVariable>(param)) {
       auto *var = operand->getVar();
       body << "    " << var->name
            << "OperandsLoc = parser.getCurrentLocation();\n";
       if (var->isOptional()) {
-        body << llvm::formatv(
+        body << formatv(
             "    ::std::optional<::mlir::OpAsmParser::UnresolvedOperand> "
             "{0}Operand;\n",
             var->name);
       } else if (var->isVariadicOfVariadic()) {
-        body << llvm::formatv("    "
-                              "::llvm::SmallVector<::llvm::SmallVector<::mlir::"
-                              "OpAsmParser::UnresolvedOperand>> "
-                              "{0}OperandGroups;\n",
-                              var->name);
+        body << formatv("    "
+                        "::llvm::SmallVector<::llvm::SmallVector<::mlir::"
+                        "OpAsmParser::UnresolvedOperand>> "
+                        "{0}OperandGroups;\n",
+                        var->name);
       }
     } else if (auto *dir = dyn_cast<TypeDirective>(param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getArg(), lengthKind);
       if (lengthKind == ArgumentLengthKind::Optional) {
-        body << llvm::formatv("    ::mlir::Type {0}Type;\n", listName);
+        body << formatv("    ::mlir::Type {0}Type;\n", listName);
       } else if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
-        body << llvm::formatv(
+        body << formatv(
             "    ::llvm::SmallVector<llvm::SmallVector<::mlir::Type>> "
             "{0}TypeGroups;\n",
             listName);
@@ -1003,7 +1185,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
       if (auto *operand = dyn_cast<OperandVariable>(input)) {
         if (!operand->getVar()->isOptional())
           continue;
-        body << llvm::formatv(
+        body << formatv(
             "    {0} {1}Operand = {1}Operands.empty() ? {0}() : "
             "{1}Operands[0];\n",
             "::std::optional<::mlir::OpAsmParser::UnresolvedOperand>",
@@ -1013,18 +1195,18 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
         ArgumentLengthKind lengthKind;
         StringRef listName = getTypeListName(type->getArg(), lengthKind);
         if (lengthKind == ArgumentLengthKind::Optional) {
-          body << llvm::formatv("    ::mlir::Type {0}Type = {0}Types.empty() ? "
-                                "::mlir::Type() : {0}Types[0];\n",
-                                listName);
+          body << formatv("    ::mlir::Type {0}Type = {0}Types.empty() ? "
+                          "::mlir::Type() : {0}Types[0];\n",
+                          listName);
         }
       }
     }
   }
 
   body << "    auto odsResult = parse" << dir->getName() << "(parser";
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     body << ", ";
-    genCustomParameterParser(param, body);
+    genCustomParameterParser(param, body, opCppClassName);
   }
   body << ");\n";
 
@@ -1036,43 +1218,36 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   // After parsing, add handling for any of the optional constructs.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *attr = dyn_cast<AttributeVariable>(param)) {
       const NamedAttribute *var = attr->getVar();
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
-        body << llvm::formatv("    if ({0}Attr)\n  ", var->name);
-      if (useProperties) {
-        body << formatv(
-            "    result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;\n",
-            var->name, opCppClassName);
-      } else {
-        body << llvm::formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
-                              var->name);
-      }
-
+        body << formatv("    if ({0}Attr)\n  ", var->name);
+      std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+      body << formatv("    {0}.{1} = {1}Attr;\n", propAccess, var->name);
     } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
       const NamedTypeConstraint *var = operand->getVar();
       if (var->isOptional()) {
-        body << llvm::formatv("    if ({0}Operand.has_value())\n"
-                              "      {0}Operands.push_back(*{0}Operand);\n",
-                              var->name);
+        body << formatv("    if ({0}Operand.has_value())\n"
+                        "      {0}Operands.push_back(*{0}Operand);\n",
+                        var->name);
       } else if (var->isVariadicOfVariadic()) {
-        body << llvm::formatv(
+        body << formatv(
             "    for (const auto &subRange : {0}OperandGroups) {{\n"
             "      {0}Operands.append(subRange.begin(), subRange.end());\n"
             "      {0}OperandGroupSizes.push_back(subRange.size());\n"
             "    }\n",
-            var->name, var->constraint.getVariadicOfVariadicSegmentSizeAttr());
+            var->name);
       }
     } else if (auto *dir = dyn_cast<TypeDirective>(param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getArg(), lengthKind);
       if (lengthKind == ArgumentLengthKind::Optional) {
-        body << llvm::formatv("    if ({0}Type)\n"
-                              "      {0}Types.push_back({0}Type);\n",
-                              listName);
+        body << formatv("    if ({0}Type)\n"
+                        "      {0}Types.push_back({0}Type);\n",
+                        listName);
       } else if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
-        body << llvm::formatv(
+        body << formatv(
             "    for (const auto &subRange : {0}TypeGroups)\n"
             "      {0}Types.append(subRange.begin(), subRange.end());\n",
             listName);
@@ -1086,26 +1261,35 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
 /// Generate the parser for a enum attribute.
 static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
-                              bool useProperties, StringRef opCppClassName) {
+                              StringRef opCppClassName,
+                              bool formatAsEnumDirective,
+                              bool formatBitEnumAsUnquoted = false) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Generate the code for building an attribute for this enum.
   std::string attrBuilderStr;
   {
     llvm::raw_string_ostream os(attrBuilderStr);
-    os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
+    os << tgfmt(baseAttr.getConstBuilderTemplate(), &attrTypeCtx,
                 "*attrOptional");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
-  std::string validCaseKeywordsStr = "{";
+  std::string validCaseKeywordsStr;
   llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
-  for (const EnumAttrCase &attrCase : cases)
-    if (canFormatStringAsKeyword(attrCase.getStr()))
-      validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
-  validCaseKeywordsOS.str().back() = '}';
+  validCaseKeywordsOS << '{';
+  bool isFirstKeyword = true;
+  for (const EnumCase &attrCase : cases) {
+    if (!canFormatStringAsKeyword(attrCase.getStr()))
+      continue;
+    if (!isFirstKeyword)
+      validCaseKeywordsOS << ',';
+    isFirstKeyword = false;
+    validCaseKeywordsOS << '"' << attrCase.getStr() << '"';
+  }
+  validCaseKeywordsOS << '}';
 
   // If the attribute is not optional, build an error message for the missing
   // attribute.
@@ -1122,31 +1306,65 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
     errorMessageOS << "]\");";
   }
   std::string attrAssignment;
-  if (useProperties) {
-    attrAssignment =
-        formatv("  "
-                "result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;",
-                var->name, opCppClassName);
-  } else {
-    attrAssignment =
-        formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+  attrAssignment = formatv("  {0}.{1} = {1}Attr;", propAccess, var->name);
+
+  if (formatAsEnumDirective && enumInfo.isBitEnum() &&
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
+    StringRef separator = enumInfo.getDef().getValueAsString("separator");
+    StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
+                                     .Case("|", "parseOptionalVerticalBar")
+                                     .Case(",", "parseOptionalComma")
+                                     .Default("invalid bit enum separator");
+    std::string enumType =
+        (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
+    body << formatv(unquotedBitEnumAttrParserCode, var->name,
+                    enumInfo.getCppNamespace(),
+                    enumInfo.getStringToSymbolFnName(), attrBuilderStr,
+                    validCaseKeywordsStr, errorMessage, attrAssignment,
+                    enumType, parseSeparatorFn);
+    return;
   }
 
-  body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
-                  enumAttr.getStringToSymbolFnName(), attrBuilderStr,
+  body << formatv(enumAttrParserCode, var->name, enumInfo.getCppNamespace(),
+                  enumInfo.getStringToSymbolFnName(), attrBuilderStr,
                   validCaseKeywordsStr, errorMessage, attrAssignment);
+}
+
+// Generate the parser for a property.
+static void genPropertyParser(PropertyVariable *propVar, MethodBody &body,
+                              StringRef opCppClassName,
+                              bool requireParse = true) {
+  StringRef name = propVar->getVar()->name;
+  const Property &prop = propVar->getVar()->prop;
+  bool parseOptionally =
+      prop.hasDefaultValue() && !requireParse && prop.hasOptionalParser();
+  FmtContext fmtContext;
+  fmtContext.addSubst("_parser", "parser");
+  fmtContext.addSubst("_ctxt", "parser.getContext()");
+  fmtContext.addSubst("_storage", "propStorage");
+
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+  if (parseOptionally) {
+    body << formatv(optionalPropertyParserCode, name, propAccess,
+                    tgfmt(prop.getOptionalParserCall(), &fmtContext));
+  } else {
+    body << formatv(propertyParserCode, name, propAccess,
+                    tgfmt(prop.getParserCall(), &fmtContext),
+                    prop.getSummary());
+  }
 }
 
 // Generate the parser for an attribute.
 static void genAttrParser(AttributeVariable *attr, MethodBody &body,
                           FmtContext &attrTypeCtx, bool parseAsOptional,
-                          bool useProperties, StringRef opCppClassName) {
+                          StringRef opCppClassName) {
   const NamedAttribute *var = attr->getVar();
 
   // Check to see if we can parse this as an enum attribute.
-  if (canFormatEnumAttr(var))
+  if (attr->shouldFormatAsEnum() || canFormatEnumAttr(var))
     return genEnumAttrParser(var, body, attrTypeCtx, parseAsOptional,
-                             useProperties, opCppClassName);
+                             opCppClassName, attr->shouldFormatAsEnum());
 
   // Check to see if we should parse this as a symbol name attribute.
   if (shouldFormatSymbolNameAttr(var)) {
@@ -1174,16 +1392,8 @@ static void genAttrParser(AttributeVariable *attr, MethodBody &body,
         body << formatv(attrParserCode, var->name, attrTypeStr);
     }
   }
-  if (useProperties) {
-    body << formatv(
-        "  if ({0}Attr) result.getOrAddProperties<{1}::Properties>().{0} = "
-        "{0}Attr;\n",
-        var->name, opCppClassName);
-  } else {
-    body << formatv(
-        "  if ({0}Attr) result.attributes.append(\"{0}\", {0}Attr);\n",
-        var->name);
-  }
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+  body << formatv("  if ({0}Attr) {1}.{0} = {0}Attr;\n", var->name, propAccess);
 }
 
 // Generates the 'setPropertiesFromParsedAttr' used to set properties from a
@@ -1211,21 +1421,72 @@ if (!dict) {
   emitError() << "expected DictionaryAttr to set properties";
   return ::mlir::failure();
 }
+// keep track of used keys in the input dictionary to be able to error out
+// if there are some unknown ones.
+::mlir::DenseSet<::mlir::StringAttr> usedKeys;
+::mlir::MLIRContext *ctx = dict.getContext();
+(void)ctx;
 )decl";
 
-  // TODO: properties might be optional as well.
+  // `operandSegmentSizes`/`resultSegmentSizes` are trait-injected properties
+  // not enumerated by `op.getProperties()`, so they need to be special-cased
+  // here, mirroring `setPropertiesFromAttr` in OpDefinitionsGen.cpp. This is
+  // only necessary when the format can't infer the sizes itself (bulk
+  // `operands`/`type(results)` directives, or when there is no declarative
+  // assemblyFormat at all -- e.g. `hasCustomAssemblyFormat`, where this
+  // generated setter may still be reused by a hand-written parser that has
+  // no other way to recover the sizes); when the format spells out each
+  // variadic group individually, `genParserVariadicSegmentResolution` always
+  // overwrites the property from the parsed operand/result groups, so the key
+  // is left completely untouched here (same as any other property not
+  // handled by this format).
+  //
+  // {0}: segment sizes property name
+  const char *segmentSizesFromAttrFmt = R"decl(
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+usedKeys.insert({0}AttrName);
+auto attr = dict.get({0}AttrName);
+if (!attr) {{
+  emitError() << "expected key entry for {0} in DictionaryAttr to set "
+             "Properties.";
+  return ::mlir::failure();
+}
+if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
+      return emitError() << "for `{0}`: ";
+    })))
+  return ::mlir::failure();
+)decl";
+  bool hasNoDeclarativeFormat = !op.hasAssemblyFormat();
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      (hasNoDeclarativeFormat || fmt.allOperands)) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes");
+  }
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      (hasNoDeclarativeFormat || fmt.allResultTypes)) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes");
+  }
+
+  // {0}: fromAttribute call
+  // {1}: property name
+  // {2}: isRequired
   const char *propFromAttrFmt = R"decl(
 auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
+         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
-auto attr = dict.get("{1}");
-if (!attr) {{
+auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
+usedKeys.insert({1}AttrName);
+auto attr = dict.get({1}AttrName);
+if (!attr && {2}) {{
   emitError() << "expected key entry for {1} in DictionaryAttr to set "
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
+      return emitError() << "for `{1}`: ";
+    })))
   return ::mlir::failure();
 )decl";
 
@@ -1233,23 +1494,28 @@ if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   for (const NamedProperty &namedProperty : op.getProperties()) {
     if (fmt.usedProperties.contains(&namedProperty))
       continue;
+    if (fmt.inferredAttributes.contains(namedProperty.name))
+      continue;
 
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
 
     StringRef name = namedProperty.name;
     const Property &prop = namedProperty.prop;
+    bool isRequired = !prop.hasDefaultValue();
     FmtContext fctx;
     body << formatv(propFromAttrFmt,
                     tgfmt(prop.getConvertFromAttributeCall(),
                           &fctx.addSubst("_attr", "propAttr")
                                .addSubst("_storage", "propStorage")
                                .addSubst("_diag", "emitError")),
-                    name);
+                    name, isRequired);
   }
 
   // Generate the setter for any attribute not parsed elsewhere.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     if (fmt.usedAttributes.contains(&namedAttr))
+      continue;
+    if (fmt.inferredAttributes.contains(namedAttr.name))
       continue;
 
     const Attribute &attr = namedAttr.attr;
@@ -1264,7 +1530,9 @@ if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
     bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
     body << formatv(R"decl(
 auto &propStorage = prop.{0};
-auto attr = dict.get("{0}");
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+auto attr = dict.get({0}AttrName);
+usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
   if (!attr) {{
     emitError() << "expected key entry for {0} in DictionaryAttr to set "
@@ -1282,6 +1550,292 @@ if (attr || /*isRequired=*/{1}) {{
 )decl",
                     namedAttr.name, isRequired);
   }
+  body << R"decl(
+for (::mlir::NamedAttribute attr : dict) {
+  if (!usedKeys.contains(attr.getName()))
+    return emitError() << "unknown key '" << attr.getName() <<
+        "' when parsing properties dictionary";
+}
+return ::mlir::success();
+)decl";
+}
+
+/// Generate the parser for the key-value spelling of `prop-dict`. The generic
+/// DictionaryAttr spelling remains supported as a compatibility path.
+static bool isPresenceOnlyUnitProp(const Property &property) {
+  StringRef propertyDefName = property.getBaseProperty().getPropertyDefName();
+  return (propertyDefName == "UnitProp" || propertyDefName == "UnitProperty") &&
+         property.getDefaultValue() == "false";
+}
+
+static void genKeyValuePropDictParser(OperationFormat &fmt, Operator &op,
+                                      OpClass &opClass) {
+  if (!fmt.hasPropDict)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::OpAsmParser &", "parser");
+  paramList.emplace_back("::mlir::OperationState &", "result");
+
+  Method *method = opClass.addStaticMethod("::mlir::ParseResult",
+                                           "parsePropertiesFromKeyValueList",
+                                           std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+auto &prop = result.getOrAddProperties<Properties>();
+(void)prop;
+)decl";
+
+  bool parseOperandSegmentSizes =
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands;
+  bool parseResultSegmentSizes =
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes;
+
+  if (parseOperandSegmentSizes)
+    body << "bool seen_operandSegmentSizes = false;\n";
+  if (parseResultSegmentSizes)
+    body << "bool seen_resultSegmentSizes = false;\n";
+
+  auto shouldParseProperty = [&](const NamedProperty &property) {
+    return !fmt.usedProperties.contains(&property) &&
+           !fmt.inferredAttributes.contains(property.name);
+  };
+  auto shouldParseAttribute = [&](const NamedAttribute &attribute) {
+    return !attribute.attr.isDerivedAttr() &&
+           !fmt.usedAttributes.contains(&attribute) &&
+           !fmt.inferredAttributes.contains(attribute.name);
+  };
+
+  for (const NamedProperty &property : op.getProperties())
+    if (shouldParseProperty(property))
+      body << "bool seen_" << property.name << " = false;\n";
+  for (const NamedAttribute &attribute : op.getAttributes())
+    if (shouldParseAttribute(attribute))
+      body << "bool seen_" << attribute.name << " = false;\n";
+
+  body << R"decl(
+if (succeeded(parser.parseOptionalLess())) {
+  ::llvm::SMLoc dictionaryLoc = parser.getCurrentLocation();
+  ::mlir::NamedAttrList propertyAttributes;
+  if (parser.parseOptionalAttrDict(propertyAttributes))
+    return ::mlir::failure();
+  if (dictionaryLoc != parser.getCurrentLocation()) {
+    if (parser.parseGreater())
+      return ::mlir::failure();
+    auto propertyDictionary =
+        ::mlir::DictionaryAttr::get(parser.getContext(), propertyAttributes);
+    return setPropertiesFromParsedAttr(prop, propertyDictionary, [&]() {
+      return parser.emitError(dictionaryLoc)
+             << "invalid properties " << propertyDictionary << ": ";
+    });
+  }
+
+  bool reachedEnd = succeeded(parser.parseOptionalGreater());
+  while (!reachedEnd) {
+    ::llvm::SMLoc keyLoc = parser.getCurrentLocation();
+    ::llvm::StringRef key;
+    if (parser.parseKeyword(&key))
+      return ::mlir::failure();
+)decl";
+
+  SmallVector<StringRef> unitKeys;
+  for (const NamedProperty &property : op.getProperties())
+    if (shouldParseProperty(property) && isPresenceOnlyUnitProp(property.prop))
+      unitKeys.push_back(property.name);
+  for (const NamedAttribute &attribute : op.getAttributes())
+    if (shouldParseAttribute(attribute) &&
+        attribute.attr.getBaseAttr().getAttrDefName() == "UnitAttr")
+      unitKeys.push_back(attribute.name);
+
+  if (unitKeys.empty()) {
+    body << "    if (parser.parseEqual())\n";
+  } else {
+    body << "    bool isUnitKey = ";
+    for (auto [index, key] : llvm::enumerate(unitKeys))
+      body << (index == 0 ? "" : " || ") << "key == \"" << key << "\"";
+    body << ";\n"
+         << "    if (!isUnitKey && parser.parseEqual())\n";
+  }
+  body << "      return ::mlir::failure();\n";
+
+  bool isFirst = true;
+  FmtContext attrTypeCtx;
+  attrTypeCtx.withBuilder("parser.getBuilder()");
+
+  auto genSegmentSizesParser = [&](StringRef name) {
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << name
+         << " && key == \"" << name << "\") {\n"
+         << "      seen_" << name << " = true;\n"
+         << R"decl(
+      ::llvm::SmallVector<int32_t> parsedSegmentSizes;
+      if (parser.parseCommaSeparatedList(
+              ::mlir::AsmParser::Delimiter::Square, [&]() {
+                int32_t size;
+                if (parser.parseInteger(size))
+                  return ::mlir::failure();
+                parsedSegmentSizes.push_back(size);
+                return ::mlir::success();
+              }))
+        return ::mlir::failure();
+)decl"
+         << "      if (parsedSegmentSizes.size() != prop." << name
+         << ".size())\n"
+         << "        return parser.emitError(keyLoc, \"expected "
+         << (name == "operandSegmentSizes" ? op.getNumOperands()
+                                           : op.getNumResults())
+         << " entries for " << name << "\");\n"
+         << "      ::llvm::copy(parsedSegmentSizes, prop." << name
+         << ".begin());\n"
+         << "    }\n";
+    isFirst = false;
+  };
+
+  if (parseOperandSegmentSizes)
+    genSegmentSizesParser("operandSegmentSizes");
+  if (parseResultSegmentSizes)
+    genSegmentSizesParser("resultSegmentSizes");
+
+  for (const NamedProperty &property : op.getProperties()) {
+    if (!shouldParseProperty(property))
+      continue;
+    bool isUnitProp = isPresenceOnlyUnitProp(property.prop);
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << property.name
+         << " && key == \"" << property.name << "\") {\n"
+         << "      seen_" << property.name << " = true;\n";
+    if (isUnitProp) {
+      PropertyVariable propertyVariable(&property);
+      body << "      if (succeeded(parser.parseOptionalEqual())) {\n";
+      genPropertyParser(&propertyVariable, body.indent().indent(),
+                        fmt.opCppClassName);
+      body.unindent() << "      } else {\n"
+                      << "        prop." << property.name << " = true;\n"
+                      << "      }\n";
+    } else if (!property.prop.usesDefaultParser()) {
+      PropertyVariable propertyVariable(&property);
+      genPropertyParser(&propertyVariable, body.indent(), fmt.opCppClassName);
+    } else {
+      FmtContext fctx;
+      fctx.addSubst("_attr", "propertyAttr");
+      fctx.addSubst("_storage", "propStorage");
+      fctx.addSubst("_diag", "emitError");
+      body.indent() << R"decl(
+auto parseResult = ::mlir::detail::parsePropertyWithFallback(
+    parser, prop.)decl"
+                    << property.name << R"decl(,
+    [&](auto &propStorage,
+        ::mlir::Attribute propertyAttr) -> ::mlir::LogicalResult {
+  auto emitError = [&]() {
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid value for property " << key << ": ";
+  };
+)decl";
+      body << tgfmt(property.prop.getConvertFromAttributeCall(), &fctx)
+           << ";\n";
+      body << "});\n"
+           << "if (failed(parseResult))\n"
+           << "  return ::mlir::failure();\n";
+      body.unindent();
+    }
+    body.unindent() << "    }\n";
+    isFirst = false;
+  }
+  for (const NamedAttribute &attribute : op.getAttributes()) {
+    if (!shouldParseAttribute(attribute))
+      continue;
+    AttributeVariable attributeVariable(&attribute);
+    bool isUnitAttr =
+        attribute.attr.getBaseAttr().getAttrDefName() == "UnitAttr";
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << attribute.name
+         << " && key == \"" << attribute.name << "\") {\n"
+         << "      seen_" << attribute.name << " = true;\n";
+    if (isUnitAttr) {
+      body << "      if (succeeded(parser.parseOptionalEqual())) {\n"
+           << "        " << attribute.attr.getStorageType() << " "
+           << attribute.name << "Attr;\n";
+      genAttrParser(&attributeVariable, body.indent().indent(), attrTypeCtx,
+                    /*parseAsOptional=*/false, fmt.opCppClassName);
+      body.unindent() << "      } else {\n"
+                      << "        prop." << attribute.name
+                      << " = parser.getBuilder().getUnitAttr();\n"
+                      << "      }\n";
+    } else {
+      body << "      " << attribute.attr.getStorageType() << " "
+           << attribute.name << "Attr;\n";
+      if (shouldStripEnumAttrInPropDict(&attribute)) {
+        bool useBrackets = needsPropDictEnumBrackets(&attribute);
+        if (useBrackets)
+          body << "      if (parser.parseLSquare())\n"
+                  "        return ::mlir::failure();\n";
+        genEnumAttrParser(&attribute, body.indent(), attrTypeCtx,
+                          /*parseAsOptional=*/false, fmt.opCppClassName,
+                          /*formatAsEnumDirective=*/true,
+                          /*formatBitEnumAsUnquoted=*/true);
+        if (useBrackets)
+          body << "      if (parser.parseRSquare())\n"
+                  "        return ::mlir::failure();\n";
+      } else {
+        genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
+                      /*parseAsOptional=*/false, fmt.opCppClassName);
+      }
+    }
+    body.unindent() << "    }\n";
+    isFirst = false;
+  }
+
+  if (isFirst) {
+    body << R"decl(
+    return parser.emitError(keyLoc,
+                            "unknown property in properties dictionary: ")
+           << key;
+)decl";
+  } else {
+    body << R"decl(
+    else {
+      return parser.emitError(
+                 keyLoc,
+                 "duplicate or unknown property in properties dictionary: ")
+             << key;
+    }
+)decl";
+  }
+
+  body << R"decl(
+    reachedEnd = succeeded(parser.parseOptionalGreater());
+    if (!reachedEnd && parser.parseComma())
+      return ::mlir::failure();
+  }
+}
+)decl";
+
+  if (parseOperandSegmentSizes)
+    body << "if (!seen_operandSegmentSizes)\n"
+            "  return ::mlir::emitError(result.location, \"properties "
+            "dictionary is missing required property: "
+            "operandSegmentSizes\");\n";
+  if (parseResultSegmentSizes)
+    body << "if (!seen_resultSegmentSizes)\n"
+            "  return ::mlir::emitError(result.location, \"properties "
+            "dictionary is missing required property: "
+            "resultSegmentSizes\");\n";
+
+  for (const NamedProperty &property : op.getProperties()) {
+    if (shouldParseProperty(property) && !property.prop.hasDefaultValue())
+      body << "if (!seen_" << property.name
+           << ")\n  return ::mlir::emitError(result.location, "
+              "\"properties dictionary is missing required property: "
+           << property.name << "\");\n";
+  }
+  for (const NamedAttribute &attribute : op.getAttributes()) {
+    if (shouldParseAttribute(attribute) && !attribute.attr.isOptional() &&
+        !attribute.attr.hasDefaultValue())
+      body << "if (!seen_" << attribute.name
+           << ")\n  return ::mlir::emitError(result.location, "
+              "\"properties dictionary is missing required attribute: "
+           << attribute.name << "\");\n";
+  }
   body << "return ::mlir::success();\n";
 }
 
@@ -1297,8 +1851,16 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   // Generate variables to store the operands and type within the format. This
   // allows for referencing these variables in the presence of optional
   // groupings.
+  unsigned numVariableLengthOperands = llvm::count_if(
+      op.getOperands(), [](const NamedTypeConstraint &operand) {
+        return operand.isVariableLength();
+      });
+  bool groupOperandStorage = !allOperands && numVariableLengthOperands > 1;
+  if (groupOperandStorage)
+    body << "  ::mlir::detail::OperandParserStorage<"
+         << numVariableLengthOperands << "> odsOperandVectors;\n";
   for (FormatElement *element : elements)
-    genElementParserStorage(element, op, body);
+    genElementParserStorage(element, op, body, groupOperandStorage);
 
   // A format context used when parsing attributes with buildable types.
   FmtContext attrTypeCtx;
@@ -1318,11 +1880,13 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   body << "  return ::mlir::success();\n";
 
   genParsedAttrPropertiesSetter(*this, op, opClass);
+  genKeyValuePropDictParser(*this, op, opClass);
 }
 
 void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                                        FmtContext &attrTypeCtx,
                                        GenContext genCtx) {
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
     auto genElementParsers = [&](FormatElement *firstElement,
@@ -1331,27 +1895,26 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       // If the anchor is a unit attribute, we don't need to print it. When
       // parsing, we will add this attribute if this group is present.
       FormatElement *elidedAnchorElement = nullptr;
-      auto *anchorAttr = dyn_cast<AttributeVariable>(optional->getAnchor());
-      if (anchorAttr && anchorAttr != firstElement &&
-          anchorAttr->isUnitAttr()) {
-        elidedAnchorElement = anchorAttr;
+      auto *anchorVar = dyn_cast<AttributeLikeVariable>(optional->getAnchor());
+      if (anchorVar && anchorVar != firstElement && anchorVar->isUnit()) {
+        elidedAnchorElement = anchorVar;
 
         if (!thenGroup == optional->isInverted()) {
-          // Add the anchor unit attribute to the operation state.
-          if (useProperties) {
-            body << formatv(
-                "    result.getOrAddProperties<{1}::Properties>().{0} = "
-                "parser.getBuilder().getUnitAttr();",
-                anchorAttr->getVar()->name, opCppClassName);
+          // Add the anchor unit attribute or property to the operation state
+          // or set the property to true.
+          if (isa<PropertyVariable>(anchorVar)) {
+            body << formatv("    {0}.{1} = true;", propAccess,
+                            anchorVar->getName());
           } else {
-            body << "    result.addAttribute(\"" << anchorAttr->getVar()->name
-                 << "\", parser.getBuilder().getUnitAttr());\n";
+            body << formatv("    {0}.{1} = parser.getBuilder().getUnitAttr();",
+                            propAccess, anchorVar->getName());
           }
         }
       }
 
-      // Generate the rest of the elements inside an optional group. Elements in
-      // an optional group after the guard are parsed as required.
+      // Generate the remaining then-elements or all else-elements after the
+      // guard has selected a branch. Optional attributes must be parsed as
+      // required here so that an incomplete group is rejected.
       for (FormatElement *childElement : elements)
         if (childElement != elidedAnchorElement)
           genElementParser(childElement, body, attrTypeCtx,
@@ -1366,8 +1929,14 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     FormatElement *firstElement = thenElements.front();
     if (auto *attrVar = dyn_cast<AttributeVariable>(firstElement)) {
       genAttrParser(attrVar, body, attrTypeCtx, /*parseAsOptional=*/true,
-                    useProperties, opCppClassName);
+                    opCppClassName);
       body << "  if (" << attrVar->getVar()->name << "Attr) {\n";
+    } else if (auto *propVar = dyn_cast<PropertyVariable>(firstElement)) {
+      genPropertyParser(propVar, body, opCppClassName, /*requireParse=*/false);
+      body << formatv("if ({0}PropParseResult.has_value() && "
+                      "succeeded(*{0}PropParseResult)) ",
+                      propVar->getVar()->name)
+           << " {\n";
     } else if (auto *literal = dyn_cast<LiteralElement>(firstElement)) {
       body << "  if (::mlir::succeeded(parser.parseOptional";
       genLiteralParser(literal->getSpelling(), body);
@@ -1381,17 +1950,16 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         genElementParser(regionVar, body, attrTypeCtx);
         body << "  if (!" << region->name << "Regions.empty()) {\n";
       } else {
-        body << llvm::formatv(optionalRegionParserCode, region->name);
+        body << formatv(optionalRegionParserCode, region->name);
         body << "  if (!" << region->name << "Region->empty()) {\n  ";
         if (hasImplicitTermTrait)
-          body << llvm::formatv(regionEnsureTerminatorParserCode, region->name);
+          body << formatv(regionEnsureTerminatorParserCode, region->name);
         else if (hasSingleBlockTrait)
-          body << llvm::formatv(regionEnsureSingleBlockParserCode,
-                                region->name);
+          body << formatv(regionEnsureSingleBlockParserCode, region->name);
       }
     } else if (auto *custom = dyn_cast<CustomDirective>(firstElement)) {
       body << "  if (auto optResult = [&]() -> ::mlir::OptionalParseResult {\n";
-      genCustomDirectiveParser(custom, body, useProperties, opCppClassName,
+      genCustomDirectiveParser(custom, body, opCppClassName,
                                /*isOptional=*/true);
       body << "    return ::mlir::success();\n"
            << "  }(); optResult.has_value() && ::mlir::failed(*optResult)) {\n"
@@ -1417,11 +1985,41 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
     /// OIList Directive
   } else if (OIListElement *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+    }
+
     for (LiteralElement *le : oilist->getLiteralElements())
       body << "  bool " << le->getSpelling() << "Clause = false;\n";
+    if (oilist->getSeparator())
+      body << "  bool oilistClauseParsed = false;\n";
 
     // Generate the parsing loop
     body << "  while(true) {\n";
+    if (LiteralElement *separator = oilist->getSeparator()) {
+      body << "    auto oilistSeparatorLoc = parser.getCurrentLocation();\n";
+      body << "    if (oilistClauseParsed) {\n";
+      body << "      if (failed(parser.parseOptional";
+      genLiteralParser(separator->getSpelling(), body);
+      body << ")) {\n";
+      body << "        if (";
+      llvm::interleave(
+          oilist->getLiteralElements(),
+          [&](LiteralElement *literal) {
+            body << "succeeded(parser.parseOptional";
+            genLiteralParser(literal->getSpelling(), body);
+            body << ")";
+          },
+          [&] { body << " || "; });
+      body << ")\n";
+      body << "          return parser.emitError(oilistSeparatorLoc,\n"
+              "              \"expected '"
+           << separator->getSpelling() << "' between oilist clauses\");\n";
+      body << "        break;\n";
+      body << "      }\n";
+      body << "    }\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -1430,27 +2028,34 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << ")) {\n";
       StringRef lelementName = lelement->getSpelling();
       body << formatv(oilistParserCode, lelementName);
-      if (AttributeVariable *unitAttrElem =
-              oilist->getUnitAttrParsingElement(pelement)) {
-        if (useProperties) {
-          body << formatv(
-              "    result.getOrAddProperties<{1}::Properties>().{0} = "
-              "parser.getBuilder().getUnitAttr();",
-              unitAttrElem->getVar()->name, opCppClassName);
+      if (oilist->getSeparator())
+        body << "    oilistClauseParsed = true;\n";
+      if (AttributeLikeVariable *unitVarElem =
+              oilist->getUnitVariableParsingElement(pelement)) {
+        if (isa<PropertyVariable>(unitVarElem)) {
+          body << formatv("    {0}.{1} = true;", propAccess,
+                          unitVarElem->getName());
         } else {
-          body << "  result.addAttribute(\"" << unitAttrElem->getVar()->name
-               << "\", UnitAttr::get(parser.getContext()));\n";
+          body << formatv("    {0}.{1} = parser.getBuilder().getUnitAttr();",
+                          propAccess, unitVarElem->getName());
         }
       } else {
         for (FormatElement *el : pelement)
-          genElementParser(el, body, attrTypeCtx);
+          genElementParser(el, body, attrTypeCtx, GenContext::Optional);
       }
       body << "    } else ";
     }
     body << " {\n";
+    if (oilist->getSeparator()) {
+      body << "    if (oilistClauseParsed)\n";
+      body << "      return parser.emitError(oilistSeparatorLoc,\n"
+              "          \"expected oilist clause after separator\");\n";
+    }
     body << "    break;\n";
     body << "  }\n";
     body << "}\n";
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -1466,35 +2071,34 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
   } else if (auto *attr = dyn_cast<AttributeVariable>(element)) {
     bool parseAsOptional =
         (genCtx == GenContext::Normal && attr->getVar()->attr.isOptional());
-    genAttrParser(attr, body, attrTypeCtx, parseAsOptional, useProperties,
-                  opCppClassName);
+    genAttrParser(attr, body, attrTypeCtx, parseAsOptional, opCppClassName);
+  } else if (auto *prop = dyn_cast<PropertyVariable>(element)) {
+    genPropertyParser(prop, body, opCppClassName);
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
     StringRef name = operand->getVar()->name;
     if (lengthKind == ArgumentLengthKind::VariadicOfVariadic)
-      body << llvm::formatv(
-          variadicOfVariadicOperandParserCode, name,
-          operand->getVar()->constraint.getVariadicOfVariadicSegmentSizeAttr());
+      body << formatv(variadicOfVariadicOperandParserCode, name);
     else if (lengthKind == ArgumentLengthKind::Variadic)
-      body << llvm::formatv(variadicOperandParserCode, name);
+      body << formatv(variadicOperandParserCode, name);
     else if (lengthKind == ArgumentLengthKind::Optional)
-      body << llvm::formatv(optionalOperandParserCode, name);
+      body << formatv(optionalOperandParserCode, name);
     else
       body << formatv(operandParserCode, name);
 
   } else if (auto *region = dyn_cast<RegionVariable>(element)) {
     bool isVariadic = region->getVar()->isVariadic();
-    body << llvm::formatv(isVariadic ? regionListParserCode : regionParserCode,
-                          region->getVar()->name);
+    body << formatv(isVariadic ? regionListParserCode : regionParserCode,
+                    region->getVar()->name);
     if (hasImplicitTermTrait)
-      body << llvm::formatv(isVariadic ? regionListEnsureTerminatorParserCode
-                                       : regionEnsureTerminatorParserCode,
-                            region->getVar()->name);
+      body << formatv(isVariadic ? regionListEnsureTerminatorParserCode
+                                 : regionEnsureTerminatorParserCode,
+                      region->getVar()->name);
     else if (hasSingleBlockTrait)
-      body << llvm::formatv(isVariadic ? regionListEnsureSingleBlockParserCode
-                                       : regionEnsureSingleBlockParserCode,
-                            region->getVar()->name);
+      body << formatv(isVariadic ? regionListEnsureSingleBlockParserCode
+                                 : regionEnsureSingleBlockParserCode,
+                      region->getVar()->name);
 
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     bool isVariadic = successor->getVar()->isVariadic();
@@ -1509,13 +2113,20 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                   << (attrDict->isWithKeyword() ? "WithKeyword" : "")
                   << "(result.attributes))\n"
                   << "  return ::mlir::failure();\n";
-    if (useProperties) {
+    if (!useStrictPropertiesInAssemblyFormat) {
       body << "if (failed(verifyInherentAttrs(result.name, result.attributes, "
               "[&]() {\n"
            << "    return parser.emitError(loc) << \"'\" << "
               "result.name.getStringRef() << \"' op \";\n"
            << "  })))\n"
            << "  return ::mlir::failure();\n";
+    } else {
+      for (StringRef name : inherentAttrNames) {
+        body << "if (result.attributes.get(\"" << name << "\"))\n"
+             << "  return parser.emitError(loc, \"inherent attribute '" << name
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled\");\n";
+      }
     }
     body.unindent() << "}\n";
     body.unindent();
@@ -1523,7 +2134,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     body << "  if (parseProperties(parser, result))\n"
          << "    return ::mlir::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
-    genCustomDirectiveParser(customDir, body, useProperties, opCppClassName);
+    genCustomDirectiveParser(customDir, body, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
     body << "  [[maybe_unused]] ::llvm::SMLoc allOperandLoc ="
          << " parser.getCurrentLocation();\n"
@@ -1531,35 +2142,35 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
          << "    return ::mlir::failure();\n";
 
   } else if (isa<RegionsDirective>(element)) {
-    body << llvm::formatv(regionListParserCode, "full");
+    body << formatv(regionListParserCode, "full");
     if (hasImplicitTermTrait)
-      body << llvm::formatv(regionListEnsureTerminatorParserCode, "full");
+      body << formatv(regionListEnsureTerminatorParserCode, "full");
     else if (hasSingleBlockTrait)
-      body << llvm::formatv(regionListEnsureSingleBlockParserCode, "full");
+      body << formatv(regionListEnsureSingleBlockParserCode, "full");
 
   } else if (isa<SuccessorsDirective>(element)) {
-    body << llvm::formatv(successorListParserCode, "full");
+    body << formatv(successorListParserCode, "full");
 
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getArg(), lengthKind);
     if (lengthKind == ArgumentLengthKind::VariadicOfVariadic) {
-      body << llvm::formatv(variadicOfVariadicTypeParserCode, listName);
+      body << formatv(variadicOfVariadicTypeParserCode, listName);
     } else if (lengthKind == ArgumentLengthKind::Variadic) {
-      body << llvm::formatv(variadicTypeParserCode, listName);
+      body << formatv(variadicTypeParserCode, listName);
     } else if (lengthKind == ArgumentLengthKind::Optional) {
-      body << llvm::formatv(optionalTypeParserCode, listName);
+      body << formatv(optionalTypeParserCode, listName);
     } else {
       const char *parserCode =
           dir->shouldBeQualified() ? qualifiedTypeParserCode : typeParserCode;
       TypeSwitch<FormatElement *>(dir->getArg())
           .Case<OperandVariable, ResultVariable>([&](auto operand) {
-            body << formatv(parserCode,
-                            operand->getVar()->constraint.getCPPClassName(),
+            body << formatv(false, parserCode,
+                            operand->getVar()->constraint.getCppType(),
                             listName);
           })
           .Default([&](auto operand) {
-            body << formatv(parserCode, "::mlir::Type", listName);
+            body << formatv(false, parserCode, "::mlir::Type", listName);
           });
     }
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
@@ -1663,6 +2274,13 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
 void OperationFormat::genParserOperandTypeResolution(
     Operator &op, MethodBody &body,
     function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Fixed-length parser variables are represented as ArrayRefs to scalar
+  // storage. Coverity does not track the explicit length and reports the
+  // resolveOperands calls as ARRAY_VS_SINGLETON.
+  auto emitArrayVsSingletonSuppression = [&] {
+    body << "  // coverity[ARRAY_VS_SINGLETON]\n";
+  };
+
   // Early exit if there are no operands.
   if (op.getNumOperands() == 0)
     return;
@@ -1672,6 +2290,7 @@ void OperationFormat::genParserOperandTypeResolution(
   if (allOperandTypes) {
     // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
+      emitArrayVsSingletonSuppression();
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
               "    return ::mlir::failure();\n";
@@ -1680,6 +2299,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
     // Otherwise, use llvm::concat to merge the disjoint operand lists together.
     // llvm::concat does not allow the case of a single range, so guard it here.
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(";
     if (op.getNumOperands() > 1) {
       body << "::llvm::concat<const ::mlir::OpAsmParser::UnresolvedOperand>(";
@@ -1697,6 +2317,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
   // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(allOperands, ";
 
     // Group all of the operand types together to perform the resolution all at
@@ -1724,14 +2345,24 @@ void OperationFormat::genParserOperandTypeResolution(
   // separately.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
+    TypeResolution &operandType = operandTypes[i];
+    // Inferred type resolution may access another optional variable's empty
+    // type vector. Directly parsed type ranges are safe and must always be
+    // resolved so that operand/type cardinality is validated.
+    bool guardOptionalOperand =
+        operand.isOptional() && !operandType.isDirectlyParsed();
+    if (guardOptionalOperand)
+      body << "  if (!" << operand.name << "Operands.empty()) {\n";
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
-    TypeResolution &operandType = operandTypes[i];
     emitTypeResolver(operandType, operand.name);
 
     body << ", " << operand.name
          << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
+    if (guardOptionalOperand)
+      body << "  }\n";
   }
 }
 
@@ -1776,6 +2407,7 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
 
 void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
+  std::string propAccess = formatv(getPropertiesCode, op.getCppClassName());
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
@@ -1785,38 +2417,18 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << formatv("}), "
-                        "result.getOrAddProperties<{0}::Properties>()."
-                        "operandSegmentSizes.begin());\n",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operandSegmentSizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << "}));\n";
-      }
+      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+      body << "}), " << propAccess << ".operandSegmentSizes.begin());\n";
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
         continue;
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << llvm::formatv(
-            "  result.getOrAddProperties<{0}::Properties>().{1} = "
-            "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
-            op.getCppClassName(),
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      } else {
-        body << llvm::formatv(
-            "  result.addAttribute(\"{0}\", "
-            "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));"
-            "\n",
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      }
+      body << formatv(
+          "  {0}.{1} = "
+          "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
+          propAccess, operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+          operand.name);
     }
   }
 
@@ -1829,34 +2441,30 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << formatv("}), "
-                      "result.getOrAddProperties<{0}::Properties>()."
-                      "resultSegmentSizes.begin());\n",
-                      op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"resultSegmentSizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << "}));\n";
-    }
+    body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+    llvm::interleaveComma(op.getResults(), body, interleaveFn);
+    body << "}), " << propAccess << ".resultSegmentSizes.begin());\n";
   }
 }
 
 //===----------------------------------------------------------------------===//
 // PrinterGen
+//===----------------------------------------------------------------------===//
 
 /// The code snippet used to generate a printer call for a region of an
 // operation that has the SingleBlockImplicitTerminator trait.
 ///
 /// {0}: The name of the region.
-const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
+static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
-      printTerminator = !term->getAttrDictionary().empty() ||
+      ::mlir::NamedAttrList termAttrs(term->getRawDictionaryAttrs());
+      term->getName().walkInherentAttrs(
+          term, [&](::llvm::StringRef name, ::mlir::Attribute &attr) {{
+            termAttrs.append(name, attr);
+          });
+      printTerminator = !termAttrs.empty() ||
                         term->getNumOperands() != 0 ||
                         term->getNumResults() != 0;
     }
@@ -1870,33 +2478,238 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 ///
 /// {0}: The name of the enum attribute.
 /// {1}: The name of the enum attributes symbolToString function.
-const char *enumAttrBeginPrinterCode = R"(
+static const char *enumAttrBeginPrinterCode = R"(
   {
-    auto caseValue = {0}();
+    auto caseValue = {0};
     auto caseValueStr = {1}(caseValue);
 )";
+
+/// Generate a check that an optional or default-valued attribute or property
+/// has a non-default value. For these purposes, the default value of an
+/// optional attribute is its presence, even if the attribute itself has a
+/// default value.
+static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
+                                    AttributeVariable &attrElement) {
+  Attribute attr = attrElement.getVar()->attr;
+  std::string getter = op.getGetterName(attrElement.getVar()->name);
+  bool optionalAndDefault = attr.isOptional() && attr.hasDefaultValue();
+  if (optionalAndDefault)
+    body << "(";
+  if (attr.isOptional())
+    body << getter << "Attr()";
+  if (optionalAndDefault)
+    body << " && ";
+  if (attr.hasDefaultValue()) {
+    FmtContext fctx;
+    fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+    body << getter << "Attr() != "
+         << tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                  tgfmt(attr.getDefaultValue(), &fctx));
+  }
+  if (optionalAndDefault)
+    body << ")";
+}
+
+static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
+                                    PropertyVariable &propElement) {
+  FmtContext fctx;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << op.getGetterName(propElement.getVar()->name) << "() != "
+       << tgfmt(propElement.getVar()->prop.getDefaultValue(), &fctx);
+}
+
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
+static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
+                                      MethodBody &body,
+                                      const char *elidedStorage) {
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
+}
+
+static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
+                               MethodBody &body, StringRef valueExpression,
+                               bool formatAsEnumDirective = false,
+                               bool formatBitEnumAsUnquoted = false);
+
+/// Generate the key-value printer used by the default `prop-dict` printer.
+static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
+                                       OpClass &opClass) {
+  if (!fmt.hasPropDict || op.hasCustomPropertiesPrinter())
+    return;
+
+  bool hasPrintableField =
+      !op.getProperties().empty() ||
+      llvm::any_of(
+          op.getAttributes(),
+          [](const auto &attr) { return !attr.attr.isDerivedAttr(); }) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+       fmt.allOperands) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+       fmt.allResultTypes);
+  if (!hasPrintableField)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::MLIRContext *", "_odsContext");
+  paramList.emplace_back("::mlir::OpAsmPrinter &", "_odsPrinter");
+  paramList.emplace_back("const Properties &", "prop");
+  paramList.emplace_back("::mlir::ArrayRef<::llvm::StringRef>", "elidedProps");
+  Method *method = opClass.addStaticMethod(
+      "void", "_odsPrintPropertiesAsKeyValueList", std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+bool first = true;
+auto printKey = [&](::llvm::StringRef name, bool printValue) {
+  _odsPrinter << (first ? " <" : ", ") << name;
+  if (printValue)
+    _odsPrinter << " = ";
+  first = false;
+};
+auto shouldPrint = [&](::llvm::StringRef name) {
+  return !::llvm::is_contained(elidedProps, name);
+};
+)decl";
+
+  auto genSegmentSizesPrinter = [&](StringRef name) {
+    body << "if (shouldPrint(\"" << name << "\")) {\n"
+         << "  printKey(\"" << name << "\", /*printValue=*/true);\n"
+         << "  _odsPrinter << \"[\";\n"
+         << "  ::llvm::interleaveComma(prop." << name << ", _odsPrinter);\n"
+         << "  _odsPrinter << \"]\";\n"
+         << "}\n";
+  };
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands)
+    genSegmentSizesPrinter("operandSegmentSizes");
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes)
+    genSegmentSizesPrinter("resultSegmentSizes");
+
+  for (const NamedProperty &namedProperty : op.getProperties()) {
+    const Property &property = namedProperty.prop;
+    bool isUnitProp = isPresenceOnlyUnitProp(property);
+    body << "if (shouldPrint(\"" << namedProperty.name << "\")) {\n"
+         << "  printKey(\"" << namedProperty.name << "\", /*printValue=*/"
+         << (isUnitProp ? "false" : "true") << ");\n";
+    FmtContext printerContext;
+    printerContext.addSubst("_printer", "_odsPrinter");
+    printerContext.addSubst("_ctxt", "_odsContext");
+    printerContext.addSubst("_storage", "prop." + namedProperty.name);
+    if (isUnitProp) {
+      // Unit properties are represented by the presence of their key.
+    } else if (property.usesDefaultParser()) {
+      body << "  if constexpr (::mlir::detail::HasKeyValueFieldParser<"
+              "std::remove_cv_t<std::remove_reference_t<decltype(prop."
+           << namedProperty.name << ")>>>::value) {\n"
+           << "    " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n"
+           << "  } else {\n"
+           << "    auto propertyAttr = [&]() -> ::mlir::Attribute {\n";
+      FmtContext conversionContext;
+      conversionContext.addSubst("_ctxt", "_odsContext");
+      conversionContext.addSubst("_storage", "prop." + namedProperty.name);
+      body << tgfmt(property.getConvertToAttributeCall(), &conversionContext)
+           << "\n"
+           << "    }();\n"
+           << "    _odsPrinter.printAttribute(propertyAttr);\n"
+           << "  }\n";
+    } else {
+      body << "  " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n";
+    }
+    body << "}\n";
+  }
+
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+    StringRef name = namedAttr.name;
+    AttributeVariable attrVariable(&namedAttr);
+    bool isUnitAttr =
+        namedAttr.attr.getBaseAttr().getAttrDefName() == "UnitAttr";
+    body << "if (shouldPrint(\"" << name << "\")";
+    if (namedAttr.attr.isOptional() || namedAttr.attr.hasDefaultValue())
+      body << " && prop." << name;
+    body << ") {\n"
+         << "  printKey(\"" << name << "\", /*printValue=*/"
+         << (isUnitAttr ? "false" : "true") << ");\n";
+
+    if (isUnitAttr) {
+      // Unit attributes are represented by the presence of their key.
+    } else if (shouldStripEnumAttrInPropDict(&namedAttr)) {
+      bool useBrackets = needsPropDictEnumBrackets(&namedAttr);
+      if (useBrackets)
+        body << "  _odsPrinter << \"[\";\n";
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression,
+                         /*formatAsEnumDirective=*/true,
+                         /*formatBitEnumAsUnquoted=*/true);
+      if (useBrackets)
+        body << "  _odsPrinter << \"]\";\n";
+    } else if (canFormatEnumAttr(&namedAttr)) {
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression);
+    } else if (shouldFormatSymbolNameAttr(&namedAttr)) {
+      body << "  _odsPrinter.printSymbolName(prop." << name
+           << ".getValue());\n";
+    } else {
+      if (attrVariable.getTypeBuilder())
+        body << "  _odsPrinter.printAttributeWithoutType(prop." << name
+             << ");\n";
+      else if (attrVariable.shouldBeQualified() ||
+               namedAttr.attr.getStorageType() == "::mlir::Attribute")
+        body << "  _odsPrinter.printAttribute(prop." << name << ");\n";
+      else
+        body << "  _odsPrinter.printStrippedAttrOrType(prop." << name << ");\n";
+    }
+    body << "}\n";
+  }
+  body << "if (!first)\n"
+          "  _odsPrinter << \">\";\n";
+}
 
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedProps");
+
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
+  for (StringRef key : fmt.inferredAttributes.keys())
+    body << "  elidedProps.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (fmt.usedAttributes.contains(&namedAttr))
+      continue;
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -1904,39 +2717,87 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
       body << "  }\n";
     }
   }
+  // Similarly, elide default-valued properties.
+  for (const NamedProperty &prop : op.getProperties()) {
+    if (prop.prop.hasDefaultValue()) {
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
+      body << "  if (" << op.getGetterName(prop.name)
+           << "() == " << tgfmt(prop.prop.getDefaultValue(), &fctx) << ") {";
+      body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
+      body << "  }\n";
+    }
+  }
 
-  body << "  _odsPrinter << \" \";\n"
-       << "  printProperties(this->getContext(), _odsPrinter, "
+  // The `printProperties` method is responsible for printing out a leading
+  // space so that empty `prop-dict`s don't produce stray whitespace.
+  body << "  printProperties((*this)->getContext(), _odsPrinter, "
           "getProperties(), elidedProps);\n";
 }
 
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
-  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-  // Elide the variadic segment size attributes if necessary.
+  // TODO: Remove the non-strict path when strict properties in assembly
+  // formats are always enabled.
+  if (fmt.useStrictPropertiesInAssemblyFormat) {
+    // Inherent attributes are printed by their bindings or prop-dict.
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getDiscardableAttrDictionary().getValue());\n";
+    return;
+  }
+
+  SmallVector<StringRef> fixedElidedAttrs;
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
+    fixedElidedAttrs.push_back("operandSegmentSizes");
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
-  for (const StringRef key : fmt.inferredAttributes.keys())
-    body << "  elidedAttrs.push_back(\"" << key << "\");\n";
+    fixedElidedAttrs.push_back("resultSegmentSizes");
+  for (StringRef key : fmt.inferredAttributes.keys())
+    fixedElidedAttrs.push_back(key);
   for (const NamedAttribute *attr : fmt.usedAttributes)
-    body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+    fixedElidedAttrs.push_back(attr->name);
+
+  bool hasConditionalElision =
+      llvm::any_of(op.getAttributes(), [&](const NamedAttribute &namedAttr) {
+        return !fmt.usedAttributes.contains(&namedAttr) &&
+               !namedAttr.attr.isDerivedAttr() &&
+               namedAttr.attr.hasDefaultValue();
+      });
+  if (hasConditionalElision) {
+    body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  } else if (fixedElidedAttrs.empty()) {
+    body << "  ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;\n";
+  } else {
+    body << "  static constexpr ::llvm::StringRef elidedAttrs[] = {";
+    llvm::interleaveComma(fixedElidedAttrs, body, [&](StringRef name) {
+      body << "\"" << name << "\"";
+    });
+    body << "};\n";
+  }
+
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (fmt.usedAttributes.contains(&namedAttr))
+      continue;
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -1947,11 +2808,20 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   if (fmt.hasPropDict)
     body << "  _odsPrinter.printOptionalAttrDict"
          << (withKeyword ? "WithKeyword" : "")
-         << "(llvm::to_vector((*this)->getDiscardableAttrs()), elidedAttrs);\n";
-  else
-    body << "  _odsPrinter.printOptionalAttrDict"
+         << "(llvm::to_vector((*this)->getDiscardableAttrDictionary().getValue("
+            ")), elidedAttrs);\n";
+  else {
+    body << "  ::mlir::NamedAttrList _odsAttrs("
+            "(*this)->getRawDictionaryAttrs());\n"
+            "  (*this)->getName().walkInherentAttrs(*this, "
+            "[&](::llvm::StringRef name, ::mlir::Attribute &attr) {\n"
+            "    _odsAttrs.append(name, attr);\n"
+            "  });\n"
+            "  _odsPrinter.printOptionalAttrDict"
          << (withKeyword ? "WithKeyword" : "")
-         << "((*this)->getAttrs(), elidedAttrs);\n";
+         << "(_odsAttrs.getDictionary((*this)->getContext()).getValue(), "
+            "elidedAttrs);\n";
+  }
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
@@ -1959,12 +2829,12 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 /// the previous element was a punctuation literal.
 static void genLiteralPrinter(StringRef value, MethodBody &body,
                               bool &shouldEmitSpace, bool &lastWasPunctuation) {
-  body << "  _odsPrinter";
+  body << "  _odsPrinter << \"";
 
   // Don't insert a space for certain punctuation.
   if (shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation))
-    body << " << ' '";
-  body << " << \"" << value << "\";\n";
+    body << ' ';
+  body << value << "\";\n";
 
   // Insert a space after certain literals.
   shouldEmitSpace =
@@ -1993,7 +2863,12 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     body << op.getGetterName(attr->getVar()->name) << "Attr()";
 
   } else if (isa<AttrDictDirective>(element)) {
-    body << "getOperation()->getAttrDictionary()";
+    body << "[&]() { ::mlir::NamedAttrList attrs("
+            "getOperation()->getRawDictionaryAttrs()); "
+            "getOperation()->getName().walkInherentAttrs(getOperation(), "
+            "[&](::llvm::StringRef name, ::mlir::Attribute &attr) { "
+            "attrs.append(name, attr); }); return attrs.getDictionary("
+            "getOperation()->getContext()); }()";
 
   } else if (isa<PropDictDirective>(element)) {
     body << "getProperties()";
@@ -2019,7 +2894,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     if (var->isVariadic())
       body << name << "().getTypes()";
     else if (var->isOptional())
-      body << llvm::formatv("({0}() ? {0}().getType() : ::mlir::Type())", name);
+      body << formatv("({0}() ? {0}().getType() : ::mlir::Type())", name);
     else
       body << name << "().getType()";
 
@@ -2031,7 +2906,6 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 
   } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
     FmtContext ctx;
-    ctx.addSubst("_ctxt", "getContext()");
     const NamedProperty *namedProperty = property->getVar();
     ctx.addSubst("_storage", "getProperties()." + namedProperty->name);
     body << tgfmt(namedProperty->prop.getConvertFromStorageCall(), &ctx);
@@ -2044,7 +2918,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       const Operator &op, MethodBody &body) {
   body << "  print" << customDir->getName() << "(_odsPrinter, *this";
-  for (FormatElement *param : customDir->getArguments()) {
+  for (FormatElement *param : customDir->getElements()) {
     body << ", ";
     genCustomDirectiveParameterPrinter(param, op, body);
   }
@@ -2055,8 +2929,7 @@ static void genCustomDirectivePrinter(CustomDirective *customDir,
 static void genRegionPrinter(const Twine &regionName, MethodBody &body,
                              bool hasImplicitTermTrait) {
   if (hasImplicitTermTrait)
-    body << llvm::formatv(regionSingleBlockImplicitTerminatorPrinterCode,
-                          regionName);
+    body << formatv(regionSingleBlockImplicitTerminatorPrinterCode, regionName);
   else
     body << "  _odsPrinter.printRegion(" << regionName << ");\n";
 }
@@ -2080,12 +2953,12 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
   auto *operand = dyn_cast<OperandVariable>(arg);
   auto *var = operand ? operand->getVar() : cast<ResultVariable>(arg)->getVar();
   if (var->isVariadicOfVariadic())
-    return body << llvm::formatv("{0}().join().getTypes()",
-                                 op.getGetterName(var->name));
+    return body << formatv("{0}().join().getTypes()",
+                           op.getGetterName(var->name));
   if (var->isVariadic())
     return body << op.getGetterName(var->name) << "().getTypes()";
   if (var->isOptional())
-    return body << llvm::formatv(
+    return body << formatv(
                "({0}() ? ::llvm::ArrayRef<::mlir::Type>({0}().getType()) : "
                "::llvm::ArrayRef<::mlir::Type>())",
                op.getGetterName(var->name));
@@ -2097,15 +2970,30 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body) {
+                               MethodBody &body, StringRef valueExpression,
+                               bool formatAsEnumDirective,
+                               bool formatBitEnumAsUnquoted) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+  bool dereferenceGetter =
+      var->attr.isOptional() && !var->attr.hasDefaultValue();
 
-  body << llvm::formatv(enumAttrBeginPrinterCode,
-                        (var->attr.isOptional() ? "*" : "") +
-                            op.getGetterName(var->name),
-                        enumAttr.getSymbolToStringFnName());
+  std::string caseValue = valueExpression.empty()
+                              ? op.getGetterName(var->name) + "()"
+                              : valueExpression.str();
+  if (dereferenceGetter)
+    caseValue = "*(" + caseValue + ")";
+  body << formatv(enumAttrBeginPrinterCode, caseValue,
+                  enumInfo.getSymbolToStringFnName());
+
+  if (formatAsEnumDirective && enumInfo.isBitEnum() &&
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
+    body << "    _odsPrinter << caseValueStr;\n"
+            "  }\n";
+    return;
+  }
+
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
@@ -2118,7 +3006,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Otherwise if this is a bit enum attribute, don't allow cases that may
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
-  if (enumAttr.isBitEnum()) {
+  if (enumInfo.isBitEnum()) {
     for (auto it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
@@ -2130,15 +3018,14 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     body << "    switch (caseValue) {\n";
-    StringRef cppNamespace = enumAttr.getCppNamespace();
-    StringRef enumName = enumAttr.getEnumClassName();
+    StringRef cppNamespace = enumInfo.getCppNamespace();
+    StringRef enumName = enumInfo.getEnumClassName();
     for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();
-      body << llvm::formatv("    case {0}::{1}::{2}:\n", cppNamespace, enumName,
-                            llvm::isDigit(symbol.front()) ? ("_" + symbol)
-                                                          : symbol);
+      body << formatv("    case {0}::{1}::{2}:\n", cppNamespace, enumName,
+                      llvm::isDigit(symbol.front()) ? ("_" + symbol) : symbol);
     }
     body << "      _odsPrinter << caseValueStr;\n"
             "      break;\n"
@@ -2152,16 +3039,6 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
 
   body << "    _odsPrinter << caseValueStr;\n"
           "  }\n";
-}
-
-/// Generate a check that a DefaultValuedAttr has a value that is non-default.
-static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
-                                    AttributeVariable &attrElement) {
-  FmtContext fctx;
-  Attribute attr = attrElement.getVar()->attr;
-  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
-  body << " && " << op.getGetterName(attrElement.getVar()->name) << "Attr() != "
-       << tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue());
 }
 
 /// Generate the check for the anchor of an optional group.
@@ -2190,22 +3067,17 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         genOptionalGroupPrinterAnchor(element->getInputs(), op, body);
       })
       .Case([&](AttributeVariable *element) {
-        Attribute attr = element->getVar()->attr;
-        body << op.getGetterName(element->getVar()->name) << "Attr()";
-        if (attr.isOptional())
-          return; // done
-        if (attr.hasDefaultValue()) {
-          // Consider a default-valued attribute as present if it's not the
-          // default value.
-          genNonDefaultValueCheck(body, op, *element);
-          return;
-        }
-        llvm_unreachable("attribute must be optional or default-valued");
+        // Consider a default-valued attribute as present if it's not the
+        // default value and an optional one present if it is set.
+        genNonDefaultValueCheck(body, op, *element);
+      })
+      .Case([&](PropertyVariable *element) {
+        genNonDefaultValueCheck(body, op, *element);
       })
       .Case([&](CustomDirective *ele) {
         body << '(';
         llvm::interleave(
-            ele->getArguments(), body,
+            ele->getElements(), body,
             [&](FormatElement *child) {
               body << '(';
               genOptionalGroupPrinterAnchor(child, op, body);
@@ -2216,12 +3088,12 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       });
 }
 
-void collect(FormatElement *element,
-             SmallVectorImpl<VariableElement *> &variables) {
+static void collect(FormatElement *element,
+                    SmallVectorImpl<VariableElement *> &variables) {
   TypeSwitch<FormatElement *>(element)
       .Case([&](VariableElement *var) { variables.emplace_back(var); })
       .Case([&](CustomDirective *ele) {
-        for (FormatElement *arg : ele->getArguments())
+        for (FormatElement *arg : ele->getElements())
           collect(arg, variables);
       })
       .Case([&](OptionalElement *ele) {
@@ -2276,10 +3148,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     ArrayRef<FormatElement *> thenElements = optional->getThenElements();
     ArrayRef<FormatElement *> elseElements = optional->getElseElements();
     FormatElement *elidedAnchorElement = nullptr;
-    auto *anchorAttr = dyn_cast<AttributeVariable>(anchor);
+    auto *anchorAttr = dyn_cast<AttributeLikeVariable>(anchor);
     if (anchorAttr && anchorAttr != thenElements.front() &&
         (elseElements.empty() || anchorAttr != elseElements.front()) &&
-        anchorAttr->isUnitAttr()) {
+        anchorAttr->isUnit()) {
       elidedAnchorElement = anchorAttr;
     }
     auto genElementPrinters = [&](ArrayRef<FormatElement *> elements) {
@@ -2308,6 +3180,11 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+      body << "  bool oilistClausePrinted = false;\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2319,13 +3196,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       for (VariableElement *var : vars) {
         TypeSwitch<FormatElement *>(var)
             .Case([&](AttributeVariable *attrEle) {
-              body << " || (" << op.getGetterName(attrEle->getVar()->name)
-                   << "Attr()";
-              Attribute attr = attrEle->getVar()->attr;
-              if (attr.hasDefaultValue()) {
-                // Don't print default-valued attributes.
-                genNonDefaultValueCheck(body, op, *attrEle);
-              }
+              body << " || (";
+              genNonDefaultValueCheck(body, op, *attrEle);
+              body << ")";
+            })
+            .Case([&](PropertyVariable *propEle) {
+              body << " || (";
+              genNonDefaultValueCheck(body, op, *propEle);
               body << ")";
             })
             .Case([&](OperandVariable *ele) {
@@ -2350,15 +3227,24 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
 
       body << ") {\n";
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        body << "    if (oilistClausePrinted) {\n";
+        genLiteralPrinter(separator->getSpelling(), body, shouldEmitSpace,
+                          lastWasPunctuation);
+        body << "    }\n";
+        body << "    oilistClausePrinted = true;\n";
+      }
       genLiteralPrinter(lelement->getSpelling(), body, shouldEmitSpace,
                         lastWasPunctuation);
-      if (oilist->getUnitAttrParsingElement(pelement) == nullptr) {
+      if (oilist->getUnitVariableParsingElement(pelement) == nullptr) {
         for (FormatElement *element : pelement)
           genElementPrinter(element, body, op, shouldEmitSpace,
                             lastWasPunctuation);
       }
       body << "  }\n";
     }
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
     return;
   }
 
@@ -2369,7 +3255,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     return;
   }
 
-  // Emit the attribute dictionary.
+  // Emit the property dictionary.
   if (isa<PropDictDirective>(element)) {
     genPropDictPrinter(*this, op, body);
     lastWasPunctuation = false;
@@ -2387,8 +3273,9 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     const NamedAttribute *var = attr->getVar();
 
     // If we are formatting as an enum, symbolize the attribute as a string.
-    if (canFormatEnumAttr(var))
-      return genEnumAttrPrinter(var, op, body);
+    if (attr->shouldFormatAsEnum() || canFormatEnumAttr(var))
+      return genEnumAttrPrinter(var, op, body, /*valueExpression=*/{},
+                                attr->shouldFormatAsEnum());
 
     // If we are formatting as a symbol name, handle it as a symbol name.
     if (shouldFormatSymbolNameAttr(var)) {
@@ -2408,6 +3295,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     else
       body << "_odsPrinter.printStrippedAttrOrType("
            << op.getGetterName(var->name) << "Attr());\n";
+  } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
+    const NamedProperty *var = property->getVar();
+    FmtContext fmtContext;
+    fmtContext.addSubst("_printer", "_odsPrinter");
+    fmtContext.addSubst("_ctxt", "getContext()");
+    fmtContext.addSubst("_storage", "getProperties()." + var->name);
+    body << tgfmt(var->prop.getPrinterCall(), &fmtContext) << ";\n";
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     if (operand->getVar()->isVariadicOfVariadic()) {
       body << "  ::llvm::interleaveComma("
@@ -2452,7 +3346,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     if (auto *operand = dyn_cast<OperandVariable>(dir->getArg())) {
       if (operand->getVar()->isVariadicOfVariadic()) {
-        body << llvm::formatv(
+        body << formatv(
             "  ::llvm::interleaveComma({0}().getTypes(), _odsPrinter, "
             "[&](::mlir::TypeRange types) {{ _odsPrinter << \"(\" << "
             "types << \")\"; });\n",
@@ -2469,7 +3363,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     }
     if (var && !var->isVariadicOfVariadic() && !var->isVariadic() &&
         !var->isOptional()) {
-      std::string cppClass = var->constraint.getCPPClassName();
+      StringRef cppType = var->constraint.getCppType();
       if (dir->shouldBeQualified()) {
         body << "   _odsPrinter << " << op.getGetterName(var->name)
              << "().getType();\n";
@@ -2478,7 +3372,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       body << "  {\n"
            << "    auto type = " << op.getGetterName(var->name)
            << "().getType();\n"
-           << "    if (auto validType = ::llvm::dyn_cast<" << cppClass
+           << "    if (auto validType = ::llvm::dyn_cast<" << cppType
            << ">(type))\n"
            << "      _odsPrinter.printStrippedAttrOrType(validType);\n"
            << "   else\n"
@@ -2499,8 +3393,10 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
+  // Printing is not performance sensitive. LLVM_ATTRIBUTE_MINSIZE reduces
+  // binary size and compiler work for printers generated for every operation.
   auto *method = opClass.addMethod(
-      "void", "print",
+      "LLVM_ATTRIBUTE_MINSIZE void", "print",
       MethodParameter("::mlir::OpAsmPrinter &", "_odsPrinter"));
   auto &body = method->body();
 
@@ -2509,6 +3405,8 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   bool shouldEmitSpace = true, lastWasPunctuation = false;
   for (FormatElement *element : elements)
     genElementPrinter(element, body, op, shouldEmitSpace, lastWasPunctuation);
+
+  genKeyValuePropDictPrinter(*this, op, opClass);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2574,11 +3472,15 @@ private:
   /// Verify that the attribute dictionary directive isn't followed by a region.
   LogicalResult verifyAttrDictRegion(SMLoc loc,
                                      ArrayRef<FormatElement *> elements);
+  /// Verify that an unquoted bit enum isn't followed by an indistinguishable
+  /// separator literal.
+  LogicalResult verifyEnumAdjacentLiterals(SMLoc loc,
+                                           ArrayRef<FormatElement *> elements);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
   verifyOperands(SMLoc loc,
-                 llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
+                 StringMap<TypeResolutionInstance> &variableTyResolver);
 
   /// Verify the state of operation regions within the format.
   LogicalResult verifyRegions(SMLoc loc);
@@ -2586,7 +3488,7 @@ private:
   /// Verify the state of operation results within the format.
   LogicalResult
   verifyResults(SMLoc loc,
-                llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
+                StringMap<TypeResolutionInstance> &variableTyResolver);
 
   /// Verify the state of operation successors within the format.
   LogicalResult verifySuccessors(SMLoc loc);
@@ -2598,18 +3500,22 @@ private:
   /// resolution.
   void handleAllTypesMatchConstraint(
       ArrayRef<StringRef> values,
-      llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
+      StringMap<TypeResolutionInstance> &variableTyResolver);
   /// Check for inferable type resolution given all operands, and or results,
   /// have the same type. If 'includeResults' is true, the results also have the
   /// same type as all of the operands.
   void handleSameTypesConstraint(
-      llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
+      StringMap<TypeResolutionInstance> &variableTyResolver,
       bool includeResults);
   /// Check for inferable type resolution based on another operand, result, or
   /// attribute.
   void handleTypesMatchConstraint(
-      llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-      const llvm::Record &def);
+      StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
+
+  /// Check for inferable type resolution based on
+  /// `ShapedTypeMatchesElementCountAndTypes` constraint.
+  void handleShapedTypeMatchesElementCountAndTypesConstraint(
+      StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
 
   /// Returns an argument or attribute with the given name that has been seen
   /// within the format.
@@ -2619,6 +3525,7 @@ private:
   FailureOr<FormatElement *> parsePropDictDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseAttrDictDirective(SMLoc loc, Context context,
                                                     bool withKeyword);
+  FailureOr<FormatElement *> parseEnumDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseFunctionalTypeDirective(SMLoc loc,
                                                           Context context);
   FailureOr<FormatElement *> parseOIListDirective(SMLoc loc, Context context);
@@ -2662,9 +3569,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
                           "custom assembly format");
 
   // Check for any type traits that we can use for inferring types.
-  llvm::StringMap<TypeResolutionInstance> variableTyResolver;
+  StringMap<TypeResolutionInstance> variableTyResolver;
   for (const Trait &trait : op.getTraits()) {
-    const llvm::Record &def = trait.getDef();
+    const Record &def = trait.getDef();
     if (def.isSubClassOf("AllTypesMatch")) {
       handleAllTypesMatchConstraint(def.getValueAsListOfStrings("values"),
                                     variableTyResolver);
@@ -2674,6 +3581,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
+    } else if (def.isSubClassOf("ShapedTypeMatchesElementCountAndTypes")) {
+      handleShapedTypeMatchesElementCountAndTypesConstraint(variableTyResolver,
+                                                            def);
     } else if (!op.allResultTypesKnown()) {
       // This doesn't check the name directly to handle
       //    DeclareOpInterfaceMethods<InferTypeOpInterface>
@@ -2692,8 +3602,34 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       failed(verifyResults(loc, variableTyResolver)) ||
       failed(verifyOperands(loc, variableTyResolver)) ||
       failed(verifyRegions(loc)) || failed(verifySuccessors(loc)) ||
+      failed(verifyEnumAdjacentLiterals(loc, elements)) ||
       failed(verifyOIListElements(loc, elements)))
     return failure();
+
+  if (fmt.useStrictPropertiesInAssemblyFormat && !hasPropDict) {
+    auto emitMissingError = [&](StringRef kind,
+                                StringRef name) -> LogicalResult {
+      return emitError(loc,
+                       llvm::Twine("strict properties in assembly format "
+                                   "requires prop-dict unless all inherent "
+                                   "attributes and properties are bound in "
+                                   "the custom assembly format; "
+                                   "missing ") +
+                           kind + " '" + name + "'");
+    };
+    for (const NamedAttribute &attr : op.getAttributes()) {
+      if (attr.attr.isDerivedAttr())
+        continue;
+      if (fmt.inferredAttributes.contains(attr.name))
+        continue;
+      if (!seenAttrs.count(&attr))
+        return emitMissingError("attribute", attr.name);
+    }
+    for (const NamedProperty &prop : op.getProperties()) {
+      if (!seenProperties.count(&prop))
+        return emitMissingError("property", prop.name);
+    }
+  }
 
   // Collect the set of used attributes in the format.
   fmt.usedAttributes = std::move(seenAttrs);
@@ -2728,6 +3664,25 @@ OpFormatParser::verifyAttributes(SMLoc loc,
     }
   }
 
+  // Check that optional attributes are not used directly (i.e. outside of an
+  // optional group or oilist). Printing an absent optional attribute passes a
+  // null Attribute to the printer, which leads to crashes in alias
+  // initialisation. OIList elements require optional attributes by design, so
+  // attributes nested inside them are not checked here.
+  for (FormatElement *element : elements) {
+    if (auto *attrVar = dyn_cast<AttributeVariable>(element)) {
+      const NamedAttribute *var = attrVar->getVar();
+      if (var->attr.isOptional()) {
+        return emitErrorAndNote(
+            loc,
+            "optional attribute '" + var->name +
+                "' cannot be used outside of an optional group",
+            "to conditionally print the attribute, use '($" + var->name +
+                "^)?'");
+      }
+    }
+  }
+
   return success();
 }
 
@@ -2736,6 +3691,10 @@ static bool isOptionallyParsed(FormatElement *el) {
   if (auto *attrVar = dyn_cast<AttributeVariable>(el)) {
     Attribute attr = attrVar->getVar()->attr;
     return attr.isOptional() || attr.hasDefaultValue();
+  }
+  if (auto *propVar = dyn_cast<PropertyVariable>(el)) {
+    const Property &prop = propVar->getVar()->prop;
+    return prop.hasDefaultValue() && prop.hasOptionalParser();
   }
   if (auto *operandVar = dyn_cast<OperandVariable>(el)) {
     const NamedTypeConstraint *operand = operandVar->getVar();
@@ -2859,10 +3818,9 @@ OpFormatParser::verifyAttributeColonType(SMLoc loc,
       return false;
     // If we encounter `:`, the range is known to be invalid.
     (void)emitError(
-        loc,
-        llvm::formatv("format ambiguity caused by `:` literal found after "
-                      "attribute `{0}` which does not have a buildable type",
-                      cast<AttributeVariable>(base)->getVar()->name));
+        loc, formatv("format ambiguity caused by `:` literal found after "
+                     "attribute `{0}` which does not have a buildable type",
+                     cast<AttributeVariable>(base)->getVar()->name));
     return true;
   };
   return verifyAdjacentElements(isBase, isInvalid, elements);
@@ -2882,9 +3840,9 @@ OpFormatParser::verifyAttrDictRegion(SMLoc loc,
       return false;
     (void)emitErrorAndNote(
         loc,
-        llvm::formatv("format ambiguity caused by `attr-dict` directive "
-                      "followed by region `{0}`",
-                      region->getVar()->name),
+        formatv("format ambiguity caused by `attr-dict` directive "
+                "followed by region `{0}`",
+                region->getVar()->name),
         "try using `attr-dict-with-keyword` instead");
     return true;
   };
@@ -2892,7 +3850,7 @@ OpFormatParser::verifyAttrDictRegion(SMLoc loc,
 }
 
 LogicalResult OpFormatParser::verifyOperands(
-    SMLoc loc, llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
+    SMLoc loc, StringMap<TypeResolutionInstance> &variableTyResolver) {
   // Check that all of the operands are within the format, and their types can
   // be inferred.
   auto &buildableTypes = fmt.buildableTypes;
@@ -2957,7 +3915,7 @@ LogicalResult OpFormatParser::verifyRegions(SMLoc loc) {
 }
 
 LogicalResult OpFormatParser::verifyResults(
-    SMLoc loc, llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
+    SMLoc loc, StringMap<TypeResolutionInstance> &variableTyResolver) {
   // If we format all of the types together, there is nothing to check.
   if (fmt.allResultTypes)
     return success();
@@ -3023,12 +3981,54 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 }
 
 LogicalResult
+OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
+                                           ArrayRef<FormatElement *> elements) {
+  for (auto [index, element] : llvm::enumerate(elements)) {
+    auto *attr = dyn_cast<AttributeVariable>(element);
+    if (!attr || !attr->shouldFormatAsEnum())
+      continue;
+
+    Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
+    EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+    if (!enumInfo.isBitEnum() || enumInfo.printBitEnumQuoted())
+      continue;
+
+    auto remaining = elements.drop_front(index + 1);
+    auto next = llvm::find_if_not(remaining, llvm::IsaPred<WhitespaceElement>);
+    if (next == remaining.end())
+      continue;
+
+    auto *literal = dyn_cast<LiteralElement>(*next);
+    if (!literal)
+      continue;
+
+    StringRef separator =
+        enumInfo.getDef().getValueAsString("separator").trim();
+    if (literal->getSpelling() == separator) {
+      return emitError(loc, "unquoted bit enum cannot be followed by its '" +
+                                separator + "' separator literal");
+    }
+  }
+  return success();
+}
+
+LogicalResult
 OpFormatParser::verifyOIListElements(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {
-  // Check that all of the successors are within the format.
+  // Check for ambiguous literals in and around oilist elements.
   SmallVector<StringRef> prohibitedLiterals;
   for (FormatElement *it : elements) {
     if (auto *oilist = dyn_cast<OIListElement>(it)) {
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        for (LiteralElement *literal : oilist->getLiteralElements()) {
+          if (literal->getSpelling() == separator->getSpelling()) {
+            return emitError(
+                loc, "format ambiguity because " + separator->getSpelling() +
+                         " is used as both an oilist separator and clause "
+                         "keyword.");
+          }
+        }
+      }
       if (!prohibitedLiterals.empty()) {
         // We just saw an oilist element in last iteration. Literals should not
         // match.
@@ -3043,6 +4043,8 @@ OpFormatParser::verifyOIListElements(SMLoc loc,
       }
       for (LiteralElement *literal : oilist->getLiteralElements())
         prohibitedLiterals.push_back(literal->getSpelling());
+      if (LiteralElement *separator = oilist->getSeparator())
+        prohibitedLiterals.push_back(separator->getSpelling());
     } else if (auto *literal = dyn_cast<LiteralElement>(it)) {
       if (find(prohibitedLiterals, literal->getSpelling()) !=
           prohibitedLiterals.end()) {
@@ -3061,7 +4063,7 @@ OpFormatParser::verifyOIListElements(SMLoc loc,
 
 void OpFormatParser::handleAllTypesMatchConstraint(
     ArrayRef<StringRef> values,
-    llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
+    StringMap<TypeResolutionInstance> &variableTyResolver) {
   for (unsigned i = 0, e = values.size(); i != e; ++i) {
     // Check to see if this value matches a resolved operand or result type.
     ConstArgument arg = findSeenArg(values[i]);
@@ -3077,7 +4079,7 @@ void OpFormatParser::handleAllTypesMatchConstraint(
 }
 
 void OpFormatParser::handleSameTypesConstraint(
-    llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
+    StringMap<TypeResolutionInstance> &variableTyResolver,
     bool includeResults) {
   const NamedTypeConstraint *resolver = nullptr;
   int resolvedIt = -1;
@@ -3102,13 +4104,30 @@ void OpFormatParser::handleSameTypesConstraint(
 }
 
 void OpFormatParser::handleTypesMatchConstraint(
-    llvm::StringMap<TypeResolutionInstance> &variableTyResolver,
-    const llvm::Record &def) {
+    StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def) {
   StringRef lhsName = def.getValueAsString("lhs");
   StringRef rhsName = def.getValueAsString("rhs");
   StringRef transformer = def.getValueAsString("transformer");
   if (ConstArgument arg = findSeenArg(lhsName))
     variableTyResolver[rhsName] = {arg, transformer};
+}
+
+void OpFormatParser::handleShapedTypeMatchesElementCountAndTypesConstraint(
+    StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def) {
+  StringRef shapedArg = def.getValueAsString("shaped");
+  StringRef elementsArg = def.getValueAsString("elements");
+
+  // Check if the 'shaped' argument is seen, then we can infer the 'elements'
+  // types.
+  if (ConstArgument arg = findSeenArg(shapedArg)) {
+    variableTyResolver[elementsArg] = {
+        arg, "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
+             "ShapedType>($_self).getNumElements(), "
+             "::llvm::cast<::mlir::ShapedType>($_self).getElementType())"};
+  }
+
+  // Type inference in the opposite direction is not possible as the actual
+  // shaped type can't be inferred from the variadic elements.
 }
 
 ConstArgument OpFormatParser::findSeenArg(StringRef name) {
@@ -3141,10 +4160,9 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
   }
 
   if (const NamedProperty *property = findArg(op.getProperties(), name)) {
-    if (ctx != CustomDirectiveContext && ctx != RefDirectiveContext)
+    if (ctx == TypeDirectiveContext)
       return emitError(
-          loc, "properties currently only supported in `custom` directive");
-
+          loc, "properties cannot be used as children to a `type` directive");
     if (ctx == RefDirectiveContext) {
       if (!seenProperties.count(property))
         return emitError(loc, "property '" + name +
@@ -3173,11 +4191,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllRegions || !seenRegions.insert(region).second)
         return emitError(loc, "region '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenRegions.count(region)) {
-      return emitError(loc, "region '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenRegions.count(region))
+        return emitError(loc, "region '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "regions can only be used at the top level");
+      return emitError(loc, "regions can only be used at the top level "
+                            "or in a ref directive");
     }
     return create<RegionVariable>(region);
   }
@@ -3193,11 +4213,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
         return emitError(loc, "successor '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenSuccessors.count(successor)) {
-      return emitError(loc, "successor '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenSuccessors.count(successor))
+        return emitError(loc, "successor '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "successors can only be used at the top level");
+      return emitError(loc, "successors can only be used at the top level "
+                            "or in a ref directive");
     }
 
     return create<SuccessorVariable>(successor);
@@ -3218,6 +4240,8 @@ OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
   case FormatToken::kw_attr_dict_w_keyword:
     return parseAttrDictDirective(loc, ctx,
                                   /*withKeyword=*/true);
+  case FormatToken::kw_enum:
+    return parseEnumDirective(loc, ctx);
   case FormatToken::kw_functional_type:
     return parseFunctionalTypeDirective(loc, ctx);
   case FormatToken::kw_operands:
@@ -3236,6 +4260,50 @@ OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
   default:
     return emitError(loc, "unsupported directive kind");
   }
+}
+
+FailureOr<FormatElement *> OpFormatParser::parseEnumDirective(SMLoc loc,
+                                                              Context context) {
+  if (context != TopLevelContext)
+    return emitError(loc, "'enum' directive can only be used at the top level");
+
+  FailureOr<FormatElement *> element;
+  if (failed(parseToken(FormatToken::l_paren,
+                        "expected '(' before argument list")) ||
+      failed(element = parseElement(context)) ||
+      failed(
+          parseToken(FormatToken::r_paren, "expected ')' after argument list")))
+    return failure();
+
+  auto *attr = dyn_cast<AttributeVariable>(*element);
+  if (!attr)
+    return emitError(loc, "'enum' directive expects an enum attribute");
+
+  Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
+  if (!baseAttr.isEnumAttr())
+    return emitError(loc, "'enum' directive expects an enum attribute");
+
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+  if (enumInfo.getUnderlyingType().empty() ||
+      baseAttr.getConstBuilderTemplate().empty()) {
+    return emitError(
+        loc, "'enum' directive requires an enum attribute with an underlying "
+             "type and a constant builder");
+  }
+
+  if (enumInfo.isBitEnum() &&
+      llvm::none_of(enumInfo.getAllCases(), [](const EnumCase &attrCase) {
+        return attrCase.getValue() == 0;
+      })) {
+    return emitError(loc, "'enum' directive requires a bit enum to define a "
+                          "zero-valued case");
+  }
+
+  if (attr->shouldBeQualified())
+    return emitError(loc,
+                     "'enum' and 'qualified' directives cannot be combined");
+  attr->setShouldFormatAsEnum();
+  return attr;
 }
 
 FailureOr<FormatElement *>
@@ -3379,6 +4447,21 @@ OpFormatParser::parseSuccessorsDirective(SMLoc loc, Context context) {
 
 FailureOr<FormatElement *>
 OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
+  LiteralElement *separator = nullptr;
+  if (peekToken().is(FormatToken::less)) {
+    consumeToken();
+    SMLoc separatorLoc = peekToken().getLoc();
+    FailureOr<FormatElement *> separatorElement = parseLiteral(context);
+    if (failed(separatorElement))
+      return failure();
+    separator = dyn_cast<LiteralElement>(*separatorElement);
+    if (!separator)
+      return emitError(separatorLoc,
+                       "oilist separator must be a non-whitespace literal");
+    if (failed(parseToken(FormatToken::greater,
+                          "expected '>' after oilist separator")))
+      return failure();
+  }
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before oilist argument list")))
     return failure();
@@ -3409,7 +4492,7 @@ OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
     }
   } while (true);
 
-  return create<OIListElement>(std::move(literalElements),
+  return create<OIListElement>(separator, std::move(literalElements),
                                std::move(parsingElements));
 }
 
@@ -3426,6 +4509,15 @@ LogicalResult OpFormatParser::verifyOIListParsingElement(FormatElement *element,
                   !attrEle->getVar()->attr.hasDefaultValue())
                 return emitError(loc, "only optional attributes can be used in "
                                       "an oilist parsing group");
+              return success();
+            })
+            // Only optional properties can be within an oilist parsing group.
+            .Case([&](PropertyVariable *propEle) {
+              if (!propEle->getVar()->prop.hasDefaultValue())
+                return emitError(
+                    loc,
+                    "only default-valued or optional properties can be used in "
+                    "an olist parsing group");
               return success();
             })
             // Only optional-like(i.e. variadic) operands can be within an
@@ -3475,7 +4567,14 @@ FailureOr<FormatElement *> OpFormatParser::parseTypeDirective(SMLoc loc,
 
 LogicalResult OpFormatParser::markQualified(SMLoc loc, FormatElement *element) {
   return TypeSwitch<FormatElement *, LogicalResult>(element)
-      .Case<AttributeVariable, TypeDirective>([](auto *element) {
+      .Case([&](AttributeVariable *element) {
+        if (element->shouldFormatAsEnum())
+          return emitError(
+              loc, "'enum' and 'qualified' directives cannot be combined");
+        element->setShouldBeQualified();
+        return success();
+      })
+      .Case<TypeDirective>([](auto *element) {
         element->setShouldBeQualified();
         return success();
       })
@@ -3537,6 +4636,8 @@ OpFormatParser::parseTypeDirectiveOperand(SMLoc loc, bool isRefChild) {
 
 LogicalResult OpFormatParser::verifyOptionalGroupElements(
     SMLoc loc, ArrayRef<FormatElement *> elements, FormatElement *anchor) {
+  if (failed(verifyEnumAdjacentLiterals(loc, elements)))
+    return failure();
   for (FormatElement *element : elements) {
     if (failed(verifyOptionalGroupElement(loc, element, element == anchor)))
       return failure();
@@ -3554,6 +4655,17 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         Attribute attr = attrEle->getVar()->attr;
         if (isAnchor && !(attr.isOptional() || attr.hasDefaultValue()))
           return emitError(loc, "only optional or default-valued attributes "
+                                "can be used to anchor an optional group");
+        return success();
+      })
+      // All properties can be within the optional group, but only optional
+      // properties can be the anchor.
+      .Case([&](PropertyVariable *propEle) {
+        Property prop = propEle->getVar()->prop;
+        if (isAnchor && !(prop.hasDefaultValue() && prop.hasOptionalParser()))
+          return emitError(loc, "only properties with default values "
+                                "that can be optionally parsed (have the `let "
+                                "optionalParser = ...` field defined) "
                                 "can be used to anchor an optional group");
         return success();
       })
@@ -3594,7 +4706,7 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
           return success();
         // Verify each child as being valid in an optional group. They are all
         // potential anchors if the custom directive was marked as one.
-        for (FormatElement *child : ele->getArguments()) {
+        for (FormatElement *child : ele->getElements()) {
           if (isa<RefDirective>(child))
             continue;
           if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))
@@ -3625,8 +4737,14 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-  if (!op.hasAssemblyFormat())
+  if (!op.hasAssemblyFormat()) {
+    // We still need to generate the parsed attribute properties setter for
+    // allowing it to be reused in custom assembly implementations.
+    OperationFormat format(op);
+    format.hasPropDict = true;
+    genParsedAttrPropertiesSetter(format, op, opClass);
     return;
+  }
 
   // Parse the format description.
   llvm::SourceMgr mgr;

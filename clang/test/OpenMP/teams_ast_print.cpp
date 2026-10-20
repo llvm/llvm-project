@@ -27,10 +27,6 @@ struct S {
 // CHECK:        static int TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
 // CHECK-NEXT: }
-// CHECK:      template<> struct S<long> {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {

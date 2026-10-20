@@ -1,0 +1,7 @@
+# REQUIRES: amdgpu-registered-target
+## Check that unique is working
+
+# RUN: cp -f %S/Inputs/amdgpu_asm_unique.s %t.s && %update_mc_test_checks --unique %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm_unique.s.expected %t.s
+# RUN: cp -f %S/Inputs/amdgpu_dasm_unique.txt %t.txt && %update_mc_test_checks --unique %t.txt
+# RUN: diff -u %S/Inputs/amdgpu_dasm_unique.txt.expected %t.txt

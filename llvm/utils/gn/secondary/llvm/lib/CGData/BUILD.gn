@@ -1,0 +1,26 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("CGDataOptions") {
+  visibility = [ ":CGData" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+static_library("CGData") {
+  output_name = "LLVMCGData"
+  deps = [
+    ":CGDataOptions",
+    "//llvm/lib/IR",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "CGDataOptions.cpp",
+    "CodeGenData.cpp",
+    "CodeGenDataReader.cpp",
+    "CodeGenDataWriter.cpp",
+    "OutlinedHashTree.cpp",
+    "OutlinedHashTreeRecord.cpp",
+    "StableFunctionMap.cpp",
+    "StableFunctionMapRecord.cpp",
+  ]
+}

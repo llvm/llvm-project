@@ -10,11 +10,12 @@
 #define LLVM_LIBC_SRC_STDFIX_ROUNDULR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 unsigned long fract roundulr(unsigned long fract x, int n);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDFIX_ROUNDULR_H

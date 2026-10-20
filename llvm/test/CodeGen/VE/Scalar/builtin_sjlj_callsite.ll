@@ -11,8 +11,8 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -432(, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB0_7
-; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB0_6
+; CHECK-NEXT:  # %bb.7:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -21,7 +21,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_7:
+; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill
@@ -52,13 +52,13 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, .LBB0_3@hi(, %s0)
 ; CHECK-NEXT:    st %s0, -32(, %s9)
-; CHECK-NEXT:    or %s0, 1, (0)1
-; CHECK-NEXT:    st %s0, -96(, %s9)
 ; CHECK-NEXT:    lea %s0, _Unwind_SjLj_Register@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Unwind_SjLj_Register@hi(, %s0)
 ; CHECK-NEXT:    lea %s0, -104(, %s9)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s0, 1, (0)1
+; CHECK-NEXT:    st %s0, -96(, %s9)
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    lea %s0, f@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -126,8 +126,8 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
 ; PIC-NEXT:    lea %s11, -432(, %s11)
-; PIC-NEXT:    brge.l %s11, %s8, .LBB0_7
-; PIC-NEXT:  # %bb.6:
+; PIC-NEXT:    brge.l %s11, %s8, .LBB0_6
+; PIC-NEXT:  # %bb.7:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -136,7 +136,7 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB0_7:
+; PIC-NEXT:  .LBB0_6:
 ; PIC-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; PIC-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; PIC-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill
@@ -172,14 +172,14 @@ define void @test_callsite() personality ptr @__gxx_personality_sj0 {
 ; PIC-NEXT:    and %s0, %s0, (32)0
 ; PIC-NEXT:    lea.sl %s0, .LBB0_3@gotoff_hi(%s0, %s15)
 ; PIC-NEXT:    st %s0, -32(, %s9)
-; PIC-NEXT:    or %s0, 1, (0)1
-; PIC-NEXT:    st %s0, -96(, %s9)
 ; PIC-NEXT:    lea %s12, _Unwind_SjLj_Register@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0
 ; PIC-NEXT:    sic %s16
 ; PIC-NEXT:    lea.sl %s12, _Unwind_SjLj_Register@plt_hi(%s16, %s12)
 ; PIC-NEXT:    lea %s0, -104(, %s9)
 ; PIC-NEXT:    bsic %s10, (, %s12)
+; PIC-NEXT:    or %s0, 1, (0)1
+; PIC-NEXT:    st %s0, -96(, %s9)
 ; PIC-NEXT:  .Ltmp0:
 ; PIC-NEXT:    lea %s12, f@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0

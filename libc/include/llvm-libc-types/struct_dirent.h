@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 #define LLVM_LIBC_TYPES_STRUCT_DIRENT_H
 
-#include "llvm-libc-types/ino_t.h"
-#include "llvm-libc-types/off_t.h"
+#include "ino_t.h"
+#include "off_t.h"
+#include "reclen_t.h"
 
 struct dirent {
   ino_t d_ino;
 #ifdef __linux__
   off_t d_off;
-  unsigned short d_reclen;
+  reclen_t d_reclen;
 #endif
   unsigned char d_type;
   // The user code should use strlen to determine actual the size of d_name.

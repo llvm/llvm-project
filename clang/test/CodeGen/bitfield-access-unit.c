@@ -27,7 +27,7 @@
 // Configs that have expensive unaligned access
 // 64-bit Little Endian
 // RUN: %clang_cc1 -triple=aarch64-linux-gnu %s -target-feature +strict-align -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT,CHECK-64,LAYOUT-64,LAYOUT-64-STRICT %s
-// RUN: %clang_cc1 -triple=amdgcn-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT,CHECK-64,LAYOUT-64,LAYOUT-64-STRICT %s
+// RUN: %clang_cc1 -triple=amdgpu-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT,CHECK-64,LAYOUT-64,LAYOUT-64-STRICT %s
 // RUN: %clang_cc1 -triple=loongarch64-elf -target-feature -ual %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT,CHECK-64,LAYOUT-64,LAYOUT-64-STRICT %s
 // RUN: %clang_cc1 -triple=riscv64 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT,CHECK-64,LAYOUT-64,LAYOUT-64-STRICT %s
 
@@ -53,8 +53,8 @@
 // RUN: %clang_cc1 -triple=sparc-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT %s
 // RUN: %clang_cc1 -triple=tce-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT-STRICT %s
 
-// Both le64-elf and m68-elf are strict alignment ISAs with 4-byte aligned
-// 64-bit or 2-byte aligned 32-bit integer types. This more compex to describe here.
+// m68-elf is a strict alignment ISA with 4-byte aligned 64-bit or 2-byte
+// aligned 32-bit integer types. This more compex to describe here.
 
 // If unaligned access is expensive don't stick these together.
 struct A {

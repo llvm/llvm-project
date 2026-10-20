@@ -6,7 +6,6 @@ reasons which can make it seem like the operation as a whole works but at the
 API level it won't if we don't remove them there also.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -46,7 +45,7 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
         self.expect("memory read {}".format(read_from), substrs=[data])
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_non_address_bit_memory_read_write_cmds(self):
         self.setup_test()
 
@@ -83,7 +82,7 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
         self.assertEqual(data, buf_content)
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_non_address_bit_memory_read_write_api_process(self):
         self.setup_test()
         buf, buf_with_non_address = self.get_ptr_values()
@@ -122,7 +121,7 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
         self.assertEqual(0x5634120042444C4C, ptr)
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_non_address_bit_memory_read_write_api_target(self):
         self.setup_test()
         buf, buf_with_non_address = self.get_ptr_values()
@@ -148,7 +147,7 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
         # Read<type>FromMemory are in Target but not SBTarget so no tests for those.
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_non_address_bit_memory_caching(self):
         # The read/write tests above do exercise the cache but this test
         # only cares that the cache sees buf and buf_with_non_address
@@ -199,7 +198,13 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
     def test_non_address_bit_memory_corefile(self):
         self.runCmd("target create --core corefile")
 
-        self.expect("thread list", substrs=["stopped", "stop reason = signal SIGSEGV"])
+        self.expect(
+            "thread list",
+            substrs=[
+                "stopped",
+                "stop reason = SIGSEGV: address not mapped to object (fault address=0x0)",
+            ],
+        )
 
         # No caching (the program/corefile are the cache) and no writing
         # to memory. So just check that tagged/untagged addresses read

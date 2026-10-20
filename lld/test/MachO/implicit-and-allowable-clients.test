@@ -1,3 +1,6 @@
+# ln -s is not guaranteed to work on Windows
+# UNSUPPORTED: system-windows
+
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t
 # RUN: ln -s Versions/A/FrameworkPublic.tbd %t/System/Library/Frameworks/FrameworkPublic.framework/

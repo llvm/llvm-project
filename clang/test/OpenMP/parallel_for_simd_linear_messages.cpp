@@ -71,7 +71,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int ind2 = 0;
-  // expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+  // expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
   #pragma omp parallel for simd linear(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;

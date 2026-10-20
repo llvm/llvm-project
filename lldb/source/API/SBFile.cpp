@@ -11,6 +11,10 @@
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -39,11 +43,26 @@ SBFile::SBFile() { LLDB_INSTRUMENT_VA(this); }
 SBFile::SBFile(FILE *file, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, file, transfer_ownership);
 
-  m_opaque_sp = std::make_shared<NativeFile>(file, transfer_ownership);
+  // For backwards comptability, this defaulted to ReadOnly previously.
+  m_opaque_sp = std::make_shared<NativeFile>(file, File::eOpenOptionReadOnly,
+                                             transfer_ownership);
 }
 
-SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
-  LLDB_INSTRUMENT_VA(this, fd, mode, transfer_owndership);
+SBFile::SBFile(FILE *file, const char *mode, bool transfer_ownership) {
+  LLDB_INSTRUMENT_VA(this, file, transfer_ownership);
+
+  auto options = File::GetOptionsFromMode(mode);
+  if (!options) {
+    llvm::consumeError(options.takeError());
+    return;
+  }
+
+  m_opaque_sp =
+      std::make_shared<NativeFile>(file, options.get(), transfer_ownership);
+}
+
+SBFile::SBFile(int fd, const char *mode, bool transfer_ownership) {
+  LLDB_INSTRUMENT_VA(this, fd, mode, transfer_ownership);
 
   auto options = File::GetOptionsFromMode(mode);
   if (!options) {
@@ -51,7 +70,17 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
     return;
   }
   m_opaque_sp =
-      std::make_shared<NativeFile>(fd, options.get(), transfer_owndership);
+      std::make_shared<NativeFile>(fd, options.get(), transfer_ownership);
+}
+
+int SBFile::OpenFdFromHandle(intptr_t handle, int flags) {
+#ifdef _WIN32
+  return _open_osfhandle(handle, flags);
+#else
+  (void)handle;
+  (void)flags;
+  return -1;
+#endif
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
@@ -59,11 +88,10 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
     *bytes_read = 0;
   } else {
-    Status status = m_opaque_sp->Read(buf, num_bytes);
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Read(buf, num_bytes));
     *bytes_read = num_bytes;
   }
   return error;
@@ -75,11 +103,10 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
     *bytes_written = 0;
   } else {
-    Status status = m_opaque_sp->Write(buf, num_bytes);
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Write(buf, num_bytes));
     *bytes_written = num_bytes;
   }
   return error;
@@ -90,10 +117,9 @@ SBError SBFile::Flush() {
 
   SBError error;
   if (!m_opaque_sp) {
-    error.SetErrorString("invalid SBFile");
+    error = Status::FromErrorString("invalid SBFile");
   } else {
-    Status status = m_opaque_sp->Flush();
-    error.SetError(status);
+    error.SetError(m_opaque_sp->Flush());
   }
   return error;
 }
@@ -106,10 +132,8 @@ bool SBFile::IsValid() const {
 SBError SBFile::Close() {
   LLDB_INSTRUMENT_VA(this);
   SBError error;
-  if (m_opaque_sp) {
-    Status status = m_opaque_sp->Close();
-    error.SetError(status);
-  }
+  if (m_opaque_sp)
+    error.SetError(m_opaque_sp->Close());
   return error;
 }
 

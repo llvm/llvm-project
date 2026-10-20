@@ -504,3 +504,123 @@ template struct Z<int>;
 Y y(1);
 
 }
+
+namespace GH98258 {
+
+struct S {
+  template <typename U>
+  friend void f() requires requires { []<typename V>(V){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f2() requires requires { [](auto){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f3() requires requires { []<int X>(){ return X; }; } {
+    return;
+  }
+};
+
+}
+
+namespace GH78101 {
+
+template <typename T, int i>
+concept True = true;
+
+template <typename T, int I> struct Template {
+  static constexpr int i = I;
+
+  friend constexpr auto operator+(True<i> auto f) { return i; }
+};
+
+template <int I> struct Template<float, I> {
+  static constexpr int i = I;
+
+  friend constexpr auto operator+(True<i> auto f) { return i; }
+};
+
+Template<void, 4> f{};
+
+static_assert(+Template<float, 5>{} == 5);
+
+} // namespace GH78101
+
+namespace GH156225 {
+
+struct Test {
+  template <class T>
+  friend constexpr bool foo()
+    requires([] {
+      bool flags[1];
+      for (bool x : flags)
+        return false;
+      return true;
+    }())
+  {
+    return {};
+  }
+};
+
+}
+
+namespace GH104057 {
+template <class T> concept A = requires { typename T::type; }; // #GH104057_A
+
+struct B {
+  using type = int;
+};
+struct C {};
+
+template <class T> struct D {
+  static void f()
+    requires A<T>; // #GH104057_D_f
+};
+
+class E {
+  static int n;
+  template <A T> friend void D<T>::f();
+};
+
+template <class T> struct F {
+  template <A U> // #GH104057_F_TPL
+  static void f() // #GH104057_F_f
+    requires A<T>;
+};
+
+class G {
+  static int n;
+  template <A T> template <A U>
+  friend void F<T>::f()
+    requires A<T>;
+};
+
+template <class T>
+void D<T>::f() requires A<T> {
+  E::n = 0;
+}
+
+template <class T>
+template <A U>
+void F<T>::f() requires A<T> {
+  G::n = 0;
+}
+
+void test() {
+  D<B>::f();
+  D<C>::f();
+  // expected-error@-1 {{invalid reference to function 'f': constraints not satisfied}}
+  //   expected-note@#GH104057_D_f {{because 'GH104057::C' does not satisfy 'A'}}
+  //   expected-note@#GH104057_A {{because 'typename T::type' would be invalid: no type named 'type' in 'GH104057::C'}}
+
+  F<B>::f<B>();
+  F<B>::f<C>();
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  //   expected-note@#GH104057_F_f {{candidate template ignored: constraints not satisfied}}
+  //   expected-note@#GH104057_F_TPL {{because 'GH104057::C' does not satisfy 'A'}}
+  //   expected-note@#GH104057_A {{because 'typename T::type' would be invalid: no type named 'type' in 'GH104057::C'}}
+}
+} // namespace GH104057

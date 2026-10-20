@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCoreFrameLowering.h"
-#include "XCore.h"
 #include "XCoreInstrInfo.h"
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreSubtarget.h"
@@ -23,10 +22,9 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -159,16 +157,20 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
 /// As offsets are negative, the largest offsets will be first.
 static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                            MachineFrameInfo &MFI, XCoreFunctionInfo *XFI,
-                           const Constant *PersonalityFn,
+                           const Module &M, const Constant *PersonalityFn,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
   const int *EHSlot = XFI->getEHSpillSlot();
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = M.getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = TL->getTargetMachine().getExceptionModel();
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[0]),
-                    TL->getExceptionPointerRegister(PersonalityFn)));
+                    TL->getExceptionPointerRegister(EH, PersonalityFn)));
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
-                    TL->getExceptionSelectorRegister(PersonalityFn)));
+                    TL->getExceptionSelectorRegister(EH, PersonalityFn)));
   llvm::sort(SpillList, CompareSSIOffset);
 }
 
@@ -215,9 +217,8 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
   // Do nothing
 }
 
-bool XCoreFrameLowering::hasFP(const MachineFunction &MF) const {
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MF.getFrameInfo().hasVarSizedObjects();
+bool XCoreFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  return MF.disableFramePointerElim() || MF.getFrameInfo().hasVarSizedObjects();
 }
 
 void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
@@ -225,8 +226,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo *MMI = &MF.getMMI();
-  const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const XCoreInstrInfo &TII = *MF.getSubtarget<XCoreSubtarget>().getInstrInfo();
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
   // Debug location must be unknown since the first debug location is used
@@ -327,7 +327,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
       const Constant *PersonalityFn =
           Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
       SmallVector<StackSlotInfo, 2> SpillList;
-      GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
+      GetEHSpillList(SpillList, MFI, XFI, *Fn->getParent(), PersonalityFn,
                      MF.getSubtarget().getTargetLowering());
       assert(SpillList.size()==2 && "Unexpected SpillList size");
       EmitCfiOffset(MBB, MBBI, dl, TII,
@@ -362,7 +362,7 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
     const Constant *PersonalityFn =
         Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
     SmallVector<StackSlotInfo, 2> SpillList;
-    GetEHSpillList(SpillList, MFI, XFI, PersonalityFn,
+    GetEHSpillList(SpillList, MFI, XFI, *Fn->getParent(), PersonalityFn,
                    MF.getSubtarget().getTargetLowering());
     RestoreSpillList(MBB, MBBI, dl, TII, RemainingAdj, SpillList);
 
@@ -428,14 +428,14 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitPrologue");
 
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC,
                             Register());
     if (emitFrameMoves) {
       auto Store = MI;
@@ -456,13 +456,12 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
   if (!AtStart)
     --BeforeI;
   for (const CalleeSavedInfo &CSR : CSI) {
-    Register Reg = CSR.getReg();
+    MCRegister Reg = CSR.getReg();
     assert(Reg != XCore::LR && !(Reg == XCore::R10 && hasFP(*MF)) &&
            "LR & FP are always handled in emitEpilogue");
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, TRI,
-                             Register());
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, Register());
     assert(MI != MBB.begin() &&
            "loadRegFromStackSlot didn't insert any code!");
     // Insert in reverse order.  loadRegFromStackSlot can insert multiple
@@ -579,7 +578,7 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
   unsigned Size = TRI.getSpillSize(RC);
   Align Alignment = TRI.getSpillAlign(RC);
   if (XFI->isLargeFrame(MF) || hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
   if (XFI->isLargeFrame(MF) && !hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
 }

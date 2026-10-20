@@ -6,6 +6,8 @@ add_mlir_library(MLIRTestIR
   TestBuiltinDistinctAttributes.cpp
   TestClone.cpp
   TestDiagnostics.cpp
+  TestDiagnosticsMetadata.cpp
+  TestDiagnosticsNext.cpp
   TestDominance.cpp
   TestFunc.cpp
   TestInterfaces.cpp
@@ -28,11 +30,15 @@ add_mlir_library(MLIRTestIR
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
+  MLIRTestDialect
+  )
+
+mlir_target_link_libraries(MLIRTestIR PUBLIC
   MLIRPass
   MLIRBytecodeReader
   MLIRBytecodeWriter
   MLIRFunctionInterfaces
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRTestIR

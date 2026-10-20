@@ -31,7 +31,7 @@ void positiveViewType() {
   ExpensiveToCopy E;
   ViewType<ExpensiveToCopy> V(E);
   const auto O = V.view();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'O' is copy-constructed
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'O' of type 'ExpensiveToCopy const' is copy-constructed
   // CHECK-FIXES: const auto& O = V.view();
   O.constMethod();
 }

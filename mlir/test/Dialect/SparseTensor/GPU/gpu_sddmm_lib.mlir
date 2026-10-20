@@ -30,20 +30,20 @@
 // CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_9:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_10:.*]] = tensor.dim %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>
-// CHECK:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?xf32>
+// CHECK:           %[[VAL_11:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK:           %[[VAL_12:.*]] = gpu.wait async
 // CHECK:           %[[VAL_13:.*]] = memref.dim %[[VAL_11]], %[[VAL_3]] : memref<?x?xf32>
 // CHECK:           %[[VAL_14:.*]] = memref.dim %[[VAL_11]], %[[VAL_4]] : memref<?x?xf32>
 // CHECK:           %[[VAL_15:.*]], %[[VAL_16:.*]] = gpu.alloc async {{\[}}%[[VAL_12]]] (%[[VAL_13]], %[[VAL_14]]) : memref<?x?xf32>
 // CHECK:           %[[VAL_17:.*]] = gpu.memcpy async {{\[}}%[[VAL_16]]] %[[VAL_15]], %[[VAL_11]] : memref<?x?xf32>, memref<?x?xf32>
-// CHECK:           %[[VAL_18:.*]] = bufferization.to_memref %[[VAL_2]] : memref<?x?xf32>
+// CHECK:           %[[VAL_18:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK:           %[[VAL_19:.*]] = gpu.wait async
 // CHECK:           %[[VAL_20:.*]] = memref.dim %[[VAL_18]], %[[VAL_3]] : memref<?x?xf32>
 // CHECK:           %[[VAL_21:.*]] = memref.dim %[[VAL_18]], %[[VAL_4]] : memref<?x?xf32>
 // CHECK:           %[[VAL_22:.*]], %[[VAL_23:.*]] = gpu.alloc async {{\[}}%[[VAL_19]]] (%[[VAL_20]], %[[VAL_21]]) : memref<?x?xf32>
 // CHECK:           %[[VAL_24:.*]] = gpu.memcpy async {{\[}}%[[VAL_23]]] %[[VAL_22]], %[[VAL_18]] : memref<?x?xf32>, memref<?x?xf32>
-// CHECK:           %[[VAL_25:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index}
-// CHECK:           %[[VAL_26:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index}
+// CHECK:           %[[VAL_25:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1
+// CHECK:           %[[VAL_26:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 1
 // CHECK:           %[[VAL_27:.*]] = sparse_tensor.values %[[VAL_0]]
 // CHECK:           %[[VAL_28:.*]] = gpu.wait async
 // CHECK:           %[[VAL_29:.*]] = memref.dim %[[VAL_25]], %[[VAL_3]] : memref<?xindex>

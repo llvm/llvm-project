@@ -1,9 +1,17 @@
+// RUN: not llvm-mc -triple aarch64-darwin -filetype=obj --defsym PARSE=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not llvm-mc -triple aarch64-darwin -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-ios -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
 
 Lstart:
   .space 8
 Lend:
+.ifdef PARSE
+  add w0, w1, #(Lend - var@TLVPPAGEOFF)
+  // ERR: [[#@LINE-1]]:27: error: expected ')'
+  cmp w0, #(Lend - var@TLVPPAGEOFF)
+  // ERR: [[#@LINE-1]]:23: error: expected ')'
+
+.else
   add w0, w1, #(Lend - external)
   cmp w0, #(Lend - external)
   // CHECK: error: unknown AArch64 fixup kind!
@@ -11,15 +19,6 @@ Lend:
   // CHECK-NEXT: ^
   // CHECK: error: unknown AArch64 fixup kind!
   // CHECK-NEXT: cmp w0, #(Lend - external)
-  // CHECK-NEXT: ^
-
-  add w0, w1, #(Lend - var@TLVPPAGEOFF)
-  cmp w0, #(Lend - var@TLVPPAGEOFF)
-  // CHECK: error: unsupported subtraction of qualified symbol
-  // CHECK-NEXT: add w0, w1, #(Lend - var@TLVPPAGEOFF)
-  // CHECK-NEXT: ^
-  // CHECK: error: unsupported subtraction of qualified symbol
-  // CHECK-NEXT: cmp w0, #(Lend - var@TLVPPAGEOFF)
   // CHECK-NEXT: ^
 
   add w0, w1, #(Lstart - Lend)
@@ -66,3 +65,4 @@ Lend_across_sec:
   // CHECK: error: unknown AArch64 fixup kind!
   // CHECK-NEXT: cmp w0, #(Lend_across_sec - Lprivate2)
   // CHECK-NEXT: ^
+.endif

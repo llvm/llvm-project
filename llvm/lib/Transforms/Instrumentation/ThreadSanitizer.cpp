@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,49 +39,16 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "tsan"
-
-static cl::opt<bool> ClInstrumentMemoryAccesses(
-    "tsan-instrument-memory-accesses", cl::init(true),
-    cl::desc("Instrument memory accesses"), cl::Hidden);
-static cl::opt<bool>
-    ClInstrumentFuncEntryExit("tsan-instrument-func-entry-exit", cl::init(true),
-                              cl::desc("Instrument function entry and exit"),
-                              cl::Hidden);
-static cl::opt<bool> ClHandleCxxExceptions(
-    "tsan-handle-cxx-exceptions", cl::init(true),
-    cl::desc("Handle C++ exceptions (insert cleanup blocks for unwinding)"),
-    cl::Hidden);
-static cl::opt<bool> ClInstrumentAtomics("tsan-instrument-atomics",
-                                         cl::init(true),
-                                         cl::desc("Instrument atomics"),
-                                         cl::Hidden);
-static cl::opt<bool> ClInstrumentMemIntrinsics(
-    "tsan-instrument-memintrinsics", cl::init(true),
-    cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
-static cl::opt<bool> ClDistinguishVolatile(
-    "tsan-distinguish-volatile", cl::init(false),
-    cl::desc("Emit special instrumentation for accesses to volatiles"),
-    cl::Hidden);
-static cl::opt<bool> ClInstrumentReadBeforeWrite(
-    "tsan-instrument-read-before-write", cl::init(false),
-    cl::desc("Do not eliminate read instrumentation for read-before-writes"),
-    cl::Hidden);
-static cl::opt<bool> ClCompoundReadBeforeWrite(
-    "tsan-compound-read-before-write", cl::init(false),
-    cl::desc("Emit special compound instrumentation for reads-before-writes"),
-    cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -106,9 +74,10 @@ namespace {
 /// ensures the __tsan_init function is in the list of global constructors for
 /// the module.
 struct ThreadSanitizer {
-  ThreadSanitizer() {
+  ThreadSanitizer(const InstrumentationOptions &Opts) : Opts(Opts) {
     // Check options and warn user.
-    if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
+    if (Opts.tsan_instrument_read_before_write &&
+        Opts.tsan_compound_read_before_write) {
       errs()
           << "warning: Option -tsan-compound-read-before-write has no effect "
              "when -tsan-instrument-read-before-write is set.\n";
@@ -142,6 +111,7 @@ private:
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
 
+  const InstrumentationOptions &Opts;
   Type *IntptrTy;
   FunctionCallee TsanFuncEntry;
   FunctionCallee TsanFuncExit;
@@ -183,7 +153,8 @@ void insertModuleCtor(Module &M) {
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan;
+  ThreadSanitizer TSan(
+      F.getContext().getLibraryOptions().get<InstrumentationOptions>());
   if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -191,6 +162,9 @@ PreservedAnalyses ThreadSanitizerPass::run(Function &F,
 
 PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_thread module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_thread"))
+    return PreservedAnalyses::all();
   insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
@@ -199,7 +173,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   LLVMContext &Ctx = M.getContext();
   IntptrTy = DL.getIntPtrType(Ctx);
 
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   // Initialize the callbacks.
@@ -349,16 +323,18 @@ static bool isVtableAccess(Instruction *I) {
 }
 
 // Do not instrument known races/"benign races" that come from compiler
-// instrumentatin. The user has no way of suppressing them.
+// instrumentation. The user has no way of suppressing them.
 static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   // Peel off GEPs and BitCasts.
-  Addr = Addr->stripInBoundsOffsets();
+  // Note: This also peels AddrspaceCasts, so this should not be used when
+  // checking the address space below.
+  Value *PeeledAddr = Addr->stripInBoundsOffsets();
 
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(PeeledAddr)) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      auto OF = Triple(M->getTargetTriple()).getObjectFormat();
+      auto OF = M->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
@@ -367,11 +343,9 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
 
   // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
-  if (Addr) {
-    Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
-    if (PtrTy->getPointerAddressSpace() != 0)
-      return false;
-  }
+  Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+  if (PtrTy->getPointerAddressSpace() != 0)
+    return false;
 
   return true;
 }
@@ -424,13 +398,14 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
 
     if (!IsWrite) {
       const auto WriteEntry = WriteTargets.find(Addr);
-      if (!ClInstrumentReadBeforeWrite && WriteEntry != WriteTargets.end()) {
+      if (!Opts.tsan_instrument_read_before_write &&
+          WriteEntry != WriteTargets.end()) {
         auto &WI = All[WriteEntry->second];
         // If we distinguish volatile accesses and if either the read or write
         // is volatile, do not omit any instrumentation.
-        const bool AnyVolatile =
-            ClDistinguishVolatile && (cast<LoadInst>(I)->isVolatile() ||
-                                      cast<StoreInst>(WI.Inst)->isVolatile());
+        const bool AnyVolatile = Opts.tsan_distinguish_volatile &&
+                                 (cast<LoadInst>(I)->isVolatile() ||
+                                  cast<StoreInst>(WI.Inst)->isVolatile());
         if (!AnyVolatile) {
           // We will write to this temp, so no reason to analyze the read.
           // Mark the write instruction as compound.
@@ -446,8 +421,10 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       }
     }
 
-    if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-        !PointerMayBeCaptured(Addr, true, true)) {
+    const AllocaInst *AI = findAllocaForValue(Addr);
+    // Instead of Addr, we should check whether its base pointer is captured.
+    if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true) &&
+        Opts.tsan_omit_by_pointer_capturing) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
@@ -477,9 +454,10 @@ static bool isTsanAtomic(const Instruction *I) {
 }
 
 void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
-  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
+  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHIIt());
   IRB.CreateCall(TsanIgnoreBegin);
-  EscapeEnumerator EE(F, "tsan_ignore_cleanup", ClHandleCxxExceptions);
+  EscapeEnumerator EE(F, "tsan_ignore_cleanup",
+                      Opts.tsan_handle_cxx_exceptions);
   while (IRBuilder<> *AtExit = EE.Next()) {
     InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
     AtExit->CreateCall(TsanIgnoreEnd);
@@ -523,8 +501,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
         AtomicAccesses.push_back(&Inst);
       else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
         LocalLoadsAndStores.push_back(&Inst);
-      else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
-               isa<InvokeInst>(Inst)) {
+      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         if (isa<MemIntrinsic>(Inst))
@@ -542,19 +519,19 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // (e.g. variables that do not escape, etc).
 
   // Instrument memory accesses only if we want to report bugs in the function.
-  if (ClInstrumentMemoryAccesses && SanitizeFunction)
+  if (Opts.tsan_instrument_memory_accesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
-  if (ClInstrumentAtomics)
+  if (Opts.tsan_instrument_atomics)
     for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
-  if (ClInstrumentMemIntrinsics && SanitizeFunction)
+  if (Opts.tsan_instrument_memintrinsics && SanitizeFunction)
     for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
@@ -566,14 +543,15 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   }
 
   // Instrument function entry/exit points if there were instrumented accesses.
-  if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
-    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
-    Value *ReturnAddress = IRB.CreateCall(
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::returnaddress),
-        IRB.getInt32(0));
+  if ((Res || HasCalls) && Opts.tsan_instrument_func_entry_exit) {
+    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHIIt());
+    auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),
+                                           DL.getProgramAddressSpace());
+    Value *ReturnAddress = IRB.CreateIntrinsic(
+        Intrinsic::returnaddress, {ProgramAsPtrTy}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
-    EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);
+    EscapeEnumerator EE(F, "tsan_cleanup", Opts.tsan_handle_cxx_exceptions);
     while (IRBuilder<> *AtExit = EE.Next()) {
       InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
       AtExit->CreateCall(TsanFuncExit, {});
@@ -624,9 +602,9 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
 
   const Align Alignment = IsWrite ? cast<StoreInst>(II.Inst)->getAlign()
                                   : cast<LoadInst>(II.Inst)->getAlign();
-  const bool IsCompoundRW =
-      ClCompoundReadBeforeWrite && (II.Flags & InstructionInfo::kCompoundRW);
-  const bool IsVolatile = ClDistinguishVolatile &&
+  const bool IsCompoundRW = Opts.tsan_compound_read_before_write &&
+                            (II.Flags & InstructionInfo::kCompoundRW);
+  const bool IsVolatile = Opts.tsan_distinguish_volatile &&
                           (IsWrite ? cast<StoreInst>(II.Inst)->isVolatile()
                                    : cast<LoadInst>(II.Inst)->isVolatile());
   assert((!IsVolatile || !IsCompoundRW) && "Compound volatile invalid!");
@@ -725,6 +703,7 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
+    I->eraseFromParent();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     Value *Addr = SI->getPointerOperand();
     int Idx =

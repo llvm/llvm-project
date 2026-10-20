@@ -1,7 +1,7 @@
 ; Check that we accept a user definition/declaration of __stack_chk_guard
 ; that is not the expected type (ptr) but one of the same size.
 ;
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK: __stack_chk_fail
 
 target triple = "hexagon"

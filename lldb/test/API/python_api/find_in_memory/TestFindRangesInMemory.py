@@ -3,6 +3,7 @@ Test Process::FindRangesInMemory.
 """
 
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from address_ranges_helper import *
@@ -30,7 +31,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetHeapRanges(self)
+        addr_ranges = GetHeapRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
@@ -43,12 +44,13 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertSuccess(error)
         self.assertEqual(matches.GetSize(), 2)
 
+    @skipIfWasm  # Wasm linear memory is one region, which holds more than the stack
     def test_find_ranges_in_memory_one_match(self):
         """Make sure exactly one match exists in the heap memory and the right address ranges are provided"""
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetStackRanges(self)
+        addr_ranges = GetStackRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             SINGLE_INSTANCE_PATTERN_STACK,
@@ -61,12 +63,13 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertSuccess(error)
         self.assertEqual(matches.GetSize(), 1)
 
+    @skipIfWasm  # Wasm linear memory is one region, which holds more than the stack
     def test_find_ranges_in_memory_one_match_multiple_ranges(self):
         """Make sure exactly one match exists in the heap memory and multiple address ranges are provided"""
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetRanges(self)
+        addr_ranges = GetRanges(self, True)
         addr_ranges.Append(lldb.SBAddressRange())
         self.assertGreater(addr_ranges.GetSize(), 2)
         error = lldb.SBError()
@@ -86,7 +89,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetHeapRanges(self)
+        addr_ranges = GetHeapRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
@@ -104,7 +107,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetHeapRanges(self)
+        addr_ranges = GetHeapRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
@@ -160,7 +163,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetHeapRanges(self)
+        addr_ranges = GetHeapRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             "",
@@ -178,7 +181,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
-        addr_ranges = GetHeapRanges(self)
+        addr_ranges = GetHeapRanges(self, True)
         error = lldb.SBError()
         matches = self.process.FindRangesInMemory(
             DOUBLE_INSTANCE_PATTERN_HEAP,
@@ -197,7 +200,7 @@ class FindRangesInMemoryTestCase(TestBase):
         self.assertState(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         addr_ranges = lldb.SBAddressRangeList()
-        addr_ranges.Append(GetAlignedRange(self))
+        addr_ranges.Append(GetAlignedRange(self, True))
         error = lldb.SBError()
 
         matches = self.process.FindRangesInMemory(

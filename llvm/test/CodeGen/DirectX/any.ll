@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -passes=dxil-intrinsic-expansion,dxil-op-lower -mtriple=dxil-pc-shadermodel6.0-library < %s | FileCheck %s
 
 ; Make sure dxil operation function calls for any are generated for float and half.
 
@@ -71,7 +71,7 @@ entry:
 }
 
 ; CHECK-LABEL: any_half
-; CHECK: fcmp une half %{{.*}}, 0xH0000
+; CHECK: fcmp une half %{{.*}}, 0.000000e+00
 define noundef i1 @any_half(half noundef %p0) {
 entry:
   %p0.addr = alloca half, align 2

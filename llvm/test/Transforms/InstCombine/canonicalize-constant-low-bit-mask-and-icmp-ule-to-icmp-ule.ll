@@ -51,7 +51,7 @@ define i1 @pv(i8 %y) {
 define <2 x i1> @p1_vec_splat() {
 ; CHECK-LABEL: @p1_vec_splat(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[X]], <i8 4, i8 4>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[X]], splat (i8 4)
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %x = call <2 x i8> @gen2x8()
@@ -98,7 +98,7 @@ define <2 x i1> @p2_vec_nonsplat_edgecase1() {
 define <3 x i1> @p3_vec_splat_poison() {
 ; CHECK-LABEL: @p3_vec_splat_poison(
 ; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult <3 x i8> [[X]], <i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult <3 x i8> [[X]], splat (i8 4)
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %x = call <3 x i8> @gen3x8()

@@ -7,7 +7,7 @@ define void @foo(ptr %ptr) {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 328
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 334
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[GEP0]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP1]], <i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP1]], splat (i16 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i16>, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i16> [[TMP5]] to <2 x i32>
@@ -15,8 +15,8 @@ define void @foo(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <2 x i32> [[TMP6]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sitofp <2 x i32> [[TMP7]] to <2 x double>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp olt double [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    ret void
 ;

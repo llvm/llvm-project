@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"
 #include "src/__support/common.h"
-#include "syscall.h"     // For internal syscall function.
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 // mark as no_stack_protector for x86 since TLS can be torn down before calling
 // exit so that the stack protector canary cannot be loaded.
@@ -19,10 +20,8 @@ __attribute__((no_stack_protector))
 #endif
 __attribute__((noreturn)) void
 exit(int status) {
-  for (;;) {
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, status);
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
-  }
+  linux_syscalls::exit_group(status);
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL

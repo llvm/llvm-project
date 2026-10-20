@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -show-mc-encoding < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define i32 @bpf_prog1(ptr nocapture readnone) local_unnamed_addr #0 {

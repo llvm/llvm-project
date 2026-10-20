@@ -37,18 +37,35 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
         is meant to be used for passing additional options that are not in the
         attribute.
       }],
-      "std::optional<::mlir::SmallVector<char, 0>>", "serializeToObject",
+      "std::optional<SerializedObject>", "serializeToObject",
       (ins "::mlir::Operation*":$module,
            "const ::mlir::gpu::TargetOptions&":$options)>,
     InterfaceMethod<[{
         Creates a GPU object attribute from a binary string.
 
+        The `module` parameter must be a `GPUModuleOp` and can be used to
+        retrieve additional information like the list of kernels in the binary.
         The `object` parameter is a binary string. The `options` parameter is
         meant to be used for passing additional options that are not in the
         attribute.
       }], "::mlir::Attribute", "createObject",
-        (ins "const ::llvm::SmallVector<char, 0>&":$object,
-             "const ::mlir::gpu::TargetOptions&":$options)>
+        (ins "::mlir::Operation *":$module,
+             "const ::mlir::gpu::SerializedObject &":$object,
+             "const ::mlir::gpu::TargetOptions &":$options)>
+  ];
+}
+
+def GPUTargetAttrVerifyInterface : AttrInterface<"TargetAttrVerifyInterface"> {
+  let description = [{
+    Interface for GPU target attributes that verify the target attribute
+    of a given GPU module.
+  }];
+  let cppNamespace = "::mlir::gpu";
+  let methods = [
+    InterfaceMethod<[{
+        Verifies that the target attribute is valid for the given GPU module.
+      }], "::mlir::LogicalResult", "verifyTarget",
+      (ins "::mlir::Operation *":$module)>
   ];
 }
 

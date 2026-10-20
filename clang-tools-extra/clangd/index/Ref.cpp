@@ -15,8 +15,8 @@ namespace clangd {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, RefKind K) {
   if (K == RefKind::Unknown)
     return OS << "Unknown";
-  static constexpr std::array<const char *, 4> Messages = {"Decl", "Def", "Ref",
-                                                           "Spelled"};
+  static constexpr std::array<const char *, 5> Messages = {"Decl", "Def", "Ref",
+                                                           "Spelled", "Call"};
   bool VisitedOnce = false;
   for (unsigned I = 0; I < Messages.size(); ++I) {
     if (static_cast<uint8_t>(K) & 1u << I) {

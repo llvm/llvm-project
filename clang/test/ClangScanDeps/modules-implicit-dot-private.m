@@ -22,7 +22,9 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,context-hash,file-deps,link-libraries,name,clang-context-hash,command-line,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
@@ -32,8 +34,8 @@ framework module FW_Private { umbrella header "FW_Private.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {

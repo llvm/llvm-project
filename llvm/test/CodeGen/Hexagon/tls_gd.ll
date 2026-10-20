@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -relocation-model=pic < %s | FileCheck %s
 ; CHECK: add({{pc|PC}},##_GLOBAL_OFFSET_TABLE_@PCREL)
 ; CHECK: call g1@GDPLT
 ; CHECK: call g0@GDPLT

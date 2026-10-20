@@ -272,17 +272,29 @@ define dso_local i128 @load_atomic_i128_aligned_acquire_const(ptr readonly %ptr)
 }
 
 define dso_local i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
-; CHECK-LABEL: load_atomic_i128_aligned_seq_cst:
-; CHECK:    ldp x0, x1, [x0]
-; CHECK:    dmb ish
+; -O0-LABEL: load_atomic_i128_aligned_seq_cst:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x0, x1, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_i128_aligned_seq_cst:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x0, x1, [x0]
+; -O1:    dmb ish
     %r = load atomic i128, ptr %ptr seq_cst, align 16
     ret i128 %r
 }
 
 define dso_local i128 @load_atomic_i128_aligned_seq_cst_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_i128_aligned_seq_cst_const:
-; CHECK:    ldp x0, x1, [x0]
-; CHECK:    dmb ish
+; -O0-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x0, x1, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_i128_aligned_seq_cst_const:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x0, x1, [x0]
+; -O1:    dmb ish
     %r = load atomic i128, ptr %ptr seq_cst, align 16
     ret i128 %r
 }
@@ -567,118 +579,30 @@ define dso_local i128 @load_atomic_i128_unaligned_seq_cst_const(ptr readonly %pt
     ret i128 %r
 }
 
-define dso_local half @load_atomic_f16_aligned_unordered(ptr %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_unordered:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic half, ptr %ptr unordered, align 2
-    ret half %r
+define dso_local fp128 @load_atomic_fp128_aligned_seq_cst(ptr %ptr) {
+; -O0-LABEL: load_atomic_fp128_aligned_seq_cst:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x9, x8, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_fp128_aligned_seq_cst:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x8, x9, [x0]
+; -O1:    dmb ish
+    %r = load atomic fp128, ptr %ptr seq_cst, align 16
+    ret fp128 %r
 }
 
-define dso_local half @load_atomic_f16_aligned_unordered_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_unordered_const:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic half, ptr %ptr unordered, align 2
-    ret half %r
+define dso_local fp128 @load_atomic_fp128_aligned_seq_cst_const(ptr readonly %ptr) {
+; -O0-LABEL: load_atomic_fp128_aligned_seq_cst_const:
+; -O0:    ldar x8, [x0]
+; -O0:    ldp x9, x8, [x0]
+; -O0:    dmb ish
+;
+; -O1-LABEL: load_atomic_fp128_aligned_seq_cst_const:
+; -O1:    ldar xzr, [x0]
+; -O1:    ldp x8, x9, [x0]
+; -O1:    dmb ish
+    %r = load atomic fp128, ptr %ptr seq_cst, align 16
+    ret fp128 %r
 }
-
-define dso_local half @load_atomic_f16_aligned_monotonic(ptr %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_monotonic:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic half, ptr %ptr monotonic, align 2
-    ret half %r
-}
-
-define dso_local half @load_atomic_f16_aligned_monotonic_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_monotonic_const:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic half, ptr %ptr monotonic, align 2
-    ret half %r
-}
-
-define dso_local half @load_atomic_f16_aligned_acquire(ptr %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_acquire:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic half, ptr %ptr acquire, align 2
-    ret half %r
-}
-
-define dso_local half @load_atomic_f16_aligned_acquire_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_acquire_const:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic half, ptr %ptr acquire, align 2
-    ret half %r
-}
-
-define dso_local half @load_atomic_f16_aligned_seq_cst(ptr %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_seq_cst:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic half, ptr %ptr seq_cst, align 2
-    ret half %r
-}
-
-define dso_local half @load_atomic_f16_aligned_seq_cst_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_f16_aligned_seq_cst_const:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic half, ptr %ptr seq_cst, align 2
-    ret half %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_unordered(ptr %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_unordered:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr unordered, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_unordered_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_unordered_const:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr unordered, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_monotonic(ptr %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_monotonic:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr monotonic, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_monotonic_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_monotonic_const:
-; CHECK:    ldrh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr monotonic, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_acquire(ptr %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_acquire:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr acquire, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_acquire_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_acquire_const:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr acquire, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_seq_cst(ptr %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_seq_cst:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr seq_cst, align 2
-    ret bfloat %r
-}
-
-define dso_local bfloat @load_atomic_bf16_aligned_seq_cst_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_bf16_aligned_seq_cst_const:
-; CHECK:    ldarh w8, [x0]
-    %r = load atomic bfloat, ptr %ptr seq_cst, align 2
-    ret bfloat %r
-}
-
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; -O0: {{.*}}
-; -O1: {{.*}}

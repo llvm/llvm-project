@@ -13,16 +13,17 @@
 #ifndef LLVM_CLANG_SEMA_SEMASWIFT_H
 #define LLVM_CLANG_SEMA_SEMASWIFT_H
 
-#include "clang/AST/Attr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class AttributeCommonInfo;
 class Decl;
+enum class ParameterABI;
 class ParsedAttr;
+class SwiftAttrAttr;
 class SwiftNameAttr;
 
 class SemaSwift : public SemaBase {
@@ -31,6 +32,8 @@ public:
 
   SwiftNameAttr *mergeNameAttr(Decl *D, const SwiftNameAttr &SNA,
                                StringRef Name);
+
+  SwiftAttrAttr *mergeAttrAttr(Decl *D, const SwiftAttrAttr &SAA);
 
   void handleAttrAttr(Decl *D, const ParsedAttr &AL);
   void handleAsyncAttr(Decl *D, const ParsedAttr &AL);

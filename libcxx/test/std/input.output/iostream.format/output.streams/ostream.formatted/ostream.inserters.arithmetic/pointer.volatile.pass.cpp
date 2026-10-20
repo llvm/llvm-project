@@ -61,7 +61,7 @@ protected:
 int main(int, char**) {
   testbuf<char> sb1;
   std::ostream os1(&sb1);
-  int n1;
+  int n1 = 0;
   os1 << &n1;
   assert(os1.good());
   std::string s1 = sb1.str();
@@ -74,7 +74,7 @@ int main(int, char**) {
 
   testbuf<char> sb3;
   std::ostream os3(&sb3);
-  volatile int n3;
+  volatile int n3 = 0;
   os3 << &n3;
   assert(os3.good());
   std::string s3 = sb3.str();

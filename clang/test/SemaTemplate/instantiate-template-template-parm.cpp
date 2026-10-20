@@ -24,11 +24,13 @@ template<int> struct B;
 
 template<typename T,
          template<T Value> class X> // expected-error{{cannot have type 'float'}}
+                                    // expected-error@-1 {{cannot be narrowed from type 'long long' to 'int'}}
+                                    // expected-note@-2 {{previous template template parameter is here}}
 struct X0 { };
 
 X0<int, B> x0b1;
 X0<float, B> x0b2; // expected-note{{while substituting}}
-X0<long, B> x0b3;
+X0<long long, B> x0b3; // expected-note {{has different template parameters}}
 
 template<template<int V> class TT>
 struct X1 { };

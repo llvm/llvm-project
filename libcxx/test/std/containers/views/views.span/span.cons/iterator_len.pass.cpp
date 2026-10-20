@@ -5,19 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template <class It>
-// constexpr explicit(Extent != dynamic_extent) span(It first, size_type count);
-//  If Extent is not equal to dynamic_extent, then count shall be equal to Extent.
+// template<class It>
+//   constexpr explicit(extent != dynamic_extent) span(It first, size_type count);
 //
+// Hardened preconditions:
+//   - If extent is not equal to dynamic_extent, then count == extent is true.
 
-
-#include <span>
 #include <cassert>
+#include <cstddef>
 #include <iterator>
+#include <span>
 #include <type_traits>
 
 template <std::size_t Extent>
@@ -42,8 +44,8 @@ constexpr void test_constructibility() {
 template <class T>
 constexpr bool test_ctor() {
   T val[2] = {};
-  auto s1 = std::span<T>(val, 2);
-  auto s2 = std::span<T, 2>(val, 2);
+  auto s1  = std::span<T>(val, 2);
+  auto s2  = std::span<T, 2>(val, 2);
   assert(s1.data() == std::data(val) && s1.size() == std::size(val));
   assert(s2.data() == std::data(val) && s2.size() == std::size(val));
   return true;

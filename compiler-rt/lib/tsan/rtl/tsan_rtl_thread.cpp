@@ -88,10 +88,13 @@ void ThreadFinalize(ThreadState *thr) {
 #if !SANITIZER_GO
   if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
   Vector<ThreadLeak> leaks;
-  ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
-                                                      &leaks);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
+                                                        &leaks);
+  }
+
   for (uptr i = 0; i < leaks.Size(); i++) {
     ScopedReport rep(ReportTypeThreadLeak);
     rep.AddThread(leaks[i].tctx, true);
@@ -149,7 +152,7 @@ struct OnStartedArgs {
   uptr tls_size;
 };
 
-void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type) {
   ctx->thread_registry.StartThread(tid, os_id, thread_type, thr);
   if (!thr->ignore_sync) {
@@ -165,14 +168,16 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
 #endif
 
   uptr stk_addr = 0;
-  uptr stk_size = 0;
+  uptr stk_end = 0;
   uptr tls_addr = 0;
-  uptr tls_size = 0;
+  uptr tls_end = 0;
 #if !SANITIZER_GO
   if (thread_type != ThreadType::Fiber)
-    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
-                         &tls_size);
+    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_end, &tls_addr,
+                         &tls_end);
 #endif
+  uptr stk_size = stk_end - stk_addr;
+  uptr tls_size = tls_end - tls_addr;
   thr->stk_addr = stk_addr;
   thr->stk_size = stk_size;
   thr->tls_addr = tls_addr;
@@ -186,10 +191,14 @@ void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
   }
 #endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_ANDROID
   // Don't imitate stack/TLS writes for the main thread,
   // because its initialization is synchronized with all
   // subsequent threads anyway.
+  // Because thr is created by MmapOrDie, the thr object
+  // is not in tls, the pointer to the thr object is in
+  // TLS_SLOT_SANITIZER slot. So skip this check on
+  // Android platform.
   if (tid != kMainTid) {
     if (stk_addr && stk_size) {
       const uptr pc = StackTrace::GetNextInstructionPc(

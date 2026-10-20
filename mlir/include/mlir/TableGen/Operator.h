@@ -38,6 +38,14 @@ class StringInit;
 namespace mlir {
 namespace tblgen {
 
+/// The canonical and legacy names of the implicit segment-size properties.
+inline constexpr StringLiteral operandSegmentAttrName = "operandSegmentSizes";
+inline constexpr StringLiteral resultSegmentAttrName = "resultSegmentSizes";
+inline constexpr StringLiteral legacyOperandSegmentAttrName =
+    "operand_segment_sizes";
+inline constexpr StringLiteral legacyResultSegmentAttrName =
+    "result_segment_sizes";
+
 /// This class represents an inferred result type. The result type can be
 /// inferred from an argument or result type. If it is inferred from another
 /// result type, that type must be buildable or inferred from yet another type.
@@ -119,14 +127,15 @@ public:
 
   /// A utility iterator over a list of variable decorators.
   struct VariableDecoratorIterator
-      : public llvm::mapped_iterator<llvm::Init *const *,
-                                     VariableDecorator (*)(llvm::Init *)> {
+      : public llvm::mapped_iterator<const llvm::Init *const *,
+                                     VariableDecorator (*)(
+                                         const llvm::Init *)> {
     /// Initializes the iterator to the specified iterator.
-    VariableDecoratorIterator(llvm::Init *const *it)
-        : llvm::mapped_iterator<llvm::Init *const *,
-                                VariableDecorator (*)(llvm::Init *)>(it,
-                                                                     &unwrap) {}
-    static VariableDecorator unwrap(llvm::Init *init);
+    VariableDecoratorIterator(const llvm::Init *const *it)
+        : llvm::mapped_iterator<const llvm::Init *const *,
+                                VariableDecorator (*)(const llvm::Init *)>(
+              it, &unwrap) {}
+    static VariableDecorator unwrap(const llvm::Init *init);
   };
   using var_decorator_iterator = VariableDecoratorIterator;
   using var_decorator_range = llvm::iterator_range<VariableDecoratorIterator>;
@@ -141,6 +150,9 @@ public:
 
   /// Returns true if default builders should not be generated.
   bool skipDefaultBuilders() const;
+
+  /// Returns true if the operation provides a custom properties printer.
+  bool hasCustomPropertiesPrinter() const;
 
   /// Op result iterators.
   const_value_iterator result_begin() const;
@@ -204,6 +216,13 @@ public:
   property_iterator properties_end() { return properties.end(); }
   llvm::iterator_range<property_iterator> getProperties() { return properties; }
   int getNumCoreAttributes() const { return properties.size(); }
+
+  /// Returns whether this operation has any non-empty properties.
+  bool hasNonEmptyProperties() const;
+
+  /// Returns all accepted attribute spellings for this operation's inherent
+  /// attributes and properties, including legacy segment-size aliases.
+  SmallVector<StringRef> getInherentAttrNames() const;
 
   // Op properties accessors.
   NamedProperty &getProperty(int index) { return properties[index]; }
@@ -322,21 +341,22 @@ public:
   /// Requires: all result types are known.
   const InferredResultType &getInferredResultType(int index) const;
 
-  /// Pair consisting kind of argument and index into operands or attributes.
-  struct OperandOrAttribute {
-    enum class Kind { Operand, Attribute };
-    OperandOrAttribute(Kind kind, int index) {
-      packed = (index << 1) | (kind == Kind::Attribute);
+  /// Pair consisting kind of argument and index into operands, attributes, or
+  /// properties.
+  struct OperandAttrOrProp {
+    enum class Kind { Operand = 0x0, Attribute = 0x1, Property = 0x2 };
+    OperandAttrOrProp(Kind kind, int index) {
+      packed = (index << 2) | static_cast<int>(kind);
     }
-    int operandOrAttributeIndex() const { return (packed >> 1); }
-    Kind kind() { return (packed & 0x1) ? Kind::Attribute : Kind::Operand; }
+    int operandOrAttributeIndex() const { return (packed >> 2); }
+    Kind kind() const { return static_cast<Kind>(packed & 0x3); }
 
   private:
     int packed;
   };
 
-  /// Returns the OperandOrAttribute corresponding to the index.
-  OperandOrAttribute getArgToOperandOrAttribute(int index) const;
+  /// Returns the OperandAttrOrProp corresponding to the index.
+  OperandAttrOrProp getArgToOperandAttrOrProp(int index) const;
 
   /// Returns the builders of this operation.
   ArrayRef<Builder> getBuilders() const { return builders; }
@@ -384,7 +404,7 @@ private:
   SmallVector<NamedAttribute, 4> attributes;
 
   /// The properties of the op.
-  SmallVector<NamedProperty> properties;
+  SmallVector<NamedProperty, 4> properties;
 
   /// The arguments of the op (operands and native attributes).
   SmallVector<Argument, 4> arguments;
@@ -404,8 +424,8 @@ private:
   /// The argument with the same type as the result.
   SmallVector<InferredResultType> resultTypeMapping;
 
-  /// Map from argument to attribute or operand number.
-  SmallVector<OperandOrAttribute, 4> attrOrOperandMapping;
+  /// Map from argument to attribute, property, or operand number.
+  SmallVector<OperandAttrOrProp, 4> attrPropOrOperandMapping;
 
   /// The builders of this operator.
   SmallVector<Builder> builders;

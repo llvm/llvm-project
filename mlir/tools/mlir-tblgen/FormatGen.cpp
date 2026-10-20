@@ -13,6 +13,7 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::SourceMgr;
 
 //===----------------------------------------------------------------------===//
 // FormatToken
@@ -26,14 +27,14 @@ SMLoc FormatToken::getLoc() const {
 // FormatLexer
 //===----------------------------------------------------------------------===//
 
-FormatLexer::FormatLexer(llvm::SourceMgr &mgr, SMLoc loc)
+FormatLexer::FormatLexer(SourceMgr &mgr, SMLoc loc)
     : mgr(mgr), loc(loc),
       curBuffer(mgr.getMemoryBuffer(mgr.getMainFileID())->getBuffer()),
       curPtr(curBuffer.begin()) {}
 
 FormatToken FormatLexer::emitError(SMLoc loc, const Twine &msg) {
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
-  llvm::SrcMgr.PrintMessage(this->loc, llvm::SourceMgr::DK_Note,
+  mgr.PrintMessage(loc, SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(this->loc, SourceMgr::DK_Note,
                             "in custom assembly format for this operation");
   return formToken(FormatToken::error, loc.getPointer());
 }
@@ -44,10 +45,10 @@ FormatToken FormatLexer::emitError(const char *loc, const Twine &msg) {
 
 FormatToken FormatLexer::emitErrorAndNote(SMLoc loc, const Twine &msg,
                                           const Twine &note) {
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
-  llvm::SrcMgr.PrintMessage(this->loc, llvm::SourceMgr::DK_Note,
+  mgr.PrintMessage(loc, SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(this->loc, SourceMgr::DK_Note,
                             "in custom assembly format for this operation");
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Note, note);
+  mgr.PrintMessage(loc, SourceMgr::DK_Note, note);
   return formToken(FormatToken::error, loc.getPointer());
 }
 
@@ -179,6 +180,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("attr-dict-with-keyword", FormatToken::kw_attr_dict_w_keyword)
           .Case("prop-dict", FormatToken::kw_prop_dict)
           .Case("custom", FormatToken::kw_custom)
+          .Case("enum", FormatToken::kw_enum)
           .Case("functional-type", FormatToken::kw_functional_type)
           .Case("oilist", FormatToken::kw_oilist)
           .Case("operands", FormatToken::kw_operands)
@@ -222,6 +224,7 @@ FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
 
 //===----------------------------------------------------------------------===//
 // Element Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<FormatElement *> FormatParser::parseElement(Context ctx) {
   if (curToken.is(FormatToken::literal))
@@ -398,16 +401,22 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
                                                               Context ctx) {
-  if (ctx != TopLevelContext)
-    return emitError(loc, "'custom' is only valid as a top-level directive");
+  if (ctx != TopLevelContext && ctx != StructDirectiveContext) {
+    return emitError(loc, "`custom` can only be used at the top-level context "
+                          "or within a `struct` directive");
+  }
 
-  FailureOr<FormatToken> nameTok;
   if (failed(parseToken(FormatToken::less,
-                        "expected '<' before custom directive name")) ||
-      failed(nameTok =
-                 parseToken(FormatToken::identifier,
-                            "expected custom directive name identifier")) ||
-      failed(parseToken(FormatToken::greater,
+                        "expected '<' before custom directive name")))
+    return failure();
+  // Preserve `custom<enum>` now that `enum` is also a directive keyword.
+  if (!curToken.is(FormatToken::identifier) &&
+      !curToken.is(FormatToken::kw_enum))
+    return emitError(curToken.getLoc(),
+                     "expected custom directive name identifier");
+  FormatToken nameTok = curToken;
+  consumeToken();
+  if (failed(parseToken(FormatToken::greater,
                         "expected '>' after custom directive name")) ||
       failed(parseToken(FormatToken::l_paren,
                         "expected '(' before custom directive parameters")))
@@ -431,7 +440,7 @@ FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
 
   if (failed(verifyCustomDirectiveArguments(loc, arguments)))
     return failure();
-  return create<CustomDirective>(nameTok->getSpelling(), std::move(arguments));
+  return create<CustomDirective>(nameTok.getSpelling(), std::move(arguments));
 }
 
 FailureOr<FormatElement *> FormatParser::parseRefDirective(SMLoc loc,
@@ -514,7 +523,7 @@ bool mlir::tblgen::isValidLiteral(StringRef value,
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1) {
-    StringRef bare = "_:,=<>()[]{}?+*";
+    StringRef bare = "_:,=<>()[]{}?+-*";
     if (isalpha(front) || bare.contains(front))
       return true;
     if (emitError)

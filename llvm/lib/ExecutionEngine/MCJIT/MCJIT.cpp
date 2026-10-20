@@ -19,7 +19,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -66,8 +65,10 @@ MCJIT::createJIT(std::unique_ptr<Module> M, std::string *ErrorStr,
 MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
              std::shared_ptr<MCJITMemoryManager> MemMgr,
              std::shared_ptr<LegacyJITSymbolResolver> Resolver)
-    : ExecutionEngine(TM->createDataLayout(), std::move(M)), TM(std::move(TM)),
-      Ctx(nullptr), MemMgr(std::move(MemMgr)),
+    : ExecutionEngine(DataLayout(TM->getTargetTriple().computeDataLayout(
+                          TM->Options.MCOptions.getABIName())),
+                      std::move(M)),
+      TM(std::move(TM)), Ctx(nullptr), MemMgr(std::move(MemMgr)),
       Resolver(*this, std::move(Resolver)), Dyld(*this->MemMgr, this->Resolver),
       ObjCache(nullptr) {
   // FIXME: We are managing our modules, so we do not want the base class
@@ -219,7 +220,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(LoadedObject.takeError(), OS);
-    report_fatal_error(Twine(OS.str()));
+    report_fatal_error(Twine(Buf));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
     Dyld.loadObject(*LoadedObject.get());
@@ -260,9 +261,7 @@ void MCJIT::finalizeObject() {
 
   // Generate code for module is going to move objects out of the 'added' list,
   // so we need to copy that out before using it:
-  SmallVector<Module*, 16> ModsToAdd;
-  for (auto *M : OwnedModules.added())
-    ModsToAdd.push_back(M);
+  SmallVector<Module *, 16> ModsToAdd(OwnedModules.added());
 
   for (auto *M : ModsToAdd)
     generateCodeForModule(M);
@@ -590,7 +589,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       return rv;
     }
     case Type::VoidTyID:
-      rv.IntVal = APInt(32, ((int(*)())(intptr_t)FPtr)());
+      rv.IntVal = APInt(32, ((int (*)())(intptr_t)FPtr)(), true);
       return rv;
     case Type::FloatTyID:
       rv.FloatVal = ((float(*)())(intptr_t)FPtr)();

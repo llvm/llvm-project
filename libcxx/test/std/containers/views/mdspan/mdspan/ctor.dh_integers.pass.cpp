@@ -30,8 +30,8 @@
 //   - value-initializes acc_.
 
 #include <array>
-#include <concepts>
 #include <cassert>
+#include <concepts>
 #include <mdspan>
 #include <type_traits>
 

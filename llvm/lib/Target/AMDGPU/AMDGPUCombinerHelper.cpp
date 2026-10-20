@@ -8,14 +8,22 @@
 
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace MIPatternMatch;
+
+AMDGPUCombinerHelper::AMDGPUCombinerHelper(
+    GISelChangeObserver &Observer, MachineIRBuilder &B, bool IsPreLegalize,
+    GISelValueTracking *VT, MachineDominatorTree *MDT, const LegalizerInfo *LI,
+    const GCNSubtarget &STI)
+    : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI),
+      TII(*STI.getInstrInfo()) {}
 
 LLVM_READNONE
 static bool fnegFoldsIntoMI(const MachineInstr &MI) {
@@ -135,9 +143,8 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool mayIgnoreSignedZero(MachineInstr &MI) {
-  const TargetOptions &Options = MI.getMF()->getTarget().Options;
-  return Options.NoSignedZerosFPMath || MI.getFlag(MachineInstr::MIFlag::FmNsz);
+static bool mayIgnoreSignedZero(const MachineInstr &MI) {
+  return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
 static bool isInv2Pi(const APFloat &APF) {
@@ -166,6 +173,15 @@ static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
   return false;
 }
 
+bool AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies(const MachineInstr &MI,
+                                                     Register LHS,
+                                                     Register RHS) const {
+  if (mayIgnoreSignedZero(MI))
+    return true;
+  return VT &&
+         (VT->isKnownNeverLogicalZero(LHS) || VT->isKnownNeverLogicalZero(RHS));
+}
+
 static unsigned inverseMinMax(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::G_FMAXNUM:
@@ -190,7 +206,7 @@ static unsigned inverseMinMax(unsigned Opc) {
 }
 
 bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
-                                             MachineInstr *&MatchInfo) {
+                                             MachineInstr *&MatchInfo) const {
   Register Src = MI.getOperand(1).getReg();
   MatchInfo = MRI.getVRegDef(Src);
 
@@ -209,14 +225,21 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   }
 
   switch (MatchInfo->getOpcode()) {
+  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
+  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
+    if (isConstantCostlierToNegate(*MatchInfo,
+                                   MatchInfo->getOperand(2).getReg(), MRI))
+      return false;
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    return canIgnoreLegacyMinMaxTies(*MatchInfo,
+                                     MatchInfo->getOperand(1).getReg(),
+                                     MatchInfo->getOperand(2).getReg());
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
-  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     // 0 doesn't have a negated inline immediate.
     return !isConstantCostlierToNegate(*MatchInfo,
                                        MatchInfo->getOperand(2).getReg(), MRI);
@@ -259,7 +282,7 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
 }
 
 void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
-                                             MachineInstr *&MatchInfo) {
+                                             MachineInstr *&MatchInfo) const {
   // Transform:
   // %A = inst %Op1, ...
   // %B = fneg %A
@@ -395,18 +418,39 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool AMDGPUCombinerHelper::matchFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  Register Round = Fptrunc.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(Round))
+    return false;
+
+  LLT SrcTy = MRI.getType(Fptrunc.getOperand(1).getReg());
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_FABS, {SrcTy}});
+}
+
+void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  // fabs (fptrunc x) -> fptrunc (fabs x)
+  Register Dst = Fabs.getOperand(0).getReg();
+  Register Src = Fptrunc.getOperand(1).getReg();
+  Builder.setInstrAndDebugLoc(Fabs);
+  Register Abs =
+      Builder.buildFAbs(MRI.getType(Src), Src, Fabs.getFlags()).getReg(0);
+  Builder.buildFPTrunc(Dst, Abs, Fptrunc.getFlags());
+  Fabs.eraseFromParent();
+}
+
 // TODO: Should return converted value / extension source and avoid introducing
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
                                   Register Reg) {
-  const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
-    Register SrcReg = Def->getOperand(1).getReg();
-    return MRI.getType(SrcReg) == LLT::scalar(16);
-  }
+  Register SrcReg;
+  if (mi_match(Reg, MRI, m_GFPExt(m_Reg(SrcReg))))
+    return MRI.getType(SrcReg) == LLT::float16();
 
-  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
-    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+  const ConstantFP *FPImm;
+  if (mi_match(Reg, MRI, m_GFCst(FPImm))) {
+    APFloat Val = FPImm->getValueAPF();
     bool LosesInfo = true;
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
     return !LosesInfo;
@@ -418,10 +462,12 @@ static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
 bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
-                                                       Register Src2) {
+                                                       Register Src2) const {
   assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
   Register SrcReg = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
+  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::float16())
+    return false;
+  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::float32())
     return false;
 
   return isFPExtFromF16OrConst(MRI, Src0) && isFPExtFromF16OrConst(MRI, Src1) &&
@@ -431,12 +477,12 @@ bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
 void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
-                                                       Register Src2) {
+                                                       Register Src2) const {
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
-  Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
-  Src1 = Builder.buildFPTrunc(LLT::scalar(16), Src1).getReg(0);
-  Src2 = Builder.buildFPTrunc(LLT::scalar(16), Src2).getReg(0);
+  Src0 = Builder.buildFPTrunc(LLT::float16(), Src0).getReg(0);
+  Src1 = Builder.buildFPTrunc(LLT::float16(), Src1).getReg(0);
+  Src2 = Builder.buildFPTrunc(LLT::float16(), Src2).getReg(0);
 
   LLT Ty = MRI.getType(Src0);
   auto A1 = Builder.buildFMinNumIEEE(Ty, Src0, Src1);
@@ -444,4 +490,96 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
   auto C1 = Builder.buildFMaxNumIEEE(Ty, A1, Src2);
   Builder.buildFMinNumIEEE(MI.getOperand(0), B1, C1);
   MI.eraseFromParent();
+}
+
+bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
+    MachineInstr &MI, MachineInstr &Sel,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FMUL);
+  assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
+  assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DestTy = MRI.getType(Dst);
+  LLT ScalarDestTy = DestTy.getScalarType();
+
+  // TODO: Expected float type in ScalarDestTy
+  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
+       ScalarDestTy != LLT::float16()) ||
+      !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
+    return false;
+
+  Register SelectCondReg = Sel.getOperand(1).getReg();
+  Register SelectTrueReg = Sel.getOperand(2).getReg();
+  Register SelectFalseReg = Sel.getOperand(3).getReg();
+
+  const auto SelectTrueVal =
+      isConstantOrConstantSplatVectorFP(SelectTrueReg, MRI);
+  if (!SelectTrueVal)
+    return false;
+  const auto SelectFalseVal =
+      isConstantOrConstantSplatVectorFP(SelectFalseReg, MRI);
+  if (!SelectFalseVal)
+    return false;
+
+  if (SelectTrueVal->isNegative() != SelectFalseVal->isNegative())
+    return false;
+
+  // For f32, only non-inline constants should be transformed.
+  // TODO: Expected float32
+  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
+      TII.isInlineConstant(*SelectFalseVal))
+    return false;
+
+  int SelectTrueLog2Val = SelectTrueVal->getExactLog2Abs();
+  if (SelectTrueLog2Val == INT_MIN)
+    return false;
+  int SelectFalseLog2Val = SelectFalseVal->getExactLog2Abs();
+  if (SelectFalseLog2Val == INT_MIN)
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &Builder) {
+    LLT IntDestTy = DestTy.changeElementType(LLT::integer(32));
+    auto NewSel = Builder.buildSelect(
+        IntDestTy, SelectCondReg,
+        Builder.buildConstant(IntDestTy, SelectTrueLog2Val),
+        Builder.buildConstant(IntDestTy, SelectFalseLog2Val));
+
+    Register XReg = MI.getOperand(1).getReg();
+    if (SelectTrueVal->isNegative()) {
+      auto NegX =
+          Builder.buildFNeg(DestTy, XReg, MRI.getVRegDef(XReg)->getFlags());
+      Builder.buildFLdexp(Dst, NegX, NewSel, MI.getFlags());
+    } else {
+      Builder.buildFLdexp(Dst, XReg, NewSel, MI.getFlags());
+    }
+  };
+
+  return true;
+}
+
+bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
+  auto Res = getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (!Res)
+    return false;
+
+  const uint64_t Val = Res->Value.getZExtValue();
+  unsigned MaskIdx = 0;
+  unsigned MaskLen = 0;
+  if (!isShiftedMask_64(Val, MaskIdx, MaskLen))
+    return false;
+
+  // Check if low 32 bits or high 32 bits are all ones.
+  return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
+}
+
+bool AMDGPUCombinerHelper::matchBinopWith32BitMask(Register X,
+                                                   Register Y) const {
+  // If both operands are constants, constant_fold_binop can fold the whole
+  // binop to a single constant, which is strictly better than narrowing it
+  // into two s32 ops. Bail so the fold is not preempted.
+  if (getIConstantVRegValWithLookThrough(X, MRI) &&
+      getIConstantVRegValWithLookThrough(Y, MRI))
+    return false;
+  return matchConstantIs32BitMask(X) || matchConstantIs32BitMask(Y);
 }

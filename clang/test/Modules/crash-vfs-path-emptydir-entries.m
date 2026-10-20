@@ -1,4 +1,5 @@
-// REQUIRES: crash-recovery, shell
+// UNSUPPORTED: system-windows
+// REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}
@@ -23,7 +24,7 @@
 
 #include "usr/include/stdio.h"
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

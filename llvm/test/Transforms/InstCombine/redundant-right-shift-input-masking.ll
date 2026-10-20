@@ -39,7 +39,7 @@ define i32 @t1_sshr(i32 %data, i32 %nbits) {
 
 define <4 x i32> @t2_vec(<4 x i32> %data, <4 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, [[NBITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <4 x i32> splat (i32 -1), [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and <4 x i32> [[T0]], [[DATA:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> [[T1]], [[NBITS]]
 ; CHECK-NEXT:    ret <4 x i32> [[T2]]

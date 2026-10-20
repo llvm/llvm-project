@@ -18,7 +18,7 @@ struct myfunction {
 myfunction create_func() {
   int n;
   auto c = [&n] {};
-  return c; // expected-warning {{Address of stack memory associated with local variable 'n' is still referred to by a temporary object on the stack upon returning to the caller.  This will be a dangling reference}}
+  return c; // expected-warning {{Address of stack memory associated with local variable 'n' returned to caller}} expected-warning{{Address of stack memory associated with local variable 'n' is still referred to by a temporary object on the stack upon returning to the caller.  This will be a dangling reference}}
 }
 void gh_66221() {
   create_func()();

@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for fmin are generated for half/float/double.
 
@@ -25,6 +25,11 @@ entry:
   %0 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %0
 }
+
+; CHECK-DAG: declare half @dx.op.binary.f16(i32, half, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.binary.f32(i32, float, float) #[[#ATTR0]]
+; CHECK-DAG: declare double @dx.op.binary.f64(i32, double, double) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare half @llvm.minnum.f16(half, half)
 declare float @llvm.minnum.f32(float, float)

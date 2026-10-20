@@ -15,9 +15,10 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
+#include <cassert>
 #include <iomanip>
 #include <istream>
-#include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros

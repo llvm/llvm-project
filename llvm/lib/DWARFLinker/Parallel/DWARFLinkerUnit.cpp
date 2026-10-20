@@ -18,9 +18,9 @@ void DwarfUnit::assignAbbrev(DIEAbbrev &Abbrev) {
   // Check the set for priors.
   FoldingSetNodeID ID;
   Abbrev.Profile(ID);
-  void *InsertToken;
+  FoldingSetInsertToken Token;
 
-  DIEAbbrev *InSet = AbbreviationsSet.FindNodeOrInsertPos(ID, InsertToken);
+  DIEAbbrev *InSet = AbbreviationsSet.lookup(ID, Token);
   // If it's newly added.
   if (InSet) {
     // Assign existing abbreviation number.
@@ -31,7 +31,7 @@ void DwarfUnit::assignAbbrev(DIEAbbrev &Abbrev) {
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr);
-    AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
+    AbbreviationsSet.insert(Abbreviations.back().get(), Token);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
     Abbreviations.back()->setNumber(Abbreviations.size());
@@ -70,9 +70,7 @@ void DwarfUnit::emitDwarfAbbrevEntry(const DIEAbbrev &Abbrev,
 
   // For each attribute description.
   const SmallVectorImpl<DIEAbbrevData> &Data = Abbrev.getData();
-  for (unsigned i = 0, N = Data.size(); i < N; ++i) {
-    const DIEAbbrevData &AttrData = Data[i];
-
+  for (const DIEAbbrevData &AttrData : Data) {
     // Emit attribute type.
     encodeULEB128(AttrData.getAttribute(), AbbrevSection.OS);
 
@@ -120,11 +118,14 @@ Error DwarfUnit::emitDebugInfo(const Triple &TargetTriple) {
   return Error::success();
 }
 
-Error DwarfUnit::emitDebugLine(const Triple &TargetTriple,
-                               const DWARFDebugLine::LineTable &OutLineTable) {
+Error DwarfUnit::emitDebugLine(
+    const Triple &TargetTriple, const DWARFDebugLine::LineTable &OutLineTable,
+    ArrayRef<uint64_t> OrigRowIndices,
+    DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset) {
   DebugLineSectionEmitter DebugLineEmitter(TargetTriple, *this);
 
-  return DebugLineEmitter.emit(OutLineTable);
+  return DebugLineEmitter.emit(OutLineTable, OrigRowIndices,
+                               RowIndexToSeqStartOffset);
 }
 
 Error DwarfUnit::emitDebugStringOffsetSection() {

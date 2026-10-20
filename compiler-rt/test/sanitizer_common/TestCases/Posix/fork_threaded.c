@@ -14,12 +14,18 @@
 // UNSUPPORTED: target={{.*netbsd.*}}
 // UNSUPPORTED: target={{.*apple.*}}
 
+// FIXME: Loops indefinitely
+// UNSUPPORTED: target={{.*freebsd.*}} && tsan
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:
 //  1. Internal mutexes used by `inparent` thread do not deadlock `inchild`
 //     thread.
 //  2. Stack poisoned by `inparent` is not poisoned in `inchild` thread.
+
+// Stack tagging is unsupported.
+// UNSUPPORTED: hwasan-aliasing
 
 #include <assert.h>
 #include <pthread.h>

@@ -126,8 +126,8 @@ void collapseSparseSpace(MutableArrayRef<CollapseSpaceInfo> toCollapse) {
   OpBuilder builder(root);
 
   // Construct the collapsed iteration space.
-  auto collapsedSpace = builder.create<ExtractIterSpaceOp>(
-      loc, root.getTensor(), root.getParentIter(), root.getLoLvl(),
+  auto collapsedSpace = ExtractIterSpaceOp::create(
+      builder, loc, root.getTensor(), root.getParentIter(), root.getLoLvl(),
       leaf.getHiLvl());
 
   auto rItOp = llvm::cast<IterateOp>(*root->getUsers().begin());
@@ -141,10 +141,10 @@ void collapseSparseSpace(MutableArrayRef<CollapseSpaceInfo> toCollapse) {
   auto cloned = llvm::cast<IterateOp>(builder.clone(*innermost, mapper));
   builder.setInsertionPointToStart(cloned.getBody());
 
-  LevelSet crdUsedLvls;
+  I64BitSet crdUsedLvls;
   unsigned shift = 0, argIdx = 1;
   for (auto info : toCollapse.drop_back()) {
-    LevelSet set = info.loop.getCrdUsedLvls();
+    I64BitSet set = info.loop.getCrdUsedLvls();
     crdUsedLvls |= set.lshift(shift);
     shift += info.loop.getSpaceDim();
     for (BlockArgument crd : info.loop.getCrds()) {
@@ -178,17 +178,25 @@ struct SparseSpaceCollapsePass
     // %space2 = extract_space %t2 ...
     // sparse_tensor.iterate(%sp1) ...
     //
+    // Collect all groups to collapse before performing any IR mutations.
+    // Mutating (erasing) ops during the walk would invalidate the walk's
+    // internal iterator and cause use-after-free crashes.
+    SmallVector<SmallVector<CollapseSpaceInfo>> groups;
     SmallVector<CollapseSpaceInfo> toCollapse;
     func->walk([&](ExtractIterSpaceOp op) {
       if (!legalToCollapse(toCollapse, op)) {
-        // if not legal to collapse one more space, collapse the existing ones
-        // and clear.
-        collapseSparseSpace(toCollapse);
+        // Save the current group and start a new one.
+        groups.push_back(std::move(toCollapse));
         toCollapse.clear();
+        // Try to start a new group with the current op.
+        legalToCollapse(toCollapse, op);
       }
     });
+    groups.push_back(std::move(toCollapse));
 
-    collapseSparseSpace(toCollapse);
+    // Apply all collapse transformations after the walk is complete.
+    for (auto &group : groups)
+      collapseSparseSpace(group);
   }
 };
 

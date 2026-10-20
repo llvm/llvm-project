@@ -5,7 +5,7 @@
 # RUN:         -split-dwarf-file=%t.dwo -dwarf-version=5
 # RUN: llvm-dwp %t.dwo -o %t.dwp
 # RUN: llvm-dwarfdump -debug-info -debug-cu-index -debug-tu-index \
-# RUN:                -manaully-generate-unit-index %t.dwp 2>&1 | FileCheck %s
+# RUN:                -manually-generate-unit-index %t.dwp 2>&1 | FileCheck %s
 
 ## Note: In order to check whether the type unit index is generated
 ## there is no need to add the missing DIEs for the structure type of the type unit.
@@ -13,15 +13,15 @@
 # CHECK-NOT: .debug_info.dwo contents:
 
 # CHECK-DAG: .debug_cu_index contents:
-# CHECK: warning: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
+# CHECK: warning: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 7, supported are 2-6
 
 # CHECK-DAG: .debug_tu_index contents:
-# CHECK: warning: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
+# CHECK: warning: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 7, supported are 2-6
 
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
 .Ldebug_info_dwo_start0:
-    .short	6                               # DWARF version number
+    .short	7                               # DWARF version number
     .byte	6                               # DWARF Unit Type (DW_UT_split_type)
     .byte	8                               # Address Size (in bytes)
     .long	0                               # Offset Into Abbrev. Section
@@ -34,7 +34,7 @@
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end1-.Ldebug_info_dwo_start1 # Length of Unit
 .Ldebug_info_dwo_start1:
-    .short	6                               # DWARF version number
+    .short	7                               # DWARF version number
     .byte	6                               # DWARF Unit Type (DW_UT_split_type)
     .byte	8                               # Address Size (in bytes)
     .long	0                               # Offset Into Abbrev. Section
@@ -47,7 +47,7 @@
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end2-.Ldebug_info_dwo_start2 # Length of Unit
 .Ldebug_info_dwo_start2:
-    .short	6                               # DWARF version number
+    .short	7                               # DWARF version number
     .byte	5                               # DWARF Unit Type (DW_UT_split_compile)
     .byte	8                               # Address Size (in bytes)
     .long	0                               # Offset Into Abbrev. Section

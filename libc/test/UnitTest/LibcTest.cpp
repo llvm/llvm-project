@@ -12,8 +12,9 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
+#include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -27,10 +28,12 @@ extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
 #define LIBC_TEST_USE_CLOCK
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
+
+RunContext *current_context = nullptr;
 
 TestLogger &operator<<(TestLogger &logger, Location Loc) {
   return logger << Loc.file << ":" << Loc.line << ": FAILURE\n";
@@ -43,9 +46,8 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
-  return buffer.view();
+  return cpp::string(buffer.view());
 }
 
 // When the value is of a standard integral type, just display it as normal.
@@ -70,9 +72,13 @@ cpp::enable_if_t<cpp::is_fixed_point_v<T>, cpp::string> describeValue(T Value) {
 cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
+cpp::string describeValue(cpp::wstring_view Value) {
+  return try_convert_to_utf8(Value);
+}
+
 template <typename ValType>
-bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
-          const char *LHSStr, const char *RHSStr, Location Loc) {
+bool test_impl(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
+               const char *LHSStr, const char *RHSStr, Location Loc) {
   auto ExplainDifference = [=, &Ctx](bool Cond,
                                      cpp::string_view OpString) -> bool {
     if (Cond)
@@ -158,13 +164,18 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
-    [[maybe_unused]] const auto start_time = clock();
     RunContext Ctx;
+    internal::current_context = &Ctx;
+#ifdef LIBC_TEST_USE_CLOCK
+    const uint64_t start_time = static_cast<uint64_t>(clock());
+#endif
     T->SetUp();
-    T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const auto end_time = clock();
+#ifdef LIBC_TEST_USE_CLOCK
+    const uint64_t end_time = static_cast<uint64_t>(clock());
+#endif
+    internal::current_context = nullptr;
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
@@ -213,9 +224,11 @@ int Test::runTests(const TestOptions &Options) {
 namespace internal {
 
 #define TEST_SPECIALIZATION(TYPE)                                              \
-  template bool test<TYPE>(RunContext * Ctx, TestCond Cond, TYPE LHS,          \
-                           TYPE RHS, const char *LHSStr, const char *RHSStr,   \
-                           Location Loc)
+  template bool test_impl<TYPE>(RunContext * Ctx, TestCond Cond, TYPE LHS,     \
+                                TYPE RHS, const char *LHSStr,                  \
+                                const char *RHSStr, Location Loc)
+
+TEST_SPECIALIZATION(wchar_t);
 
 TEST_SPECIALIZATION(char);
 TEST_SPECIALIZATION(short);
@@ -223,6 +236,7 @@ TEST_SPECIALIZATION(int);
 TEST_SPECIALIZATION(long);
 TEST_SPECIALIZATION(long long);
 
+TEST_SPECIALIZATION(signed char);
 TEST_SPECIALIZATION(unsigned char);
 TEST_SPECIALIZATION(unsigned short);
 TEST_SPECIALIZATION(unsigned int);
@@ -241,12 +255,14 @@ TEST_SPECIALIZATION(__uint128_t);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<96>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<320>);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::wstring_view);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
@@ -265,28 +281,46 @@ TEST_SPECIALIZATION(unsigned accum);
 TEST_SPECIALIZATION(unsigned long accum);
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
+bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::EQ,
+                   LHS ? cpp::string_view(LHS) : cpp::string_view(),
+                   RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::EQ,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::NE,
+                   LHS ? cpp::string_view(LHS) : cpp::string_view(),
+                   RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc) {
+  return test_impl(internal::current_context, TestCond::NE,
+                   LHS ? cpp::wstring_view(LHS) : cpp::wstring_view(),
+                   RHS ? cpp::wstring_view(RHS) : cpp::wstring_view(), LHSStr,
+                   RHSStr, Loc);
+}
+
 } // namespace internal
-
-bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
-                     const char *RHSStr, internal::Location Loc) {
-  return internal::test(
-      Ctx, TestCond::EQ, LHS ? cpp::string_view(LHS) : cpp::string_view(),
-      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
-}
-
-bool Test::testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
-                     const char *RHSStr, internal::Location Loc) {
-  return internal::test(
-      Ctx, TestCond::NE, LHS ? cpp::string_view(LHS) : cpp::string_view(),
-      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
-}
 
 bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
                      const char *RHSStr, internal::Location Loc) {
   if (MatchResult)
     return true;
 
-  Ctx->markFail();
+  internal::current_context->markFail();
   if (!Matcher.is_silent()) {
     tlog << Loc;
     tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
@@ -296,4 +330,4 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

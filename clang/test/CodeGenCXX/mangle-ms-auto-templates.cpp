@@ -26,7 +26,7 @@ int j;
 
 void template_mangling() {
   AutoFunc<1>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MH00@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MH00@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$00@@YA?A?<auto>@@XZ"
   AutoParmTemplate<0> auto_int;
   // AFTER: call {{.*}} @"??0?$AutoParmTemplate@$MH0A@@@QEAA@XZ"
@@ -52,7 +52,7 @@ void template_mangling() {
   // BEFORE: call {{.*}} @"??0?$AutoParmsTemplate@$00$0HPPPPPPPPPPPPPPP@@@QEAA@XZ"
 
   AutoFunc<&i>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MPEAH1?i@@3HA@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MPEAH1?i@@3HA@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$1?i@@3HA@@YA?A?<auto>@@XZ"
 
   AutoParmTemplate<&i> auto_int_ptr;
@@ -64,7 +64,7 @@ void template_mangling() {
   // BEFORE: call {{.*}} @"??0?$AutoParmsTemplate@$1?i@@3HA$1?j@@3HA@@QEAA@XZ"
 
   AutoFunc<&Func>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$MP6AHXZ1?Func@@YAHXZ@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$MP6AHXZ1?Func@@YAHXZ@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$1?Func@@YAHXZ@@YA?A?<auto>@@XZ"
 
   AutoParmTemplate<&Func> auto_func_ptr;

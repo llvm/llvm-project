@@ -1,0 +1,61 @@
+// Check that marker symbols ($d, $x) denoting data embedded in code are ignored
+// if they fall outside their respective sections.
+
+// RUN: yaml2obj %S/Inputs/spurious-marker-symbol.yaml -o %t.exe
+// RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
+// CHECK: 1 out of 1 functions were overwritten
+// RUN: llvm-objdump -j .text -d %t.bolt | FileCheck %s -check-prefix=CHECK-DISASM
+// CHECK-DISASM: func
+// CHECK-DISASM: 2a0000: d2800540   mov
+// CHECK-DISASM: 2a0004: d65f03c0   ret
+
+// The YAML encodes the following assembly and debug information:
+
+  .text
+  .globl func
+  .type func, %function
+func:
+  mov    x0, #42
+// $d.42:    (symbol in .ignored, with an address in .text)
+  ret
+
+// .eh_frame contains minimal DWARF with a CFA operation on the `ret`. BOLT
+// should ignore the spurious `$d.42`. If it doesn't, then it will stop
+// disassembling after the `mov` and will fail to process the second
+// DW_CFA_def_cfa_offset.
+//
+// CIE
+//    length:                       00000010
+//    CIE_id:                       00000000
+//    version:                            01
+//    augmentation:
+//      "zR"                        7a 52 00
+//      - read augmentation data
+//      - read FDE pointer encoding
+//    code_alignment_factor:              04
+//    data_alignment_factor:              78  (-8)
+//    return_address_register:            1e  (r30 / lr)
+//
+//    augmentation data:
+//      length:                           01
+//      FDE pointers are absptr+sdata4    0b
+//
+//    initial_instructions:
+//      DW_CFA_def_cfa (31, 0):     0c 1f 00
+//
+// Encoding: 10000000'00000000'01'7a5200'04'78'1e'10'0b'0c1f00
+//
+// FDE
+//    length:                       00000014
+//    CIE_pointer:                  00000018  (backwards offset from here to CIE)
+//    initial_location:             002a0000  (`func` as absptr+sdata4)
+//    address_range:                00000008
+//    augmentation data:
+//      length:                           00
+//    instructions:
+//      DW_CFA_def_cfa_offset (1)      0e 01
+//      DW_CFA_advance_loc (1)            41  (`ret` at 0x2a0004)
+//      DW_CFA_def_cfa_offset (1)      0e 01  Fails unless $d.42 is ignored.
+//      DW_CFA_nop                     00 00
+//
+// Encoding: 14000000'18000000'00002a00'08000000'000e0141'0e010000

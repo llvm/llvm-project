@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceGlobalObjectsDeltaPass(TestRunner &Test);
+void reduceGlobalObjectsDeltaPass(Oracle &O, ReducerWorkItem &Program);
 } // namespace llvm
 
 #endif

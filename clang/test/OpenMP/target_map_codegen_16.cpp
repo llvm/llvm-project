@@ -35,9 +35,9 @@
 
 // CK17-DAG: [[ST:%.+]] = type { i32, double }
 // CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
+// CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 {{16|12}}, i64 0]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
+// CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 288]
 
 class SSS {
 public:
@@ -61,7 +61,7 @@ void implicit_maps_struct (int a){
 // CK17-DAG: store ptr [[DECL:%.+]], ptr [[BP1]]
 // CK17-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK17: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK17: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target
   {
     s.a += 1;
@@ -69,10 +69,10 @@ void implicit_maps_struct (int a){
   }
 }
 
-// CK17: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK17: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK17: [[ADDR:%.+]] = alloca ptr,
 // CK17: store ptr [[ARG]], ptr [[ADDR]],
 // CK17: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK17: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK17: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif // CK17
 #endif

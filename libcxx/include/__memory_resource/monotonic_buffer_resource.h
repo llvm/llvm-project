@@ -9,10 +9,11 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 
+#include <__assert>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory_resource/memory_resource.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,14 +22,14 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
 // [mem.res.monotonic.buffer]
 
 class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resource : public memory_resource {
-  static const size_t __default_buffer_capacity  = 1024;
-  static const size_t __default_buffer_alignment = 16;
+  static constexpr size_t __default_buffer_capacity = 1024;
 
   struct __chunk_footer {
     __chunk_footer* __next_;
@@ -38,7 +39,6 @@ class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resour
     _LIBCPP_HIDE_FROM_ABI size_t __allocation_size() {
       return (reinterpret_cast<char*>(this) - __start_) + sizeof(*this);
     }
-    void* __try_allocate_from_chunk(size_t, size_t);
   };
 
   struct __initial_descriptor {
@@ -48,7 +48,6 @@ class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resour
       char* __end_;
       size_t __size_;
     };
-    void* __try_allocate_from_chunk(size_t, size_t);
   };
 
 public:
@@ -56,7 +55,10 @@ public:
       : monotonic_buffer_resource(nullptr, __default_buffer_capacity, get_default_resource()) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit monotonic_buffer_resource(size_t __initial_size)
-      : monotonic_buffer_resource(nullptr, __initial_size, get_default_resource()) {}
+      : monotonic_buffer_resource(nullptr, __initial_size, get_default_resource()) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __initial_size > 0, "monotonic_buffer_resource: initial_size must be greater than zero");
+  }
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(void* __buffer, size_t __buffer_size)
       : monotonic_buffer_resource(__buffer, __buffer_size, get_default_resource()) {}
@@ -65,7 +67,10 @@ public:
       : monotonic_buffer_resource(nullptr, __default_buffer_capacity, __upstream) {}
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(size_t __initial_size, memory_resource* __upstream)
-      : monotonic_buffer_resource(nullptr, __initial_size, __upstream) {}
+      : monotonic_buffer_resource(nullptr, __initial_size, __upstream) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __initial_size > 0, "monotonic_buffer_resource: initial_size must be greater than zero");
+  }
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(void* __buffer, size_t __buffer_size, memory_resource* __upstream)
       : __res_(__upstream) {
@@ -96,7 +101,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
 protected:
   void* do_allocate(size_t __bytes, size_t __alignment) override; // key function
@@ -115,6 +120,7 @@ private:
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

@@ -13,7 +13,7 @@ define void @foo() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[X0:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[IDXPROM_I:%.*]] = zext i32 [[X0]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr [[STRUCT_S:%.*]], ptr addrspacecast (ptr addrspace(3) @g1 to ptr), i64 0, i32 0, i64 [[IDXPROM_I]]
-; CHECK-NEXT:    tail call void @f1(ptr [[ARRAYIDX_I]], i32 undef) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    tail call void @f1(ptr [[ARRAYIDX_I]], i32 poison) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr addrspace(3) @g1, align 4
 ; CHECK-NEXT:    [[L_SROA_0_0_INSERT_EXT_I:%.*]] = zext i32 [[X1]] to i64
 ; CHECK-NEXT:    tail call void @f2(ptr null, i64 [[L_SROA_0_0_INSERT_EXT_I]]) #[[ATTR0]]
@@ -23,7 +23,7 @@ entry:
   %x0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() #2
   %idxprom.i = zext i32 %x0 to i64
   %arrayidx.i = getelementptr %struct.S, ptr addrspacecast (ptr addrspace(3) @g1 to ptr), i64 0, i32 0, i64 %idxprom.i
-  tail call void @f1(ptr %arrayidx.i, i32 undef) #0
+  tail call void @f1(ptr %arrayidx.i, i32 poison) #0
   %x1 = load i32, ptr addrspacecast (ptr addrspace(3) @g1 to ptr), align 4
   %L.sroa.0.0.insert.ext.i = zext i32 %x1 to i64
   tail call void @f2(ptr null, i64 %L.sroa.0.0.insert.ext.i) #0
@@ -36,12 +36,20 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
 ; Make sure we can clone GEP which uses complex constant expressions as indices.
 ; https://bugs.llvm.org/show_bug.cgi?id=51099
-@g2 = internal addrspace(3) global [128 x i8] undef, align 1
+;
+; The pointer operand (@g2) is still rewritten to addrspace(3), but the index
+; operand -- itself a constant expression that happens to reference pointers
+; -- is left as-is rather than recursed into, since index operands are not
+; required to relate to the pointer's address space (see the GEP-index-operand
+; check in cloneConstantExprWithNewAddressSpace). This means the nested
+; getelementptrs inside the index keep their original addrspacecast rather
+; than also being narrowed to addrspace(3).
+@g2 = internal addrspace(3) global [128 x i8] poison, align 1
 
 define float @complex_ce(ptr nocapture readnone %a, ptr nocapture readnone %b, ptr nocapture readnone %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: @complex_ce(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 sub (i64 ptrtoint (ptr addrspace(3) getelementptr inbounds ([128 x i8], ptr addrspace(3) @g2, i64 0, i64 123) to i64), i64 ptrtoint (ptr addrspace(3) getelementptr inbounds ([128 x i8], ptr addrspace(3) @g2, i64 2, i64 0) to i64))), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 sub (i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(3) @g2 to ptr), i64 0, i64 123) to i64), i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(3) @g2 to ptr), i64 2, i64 0) to i64))), align 4
 ; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
@@ -67,7 +75,22 @@ entry:
   ret float %0
 }
 
+; The index operand of the GEP below is computed from a pointer in an address
+; space (1) different from the one inferred for the GEP's pointer operand (3).
+; The index operand must not be rewritten for the inferred address space.
+@g3 = internal addrspace(1) global [128 x i8] poison, align 1
 
+define float @complex_ce_mixed_addrspace_index() {
+; CHECK-LABEL: @complex_ce_mixed_addrspace_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 ptrtoint (ptr addrspacecast (ptr addrspace(1) @g3 to ptr) to i64)), align 4
+; CHECK-NEXT:    ret float [[VAL]]
+;
+entry:
+  %val = load float, ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(3) @g2 to ptr),
+                                        i64 ptrtoint (ptr addrspacecast (ptr addrspace(1) @g3 to ptr) to i64)), align 4
+  ret float %val
+}
 
 attributes #0 = { convergent nounwind }
 attributes #1 = { nounwind readnone }

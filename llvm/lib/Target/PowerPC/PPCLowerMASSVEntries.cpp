@@ -45,9 +45,7 @@ public:
 
   StringRef getPassName() const override { return "PPC Lower MASS Entries"; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {}
 
 private:
   static bool isMASSVFunc(StringRef Name);
@@ -123,7 +121,7 @@ bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
         return false;
 
       CI->setCalledFunction(
-          Intrinsic::getDeclaration(&M, Intrinsic::pow, CI->getType()));
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::pow, CI->getType()));
       return true;
     }
 

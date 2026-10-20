@@ -20,16 +20,16 @@ using namespace CodeGen;
 
 llvm::Type *ConstantInitFuture::getType() const {
   assert(Data && "dereferencing null future");
-  if (Data.is<llvm::Constant*>()) {
-    return Data.get<llvm::Constant*>()->getType();
+  if (const auto *C = dyn_cast<llvm::Constant *>(Data)) {
+    return C->getType();
   } else {
-    return Data.get<ConstantInitBuilderBase*>()->Buffer[0]->getType();
+    return cast<ConstantInitBuilderBase *>(Data)->Buffer[0]->getType();
   }
 }
 
 void ConstantInitFuture::abandon() {
   assert(Data && "abandoning null future");
-  if (auto builder = Data.dyn_cast<ConstantInitBuilderBase*>()) {
+  if (auto *builder = dyn_cast<ConstantInitBuilderBase *>(Data)) {
     builder->abandon(0);
   }
   Data = nullptr;
@@ -37,10 +37,10 @@ void ConstantInitFuture::abandon() {
 
 void ConstantInitFuture::installInGlobal(llvm::GlobalVariable *GV) {
   assert(Data && "installing null future");
-  if (Data.is<llvm::Constant*>()) {
-    GV->setInitializer(Data.get<llvm::Constant*>());
+  if (auto *C = dyn_cast<llvm::Constant *>(Data)) {
+    GV->setInitializer(C);
   } else {
-    auto &builder = *Data.get<ConstantInitBuilderBase*>();
+    auto &builder = *cast<ConstantInitBuilderBase *>(Data);
     assert(builder.Buffer.size() == 1);
     builder.setGlobalInitializer(GV, builder.Buffer[0]);
     builder.Buffer.clear();
@@ -63,13 +63,10 @@ inline ConstantInitFuture::ConstantInitFuture(ConstantInitBuilderBase *builder)
   assert(builder->Buffer[0] != nullptr);
 }
 
-llvm::GlobalVariable *
-ConstantInitBuilderBase::createGlobal(llvm::Constant *initializer,
-                                      const llvm::Twine &name,
-                                      CharUnits alignment,
-                                      bool constant,
-                                      llvm::GlobalValue::LinkageTypes linkage,
-                                      unsigned addressSpace) {
+llvm::GlobalVariable *ConstantInitBuilderBase::createGlobal(
+    llvm::Constant *initializer, const llvm::Twine &name, CharUnits alignment,
+    bool constant, llvm::GlobalValue::LinkageTypes linkage,
+    std::optional<unsigned> addressSpace) {
   auto GV = new llvm::GlobalVariable(CGM.getModule(),
                                      initializer->getType(),
                                      constant,
@@ -94,9 +91,9 @@ void ConstantInitBuilderBase::setGlobalInitializer(llvm::GlobalVariable *GV,
 
 void ConstantInitBuilderBase::resolveSelfReferences(llvm::GlobalVariable *GV) {
   for (auto &entry : SelfReferences) {
-    llvm::Constant *resolvedReference =
-      llvm::ConstantExpr::getInBoundsGetElementPtr(
-        GV->getValueType(), GV, entry.Indices);
+    llvm::Constant *resolvedReference = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), GV->getValueType(), GV, entry.Indices,
+        llvm::GEPNoWrapFlags::inBounds());
     auto dummy = entry.Dummy;
     dummy->replaceAllUsesWith(resolvedReference);
     dummy->eraseFromParent();
@@ -160,7 +157,7 @@ ConstantAggregateBuilderBase::getAddrOfPosition(llvm::Type *type,
                                         nullptr, "");
   Builder.SelfReferences.emplace_back(dummy);
   auto &entry = Builder.SelfReferences.back();
-  (void)getGEPIndicesTo(entry.Indices, position + Begin);
+  getGEPIndicesTo(entry.Indices, position + Begin);
   return dummy;
 }
 

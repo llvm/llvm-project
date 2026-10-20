@@ -8,22 +8,22 @@ template<typename T> struct A {
 template<typename T> struct B : A<T> {
   using A<T>::f;
   using A<T>::N; // expected-error{{dependent using declaration resolved to type without 'typename'}}
-  
+
   using A<T>::foo; // expected-error{{no member named 'foo'}}
-  using A<double>::f; // expected-error{{using declaration refers into 'A<double>::', which is not a base class of 'B<int>'}}
+  using A<double>::f; // expected-error{{using declaration refers into 'A<double>', which is not a base class of 'B<int>'}}
 };
 
 B<int> a; // expected-note{{in instantiation of template class 'B<int>' requested here}}
 
 template<typename T> struct C : A<T> {
   using A<T>::f;
-  
+
   void f() { };
 };
 
 template <typename T> struct D : A<T> {
   using A<T>::f;
-  
+
   void f();
 };
 
@@ -63,6 +63,17 @@ template <class T> struct Bar : public Foo<T>, Baz {
 };
 template int Bar<int>::foo();
 }
+
+namespace CrashOnInvalidUsingShadow {
+template <class T> struct BaseTpl {};
+template <class T> struct Derived : public BaseTpl<T>, Derivd { // expected-error {{expected class name}} expected-note {{'Derived' declared here}}
+  using BaseTpl<T>::k;
+  using Derivd::k; // expected-error {{use of undeclared identifier 'Derivd'; did you mean 'Derived'?}}
+  int foo() {
+    return k(1.0f);
+  }
+};
+} // namespace CrashOnInvalidUsingShadow
 
 // PR10883
 namespace PR10883 {
@@ -153,3 +164,11 @@ T foo(T t) { // OK
 }
 } // namespace sss
 } // namespace func_templ
+
+namespace DependentName {
+  template <typename T> struct S {
+    using typename T::Ty;
+    static Ty Val;
+  };
+  template <typename T> typename S<T>::Ty S<T>::Val;
+} // DependentName

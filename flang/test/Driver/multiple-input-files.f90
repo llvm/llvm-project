@@ -39,7 +39,7 @@
 ! FLANG-NEXT:end program hello
 
 ! TEST 2: `-o` does not when multiple input files are present
-! ERROR: flang-new: error: cannot specify -o when generating multiple output files
+! ERROR: flang{{.*}}: error: cannot specify -o when generating multiple output files
 
 ! TEST 3: The output file _was not_ specified - `flang_fc1` will process all
 ! input files and generate one output file for every input file.

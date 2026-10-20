@@ -85,8 +85,8 @@ untouched:
   };
 
 
-Known limitations
-^^^^^^^^^^^^^^^^^
+Limitations
+-----------
 
 A situation where the generated code can be wrong is when the object referenced
 is modified before the assignment in the init-list through a "hidden" reference.
@@ -164,3 +164,8 @@ Options
 
    When `true`, the check only warns about copied parameters that are already
    passed by value. Default is `false`.
+
+.. option:: IgnoreMacros
+
+   When `true`, the check will not give warnings inside macros. Default is
+   `false`.

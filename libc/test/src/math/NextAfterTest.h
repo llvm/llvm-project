@@ -18,6 +18,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
@@ -98,7 +100,7 @@ public:
     expected_bits = min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, 0), 0);
+    ASSERT_FP_EQ(func(x, 0), zero);
 
     x = -x;
     result = func(x, -1);
@@ -184,9 +186,9 @@ public:
   }
 };
 
-#define LIST_NEXTAFTER_TESTS(T, func)                                          \
-  using LlvmLibcNextAfterTest = NextAfterTestTemplate<T>;                      \
-  TEST_F(LlvmLibcNextAfterTest, TestNaN) { testNaN(&func); }                   \
-  TEST_F(LlvmLibcNextAfterTest, TestBoundaries) { testBoundaries(&func); }
+#define LIST_NEXTAFTER_TESTS(Name, T, func)                                    \
+  using LlvmLibc##Name##Test = NextAfterTestTemplate<T>;                       \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H

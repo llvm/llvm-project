@@ -1,36 +1,36 @@
 // PR21000: Test that -I is passed to both external and integrated assemblers.
 
-// RUN: %clang -target x86_64-linux-gnu -c -no-integrated-as %s \
+// RUN: %clang --target=x86_64-linux-gnu -c -no-integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target x86_64-linux-gnu -c -no-integrated-as %s \
+// RUN: %clang --target=x86_64-linux-gnu -c -no-integrated-as %s \
 // RUN:   -I foo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target x86_64-linux-gnu -c -integrated-as %s \
+// RUN: %clang --target=x86_64-linux-gnu -c -integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target x86_64-linux-gnu -c -integrated-as %s \
+// RUN: %clang --target=x86_64-linux-gnu -c -integrated-as %s \
 // RUN:   -I foo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
 // Other GNU targets
 
-// RUN: %clang -target aarch64-linux-gnu -c -no-integrated-as %s \
+// RUN: %clang --target=aarch64-linux-gnu -c -no-integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target aarch64-linux-gnu -c -integrated-as %s \
+// RUN: %clang --target=aarch64-linux-gnu -c -integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target armv7-linux-gnueabihf -c -no-integrated-as %s \
+// RUN: %clang --target=armv7-linux-gnueabihf -c -no-integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target armv7-linux-gnueabihf -c -integrated-as %s \
+// RUN: %clang --target=armv7-linux-gnueabihf -c -integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \
 // RUN:   | FileCheck %s
 
@@ -53,45 +53,45 @@
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN: %clang -mimplicit-it=always --target=armv7-linux-gnueabi -E \
 // RUN:   -fintegrated-as -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN: %clang -mimplicit-it=always --target=armv7-linux-gnueabi -E \
 // RUN:   -fno-integrated-as -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN: %clang -mimplicit-it=always --target=armv7-linux-gnueabi -E \
 // RUN:   -fintegrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
+// RUN: %clang -mimplicit-it=always --target=armv7-linux-gnueabi -E \
 // RUN:   -fno-integrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fintegrated-as \
+// RUN: %clang -Wa,-mbig-obj --target=i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fno-integrated-as \
+// RUN: %clang -Wa,-mbig-obj --target=i386-pc-windows -E -fno-integrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fintegrated-as \
+// RUN: %clang -Wa,-mbig-obj --target=i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fno-integrated-as \
+// RUN: %clang -Wa,-mbig-obj --target=i386-pc-windows -E -fno-integrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 
-// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E -fintegrated-as \
+// RUN: %clang -Xassembler -mbig-obj --target=i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E \
+// RUN: %clang -Xassembler -mbig-obj --target=i386-pc-windows -E \
 // RUN:   -fno-integrated-as -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 
-// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E -fintegrated-as \
+// RUN: %clang -Xassembler -mbig-obj --target=i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -Xassembler -mbig-obj -target i386-pc-windows -E \
+// RUN: %clang -Xassembler -mbig-obj --target=i386-pc-windows -E \
 // RUN:   -fno-integrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
 

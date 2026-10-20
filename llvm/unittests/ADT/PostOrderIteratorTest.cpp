@@ -11,34 +11,34 @@
 #include "gtest/gtest.h"
 #include "TestGraph.h"
 
+#include <array>
+#include <iterator>
+#include <type_traits>
+
+#include <cstddef>
+
 using namespace llvm;
 
 namespace {
 
 // Whether we're able to compile
 TEST(PostOrderIteratorTest, Compiles) {
-  typedef SmallPtrSet<void *, 4> ExtSetTy;
+  Graph<6> G;
+  using NodeType = Graph<6>::NodeType;
+  NodeType *NullNode = nullptr;
 
-  // Tests that template specializations are kept up to date
-  void *Null = nullptr;
-  po_iterator_storage<std::set<void *>, false> PIS;
-  PIS.insertEdge(std::optional<void *>(), Null);
+  auto PI = post_order(G);
+  PI.insertEdge(std::optional<NodeType *>(), NullNode);
+
+  using ExtSetTy = SmallPtrSet<void *, 4>;
   ExtSetTy Ext;
-  po_iterator_storage<ExtSetTy, true> PISExt(Ext);
-  PIS.insertEdge(std::optional<void *>(), Null);
-
-  // Test above, but going through po_iterator (which inherits from template
-  // base)
-  BasicBlock *NullBB = nullptr;
-  auto PI = po_end(NullBB);
-  PI.insertEdge(std::optional<BasicBlock *>(), NullBB);
-  auto PIExt = po_ext_end(NullBB, Ext);
-  PIExt.insertEdge(std::optional<BasicBlock *>(), NullBB);
+  auto PIExt = post_order_ext(G, Ext);
+  PIExt.insertEdge(std::optional<NodeType *>(), NullNode);
 }
 
-static_assert(
-    std::is_convertible_v<decltype(*std::declval<po_iterator<Graph<3>>>()),
-                          typename po_iterator<Graph<3>>::reference>);
+static_assert(std::is_convertible_v<
+              decltype(*post_order(std::declval<Graph<3>>()).begin()),
+              PostOrderTraversal<Graph<3>>::iterator::reference>);
 
 // Test post-order and reverse post-order traversals for simple graph type.
 TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {

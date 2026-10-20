@@ -11,12 +11,9 @@
 //
 // Dereference and indexing operators
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
-#include <iterator>
+#include <__iterator/bounded_iter.h>
 
 #include "check_assertion.h"
 #include "test_iterators.h"

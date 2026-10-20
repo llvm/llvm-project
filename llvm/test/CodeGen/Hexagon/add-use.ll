@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Do not want to see register copies in the loop.
 ; CHECK-NOT: r{{[0-9]*}} = r{{[0-9]*}}

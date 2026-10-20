@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -124,10 +125,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // Set up target dependant options
   //
 
-  M->setTargetTriple(TM->getTargetTriple().normalize());
-  M->setDataLayout(TM->createDataLayout());
-  codegen::setFunctionAttributes(TM->getTargetCPU(),
-                                 TM->getTargetFeatureString(), *M);
+  M->setTargetTriple(TM->getTargetTriple());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
+  codegen::setFunctionAttributes(*M, TM->getTargetCPU(),
+                                 TM->getTargetFeatureString());
 
   // Create pass pipeline
   //
@@ -175,6 +176,7 @@ static void handleLLVMFatalError(void *, const char *Message, bool) {
 extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
                                                         char ***argv) {
   EnableDebugBuffering = true;
+  StringRef ExecName = *argv[0];
 
   // Make sure we print the summary and the current unit when LLVM errors out.
   install_fatal_error_handler(handleLLVMFatalError, nullptr);
@@ -188,32 +190,34 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Parse input options
   //
 
-  handleExecNameEncodedOptimizerOpts(*argv[0]);
-  parseFuzzerCLOpts(*argc, *argv);
+  // Created after the targets register their library options.
+  static cl::LibraryOptionsContext LibraryOptions;
+  handleExecNameEncodedOptimizerOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
 
   // Create TargetMachine
   //
-
   if (TargetTripleStr.empty()) {
-    errs() << *argv[0] << ": -mtriple must be specified\n";
+    errs() << ExecName << ": -mtriple must be specified\n";
     exit(1);
   }
-  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTripleStr)));
+  ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
+
+  Triple TT(Triple::normalize(TargetTripleStr));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(LibraryOptions, TT));
 
   // Check that pass pipeline is specified and correct
   //
 
   if (PassPipeline.empty()) {
-    errs() << *argv[0] << ": at least one pass should be specified\n";
+    errs() << ExecName << ": at least one pass should be specified\n";
     exit(1);
   }
 
   PassBuilder PB(TM.get());
   ModulePassManager MPM;
   if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
-    errs() << *argv[0] << ": " << toString(std::move(Err)) << "\n";
+    errs() << ExecName << ": " << toString(std::move(Err)) << "\n";
     exit(1);
   }
 

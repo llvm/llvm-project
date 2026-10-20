@@ -1,4 +1,4 @@
-; RUN: llc -O1 < %s -march=avr | FileCheck %s
+; RUN: llc -O1 < %s -mtriple=avr | FileCheck %s
 
 ; This test ensures that the Select8/Select16 expansion
 ; pass inserts an unconditional branch to the previous adjacent

@@ -13,14 +13,9 @@
 
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 using namespace mlir::nvgpu;
@@ -40,7 +35,7 @@ struct MmaSyncF32ToTF32Pattern : public OpRewritePattern<nvgpu::MmaSyncOp> {
                                 PatternRewriter &rewriter) const override {
     Location location = op->getLoc();
 
-    if (op->hasAttr(op.getTf32EnabledAttrName()) ||
+    if (op.getTf32Enabled().value_or(false) ||
         !cast<VectorType>(op.getMatrixA().getType()).getElementType().isF32())
       return failure();
 
@@ -69,6 +64,5 @@ private:
 
 void mlir::nvgpu::populateMmaSyncF32ToTF32Patterns(
     RewritePatternSet &patterns, nvgpu::MmaSyncF32Lowering precision) {
-
   patterns.add<MmaSyncF32ToTF32Pattern>(patterns.getContext(), precision);
 }

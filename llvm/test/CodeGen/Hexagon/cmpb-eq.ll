@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: cmpb.eq(r{{[0-9]+}},#-1)
 
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
@@ -49,5 +49,6 @@ if.end21:                                         ; preds = %for.body
   br i1 %tobool, label %if.then12.loopexit, label %for.body
 }
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!2, !2, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
+!2 = !{!"omnipotent char", !1}

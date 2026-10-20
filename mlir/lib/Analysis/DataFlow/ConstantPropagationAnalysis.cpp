@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <cassert>
 
 #define DEBUG_TYPE "constant-propagation"
@@ -43,10 +44,10 @@ void ConstantValue::print(raw_ostream &os) const {
 // SparseConstantPropagation
 //===----------------------------------------------------------------------===//
 
-void SparseConstantPropagation::visitOperation(
+LogicalResult SparseConstantPropagation::visitOperation(
     Operation *op, ArrayRef<const Lattice<ConstantValue> *> operands,
     ArrayRef<Lattice<ConstantValue> *> results) {
-  LLVM_DEBUG(llvm::dbgs() << "SCP: Visiting operation: " << *op << "\n");
+  LDBG() << "SCP: Visiting operation: " << *op;
 
   // Don't try to simulate the results of a region operation as we can't
   // guarantee that folding will be out-of-place. We don't allow in-place
@@ -54,14 +55,14 @@ void SparseConstantPropagation::visitOperation(
   // folding.
   if (op->getNumRegions()) {
     setAllToEntryStates(results);
-    return;
+    return success();
   }
 
   SmallVector<Attribute, 8> constantOperands;
   constantOperands.reserve(op->getNumOperands());
   for (auto *operandLattice : operands) {
     if (operandLattice->getValue().isUninitialized())
-      return;
+      return success();
     constantOperands.push_back(operandLattice->getValue().getConstantValue());
   }
 
@@ -69,25 +70,31 @@ void SparseConstantPropagation::visitOperation(
   // folds in-place. The constant passed in may not correspond to the real
   // runtime value, so in-place updates are not allowed.
   SmallVector<Value, 8> originalOperands(op->getOperands());
-  DictionaryAttr originalAttrs = op->getAttrDictionary();
+  DictionaryAttr originalAttrs = op->getDiscardableAttrDictionary();
+  Attribute originalProperties = op->getPropertiesAsAttribute();
 
-  // Simulate the result of folding this operation to a constant. If folding
-  // fails or was an in-place fold, mark the results as overdefined.
+  // Simulate the result of folding this operation to a constant.
   SmallVector<OpFoldResult, 8> foldResults;
   foldResults.reserve(op->getNumResults());
-  if (failed(op->fold(constantOperands, foldResults))) {
-    setAllToEntryStates(results);
-    return;
-  }
+  LogicalResult folded = op->fold(constantOperands, foldResults);
 
-  // If the folding was in-place, mark the results as overdefined and reset
-  // the operation. We don't allow in-place folds as the desire here is for
-  // simulated execution, and not general folding.
-  if (foldResults.empty()) {
+  // `fold` can mutate the operation in place and still return an out-of-place
+  // result, so the mutation must be reverted regardless of the outcome.
+  // Only write the operands back if the fold changed them, as `setOperands`
+  // relinks use-lists even for identical values.
+  if (!llvm::equal(op->getOperands(), originalOperands))
     op->setOperands(originalOperands);
-    op->setAttrs(originalAttrs);
+  op->setDiscardableAttrs(originalAttrs);
+  if (originalProperties)
+    (void)op->setPropertiesFromAttribute(originalProperties,
+                                         /*emitError=*/nullptr);
+
+  // If folding failed or was in-place, mark the results as overdefined. We
+  // don't allow in-place folds here: the goal is simulated execution, not
+  // general folding.
+  if (failed(folded) || foldResults.empty()) {
     setAllToEntryStates(results);
-    return;
+    return success();
   }
 
   // Merge the fold results into the lattice for this operation.
@@ -98,16 +105,20 @@ void SparseConstantPropagation::visitOperation(
     // Merge in the result of the fold, either a constant or a value.
     OpFoldResult foldResult = std::get<1>(it);
     if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(foldResult)) {
-      LLVM_DEBUG(llvm::dbgs() << "Folded to constant: " << attr << "\n");
+      LDBG() << "Folded to constant: " << attr;
       propagateIfChanged(lattice,
                          lattice->join(ConstantValue(attr, op->getDialect())));
     } else {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Folded to value: " << foldResult.get<Value>() << "\n");
+      Value foldValue = cast<Value>(foldResult);
+      LDBG() << "Folded to value: " << foldValue;
+      // The folded value may not be an operand of `op`, so we need to use
+      // `getLatticeElementFor` (and not `getLatticeElement`) so that
+      // this operation is revisited if that value's lattice widens later.
       AbstractSparseForwardDataFlowAnalysis::join(
-          lattice, *getLatticeElement(foldResult.get<Value>()));
+          lattice, *getLatticeElementFor(getProgramPointAfter(op), foldValue));
     }
   }
+  return success();
 }
 
 void SparseConstantPropagation::setToEntryState(

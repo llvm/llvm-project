@@ -63,7 +63,10 @@ enum class RefKind : uint8_t {
   //   ^ this references Foo, but does not explicitly spell out its name
   // };
   Spelled = 1 << 3,
-  All = Declaration | Definition | Reference | Spelled,
+  // A reference which is a call. Used as a filter for which references
+  // to store in data structures used for computing outgoing calls.
+  Call = 1 << 4,
+  All = Declaration | Definition | Reference | Spelled | Call,
 };
 
 inline RefKind operator|(RefKind L, RefKind R) {
@@ -168,14 +171,6 @@ private:
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
   using Entry = clang::clangd::RefSlab::Builder::Entry;
-  static inline Entry getEmptyKey() {
-    static Entry E{clang::clangd::SymbolID(""), {}};
-    return E;
-  }
-  static inline Entry getTombstoneKey() {
-    static Entry E{clang::clangd::SymbolID("TOMBSTONE"), {}};
-    return E;
-  }
   static unsigned getHashValue(const Entry &Val) {
     return llvm::hash_combine(
         Val.Symbol, reinterpret_cast<uintptr_t>(Val.Reference.Location.FileURI),

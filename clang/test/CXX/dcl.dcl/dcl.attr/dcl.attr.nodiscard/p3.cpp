@@ -8,7 +8,7 @@ namespace std_example {
   error_info enable_missile_safety_mode();
   void launch_missiles();
   void test_missiles() {
-    enable_missile_safety_mode(); // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
+    enable_missile_safety_mode(); // expected-warning {{ignoring return value of type 'error_info' declared with 'nodiscard'}}
     launch_missiles();
   }
 

@@ -3,7 +3,7 @@
 
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/function-types-builtins.lldbinit | FileCheck %s
 
 // Test that we can display function signatures with simple builtin
@@ -191,17 +191,17 @@ auto rad = &unaryret<int(*const)[5], 28>;
 // Function references, we only need a couple of these since most of the
 // interesting cases are already tested.
 auto &ref = unary<bool>;
-// CHECK: (void (&)(bool)) ref = {{.*}} (&::ref = <no summary available>)
+// CHECK: (void (&)(bool)) ref = {{.*}} (&ref = <no summary available>)
 auto &ref2 = unary<volatile int*>;
-// CHECK: (void (&)(volatile int *)) ref2 = {{.*}} (&::ref2 = <no summary available>)
+// CHECK: (void (&)(volatile int *)) ref2 = {{.*}} (&ref2 = <no summary available>)
 auto &ref3 = varargs;
-// CHECK: (int (&)(int, int, ...)) ref3 = {{.*}} (&::ref3 = <no summary available>)
+// CHECK: (int (&)(int, int, ...)) ref3 = {{.*}} (&ref3 = <no summary available>)
 
 // Multiple arguments, as before, just something to make sure it works.
 auto binp = &binary<int*, const int*>;
 // CHECK: (void (*)(int *, const int *)) binp = {{.*}}
 auto &binr = binary<int*, const int*>;
-// CHECK: (void (&)(int *, const int *)) binr = {{.*}} (&::binr = <no summary available>)
+// CHECK: (void (&)(int *, const int *)) binr = {{.*}} (&binr = <no summary available>)
 
 // And finally, a function with no arguments.
 auto null = &nullary;

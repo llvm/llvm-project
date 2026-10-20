@@ -20,7 +20,7 @@
 #include "posix_compat.h"
 #include "time_utils.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -30,13 +30,13 @@
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
 #  include <unistd.h>
-#endif // defined(_LIBCPP_WIN32API)
+#endif // _WIN32
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
 
-#if !defined(_LIBCPP_WIN32API)
+#ifndef _WIN32
 
 #  if defined(DT_BLK)
 template <class DirEntT, class = decltype(DirEntT::d_type)>
@@ -84,7 +84,7 @@ inline pair<string_view, file_type> posix_readdir(DIR* dir_stream, error_code& e
   }
 }
 
-#else // _LIBCPP_WIN32API
+#else // _WIN32
 
 inline file_type get_file_type(const WIN32_FIND_DATAW& data) {
   if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && data.dwReserved0 == IO_REPARSE_TAG_SYMLINK)
@@ -97,14 +97,21 @@ inline uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
   return (static_cast<uint64_t>(data.nFileSizeHigh) << 32) + data.nFileSizeLow;
 }
 inline file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
-  ULARGE_INTEGER tmp;
+  using detail::fs_time;
   const FILETIME& time = data.ftLastWriteTime;
-  tmp.u.LowPart        = time.dwLowDateTime;
-  tmp.u.HighPart       = time.dwHighDateTime;
-  return file_time_type(file_time_type::duration(tmp.QuadPart));
+  auto ts              = filetime_to_timespec(time);
+  if (!fs_time::is_representable(ts))
+    return file_time_type::min();
+  return fs_time::convert_from_timespec(ts);
+}
+inline perms get_file_perm(const WIN32_FIND_DATAW& data) {
+  unsigned st_mode = 0555; // Read-only
+  if (!(data.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+    st_mode |= 0222; // Write
+  return static_cast<perms>(st_mode) & perms::mask;
 }
 
-#endif // !_LIBCPP_WIN32API
+#endif // _WIN32
 
 //                       POSIX HELPERS
 
@@ -121,7 +128,7 @@ struct FileDescriptor {
   static FileDescriptor create(const path* p, error_code& ec, Args... args) {
     ec.clear();
     int fd;
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
     // TODO: most of the filesystem implementation uses native Win32 calls
     // (mostly via posix_compat.h). However, here we use the C-runtime APIs to
     // open a file, because we subsequently pass the C-runtime fd to
@@ -164,7 +171,7 @@ struct FileDescriptor {
 
   void close() noexcept {
     if (fd != -1) {
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
       ::_close(fd);
 #else
       ::close(fd);
@@ -194,7 +201,7 @@ inline perms posix_get_perms(const StatT& st) noexcept { return static_cast<perm
 inline file_status create_file_status(error_code& m_ec, path const& p, const StatT& path_stat, error_code* ec) {
   if (ec)
     *ec = m_ec;
-  if (m_ec && (m_ec.value() == ENOENT || m_ec.value() == ENOTDIR)) {
+  if (m_ec && (m_ec == errc::no_such_file_or_directory || m_ec == errc::not_a_directory)) {
     return file_status(file_type::not_found);
   } else if (m_ec) {
     ErrorHandler<void> err("posix_stat", ec, &p);
@@ -229,7 +236,7 @@ inline file_status create_file_status(error_code& m_ec, path const& p, const Sta
 inline file_status posix_stat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
   if (detail::stat(p.c_str(), &path_stat) == -1)
-    m_ec = detail::capture_errno();
+    m_ec = detail::get_last_error();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
@@ -241,7 +248,7 @@ inline file_status posix_stat(path const& p, error_code* ec) {
 inline file_status posix_lstat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
   if (detail::lstat(p.c_str(), &path_stat) == -1)
-    m_ec = detail::capture_errno();
+    m_ec = detail::get_last_error();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
@@ -253,7 +260,7 @@ inline file_status posix_lstat(path const& p, error_code* ec) {
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/ftruncate.html
 inline bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
   if (detail::ftruncate(fd.fd, to_size) == -1) {
-    ec = capture_errno();
+    ec = get_last_error();
     return true;
   }
   ec.clear();
@@ -262,7 +269,7 @@ inline bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code&
 
 inline bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
   if (detail::fchmod(fd.fd, st.st_mode) == -1) {
-    ec = capture_errno();
+    ec = get_last_error();
     return true;
   }
   ec.clear();
@@ -279,12 +286,12 @@ inline file_status FileDescriptor::refresh_status(error_code& ec) {
   m_stat   = {};
   error_code m_ec;
   if (detail::fstat(fd, &m_stat) == -1)
-    m_ec = capture_errno();
+    m_ec = get_last_error();
   m_status = create_file_status(m_ec, name, m_stat, &ec);
   return m_status;
 }
 
-} // end namespace detail
+} // namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

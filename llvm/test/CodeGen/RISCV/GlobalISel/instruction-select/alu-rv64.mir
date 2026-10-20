@@ -3,204 +3,6 @@
 # RUN: | FileCheck -check-prefix=RV64I %s
 
 ---
-name:            add_i8_zeroext
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10, $x11
-
-    ; RV64I-LABEL: name: add_i8_zeroext
-    ; RV64I: liveins: $x10, $x11
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; RV64I-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY1]]
-    ; RV64I-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[ADDW]], 255
-    ; RV64I-NEXT: $x10 = COPY [[ANDI]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %2:gprb(s64) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %6:gprb(s32) = G_TRUNC %2(s64)
-    %7:gprb(s32) = G_TRUNC %3(s64)
-    %8:gprb(s32) = G_ADD %6, %7
-    %9:gprb(s64) = G_CONSTANT i64 255
-    %10:gprb(s64) = G_ANYEXT %8(s32)
-    %5:gprb(s64) = G_AND %10, %9
-    $x10 = COPY %5(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            add_i16_signext
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10, $x11
-
-    ; RV64I-LABEL: name: add_i16_signext
-    ; RV64I: liveins: $x10, $x11
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; RV64I-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY1]]
-    ; RV64I-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[ADDW]], 48
-    ; RV64I-NEXT: [[SRAI:%[0-9]+]]:gpr = SRAI [[SLLI]], 48
-    ; RV64I-NEXT: $x10 = COPY [[SRAI]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %2:gprb(s64) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %6:gprb(s32) = G_TRUNC %2(s64)
-    %7:gprb(s32) = G_TRUNC %3(s64)
-    %8:gprb(s32) = G_ADD %6, %7
-    %9:gprb(s64) = G_ANYEXT %8(s32)
-    %11:gprb(s64) = G_CONSTANT i64 48
-    %10:gprb(s64) = G_SHL %9, %11(s64)
-    %5:gprb(s64) = G_ASHR %10, %11(s64)
-    $x10 = COPY %5(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            add_i16_zeroext
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10, $x11
-
-    ; RV64I-LABEL: name: add_i16_zeroext
-    ; RV64I: liveins: $x10, $x11
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; RV64I-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY1]]
-    ; RV64I-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 16
-    ; RV64I-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], -1
-    ; RV64I-NEXT: [[AND:%[0-9]+]]:gpr = AND [[ADDW]], [[ADDIW]]
-    ; RV64I-NEXT: $x10 = COPY [[AND]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %2:gprb(s64) = COPY $x10
-    %3:gprb(s64) = COPY $x11
-    %6:gprb(s32) = G_TRUNC %2(s64)
-    %7:gprb(s32) = G_TRUNC %3(s64)
-    %8:gprb(s32) = G_ADD %6, %7
-    %9:gprb(s64) = G_CONSTANT i64 65535
-    %10:gprb(s64) = G_ANYEXT %8(s32)
-    %5:gprb(s64) = G_AND %10, %9
-    $x10 = COPY %5(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            add_i32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10, $x11
-
-    ; RV64I-LABEL: name: add_i32
-    ; RV64I: liveins: $x10, $x11
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; RV64I-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY1]]
-    ; RV64I-NEXT: $x10 = COPY [[ADDW]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %3:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_ADD %1, %3
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            addi_i32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-
-    ; RV64I-LABEL: name: addi_i32
-    ; RV64I: liveins: $x10
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 1234
-    ; RV64I-NEXT: $x10 = COPY [[ADDIW]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s32) = G_CONSTANT i32 1234
-    %3:gprb(s32) = G_ADD %1, %2
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            sub_i32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10, $x11
-
-    ; RV64I-LABEL: name: sub_i32
-    ; RV64I: liveins: $x10, $x11
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; RV64I-NEXT: [[SUBW:%[0-9]+]]:gpr = SUBW [[COPY]], [[COPY1]]
-    ; RV64I-NEXT: $x10 = COPY [[SUBW]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %3:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_SUB %1, %3
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
-    PseudoRET implicit $x10
-
-...
----
-name:            subi_i32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-
-    ; RV64I-LABEL: name: subi_i32
-    ; RV64I: liveins: $x10
-    ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 1234
-    ; RV64I-NEXT: $x10 = COPY [[ADDIW]]
-    ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s32) = G_CONSTANT i32 -1234
-    %3:gprb(s32) = G_SUB %1, %2
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
-    PseudoRET implicit $x10
-
-...
----
 name:            sll_i32
 legalized:       true
 regBankSelected: true
@@ -218,12 +20,9 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[SLLW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %3:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_SHL %1, %3(s32)
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_SLLW %0, %1
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -240,15 +39,13 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[SLLIW:%[0-9]+]]:gpr = SLLIW [[COPY]], 31
-    ; RV64I-NEXT: $x10 = COPY [[SLLIW]]
+    ; RV64I-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[COPY]], 31
+    ; RV64I-NEXT: $x10 = COPY [[SLLI]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_SHL %1, %2(s64)
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:gprb(s64) = G_CONSTANT i64 31
+    %2:gprb(s64) = G_SHL %0, %1
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -270,12 +67,9 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[SRAW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %3:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_ASHR %1, %3(s32)
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_SRAW %0, %1
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -296,11 +90,10 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[SRAIW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_ASHR %1, %2(s64)
-    %4:gprb(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:gprb(s64) = G_CONSTANT i64 31
+    %2:gprb(s64) = G_SEXT_INREG %0, 32
+    %3:gprb(s64) = G_ASHR %2, %1(s64)
+    $x10 = COPY %3(s64)
     PseudoRET implicit $x10
 
 ...
@@ -322,12 +115,9 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[SRLW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = COPY $x11
-    %3:gprb(s32) = G_TRUNC %2(s64)
-    %4:gprb(s32) = G_LSHR %1, %3(s32)
-    %5:gprb(s64) = G_ANYEXT %4(s32)
-    $x10 = COPY %5(s64)
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_SRLW %0, %1
+    $x10 = COPY %2(s64)
     PseudoRET implicit $x10
 
 ...
@@ -348,10 +138,10 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[SRLIW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-    %2:gprb(s64) = G_CONSTANT i64 31
-    %3:gprb(s32) = G_LSHR %1, %2(s64)
-    %4:gprb(s64) = G_ANYEXT %3(s32)
+    %1:gprb(s64) = G_CONSTANT i64 31
+    %2:gprb(s64) = G_CONSTANT i64 4294967295
+    %3:gprb(s64) = G_AND %0, %2
+    %4:gprb(s64) = G_LSHR %3, %1(s64)
     $x10 = COPY %4(s64)
     PseudoRET implicit $x10
 
@@ -440,8 +230,9 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], 1234
-    ; RV64I-NEXT: $x10 = COPY [[ADDI]]
+    ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1234
+    ; RV64I-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY]], [[ADDI]]
+    ; RV64I-NEXT: $x10 = COPY [[SUB]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
     %1:gprb(s64) = G_CONSTANT i64 -1234

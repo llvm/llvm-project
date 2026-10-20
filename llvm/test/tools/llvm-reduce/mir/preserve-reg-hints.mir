@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -mtriple=amdgpu9.00-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: S_NOP 0
@@ -7,11 +7,11 @@
 # Make sure that register hints are preserved in the cloned function.
 
 # RESULT: registers:
-# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
-# RESULT-NEXT: - { id: 1, class: vgpr_32, preferred-register: '' }
-# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1' }
-# RESULT-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%4' }
-# RESULT-NEXT: - { id: 4, class: vgpr_32, preferred-register: '%3' }
+# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0', flags: [   ] }
+# RESULT-NEXT: - { id: 1, class: vgpr_32, preferred-register: '', flags: [   ] }
+# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1', flags: [   ] }
+# RESULT-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%4', flags: [   ] }
+# RESULT-NEXT: - { id: 4, class: vgpr_32, preferred-register: '%3', flags: [   ] }
 ---
 name: register_hints
 tracksRegLiveness: true

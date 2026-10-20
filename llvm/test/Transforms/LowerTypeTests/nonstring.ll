@@ -4,8 +4,8 @@
 
 target datalayout = "e-p:32:32"
 
-; CHECK: @[[ANAME:.*]] = private constant { i32 }
 ; CHECK: @[[BNAME:.*]] = private constant { [2 x i32] }
+; CHECK: @[[ANAME:.*]] = private constant { i32 }
 
 @a = constant i32 1, !type !0
 @b = constant [2 x i32] [i32 2, i32 3], !type !1

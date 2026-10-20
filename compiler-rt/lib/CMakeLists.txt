@@ -9,7 +9,7 @@ include(SanitizerUtils)
 #
 #TODO: Refactor sanitizer_common into smaller pieces (e.g. flag parsing, utils).
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND
-    (COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_XRAY OR COMPILER_RT_BUILD_MEMPROF))
+    (COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_XRAY OR COMPILER_RT_BUILD_MEMPROF OR COMPILER_RT_BUILD_COPYPROF OR COMPILER_RT_BUILD_CTX_PROFILE))
   add_subdirectory(sanitizer_common)
 endif()
 
@@ -31,14 +31,21 @@ function(compiler_rt_build_runtime runtime)
   endif()
 endfunction()
 
-if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF)
+if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF OR COMPILER_RT_BUILD_COPYPROF)
   compiler_rt_build_runtime(interception)
 endif()
 
 if(COMPILER_RT_BUILD_SANITIZERS)
+  # The sanitizer ignorelists are consumed by the compiler driver, not linked
+  # into the runtimes. Build them as their own target so they can be built
+  # independently of the runtime libraries.
+  add_subdirectory(sanitizer_ignorelists)
+
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
     add_subdirectory(stats)
+    # Contains RTLSanCommon used even without COMPILER_RT_HAS_LSAN.
     add_subdirectory(lsan)
+    # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
     add_subdirectory(ubsan)
   endif()
 
@@ -47,11 +54,11 @@ if(COMPILER_RT_BUILD_SANITIZERS)
   endforeach()
 endif()
 
-if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
+if(COMPILER_RT_BUILD_PROFILE)
   compiler_rt_build_runtime(profile)
 endif()
 
-if(COMPILER_RT_BUILD_CTX_PROFILE AND COMPILER_RT_HAS_CTX_PROFILE)
+if(COMPILER_RT_BUILD_CTX_PROFILE)
   compiler_rt_build_runtime(ctx_profile)
 endif()
 
@@ -65,6 +72,10 @@ endif()
 
 if(COMPILER_RT_BUILD_MEMPROF AND COMPILER_RT_HAS_SANITIZER_COMMON)
   compiler_rt_build_runtime(memprof)
+endif()
+
+if(COMPILER_RT_BUILD_COPYPROF AND COMPILER_RT_HAS_SANITIZER_COMMON)
+  compiler_rt_build_runtime(copyprof)
 endif()
 
 if(COMPILER_RT_BUILD_ORC)

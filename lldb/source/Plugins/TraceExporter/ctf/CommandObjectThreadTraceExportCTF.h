@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_COMMANDOBJECTTHREADTRACEEXPORTCTF_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_COMMANDOBJECTTHREADTRACEEXPORTCTF_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_COMMANDOBJECTTHREADTRACEEXPORTCTF_H
+#define LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_COMMANDOBJECTTHREADTRACEEXPORTCTF_H
 
 #include "TraceExporterCTF.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -48,7 +48,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &args, CommandReturnObject &result) override;
 
   CommandOptions m_options;
 };
@@ -56,4 +56,4 @@ protected:
 } // namespace ctf
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_COMMANDOBJECTTHREADTRACEEXPORTCTF_H
+#endif // LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_COMMANDOBJECTTHREADTRACEEXPORTCTF_H

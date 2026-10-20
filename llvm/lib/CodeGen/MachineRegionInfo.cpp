@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -25,11 +26,25 @@ STATISTIC(numMachineSimpleRegions, "The # of simple machine regions");
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<MachineFunction>>;
-template class RegionNodeBase<RegionTraits<MachineFunction>>;
-template class RegionInfoBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionNodeBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
+
+//===----------------------------------------------------------------------===//
+// RegionTraits<MachineFunction> implementation
+//
+
+void RegionTraits<MachineFunction>::updateStatistics(MachineRegion *R) {
+  ++numMachineRegions;
+
+  // TODO: Slow. Should only be enabled if -stats is used.
+  if (R->isSimple())
+    ++numMachineSimpleRegions;
+}
 
 //===----------------------------------------------------------------------===//
 // MachineRegion implementation
@@ -48,14 +63,6 @@ MachineRegionInfo::MachineRegionInfo() = default;
 
 MachineRegionInfo::~MachineRegionInfo() = default;
 
-void MachineRegionInfo::updateStatistics(MachineRegion *R) {
-  ++numMachineRegions;
-
-  // TODO: Slow. Should only be enabled if -stats is used.
-  if (R->isSimple())
-    ++numMachineSimpleRegions;
-}
-
 void MachineRegionInfo::recalculate(MachineFunction &F,
                                     MachineDominatorTree *DT_,
                                     MachinePostDominatorTree *PDT_,
@@ -67,17 +74,48 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
   MachineBasicBlock *Entry = GraphTraits<MachineFunction*>::getEntryNode(&F);
 
   TopLevelRegion = new MachineRegion(Entry, nullptr, this, DT, nullptr);
-  updateStatistics(TopLevelRegion);
+  RegionTraits<MachineFunction>::updateStatistics(TopLevelRegion);
   calculate(F);
+}
+
+bool MachineRegionInfo::invalidate(
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG has been preserved.
+  auto PAC = PA.getChecker<MachineRegionInfoAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
+//===----------------------------------------------------------------------===//
+// MachineRegionAnalysis implementation
+//
+AnalysisKey MachineRegionInfoAnalysis::Key;
+MachineRegionInfo
+MachineRegionInfoAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo MRI;
+  MRI.recalculate(MF, &MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachineDominanceFrontierAnalysis>(MF));
+  return MRI;
+}
+
+PreservedAnalyses
+MachineRegionInfoPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo &MRI = MFAM.getResult<MachineRegionInfoAnalysis>(MF);
+  MRI.print(OS);
+  return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//
 // MachineRegionInfoPass implementation
 //
 
-MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {
-  initializeMachineRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {}
 
 MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 
@@ -87,7 +125,7 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   auto DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto PDT =
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  auto DF = &getAnalysis<MachineDominanceFrontier>();
+  auto DF = &getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
 
   RI.recalculate(F, DT, PDT, DF);
 
@@ -112,7 +150,7 @@ void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -127,13 +165,13 @@ LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
 #endif
 
 char MachineRegionInfoPass::ID = 0;
-char &MachineRegionInfoPassID = MachineRegionInfoPass::ID;
+char &llvm::MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
                     "Detect single entry single exit regions", true, true)
 

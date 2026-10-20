@@ -25,17 +25,33 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Cmp = CXI->getCompareOperand();
   Value *Val = CXI->getNewValOperand();
 
-  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr);
-  Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
-  Value *Res = Builder.CreateSelect(Equal, Val, Orig);
-  Builder.CreateStore(Res, Ptr);
+  auto [Orig, Equal] = buildCmpXchgValue(Builder, Ptr, Cmp, Val,
+                                         CXI->getAlign(), CXI->isVolatile());
 
-  Res = Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
+  Value *Res =
+      Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
   Res = Builder.CreateInsertValue(Res, Equal, 1);
 
   CXI->replaceAllUsesWith(Res);
   CXI->eraseFromParent();
   return true;
+}
+
+std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
+                                                    Value *Ptr, Value *Cmp,
+                                                    Value *Val, Align Alignment,
+                                                    bool IsVolatile) {
+  LoadInst *Orig =
+      Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment, IsVolatile);
+  Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
+  // We have no idea what the probability of the value in memory being equal to
+  // the comparison value is without additional VP metadata, so explicitly mark
+  // it unknown.
+  Value *Res =
+      Builder.CreateSelectWithUnknownProfile(Equal, Val, Orig, DEBUG_TYPE);
+  Builder.CreateAlignedStore(Res, Ptr, Alignment, IsVolatile);
+
+  return {Orig, Equal};
 }
 
 Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
@@ -77,6 +93,14 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     return Builder.CreateMaxNum(Loaded, Val);
   case AtomicRMWInst::FMin:
     return Builder.CreateMinNum(Loaded, Val);
+  case AtomicRMWInst::FMaximum:
+    return Builder.CreateMaximum(Loaded, Val);
+  case AtomicRMWInst::FMinimum:
+    return Builder.CreateMinimum(Loaded, Val);
+  case AtomicRMWInst::FMaximumNum:
+    return Builder.CreateMaximumNum(Loaded, Val);
+  case AtomicRMWInst::FMinimumNum:
+    return Builder.CreateMinimumNum(Loaded, Val);
   case AtomicRMWInst::UIncWrap: {
     Constant *One = ConstantInt::get(Loaded->getType(), 1);
     Value *Inc = Builder.CreateAdd(Loaded, One);
@@ -94,6 +118,14 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     Value *Or = Builder.CreateOr(CmpEq0, CmpOldGtVal);
     return Builder.CreateSelect(Or, Val, Dec, "new");
   }
+  case AtomicRMWInst::USubCond: {
+    Value *Cmp = Builder.CreateICmpUGE(Loaded, Val);
+    Value *Sub = Builder.CreateSub(Loaded, Val);
+    return Builder.CreateSelect(Cmp, Sub, Loaded, "new");
+  }
+  case AtomicRMWInst::USubSat:
+    return Builder.CreateIntrinsic(Intrinsic::usub_sat, Loaded->getType(),
+                                   {Loaded, Val}, nullptr, "new");
   default:
     llvm_unreachable("Unknown atomic op");
   }
@@ -107,9 +139,9 @@ bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
 
-  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr);
+  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr, RMWI->isVolatile());
   Value *Res = buildAtomicRMWValue(RMWI->getOperation(), Builder, Orig, Val);
-  Builder.CreateStore(Res, Ptr);
+  Builder.CreateStore(Res, Ptr)->setVolatile(RMWI->isVolatile());
   RMWI->replaceAllUsesWith(Orig);
   RMWI->eraseFromParent();
   return true;

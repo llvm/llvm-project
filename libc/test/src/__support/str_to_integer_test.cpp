@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/str_to_integer.h"
-#include "src/errno/libc_errno.h"
 #include <stddef.h>
 
 #include "test/UnitTest/Test.h"
 
 // This file is for testing the src_len argument and other internal interface
-// features. Primary testing is done in stdlib/StrolTest.cpp through the public
+// features. Primary testing is done in stdlib/StrolTest.h through the public
 // interface.
 
 TEST(LlvmLibcStrToIntegerTest, SimpleLength) {
@@ -50,12 +49,14 @@ TEST(LlvmLibcStrToIntegerTest, LeadingSpaces) {
   EXPECT_EQ(result.parsed_len, ptrdiff_t(7));
   ASSERT_EQ(result.value, 12);
 
-  result = LIBC_NAMESPACE::internal::strtointeger<int>("     12345", 10, 5);
+  // Use a non-null-terminated buffer to test for possible OOB access.
+  char buf[5] = {' ', ' ', ' ', ' ', ' '};
+  result = LIBC_NAMESPACE::internal::strtointeger<int>(buf, 10, 5);
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
   ASSERT_EQ(result.value, 0);
 
-  result = LIBC_NAMESPACE::internal::strtointeger<int>("     12345", 10, 0);
+  result = LIBC_NAMESPACE::internal::strtointeger<int>(buf, 10, 0);
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
   ASSERT_EQ(result.value, 0);
@@ -237,4 +238,155 @@ TEST(LlvmLibcStrToIntegerTest, CombinedTests) {
   EXPECT_FALSE(result.has_error());
   EXPECT_EQ(result.parsed_len, ptrdiff_t(6));
   ASSERT_EQ(result.value, 0);
+}
+
+TEST(LlvmLibcStrToIntegerTest, Base2PrefixAutoSelect) {
+  auto result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 0, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(7));
+  ASSERT_EQ(result.value, 0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 0, 6);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(6));
+  ASSERT_EQ(result.value, 0b1010);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 0, 5);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(5));
+  ASSERT_EQ(result.value, 0b101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 0, 2);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 0, 0);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("-0b10101", 0, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(8));
+  ASSERT_EQ(result.value, -0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10234", 0, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(4));
+  ASSERT_EQ(result.value, 0b10);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b61010", 0, 8);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10102", 0, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(6));
+  ASSERT_EQ(result.value, 0b1010);
+}
+
+TEST(LlvmLibcStrToIntegerTest, Base2PrefixManualSelect) {
+  auto result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(5));
+  ASSERT_EQ(result.value, 0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 4);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(4));
+  ASSERT_EQ(result.value, 0b1010);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 3);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(3));
+  ASSERT_EQ(result.value, 0b101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 2);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(2));
+  ASSERT_EQ(result.value, 0b10);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 1);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0b1);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10101", 2, 0);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("-10101", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(6));
+  ASSERT_EQ(result.value, -0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10234", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(2));
+  ASSERT_EQ(result.value, 0b10);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("61010", 2, 8);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("10102", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(4));
+  ASSERT_EQ(result.value, 0b1010);
+}
+
+TEST(LlvmLibcStrToIntegerTest, Base2PrefixManualSelectWithPrefix) {
+  auto result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(7));
+  ASSERT_EQ(result.value, 0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 4);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(4));
+  ASSERT_EQ(result.value, 0b10);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 3);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(3));
+  ASSERT_EQ(result.value, 0b1);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 2);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 1);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10101", 2, 0);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(0));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("-0b10101", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(8));
+  ASSERT_EQ(result.value, -0b10101);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10234", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(4));
+  ASSERT_EQ(result.value, 0b10);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b61010", 2, 8);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(1));
+  ASSERT_EQ(result.value, 0);
+
+  result = LIBC_NAMESPACE::internal::strtointeger<int>("0b10102", 2, 10);
+  EXPECT_FALSE(result.has_error());
+  EXPECT_EQ(result.parsed_len, ptrdiff_t(6));
+  ASSERT_EQ(result.value, 0b1010);
 }

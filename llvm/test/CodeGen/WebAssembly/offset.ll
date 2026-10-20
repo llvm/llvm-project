@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt -mattr=+half-precision | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt -mattr=+fp16 | FileCheck %s
 
 ; Test constant load and store address offsets.
 
@@ -36,6 +36,26 @@ define i32 @load_i32_with_folded_offset(ptr %p) {
 ; CHECK: i32.load  $push0=, 24($0){{$}}
 define i32 @load_i32_with_folded_gep_offset(ptr %p) {
   %s = getelementptr inbounds i32, ptr %p, i32 6
+  %t = load i32, ptr %s
+  ret i32 %t
+}
+
+; Same for nusw.
+
+; CHECK-LABEL: load_i32_with_folded_gep_offset_nusw:
+; CHECK: i32.load  $push0=, 24($0){{$}}
+define i32 @load_i32_with_folded_gep_offset_nusw(ptr %p) {
+  %s = getelementptr nusw i32, ptr %p, i32 6
+  %t = load i32, ptr %s
+  ret i32 %t
+}
+
+; For nuw we don't need the offset to be positive.
+
+; CHECK-LABEL: load_i32_with_folded_gep_offset_nuw:
+; CHECK: i32.load  $push0=, -24($0){{$}}
+define i32 @load_i32_with_folded_gep_offset_nuw(ptr %p) {
+  %s = getelementptr nuw i32, ptr %p, i32 -6
   %t = load i32, ptr %s
   ret i32 %t
 }
@@ -95,6 +115,16 @@ define i32 @load_i32_from_numeric_address() {
 @gv = global i32 0
 define i32 @load_i32_from_global_address() {
   %t = load i32, ptr @gv
+  ret i32 %t
+}
+
+define i32 @load_i32_global_with_folded_gep_offset_nonconst_nuw(i32 %idx) {
+; CHECK-LABEL: load_i32_global_with_folded_gep_offset_nonconst_nuw:
+; CHECK: i32.const $push0=, 2
+; CHECK: i32.shl $push1=, $0, $pop0
+; CHECK: i32.load $push2=, gv($pop1)
+  %s = getelementptr nuw i32, ptr @gv, i32 %idx
+  %t = load i32, ptr %s
   ret i32 %t
 }
 

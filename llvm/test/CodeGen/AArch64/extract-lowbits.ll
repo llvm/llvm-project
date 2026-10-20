@@ -347,10 +347,9 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 define i32 @bzhi32_c0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi32_c0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    neg w9, w1
-; CHECK-NEXT:    lsr w8, w8, w9
-; CHECK-NEXT:    and w0, w8, w0
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsl w9, w0, w8
+; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -362,10 +361,9 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi32_c1_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #32 // =0x20
-; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsr w8, w9, w8
-; CHECK-NEXT:    and w0, w8, w0
+; CHECK-NEXT:    lsl w9, w0, w8
+; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i8 32, %numlowbits
   %sh_prom = zext i8 %numhighbits to i32
@@ -377,11 +375,10 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 define i32 @bzhi32_c2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi32_c2_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    neg w9, w1
-; CHECK-NEXT:    ldr w10, [x0]
-; CHECK-NEXT:    lsr w8, w8, w9
-; CHECK-NEXT:    and w0, w8, w10
+; CHECK-NEXT:    lsl w8, w8, w9
+; CHECK-NEXT:    lsr w0, w8, w9
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %w
   %numhighbits = sub i32 32, %numlowbits
@@ -394,11 +391,10 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi32_c3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #32 // =0x20
-; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-NEXT:    ldr w10, [x0]
+; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsr w8, w9, w8
-; CHECK-NEXT:    and w0, w8, w10
+; CHECK-NEXT:    lsl w9, w9, w8
+; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %w
   %numhighbits = sub i8 32, %numlowbits
@@ -411,10 +407,9 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi32_c4_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    neg w9, w1
-; CHECK-NEXT:    lsr w8, w8, w9
-; CHECK-NEXT:    and w0, w0, w8
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsl w9, w0, w8
+; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -427,10 +422,9 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
 define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_c0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    neg x9, x1
-; CHECK-NEXT:    lsr x8, x8, x9
-; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsl x9, x0, x8
+; CHECK-NEXT:    lsr x0, x9, x8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i64 64, %numlowbits
   %mask = lshr i64 -1, %numhighbits
@@ -442,10 +436,9 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_c1_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #64 // =0x40
-; CHECK-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsr x8, x9, x8
-; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    lsl x9, x0, x8
+; CHECK-NEXT:    lsr x0, x9, x8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i8 64, %numlowbits
   %sh_prom = zext i8 %numhighbits to i64
@@ -457,11 +450,10 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 define i64 @bzhi64_c2_load(ptr %w, i64 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_c2_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    neg x9, x1
-; CHECK-NEXT:    ldr x10, [x0]
-; CHECK-NEXT:    lsr x8, x8, x9
-; CHECK-NEXT:    and x0, x8, x10
+; CHECK-NEXT:    lsl x8, x8, x9
+; CHECK-NEXT:    lsr x0, x8, x9
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %w
   %numhighbits = sub i64 64, %numlowbits
@@ -474,11 +466,10 @@ define i64 @bzhi64_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_c3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #64 // =0x40
-; CHECK-NEXT:    mov x9, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr x10, [x0]
+; CHECK-NEXT:    ldr x9, [x0]
 ; CHECK-NEXT:    sub w8, w8, w1
-; CHECK-NEXT:    lsr x8, x9, x8
-; CHECK-NEXT:    and x0, x8, x10
+; CHECK-NEXT:    lsl x9, x9, x8
+; CHECK-NEXT:    lsr x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %w
   %numhighbits = sub i8 64, %numlowbits
@@ -491,10 +482,9 @@ define i64 @bzhi64_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_c4_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    neg x9, x1
-; CHECK-NEXT:    lsr x8, x8, x9
-; CHECK-NEXT:    and x0, x0, x8
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsl x9, x0, x8
+; CHECK-NEXT:    lsr x0, x9, x8
 ; CHECK-NEXT:    ret
   %numhighbits = sub i64 64, %numlowbits
   %mask = lshr i64 -1, %numhighbits
@@ -773,5 +763,161 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
 ; CHECK-NEXT:    ret
   %val1 = load i64, ptr %val
   %masked = and i64 %val1, 127
+  ret i64 %masked
+}
+
+; ---------------------------------------------------------------------------- ;
+; Pattern e. 32-bit mask zero-extended into a 64-bit and
+; ---------------------------------------------------------------------------- ;
+
+; The mask is built in i32, as a 32-bit mask table or (1u << n) - 1 would be,
+; and applied to a 64-bit value. The same mask built directly in i64 selects
+; as a single and-not.
+
+define i64 @bzhi64_32_e0(i64 %val, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    ret
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+define i64 @bzhi64_32_e1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e1_indexzext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    ret
+  %conv = zext i8 %numlowbits to i32
+  %notmask = shl i32 -1, %conv
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+define i64 @bzhi64_32_e2_load(ptr %w, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e2_load:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x9
+; CHECK-NEXT:    ret
+  %val = load i64, ptr %w
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+define i64 @bzhi64_32_e3_commutative(i64 %val, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e3_commutative:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x0, x8
+; CHECK-NEXT:    ret
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %val, %zmask ; swapped order
+  ret i64 %masked
+}
+
+; The value is a shifted operand: the and could absorb the shift, an and-not
+; cannot, so the instruction count does not change here.
+define i64 @bzhi64_32_e4_shifted_val(i64 %val, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e4_shifted_val:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0, lsr #40
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, 40
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %shifted
+  ret i64 %masked
+}
+
+define i64 @bzhi64_16_e0(i64 %val, i16 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_16_e0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    bic w8, w0, w8
+; CHECK-NEXT:    and x0, x8, #0xffff
+; CHECK-NEXT:    ret
+  %notmask = shl i16 -1, %numlowbits
+  %mask = xor i16 %notmask, -1
+  %zmask = zext i16 %mask to i64
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+; Negative: the narrow mask has another use.
+define i64 @bzhi64_32_e5_multiuse_mask(i64 %val, i32 %numlowbits, ptr %escape) nounwind {
+; CHECK-LABEL: bzhi64_32_e5_multiuse_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    ret
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  store i32 %mask, ptr %escape
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+; Negative: the zero-extended mask has another use.
+define i64 @bzhi64_32_e6_multiuse_zext(i64 %val, i32 %numlowbits, ptr %escape) nounwind {
+; CHECK-LABEL: bzhi64_32_e6_multiuse_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    ret
+  %notmask = shl i32 -1, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  store i64 %zmask, ptr %escape
+  %masked = and i64 %zmask, %val
+  ret i64 %masked
+}
+
+; Not a low-bits mask.
+define i64 @bzhi64_32_e7_not_allones(i64 %val, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bzhi64_32_e7_not_allones:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #3 // =0x3
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    ret
+  %notmask = shl i32 3, %numlowbits
+  %mask = xor i32 %notmask, -1
+  %zmask = zext i32 %mask to i64
+  %masked = and i64 %zmask, %val
   ret i64 %masked
 }

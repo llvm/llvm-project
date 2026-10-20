@@ -8,11 +8,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 18
+; CHECK-NEXT:   .long 22
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 0
 ; Num Callsites
-; CHECK-NEXT:   .long 18
+; CHECK-NEXT:   .long 22
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _test
@@ -38,6 +38,18 @@
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _patchpoint_spillargs
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i1
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i8
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i16
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i29
+; CHECK-NEXT:   .quad 16
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _generic_test_i32
 ; CHECK-NEXT:   .quad 16
@@ -485,6 +497,78 @@ entry:
   tail call void asm sideeffect "nop", "~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"() nounwind
   %result = tail call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 13, i32 16, ptr inttoptr (i64 0 to ptr), i32 2, i64 %p1, i64 %p2, i64 %p3, i64 %p4)
   ret i64 %result
+}
+
+; generic_test_i1
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i1
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i1 @generic_test_i1() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i1 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i1(i64 14, i32 20, ptr null, i32 0)
+  ret i1 %ret
+}
+
+; generic_test_i8
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i8
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i8 @generic_test_i8() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i8 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i8(i64 14, i32 20, ptr null, i32 0)
+  ret i8 %ret
+}
+
+; generic_test_i16
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i16
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i16 @generic_test_i16() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i16 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i16(i64 14, i32 20, ptr null, i32 0)
+  ret i16 %ret
+}
+
+; generic_test_i29
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i29
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i29 @generic_test_i29() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i29 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i29(i64 14, i32 20, ptr null, i32 0)
+  ret i29 %ret
 }
 
 ; generic_test_i32

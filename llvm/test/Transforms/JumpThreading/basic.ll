@@ -60,12 +60,11 @@ F2:
 }
 
 
-; Undef handling.
 define i32 @test3(i1 %cond) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT: T1:
 ; CHECK-NEXT: ret i32 42
-	br i1 undef, label %T1, label %F1
+	br i1 true, label %T1, label %F1
 
 T1:
 	ret i32 42

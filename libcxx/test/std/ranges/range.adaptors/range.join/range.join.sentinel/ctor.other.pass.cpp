@@ -13,6 +13,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "../types.h"
 #include "test_range.h"

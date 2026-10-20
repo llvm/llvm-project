@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-misched=false < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-misched=false < %s | FileCheck %s
 ; This testcase causes the scheduler to crash for some reason. Disable
 ; it for now.
 

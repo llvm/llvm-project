@@ -14,9 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
+#include "InstrumentationOptions.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,15 +32,11 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -65,75 +61,6 @@ STATISTIC(
     NumInstrumentedNonFTMemcpyStores,
     "Number of instrumented non floating-point stores with memcpy semantics");
 STATISTIC(NumInstrumentedFCmp, "Number of instrumented fcmps");
-
-// Using smaller shadow types types can help improve speed. For example, `dlq`
-// is 3x slower to 5x faster in opt mode and 2-6x faster in dbg mode compared to
-// `dqq`.
-static cl::opt<std::string> ClShadowMapping(
-    "nsan-shadow-type-mapping", cl::init("dqq"),
-    cl::desc("One shadow type id for each of `float`, `double`, `long double`. "
-             "`d`,`l`,`q`,`e` mean double, x86_fp80, fp128 (quad) and "
-             "ppc_fp128 (extended double) respectively. The default is to "
-             "shadow `float` as `double`, and `double` and `x86_fp80` as "
-             "`fp128`"),
-    cl::Hidden);
-
-static cl::opt<bool>
-    ClInstrumentFCmp("nsan-instrument-fcmp", cl::init(true),
-                     cl::desc("Instrument floating-point comparisons"),
-                     cl::Hidden);
-
-static cl::opt<std::string> ClCheckFunctionsFilter(
-    "check-functions-filter",
-    cl::desc("Only emit checks for arguments of functions "
-             "whose names match the given regular expression"),
-    cl::value_desc("regex"));
-
-static cl::opt<bool> ClTruncateFCmpEq(
-    "nsan-truncate-fcmp-eq", cl::init(true),
-    cl::desc(
-        "This flag controls the behaviour of fcmp equality comparisons."
-        "For equality comparisons such as `x == 0.0f`, we can perform the "
-        "shadow check in the shadow (`x_shadow == 0.0) == (x == 0.0f)`) or app "
-        " domain (`(trunc(x_shadow) == 0.0f) == (x == 0.0f)`). This helps "
-        "catch the case when `x_shadow` is accurate enough (and therefore "
-        "close enough to zero) so that `trunc(x_shadow)` is zero even though "
-        "both `x` and `x_shadow` are not"),
-    cl::Hidden);
-
-// When there is external, uninstrumented code writing to memory, the shadow
-// memory can get out of sync with the application memory. Enabling this flag
-// emits consistency checks for loads to catch this situation.
-// When everything is instrumented, this is not strictly necessary because any
-// load should have a corresponding store, but can help debug cases when the
-// framework did a bad job at tracking shadow memory modifications by failing on
-// load rather than store.
-// TODO: provide a way to resume computations from the FT value when the load
-// is inconsistent. This ensures that further computations are not polluted.
-static cl::opt<bool> ClCheckLoads("nsan-check-loads",
-                                  cl::desc("Check floating-point load"),
-                                  cl::Hidden);
-
-static cl::opt<bool> ClCheckStores("nsan-check-stores", cl::init(true),
-                                   cl::desc("Check floating-point stores"),
-                                   cl::Hidden);
-
-static cl::opt<bool> ClCheckRet("nsan-check-ret", cl::init(true),
-                                cl::desc("Check floating-point return values"),
-                                cl::Hidden);
-
-// LLVM may store constant floats as bitcasted ints.
-// It's not really necessary to shadow such stores,
-// if the shadow value is unknown the framework will re-extend it on load
-// anyway. Moreover, because of size collisions (e.g. bf16 vs f16) it is
-// impossible to determine the floating-point type based on the size.
-// However, for debugging purposes it can be useful to model such stores.
-static cl::opt<bool> ClPropagateNonFTConstStoresAsFT(
-    "nsan-propagate-non-ft-const-stores-as-ft",
-    cl::desc(
-        "Propagate non floating-point const stores as floating point values."
-        "For debugging purposes only"),
-    cl::Hidden);
 
 constexpr StringLiteral kNsanModuleCtorName("nsan.module_ctor");
 constexpr StringLiteral kNsanInitName("__nsan_init");
@@ -165,7 +92,7 @@ template <char NsanTypeId>
 class ShadowTypeConfigImpl : public ShadowTypeConfig {
 public:
   char getNsanTypeId() const override { return NsanTypeId; }
-  static constexpr const char kNsanTypeId = NsanTypeId;
+  static constexpr char kNsanTypeId = NsanTypeId;
 };
 
 // `double` (`d`) shadow type.
@@ -261,15 +188,18 @@ static const char *typeNameFromFTValueType(FTValueType VT) {
 // (see -nsan-shadow-mapping flag).
 class MappingConfig {
 public:
-  explicit MappingConfig(LLVMContext &C) : Context(C) {
-    if (ClShadowMapping.size() != 3)
-      report_fatal_error("Invalid nsan mapping: " + Twine(ClShadowMapping));
+  MappingConfig(const InstrumentationOptions &Opts, LLVMContext &C)
+      : Context(C) {
+    if (Opts.nsan_shadow_type_mapping.size() != 3)
+      report_fatal_error("Invalid nsan mapping: " +
+                         Twine(Opts.nsan_shadow_type_mapping));
     unsigned ShadowTypeSizeBits[kNumValueTypes];
     for (int VT = 0; VT < kNumValueTypes; ++VT) {
-      auto Config = ShadowTypeConfig::fromNsanTypeId(ClShadowMapping[VT]);
+      auto Config =
+          ShadowTypeConfig::fromNsanTypeId(Opts.nsan_shadow_type_mapping[VT]);
       if (!Config)
         report_fatal_error("Failed to get ShadowTypeConfig for " +
-                           Twine(ClShadowMapping[VT]));
+                           Twine(Opts.nsan_shadow_type_mapping[VT]));
       const unsigned AppTypeSize =
           typeFromFTValueType(static_cast<FTValueType>(VT), Context)
               ->getScalarSizeInBits();
@@ -443,9 +373,7 @@ public:
 
   // Returns true if the value already has a shadow (including if the value is a
   // constant). If true, calling getShadow() is valid.
-  bool hasShadow(Value *V) const {
-    return isa<Constant>(V) || (Map.find(V) != Map.end());
-  }
+  bool hasShadow(Value *V) const { return isa<Constant>(V) || Map.contains(V); }
 
   // Returns the shadow value for a given value. Asserts that the value has
   // a shadow value. Lazily creates shadows for constant values.
@@ -474,7 +402,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {
@@ -493,13 +422,67 @@ private:
   DenseMap<Value *, Value *> Map;
 };
 
+class NsanMemOpFn {
+public:
+  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
+              size_t NumArgs);
+  FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
+  FunctionCallee getFallback() const;
+
+private:
+  SmallVector<FunctionCallee> Funcs;
+  size_t NumSizedFuncs;
+};
+
+NsanMemOpFn::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
+                         StringRef Fallback, size_t NumArgs) {
+  LLVMContext &Ctx = M.getContext();
+  AttributeList Attr;
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
+  FunctionType *SizedFnTy = nullptr;
+
+  NumSizedFuncs = Sized.size();
+
+  // First entry is fallback function
+  if (NumArgs == 3) {
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy));
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
+  } else if (NumArgs == 2) {
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy));
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
+  } else {
+    llvm_unreachable("Unexpected value of sized functions arguments");
+  }
+
+  for (size_t i = 0; i < NumSizedFuncs; ++i)
+    Funcs.push_back(M.getOrInsertFunction(Sized[i], SizedFnTy, Attr));
+}
+
+FunctionCallee NsanMemOpFn::getFunctionFor(uint64_t MemOpSize) const {
+  // Now `getFunctionFor` operates on `Funcs` of size 4 (at least) and the
+  // following code assumes that the number of functions in `Func` is sufficient
+  assert(NumSizedFuncs >= 3 && "Unexpected number of sized functions");
+
+  size_t Idx =
+      MemOpSize == 4 ? 1 : (MemOpSize == 8 ? 2 : (MemOpSize == 16 ? 3 : 0));
+
+  return Funcs[Idx];
+}
+
+FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[0]; }
+
 /// Instantiating NumericalStabilitySanitizer inserts the nsan runtime library
 /// API function declarations into the module if they don't exist already.
 /// Instantiating ensures the __nsan_init function is in the list of global
 /// constructors for the module.
 class NumericalStabilitySanitizer {
 public:
-  NumericalStabilitySanitizer(Module &M);
+  NumericalStabilitySanitizer(const InstrumentationOptions &Opts, Module &M);
   bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
 
 private:
@@ -546,16 +529,21 @@ private:
   void propagateNonFTStore(StoreInst &Store, Type *VT,
                            const ValueToShadowMap &Map);
 
+  const InstrumentationOptions &Opts;
   const DataLayout &DL;
   LLVMContext &Context;
   MappingConfig Config;
   IntegerType *IntptrTy = nullptr;
+
+  // TODO: Use std::array instead?
   FunctionCallee NsanGetShadowPtrForStore[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanGetShadowPtrForLoad[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
-  FunctionCallee NsanCopyValues;
-  FunctionCallee NsanSetValueUnknown;
+
+  NsanMemOpFn NsanCopyFns;
+  NsanMemOpFn NsanSetUnknownFns;
+
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
   GlobalValue *NsanShadowRetTag = nullptr;
@@ -581,7 +569,9 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-  NumericalStabilitySanitizer Nsan(M);
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  NumericalStabilitySanitizer Nsan(Opts, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)
     Nsan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
@@ -590,15 +580,24 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
-  return dyn_cast<GlobalValue>(M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
+  return M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
     return new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name, nullptr,
                               GlobalVariable::InitialExecTLSModel);
-  }));
+  });
 }
 
-NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
-    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context) {
+NumericalStabilitySanitizer::NumericalStabilitySanitizer(
+    const InstrumentationOptions &Opts, Module &M)
+    : Opts(Opts), DL(M.getDataLayout()), Context(M.getContext()),
+      Config(Opts, Context),
+      NsanCopyFns(M, {"__nsan_copy_4", "__nsan_copy_8", "__nsan_copy_16"},
+                  "__nsan_copy_values", /*NumArgs=*/3),
+      NsanSetUnknownFns(M,
+                        {"__nsan_set_value_unknown_4",
+                         "__nsan_set_value_unknown_8",
+                         "__nsan_set_value_unknown_16"},
+                        "__nsan_set_value_unknown", /*NumArgs=*/2) {
   IntptrTy = DL.getIntPtrType(Context);
   Type *PtrTy = PointerType::getUnqual(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
@@ -607,6 +606,15 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
 
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Context, Attribute::NoUnwind);
+
+  Triple TT(M.getTargetTriple());
+  Attribute::AttrKind I32RetExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Return(TT, /*Signed=*/true);
+  Attribute::AttrKind I32ArgExtAttr =
+      TargetLibraryInfo::getExtAttrForI32Param(TT, /*Signed=*/true);
+  Attribute::AttrKind BoolExtAttr =
+      TargetLibraryInfo::getExtAttrForBoolParam(TT);
+
   // Initialize the runtime values (functions and global variables).
   for (int I = 0; I < kNumValueTypes; ++I) {
     const FTValueType VT = static_cast<FTValueType>(I);
@@ -624,20 +632,27 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
     // Check.
     const auto &ShadowConfig = Config.byValueType(VT);
     Type *ShadowTy = ShadowConfig.getType(Context);
-    NsanCheckValue[VT] =
-        M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
-                                  "_" + ShadowConfig.getNsanTypeId(),
-                              Attr, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
-    NsanFCmpFail[VT] = M.getOrInsertFunction(
-        std::string("__nsan_fcmp_fail_") + VTName + "_" +
-            ShadowConfig.getNsanTypeId(),
-        Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
-  }
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddRetAttribute(Context, I32RetExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 2, I32ArgExtAttr);
+      NsanCheckValue[VT] =
+          M.getOrInsertFunction(std::string("__nsan_internal_check_") + VTName +
+                                    "_" + ShadowConfig.getNsanTypeId(),
+                                AL, Int32Ty, VTTy, ShadowTy, Int32Ty, IntptrTy);
+    }
 
-  NsanCopyValues = M.getOrInsertFunction("__nsan_copy_values", Attr, VoidTy,
-                                         PtrTy, PtrTy, IntptrTy);
-  NsanSetValueUnknown = M.getOrInsertFunction("__nsan_set_value_unknown", Attr,
-                                              VoidTy, PtrTy, IntptrTy);
+    {
+      AttributeList AL = Attr;
+      AL = AL.maybeAddParamAttribute(Context, 4, I32ArgExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 5, BoolExtAttr);
+      AL = AL.maybeAddParamAttribute(Context, 6, BoolExtAttr);
+      NsanFCmpFail[VT] = M.getOrInsertFunction(
+          std::string("__nsan_fcmp_fail_") + VTName + "_" +
+              ShadowConfig.getNsanTypeId(),
+          AL, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
+    }
+  }
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
   NsanGetRawShadowTypePtr = M.getOrInsertFunction(
@@ -662,8 +677,8 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
   NsanShadowArgsPtr =
       createThreadLocalGV("__nsan_shadow_args_ptr", M, NsanShadowArgsType);
 
-  if (!ClCheckFunctionsFilter.empty()) {
-    Regex R = Regex(ClCheckFunctionsFilter);
+  if (!Opts.check_functions_filter.empty()) {
+    Regex R = Regex(Opts.check_functions_filter);
     std::string RegexError;
     assert(R.isValid(RegexError));
     CheckFunctionsFilter = std::move(R);
@@ -704,7 +719,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHI());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -756,9 +771,9 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NumLibFuncs;
+  LibFunc LFunc = TLI.getLibFunc(*Fn);
   // Always check args of unknown functions.
-  if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
+  if (ID == Intrinsic::ID() && LFunc == NotLibFunc)
     return true;
 
   // Do not check args of an `fabs` call that is used for a comparison.
@@ -801,8 +816,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
 
   // Do not create shadow stacks for intrinsics/known lib funcs.
   if (Function *Fn = CI.getCalledFunction()) {
-    LibFunc LFunc;
-    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn, LFunc))
+    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn) != NotLibFunc)
       return;
   }
 
@@ -941,7 +955,7 @@ Value *NumericalStabilitySanitizer::emitCheck(Value *V, Value *ShadowV,
 // values.
 void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
                                                 const ValueToShadowMap &Map) {
-  if (!ClInstrumentFCmp)
+  if (!Opts.nsan_instrument_fcmp)
     return;
 
   Function *F = FCmp.getFunction();
@@ -967,8 +981,8 @@ void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
   FCmpBuilder.SetCurrentDebugLocation(FCmp.getDebugLoc());
   Value *ShadowLHS = Map.getShadow(LHS);
   Value *ShadowRHS = Map.getShadow(RHS);
-  // See comment on ClTruncateFCmpEq.
-  if (FCmp.isEquality() && ClTruncateFCmpEq) {
+  // See the help text of -nsan-truncate-fcmp-eq.
+  if (FCmp.isEquality() && Opts.nsan_truncate_fcmp_eq) {
     Type *Ty = ShadowLHS->getType();
     ShadowLHS = FCmpBuilder.CreateFPExt(
         FCmpBuilder.CreateFPTrunc(ShadowLHS, LHS->getType()), Ty);
@@ -1054,7 +1068,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
   // created. They will be populated in a final phase, once all shadow values
   // have been created.
   PHINode *Shadow = PHINode::Create(ExtendedVT, Phi.getNumIncomingValues());
-  Shadow->insertAfter(&Phi);
+  Shadow->insertAfter(Phi.getIterator());
   return Shadow;
 }
 
@@ -1112,7 +1126,7 @@ Value *NumericalStabilitySanitizer::handleLoad(LoadInst &Load, Type *VT,
   ShadowLoadBBBuilder.SetCurrentDebugLocation(Load.getDebugLoc());
   Value *ShadowLoad = ShadowLoadBBBuilder.CreateAlignedLoad(
       ExtendedVT, ShadowPtr, Align(1), Load.isVolatile());
-  if (ClCheckLoads) {
+  if (Opts.nsan_check_loads) {
     ShadowLoad = emitCheck(&Load, ShadowLoad, ShadowLoadBBBuilder,
                            CheckLoc::makeLoad(Load.getPointerOperand()));
   }
@@ -1343,14 +1357,11 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.log2.f64", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.log2.f80", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.fma.f32", Intrinsic::fma, makeDoubleDoubleDoubleDouble},
-
-    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
-
     {"llvm.fma.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
-    {"llvm.fmuladd.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
     {"llvm.fma.f80", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
+    {"llvm.fmuladd.f64", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f80", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
     {"llvm.fabs.f32", Intrinsic::fabs, makeDoubleDouble},
     {"llvm.fabs.f64", Intrinsic::fabs, makeX86FP80X86FP80},
     {"llvm.fabs.f80", Intrinsic::fabs, makeX86FP80X86FP80},
@@ -1366,6 +1377,12 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.maximum.f32", Intrinsic::maximum, makeDoubleDoubleDouble},
     {"llvm.maximum.f64", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
     {"llvm.maximum.f80", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f32", Intrinsic::minimumnum, makeDoubleDoubleDouble},
+    {"llvm.minimumnum.f64", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f80", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f32", Intrinsic::maximumnum, makeDoubleDoubleDouble},
+    {"llvm.maximumnum.f64", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f80", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f32", Intrinsic::copysign, makeDoubleDoubleDouble},
     {"llvm.copysign.f64", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f80", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
@@ -1383,22 +1400,10 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.rint.f80", Intrinsic::rint, makeX86FP80X86FP80},
     {"llvm.nearbyint.f32", Intrinsic::nearbyint, makeDoubleDouble},
     {"llvm.nearbyint.f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
-    {"llvm.nearbyin80f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
+    {"llvm.nearbyint.f80", Intrinsic::nearbyint, makeX86FP80X86FP80},
     {"llvm.round.f32", Intrinsic::round, makeDoubleDouble},
     {"llvm.round.f64", Intrinsic::round, makeX86FP80X86FP80},
     {"llvm.round.f80", Intrinsic::round, makeX86FP80X86FP80},
-    {"llvm.lround.f32", Intrinsic::lround, makeDoubleDouble},
-    {"llvm.lround.f64", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.lround.f80", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.llround.f32", Intrinsic::llround, makeDoubleDouble},
-    {"llvm.llround.f64", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.llround.f80", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.lrint.f32", Intrinsic::lrint, makeDoubleDouble},
-    {"llvm.lrint.f64", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.lrint.f80", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f32", Intrinsic::llrint, makeDoubleDouble},
-    {"llvm.llrint.f64", Intrinsic::llrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f80", Intrinsic::llrint, makeX86FP80X86FP80},
 };
 
 const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
@@ -1444,6 +1449,12 @@ const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
     {LibFunc_fminf, "llvm.minnum.f32"},
     {LibFunc_fmin, "llvm.minnum.f64"},
     {LibFunc_fminl, "llvm.minnum.f80"},
+    {LibFunc_fmaximum_numf, "llvm.maximumnum.f32"},
+    {LibFunc_fmaximum_num, "llvm.maximumnum.f64"},
+    {LibFunc_fmaximum_numl, "llvm.maximumnum.f80"},
+    {LibFunc_fminimum_numf, "llvm.minimumnum.f32"},
+    {LibFunc_fminimum_num, "llvm.minimumnum.f64"},
+    {LibFunc_fminimum_numl, "llvm.minimumnum.f80"},
     {LibFunc_ceilf, "llvm.ceil.f32"},
     {LibFunc_ceil, "llvm.ceil.f64"},
     {LibFunc_ceill, "llvm.ceil.f80"},
@@ -1480,8 +1491,8 @@ const KnownIntrinsic::WidenedIntrinsic *KnownIntrinsic::widen(StringRef Name) {
 // Returns the name of the LLVM intrinsic corresponding to the given function.
 static const char *getIntrinsicFromLibfunc(Function &Fn, Type *VT,
                                            const TargetLibraryInfo &TLI) {
-  LibFunc LFunc;
-  if (!TLI.getLibFunc(Fn, LFunc))
+  LibFunc LFunc = TLI.getLibFunc(Fn);
+  if (LFunc == NotLibFunc)
     return nullptr;
 
   if (const char *Name = KnownIntrinsic::get(LFunc))
@@ -1526,14 +1537,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   }
 
   // Check that the widened intrinsic is valid.
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(WidenedId, Table);
-  SmallVector<Type *, 4> ArgTys;
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
-  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
-         "invalid widened intrinsic");
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::isSignatureValid(WidenedId, WidenedFnTy, OverloadTys);
+  assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1559,7 +1566,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
     // There is no intrinsic with his level of precision, truncate the shadow.
     Args.push_back(Builder.CreateFPTrunc(Shadow, IntrinsicArgTy));
   }
-  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, ArgTys, Args);
+  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, OverloadTys, Args);
   return WidenedFnTy->getReturnType() == ExtendedVT
              ? IntrinsicCall
              : Builder.CreateFPExt(IntrinsicCall, ExtendedVT);
@@ -1615,7 +1622,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
   if (auto *Call = dyn_cast<CallInst>(&Inst)) {
     // Insert after the call.
     BasicBlock::iterator It(Inst);
-    IRBuilder<> Builder(Call->getParent(), ++It);
+    IRBuilder<> Builder(++It);
     Builder.SetCurrentDebugLocation(Call->getDebugLoc());
     return handleCallBase(*Call, VT, ExtendedVT, TLI, Map, Builder);
   }
@@ -1655,7 +1662,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
                                Map.getShadow(BinOp->getOperand(1)));
 
   if (isa<UIToFPInst>(&Inst) || isa<SIToFPInst>(&Inst)) {
-    auto *Cast = dyn_cast<CastInst>(&Inst);
+    auto *Cast = cast<CastInst>(&Inst);
     return Builder.CreateCast(Cast->getOpcode(), Cast->getOperand(0),
                               ExtendedVT);
   }
@@ -1664,6 +1671,9 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
     return Builder.CreateSelect(S->getCondition(),
                                 Map.getShadow(S->getTrueValue()),
                                 Map.getShadow(S->getFalseValue()));
+
+  if (auto *Freeze = dyn_cast<FreezeInst>(&Inst))
+    return Builder.CreateFreeze(Map.getShadow(Freeze->getOperand(0)));
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&Inst))
     return Builder.CreateExtractElement(
@@ -1753,7 +1763,7 @@ void NumericalStabilitySanitizer::propagateFTStore(
   if (!Store.getParent()->getParent()->hasOptNone()) {
     // Only check stores when optimizing, because non-optimized code generates
     // too many stores to the stack, creating false positives.
-    if (ClCheckStores) {
+    if (Opts.nsan_check_stores) {
       StoredShadow = emitCheck(StoredValue, StoredShadow, Builder,
                                CheckLoc::makeStore(Store.getPointerOperand()));
       ++NumInstrumentedFTStores;
@@ -1825,14 +1835,13 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     ++NumInstrumentedNonFTMemcpyStores;
     return;
   }
-  // ClPropagateNonFTConstStoresAsFT is by default false.
-  if (Constant *C; ClPropagateNonFTConstStoresAsFT &&
+  if (Constant *C; Opts.nsan_propagate_non_ft_const_stores_as_ft &&
                    (C = dyn_cast<Constant>(StoredValue))) {
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
-      switch (CInt->getType()->getScalarSizeInBits()) {
+    if (isa<ConstantInt, ConstantDataVector>(C)) {
+      switch (C->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
         break;
@@ -1845,25 +1854,10 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      const int NumElements =
-          cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
-      switch (CDV->getType()->getScalarSizeInBits()) {
-      case 32:
-        BitcastTy =
-            VectorType::get(Type::getFloatTy(Context), NumElements, false);
-        break;
-      case 64:
-        BitcastTy =
-            VectorType::get(Type::getDoubleTy(Context), NumElements, false);
-        break;
-      case 80:
-        BitcastTy =
-            VectorType::get(Type::getX86_FP80Ty(Context), NumElements, false);
-        break;
-      default:
-        break;
-      }
+
+      if (BitcastTy)
+        if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+          BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
@@ -1880,7 +1874,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     }
   }
   // All other stores just reset the shadow value to unknown.
-  Builder.CreateCall(NsanSetValueUnknown, {Dst, ValueSize});
+  Builder.CreateCall(NsanSetUnknownFns.getFallback(), {Dst, ValueSize});
 }
 
 void NumericalStabilitySanitizer::propagateShadowValues(
@@ -1913,7 +1907,7 @@ void NumericalStabilitySanitizer::propagateShadowValues(
   }
 
   if (auto *RetInst = dyn_cast<ReturnInst>(&Inst)) {
-    if (!ClCheckRet)
+    if (!Opts.nsan_check_ret)
       return;
 
     Value *RV = RetInst->getReturnValue();
@@ -1962,9 +1956,6 @@ static void moveFastMathFlags(Function &F,
     F.removeFnAttr(attr);                                                      \
     FMF.set##setter();                                                         \
   }
-  MOVE_FLAG("unsafe-fp-math", Fast)
-  MOVE_FLAG("no-infs-fp-math", NoInfs)
-  MOVE_FLAG("no-nans-fp-math", NoNaNs)
   MOVE_FLAG("no-signed-zeros-fp-math", NoSignedZeros)
 #undef MOVE_FLAG
 
@@ -1975,15 +1966,14 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
+      F.isDeclaration())
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within
   // the module constructor.
   if (F.getName() == kNsanModuleCtorName)
     return false;
-  SmallVector<Instruction *, 8> AllLoadsAndStores;
-  SmallVector<Instruction *, 8> LocalLoadsAndStores;
 
   // The instrumentation maintains:
   //  - for each IR value `v` of floating-point (or vector floating-point) type
@@ -2057,7 +2047,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   //
   //    For example, in the following example, the instrumentation in
   //    `instrumented_1` rejects the shadow return value from `instrumented_3`
-  //    because is is not tagged as expected (`&instrumented_3` instead of
+  //    because it is not tagged as expected (`&instrumented_3` instead of
   //    `non_instrumented_2`):
   //
   //        instrumented_1()
@@ -2105,7 +2095,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
 
   // The last pass populates shadow phis with shadow values.
   for (PHINode *Phi : OriginalPhis) {
-    PHINode *ShadowPhi = dyn_cast<PHINode>(ValueToShadow.getShadow(Phi));
+    PHINode *ShadowPhi = cast<PHINode>(ValueToShadow.getShadow(Phi));
     for (unsigned I : seq(Phi->getNumOperands())) {
       Value *V = Phi->getOperand(I);
       Value *Shadow = ValueToShadow.getShadow(V);
@@ -2123,21 +2113,45 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   return !ValueToShadow.empty();
 }
 
+static uint64_t GetMemOpSize(Value *V) {
+  uint64_t OpSize = 0;
+  if (Constant *C = dyn_cast<Constant>(V)) {
+    auto *CInt = dyn_cast<ConstantInt>(C);
+    if (CInt && CInt->getValue().getBitWidth() <= 64)
+      OpSize = CInt->getValue().getZExtValue();
+  }
+
+  return OpSize;
+}
+
 // Instrument the memory intrinsics so that they properly modify the shadow
 // memory.
 bool NumericalStabilitySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> Builder(MI);
   if (auto *M = dyn_cast<MemSetInst>(MI)) {
-    Builder.CreateCall(
-        NsanSetValueUnknown,
-        {/*Address=*/M->getArgOperand(0),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    FunctionCallee SetUnknownFn =
+        NsanSetUnknownFns.getFunctionFor(GetMemOpSize(M->getArgOperand(2)));
+    if (SetUnknownFn.getFunctionType()->getNumParams() == 1)
+      Builder.CreateCall(SetUnknownFn, {/*Address=*/M->getArgOperand(0)});
+    else
+      Builder.CreateCall(SetUnknownFn,
+                         {/*Address=*/M->getArgOperand(0),
+                          /*Size=*/Builder.CreateIntCast(M->getArgOperand(2),
+                                                         IntptrTy, false)});
+
   } else if (auto *M = dyn_cast<MemTransferInst>(MI)) {
-    Builder.CreateCall(
-        NsanCopyValues,
-        {/*Destination=*/M->getArgOperand(0),
-         /*Source=*/M->getArgOperand(1),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    FunctionCallee CopyFn =
+        NsanCopyFns.getFunctionFor(GetMemOpSize(M->getArgOperand(2)));
+
+    if (CopyFn.getFunctionType()->getNumParams() == 2)
+      Builder.CreateCall(CopyFn, {/*Destination=*/M->getArgOperand(0),
+                                  /*Source=*/M->getArgOperand(1)});
+    else
+      Builder.CreateCall(CopyFn, {/*Destination=*/M->getArgOperand(0),
+                                  /*Source=*/M->getArgOperand(1),
+                                  /*Size=*/
+                                  Builder.CreateIntCast(M->getArgOperand(2),
+                                                        IntptrTy, false)});
   }
   return false;
 }

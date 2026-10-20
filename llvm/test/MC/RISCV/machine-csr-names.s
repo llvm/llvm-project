@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 #
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
@@ -187,6 +187,20 @@ csrrs t1, mcounteren, zero
 # uimm12
 csrrs t2, 0x306, zero
 
+# mijt
+# name
+# CHECK-INST: csrrs t1, mijt, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t1, mijt
+# uimm12
+# CHECK-INST: csrrs t2, mijt, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t2, mijt
+# name
+csrrs t1, mijt, zero
+# uimm12
+csrrs t2, 0x307, zero
+
 # mscratch
 # name
 # CHECK-INST: csrrs t1, mscratch, zero
@@ -256,6 +270,62 @@ csrrs t2, 0x343, zero
 csrrs t1, mip, zero
 # uimm12
 csrrs t2, 0x344, zero
+
+# mistatus
+# name
+# CHECK-INST: csrrs t1, mistatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x34]
+# CHECK-INST-ALIAS: csrr t1, mistatus
+# uimm12
+# CHECK-INST: csrrs t2, mistatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x34]
+# CHECK-INST-ALIAS: csrr t2, mistatus
+# name
+csrrs t1, mistatus, zero
+# uimm12
+csrrs t2, 0x346, zero
+
+# mithreshold
+# name
+# CHECK-INST: csrrs t1, mithreshold, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x34]
+# CHECK-INST-ALIAS: csrr t1, mithreshold
+# uimm12
+# CHECK-INST: csrrs t2, mithreshold, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x34]
+# CHECK-INST-ALIAS: csrr t2, mithreshold
+# name
+csrrs t1, mithreshold, zero
+# uimm12
+csrrs t2, 0x347, zero
+
+# mtopsi
+# name
+# CHECK-INST: csrrs t1, mtopsi, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x34]
+# CHECK-INST-ALIAS: csrr t1, mtopsi
+# uimm12
+# CHECK-INST: csrrs t2, mtopsi, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x34]
+# CHECK-INST-ALIAS: csrr t2, mtopsi
+# name
+csrrs t1, mtopsi, zero
+# uimm12
+csrrs t2, 0x348, zero
+
+# mspcs
+# name
+# CHECK-INST: csrrs t1, mspcs, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t1, mspcs
+# uimm12
+# CHECK-INST: csrrs t2, mspcs, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t2, mspcs
+# name
+csrrs t1, mspcs, zero
+# uimm12
+csrrs t2, 0x349, zero
 
 # mtinst
 # name
@@ -1392,6 +1462,54 @@ csrrs t1, tdata1, zero
 # uimm12
 csrrs t2, 0x7A1, zero
 
+# mcontrol (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, mcontrol, zero
+
+# mcontrol6 (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, mcontrol6, zero
+
+# icount (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, icount, zero
+
+# itrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, itrigger, zero
+
+# etrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, etrigger, zero
+
+# tmexttrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, tmexttrigger, zero
+
 # tdata2
 # name
 # CHECK-INST: csrrs t1, tdata2, zero
@@ -1419,6 +1537,50 @@ csrrs t1, tdata3, zero
 # uimm12
 csrrs t2, 0x7A3, zero
 
+# textra32 (alias for tdata3)
+# name
+# CHECK-INST: csrrs t1, tdata3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata3
+# name
+csrrs t1, textra32, zero
+
+# textra64 (alias for tdata3)
+# name
+# CHECK-INST: csrrs t1, tdata3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata3
+# name
+csrrs t1, textra64, zero
+
+# tinfo
+# name
+# CHECK-INST: csrrs t1, tinfo, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tinfo
+# uimm12
+# CHECK-INST: csrrs t2, tinfo, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x7a]
+# CHECK-INST-ALIAS: csrr t2, tinfo
+# name
+csrrs t1, tinfo, zero
+# uimm12
+csrrs t2, 0x7A4, zero
+
+# tcontrol
+# name
+# CHECK-INST: csrrs t1, tcontrol, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tcontrol
+# uimm12
+# CHECK-INST: csrrs t2, tcontrol, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x7a]
+# CHECK-INST-ALIAS: csrr t2, tcontrol
+# name
+csrrs t1, tcontrol, zero
+# uimm12
+csrrs t2, 0x7A5, zero
+
 # mcontext
 # name
 # CHECK-INST: csrrs t1, mcontext, zero
@@ -1432,6 +1594,20 @@ csrrs t2, 0x7A3, zero
 csrrs t1, mcontext, zero
 # uimm12
 csrrs t2, 0x7A8, zero
+
+# mscontext
+# name
+# CHECK-INST: csrrs t1, mscontext, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x7a]
+# CHECK-INST-ALIAS: csrr t1, mscontext
+# uimm12
+# CHECK-INST: csrrs t2, mscontext, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x7a]
+# CHECK-INST-ALIAS: csrr t2, mscontext
+# name
+csrrs t1, mscontext, zero
+# uimm12
+csrrs t2, 0x7AA, zero
 
 #######################
 # Debug Mode Registers
@@ -1927,20 +2103,6 @@ csrrs t2, 0xB1F, zero
 # CHECK-INST-ALIAS: csrr t2, mcountinhibit
 # name
 csrrs t1, mcountinhibit, zero
-# uimm12
-csrrs t2, 0x320, zero
-
-# mucounteren
-# name
-# CHECK-INST: csrrs t1, mcountinhibit, zero
-# CHECK-ENC:  encoding: [0x73,0x23,0x00,0x32]
-# CHECK-INST-ALIAS: csrr t1, mcountinhibit
-# uimm12
-# CHECK-INST: csrrs t2, mcountinhibit, zero
-# CHECK-ENC:  encoding: [0xf3,0x23,0x00,0x32]
-# CHECK-INST-ALIAS: csrr t2, mcountinhibit
-# name
-csrrs t1, mucounteren, zero
 # uimm12
 csrrs t2, 0x320, zero
 
@@ -2568,3 +2730,100 @@ csrrs t2, 0x308, zero
 csrrs t1, mvip, zero
 # uimm12
 csrrs t2, 0x309, zero
+
+##################################
+# Control Transfer Records
+##################################
+
+# mctrctl
+# name
+# CHECK-INST: csrrs t1, mctrctl, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x34]
+# CHECK-INST-ALIAS: csrr t1, mctrctl
+# uimm12
+# CHECK-INST: csrrs t2, mctrctl, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x34]
+# CHECK-INST-ALIAS: csrr t2, mctrctl
+csrrs t1, mctrctl, zero
+# uimm12
+csrrs t2, 0x34E, zero
+
+################################################
+# Resumable Non-Maskable Interrupts(Smrnmi) CSRs
+################################################
+
+# mnscratch
+# name
+# CHECK-INST: csrrs t1, mnscratch, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnscratch
+# uimm12
+# CHECK-INST: csrrs t2, mnscratch, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnscratch
+csrrs t1, mnscratch, zero
+# uimm12
+csrrs t2, 0x740, zero
+
+# mnepc
+# name
+# CHECK-INST: csrrs t1, mnepc, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnepc
+# uimm12
+# CHECK-INST: csrrs t2, mnepc, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnepc
+csrrs t1, mnepc, zero
+# uimm12
+csrrs t2, 0x741, zero
+
+# mncause
+# name
+# CHECK-INST: csrrs t1, mncause, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x74]
+# CHECK-INST-ALIAS: csrr t1, mncause
+# uimm12
+# CHECK-INST: csrrs t2, mncause, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x74]
+# CHECK-INST-ALIAS: csrr t2, mncause
+csrrs t1, mncause, zero
+# uimm12
+csrrs t2, 0x742, zero
+
+# mnstatus
+# name
+# CHECK-INST: csrrs t1, mnstatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnstatus
+# uimm12
+# CHECK-INST: csrrs t2, mnstatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnstatus
+csrrs t1, mnstatus, zero
+# uimm12
+csrrs t2, 0x744, zero
+
+# mcyclecfg
+# name
+# CHECK-INST: csrrs t1, mcyclecfg, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x10,0x32]
+# CHECK-INST-ALIAS: csrr t1, mcyclecfg
+csrrs t1, mcyclecfg, zero
+# uimm12
+# CHECK-INST: csrrs t2, mcyclecfg, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x10,0x32]
+# CHECK-INST-ALIAS: csrr t2, mcyclecfg
+csrrs t2, 0x321, zero
+
+# minstretcfg
+# name
+# CHECK-INST: csrrs t1, minstretcfg, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x20,0x32]
+# CHECK-INST-ALIAS: csrr t1, minstretcfg
+csrrs t1, minstretcfg, zero
+# uimm12
+# CHECK-INST: csrrs t2, minstretcfg, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x20,0x32]
+# CHECK-INST-ALIAS: csrr t2, minstretcfg
+csrrs t2, 0x322, zero

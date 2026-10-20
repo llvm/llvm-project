@@ -10,7 +10,7 @@ let () = Llvm_all_backends.initialize ()
 
 (*===-- Fixture -----------------------------------------------------------===*)
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let m = Llvm.create_module context "mymodule"
 
@@ -71,4 +71,5 @@ let () =
 
 let () =
   Llvm_passbuilder.dispose_passbuilder_options options;
-  Llvm.dispose_module m
+  Llvm.dispose_module m;
+  Llvm.dispose_context context

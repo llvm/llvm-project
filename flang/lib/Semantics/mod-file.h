@@ -37,6 +37,10 @@ public:
   bool WriteAll();
   void WriteClosure(llvm::raw_ostream &, const Symbol &,
       UnorderedSymbolSet &nonIntrinsicModulesWritten);
+  ModFileWriter &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
+  }
 
 private:
   SemanticsContext &context_;
@@ -49,6 +53,10 @@ private:
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
   UnorderedSymbolSet usedNonIntrinsicModules_;
+  // Modules already re-exported by a plain USE for an operator-less declare
+  // reduction, so the USE is written once even when several such reductions
+  // come from the same module.
+  UnorderedSymbolSet reexportedReductionModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
@@ -57,13 +65,14 @@ private:
   llvm::raw_string_ostream decls_{declsBuf_};
   llvm::raw_string_ostream contains_{containsBuf_};
   bool isSubmodule_{false};
+  bool hermeticModuleFileOutput_{false};
 
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
   void PrepareRenamings(const Scope &);
-  void PutSymbols(const Scope &);
+  void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic);
   // Returns true if a derived type with bindings and "contains" was emitted
   bool PutComponents(const Symbol &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);
@@ -74,7 +83,9 @@ private:
   void PutProcEntity(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &, const Scope * = nullptr);
   void PutDECStructure(const Symbol &, const Scope * = nullptr);
+  void PutEnumerationType(const Symbol &);
   void PutTypeParam(llvm::raw_ostream &, const Symbol &);
+  void PutUserReduction(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);
   void PutUse(const Symbol &);
@@ -97,7 +108,7 @@ public:
 private:
   SemanticsContext &context_;
 
-  parser::Message &Say(SourceName, const std::string &,
+  parser::Message &Say(const char *verb, SourceName, const std::string &,
       parser::MessageFixedText &&, const std::string &);
 };
 

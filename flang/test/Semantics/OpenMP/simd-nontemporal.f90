@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 
 ! OpenMP Version 4.5
 ! 2.8.1 simd Construct

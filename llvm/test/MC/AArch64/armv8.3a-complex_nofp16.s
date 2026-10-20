@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+complxnum -o - %s 2>%t | FileCheck %s
+.text
 fcmla v0.2s, v1.2s, v2.2s, #0
 fcmla v0.4s, v1.4s, v2.4s, #0
 fcmla v0.2d, v1.2d, v2.2d, #0

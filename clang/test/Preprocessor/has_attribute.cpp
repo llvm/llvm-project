@@ -46,6 +46,7 @@ CXX11(gnu::mips16)
 // Test for standard attributes as listed in C++2a [cpp.cond] paragraph 6.
 
 CXX11(assert)
+// carries_dependency was removed from the standard by P3475R2.
 CXX11(carries_dependency)
 CXX11(deprecated)
 CXX11(ensures)
@@ -59,7 +60,7 @@ CXX11(nodiscard)
 CXX11(noreturn)
 CXX11(unlikely)
 // FIXME(201806L) CHECK: assert: 0
-// CHECK: carries_dependency: 200809L
+// CHECK: carries_dependency: 0
 // CHECK: deprecated: 201309L
 // FIXME(201806L) CHECK: ensures: 0
 // FIXME(201806L) CHECK: expects: 0
@@ -116,6 +117,26 @@ int funclike_1;
 int funclike_2;
 #endif
 // CHECK: int funclike_2;
+
+#if __has_cpp_attribute(CF\
+)
+int has_clang_falthrough_5;
+#endif
+// CHECK: int has_clang_falthrough_5;
+
+#define CF_2 clang::\
+fallthrough
+
+#if __has_cpp_attribute(CF_2)
+int has_clang_falthrough_6;
+#endif
+// CHECK: int has_clang_falthrough_6;
+
+#if __has_cpp_attribute(CF_2\
+)
+int has_clang_falthrough_7;
+#endif
+// CHECK: int has_clang_falthrough_7;
 }
 
 // Test for Microsoft __declspec attributes

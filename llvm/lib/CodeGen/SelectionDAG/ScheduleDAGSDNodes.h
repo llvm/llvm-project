@@ -94,7 +94,7 @@ class InstrItineraryData;
     /// are input.  This SUnit graph is similar to the SelectionDAG, but
     /// excludes nodes that aren't interesting to scheduling, and represents
     /// flagged together nodes with a single SUnit.
-    void BuildSchedGraph(AAResults *AA);
+    void BuildSchedGraph();
 
     /// InitNumRegDefsLeft - Determine the # of regs defined by this node.
     ///
@@ -126,7 +126,9 @@ class InstrItineraryData;
     void dump() const override;
     void dumpSchedule() const;
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     std::string getGraphNodeLabel(const SUnit *SU) const override;
+#endif
 
     std::string getDAGName() const override;
 
@@ -184,7 +186,8 @@ class InstrItineraryData;
     void BuildSchedUnits();
     void AddSchedEdges();
 
-    void EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
+    void EmitPhysRegCopy(SUnit *SU,
+                         SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
                          MachineBasicBlock::iterator InsertPos);
   };
 

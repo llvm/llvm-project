@@ -364,3 +364,18 @@ entry:
   %t = xor i32 %s, %spec.select
   ret i32 %t
 }
+
+define i32 @test_known_bits(i32 %a, i32 %b) {
+; CHECK-LABEL: test_known_bits:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r2, #1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    cneg r0, r2, mi
+; CHECK-NEXT:    add r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp slt i32 %a, 0
+  %s = select i1 %c, i32 -1, i32 1
+  %t = add i32 %s, %b
+  ret i32 %t
+}

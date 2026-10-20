@@ -7,22 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigemptyset.h"
-#include "src/errno/libc_errno.h"
-#include "src/signal/linux/signal_utils.h"
-
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-#include <signal.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigemptyset, (sigset_t * set)) {
   if (!set) {
     libc_errno = EINVAL;
     return -1;
   }
-  *set = empty_set();
+  *set = signals::empty_set();
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

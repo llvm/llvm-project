@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// TODO: Change to XFAIL once https://llvm.org/PR40995 is fixed
 // UNSUPPORTED: availability-pmr-missing
+
+// XFAIL: using-built-library-before-llvm-24
 
 // <memory_resource>
 
 // class monotonic_buffer_resource
 
-#include <memory_resource>
 #include <cassert>
+#include <cstddef>
+#include <memory_resource>
 
 #include "test_macros.h"
 #include "count_new.h"
@@ -41,7 +44,7 @@ int main(int, char**) {
   ret = r1.allocate(globalMemCounter.last_new_size, 4);
   assert(ret != nullptr);
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkNewCalledEq(2));
-  ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkAlignedNewCalledEq(1));
+  ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkAlignedNewCalledEq(2));
 
   return 0;
 }

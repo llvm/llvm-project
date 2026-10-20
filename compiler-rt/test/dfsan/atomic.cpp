@@ -1,8 +1,11 @@
-// RUN: %clangxx_dfsan %s -fno-exceptions -o %t && %run %t
-// RUN: %clangxx_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -o %t && %run %t
+// RUN: %clangxx_dfsan %s -fno-exceptions -D_GLIBCXX_NO_ASSERTIONS -o %t && %run %t
+// RUN: %clangxx_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -D_GLIBCXX_NO_ASSERTIONS -o %t && %run %t
 //
 // Use -fno-exceptions to turn off exceptions to avoid instrumenting
 // __cxa_begin_catch, std::terminate and __gxx_personality_v0.
+//
+// Use -D_GLIBCXX_NO_ASSERTIONS to avoid depending on
+// std::__glibcxx_assert_fail with gcc >= 15.
 //
 // TODO: Support builtin atomics. For example, https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
 // DFSan instrumentation pass cannot identify builtin callsites yet.

@@ -18,7 +18,7 @@ void no_leak() {
 void invalid_free() {
   int i;
   int *p = &i;
-  //expected-note@+2{{Argument to free() is the address of the local variable 'i', which is not memory allocated by malloc()}}
-  //expected-warning@+1{{Argument to free() is the address of the local variable 'i', which is not memory allocated by malloc()}}
+  //expected-note@+2{{Argument to 'free()' is the address of the local variable 'i', which is not memory allocated by 'malloc()'}}
+  //expected-warning@+1{{Argument to 'free()' is the address of the local variable 'i', which is not memory allocated by 'malloc()'}}
   std::free(p);
 }

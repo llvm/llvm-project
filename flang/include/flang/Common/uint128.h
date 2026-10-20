@@ -19,14 +19,17 @@
 #define AVOID_NATIVE_UINT128_T 0
 #endif
 
+#include "api-attrs.h"
 #include "leading-zero-bit-count.h"
-#include "flang/Common/api-attrs.h"
+#include "numeric-limits.h"
 #include <cstdint>
 #include <type_traits>
 
 namespace Fortran::common {
 
 template <bool IS_SIGNED = false> class Int128 {
+  friend class detail::numeric_limits_impl<Int128>;
+
 public:
   constexpr Int128() {}
   // This means of definition provides some portability for
@@ -278,9 +281,11 @@ using SignedInt128 = Int128<true>;
 
 #if !AVOID_NATIVE_UINT128_T && (defined __GNUC__ || defined __clang__) && \
     defined __SIZEOF_INT128__
+#define USING_NATIVE_INT128_T 1
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;
 #else
+#undef USING_NATIVE_INT128_T
 using uint128_t = UnsignedInt128;
 using int128_t = SignedInt128;
 #endif
@@ -301,6 +306,50 @@ template <int BITS>
 using HostUnsignedIntType = typename HostUnsignedIntTypeHelper<BITS>::type;
 template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
+
+namespace detail {
+
+template <> class numeric_limits_impl<Fortran::common::UnsignedInt128> {
+public:
+  using T = Fortran::common::UnsignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() { return T{0, 0}; }
+  static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
+  static constexpr T lowest() { return min(); }
+};
+
+template <> class numeric_limits_impl<Fortran::common::SignedInt128> {
+public:
+  using T = Fortran::common::SignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() {
+    return T{static_cast<std::uint64_t>(INT64_MIN), 0};
+  }
+  static constexpr T max() {
+    return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
+  }
+  static constexpr T lowest() { return min(); }
+};
+
+template <> class make_unsigned_impl<Fortran::common::UnsignedInt128> {
+public:
+  using type = Fortran::common::UnsignedInt128;
+};
+
+template <> class make_unsigned_impl<Fortran::common::SignedInt128> {
+public:
+  using type = Fortran::common::UnsignedInt128;
+};
+
+} // namespace detail
 
 } // namespace Fortran::common
 #endif

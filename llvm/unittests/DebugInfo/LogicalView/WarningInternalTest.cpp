@@ -117,7 +117,7 @@ public:
     setInstance(this);
   }
 
-  Error createScopes() { return LVReader::createScopes(); }
+  Error createScopes() override { return LVReader::createScopes(); }
 
   void setMapping();
   void createElements();

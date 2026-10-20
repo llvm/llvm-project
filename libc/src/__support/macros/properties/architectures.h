@@ -13,15 +13,20 @@
 #define LIBC_TARGET_ARCH_IS_AMDGPU
 #endif
 
+#if defined(__SPIRV__)
+#define LIBC_TARGET_ARCH_IS_SPIRV
+#endif
+
 #if defined(__NVPTX__)
 #define LIBC_TARGET_ARCH_IS_NVPTX
 #endif
 
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX) || defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX) ||                                      \
+    defined(LIBC_TARGET_ARCH_IS_AMDGPU) || defined(LIBC_TARGET_ARCH_IS_SPIRV)
 #define LIBC_TARGET_ARCH_IS_GPU
 #endif
 
-#if defined(__pnacl__) || defined(__CLR_VER) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#if defined(__CLR_VER) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #define LIBC_TARGET_ARCH_IS_VM
 #endif
 
@@ -39,6 +44,10 @@
 
 #if (defined(__arm__) || defined(_M_ARM))
 #define LIBC_TARGET_ARCH_IS_ARM
+#endif
+
+#if defined(__wasm__)
+#define LIBC_TARGET_ARCH_IS_WASM
 #endif
 
 #if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
@@ -59,6 +68,10 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_RISCV64) || defined(LIBC_TARGET_ARCH_IS_RISCV32)
 #define LIBC_TARGET_ARCH_IS_ANY_RISCV
+#endif
+
+#if defined(__hexagon__)
+#define LIBC_TARGET_ARCH_IS_HEXAGON
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_ARCHITECTURES_H

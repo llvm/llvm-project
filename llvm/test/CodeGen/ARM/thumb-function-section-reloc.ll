@@ -46,9 +46,9 @@ define dso_local void @_ZdlPv(ptr %ptr) local_unnamed_addr nounwind "target-feat
 ; CHECK-NEXT: 	.globl	_ZdlPv                          @ -- Begin function _ZdlPv
 ; CHECK-NEXT: 	.p2align	1
 ; CHECK-NEXT: 	.type	_ZdlPv,%function
-; CHECK-NEXT: 	.code	16                              @ @_ZdlPv
+; CHECK-NEXT: 	.code	16
 ; CHECK-NEXT: 	.thumb_func
-; CHECK-NEXT: _ZdlPv:
+; CHECK-NEXT: _ZdlPv:                                   @ @_ZdlPv
 ; CHECK-NEXT: .L_ZdlPv$local:
 ; CHECK-NEXT: .type .L_ZdlPv$local,%function
 ; CHECK-NEXT: 	.fnstart

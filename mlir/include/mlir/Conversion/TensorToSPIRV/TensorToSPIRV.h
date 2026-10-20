@@ -30,7 +30,7 @@ class SPIRVTypeConverter;
 /// variables. SPIR-V consumers in GPU drivers may or may not optimize that
 /// away. So this has implications over register pressure. Therefore, a
 /// threshold is used to control when the patterns should kick in.
-void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateTensorToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
                                    RewritePatternSet &patterns);
 

@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "RegisterInfoInterface.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
@@ -32,6 +32,9 @@ public:
   const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg_index) const override;
 
   const RegisterInfoInterface &GetRegisterInfoInterface() const;
+
+  // Invalidate cached values in register context data structures.
+  virtual void InvalidateAllRegisters() {}
 
 protected:
   std::unique_ptr<RegisterInfoInterface> m_register_info_interface_up;

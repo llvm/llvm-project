@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump -d - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr < %s | llvm-objdump -dr - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   dec r26
   dec r3
   dec r24

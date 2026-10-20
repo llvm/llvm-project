@@ -13,11 +13,9 @@
 
 #include "MyExtension.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
-#define DEBUG_TYPE_MATCHER "transform-matcher"
-#define DBGS_MATCHER() (llvm::dbgs() << "[" DEBUG_TYPE_MATCHER "] ")
-#define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
+#define DEBUG_TYPE "transform-matcher"
 
 #define GET_OP_CLASSES
 #include "MyExtension.cpp.inc"
@@ -31,6 +29,9 @@
 class MyExtension
     : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
+  // The TypeID of this extension.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MyExtension)
+
   // The extension must derive the base constructor.
   using Base::Base;
 
@@ -121,9 +122,8 @@ mlir::transform::HasOperandSatisfyingOp::apply(
       // Report failure-to-match for debugging purposes and stop matching this
       // operand.
       assert(diag.isSilenceableFailure());
-      DEBUG_MATCHER(DBGS_MATCHER()
-                    << "failed to match operand #" << operand.getOperandNumber()
-                    << ": " << diag.getMessage());
+      LDBG() << "failed to match operand #" << operand.getOperandNumber()
+             << ": " << diag.getMessage();
       (void)diag.silence();
       matchSucceeded = false;
       break;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_SDNODEPROPERTIES_H
-#define LLVM_UTILS_TABLEGEN_SDNODEPROPERTIES_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H
+#define LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H
 
 namespace llvm {
 
@@ -28,12 +28,10 @@ enum SDNP {
   SDNPSideEffect,
   SDNPMemOperand,
   SDNPVariadic,
-  SDNPWantRoot,
-  SDNPWantParent
 };
 
-unsigned parseSDPatternOperatorProperties(Record *R);
+unsigned parseSDPatternOperatorProperties(const Record *R);
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_SDNODEPROPERTIES_H

@@ -44,7 +44,8 @@ class ARMBaseInstrInfo : public ARMGenInstrInfo {
 
 protected:
   // Can be only subclassed.
-  explicit ARMBaseInstrInfo(const ARMSubtarget &STI);
+  explicit ARMBaseInstrInfo(const ARMSubtarget &STI,
+                            const ARMBaseRegisterInfo &TRI);
 
   void expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                 unsigned LoadImmOpc, unsigned LoadOpc) const;
@@ -118,6 +119,8 @@ protected:
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
@@ -125,10 +128,16 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
-                                      LiveIntervals *LIS) const override;
+  const ARMBaseRegisterInfo &getRegisterInfo() const {
+    return static_cast<const ARMBaseRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
 
-  virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
+  }
+
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *
@@ -162,10 +171,9 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
@@ -191,6 +199,15 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These instructions report an incorrect size, but the ARM constant
+    // islands pass somehow depends on it being incorrect.
+    if (MI.getOpcode() == ARM::tTBB_JT || MI.getOpcode() == ARM::tTBH_JT)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
+
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
@@ -201,45 +218,43 @@ public:
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  unsigned SrcReg, bool KillSrc,
+                  MCRegister SrcReg, bool KillSrc,
                   const ARMSubtarget &Subtarget) const;
   void copyFromCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned DestReg, bool KillSrc,
+                    MCRegister DestReg, bool KillSrc,
                     const ARMSubtarget &Subtarget) const;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      Register VReg, unsigned SubReg = 0,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool shouldSink(const MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
             const MachineInstr &Orig) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                                     unsigned SubIdx, unsigned State,
-                                     const TargetRegisterInfo *TRI) const;
+                                     unsigned SubIdx, RegState State) const;
 
   bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
@@ -305,10 +320,6 @@ public:
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
-
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
@@ -336,11 +347,9 @@ public:
   getExecutionDomain(const MachineInstr &MI) const override;
   void setExecutionDomain(MachineInstr &MI, unsigned Domain) const override;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &, unsigned,
-                               const TargetRegisterInfo *) const override;
-  void breakPartialRegDependency(MachineInstr &, unsigned,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &,
+                                        unsigned) const override;
+  void breakPartialRegDependency(MachineInstr &, unsigned) const override;
 
   /// Get the number of addresses by LDM or VLDM or zero for unknown.
   unsigned getNumLDMAddresses(const MachineInstr &MI) const;
@@ -355,12 +364,16 @@ public:
   /// ARM supports the MachineOutliner.
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
-                                       unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                               unsigned &Flags) const override;
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -405,16 +418,6 @@ private:
                           MachineBasicBlock::iterator It, bool CFI,
                           bool Auth) const;
 
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// for the case when the LR is saved in the register \p Reg.
-  void emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator It,
-                             Register Reg) const;
-
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// after the LR is was restored from a register.
-  void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator It) const;
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -425,8 +428,6 @@ private:
   /// and updates it if requested.
   bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
                                  bool Updt) const;
-
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
 
   std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
                                           const MCInstrDesc &DefMCID,
@@ -488,7 +489,7 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
@@ -541,19 +542,6 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
-
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    if (RegClassID == ARM::MQPRRegClass.getID())
-      return ARM::PseudoARMInitUndefMQPR;
-    if (RegClassID == ARM::SPRRegClass.getID())
-      return ARM::PseudoARMInitUndefSPR;
-    if (RegClassID == ARM::DPR_VFP2RegClass.getID())
-      return ARM::PseudoARMInitUndefDPR_VFP2;
-    if (RegClassID == ARM::GPRRegClass.getID())
-      return ARM::PseudoARMInitUndefGPR;
-
-    llvm_unreachable("Unexpected register class.");
-  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the
@@ -980,6 +968,34 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
 unsigned getBLXOpcode(const MachineFunction &MF);
 unsigned gettBLXrOpcode(const MachineFunction &MF);
 unsigned getBLXpredOpcode(const MachineFunction &MF);
+
+inline bool isMVEVectorInstruction(const MachineInstr *MI) {
+  // This attempts to remove non-mve instructions (scalar shifts), which
+  // are just DPU CX instruction.
+  switch (MI->getOpcode()) {
+  case ARM::MVE_SQSHL:
+  case ARM::MVE_SRSHR:
+  case ARM::MVE_UQSHL:
+  case ARM::MVE_URSHR:
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL:
+  case ARM::MVE_ASRLr:
+  case ARM::MVE_ASRLi:
+  case ARM::MVE_LSLLr:
+  case ARM::MVE_LSLLi:
+  case ARM::MVE_LSRL:
+  case ARM::MVE_SQRSHRL:
+  case ARM::MVE_SQSHLL:
+  case ARM::MVE_SRSHRL:
+  case ARM::MVE_UQRSHLL:
+  case ARM::MVE_UQSHLL:
+  case ARM::MVE_URSHRL:
+    return false;
+  }
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::DomainMask) == ARMII::DomainMVE;
+}
 
 } // end namespace llvm
 

@@ -9,10 +9,13 @@ add_subdirectory(Expression)
 add_subdirectory(Host)
 add_subdirectory(Initialization)
 add_subdirectory(Interpreter)
+add_subdirectory(Register)
 add_subdirectory(Plugins)
+add_subdirectory(Protocol)
 add_subdirectory(Symbol)
 add_subdirectory(Target)
 add_subdirectory(Utility)
+add_subdirectory(ValueObject)
 add_subdirectory(Version)
 
 # Build API last.  Since liblldb needs to link against every other target, it needs

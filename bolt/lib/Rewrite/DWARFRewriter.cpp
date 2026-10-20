@@ -14,6 +14,8 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,14 +26,15 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -43,11 +46,17 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <condition_variable>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -55,6 +64,8 @@
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
+
+static mc::RegisterMCTargetOptionsFlags MOF;
 
 static void printDie(const DWARFDie &DIE) {
   DIDumpOptions DumpOpts;
@@ -66,7 +77,7 @@ static void printDie(const DWARFDie &DIE) {
 }
 
 /// Lazily parse DWARF DIE and print it out.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   uint64_t OriginalOffsets = DIEOffset;
   uint64_t NextCUOffset = DU.getNextUnitOffset();
@@ -87,6 +98,19 @@ static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
 }
 
 using namespace bolt;
+
+llvm::ThreadPoolInterface &
+DWARFRewriter::getOrCreateDebugInfoThreadPool(unsigned ThreadsCount) {
+  if (opts::NoThreads || ThreadsCount == 0)
+    ThreadsCount = 1;
+
+  if (DebugInfoThreadPool)
+    return *DebugInfoThreadPool;
+
+  DebugInfoThreadPool = std::make_unique<DefaultThreadPool>(
+      llvm::hardware_concurrency(ThreadsCount));
+  return *DebugInfoThreadPool;
+}
 
 /// Take a set of DWARF address ranges corresponding to the input binary and
 /// translate them to a set of address ranges in the output binary.
@@ -226,18 +250,20 @@ private:
     llvm::AsmPrinter &Asm = getAsmPrinter();
 
     // Emit size of content not including length itself
-    Asm.emitInt32(Unit.getHeaderSize() + UnitDIE.getSize() - 4);
+    Asm.emitDwarfUnitLength(Unit.getHeaderSize() + UnitDIE.getSize() -
+                                Asm.getUnitLengthFieldByteSize(),
+                            "Length of Unit");
     Asm.emitInt16(Version);
 
     // DWARF v5 reorders the address size and adds a unit type.
     if (Version >= 5) {
       Asm.emitInt8(UT);
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
 
-    Asm.emitInt32(0);
+    Asm.emitDwarfLengthOrOffset(0);
     if (Version <= 4) {
-      Asm.emitInt8(Asm.MAI->getCodePointerSize());
+      Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
   }
 
@@ -326,22 +352,21 @@ static cl::opt<bool> KeepARanges(
         "keep or generate .debug_aranges section if .gdb_index is written"),
     cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool> DeterministicDebugInfo(
-    "deterministic-debuginfo",
-    cl::desc("disables parallel execution of tasks that may produce "
-             "nondeterministic debug info"),
-    cl::init(true), cl::cat(BoltCategory));
+static cl::opt<unsigned>
+    DebugThreadCount("debug-thread-count",
+                     cl::desc("specifies thread count for the multithreading "
+                              "for updating DWARF debug info"),
+                     cl::init(32), cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    PreserveOrder("dwarf-preserve-order",
+                  cl::desc("Update debug information in deterministic order"),
+                  cl::init(true), cl::cat(BoltCategory));
 
 static cl::opt<std::string> DwarfOutputPath(
     "dwarf-output-path",
-    cl::desc("Path to where .dwo files or dwp file will be written out to."),
-    cl::init(""), cl::cat(BoltCategory));
-
-static cl::opt<bool>
-    WriteDWP("write-dwp",
-             cl::desc("output a single dwarf package file (dwp) instead of "
-                      "multiple non-relocatable dwarf object files (dwo)."),
-             cl::init(false), cl::cat(BoltCategory));
+    cl::desc("Path to where .dwo files will be written out to."), cl::init(""),
+    cl::cat(BoltCategory));
 
 static cl::opt<bool> CreateDebugNames(
     "create-debug-names-section",
@@ -353,8 +378,7 @@ static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
                     cl::desc("prints out offsets for abbrev and debug_info of "
                              "Skeleton CUs that get patched."),
-                    cl::ZeroOrMore, cl::Hidden, cl::init(false),
-                    cl::cat(BoltCategory));
+                    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 
 static cl::opt<unsigned> BatchSize(
     "cu-processing-batch-size",
@@ -372,6 +396,41 @@ static cl::opt<bool> AlwaysConvertToRanges(
 extern cl::opt<std::string> CompDirOverride;
 } // namespace opts
 
+/// True if \p Form belongs to DWARF's address class. A DW_AT_high_pc using one
+/// of these holds the end address; any other form holds an offset from
+/// DW_AT_low_pc.
+static bool isAddressForm(dwarf::Form Form) {
+  switch (Form) {
+  case dwarf::DW_FORM_addr:
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
+  case dwarf::DW_FORM_GNU_addr_index:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// True if \p Form stores an index into .debug_addr rather than the address
+/// itself. DW_FORM_LLVM_addrx_offset is deliberately excluded: it packs an
+/// index and an offset into a single value and needs its own handling.
+static bool isIndexedAddressForm(dwarf::Form Form) {
+  switch (Form) {
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
+  case dwarf::DW_FORM_GNU_addr_index:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// If DW_AT_low_pc exists sets LowPC and returns true.
 static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
                      uint64_t &SectionIndex) {
@@ -382,8 +441,7 @@ static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
   dwarf::Form Form = DvalLowPc.getForm();
   bool AddrOffset = Form == dwarf::DW_FORM_LLVM_addrx_offset;
   uint64_t LowPcValue = DvalLowPc.getDIEInteger().getValue();
-  if (Form == dwarf::DW_FORM_GNU_addr_index || Form == dwarf::DW_FORM_addrx ||
-      AddrOffset) {
+  if (isIndexedAddressForm(Form) || AddrOffset) {
 
     uint32_t Index = AddrOffset ? (LowPcValue >> 32) : LowPcValue;
     std::optional<object::SectionedAddress> SA =
@@ -403,14 +461,27 @@ static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
 }
 
 /// If DW_AT_high_pc exists sets HighPC and returns true.
-static bool getHighPC(const DIE &Die, const uint64_t LowPC, uint64_t &HighPC) {
+static bool getHighPC(const DIE &Die, const DWARFUnit &DU, const uint64_t LowPC,
+                      uint64_t &HighPC) {
   DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
   if (!DvalHighPc)
     return false;
-  if (DvalHighPc.getForm() == dwarf::DW_FORM_addr)
-    HighPC = DvalHighPc.getDIEInteger().getValue();
-  else
-    HighPC = LowPC + DvalHighPc.getDIEInteger().getValue();
+  const dwarf::Form Form = DvalHighPc.getForm();
+  const uint64_t Value = DvalHighPc.getDIEInteger().getValue();
+  if (!isAddressForm(Form)) {
+    // Class constant: an offset from DW_AT_low_pc.
+    HighPC = LowPC + Value;
+    return true;
+  }
+  if (!isIndexedAddressForm(Form)) {
+    HighPC = Value;
+    return true;
+  }
+  std::optional<object::SectionedAddress> SA =
+      DU.getAddrOffsetSectionItem(Value);
+  if (!SA)
+    return false;
+  HighPC = SA->Address;
   return true;
 }
 
@@ -423,7 +494,7 @@ static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
   uint64_t TempHighPC = HighPC;
   uint64_t TempSectionIndex = SectionIndex;
   if (getLowPC(Die, DU, TempLowPC, TempSectionIndex) &&
-      getHighPC(Die, TempLowPC, TempHighPC)) {
+      getHighPC(Die, DU, TempLowPC, TempHighPC)) {
     LowPC = TempLowPC;
     HighPC = TempHighPC;
     SectionIndex = TempSectionIndex;
@@ -473,23 +544,21 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
   return Streamer;
 }
 
-static DWARFRewriter::UnitMeta
-emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
+static void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer,
+                     DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
-  const DIEBuilder::DWARFUnitInfo &U = DIEBldr.getUnitInfoByDwarfUnit(Unit);
+  Streamer.getAsmPrinter().OutContext.setDwarfFormat(
+      Unit.getFormParams().Format);
   Streamer.emitUnit(Unit, *UnitDIE);
-  uint64_t TypeHash = 0;
-  if (DWARFTypeUnit *DTU = dyn_cast_or_null<DWARFTypeUnit>(&Unit))
-    TypeHash = DTU->getTypeHash();
-  return {U.UnitOffset, U.UnitLength, TypeHash};
 }
 
-static void
-emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
-               DWARFRewriter &Rewriter, DWARFUnit &SplitCU, DWARFUnit &CU,
-               DWARFRewriter::DWPState &State, DebugLocWriter &LocWriter,
-               DebugStrOffsetsWriter &StrOffstsWriter,
-               DebugStrWriter &StrWriter, GDBIndex &GDBIndexSection) {
+static void emitDWOBuilder(const std::string &DWOName,
+                           DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
+                           DWARFUnit &SplitCU, DWARFUnit &CU,
+                           DebugLocWriter &LocWriter,
+                           DebugStrOffsetsWriter &StrOffstsWriter,
+                           DebugStrWriter &StrWriter, GDBIndex &GDBIndexSection,
+                           DebugRangesSectionWriter &TempRangesSectionWriter) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
   DWODIEBuilder.generateAbbrevs();
   DWODIEBuilder.finish();
@@ -502,28 +571,16 @@ emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
   std::unique_ptr<DIEStreamer> Streamer =
       createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
                         DWODIEBuilder, GDBIndexSection);
-  DWARFRewriter::UnitMetaVectorType TUMetaVector;
-  DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_info_section_units()) {
-      if (!CU->isTypeUnit())
-        continue;
-      DWARFRewriter::UnitMeta MI =
-          emitUnit(DWODIEBuilder, *Streamer, *CU.get());
-      TUMetaVector.emplace_back(MI);
-    }
-    CUMI = emitUnit(DWODIEBuilder, *Streamer, SplitCU);
+    for (DWARFUnit *CU : DWODIEBuilder.getDWARF5TUVector())
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
 
     // emit debug_types sections for dwarf4
-    for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector()) {
-      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, *Streamer, *CU);
-      TUMetaVector.emplace_back(MI);
-    }
+    for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
   }
 
   Streamer->emitAbbrevs(DWODIEBuilder.getAbbrevs(),
@@ -550,102 +607,292 @@ emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
       continue;
     OverriddenSections[Kind] = Contents;
   }
-  if (opts::WriteDWP)
-    Rewriter.updateDWP(CU, OverriddenSections, CUMI, TUMetaVector, State,
-                       LocWriter, StrOffstsWriter, StrWriter);
-  else
-    Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter,
-                           StrOffstsWriter, StrWriter);
+  Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter,
+                         StrOffstsWriter, StrWriter, TempRangesSectionWriter);
 }
 
-using DWARFUnitVec = std::vector<DWARFUnit *>;
-using CUPartitionVector = std::vector<DWARFUnitVec>;
-/// Partitions CUs in to buckets. Bucket size is controlled by
-/// cu-processing-batch-size. All the CUs that have cross CU reference reference
-/// as a source are put in to the same initial bucket.
-static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
-  CUPartitionVector Vec(2);
-  unsigned Counter = 0;
-  const DWARFDebugAbbrev *Abbr = DwCtx.getDebugAbbrev();
-  for (std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
-    Expected<const DWARFAbbreviationDeclarationSet *> AbbrDeclSet =
-        Abbr->getAbbreviationDeclarationSet(CU->getAbbreviationsOffset());
-    if (!AbbrDeclSet) {
-      consumeError(AbbrDeclSet.takeError());
-      return Vec;
-    }
-    bool CrossCURefFound = false;
-    for (const DWARFAbbreviationDeclaration &Decl : *AbbrDeclSet.get()) {
-      for (const DWARFAbbreviationDeclaration::AttributeSpec &Attr :
-           Decl.attributes()) {
-        if (Attr.Form == dwarf::DW_FORM_ref_addr) {
-          CrossCURefFound = true;
+static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
+                                                          const size_t Size) {
+  SmallVector<DWARFUnit *, 0> AllCUs;
+  AllCUs.reserve(Size);
+  for (auto &CU : DwCtx.compile_units())
+    AllCUs.push_back(CU.get());
+  if (AllCUs.empty())
+    return {};
+
+  DenseSet<DWARFUnit *> CrossRefSet;
+  EquivalenceClasses<DWARFUnit *> EC;
+  for (DWARFUnit *CU : AllCUs) {
+    const DWARFAbbreviationDeclarationSet *AbbrevSet = CU->getAbbreviations();
+    if (!AbbrevSet)
+      continue;
+    SmallDenseSet<const DWARFAbbreviationDeclaration *, 4> RefAddrAbbrevs;
+    for (const auto &Decl : *AbbrevSet)
+      for (const auto &Spec : Decl.attributes())
+        if (Spec.Form == dwarf::DW_FORM_ref_addr) {
+          RefAddrAbbrevs.insert(&Decl);
           break;
         }
+    if (RefAddrAbbrevs.empty())
+      continue;
+    // Track CUs involved in cross-CU references via DW_FORM_ref_addr. Only DIE
+    // attributes are inspected, so forEachDIEInUnit streams the DIEs without
+    // materializing the unit's full DIE vector.
+    forEachDIEInUnit(*CU, [&](const DWARFDie &Die) {
+      if (!RefAddrAbbrevs.count(Die.getAbbreviationDeclarationPtr()))
+        return;
+      for (const DWARFAttribute &Attr : Die.attributes()) {
+        if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
+          continue;
+        auto OptRef = Attr.Value.getAsDebugInfoReference();
+        if (!OptRef)
+          continue;
+        DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
+        if (!TargetCU || TargetCU == CU)
+          continue;
+        if (CrossRefSet.insert(CU).second)
+          EC.insert(CU);
+        if (CrossRefSet.insert(TargetCU).second)
+          EC.insert(TargetCU);
+        EC.unionSets(CU, TargetCU);
       }
-      if (CrossCURefFound)
-        break;
-    }
-    if (CrossCURefFound) {
-      Vec[0].push_back(CU.get());
-    } else {
-      ++Counter;
-      Vec.back().push_back(CU.get());
-    }
-    if (Counter % opts::BatchSize == 0 && !Vec.back().empty())
-      Vec.push_back({});
+    });
   }
+
+  DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;
+  for (DWARFUnit *CU : AllCUs) {
+    if (!CrossRefSet.count(CU))
+      continue;
+    MembersByLeader[EC.getLeaderValue(CU)].push_back(CU);
+  }
+
+  SmallVector<DWARFUnit *> Leaders;
+  Leaders.reserve(MembersByLeader.size());
+  for (auto &[Leader, Members] : MembersByLeader)
+    Leaders.push_back(Leader);
+  llvm::sort(Leaders, [&](DWARFUnit *A, DWARFUnit *B) {
+    return MembersByLeader[A].front()->getOffset() <
+           MembersByLeader[B].front()->getOffset();
+  });
+
+  // Emit cross-ref buckets, then singleton non-cross-ref CUs.
+  SmallVector<SmallVector<DWARFUnit *>> Vec;
+  for (DWARFUnit *Leader : Leaders)
+    Vec.push_back(std::move(MembersByLeader[Leader]));
+  for (DWARFUnit *CU : AllCUs) {
+    if (!CrossRefSet.count(CU))
+      Vec.push_back({CU});
+  }
+
   return Vec;
 }
 
-void DWARFRewriter::updateDebugInfo() {
-  ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
-  if (!DebugInfo)
+static std::unordered_map<uint64_t, std::string>
+getDWONameMap(DWARFContext &DwCtx, const size_t Size) {
+  std::unordered_map<uint64_t, std::string> DWOIDToNameMap(Size);
+  std::unordered_map<std::string, uint32_t> NameToIndexMap(Size);
+  for (const std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOID = CU->getDWOId();
+    if (!DWOID)
+      continue;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    auto DWONameAttr =
+        UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name});
+
+    // Skip invalid (broken) skeleton units that have a DWOId but lack
+    // DW_AT_dwo_name / DW_AT_GNU_dwo_name.
+    if (!CU->isDWOUnit() && !DWONameAttr)
+      continue;
+
+    std::string DWOName = dwarf::toString(DWONameAttr, "");
+    if (DWOName.empty())
+      continue;
+
+    if (!opts::DwarfOutputPath.empty()) {
+      DWOName = std::string(sys::path::filename(DWOName));
+      uint32_t &Index = NameToIndexMap[DWOName];
+      DWOName.append(std::to_string(Index));
+      ++Index;
+    }
+    DWOName.append(".dwo");
+    DWOIDToNameMap.emplace(*DWOID, std::move(DWOName));
+  }
+  return DWOIDToNameMap;
+}
+
+void DWARFRewriter::finalizeMainCUStrOffsets(
+    DIEBuilder &PartDIEBlder, ArrayRef<DWARFUnit *> SortedCUs,
+    const std::unordered_map<uint64_t, std::string> &DWOToNameMap) {
+  for (DWARFUnit *CU : SortedCUs) {
+    const std::optional<uint64_t> DWOId = CU->getDWOId();
+    std::optional<DWARFUnit *> DWOCU =
+        DWOId ? BC.getDWOCU(*DWOId) : std::nullopt;
+    const bool HasSplitCU = DWOCU && *DWOCU != nullptr;
+    const unsigned Version = CU->getVersion();
+
+    if (HasSplitCU) {
+      auto It = DWOToNameMap.find(*DWOId);
+      if (It != DWOToNameMap.end()) {
+        PartDIEBlder.updateDWONameCompDir(*StrOffstsWriter, *StrWriter, *CU,
+                                          opts::DwarfOutputPath,
+                                          StringRef(It->second));
+        if (Version >= 5 && StrOffstsWriter->isStrOffsetsSectionModified())
+          StrOffstsWriter->finalizeSection(*CU, PartDIEBlder);
+      }
+      //  split CU were just finalized above when the
+      // .debug_str_offsets section was modified;
+      continue;
+    }
+
+    if (Version >= 5)
+      StrOffstsWriter->finalizeSection(*CU, PartDIEBlder);
+  }
+}
+
+void DWARFRewriter::mergePerBucketLocs(DIEBuilder &PartDIEBlder,
+                                       ArrayRef<DWARFUnit *> SortedCUs,
+                                       BucketLocAccumOffset &Accum) {
+  // Location lists are emitted later in Accum.LocListCUOrder order. Compute the
+  // global base each CU will have in the final section and update DIEs now.
+  for (DWARFUnit *CU : SortedCUs) {
+    const uint64_t CUOffset = CU->getOffset();
+    // Record CUs order to make loc/loclist order correct.
+    Accum.LocListCUOrder.push_back(CUOffset);
+    uint64_t LoclistsBase = 0;
+    uint64_t LegacyLocBase = 0;
+
+    auto LocIt = LocListWritersByCU.find(CUOffset);
+    if (LocIt != LocListWritersByCU.end()) {
+      DebugLocWriter *LocWriter = LocIt->second.get();
+      auto *LocListWriter = dyn_cast<DebugLoclistWriter>(LocWriter);
+      const uint64_t BufferSize = LocWriter->getLocBufferSize();
+
+      if (LocListWriter && LocListWriter->getDwarfVersion() >= 5 &&
+          !LocListWriter->isSplitDwarf() && BufferSize != 0) {
+        LoclistsBase = Accum.LoclistsOffset;
+        Accum.LoclistsOffset += BufferSize;
+      } else if (!LocListWriter) {
+        LegacyLocBase = Accum.LegacyLocOffset;
+        // Each per-CU DWARF4 .debug_loc buffer begins with a 16-byte empty-list
+        // sentinel (offset 0). That sentinel is emitted once for the whole
+        // section in makeFinalLocListsSection, and each CU's leading 16 bytes
+        // are stripped, so a CU contributes BufferSize-16 bytes to the global
+        // section.
+
+        if (BufferSize > 16)
+          Accum.LegacyLocOffset += BufferSize - 16;
+      }
+    }
+
+    if (LoclistsBase) {
+      DIE *UnitDIE = PartDIEBlder.getUnitDIEbyUnit(*CU);
+      if (UnitDIE) {
+        DIEValue LocBase = UnitDIE->findAttribute(dwarf::DW_AT_loclists_base);
+        if (LocBase.getType()) {
+          const uint64_t OldVal = LocBase.getDIEInteger().getValue();
+          PartDIEBlder.replaceValue(UnitDIE, dwarf::DW_AT_loclists_base,
+                                    LocBase.getForm(),
+                                    DIEInteger(OldVal + LoclistsBase));
+        }
+      }
+    }
+    if (LegacyLocBase)
+      LocIt->second->applyBase(PartDIEBlder, LegacyLocBase);
+  }
+}
+
+void DWARFRewriter::mergePerBucketRanges(DIEBuilder &PartDIEBlder,
+                                         BucketLocalWriter &LocalWriters,
+                                         ArrayRef<DWARFUnit *> SortedCUs) {
+  // Range lists are stored in bucket-local buffers during parallel processing.
+  // Fix DIE offsets from bucket-local coordinates into the current global
+  // range section coordinates, then append the local buffers.
+  if (RangeListsSectionWriter) {
+    const uint64_t RangesOffset = RangeListsSectionWriter->getSectionOffset();
+    for (DWARFUnit *CU : SortedCUs)
+      if (CU->getVersion() >= 5) {
+        DIE *CUDie = PartDIEBlder.getUnitDIEbyUnit(*CU);
+        DIEValue RngBaseVal = CUDie->findAttribute(dwarf::DW_AT_rnglists_base);
+        if (RngBaseVal) {
+          const uint64_t OldVal = RngBaseVal.getDIEInteger().getValue();
+          PartDIEBlder.replaceValue(CUDie, dwarf::DW_AT_rnglists_base,
+                                    RngBaseVal.getForm(),
+                                    DIEInteger(OldVal + RangesOffset));
+        }
+      }
+  }
+
+  if (LocalWriters.RngListsWriter && RangeListsSectionWriter) {
+    std::unique_ptr<DebugBufferVector> LocalBuf =
+        LocalWriters.RngListsWriter->releaseBuffer();
+    RangeListsSectionWriter->appendToRangeBuffer(*LocalBuf);
+  }
+
+  if (!LocalWriters.LegacyRangesWriter || !LegacyRangesSectionWriter)
     return;
 
-  ARangesSectionWriter = std::make_unique<DebugARangesSectionWriter>();
-  StrWriter = std::make_unique<DebugStrWriter>(*BC.DwCtx, false);
-  StrOffstsWriter = std::make_unique<DebugStrOffsetsWriter>(BC);
+  std::unique_ptr<DebugBufferVector> LegacyBuf =
+      LocalWriters.LegacyRangesWriter->releaseBuffer();
+  // Local buffers reserve offset 0 for an empty ranges terminator via
+  // initSection(). When appending to the global buffer, skip that local
+  // terminator since the global buffer has its own at offset 0. Adjust
+  // the fixup offset to account for the skipped prefix.
+  const uint64_t LocalTerminatorSize = 16;
+  const uint64_t GlobalOffset =
+      LegacyRangesSectionWriter->getSectionOffset() - LocalTerminatorSize;
+  for (DWARFUnit *CU : SortedCUs)
+    if (CU->getVersion() <= 4) {
+      // Fix DWARF v4 DW_AT_ranges attribute.
+      const auto &DIs = PartDIEBlder.getDIEsByUnit(*CU);
+      for (const auto &DI : DIs) {
+        DIE *Die = DI->Die;
+        DIEValue RangesVal = Die->findAttribute(dwarf::DW_AT_ranges);
+        if (RangesVal && RangesVal.getForm() == dwarf::DW_FORM_sec_offset) {
+          const uint64_t OldVal = RangesVal.getDIEInteger().getValue();
+          // Empty ranges are stored at offset 0 in both local and global
+          // buffers, so must not be shifted during merge.
+          if (OldVal != DebugRangesSectionWriter::getEmptyRangesOffset())
+            PartDIEBlder.replaceValue(Die, dwarf::DW_AT_ranges,
+                                      RangesVal.getForm(),
+                                      DIEInteger(OldVal + GlobalOffset));
+        }
+      }
+    }
+  DebugBufferVector TrimmedBuf(LegacyBuf->begin() + LocalTerminatorSize,
+                               LegacyBuf->end());
+  LegacyRangesSectionWriter->appendToRangeBuffer(TrimmedBuf);
+}
 
-  if (!opts::DeterministicDebugInfo) {
-    opts::DeterministicDebugInfo = true;
-    errs() << "BOLT-WARNING: --deterministic-debuginfo is being deprecated\n";
-  }
+void DWARFRewriter::createRangeLocListAndAddressWriters() {
+  for (auto &DWCU : BC.DwCtx->compile_units()) {
+    DWARFUnit &CU = *DWCU;
+    if (LocListWritersByCU.count(CU.getOffset()))
+      continue;
 
-  if (BC.isDWARF5Used()) {
-    AddrWriter = std::make_unique<DebugAddrWriterDwarf5>(&BC);
-    RangeListsSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
-    DebugRangeListsSectionWriter::setAddressWriter(AddrWriter.get());
-  } else {
-    AddrWriter = std::make_unique<DebugAddrWriter>(&BC);
-  }
-
-  if (BC.isDWARFLegacyUsed())
-    LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
-
-  DebugLoclistWriter::setAddressWriter(AddrWriter.get());
-
-  uint32_t CUIndex = 0;
-  std::mutex AccessMutex;
-  // Needs to be invoked in the same order as CUs are processed.
-  auto createRangeLocList = [&](DWARFUnit &CU) -> DebugLocWriter * {
-    std::lock_guard<std::mutex> Lock(AccessMutex);
     const uint16_t DwarfVersion = CU.getVersion();
     if (DwarfVersion >= 5) {
-      LocListWritersByCU[CUIndex] =
-          std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false);
-
+      auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
+          &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase(),
+          CU.getFormParams().Format);
+      RangeListsSectionWriter->setAddressWriter(AddrW.get());
+      LocListWritersByCU[CU.getOffset()] =
+          std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false, *AddrW);
       if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
         assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
-        auto RangeListsSectionWriter =
+        auto DWORangeListsSectionWriter =
             std::make_unique<DebugRangeListsSectionWriter>();
-        RangeListsSectionWriter->initSection(CU);
-        RangeListsWritersByCU[*DWOId] = std::move(RangeListsSectionWriter);
+        DWORangeListsSectionWriter->initSection(CU);
+        DWORangeListsSectionWriter->setAddressWriter(AddrW.get());
+        RangeListsWritersByCU[*DWOId] = std::move(DWORangeListsSectionWriter);
       }
-
+      AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
     } else {
-      LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
+      auto AddrW =
+          std::make_unique<DebugAddrWriter>(&BC, CU.getAddressByteSize());
+      AddressWritersByCU[CU.getOffset()] = std::move(AddrW);
+      LocListWritersByCU[CU.getOffset()] = std::make_unique<DebugLocWriter>();
       if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
         assert(LegacyRangesWritersByCU.count(*DWOId) == 0 &&
                "LegacyRangeLists writer for DWO unit already exists.");
@@ -656,84 +903,163 @@ void DWARFRewriter::updateDebugInfo() {
             std::move(LegacyRangesSectionWriterByCU);
       }
     }
-    return LocListWritersByCU[CUIndex++].get();
+  }
+}
+
+void DWARFRewriter::processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
+                                        BucketLocalWriter &LocalWriter) {
+  std::optional<DWARFUnit *> SplitCU;
+  std::optional<uint64_t> RangesBase;
+  std::optional<uint64_t> DWOId = Unit.getDWOId();
+  uint8_t DWARFVersion = Unit.getVersion();
+  if (DWOId)
+    SplitCU = BC.getDWOCU(*DWOId);
+  auto LocIt = LocListWritersByCU.find(Unit.getOffset());
+  assert(LocIt != LocListWritersByCU.end() &&
+         "LocListWriter does not exist for CU");
+  DebugLocWriter &DebugLocWriter = *LocIt->second.get();
+  auto AddrIt = AddressWritersByCU.find(Unit.getOffset());
+  assert(AddrIt != AddressWritersByCU.end() &&
+         "AddressWriter does not exist for CU");
+  DebugAddrWriter &AddressWriter = *AddrIt->second.get();
+  if (DWARFVersion >= 5) {
+    if (!LocalWriter.RngListsWriter)
+      LocalWriter.RngListsWriter =
+          std::make_unique<DebugRangeListsSectionWriter>();
+  } else {
+    if (!LocalWriter.LegacyRangesWriter) {
+      LocalWriter.LegacyRangesWriter =
+          std::make_unique<DebugRangesSectionWriter>();
+      LocalWriter.LegacyRangesWriter->initSection();
+    }
+  }
+
+  DebugRangesSectionWriter &RangesSectionWriter =
+      DWARFVersion >= 5 ? *LocalWriter.RngListsWriter
+                        : *LocalWriter.LegacyRangesWriter;
+
+  if (DWARFVersion >= 5) {
+    LocalWriter.RngListsWriter->setAddressWriter(&AddressWriter);
+    RangesBase = RangesSectionWriter.getSectionOffset() +
+                 getDWARF5RngListLocListHeaderSize(Unit.getFormParams().Format);
+    RangesSectionWriter.initSection(Unit);
+  } else if (SplitCU) {
+    // DWARF4: only split-dwarf CUs need a ranges base
+    RangesBase = LocalWriter.LegacyRangesWriter->getSectionOffset();
+  }
+  updateUnitDebugInfo(Unit, DIEBlder, DebugLocWriter, RangesSectionWriter,
+                      AddressWriter, RangesBase);
+  DebugLocWriter.finalize(DIEBlder, *DIEBlder.getUnitDIEbyUnit(Unit));
+  if (DWARFVersion >= 5)
+    RangesSectionWriter.finalizeSection();
+}
+
+void DWARFRewriter::processBucket(
+    size_t Idx, SmallVector<SmallVector<DWARFUnit *>> &PartVec,
+    std::vector<std::unique_ptr<DIEBuilder>> &BucketDIEBlders,
+    std::vector<BucketLocalWriter> &LocalWriters,
+    DWARF5AcceleratorTable &DebugNamesTable,
+    std::unordered_map<uint64_t, std::string> &DWOToNameMap,
+    GDBIndex &GDBIndexSection) {
+  SmallVector<DWARFUnit *> &Vec = PartVec[Idx];
+  std::unique_ptr<DIEBuilder> &BucketDIEBlder = BucketDIEBlders[Idx];
+  BucketDIEBlder =
+      std::make_unique<DIEBuilder>(BC, BC.DwCtx.get(), DebugNamesTable);
+  DIEBuilder &PartDIEBlder = *BucketDIEBlder;
+  PartDIEBlder.buildCompileUnits(Vec);
+  auto ProcessSplitCU = [&](DWARFUnit &Unit, DWARFUnit &SplitCU,
+                            DebugRangesSectionWriter &TempRangesSectionWriter,
+                            DebugAddrWriter &AddressWriter,
+                            const std::string &DWOName,
+                            DIEBuilder &DWODIEBuilder) {
+    DWODIEBuilder.buildDWOUnit(SplitCU);
+    DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
+    DebugStrWriter DWOStrWriter(SplitCU.getContext(), true);
+    DWODIEBuilder.updateDWONameCompDirForTypes(DWOStrOffstsWriter, DWOStrWriter,
+                                               SplitCU, opts::DwarfOutputPath,
+                                               DWOName);
+    DebugLoclistWriter DebugLocDWoWriter(Unit, Unit.getVersion(), true,
+                                         AddressWriter);
+    updateUnitDebugInfo(SplitCU, DWODIEBuilder, DebugLocDWoWriter,
+                        TempRangesSectionWriter, AddressWriter);
+    DebugLocDWoWriter.finalize(DWODIEBuilder,
+                               *DWODIEBuilder.getUnitDIEbyUnit(SplitCU));
+    if (Unit.getVersion() >= 5)
+      TempRangesSectionWriter.finalizeSection();
+    emitDWOBuilder(DWOName, DWODIEBuilder, *this, SplitCU, Unit,
+                   DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter,
+                   GDBIndexSection, TempRangesSectionWriter);
+    {
+      std::lock_guard<std::mutex> Lock(DebugNamesUpdateMutex);
+      DWODIEBuilder.updateDebugNamesTable();
+    }
   };
 
-  DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
-                                         *StrWriter);
-  GDBIndex GDBIndexSection(BC);
-  DWPState State;
-  if (opts::WriteDWP)
-    initDWPState(State);
-  auto processUnitDIE = [&](DWARFUnit *Unit, DIEBuilder *DIEBlder) {
-    // Check if the unit is a skeleton and we need special updates for it and
-    // its matching split/DWO CU.
+  for (DWARFUnit *CU : PartDIEBlder.getProcessedCUs()) {
     std::optional<DWARFUnit *> SplitCU;
-    std::optional<uint64_t> RangesBase;
-    std::optional<uint64_t> DWOId = Unit->getDWOId();
+    std::optional<uint64_t> DWOId = CU->getDWOId();
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
-    DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
-    DebugRangesSectionWriter *RangesSectionWriter =
-        Unit->getVersion() >= 5 ? RangeListsSectionWriter.get()
-                                : LegacyRangesSectionWriter.get();
-    // Skipping CUs that failed to load.
     if (SplitCU) {
-      DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), DebugNamesTable,
-                               Unit);
-      DWODIEBuilder.buildDWOUnit(**SplitCU);
-      std::string DWOName = "";
-      std::optional<std::string> DwarfOutputPath =
-          opts::DwarfOutputPath.empty()
-              ? std::nullopt
-              : std::optional<std::string>(opts::DwarfOutputPath.c_str());
-      {
-        std::lock_guard<std::mutex> Lock(AccessMutex);
-        DWOName = DIEBlder->updateDWONameCompDir(
-            *StrOffstsWriter, *StrWriter, *Unit, DwarfOutputPath, std::nullopt);
+      DebugAddrWriter &AddressWriter = *AddressWritersByCU.at(CU->getOffset());
+      DebugRangesSectionWriter &TempRangesSectionWriter =
+          CU->getVersion() >= 5 ? *RangeListsWritersByCU.at(*DWOId)
+                                : *LegacyRangesWritersByCU.at(*DWOId);
+      auto NameIt = DWOToNameMap.find(*DWOId);
+      if (NameIt == DWOToNameMap.end()) {
+        BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
+                     "DWO name for DWO ID "
+                  << Twine::utohexstr(*DWOId) << ".\n";
+        continue;
       }
-      DebugStrOffsetsWriter DWOStrOffstsWriter(BC);
-      DebugStrWriter DWOStrWriter((*SplitCU)->getContext(), true);
-      DWODIEBuilder.updateDWONameCompDirForTypes(DWOStrOffstsWriter,
-                                                 DWOStrWriter, **SplitCU,
-                                                 DwarfOutputPath, DWOName);
-      DebugLoclistWriter DebugLocDWoWriter(*Unit, Unit->getVersion(), true);
-      DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
-      if (Unit->getVersion() >= 5) {
-        TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
-      } else {
-        TempRangesSectionWriter = LegacyRangesWritersByCU[*DWOId].get();
-        RangesBase = RangesSectionWriter->getSectionOffset();
-        setDwoRangesBase(*DWOId, *RangesBase);
-      }
-
-      updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,
-                          *TempRangesSectionWriter);
-      DebugLocDWoWriter.finalize(DWODIEBuilder,
-                                 *DWODIEBuilder.getUnitDIEbyUnit(**SplitCU));
-      if (Unit->getVersion() >= 5)
-        TempRangesSectionWriter->finalizeSection();
-
-      emitDWOBuilder(DWOName, DWODIEBuilder, *this, **SplitCU, *Unit, State,
-                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter,
-                     GDBIndexSection);
+      auto DWOName = NameIt->second;
+      auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
+          BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
+      DIEBuilder &DWODIEBuilder = *DWODIEBuilderPtr;
+      ProcessSplitCU(*CU, **SplitCU, TempRangesSectionWriter, AddressWriter,
+                     DWOName, DWODIEBuilder);
     }
+    processMainBinaryCU(*CU, PartDIEBlder, LocalWriters[Idx]);
+  }
+}
 
-    if (Unit->getVersion() >= 5) {
-      RangesBase = RangesSectionWriter->getSectionOffset() +
-                   getDWARF5RngListLocListHeaderSize();
-      RangesSectionWriter->initSection(*Unit);
-      StrOffstsWriter->finalizeSection(*Unit, *DIEBlder);
-    }
+void DWARFRewriter::updateDebugInfo() {
+  ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
+  if (!DebugInfo)
+    return;
+  ARangesSectionWriter = std::make_unique<DebugARangesSectionWriter>();
+  StrWriter = std::make_unique<DebugStrWriter>(*BC.DwCtx, false);
+  StrOffstsWriter = std::make_unique<DebugStrOffsetsWriter>(BC);
+  /// Stores and serializes information that will be put into the
+  /// .debug_addr DWARF section.
+  std::unique_ptr<DebugAddrWriter> FinalAddrWriter;
+  if (BC.isDWARF5Used()) {
+    FinalAddrWriter = std::make_unique<DebugAddrWriterDwarf5>(&BC);
+    RangeListsSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
+  } else {
+    FinalAddrWriter = std::make_unique<DebugAddrWriter>(&BC);
+  }
+  if (BC.isDWARFLegacyUsed()) {
+    LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
+    LegacyRangesSectionWriter->initSection();
+  }
 
-    updateUnitDebugInfo(*Unit, *DIEBlder, *DebugLocWriter, *RangesSectionWriter,
-                        RangesBase);
-    DebugLocWriter->finalize(*DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
-    if (Unit->getVersion() >= 5)
-      RangesSectionWriter->finalizeSection();
-    AddrWriter->update(*DIEBlder, *Unit);
-  };
-
+  uint32_t CUSize = std::distance(BC.DwCtx->compile_units().begin(),
+                                  BC.DwCtx->compile_units().end());
+  // Pre-create per-CU writers in a single thread.
+  // Worker threads should only read from these maps.
+  createRangeLocListAndAddressWriters();
+  // If the user requested an output directory for rewritten .dwo files, make
+  // sure it exists before any worker attempt to create the files.
+  if (!opts::DwarfOutputPath.empty() && !sys::fs::exists(opts::DwarfOutputPath))
+    (void)sys::fs::create_directories(opts::DwarfOutputPath);
+  std::unordered_map<uint64_t, std::string> DWOToNameMap =
+      getDWONameMap(*BC.DwCtx, CUSize);
+  DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
+                                         *StrWriter);
+  if (DebugNamesTable.isCreated())
+    DebugNamesTable.preAllocateUnits(*BC.DwCtx);
+  GDBIndex GDBIndexSection(BC);
   DIEBuilder DIEBlder(BC, BC.DwCtx.get(), DebugNamesTable);
   DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
@@ -745,43 +1071,98 @@ void DWARFRewriter::updateDebugInfo() {
       *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, GDBIndexSection);
   CUOffsetMap OffsetMap =
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
+  SmallVector<SmallVector<DWARFUnit *>> PartVec =
+      partitionCUs(*BC.DwCtx, CUSize);
+  // Buckets below run in parallel, and with a .dwp package they all read the
+  // same split DWARF context. Create that context now to avoid a race
+  // (note this is a DWP-only issue, DWOs are safe since each thread operate
+  // on its own DWARF context).
+  BC.openSharedDWOContext();
+  const unsigned int ThreadCount =
+      std::min(opts::DebugThreadCount, opts::ThreadCount);
+  llvm::ThreadPoolInterface &ThreadPool =
+      getOrCreateDebugInfoThreadPool(ThreadCount);
+  std::vector<BucketLocalWriter> LocalWriters(PartVec.size());
+  std::vector<std::unique_ptr<DIEBuilder>> BucketDIEBlders(PartVec.size());
+  std::mutex MergeQueueMutex;
+  std::condition_variable MergeQueueCV;
+  std::queue<size_t> MergeQueue;
+  const size_t TotalTasks = PartVec.size();
+  std::vector<char> BucketDone(TotalTasks, 0);
 
-  const bool SingleThreadedMode =
-      opts::NoThreads || opts::DeterministicDebugInfo;
-  if (!SingleThreadedMode)
-    DIEBlder.buildCompileUnits();
-  if (SingleThreadedMode) {
-    CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
-    for (std::vector<DWARFUnit *> &Vec : PartVec) {
-      DIEBlder.buildCompileUnits(Vec);
-      for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
-        processUnitDIE(CU, &DIEBlder);
-      finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
-                           DIEBlder.getProcessedCUs());
-    }
-  } else {
-    // Update unit debug info in parallel
-    ThreadPoolInterface &ThreadPool = ParallelUtilities::getThreadPool();
-    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
-      ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
-    ThreadPool.wait();
+  BucketLocAccumOffset Accum;
+  auto MergeBucket = [&](size_t Idx) -> void {
+    std::unique_ptr<DIEBuilder> &BucketDIEBlder = BucketDIEBlders[Idx];
+    assert(BucketDIEBlder && "Bucket DIEBuilder is null.");
+    const auto &Processed = BucketDIEBlder->getProcessedCUs();
+    std::vector<DWARFUnit *> SortedCUs;
+    SortedCUs.assign(Processed.begin(), Processed.end());
+    // Ensure deterministic output by sorting CUs in section offset order.
+    llvm::sort(SortedCUs, [](const DWARFUnit *A, const DWARFUnit *B) {
+      return A->getOffset() < B->getOffset();
+    });
+
+    finalizeMainCUStrOffsets(*BucketDIEBlder, SortedCUs, DWOToNameMap);
+    mergePerBucketLocs(*BucketDIEBlder, SortedCUs, Accum);
+    mergePerBucketRanges(*BucketDIEBlder, LocalWriters[Idx], SortedCUs);
+    finalizeCompileUnits(*BucketDIEBlder, DIEBlder, *Streamer, OffsetMap,
+                         BucketDIEBlder->getProcessedCUs(), *FinalAddrWriter);
+
+    // Release memory for this bucket.
+    BucketDIEBlders[Idx].reset();
+    LocalWriters[Idx].RngListsWriter.reset();
+    LocalWriters[Idx].LegacyRangesWriter.reset();
+    for (DWARFUnit *CU : SortedCUs)
+      if (std::optional<uint64_t> DWOId = CU->getDWOId())
+        BC.releaseDWOCU(*DWOId);
+  };
+
+  for (size_t I = 0; I < TotalTasks; ++I) {
+    ThreadPool.async([&, I] {
+      processBucket(I, PartVec, BucketDIEBlders, LocalWriters, DebugNamesTable,
+                    DWOToNameMap, GDBIndexSection);
+      {
+        std::lock_guard<std::mutex> Lock(MergeQueueMutex);
+        BucketDone[I] = 1;
+        if (!opts::PreserveOrder)
+          MergeQueue.push(I);
+      }
+      // Only the merge thread waits on the CV and it waits on a specific
+      // index. notify_one is sufficient and avoids waking all workers.
+      MergeQueueCV.notify_one();
+    });
   }
 
+  // Merge completed buckets in-order or as they finish, depending on
+  // PreserveOrder.
+  for (size_t Idx = 0; Idx < TotalTasks; ++Idx) {
+    size_t ProcessIndex;
+    {
+      std::unique_lock<std::mutex> Lock(MergeQueueMutex);
+      if (opts::PreserveOrder) {
+        MergeQueueCV.wait(Lock, [&] { return BucketDone[Idx] != 0; });
+        ProcessIndex = Idx;
+      } else {
+        MergeQueueCV.wait(Lock, [&] { return !MergeQueue.empty(); });
+        ProcessIndex = MergeQueue.front();
+        MergeQueue.pop();
+      }
+    }
+    MergeBucket(ProcessIndex);
+  }
+
+  ThreadPool.wait();
   DebugNamesTable.emitAccelTable();
-
-  if (opts::WriteDWP)
-    finalizeDWP(State);
-
-  finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS,
-                        OffsetMap);
-  GDBIndexSection.updateGdbIndexSection(OffsetMap, CUIndex,
+  finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS, OffsetMap,
+                        *FinalAddrWriter, Accum.LocListCUOrder);
+  GDBIndexSection.updateGdbIndexSection(OffsetMap, CUSize,
                                         *ARangesSectionWriter);
 }
 
 void DWARFRewriter::updateUnitDebugInfo(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DebugLocWriter &DebugLocWriter,
     DebugRangesSectionWriter &RangesSectionWriter,
-    std::optional<uint64_t> RangesBase) {
+    DebugAddrWriter &AddressWriter, std::optional<uint64_t> RangesBase) {
   // Cache debug ranges so that the offset for identical ranges could be reused.
   std::map<DebugAddressRangesVector, uint64_t> CachedRanges;
 
@@ -797,8 +1178,12 @@ void DWARFRewriter::updateUnitDebugInfo(
     dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
     dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
     dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
-    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
-    const uint32_t Size = HighPC - LowPC;
+    // DW_AT_high_pc holding an offset from DW_AT_low_pc is a DWARF 4 addition;
+    // before that the attribute is always address.
+    dwarf::Form FormHighPC =
+        Unit.getVersion() >= 4 ? dwarf::DW_FORM_data4 : dwarf::DW_FORM_addr;
+    // Computed before LowPC is possibly replaced by an address table index.
+    const uint64_t Size = HighPC - LowPC;
     // Whatever was generated is not low_pc/high_pc, so will reset to
     // default for size 1.
     if (!LowPCVal || !HighPCVal) {
@@ -813,19 +1198,39 @@ void DWARFRewriter::updateUnitDebugInfo(
       FormHighPC = HighPCVal.getForm();
     }
 
-    if (FormLowPC == dwarf::DW_FORM_addrx ||
-        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
-      LowPC = AddrWriter->getIndexFromAddress(LowPC, Unit);
+    // A fixed-width indexed form caps the index it can encode, and the index
+    // assigned below comes from a rebuilt .debug_addr that may hold more
+    // entries than the input's. Normalize to the ULEB-encoded form so the
+    // value always fits. DW_FORM_addrx is DWARF 5, so the GNU extension used
+    // by earlier split DWARF keeps its own form.
+    auto normalizeIndexedForm = [](dwarf::Form Form) {
+      return Form == dwarf::DW_FORM_GNU_addr_index ? Form
+                                                   : dwarf::DW_FORM_addrx;
+    };
+
+    if (isIndexedAddressForm(FormLowPC)) {
+      LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
+      FormLowPC = normalizeIndexedForm(FormLowPC);
+    }
+
+    // The value has to match the class of the form it is written under.
+    uint64_t HighPCEncoded = Size;
+    if (isIndexedAddressForm(FormHighPC)) {
+      HighPCEncoded = AddressWriter.getIndexFromAddress(HighPC, Unit);
+      FormHighPC = normalizeIndexedForm(FormHighPC);
+    } else if (isAddressForm(FormHighPC))
+      HighPCEncoded = HighPC;
 
     if (LowPCVal)
       DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
     else
       DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
     if (HighPCVal) {
-      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC,
+                           DIEInteger(HighPCEncoded));
     } else {
       DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
-      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(HighPCEncoded));
     }
   };
 
@@ -864,7 +1269,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
-                                     RangesBase);
+                                     AddressWriter, RangesBase);
       DIEValue StmtListAttrVal = Die->findAttribute(dwarf::DW_AT_stmt_list);
       if (LineTablePatchMap.count(&Unit))
         DIEBldr.replaceValue(Die, dwarf::DW_AT_stmt_list,
@@ -906,10 +1311,22 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal)
-          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        else
-          FunctionRanges.push_back({0, 1});
+        // There is no output range for this DIE, so point it at address 0
+        // and keep its original size. The stored DW_AT_high_pc is that size
+        // only for non-address forms; for an address form it is the end
+        // address, and for an indexed one it is an address table index that
+        // cannot be resolved to a size here.
+        uint64_t OriginalSize = 1;
+        if (LowPCVal && HighPCVal) {
+          const dwarf::Form HighForm = HighPCVal.getForm();
+          if (!isAddressForm(HighForm))
+            OriginalSize = HighPCVal.getDIEInteger().getValue();
+          else if (HighForm == dwarf::DW_FORM_addr &&
+                   LowPCVal.getForm() == dwarf::DW_FORM_addr)
+            OriginalSize = HighPCVal.getDIEInteger().getValue() -
+                           LowPCVal.getDIEInteger().getValue();
+        }
+        FunctionRanges.push_back({0, OriginalSize});
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
@@ -919,7 +1336,8 @@ void DWARFRewriter::updateUnitDebugInfo(
       }
 
       updateDWARFObjectAddressRanges(
-          Unit, DIEBldr, *Die, RangesSectionWriter.addRanges(FunctionRanges));
+          Unit, DIEBldr, *Die, RangesSectionWriter.addRanges(FunctionRanges),
+          AddressWriter);
 
       break;
     }
@@ -964,7 +1382,8 @@ void DWARFRewriter::updateUnitDebugInfo(
                           OutputRanges.back().HighPC);
         break;
       }
-      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset);
+      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
+                                     AddressWriter);
       break;
     }
     case dwarf::DW_TAG_call_site: {
@@ -977,9 +1396,9 @@ void DWARFRewriter::updateUnitDebugInfo(
           UpdatedAddress =
               Function->translateInputToOutputAddress(UpdatedAddress);
 
-        if (AttrVal.getForm() == dwarf::DW_FORM_addrx) {
+        if (isIndexedAddressForm(AttrVal.getForm())) {
           const uint32_t Index =
-              AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+              AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
           DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
                                DIEInteger(Index));
         } else if (AttrVal.getForm() == dwarf::DW_FORM_addr) {
@@ -1139,10 +1558,7 @@ void DWARFRewriter::updateUnitDebugInfo(
                   const_cast<DIEBlock *>(&LocAttrInfo.getDIEBlock());
               AttrLocValList = static_cast<DIEValueList *>(BlockAttr);
             }
-            ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-            DataExtractor Data(
-                StringRef((const char *)Expr.data(), Expr.size()),
-                Unit.getContext().isLittleEndian(), 0);
+            DataExtractor Data(Sblock, Unit.getContext().isLittleEndian());
             DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                                     Unit.getFormParams().Format);
             uint32_t PrevOffset = 0;
@@ -1196,7 +1612,7 @@ void DWARFRewriter::updateUnitDebugInfo(
                 assert(EntryAddress && "Address is not found.");
                 assert(Index <= std::numeric_limits<uint32_t>::max() &&
                        "Invalid Operand Index.");
-                const uint32_t AddrIndex = AddrWriter->getIndexFromAddress(
+                const uint32_t AddrIndex = AddressWriter.getIndexFromAddress(
                     EntryAddress->Address, Unit);
                 // update Index into .debug_address section for DW_AT_location.
                 // The Size field is not stored in IR, we need to minus 1 in
@@ -1245,10 +1661,8 @@ void DWARFRewriter::updateUnitDebugInfo(
           dwarf::Form Form = LowPCAttrInfo.getForm();
           assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
                  "DW_FORM_LLVM_addrx_offset is not supported");
-          std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
-          if (Form == dwarf::DW_FORM_addrx ||
-              Form == dwarf::DW_FORM_GNU_addr_index) {
-            const uint32_t Index = AddrWriter->getIndexFromAddress(
+          if (isIndexedAddressForm(Form)) {
+            const uint32_t Index = AddressWriter.getIndexFromAddress(
                 NewAddress ? NewAddress : Address, Unit);
             DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),
                                  LowPCAttrInfo.getForm(), DIEInteger(Index));
@@ -1272,7 +1686,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 
 void DWARFRewriter::updateDWARFObjectAddressRanges(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die, uint64_t DebugRangesOffset,
-    std::optional<uint64_t> RangesBase) {
+    DebugAddrWriter &AddressWriter, std::optional<uint64_t> RangesBase) {
 
   if (RangesBase) {
     // If DW_AT_GNU_ranges_base is present, update it. No further modifications
@@ -1292,8 +1706,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
         RangesWriterIterator->second->setDie(&Die);
       } else {
         DIEBldr.replaceValue(&Die, RangesBaseInfo.getAttribute(),
-                             RangesBaseInfo.getForm(),
-                             DIEInteger(static_cast<uint32_t>(*RangesBase)));
+                             RangesBaseInfo.getForm(), DIEInteger(*RangesBase));
       }
       RangesBase = std::nullopt;
     }
@@ -1320,9 +1733,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
                            DIEInteger(DebugRangesOffset));
 
     if (!RangesBase) {
-      if (LowPCAttrInfo &&
-          LowPCAttrInfo.getForm() != dwarf::DW_FORM_GNU_addr_index &&
-          LowPCAttrInfo.getForm() != dwarf::DW_FORM_addrx)
+      if (LowPCAttrInfo && !isIndexedAddressForm(LowPCAttrInfo.getForm()))
         DIEBldr.replaceValue(&Die, dwarf::DW_AT_low_pc, LowPCAttrInfo.getForm(),
                              DIEInteger(0));
       return;
@@ -1353,14 +1764,14 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
   // to back. Replace with new attributes and patch the DIE.
   DIEValue HighPCAttrInfo = Die.findAttribute(dwarf::DW_AT_high_pc);
   if (LowPCAttrInfo && HighPCAttrInfo) {
-
     convertToRangesPatchDebugInfo(Unit, DIEBldr, Die, DebugRangesOffset,
-                                  LowPCAttrInfo, HighPCAttrInfo, RangesBase);
+                                  LowPCAttrInfo, HighPCAttrInfo, AddressWriter,
+                                  RangesBase);
   } else if (!(Unit.isDWOUnit() &&
                Die.getTag() == dwarf::DW_TAG_compile_unit)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: cannot update ranges for DIE in Unit offset 0x"
-             << Unit.getOffset() << '\n';
+             << Twine::utohexstr(Unit.getOffset()) << '\n';
   }
 }
 
@@ -1401,12 +1812,11 @@ void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
       continue;
 
     std::optional<uint64_t> StmtOffset =
-        GetStatementListValue(CU.get()->getUnitDIE());
+        GetStatementListValue(CU->getUnitDIE());
     if (!StmtOffset)
       continue;
 
-    const uint64_t LineTableOffset =
-        Asm.getSymbolOffset(*Label);
+    const uint64_t LineTableOffset = Asm.getSymbolOffset(*Label);
     DebugLineOffsetMap[*StmtOffset] = LineTableOffset;
     assert(DbgInfoSection && ".debug_info section must exist");
     LineTablePatchMap[CU.get()] = LineTableOffset;
@@ -1463,6 +1873,7 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   // generate and populate abbrevs here
   DIEBlder.generateAbbrevs();
   DIEBlder.finish();
+  DIEBlder.updateDebugNamesTable();
   SmallVector<char, 20> OutBuffer;
   std::shared_ptr<raw_svector_ostream> ObjOS =
       std::make_shared<raw_svector_ostream>(OutBuffer);
@@ -1476,13 +1887,17 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->info_section_units()) {
     if (!CU->isTypeUnit())
       continue;
-    updateLineTable(*CU.get());
-    emitUnit(DIEBlder, Streamer, *CU.get());
-    uint32_t StartOffset = CUOffset;
-    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU.get());
-    CUOffset += CU.get()->getHeaderSize();
+    updateLineTable(*CU);
+    emitUnit(DIEBlder, Streamer, *CU);
+    uint64_t StartOffset = CUOffset;
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
+    CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU.get()->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    const dwarf::DwarfFormat Format = CU->getFormParams().Format;
+    CUMap[CU->getOffset()] = {StartOffset,
+                              CUOffset - StartOffset -
+                                  dwarf::getUnitLengthFieldByteSize(Format),
+                              Format};
   }
 
   // Emit Type Unit of DWARF 4 to .debug_type section
@@ -1511,7 +1926,8 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
 
 void DWARFRewriter::finalizeDebugSections(
     DIEBuilder &DIEBlder, DWARF5AcceleratorTable &DebugNamesTable,
-    DIEStreamer &Streamer, raw_svector_ostream &ObjOS, CUOffsetMap &CUMap) {
+    DIEStreamer &Streamer, raw_svector_ostream &ObjOS, CUOffsetMap &CUMap,
+    DebugAddrWriter &FinalAddrWriter, std::vector<uint64_t> SortedCU) {
   if (StrWriter->isInitialized()) {
     RewriteInstance::addToDebugSectionsToOverwrite(".debug_str");
     std::unique_ptr<DebugStrBufferVector> DebugStrSectionContents =
@@ -1548,7 +1964,7 @@ void DWARFRewriter::finalizeDebugSections(
 
   if (BC.isDWARF5Used()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =
-        makeFinalLocListsSection(DWARFVersion::DWARF5);
+        makeFinalLocListsSection(DWARFVersion::DWARF5, SortedCU);
     if (!LocationListSectionContents->empty())
       BC.registerOrUpdateNoteSection(
           ".debug_loclists", copyByteArray(*LocationListSectionContents),
@@ -1557,20 +1973,19 @@ void DWARFRewriter::finalizeDebugSections(
 
   if (BC.isDWARFLegacyUsed()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =
-        makeFinalLocListsSection(DWARFVersion::DWARFLegacy);
+        makeFinalLocListsSection(DWARFVersion::DWARFLegacy, SortedCU);
     if (!LocationListSectionContents->empty())
       BC.registerOrUpdateNoteSection(
           ".debug_loc", copyByteArray(*LocationListSectionContents),
           LocationListSectionContents->size());
   }
 
-  // AddrWriter should be finalized after debug_loc since more addresses can be
-  // added there.
-  if (AddrWriter->isInitialized()) {
-    AddressSectionBuffer AddressSectionContents = AddrWriter->finalize();
+  if (FinalAddrWriter.isInitialized()) {
+    std::unique_ptr<AddressSectionBuffer> AddressSectionContents =
+        FinalAddrWriter.releaseBuffer();
     BC.registerOrUpdateNoteSection(".debug_addr",
-                                   copyByteArray(AddressSectionContents),
-                                   AddressSectionContents.size());
+                                   copyByteArray(*AddressSectionContents),
+                                   AddressSectionContents->size());
   }
 
   Streamer.emitAbbrevs(DIEBlder.getAbbrevs(), BC.DwCtx->getMaxVersion());
@@ -1619,12 +2034,30 @@ void DWARFRewriter::finalizeDebugSections(
                                    DebugNamesSectionContents->size());
   }
 }
-
 void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
+                                         DIEBuilder &MainDIEBuilder,
                                          DIEStreamer &Streamer,
                                          CUOffsetMap &CUMap,
-                                         const std::list<DWARFUnit *> &CUs) {
+                                         const std::list<DWARFUnit *> &CUs,
+                                         DebugAddrWriter &FinalAddrWriter) {
   for (DWARFUnit *CU : CUs) {
+    auto AddressWriterIterator = AddressWritersByCU.find(CU->getOffset());
+    assert(AddressWriterIterator != AddressWritersByCU.end() &&
+           "AddressWriter does not exist for CU");
+    DebugAddrWriter *AddressWriter = AddressWriterIterator->second.get();
+    const size_t BufferOffset = FinalAddrWriter.getBufferSize();
+    std::optional<uint64_t> Offset = AddressWriter->finalize(BufferOffset);
+    /// If Offset already exists in UnmodifiedAddressOffsets, then update with
+    /// Offset, else update with BufferOffset.
+    if (Offset)
+      AddressWriter->updateAddrBase(DIEBlder, *CU, *Offset);
+    else if (AddressWriter->isInitialized())
+      AddressWriter->updateAddrBase(DIEBlder, *CU, BufferOffset);
+    if (AddressWriter->isInitialized()) {
+      std::unique_ptr<AddressSectionBuffer> AddressSectionContents =
+          AddressWriter->releaseBuffer();
+      FinalAddrWriter.appendToAddressBuffer(*AddressSectionContents);
+    }
     if (CU->getVersion() != 4)
       continue;
     std::optional<uint64_t> DWOId = CU->getDWOId();
@@ -1647,16 +2080,30 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
         LegacyRangesWriter->releaseBuffer();
     LegacyRangesSectionWriter->appendToRangeBuffer(*RangesWritersContents);
   }
-  DIEBlder.generateAbbrevs();
+  // Assign abbreviation numbers from the main DIEBuilder so all bucket DIEs
+  // share a single global .debug_abbrev table.
+  for (DWARFUnit *DU : CUs) {
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*DU);
+    MainDIEBuilder.generateUnitAbbrevs(UnitDIE);
+  }
+  DIEBlder.setUnitOffsetBases(CUOffset);
   DIEBlder.finish();
+  {
+    std::lock_guard<std::mutex> Lock(DebugNamesUpdateMutex);
+    DIEBlder.updateDebugNamesTable();
+  }
   // generate debug_info and CUMap
   for (DWARFUnit *CU : CUs) {
     emitUnit(DIEBlder, Streamer, *CU);
-    const uint32_t StartOffset = CUOffset;
+    const uint64_t StartOffset = CUOffset;
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
     CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    const dwarf::DwarfFormat Format = CU->getFormParams().Format;
+    CUMap[CU->getOffset()] = {StartOffset,
+                              CUOffset - StartOffset -
+                                  dwarf::getUnitLengthFieldByteSize(Format),
+                              Format};
   }
 }
 
@@ -1669,7 +2116,8 @@ namespace {
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
   return cantFail(BinaryContext::createBinaryContext(
-      File.makeTriple(), File.getFileName(), nullptr, false,
+      File.makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+      File.getFileName(), nullptr, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
                            WithColor::defaultWarningHandler),
@@ -1702,6 +2150,85 @@ StringRef getSectionName(const SectionRef &Section) {
   return Name;
 }
 
+/// Extracts the slice of the .debug_str.dwo section for a given CU from a DWP
+/// file, based on the .debug_str_offsets.dwo section. This helps address DWO
+/// bloat that may occur after updates.
+///
+/// A slice of .debug_str.dwo may be composed of several non-contiguous
+/// fragments. These non-contiguous string views will be written out
+/// sequentially, avoiding the copying overhead caused by assembling them.
+///
+/// The .debug_str_offsets for the first CU often does not need to be updated,
+/// so copying is only performed when .debug_str_offsets requires updating.
+static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
+                                   StringRef StrOffsetsContent,
+                                   SmallVectorImpl<StringRef> &StrDWOOutData,
+                                   std::string &StrOffsetsOutData,
+                                   const DWARFUnit &CU, bool IsLittleEndian) {
+  const llvm::endianness Endian =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
+  const dwarf::DwarfFormat Format = CU.getFormParams().Format;
+  uint64_t HeaderOffset = 0;
+  if (CU.getVersion() >= 5) {
+    HeaderOffset = dwarf::getUnitLengthFieldByteSize(Format) + 4;
+  }
+  const size_t SizeOfOffset = dwarf::getDwarfOffsetByteSize(Format);
+  const uint64_t NumOffsets =
+      (StrOffsetsContent.size() - HeaderOffset) / SizeOfOffset;
+
+  DataExtractor Extractor(StrOffsetsContent, IsLittleEndian);
+  uint64_t ExtractionOffset = HeaderOffset;
+
+  using StringFragment = DWARFUnitIndex::Entry::SectionContribution;
+  const auto getStringLength = [](StringRef Content,
+                                  uint64_t Offset) -> uint64_t {
+    size_t NullPos = Content.find('\0', Offset);
+    return (NullPos != StringRef::npos) ? (NullPos - Offset + 1) : 0;
+  };
+  const auto isContiguous = [](const StringFragment &Fragment,
+                               uint64_t NextOffset) -> bool {
+    return NextOffset == Fragment.getOffset() + Fragment.getLength();
+  };
+  std::optional<StringFragment> CurrentFragment;
+  uint64_t AccumulatedStrLen = 0;
+  for (uint64_t I = 0; I < NumOffsets; ++I) {
+    const uint64_t StrOffset =
+        Extractor.getUnsigned(&ExtractionOffset, SizeOfOffset);
+    const uint64_t StringLength = getStringLength(StrDWOContent, StrOffset);
+    if (!CurrentFragment) {
+      // First init.
+      CurrentFragment = StringFragment(StrOffset, StringLength);
+    } else {
+      if (isContiguous(*CurrentFragment, StrOffset)) {
+        // Expanding the current fragment.
+        CurrentFragment->setLength(CurrentFragment->getLength() + StringLength);
+      } else {
+        // Saving the current fragment and start a new one.
+        StrDWOOutData.push_back(StrDWOContent.substr(
+            CurrentFragment->getOffset(), CurrentFragment->getLength()));
+        CurrentFragment = StringFragment(StrOffset, StringLength);
+      }
+    }
+    if (AccumulatedStrLen != StrOffset) {
+      // Updating str offsets.
+      if (StrOffsetsOutData.empty())
+        StrOffsetsOutData = StrOffsetsContent.str();
+      if (Format == dwarf::DwarfFormat::DWARF64)
+        llvm::support::endian::write64(
+            &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+            AccumulatedStrLen, Endian);
+      else
+        llvm::support::endian::write32(
+            &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+            static_cast<uint32_t>(AccumulatedStrLen), Endian);
+    }
+    AccumulatedStrLen += StringLength;
+  }
+  if (CurrentFragment)
+    StrDWOOutData.push_back(StrDWOContent.substr(CurrentFragment->getOffset(),
+                                                 CurrentFragment->getLength()));
+}
+
 // Exctracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
 std::optional<StringRef> updateDebugData(
@@ -1721,6 +2248,8 @@ std::optional<StringRef> updateDebugData(
                           uint64_t &DWPOffset) -> StringRef {
     if (DWOEntry) {
       DWOSectionContribution *DWOContrubution = DWOEntry->getContribution(Sec);
+      if (!DWOContrubution)
+        return OutData;
       DWPOffset = DWOContrubution->getOffset();
       OutData = OutData.substr(DWPOffset, DWOContrubution->getLength());
     }
@@ -1738,7 +2267,7 @@ std::optional<StringRef> updateDebugData(
     auto Iter = OverridenSections.find(Kind);
     if (Iter == OverridenSections.end()) {
       errs()
-          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overriden "
+          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overridden "
              "section for: "
           << Twine::utohexstr(DWOId) << ".\n";
       return std::nullopt;
@@ -1751,6 +2280,8 @@ std::optional<StringRef> updateDebugData(
       errs() << "BOLT-WARNING: unsupported debug section: " << SectionName
              << "\n";
     if (StrWriter.isInitialized()) {
+      if (CUDWOEntry)
+        return StrWriter.getBufferStr();
       OutputBuffer = StrWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1765,6 +2296,8 @@ std::optional<StringRef> updateDebugData(
   }
   case DWARFSectionKind::DW_SECT_STR_OFFSETS: {
     if (StrOffstsWriter.isFinalized()) {
+      if (CUDWOEntry)
+        return StrOffstsWriter.getBufferStr();
       OutputBuffer = StrOffstsWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1799,233 +2332,12 @@ std::optional<StringRef> updateDebugData(
 
 } // namespace
 
-void DWARFRewriter::initDWPState(DWPState &State) {
-  SmallString<0> OutputNameStr;
-  StringRef OutputName;
-  if (opts::DwarfOutputPath.empty()) {
-    OutputName =
-        Twine(opts::OutputFilename).concat(".dwp").toStringRef(OutputNameStr);
-  } else {
-    StringRef ExeFileName = llvm::sys::path::filename(opts::OutputFilename);
-    OutputName = Twine(opts::DwarfOutputPath)
-                     .concat("/")
-                     .concat(ExeFileName)
-                     .concat(".dwp")
-                     .toStringRef(OutputNameStr);
-    errs() << "BOLT-WARNING: dwarf-output-path is in effect and .dwp file will "
-              "possibly be written to another location that is not the same as "
-              "the executable\n";
-  }
-  std::error_code EC;
-  State.Out =
-      std::make_unique<ToolOutputFile>(OutputName, EC, sys::fs::OF_None);
-  const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
-  State.TmpBC = createDwarfOnlyBC(*File);
-  State.Streamer = State.TmpBC->createStreamer(State.Out->os());
-  State.MCOFI = State.Streamer->getContext().getObjectFileInfo();
-  State.KnownSections = createKnownSectionsMap(*State.MCOFI);
-  MCSection *const StrSection = State.MCOFI->getDwarfStrDWOSection();
-
-  // Data Structures for DWP book keeping
-  // Size of array corresponds to the number of sections supported by DWO format
-  // in DWARF4/5.
-
-  State.Strings = std::make_unique<DWPStringPool>(*State.Streamer, StrSection);
-
-  // Setup DWP code once.
-  DWARFContext *DWOCtx = BC.getDWOContext();
-
-  if (DWOCtx) {
-    State.CUIndex = &DWOCtx->getCUIndex();
-    State.IsDWP = !State.CUIndex->getRows().empty();
-  }
-}
-
-void DWARFRewriter::finalizeDWP(DWPState &State) {
-  if (State.Version < 5) {
-    // Lie about there being no info contributions so the TU index only includes
-    // the type unit contribution for DWARF < 5. In DWARFv5 the TU index has a
-    // contribution to the info section, so we do not want to lie about it.
-    State.ContributionOffsets[0] = 0;
-  }
-  writeIndex(*State.Streamer.get(), State.MCOFI->getDwarfTUIndexSection(),
-             State.ContributionOffsets, State.TypeIndexEntries,
-             State.IndexVersion);
-
-  if (State.Version < 5) {
-    // Lie about the type contribution for DWARF < 5. In DWARFv5 the type
-    // section does not exist, so no need to do anything about this.
-    State.ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES, 2)] = 0;
-    // Unlie about the info contribution
-    State.ContributionOffsets[0] = 1;
-  }
-  writeIndex(*State.Streamer.get(), State.MCOFI->getDwarfCUIndexSection(),
-             State.ContributionOffsets, State.IndexEntries, State.IndexVersion);
-
-  State.Streamer->finish();
-  State.Out->keep();
-}
-
-void DWARFRewriter::updateDWP(DWARFUnit &CU,
-                              const OverriddenSectionsMap &OverridenSections,
-                              const DWARFRewriter::UnitMeta &CUMI,
-                              DWARFRewriter::UnitMetaVectorType &TUMetaVector,
-                              DWPState &State, DebugLocWriter &LocWriter,
-                              DebugStrOffsetsWriter &StrOffstsWriter,
-                              DebugStrWriter &StrWriter) {
-  const uint64_t DWOId = *CU.getDWOId();
-  MCSection *const StrOffsetSection = State.MCOFI->getDwarfStrOffDWOSection();
-  assert(StrOffsetSection && "StrOffsetSection does not exist.");
-  // Skipping CUs that we failed to load.
-  std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(DWOId);
-  if (!DWOCU)
-    return;
-
-  if (State.Version == 0) {
-    State.Version = CU.getVersion();
-    State.IndexVersion = State.Version < 5 ? 2 : 5;
-  } else if (State.Version != CU.getVersion()) {
-    errs() << "BOLT-ERROR: incompatible DWARF compile unit versions\n";
-    exit(1);
-  }
-
-  UnitIndexEntry CurEntry = {};
-  CurEntry.DWOName = dwarf::toString(
-      CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-      "");
-  const char *Name = CU.getUnitDIE().getShortName();
-  if (Name)
-    CurEntry.Name = Name;
-  StringRef CurStrSection;
-  StringRef CurStrOffsetSection;
-
-  // This maps each section contained in this file to its length.
-  // This information is later on used to calculate the contributions,
-  // i.e. offset and length, of each compile/type unit to a section.
-  std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLength;
-
-  const DWARFUnitIndex::Entry *CUDWOEntry = nullptr;
-  if (State.IsDWP)
-    CUDWOEntry = State.CUIndex->getFromHash(DWOId);
-
-  bool StrSectionWrittenOut = false;
-  const object::ObjectFile *DWOFile =
-      (*DWOCU)->getContext().getDWARFObj().getFile();
-
-  DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
-  if (CU.getVersion() == 5) {
-    assert(RangeListsWritersByCU.count(DWOId) != 0 &&
-           "No RangeListsWriter for DWO ID.");
-    RangeListssWriter = RangeListsWritersByCU[DWOId].get();
-  }
-  auto AddType = [&](unsigned int Index, uint32_t IndexVersion, uint64_t Offset,
-                     uint64_t Length, uint64_t Hash) -> void {
-    UnitIndexEntry TUEntry = CurEntry;
-    if (IndexVersion < 5)
-      TUEntry.Contributions[0] = {};
-    TUEntry.Contributions[Index].setOffset(Offset);
-    TUEntry.Contributions[Index].setLength(Length);
-    State.ContributionOffsets[Index] +=
-        TUEntry.Contributions[Index].getLength32();
-    State.TypeIndexEntries.insert(std::make_pair(Hash, TUEntry));
-  };
-  std::unique_ptr<DebugBufferVector> StrOffsetsOutputData;
-  std::unique_ptr<DebugBufferVector> StrOutputData;
-  for (const SectionRef &Section : DWOFile->sections()) {
-    std::unique_ptr<DebugBufferVector> OutputData = nullptr;
-    StringRef SectionName = getSectionName(Section);
-    Expected<StringRef> ContentsExp = Section.getContents();
-    assert(ContentsExp && "Invalid contents.");
-    std::optional<StringRef> TOutData =
-        updateDebugData((*DWOCU)->getContext(), SectionName, *ContentsExp,
-                        State.KnownSections, *State.Streamer, *this, CUDWOEntry,
-                        DWOId, OutputData, RangeListssWriter, LocWriter,
-                        StrOffstsWriter, StrWriter, OverridenSections);
-    if (!TOutData)
-      continue;
-
-    StringRef OutData = *TOutData;
-    if (SectionName == "debug_types.dwo") {
-      State.Streamer->emitBytes(OutData);
-      continue;
-    }
-
-    if (SectionName == "debug_str.dwo") {
-      CurStrSection = OutData;
-      StrOutputData = std::move(OutputData);
-    } else {
-      // Since handleDebugDataPatching returned true, we already know this is
-      // a known section.
-      auto SectionIter = State.KnownSections.find(SectionName);
-      if (SectionIter->second.second == DWARFSectionKind::DW_SECT_STR_OFFSETS) {
-        CurStrOffsetSection = OutData;
-        StrOffsetsOutputData = std::move(OutputData);
-      } else {
-        State.Streamer->emitBytes(OutData);
-      }
-      unsigned int Index =
-          getContributionIndex(SectionIter->second.second, State.IndexVersion);
-      uint64_t Offset = State.ContributionOffsets[Index];
-      uint64_t Length = OutData.size();
-      if (CU.getVersion() >= 5 &&
-          SectionIter->second.second == DWARFSectionKind::DW_SECT_INFO) {
-        for (UnitMeta &MI : TUMetaVector)
-          MI.Offset += State.DebugInfoSize;
-
-        Offset = State.DebugInfoSize + CUMI.Offset;
-        Length = CUMI.Length;
-        State.DebugInfoSize += OutData.size();
-      }
-      CurEntry.Contributions[Index].setOffset(Offset);
-      CurEntry.Contributions[Index].setLength(Length);
-      State.ContributionOffsets[Index] +=
-          CurEntry.Contributions[Index].getLength32();
-    }
-
-    // Strings are combined in to a new string section, and de-duplicated
-    // based on hash.
-    if (!StrSectionWrittenOut && !CurStrOffsetSection.empty() &&
-        !CurStrSection.empty()) {
-      // If debug_str.dwo section was modified storing it until dwp is written
-      // out. DWPStringPool stores raw pointers to strings.
-      if (StrOutputData)
-        State.StrSections.push_back(std::move(StrOutputData));
-      writeStringsAndOffsets(*State.Streamer.get(), *State.Strings.get(),
-                             StrOffsetSection, CurStrSection,
-                             CurStrOffsetSection, CU.getVersion());
-      StrSectionWrittenOut = true;
-    }
-  }
-  CompileUnitIdentifiers CUI{DWOId, CurEntry.Name.c_str(),
-                             CurEntry.DWOName.c_str()};
-  auto P = State.IndexEntries.insert(std::make_pair(CUI.Signature, CurEntry));
-  if (!P.second) {
-    Error Err = buildDuplicateError(*P.first, CUI, "");
-    errs() << "BOLT-ERROR: " << toString(std::move(Err)) << "\n";
-    return;
-  }
-
-  // Handling TU
-  const unsigned Index = getContributionIndex(
-      State.IndexVersion < 5 ? DW_SECT_EXT_TYPES : DW_SECT_INFO,
-      State.IndexVersion);
-  for (UnitMeta &MI : TUMetaVector)
-    AddType(Index, State.IndexVersion, MI.Offset, MI.Length, MI.TUHash);
-}
-
 void DWARFRewriter::writeDWOFiles(
     DWARFUnit &CU, const OverriddenSectionsMap &OverridenSections,
     const std::string &DWOName, DebugLocWriter &LocWriter,
-    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter) {
-  // Setup DWP code once.
-  DWARFContext *DWOCtx = BC.getDWOContext();
+    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
+    DebugRangesSectionWriter &TempRangesSectionWriter) {
   const uint64_t DWOId = *CU.getDWOId();
-  const DWARFUnitIndex *CUIndex = nullptr;
-  bool IsDWP = false;
-  if (DWOCtx) {
-    CUIndex = &DWOCtx->getCUIndex();
-    IsDWP = !CUIndex->getRows().empty();
-  }
 
   // Skipping CUs that we failed to load.
   std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(DWOId);
@@ -2036,23 +2348,24 @@ void DWARFRewriter::writeDWOFiles(
   }
 
   std::string CompDir = CU.getCompilationDir();
+  SmallString<16> AbsolutePath(DWOName);
 
   if (!opts::DwarfOutputPath.empty())
     CompDir = opts::DwarfOutputPath.c_str();
   else if (!opts::CompDirOverride.empty())
     CompDir = opts::CompDirOverride;
-
-  SmallString<16> AbsolutePath;
-  sys::path::append(AbsolutePath, CompDir);
-  sys::path::append(AbsolutePath, DWOName);
+  else if (!sys::fs::exists(CompDir))
+    CompDir = ".";
+  // Prevent failures when DWOName is already an absolute path.
+  sys::path::make_absolute(CompDir, AbsolutePath);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> TempOut =
       std::make_unique<ToolOutputFile>(AbsolutePath, EC, sys::fs::OF_None);
 
-  const DWARFUnitIndex::Entry *CUDWOEntry = nullptr;
-  if (IsDWP)
-    CUDWOEntry = CUIndex->getFromHash(DWOId);
+  const DWARFUnitIndex::Entry *CUDWOEntry =
+      !BC.usesDWP() ? nullptr
+                    : (*DWOCU)->getContext().getCUIndex().getFromHash(DWOId);
 
   const object::ObjectFile *File =
       (*DWOCU)->getContext().getDWARFObj().getFile();
@@ -2063,9 +2376,8 @@ void DWARFRewriter::writeDWOFiles(
 
   DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
   if (CU.getVersion() == 5) {
-    assert(RangeListsWritersByCU.count(DWOId) != 0 &&
-           "No RangeListsWriter for DWO ID.");
-    RangeListssWriter = RangeListsWritersByCU[DWOId].get();
+    RangeListssWriter =
+        llvm::dyn_cast<DebugRangeListsSectionWriter>(&TempRangesSectionWriter);
 
     // Handling .debug_rnglists.dwo separately. The original .o/.dwo might not
     // have .debug_rnglists so won't be part of the loop below.
@@ -2080,6 +2392,10 @@ void DWARFRewriter::writeDWOFiles(
     }
   }
 
+  StringRef StrDWOContent;
+  StringRef StrOffsetsContent;
+  llvm::SmallVector<StringRef, 3> StrDWOOutData;
+  std::string StrOffsetsOutData;
   for (const SectionRef &Section : File->sections()) {
     std::unique_ptr<DebugBufferVector> OutputData;
     StringRef SectionName = getSectionName(Section);
@@ -2087,27 +2403,74 @@ void DWARFRewriter::writeDWOFiles(
       continue;
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
+    if (BC.usesDWP() && SectionName == "debug_str.dwo") {
+      if (StrWriter.isInitialized())
+        StrDWOContent = StrWriter.getBufferStr();
+      else
+        StrDWOContent = *ContentsExp;
+      continue;
+    }
     if (std::optional<StringRef> OutData = updateDebugData(
             (*DWOCU)->getContext(), SectionName, *ContentsExp, KnownSections,
             *Streamer, *this, CUDWOEntry, DWOId, OutputData, RangeListssWriter,
-            LocWriter, StrOffstsWriter, StrWriter, OverridenSections))
+            LocWriter, StrOffstsWriter, StrWriter, OverridenSections)) {
+      if (BC.usesDWP() && SectionName == "debug_str_offsets.dwo") {
+        StrOffsetsContent = *OutData;
+        continue;
+      }
       Streamer->emitBytes(*OutData);
+    }
+  }
+
+  if (BC.usesDWP()) {
+    // Handling both .debug_str.dwo and .debug_str_offsets.dwo concurrently. In
+    // the original DWP, .debug_str is a deduplicated global table, and the
+    // .debug_str.dwo slice for a single CU needs to be extracted according to
+    // .debug_str_offsets.dwo.
+    UpdateStrAndStrOffsets(StrDWOContent, StrOffsetsContent, StrDWOOutData,
+                           StrOffsetsOutData, CU,
+                           (*DWOCU)->getContext().isLittleEndian());
+    auto SectionIter = KnownSections.find("debug_str.dwo");
+    if (SectionIter != KnownSections.end()) {
+      Streamer->switchSection(SectionIter->second.first);
+      for (size_t i = 0; i < StrDWOOutData.size(); ++i) {
+        StringRef OutData = StrDWOOutData[i];
+        if (!OutData.empty())
+          Streamer->emitBytes(OutData);
+      }
+    }
+    SectionIter = KnownSections.find("debug_str_offsets.dwo");
+    if (SectionIter != KnownSections.end()) {
+      Streamer->switchSection(SectionIter->second.first);
+      if (!StrOffsetsOutData.empty())
+        Streamer->emitBytes(StrOffsetsOutData);
+      else
+        Streamer->emitBytes(StrOffsetsContent);
+    }
   }
   Streamer->finish();
   TempOut->keep();
 }
 
 std::unique_ptr<DebugBufferVector>
-DWARFRewriter::makeFinalLocListsSection(DWARFVersion Version) {
+DWARFRewriter::makeFinalLocListsSection(DWARFVersion Version,
+                                        ArrayRef<uint64_t> CUOrder) {
   auto LocBuffer = std::make_unique<DebugBufferVector>();
   auto LocStream = std::make_unique<raw_svector_ostream>(*LocBuffer);
   auto Writer =
       std::unique_ptr<MCObjectWriter>(BC.createObjectWriter(*LocStream));
 
-  for (std::pair<const uint64_t, std::unique_ptr<DebugLocWriter>> &Loc :
-       LocListWritersByCU) {
-    DebugLocWriter *LocWriter = Loc.second.get();
-    auto *LocListWriter = llvm::dyn_cast<DebugLoclistWriter>(LocWriter);
+  // For DWARF4 .debug_loc, reserve the first 16 bytes for the empty list.
+  if (Version == DWARFVersion::DWARFLegacy)
+    LocStream->write_zeros(16);
+
+  for (uint64_t CUOffset : CUOrder) {
+    auto It = LocListWritersByCU.find(CUOffset);
+    if (It == LocListWritersByCU.end())
+      continue;
+
+    DebugLocWriter *LocWriter = It->second.get();
+    auto *LocListWriter = dyn_cast<DebugLoclistWriter>(LocWriter);
 
     // Filter out DWARF4, writing out DWARF5
     if (Version == DWARFVersion::DWARF5 &&
@@ -2122,8 +2485,19 @@ DWARFRewriter::makeFinalLocListsSection(DWARFVersion Version) {
     // Skipping DWARF4/5 split dwarf.
     if (LocListWriter && LocListWriter->getDwarfVersion() <= 4)
       continue;
+
     std::unique_ptr<DebugBufferVector> CurrCULocationLists =
         LocWriter->getBuffer();
+    // For DWARF4, each per-CU buffer begins with a 16-byte empty list.
+    // Emit the empty list only once globally (reserved above)
+    if (Version == DWARFVersion::DWARFLegacy) {
+      if (CurrCULocationLists->size() > 16)
+        *LocStream << StringRef(
+            reinterpret_cast<const char *>(CurrCULocationLists->data() + 16),
+            CurrCULocationLists->size() - 16);
+      continue;
+    }
+
     *LocStream << *CurrCULocationLists;
   }
 
@@ -2133,7 +2507,8 @@ DWARFRewriter::makeFinalLocListsSection(DWARFVersion Version) {
 void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
     uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
-    DIEValue &HighPCAttrInfo, std::optional<uint64_t> RangesBase) {
+    DIEValue &HighPCAttrInfo, DebugAddrWriter &AddressWriter,
+    std::optional<uint64_t> RangesBase) {
   dwarf::Form LowForm = LowPCAttrInfo.getForm();
   dwarf::Attribute RangeBaseAttribute = dwarf::DW_AT_GNU_ranges_base;
   dwarf::Form RangesForm = dwarf::DW_FORM_sec_offset;
@@ -2153,33 +2528,33 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
   // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
   // when it's absent.
   if (IsUnitDie) {
-    if (LowForm == dwarf::DW_FORM_addrx) {
-      const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
+    if (isIndexedAddressForm(LowForm)) {
+      const uint32_t Index = AddressWriter.getIndexFromAddress(0, Unit);
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(Index));
     } else {
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(0));
     }
-  }
-  // Original CU didn't have DW_AT_*_base. We converted it's children (or
-  // dwo), so need to insert it into CU.
-  if (RangesBase) {
-    if (Unit.getVersion() >= 5) {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(*RangesBase));
-    } else {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(INT_MAX));
-      auto RangesWriterIterator =
-          LegacyRangesWritersByCU.find(*Unit.getDWOId());
-      assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
-             "RangesWriter does not exist for DWOId");
-      RangesWriterIterator->second->setDie(&Die);
+    // Original CU didn't have DW_AT_*_base. We converted it's children (or
+    // dwo), so need to insert it into CU.
+    if (RangesBase) {
+      if (Unit.getVersion() >= 5) {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(*RangesBase));
+      } else {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(INT_MAX));
+        auto RangesWriterIterator =
+            LegacyRangesWritersByCU.find(*Unit.getDWOId());
+        assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+               "RangesWriter does not exist for DWOId");
+        RangesWriterIterator->second->setDie(&Die);
+      }
     }
   }
 
-  // HighPC was conveted into DW_AT_ranges.
+  // HighPC was converted into DW_AT_ranges.
   // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,

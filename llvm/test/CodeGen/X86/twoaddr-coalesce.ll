@@ -9,7 +9,7 @@ define i32 @foo() nounwind {
 ; CHECK:       # %bb.0: # %bb1.thread
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %eax

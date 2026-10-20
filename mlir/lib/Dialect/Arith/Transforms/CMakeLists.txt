@@ -6,19 +6,20 @@ add_mlir_dialect_library(MLIRArithTransforms
   EmulateWideInt.cpp
   EmulateNarrowType.cpp
   ExpandOps.cpp
-  IntNarrowing.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
+  ShardingInterfaceImpl.cpp
   UnsignedWhenEquivalent.cpp
 
   ADDITIONAL_HEADER_DIRS
-  {$MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith/Transforms
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith/Transforms
 
   DEPENDS
   MLIRArithTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisDataFlow
+  MLIRArithCommonConversion
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
@@ -26,8 +27,11 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRFuncTransforms
   MLIRInferIntRangeInterface
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRMemRefDialect
+  MLIRShardDialect
   MLIRPass
+  MLIRShardingInterface
   MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils

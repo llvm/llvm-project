@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -no-phi-elim-live-out-early-exit < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -no-phi-elim-live-out-early-exit < %s | FileCheck %s
 ; Check that we remove the compare and induction variable instructions
 ; after generating hardware loops.
 ; Bug 6685.

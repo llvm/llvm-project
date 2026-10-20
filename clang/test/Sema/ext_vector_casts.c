@@ -11,6 +11,7 @@ typedef float t3 __attribute__ ((vector_size (16)));
 typedef __typeof__(sizeof(int)) size_t;
 typedef unsigned long ulong2 __attribute__ ((ext_vector_type(2)));
 typedef size_t stride4 __attribute__((ext_vector_type(4)));
+typedef _Bool bool4 __attribute__(( ext_vector_type(4) ));
 
 static void test(void) {
     float2 vec2;
@@ -19,6 +20,7 @@ static void test(void) {
     int4 ivec4;
     short8 ish8;
     t3 vec4_3;
+    bool4 bvec4 = 0;
     int *ptr;
     int i;
 
@@ -51,6 +53,9 @@ static void test(void) {
     ivec4 -= ivec4;
     ivec4 |= ivec4;
     ivec4 += ptr; // expected-error {{cannot convert between vector and non-scalar values ('int4' (vector of 4 'int' values) and 'int *')}}
+
+    bvec4 != 0; // expected-warning {{inequality comparison result unused}} \
+                // expected-note {{use '|=' to turn this inequality comparison into an or-assignment}}
 }
 
 typedef __attribute__(( ext_vector_type(2) )) float2 vecfloat2; // expected-error{{invalid vector element type 'float2' (vector of 2 'float' values)}}

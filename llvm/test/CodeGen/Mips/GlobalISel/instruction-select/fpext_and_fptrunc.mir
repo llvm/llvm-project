@@ -19,16 +19,19 @@ body:             |
 
     ; FP32-LABEL: name: fpext
     ; FP32: liveins: $f12
-    ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP32: [[CVT_D32_S:%[0-9]+]]:afgr64 = CVT_D32_S [[COPY]]
-    ; FP32: $d0 = COPY [[CVT_D32_S]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP32-NEXT: [[CVT_D32_S:%[0-9]+]]:afgr64 = nofpexcept CVT_D32_S [[COPY]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[CVT_D32_S]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: fpext
     ; FP64: liveins: $f12
-    ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP64: [[CVT_D64_S:%[0-9]+]]:fgr64 = CVT_D64_S [[COPY]]
-    ; FP64: $d0 = COPY [[CVT_D64_S]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP64-NEXT: [[CVT_D64_S:%[0-9]+]]:fgr64 = nofpexcept CVT_D64_S [[COPY]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[CVT_D64_S]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:fprb(s32) = COPY $f12
     %1:fprb(s64) = G_FPEXT %0(s32)
     $d0 = COPY %1(s64)
@@ -47,16 +50,19 @@ body:             |
 
     ; FP32-LABEL: name: fptrunc
     ; FP32: liveins: $d6
-    ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-    ; FP32: [[CVT_S_D32_:%[0-9]+]]:fgr32 = CVT_S_D32 [[COPY]]
-    ; FP32: $f0 = COPY [[CVT_S_D32_]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+    ; FP32-NEXT: [[CVT_S_D32_:%[0-9]+]]:fgr32 = nofpexcept CVT_S_D32 [[COPY]], implicit $fcr31
+    ; FP32-NEXT: $f0 = COPY [[CVT_S_D32_]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: fptrunc
     ; FP64: liveins: $d6
-    ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-    ; FP64: [[CVT_S_D64_:%[0-9]+]]:fgr32 = CVT_S_D64 [[COPY]]
-    ; FP64: $f0 = COPY [[CVT_S_D64_]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+    ; FP64-NEXT: [[CVT_S_D64_:%[0-9]+]]:fgr32 = nofpexcept CVT_S_D64 [[COPY]], implicit $fcr31
+    ; FP64-NEXT: $f0 = COPY [[CVT_S_D64_]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:fprb(s64) = COPY $d6
     %1:fprb(s32) = G_FPTRUNC %0(s64)
     $f0 = COPY %1(s32)

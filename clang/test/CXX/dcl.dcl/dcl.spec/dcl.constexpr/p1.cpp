@@ -164,11 +164,12 @@ namespace {
 
 #if __cplusplus < 201402L
 namespace ImplicitConstexprDef {
-  struct A {
+  struct A { // #defined-here
     void f(); // expected-note {{member declaration does not match because it is not const qualified}}
   };
 
   constexpr void A::f() { } // expected-warning {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const' to avoid a change in behavior}}
                             // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'ImplicitConstexprDef::A'}}
+                            // expected-note@#defined-here {{defined here}}
 }
 #endif

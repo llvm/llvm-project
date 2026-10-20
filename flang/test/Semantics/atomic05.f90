@@ -4,7 +4,7 @@
 
 program test_atomic_fetch_add
   use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
-  implicit none
+  implicit none(external, type)
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, old_val, non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], repeated_old, repeated_val, array(10)
@@ -41,7 +41,7 @@ program test_atomic_fetch_add
   call atomic_fetch_add(array, val, old_val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_add'
-  call atomic_fetch_add(non_scalar_coarray[1], val, old_val)
+  call atomic_fetch_add(non_scalar_coarray(:)[1], val, old_val)
 
   !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
   call atomic_fetch_add(default_kind_coarray, val, old_val)

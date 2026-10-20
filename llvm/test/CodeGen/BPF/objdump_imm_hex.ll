@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK-DEC %s
-; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump -d --print-imm-hex - | FileCheck --check-prefix=CHECK-HEX %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK-DEC %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -filetype=obj -o - %s | llvm-objdump -d --print-imm-hex - | FileCheck --check-prefix=CHECK-HEX %s
 
 ; Source Code:
 ; int gbl;
@@ -53,8 +53,8 @@ define i32 @test(i64, i64) local_unnamed_addr #0 {
   %14 = phi i32 [ %12, %10 ], [ %7, %4 ]
   %15 = phi i32 [ 2, %10 ], [ 1, %4 ]
   store i32 %14, ptr @gbl, align 4
-; CHECK-DEC: 63 12 00 00 00 00 00 00         *(u32 *)(r2 + 0) = r1
-; CHECK-HEX: 63 12 00 00 00 00 00 00         *(u32 *)(r2 + 0x0) = r1
+; CHECK-DEC: 63 12 00 00 00 00 00 00         *(u32 *)(r2 + 0) = w1
+; CHECK-HEX: 63 12 00 00 00 00 00 00         *(u32 *)(r2 + 0x0) = w1
   br label %16
 
 ; <label>:16:                                     ; preds = %13, %8

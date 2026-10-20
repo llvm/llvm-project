@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-256: error:
+# ERROR-COUNT-288: error:
 # ERROR-NOT: error:
 # CHECK: ctestbb {dfv=of} $123, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x44,0x02,0xf6,0x44,0x80,0x7b,0x7b]
@@ -27,6 +27,19 @@
 # CHECK: ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
          ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
+# Swap mr form
+# CHECK: ctestbb {dfv=of} %bl, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x84,0x5c,0x80,0x7b]
+         ctestbb {dfv=of} 123(%r8,%rax,4), %bl
+# CHECK: ctestbw {dfv=of} %dx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x45,0x02,0x85,0x54,0x80,0x7b]
+         ctestbw {dfv=of} 123(%r8,%rax,4), %dx
+# CHECK: ctestbl {dfv=of} %ecx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x44,0x02,0x85,0x4c,0x80,0x7b]
+         ctestbl {dfv=of} 123(%r8,%rax,4), %ecx
+# CHECK: ctestbq {dfv=of} %r9, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0x54,0xc4,0x02,0x85,0x4c,0x80,0x7b]
+         ctestbq {dfv=of} 123(%r8,%rax,4), %r9
 # CHECK: ctestbb {dfv=of} $123, %bl
 # CHECK: encoding: [0x62,0xf4,0x44,0x02,0xf6,0xc3,0x7b]
          ctestbb {dfv=of} $123, %bl
@@ -771,3 +784,93 @@
 # CHECK: ctesteq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x85,0xcf]
          ctesteq {dfv=of} %r9, %r15
+
+## "{evex} test*" are alias for "ctestt* {dfv=}"
+
+# CHECK: ctesttb	{dfv=}	$123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x04,0x0a,0xf6,0x44,0x80,0x7b,0x7b]
+         {evex} testb	$123, 123(%r8,%rax,4)
+# CHECK: ctesttw	{dfv=}	$1234, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x05,0x0a,0xf7,0x44,0x80,0x7b,0xd2,0x04]
+         {evex} testw	$1234, 123(%r8,%rax,4)
+# CHECK: ctesttl	{dfv=}	$123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x04,0x0a,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         {evex} testl	$123456, 123(%r8,%rax,4)
+# CHECK: ctesttq	{dfv=}	$123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x84,0x0a,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         {evex} testq	$123456, 123(%r8,%rax,4)
+# CHECK: ctesttb	{dfv=}	%bl, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x84,0x5c,0x80,0x7b]
+         {evex} testb	%bl, 123(%r8,%rax,4)
+# CHECK: ctesttw	{dfv=}	%dx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x05,0x0a,0x85,0x54,0x80,0x7b]
+         {evex} testw	%dx, 123(%r8,%rax,4)
+# CHECK: ctesttl	{dfv=}	%ecx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x04,0x0a,0x85,0x4c,0x80,0x7b]
+         {evex} testl	%ecx, 123(%r8,%rax,4)
+# CHECK: ctesttq	{dfv=}	%r9, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0x4c,0x80,0x7b]
+         {evex} testq	%r9, 123(%r8,%rax,4)
+# CHECK: ctesttb	{dfv=}	$123, %bl
+# CHECK: encoding: [0x62,0xf4,0x04,0x0a,0xf6,0xc3,0x7b]
+         {evex} testb	$123, %bl
+# CHECK: ctesttw	{dfv=}	$1234, %dx
+# CHECK: encoding: [0x62,0xf4,0x05,0x0a,0xf7,0xc2,0xd2,0x04]
+         {evex} testw	$1234, %dx
+# CHECK: ctesttl	{dfv=}	$123456, %ecx
+# CHECK: encoding: [0x62,0xf4,0x04,0x0a,0xf7,0xc1,0x40,0xe2,0x01,0x00]
+         {evex} testl	$123456, %ecx
+# CHECK: ctesttq	{dfv=}	$123456, %r9
+# CHECK: encoding: [0x62,0xd4,0x84,0x0a,0xf7,0xc1,0x40,0xe2,0x01,0x00]
+         {evex} testq	$123456, %r9
+# CHECK: ctesttb	{dfv=}	%bl, %dl
+# CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x84,0xda]
+         {evex} testb	%bl, %dl
+# CHECK: ctesttw	{dfv=}	%dx, %ax
+# CHECK: encoding: [0x62,0xf4,0x05,0x0a,0x85,0xd0]
+         {evex} testw	%dx, %ax
+# CHECK: ctesttl	{dfv=}	%ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x04,0x0a,0x85,0xca]
+         {evex} testl	%ecx, %edx
+# CHECK: ctesttq	{dfv=}	%r9, %r15
+# CHECK: encoding: [0x62,0x54,0x84,0x0a,0x85,0xcf]
+         {evex} testq	%r9, %r15
+
+## Condition Code Aliases
+
+# CHECK: ctestbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestcl {dfv=of} %ecx, %edx
+# CHECK: ctestbl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x02,0x85,0xca]
+         ctestnael {dfv=of} %ecx, %edx
+# CHECK: ctestael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestnbl {dfv=of} %ecx, %edx
+# CHECK: ctestael {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x03,0x85,0xca]
+         ctestncl {dfv=of} %ecx, %edx
+# CHECK: ctestel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x04,0x85,0xca]
+         ctestzl {dfv=of} %ecx, %edx
+# CHECK: ctestnel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x05,0x85,0xca]
+         ctestnzl {dfv=of} %ecx, %edx
+# CHECK: ctestal {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x07,0x85,0xca]
+         ctestnbel {dfv=of} %ecx, %edx
+# CHECK: ctestll {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0c,0x85,0xca]
+         ctestngel {dfv=of} %ecx, %edx
+# CHECK: ctestgel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0d,0x85,0xca]
+         ctestnll {dfv=of} %ecx, %edx
+# CHECK: ctestlel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0e,0x85,0xca]
+         ctestngl {dfv=of} %ecx, %edx
+# CHECK: ctestgl {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x0f,0x85,0xca]
+         ctestnlel {dfv=of} %ecx, %edx
+# CHECK: ctestbel {dfv=of} %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x44,0x06,0x85,0xca]
+         ctestnal {dfv=of} %ecx, %edx

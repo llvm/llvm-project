@@ -84,7 +84,7 @@ public:
     assert(Index / PageSize < PageToDataPtrs.size());
     T *&PagePtr = PageToDataPtrs[Index / PageSize];
     // If the page was not yet allocated, allocate it.
-    if (!PagePtr) {
+    if (LLVM_UNLIKELY(!PagePtr)) {
       PagePtr = Allocator.getPointer()->template Allocate<T>(PageSize);
       // We need to invoke the default constructor on all the elements of the
       // page.
@@ -189,8 +189,7 @@ public:
         while (ElementIdx < PV->Size &&
                !PV->PageToDataPtrs[ElementIdx / PageSize])
           ElementIdx += PageSize;
-        if (ElementIdx > PV->Size)
-          ElementIdx = PV->Size;
+        ElementIdx = std::min(ElementIdx, PV->Size);
       }
 
       return *this;

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMacroFusion.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/MacroFusion.h"
 
@@ -26,14 +25,19 @@ namespace {
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
+  if (isNonDataDep(Dep))
+    return false;
   const SIInstrInfo &TII = static_cast<const SIInstrInfo&>(TII_);
 
   switch (SecondMI.getOpcode()) {
   case AMDGPU::V_ADDC_U32_e64:
   case AMDGPU::V_SUBB_U32_e64:
   case AMDGPU::V_SUBBREV_U32_e64:
-  case AMDGPU::V_CNDMASK_B32_e64: {
+  case AMDGPU::V_CNDMASK_B32_e64:
+  case AMDGPU::V_CNDMASK_B16_t16_e64:
+  case AMDGPU::V_CNDMASK_B16_fake16_e64: {
     // Try to cluster defs of condition registers to their uses. This improves
     // the chance VCC will be available which will allow shrinking to VOP2
     // encodings.

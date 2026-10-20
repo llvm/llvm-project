@@ -1,7 +1,7 @@
 // REQUIRES: crt
 
 // RUN: %clang -fno-use-init-array -g -c %s -o %t.o
-// RUN: %clang -o %t -no-pie -nostdlib %crt1 %crti %crtbegin %t.o -lc %libgcc %crtend %crtn
+// RUN: %clang -o %t -no-pie -nostdlib %crt1 %crti %crtbegin %t.o %libc %libgcc %crtend %crtn
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>

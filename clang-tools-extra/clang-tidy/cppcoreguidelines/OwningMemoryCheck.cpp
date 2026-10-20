@@ -1,4 +1,4 @@
-//===--- OwningMemoryCheck.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "OwningMemoryCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
@@ -157,7 +155,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                              .bind("bad_owner_creation_parameter"))),
                      this);
 
-  auto IsNotInSubLambda = stmt(
+  const auto IsNotInSubLambda = stmt(
       hasAncestor(
           stmt(anyOf(equalsBoundNode("body"), lambdaExpr())).bind("scope")),
       hasAncestor(stmt(equalsBoundNode("scope"), equalsBoundNode("body"))));

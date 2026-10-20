@@ -92,3 +92,8 @@ class FinalNonTemplate final {};
 // CHECK: class FinalNonTemplate final {
 template <typename T> class FinalTemplate final {};
 // CHECK: template <typename T> class FinalTemplate final {
+
+class alignas(8) AlignedClass {};
+// CHECK: class alignas(8) AlignedClass {
+template<typename T> class alignas(4) AlignedClassTemplate {};
+// CHECK: class alignas(4) AlignedClassTemplate {

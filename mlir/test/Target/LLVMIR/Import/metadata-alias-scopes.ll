@@ -22,7 +22,7 @@ define void @alias_scope(ptr %arg1) {
   ret void
 }
 
-!0 = distinct !{!0, !"The domain"}
+!0 = distinct !{!0, i1 false, !"The domain"}
 !1 = distinct !{!1, !0, !"The first scope"}
 !2 = distinct !{!2, !0}
 !3 = distinct !{!3, !0}
@@ -49,8 +49,8 @@ define void @two_domains(ptr %arg1) {
   ret void
 }
 
-!0 = distinct !{!0, !"The domain"}
-!1 = distinct !{!1}
+!0 = distinct !{!0, i1 false, !"The domain"}
+!1 = distinct !{!1, i1 false}
 !2 = !{!2, !0}
 !3 = !{!3, !1}
 !4 = !{!2}
@@ -89,6 +89,41 @@ declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 declare void @foo(ptr %arg1)
 
-!0 = distinct !{!0, !"The domain"}
+!0 = distinct !{!0, i1 false, !"The domain"}
 !1 = !{!1, !0}
 !2 = !{!1}
+
+; // -----
+
+; CHECK: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<id = "domain1">
+; CHECK: #[[$SCOPE0:.*]] = #llvm.alias_scope<id = "scopeid1", domain = #[[DOMAIN]], description = "The first scope">
+; CHECK: #[[$SCOPE1:.*]] = #llvm.alias_scope<id = "scopeid2", domain = #[[DOMAIN]]>
+; CHECK: #[[$SCOPE2:.*]] = #llvm.alias_scope<id = "scopeid3", domain = #[[DOMAIN]]>
+
+; CHECK-LABEL: llvm.func @alias_scope
+define void @alias_scope(ptr %arg1) {
+  ; CHECK: llvm.load
+  ; CHECK-SAME:  alias_scopes = [#[[$SCOPE0]]]
+  ; CHECK-SAME:  noalias_scopes = [#[[$SCOPE1]], #[[$SCOPE2]]]
+  %1 = load i32, ptr %arg1, !alias.scope !4, !noalias !7
+  ; CHECK: llvm.load
+  ; CHECK-SAME:  alias_scopes = [#[[$SCOPE1]]]
+  ; CHECK-SAME:  noalias_scopes = [#[[$SCOPE0]], #[[$SCOPE2]]]
+  %2 = load i32, ptr %arg1, !alias.scope !5, !noalias !8
+  ; CHECK: llvm.load
+  ; CHECK-SAME:  alias_scopes = [#[[$SCOPE2]]]
+  ; CHECK-SAME:  noalias_scopes = [#[[$SCOPE0]], #[[$SCOPE1]]]
+  %3 = load i32, ptr %arg1, !alias.scope !6, !noalias !9
+  ret void
+}
+
+!0 = !{!"domain1", i1 false}
+!1 = !{!"scopeid1", !0, !"The first scope"}
+!2 = !{!"scopeid2", !0}
+!3 = !{!"scopeid3", !0}
+!4 = !{!1}
+!5 = !{!2}
+!6 = !{!3}
+!7 = !{!2, !3}
+!8 = !{!1, !3}
+!9 = !{!1, !2}

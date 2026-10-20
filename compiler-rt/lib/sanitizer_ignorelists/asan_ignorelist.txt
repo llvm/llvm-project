@@ -1,0 +1,14 @@
+# Ignorelist for AddressSanitizer. Turns off instrumentation of particular
+# functions or sources. Use with care. You may set location of ignorelist
+# at compile-time using -fsanitize-ignorelist=<path> flag.
+
+# Example usage:
+# fun:*bad_function_name*
+# src:file_with_tricky_code.cc
+# global:*global_with_bad_access_or_initialization*
+# global:*global_with_initialization_issues*=init
+# type:*Namespace::ClassName*=init
+
+# Stack buffer overflow in VC/INCLUDE/xlocnum, see
+# https://web.archive.org/web/20140729123024/https://connect.microsoft.com/VisualStudio/feedback/details/829931/vs2012-and-vs2013-istream-code-reads-off-the-end-of-its-non-null-terminated-stack-copied-string
+fun:*_Find_elem@*@std*

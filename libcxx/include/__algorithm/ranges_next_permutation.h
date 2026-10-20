@@ -40,12 +40,10 @@ namespace ranges {
 template <class _InIter>
 using next_permutation_result = in_found_result<_InIter>;
 
-namespace __next_permutation {
-
-struct __fn {
+struct __next_permutation {
   template <bidirectional_iterator _Iter, sentinel_for<_Iter> _Sent, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<_Iter, _Comp, _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr next_permutation_result<_Iter>
+  constexpr next_permutation_result<_Iter>
   operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __result = std::__next_permutation<_RangeAlgPolicy>(
         std::move(__first), std::move(__last), std::__make_projected(__comp, __proj));
@@ -54,7 +52,7 @@ struct __fn {
 
   template <bidirectional_range _Range, class _Comp = ranges::less, class _Proj = identity>
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
-  _LIBCPP_HIDE_FROM_ABI constexpr next_permutation_result<borrowed_iterator_t<_Range>>
+  constexpr next_permutation_result<borrowed_iterator_t<_Range>>
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __result = std::__next_permutation<_RangeAlgPolicy>(
         ranges::begin(__range), ranges::end(__range), std::__make_projected(__comp, __proj));
@@ -62,10 +60,8 @@ struct __fn {
   }
 };
 
-} // namespace __next_permutation
-
 inline namespace __cpo {
-constexpr inline auto next_permutation = __next_permutation::__fn{};
+constexpr inline auto next_permutation = __next_permutation{};
 } // namespace __cpo
 } // namespace ranges
 

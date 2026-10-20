@@ -13,6 +13,10 @@
 
 #include "NativeRegisterContextLinux_ppc64le.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Register/Common/RegisterInfo_ppc64le.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,16 +24,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
-
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
-#include <sys/socket.h>
-#include <elf.h>
 #include <asm/ptrace.h>
+#include <elf.h>
+#include <sys/socket.h>
 
 #define REG_CONTEXT_SIZE                                                       \
   (GetGPRSize() + GetFPRSize() + sizeof(m_vmx_ppc64le) + sizeof(m_vsx_ppc64le))
@@ -132,7 +131,7 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
 NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)),
+          native_thread, new RegisterInfo_ppc64le(target_arch)),
       NativeRegisterContextLinux(native_thread) {
   if (target_arch.GetMachine() != llvm::Triple::ppc64le) {
     llvm_unreachable("Unhandled target architecture.");
@@ -142,7 +141,6 @@ NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
   ::memset(&m_fpr_ppc64le, 0, sizeof(m_fpr_ppc64le));
   ::memset(&m_vmx_ppc64le, 0, sizeof(m_vmx_ppc64le));
   ::memset(&m_vsx_ppc64le, 0, sizeof(m_vsx_ppc64le));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
 }
 
 uint32_t NativeRegisterContextLinux_ppc64le::GetRegisterSetCount() const {
@@ -169,7 +167,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -240,8 +238,9 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
     reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                 eByteOrderLittle, error);
   } else {
-    return Status("failed - register wasn't recognized to be a GPR, FPR, VSX "
-                  "or VMX, read strategy unknown");
+    return Status::FromErrorString(
+        "failed - register wasn't recognized to be a GPR, FPR, VSX "
+        "or VMX, read strategy unknown");
   }
 
   return error;
@@ -251,13 +250,13 @@ Status NativeRegisterContextLinux_ppc64le::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   Status error;
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   if (IsGPR(reg_index)) {
     error = ReadGPR();
@@ -350,8 +349,9 @@ Status NativeRegisterContextLinux_ppc64le::WriteRegister(
     return Status();
   }
 
-  return Status("failed - register wasn't recognized to be a GPR, FPR, VSX "
-                "or VMX, write strategy unknown");
+  return Status::FromErrorString(
+      "failed - register wasn't recognized to be a GPR, FPR, VSX "
+      "or VMX, write strategy unknown");
 }
 
 Status NativeRegisterContextLinux_ppc64le::ReadAllRegisterValues(
@@ -392,14 +392,14 @@ Status NativeRegisterContextLinux_ppc64le::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_ppc64le::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_ppc64le::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
@@ -408,10 +408,11 @@ Status NativeRegisterContextLinux_ppc64le::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_ppc64le::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_ppc64le::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
 

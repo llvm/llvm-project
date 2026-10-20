@@ -4,29 +4,29 @@
 // CHECK:      File 1, [[@LINE+7]]:12 -> [[@LINE+7]]:38 = #0
 // CHECK-NEXT: File 1, [[@LINE+6]]:15 -> [[@LINE+6]]:28 = (#0 + #2)
 // CHECK-NEXT: File 1, [[@LINE+5]]:21 -> [[@LINE+5]]:22 = (#0 + #2)
-// CHECK: Branch,File 1, [[@LINE+4]]:21 -> [[@LINE+4]]:22 = 0, 0
+// CHECK: Branch,File 1, [[@LINE+4]]:21 -> [[@LINE+4]]:22 = 0, ((#0 + #2) - #3)
 // CHECK-NEXT: File 1, [[@LINE+3]]:24 -> [[@LINE+3]]:26 = #3
 // CHECK-NEXT: File 1, [[@LINE+2]]:36 -> [[@LINE+2]]:37 = (#0 + #2)
-// CHECK-NEXT: Branch,File 1, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = 0, 0
+// CHECK-NEXT: Branch,File 1, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = 0, #0
 #define M1 do { if (0) {} } while (0)
 // CHECK-NEXT: File 2, [[@LINE+12]]:15 -> [[@LINE+12]]:41 = #0
 // CHECK-NEXT: File 2, [[@LINE+11]]:18 -> [[@LINE+11]]:31 = (#0 + #4)
 // CHECK-NEXT: File 2, [[@LINE+10]]:24 -> [[@LINE+10]]:25 = (#0 + #4)
 // CHECK: File 2, [[@LINE+9]]:27 -> [[@LINE+9]]:29 = #5
 // CHECK-NEXT: File 2, [[@LINE+8]]:39 -> [[@LINE+8]]:40 = (#0 + #4)
-// CHECK-NEXT: Branch,File 2, [[@LINE+7]]:39 -> [[@LINE+7]]:40 = 0, 0
+// CHECK-NEXT: Branch,File 2, [[@LINE+7]]:39 -> [[@LINE+7]]:40 = 0, #0
 // CHECK-NEXT: File 3, [[@LINE+6]]:15 -> [[@LINE+6]]:41 = #0
 // CHECK-NEXT: File 3, [[@LINE+5]]:18 -> [[@LINE+5]]:31 = (#0 + #6)
 // CHECK-NEXT: File 3, [[@LINE+4]]:24 -> [[@LINE+4]]:25 = (#0 + #6)
 // CHECK: File 3, [[@LINE+3]]:27 -> [[@LINE+3]]:29 = #7
 // CHECK-NEXT: File 3, [[@LINE+2]]:39 -> [[@LINE+2]]:40 = (#0 + #6)
-// CHECK-NEXT: Branch,File 3, [[@LINE+1]]:39 -> [[@LINE+1]]:40 = 0, 0
+// CHECK-NEXT: Branch,File 3, [[@LINE+1]]:39 -> [[@LINE+1]]:40 = 0, #0
 #define M2(x) do { if (x) {} } while (0)
 // CHECK-NEXT: File 4, [[@LINE+5]]:15 -> [[@LINE+5]]:38 = #0
 // CHECK-NEXT: File 4, [[@LINE+4]]:18 -> [[@LINE+4]]:28 = (#0 + #8)
 // CHECK-NEXT: Expansion,File 4, [[@LINE+3]]:20 -> [[@LINE+3]]:22 = (#0 + #8)
 // CHECK-NEXT: File 4, [[@LINE+2]]:36 -> [[@LINE+2]]:37 = (#0 + #8)
-// CHECK-NEXT: Branch,File 4, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = 0, 0
+// CHECK-NEXT: Branch,File 4, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = 0, #0
 #define M3(x) do { M2(x); } while (0)
 // CHECK-NEXT: File 5, [[@LINE+4]]:15 -> [[@LINE+4]]:27 = #0
 // CHECK-NEXT: File 5, [[@LINE+3]]:16 -> [[@LINE+3]]:19 = #0

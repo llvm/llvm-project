@@ -14,7 +14,7 @@ Sections:
       - Index:           0
         Locals:          []
         Body:            0B
-  # CHECK: yaml2obj: error: out of order section type: 3
+  # CHECK: yaml2obj: error: out of order section type: FUNCTION
   - Type:            FUNCTION
     FunctionTypes:   [ 0 ]
 ...

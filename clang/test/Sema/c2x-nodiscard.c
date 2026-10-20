@@ -31,16 +31,20 @@ enum E2 get_e(void);
 [[nodiscard]] int get_i(void);
 
 void f2(void) {
-  get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  get_s3(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Wrong}}
+  get_s(); // expected-warning {{ignoring return value of type 'S4' declared with 'nodiscard' attribute}}
+  get_s3(); // expected-warning {{ignoring return value of type 'S3' declared with 'nodiscard' attribute: Wrong}}
   get_i(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  get_e(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  get_e(); // expected-warning {{ignoring return value of type 'E2' declared with 'nodiscard' attribute}}
 
   // Okay, warnings are not encouraged
   (void)get_s();
   (void)get_s3();
   (void)get_i();
   (void)get_e();
+
+  One; // expected-warning {{expression result unused}}
+  (enum E2)(0); // expected-warning {{expression result unused}}
+  (struct S4){1}; // expected-warning {{expression result unused}}
 }
 
 struct [[nodiscard]] error_info{
@@ -50,7 +54,26 @@ struct [[nodiscard]] error_info{
 struct error_info enable_missile_safety_mode(void);
 void launch_missiles(void);
 void test_missiles(void) {
-  enable_missile_safety_mode(); // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
+  enable_missile_safety_mode(); // expected-warning {{ignoring return value of type 'error_info' declared with 'nodiscard'}}
   launch_missiles();
 }
 
+[[nodiscard]] int f3();
+
+void GH104391() {
+#define M (unsigned int) f3()
+  M; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+[[nodiscard]] typedef int NoDInt; // expected-warning {{'[[nodiscard]]' attribute ignored when applied to a typedef}}
+typedef __attribute__((warn_unused)) int WUInt; // expected-warning {{'warn_unused' attribute only applies to structs, unions, and classes}}
+typedef __attribute__((warn_unused_result)) int WURInt;
+NoDInt get_nodint();
+WUInt get_wuint();
+WURInt get_wurint();
+
+void f4(void) {
+  get_nodint(); // no warning because attribute is ignored
+  get_wuint();  // no warning because attribute is ignored
+  get_wurint(); // expected-warning {{ignoring return value of type 'WURInt' declared with 'warn_unused_result' attribute}}
+}

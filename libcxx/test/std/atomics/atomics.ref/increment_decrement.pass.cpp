@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +18,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 #include "atomic_helpers.h"
 #include "test_macros.h"
@@ -41,43 +43,78 @@ constexpr bool does_not_have_increment_nor_decrement_operators() {
 
 template <typename T>
 struct TestDoesNotHaveIncrementDecrement {
-  void operator()() const { static_assert(does_not_have_increment_nor_decrement_operators<T>()); }
+  void operator()() const { static_assert(does_not_have_increment_nor_decrement_operators<std::atomic_ref<T>>()); }
 };
 
 template <typename T>
 struct TestIncrementDecrement {
   void operator()() const {
-    static_assert(std::is_integral_v<T>);
+    if constexpr (std::is_integral_v<T>) {
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
+      std::atomic_ref<T> const a(x);
 
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
+      {
+        std::same_as<T> decltype(auto) y = ++a;
+        assert(y == T(2));
+        assert(x == T(2));
+        ASSERT_NOEXCEPT(++a);
+      }
 
-    {
-      std::same_as<T> decltype(auto) y = ++a;
-      assert(y == T(2));
-      assert(x == T(2));
-      ASSERT_NOEXCEPT(++a);
-    }
+      {
+        std::same_as<T> decltype(auto) y = --a;
+        assert(y == T(1));
+        assert(x == T(1));
+        ASSERT_NOEXCEPT(--a);
+      }
 
-    {
-      std::same_as<T> decltype(auto) y = --a;
-      assert(y == T(1));
-      assert(x == T(1));
-      ASSERT_NOEXCEPT(--a);
-    }
+      {
+        std::same_as<T> decltype(auto) y = a++;
+        assert(y == T(1));
+        assert(x == T(2));
+        ASSERT_NOEXCEPT(a++);
+      }
 
-    {
-      std::same_as<T> decltype(auto) y = a++;
-      assert(y == T(1));
-      assert(x == T(2));
-      ASSERT_NOEXCEPT(a++);
-    }
+      {
+        std::same_as<T> decltype(auto) y = a--;
+        assert(y == T(2));
+        assert(x == T(1));
+        ASSERT_NOEXCEPT(a--);
+      }
+    } else if constexpr (std::is_pointer_v<T>) {
+      using U = std::remove_pointer_t<T>;
+      U t[9]  = {};
+      alignas(std::atomic_ref<T>::required_alignment) T p{&t[1]};
+      std::atomic_ref<T> const a(p);
 
-    {
-      std::same_as<T> decltype(auto) y = a--;
-      assert(y == T(2));
-      assert(x == T(1));
-      ASSERT_NOEXCEPT(a--);
+      {
+        std::same_as<T> decltype(auto) y = ++a;
+        assert(y == &t[2]);
+        assert(p == &t[2]);
+        ASSERT_NOEXCEPT(++a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = --a;
+        assert(y == &t[1]);
+        assert(p == &t[1]);
+        ASSERT_NOEXCEPT(--a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a++;
+        assert(y == &t[1]);
+        assert(p == &t[2]);
+        ASSERT_NOEXCEPT(a++);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a--;
+        assert(y == &t[2]);
+        assert(p == &t[1]);
+        ASSERT_NOEXCEPT(a--);
+      }
+    } else {
+      static_assert(std::is_void_v<T>);
     }
   }
 };
@@ -87,7 +124,7 @@ int main(int, char**) {
 
   TestEachFloatingPointType<TestDoesNotHaveIncrementDecrement>()();
 
-  TestEachPointerType<TestDoesNotHaveIncrementDecrement>()();
+  TestEachPointerType<TestIncrementDecrement>()();
 
   TestDoesNotHaveIncrementDecrement<bool>()();
   TestDoesNotHaveIncrementDecrement<UserAtomicType>()();

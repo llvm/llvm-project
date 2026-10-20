@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 
 namespace mlir {
 class MLIRContext;
@@ -114,6 +115,22 @@ FailureOr<Value>
 castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                  MaskingOpInterface maskingOp,
                                  RewriterBase &rewriter);
+
+// Structure to hold the range of `vector.vscale`.
+struct VscaleRange {
+  unsigned vscaleMin;
+  unsigned vscaleMax;
+};
+
+/// Attempts to eliminate redundant vector masks by replacing them with all-true
+/// constants at the top of the function (which results in the masks folding
+/// away).
+/// `vscaleRange` is only needed to prove that a scalable mask dimension is
+/// all-true; without it, only fixed-size dimensions are considered.
+///
+/// Note: Currently, this only runs for vector.create_mask ops.
+void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
+                          std::optional<VscaleRange> vscaleRange = {});
 
 } // namespace vector
 } // namespace mlir

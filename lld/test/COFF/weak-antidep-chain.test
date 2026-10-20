@@ -1,0 +1,68 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows chain-bad.s -o chain-bad.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows chain-bad2.s -o chain-bad2.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows globals-bad.s -o globals-bad.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows chain-good.s -o chain-good.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows chain-good2.s -o chain-good2.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows globals-good.s -o globals-good.obj
+
+Temporary anti-dependency chains are allowed as long as they are broken by non-alias symbols.
+
+RUN: lld-link -machine:amd64 -dll -noentry -out:test.dll chain-good.obj globals-good.obj
+RUN: lld-link -machine:amd64 -dll -noentry -out:test.dll chain-good2.obj globals-good.obj
+
+Chaining of anti-dependency symbols is not allowed.
+
+RUN: not lld-link -machine:amd64 -dll -noentry -out:test.dll chain-bad.obj globals-bad.obj 2>&1 \
+RUN:              | FileCheck -check-prefix=ANTIDEP %s
+RUN: not lld-link -machine:amd64 -dll -noentry -out:test.dll chain-bad2.obj globals-bad.obj 2>&1 \
+RUN:              | FileCheck -check-prefix=ANTIDEP %s
+
+ANTIDEP:      lld-link: error: undefined symbol: sym
+ANTIDEP-NEXT: >>> referenced by chain-bad
+
+#--- chain-bad.s
+    .weak_anti_dep sym
+.set sym,sym2
+    .weak_anti_dep sym2
+.set sym2,sym3
+
+#--- chain-bad2.s
+    .weak_anti_dep sym2
+.set sym2,sym3
+    .weak sym
+.set sym,sym2
+
+#--- globals-bad.s
+    .section .test,"r"
+    .global sym3
+.set sym3,3
+
+#--- chain-good.s
+    .weak_anti_dep sym
+.set sym,sym2
+    .weak_anti_dep sym2
+.set sym2,sym3
+    .weak_anti_dep sym3
+.set sym3,sym4
+    .weak_anti_dep sym4
+
+#--- chain-good2.s
+    .weak_anti_dep sym
+.set sym,sym2
+    .weak_anti_dep sym2
+.set sym2,sym3
+    .weak_anti_dep sym3
+.set sym3,weak_sym
+    .weak weak_sym
+.set weak_sym,sym4
+    .weak_anti_dep sym4
+
+#--- globals-good.s
+    .section .test,"r"
+    .global sym2
+.set sym2,2
+    .global sym4
+.set sym4,4

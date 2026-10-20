@@ -57,6 +57,7 @@ public:
   uint32_t initProt = 0;
   uint32_t flags = 0;
   uint8_t index;
+  bool needsThunks = false;
 
   llvm::TinyPtrVector<Defined *> segmentStartSymbols;
   llvm::TinyPtrVector<Defined *> segmentEndSymbols;

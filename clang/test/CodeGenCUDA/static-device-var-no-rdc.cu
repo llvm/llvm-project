@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
@@ -9,7 +9,7 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV-NEG %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
@@ -50,7 +50,7 @@ static __device__ int x5;
 }
 
 // Check a static constant variable referenced by host is externalized.
-// DEV-DAG: @_ZL1y ={{.*}} addrspace(4) externally_initialized global i32 0
+// DEV-DAG: @_ZL1y ={{.*}} addrspace(4) externally_initialized constant i32 0
 // HOST-DAG: @_ZL1y = internal global i32 undef
 // HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 

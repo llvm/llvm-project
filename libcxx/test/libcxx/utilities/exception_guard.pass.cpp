@@ -10,6 +10,7 @@
 
 // UNSUPPORTED: no-exceptions
 
+#include <__utility/exception_guard.h>
 #include <cassert>
 #include <type_traits>
 #include <utility>

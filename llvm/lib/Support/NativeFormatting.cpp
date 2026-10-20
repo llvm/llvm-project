@@ -11,7 +11,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cmath>
@@ -54,7 +53,8 @@ static void writeWithCommas(raw_ostream &S, ArrayRef<char> Buffer) {
 
 template <typename T>
 static void write_unsigned_impl(raw_ostream &S, T N, size_t MinDigits,
-                                IntegerStyle Style, bool IsNegative) {
+                                IntegerStyle Style, bool IsNegative,
+                                bool NonNegativePlus) {
   static_assert(std::is_unsigned_v<T>, "Value is not unsigned!");
 
   char NumberBuffer[128];
@@ -62,6 +62,8 @@ static void write_unsigned_impl(raw_ostream &S, T N, size_t MinDigits,
 
   if (IsNegative)
     S << '-';
+  else if (NonNegativePlus)
+    S << '+';
 
   if (Len < MinDigits && Style != IntegerStyle::Number) {
     for (size_t I = Len; I < MinDigits; ++I)
@@ -77,59 +79,61 @@ static void write_unsigned_impl(raw_ostream &S, T N, size_t MinDigits,
 
 template <typename T>
 static void write_unsigned(raw_ostream &S, T N, size_t MinDigits,
-                           IntegerStyle Style, bool IsNegative = false) {
+                           IntegerStyle Style, bool IsNegative = false,
+                           bool NonNegativePlus = false) {
   // Output using 32-bit div/mod if possible.
   if (N == static_cast<uint32_t>(N))
     write_unsigned_impl(S, static_cast<uint32_t>(N), MinDigits, Style,
-                        IsNegative);
+                        IsNegative, NonNegativePlus);
   else
-    write_unsigned_impl(S, N, MinDigits, Style, IsNegative);
+    write_unsigned_impl(S, N, MinDigits, Style, IsNegative, NonNegativePlus);
 }
 
 template <typename T>
 static void write_signed(raw_ostream &S, T N, size_t MinDigits,
-                         IntegerStyle Style) {
+                         IntegerStyle Style, bool NonNegativePlus = false) {
   static_assert(std::is_signed_v<T>, "Value is not signed!");
 
   using UnsignedT = std::make_unsigned_t<T>;
 
   if (N >= 0) {
-    write_unsigned(S, static_cast<UnsignedT>(N), MinDigits, Style);
+    write_unsigned(S, static_cast<UnsignedT>(N), MinDigits, Style, false,
+                   NonNegativePlus);
     return;
   }
 
   UnsignedT UN = -(UnsignedT)N;
-  write_unsigned(S, UN, MinDigits, Style, true);
+  write_unsigned(S, UN, MinDigits, Style, true, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, unsigned int N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_unsigned(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_unsigned(S, N, MinDigits, Style, false, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, int N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_signed(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_signed(S, N, MinDigits, Style, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, unsigned long N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_unsigned(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_unsigned(S, N, MinDigits, Style, false, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, long N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_signed(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_signed(S, N, MinDigits, Style, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_unsigned(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_unsigned(S, N, MinDigits, Style, false, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, long long N, size_t MinDigits,
-                         IntegerStyle Style) {
-  write_signed(S, N, MinDigits, Style);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_signed(S, N, MinDigits, Style, NonNegativePlus);
 }
 
 void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,

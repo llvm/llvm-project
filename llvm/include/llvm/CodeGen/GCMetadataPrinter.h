@@ -34,9 +34,11 @@ class StackMaps;
 /// defaults from Registry.
 using GCMetadataPrinterRegistry = Registry<GCMetadataPrinter>;
 
+extern template class LLVM_TEMPLATE_ABI Registry<GCMetadataPrinter>;
+
 /// GCMetadataPrinter - Emits GC metadata as assembly code.  Instances are
 /// created, managed, and owned by the AsmPrinter.
-class GCMetadataPrinter {
+class LLVM_ABI GCMetadataPrinter {
 private:
   friend class AsmPrinter;
 

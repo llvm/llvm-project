@@ -1,0 +1,98 @@
+## SystemZDisassembler sets the branch target information during getInstruction instead of printInst.
+## Test we display the branch targets correctly in the presence of --adjust-vma.
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj a.yaml -o out
+# RUN: llvm-objdump -td --adjust-vma=0x200000 --no-show-raw-insn out | FileCheck %s --match-full-lines
+
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: 0000000001200104 l       .text  0000000000000000 f1
+# CHECK-NEXT: 0000000001200106 l       .text  0000000000000000 f2
+# CHECK-NEXT: 0000000000000800 l       *ABS*  0000000000000000 abs
+
+# CHECK:      00000000012000f8 <_start>:
+# CHECK-NEXT:  12000f8: brasl   %r14, 0x1200104
+# CHECK-NEXT:  12000fe: brasl   %r14, 0x1200106
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000001200104 <f1>:
+# CHECK-NEXT:  1200104: br      %r14
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000001200106 <f2>:
+# CHECK-NEXT:  1200106: br      %r14
+
+#--- a.s
+.globl _start
+_start:
+  brasl %r14, f1
+  brasl %r14, f2
+
+f1:
+  br %r14
+f2:
+  br %r14
+
+abs = 0x800
+#--- gen
+LLD_IN_TEST=1 clang --target=s390x-linux -no-pie -nostdlib -Wl,--no-rosegment,-zseparate-code,-znorelro,-znognustack -fuse-ld=lld a.s -o a
+obj2yaml a
+#--- a.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  Type:            ET_EXEC
+  Machine:         EM_S390
+  Entry:           0x10000F8
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x1000040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x10000E8
+    Offset:          0xE8
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .text
+    VAddr:           0x1000000
+    Align:           0x1000
+    Offset:          0x0
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10000E8
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C6436342E736F2E3100
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10000F8
+    AddressAlign:    0x4
+    Content:         C0E500000006C0E50000000407FE07FE
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Offset:          0x1000
+    Content:         4C696E6B65723A204C4C442032312E302E3000
+Symbols:
+  - Name:            f1
+    Section:         .text
+    Value:           0x1000104
+  - Name:            f2
+    Section:         .text
+    Value:           0x1000106
+  - Name:            abs
+    Index:           SHN_ABS
+    Value:           0x800
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10000F8
+...

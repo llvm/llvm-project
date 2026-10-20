@@ -28,7 +28,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -79,6 +78,9 @@ bool ProvenanceAnalysis::relatedPHI(const PHINode *A,
 /// Test if the value of P, or any value covered by its provenance, is ever
 /// stored within the function (not counting callees).
 static bool IsStoredObjCPointer(const Value *P) {
+  if (!P->hasUseList())
+    return true; // Assume the worst for a constant pointer.
+
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *, 8> Worklist;
   Worklist.push_back(P);

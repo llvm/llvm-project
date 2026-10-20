@@ -1,4 +1,4 @@
-//===--- AvoidNSObjectNewCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::google::objc {
 /// style guide.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-nsobject-new.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-nsobject-new.html
 class AvoidNSObjectNewCheck : public ClangTidyCheck {
 public:
   AvoidNSObjectNewCheck(StringRef Name, ClangTidyContext *Context)

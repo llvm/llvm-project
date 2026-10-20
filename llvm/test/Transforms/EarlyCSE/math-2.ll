@@ -4,7 +4,7 @@
 declare double @atan2(double, double) #0
 define double @f_atan2() {
 ; CHECK-LABEL: @f_atan2(
-; CHECK-NEXT:    ret double 0x3FDDAC6{{.+}}
+; CHECK-NEXT:    ret double f0x3FDDAC6{{.+}}
 ;
   %res = tail call fast double @atan2(double 1.0, double 2.0)
   ret double %res
@@ -96,6 +96,24 @@ define double @i_powi() {
 ;
   %res = tail call fast double @llvm.powi.f64.i32(double 1.0, i32 2)
   ret double %res
+}
+
+; Make sure that the type is correct after constant folding
+
+define half @pr98665() {
+; CHECK-LABEL: @pr98665(
+; CHECK-NEXT:    ret half 1.000000e+00
+;
+  %x = call half @llvm.powi.f16.i32(half 0xH3C00, i32 1)
+  ret half %x
+}
+
+define float @powi_f32() {
+; CHECK-LABEL: @powi_f32(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %y = call float @llvm.powi.f32.i32(float 0.0, i32 10)
+  ret float %y
 }
 
 attributes #0 = { nofree nounwind willreturn }

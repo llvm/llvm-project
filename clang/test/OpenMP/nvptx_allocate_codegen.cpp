@@ -87,10 +87,9 @@ void bar() {
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[B:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, ptr @_ZZ4mainE1a, align 4
-// CHECK1-NEXT:    store double 3.000000e+00, ptr [[B]], align 8
+// CHECK1-NEXT:    store double 3.000000e+00, ptr @b1, align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //
@@ -111,7 +110,7 @@ void bar() {
 // CHECK1-NEXT:    [[BAR_B:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 // CHECK1-NEXT:    ret void
 //
 //

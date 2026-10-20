@@ -9,11 +9,12 @@
 #include "roundr.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(fract, roundr, (fract x, int n)) {
   return fixed_point::round(x, n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -22,13 +22,14 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: rev64_REV64v2i32
     ; CHECK: liveins: $d0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV64v2i32 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<2 x s32>) = COPY $d0
-    %rev:fpr(<2 x s32>) = G_REV64 %copy
-    $d0 = COPY %rev(<2 x s32>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev:fpr64 = REV64v2i32 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<2 x i32>) = COPY $d0
+    %rev:fpr(<2 x i32>) = G_REV64 %copy
+    $d0 = COPY %rev(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -43,13 +44,14 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: rev64_REV64v4i16
     ; CHECK: liveins: $d0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV64v4i16 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<4 x s16>) = COPY $d0
-    %rev:fpr(<4 x s16>) = G_REV64 %copy
-    $d0 = COPY %rev(<4 x s16>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev:fpr64 = REV64v4i16 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<4 x i16>) = COPY $d0
+    %rev:fpr(<4 x i16>) = G_REV64 %copy
+    $d0 = COPY %rev(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -64,13 +66,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev64_REV64v4i32
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV64v4i32 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<4 x s32>) = COPY $q0
-    %rev:fpr(<4 x s32>) = G_REV64 %copy
-    $q0 = COPY %rev(<4 x s32>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev:fpr128 = REV64v4i32 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<4 x i32>) = COPY $q0
+    %rev:fpr(<4 x i32>) = G_REV64 %copy
+    $q0 = COPY %rev(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -85,13 +88,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev64_REV64v8i8
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV64v8i8 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<8 x s8>) = COPY $d0
-    %rev:fpr(<8 x s8>) = G_REV64 %copy
-    $d0 = COPY %rev(<8 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev:fpr64 = REV64v8i8 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<8 x i8>) = COPY $d0
+    %rev:fpr(<8 x i8>) = G_REV64 %copy
+    $d0 = COPY %rev(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -106,13 +110,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev64_REV64v8i16
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV64v8i16 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<8 x s16>) = COPY $q0
-    %rev:fpr(<8 x s16>) = G_REV64 %copy
-    $q0 = COPY %rev(<8 x s16>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev:fpr128 = REV64v8i16 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<8 x i16>) = COPY $q0
+    %rev:fpr(<8 x i16>) = G_REV64 %copy
+    $q0 = COPY %rev(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -127,13 +132,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev64_REV64v16i8
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV64v16i8 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<16 x s8>) = COPY $q0
-    %rev:fpr(<16 x s8>) = G_REV64 %copy
-    $q0 = COPY %rev(<16 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev:fpr128 = REV64v16i8 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<16 x i8>) = COPY $q0
+    %rev:fpr(<16 x i8>) = G_REV64 %copy
+    $q0 = COPY %rev(<16 x i8>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -148,13 +154,14 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: rev32_REV32v4i16
     ; CHECK: liveins: $d0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV32v4i16 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<4 x s16>) = COPY $d0
-    %rev:fpr(<4 x s16>) = G_REV32 %copy
-    $d0 = COPY %rev(<4 x s16>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev:fpr64 = REV32v4i16 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<4 x i16>) = COPY $d0
+    %rev:fpr(<4 x i16>) = G_REV32 %copy
+    $d0 = COPY %rev(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -169,13 +176,14 @@ body:             |
     liveins: $d0
     ; CHECK-LABEL: name: rev32_REV32v8i8
     ; CHECK: liveins: $d0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV32v8i8 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<8 x s8>) = COPY $d0
-    %rev:fpr(<8 x s8>) = G_REV32 %copy
-    $d0 = COPY %rev(<8 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev:fpr64 = REV32v8i8 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<8 x i8>) = COPY $d0
+    %rev:fpr(<8 x i8>) = G_REV32 %copy
+    $d0 = COPY %rev(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -190,13 +198,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev32_REV32v8i16
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV32v8i16 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<8 x s16>) = COPY $q0
-    %rev:fpr(<8 x s16>) = G_REV32 %copy
-    $q0 = COPY %rev(<8 x s16>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev:fpr128 = REV32v8i16 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<8 x i16>) = COPY $q0
+    %rev:fpr(<8 x i16>) = G_REV32 %copy
+    $q0 = COPY %rev(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -211,13 +220,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev32_REV32v16i8
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV32v16i8 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<16 x s8>) = COPY $q0
-    %rev:fpr(<16 x s8>) = G_REV32 %copy
-    $q0 = COPY %rev(<16 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev:fpr128 = REV32v16i8 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<16 x i8>) = COPY $q0
+    %rev:fpr(<16 x i8>) = G_REV32 %copy
+    $q0 = COPY %rev(<16 x i8>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -232,13 +242,16 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev16_REV16v8i8
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr64 = COPY $d0
-    ; CHECK: %rev:fpr64 = REV16v8i8 %copy
-    ; CHECK: $d0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $d0
-    %copy:fpr(<8 x s8>) = COPY $d0
-    %rev:fpr(<8 x s8>) = G_REV16 %copy
-    $d0 = COPY %rev(<8 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr64 = COPY $d0
+    ; CHECK-NEXT: %rev2:fpr64 = REV16v8i8 %copy
+    ; CHECK-NEXT: $d0 = COPY %rev2
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %copy:fpr(<8 x i8>) = COPY $d0
+    %rev1:fpr(<4 x i16>) = G_BITCAST %copy
+    %rev2:fpr(<4 x i16>) = G_BSWAP %rev1
+    %rev:fpr(<8 x i8>) = G_BITCAST %rev2
+    $d0 = COPY %rev(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -253,11 +266,14 @@ body:             |
     liveins: $q0
     ; CHECK-LABEL: name: rev16_REV16v16i8
     ; CHECK: liveins: $q0
-    ; CHECK: %copy:fpr128 = COPY $q0
-    ; CHECK: %rev:fpr128 = REV16v16i8 %copy
-    ; CHECK: $q0 = COPY %rev
-    ; CHECK: RET_ReallyLR implicit $q0
-    %copy:fpr(<16 x s8>) = COPY $q0
-    %rev:fpr(<16 x s8>) = G_REV16 %copy
-    $q0 = COPY %rev(<16 x s8>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr128 = COPY $q0
+    ; CHECK-NEXT: %rev2:fpr128 = REV16v16i8 %copy
+    ; CHECK-NEXT: $q0 = COPY %rev2
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %copy:fpr(<16 x i8>) = COPY $q0
+    %rev1:fpr(<8 x i16>) = G_BITCAST %copy
+    %rev2:fpr(<8 x i16>) = G_BSWAP %rev1
+    %rev:fpr(<16 x i8>) = G_BITCAST %rev2
+    $q0 = COPY %rev(<16 x i8>)
     RET_ReallyLR implicit $q0

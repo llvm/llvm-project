@@ -1,17 +1,17 @@
 // UNSUPPORTED: asan
 // RUN: mlir-opt %s -test-transform-dialect-erase-schedule \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -finalizing-bufferize -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
-// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
+// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
 
 // RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -finalizing-bufferize -convert-linalg-to-loops -convert-scf-to-cf -convert-scf-to-cf \
-// RUN:  -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-scf-to-cf \
+// RUN:  -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
 

@@ -133,11 +133,11 @@ class C16 { C16(int x); };
 // NOLINTEND(*,-google*)
 
 int array1[10];
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
 int array2[10];
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 // NOLINTEND(cppcoreguidelines-avoid-c-arrays)
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)

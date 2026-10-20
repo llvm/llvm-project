@@ -14,8 +14,10 @@
 #include "src/__support/CPP/type_traits/remove_all_extents.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_base_of
 namespace detail {
@@ -39,6 +41,7 @@ struct is_base_of
 template <typename Base, typename Derived>
 LIBC_INLINE_VAR constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_BASE_OF_H

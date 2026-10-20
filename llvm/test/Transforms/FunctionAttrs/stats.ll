@@ -16,9 +16,10 @@ entry:
   ret void
 }
 
-; CHECK:      2 function-attrs - Number of functions with improved memory attribute
-; CHECK-NEXT: 1 function-attrs - Number of arguments marked nocapture
+; CHECK:      1 function-attrs - Number of arguments marked captures(none)
+; CHECK-NEXT: 2 function-attrs - Number of functions with improved memory attribute
 ; CHECK-NEXT: 1 function-attrs - Number of functions marked as nofree
+; CHECK-NEXT: 1 function-attrs - Number of arguments marked as nofree
 ; CHECK-NEXT: 2 function-attrs - Number of functions marked as norecurse
 ; CHECK-NEXT: 2 function-attrs - Number of functions marked as nosync
 ; CHECK-NEXT: 2 function-attrs - Number of functions marked as nounwind

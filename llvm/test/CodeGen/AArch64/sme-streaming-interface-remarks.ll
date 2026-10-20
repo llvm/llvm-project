@@ -76,14 +76,14 @@ entry:
   %Data1 = alloca <vscale x 16 x i8>, align 16
   %Data2 = alloca <vscale x 16 x i8>, align 16
   %Data3 = alloca <vscale x 16 x i8>, align 16
-  %0 = tail call i64 @llvm.aarch64.sme.cntsb()
+  %0 = tail call i64 @llvm.aarch64.sme.cntsd()
   call void @foo(ptr noundef nonnull %Data1, ptr noundef nonnull %Data2, ptr noundef nonnull %Data3, i64 noundef %0)
   %1 = load <vscale x 16 x i8>, ptr %Data1, align 16
   %vecext = extractelement <vscale x 16 x i8> %1, i64 0
   ret i8 %vecext
 }
 
-declare i64 @llvm.aarch64.sme.cntsb()
+declare i64 @llvm.aarch64.sme.cntsd()
 
 declare void @foo(ptr noundef, ptr noundef, ptr noundef, i64 noundef)
 

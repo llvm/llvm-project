@@ -1,6 +1,12 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S - | FileCheck %s
 // RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - |  FileCheck %s --check-prefix=ASM
 
+/// The second .text has no effect, therefore it is not printed.
+// ASM:       .text
+// ASM-EMPTY:
+.text
+.text
+
 // Test that these names are accepted.
 
 .section	.note.GNU-stack,"",@progbits
@@ -283,6 +289,44 @@ bar:
 // CHECK-NEXT:       SHF_TLS
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
+
+.section .init_array,"aw",@init_array
+.byte 0
+// ASM: .section .init_array,"aw",@init_array
+
+// CHECK:      Section {
+// CHECK:        Name: .init_array
+// CHECK-NEXT:   Type: SHT_INIT_ARRAY
+// CHECK:        Size: 1
+// CHECK:        EntrySize: 8
+// CHECK-NEXT: }
+
+.section .fini_array,"aw",@fini_array
+// ASM: .section .fini_array,"aw",@fini_array
+
+// CHECK:      Section {
+// CHECK:        Name: .fini_array
+// CHECK-NEXT:   Type: SHT_FINI_ARRAY
+// CHECK:        EntrySize: 8
+// CHECK-NEXT: }
+
+.section .preinit_array,"aw",@preinit_array
+// ASM: .section .preinit_array,"aw",@preinit_array
+
+// CHECK:      Section {
+// CHECK:        Name: .preinit_array
+// CHECK-NEXT:   Type: SHT_PREINIT_ARRAY
+// CHECK:        EntrySize: 8
+// CHECK-NEXT: }
+
+.section .init_array.16,"awM",@init_array,16
+// ASM: .section .init_array.16,"awM",@init_array,16
+
+// CHECK:      Section {
+// CHECK:        Name: .init_array.16
+// CHECK-NEXT:   Type: SHT_INIT_ARRAY
+// CHECK:        EntrySize: 16
+// CHECK-NEXT: }
 
 .section .large,"l"
 // ASM: .section .large,"l"

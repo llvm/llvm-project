@@ -1,8 +1,11 @@
 add_lldb_library(lldbPluginTypeSystemClang PLUGIN
   TypeSystemClang.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
+    lldbInterpreter
     lldbSymbol
     lldbTarget
     lldbUtility
@@ -13,8 +16,8 @@ add_lldb_library(lldbPluginTypeSystemClang PLUGIN
   CLANG_LIBS
     clangAST
     clangBasic
+    clangDriver
     clangFrontend
     clangSema
-  LINK_COMPONENTS
-    Support
+    clangSerialization
 )

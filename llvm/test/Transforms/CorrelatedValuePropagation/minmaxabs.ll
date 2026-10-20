@@ -12,7 +12,7 @@ define void @test_umin(i32 %x) {
 ; CHECK-LABEL: @test_umin(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[M]], 10
+; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ult i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define void @test_smax(i32 %x) {
 ; CHECK-LABEL: @test_smax(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[M]], 10
+; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ugt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -77,7 +77,7 @@ define void @test_abs1(ptr %p) {
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], 15
+; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ult i32 [[A]], 15
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -110,7 +110,7 @@ define void @test_abs3(i32 %x) {
 ; CHECK-LABEL: @test_abs3(
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[A]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ugt i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -119,5 +119,33 @@ define void @test_abs3(i32 %x) {
   call void @use(i1 %c1)
   %c2 = icmp sgt i32 %a, 0
   call void @use(i1 %c2)
+  ret void
+}
+
+declare void @use.i64(i64)
+
+define void @smax_clamp_removed_at_unguarded_def(i64 %x) {
+; CHECK-LABEL: @smax_clamp_removed_at_unguarded_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MN:%.*]] = call i64 @llvm.smin.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i64 [[X]], -3
+; CHECK-NEXT:    br i1 [[GUARD]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @use.i64(i64 [[MN]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mx = call i64 @llvm.smax.i64(i64 %x, i64 -2)
+  %mn = call i64 @llvm.smin.i64(i64 %mx, i64 1)
+  %guard = icmp sgt i64 %x, -3
+  br i1 %guard, label %then, label %exit
+
+then:
+  call void @use.i64(i64 %mn)
+  br label %exit
+
+exit:
   ret void
 }

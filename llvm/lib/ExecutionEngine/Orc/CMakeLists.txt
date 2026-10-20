@@ -7,30 +7,47 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
 endif()
 
 add_llvm_component_library(LLVMOrcJIT
+  AbsoluteSymbols.cpp
+  BacktraceTools.cpp
+  COFF.cpp
+  COFFAutoImportGenerator.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
-  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
-  EPCDebugObjectRegistrar.cpp
-  EPCEHFrameRegistrar.cpp
   EPCGenericDylibManager.cpp
+  EPCGenericDylibManagerSPS.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericJITLinkMemoryManagerSPS.cpp
+  EPCGenericMemoryAccessSPS.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
+  ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
   IndirectionUtils.cpp
+  InProcessEPC.cpp
+  InProcessMemoryAccess.cpp
+  InstanceSymbolGenerator.cpp
+  InstanceSymbolGeneratorSPS.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
+  IRPartitionLayer.cpp
   JITTargetMachineBuilder.cpp
+  JITLinkReentryTrampolines.cpp
+  LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
-  LookupAndRecordAddrs.cpp
+  LinkGraphLayer.cpp
+  LinkGraphLinkingLayer.cpp
+  LoadLinkableFile.cpp
+  LookupAndApply.cpp
   LLJIT.cpp
+  MachO.cpp
   MachOPlatform.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
@@ -42,12 +59,20 @@ add_llvm_component_library(LLVMOrcJIT
   OrcV2CBindings.cpp
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
+  SelfExecutorProcessControl.cpp
+  SharedMemoryMapSPS.cpp
+  SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
+  SimpleRemoteMemoryMapper.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  UnwindInfoRegistrationPlugin.cpp
+  RedirectionManager.cpp
+  JITLinkRedirectableSymbolManager.cpp
+  ReOptimizeLayer.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 
@@ -60,6 +85,7 @@ add_llvm_component_library(LLVMOrcJIT
   ${atomic_lib}
 
   LINK_COMPONENTS
+  BinaryFormat
   Core
   ExecutionEngine
   JITLink
@@ -73,6 +99,7 @@ add_llvm_component_library(LLVMOrcJIT
   Support
   Target
   TargetParser
+  TextAPI
   TransformUtils
   )
 

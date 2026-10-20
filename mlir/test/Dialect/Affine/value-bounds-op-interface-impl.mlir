@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
 // CHECK: #[[$map:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
@@ -154,4 +154,231 @@ func.func @compare_maps(%a: index, %b: index) {
        rhs_map = affine_map<(d0, d1) -> (d0 + d1)>}
       : (index, index, index, index) -> ()
   return
+}
+
+// -----
+
+// CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 floordiv 15)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<()[s0] -> ((s0 mod 15) floordiv 5)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<()[s0] -> (s0 mod 5)>
+// CHECK-LABEL: func.func @delinearize_static
+// CHECK-SAME: (%[[arg0:.+]]: index)
+// CHECK-DAG: %[[v1:.+]] = affine.apply #[[$map1]]()[%[[arg0]]]
+// CHECK-DAG: %[[v2:.+]] = affine.apply #[[$map2]]()[%[[arg0]]]
+// CHECK-DAG: %[[v3:.+]] = affine.apply #[[$map3]]()[%[[arg0]]]
+// CHECK: return %[[v1]], %[[v2]], %[[v3]]
+func.func @delinearize_static(%arg0: index) -> (index, index, index) {
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %0:3 = affine.delinearize_index %arg0 into (2, 3, 5) : index, index, index
+  %1 = "test.reify_bound"(%0#0) {type = "EQ"} : (index) -> (index)
+  %2 = "test.reify_bound"(%0#1) {type = "EQ"} : (index) -> (index)
+  %3 = "test.reify_bound"(%0#2) {type = "EQ"} : (index) -> (index)
+  // expected-remark @below{{true}}
+  "test.compare"(%0#0, %c2) {cmp = "LT"} : (index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%0#1, %c3) {cmp = "LT"} : (index, index) -> ()
+  return %1, %2, %3 : index, index, index
+}
+
+// -----
+
+// CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 floordiv 15)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<()[s0] -> ((s0 mod 15) floordiv 5)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<()[s0] -> (s0 mod 5)>
+// CHECK-LABEL: func.func @delinearize_static_no_outer_bound
+// CHECK-SAME: (%[[arg0:.+]]: index)
+// CHECK-DAG: %[[v1:.+]] = affine.apply #[[$map1]]()[%[[arg0]]]
+// CHECK-DAG: %[[v2:.+]] = affine.apply #[[$map2]]()[%[[arg0]]]
+// CHECK-DAG: %[[v3:.+]] = affine.apply #[[$map3]]()[%[[arg0]]]
+// CHECK: return %[[v1]], %[[v2]], %[[v3]]
+func.func @delinearize_static_no_outer_bound(%arg0: index) -> (index, index, index) {
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %0:3 = affine.delinearize_index %arg0 into (3, 5) : index, index, index
+  %1 = "test.reify_bound"(%0#0) {type = "EQ"} : (index) -> (index)
+  %2 = "test.reify_bound"(%0#1) {type = "EQ"} : (index) -> (index)
+  %3 = "test.reify_bound"(%0#2) {type = "EQ"} : (index) -> (index)
+  "test.compaare"(%0#0, %c2) {cmp = "LT"} : (index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%0#1, %c3) {cmp = "LT"} : (index, index) -> ()
+  return %1, %2, %3 : index, index, index
+}
+
+// -----
+
+// CHECK: #[[$map:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 3)>
+// CHECK-LABEL: func.func @linearize_static
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index)
+// CHECK: %[[v1:.+]] = affine.apply #[[$map]]()[%[[arg1]], %[[arg0]]]
+// CHECK: return %[[v1]]
+func.func @linearize_static(%arg0: index, %arg1: index)  -> index {
+  %c6 = arith.constant 6 : index
+  %0 = affine.linearize_index disjoint [%arg0, %arg1] by (2, 3) : index
+  %1 = "test.reify_bound"(%0) {type = "EQ"} : (index) -> (index)
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c6) {cmp = "LT"} : (index, index) -> ()
+  return %1 : index
+}
+
+// -----
+
+// CHECK: #[[$map:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 3)>
+// CHECK-LABEL: func.func @linearize_static_no_outer_bound
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index)
+// CHECK: %[[v1:.+]] = affine.apply #[[$map]]()[%[[arg1]], %[[arg0]]]
+// CHECK: return %[[v1]]
+func.func @linearize_static_no_outer_bound(%arg0: index, %arg1: index)  -> index {
+  %c6 = arith.constant 6 : index
+  %0 = affine.linearize_index disjoint [%arg0, %arg1] by (3) : index
+  %1 = "test.reify_bound"(%0) {type = "EQ"} : (index) -> (index)
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %c6) {cmp = "LT"} : (index, index) -> ()
+  return %1 : index
+}
+
+// -----
+
+// The induction variable of an affine.for with constant bounds is bounded below
+// by the lower bound and above by `lb + (tripCount - 1) * step`.
+
+func.func @affine_for_iv_constant_bounds() {
+  %c0 = arith.constant 0 : index
+  %c384 = arith.constant 384 : index
+  %c385 = arith.constant 385 : index
+  affine.for %i = 0 to 385 step 128 {
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c0) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c384) {cmp = "LE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c385) {cmp = "LT"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Step alignment: `0 to 300 step 128` yields only {0, 128, 256}, so the
+// induction variable never exceeds 256 even though the upper bound is 300.
+
+func.func @affine_for_iv_step_alignment() {
+  %c256 = arith.constant 256 : index
+  affine.for %i = 0 to 300 step 128 {
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c256) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Non-zero lower bound: `5 to 300 step 128` yields {5, 133, 261}.
+
+func.func @affine_for_iv_nonzero_lb() {
+  %c5 = arith.constant 5 : index
+  %c261 = arith.constant 261 : index
+  affine.for %i = 5 to 300 step 128 {
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c5) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c261) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Bounds given as affine maps over loop-invariant values are handled as well,
+// including the step-aligned upper bound: `%n to %n + 300 step 128` yields
+// {%n, %n + 128, %n + 256}.
+
+func.func @affine_for_iv_symbolic_bounds(%n: index) {
+  %ub = affine.apply affine_map<()[s0] -> (s0 + 256)>()[%n]
+  affine.for %i = affine_map<()[s0] -> (s0)>()[%n]
+            to affine_map<()[s0] -> (s0 + 300)>()[%n] step 128 {
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %n) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %ub) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// A `max`/`min` bound constrains the induction variable by every result of the
+// map. The step is not taken into account for such loops, so the tighter bound
+// `%i <= 256` implied by `step 128` cannot be proven here.
+
+func.func @affine_for_iv_multi_result_bounds(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c256 = arith.constant 256 : index
+  %c300 = arith.constant 300 : index
+  affine.for %i = max affine_map<()[s0] -> (0, s0)>()[%n] to 300 step 128 {
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c0) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %n) {cmp = "GE"} : (index, index) -> ()
+    // expected-remark @below{{true}}
+    "test.compare"(%i, %c300) {cmp = "LT"} : (index, index) -> ()
+    // expected-error @below{{unknown}}
+    "test.compare"(%i, %c256) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Tiled `scf.for` + `affine.min` remainder. `%tile = minui(1, %n)` so
+// `%tile <= 1`, hence `%bytes = affine.min * 64` is `<= 64`. `{constant}`
+// reifies an exclusive UB, so the bound is 65.
+//
+// `affine.min` inserts `%iv`, `%ub`, and `%tile` as symbols. Processing
+// `%ub = arith.minui` calls `isProvablyNonNegative`, which inserts a new
+// SetDim and shifts every symbol column. The worklist must still visit
+// `%tile`; otherwise the bound is the remainder `16384 * 64` (exclusive
+// 1048577) and `tile <= 1` is never added.
+// CHECK-LABEL: func @affine_min_scf_for_stale_worklist_minui_tile
+//       CHECK:   %[[c65:.*]] = arith.constant 65 : index
+//       CHECK:   scf.yield %[[c65]]
+func.func @affine_min_scf_for_stale_worklist_minui_tile(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c16384 = arith.constant 16384 : index
+  %ub = arith.minui %n, %c16384 : index
+  %tile = arith.minui %c1, %n : index
+  %ret = scf.for %iv = %c0 to %ub step %tile iter_args(%acc = %c0) -> index {
+    %min = affine.min affine_map<(d0)[s0, s1] -> (-d0 + s0, s1)>(%iv)[%ub, %tile]
+    %bytes = arith.muli %min, %c64 : index
+    %bound = "test.reify_bound"(%bytes) {type = "UB", constant} : (index) -> (index)
+    scf.yield %bound : index
+  }
+  return %ret : index
+}
+
+// -----
+
+// Same min, but the remainder is `arith.subi` + `arith.minui`. Tile is
+// processed, so the exclusive UB is 65 even before the worklist identity
+// fix.
+// CHECK-LABEL: func @affine_min_scf_for_minui_remainder
+//       CHECK:   %[[c65:.*]] = arith.constant 65 : index
+//       CHECK:   scf.yield %[[c65]]
+func.func @affine_min_scf_for_minui_remainder(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c16384 = arith.constant 16384 : index
+  %ub = arith.minui %n, %c16384 : index
+  %tile = arith.minui %c1, %n : index
+  %ret = scf.for %iv = %c0 to %ub step %tile iter_args(%acc = %c0) -> index {
+    %rem = arith.subi %ub, %iv : index
+    %min = arith.minui %rem, %tile : index
+    %bytes = arith.muli %min, %c64 : index
+    %bound = "test.reify_bound"(%bytes) {type = "UB", constant} : (index) -> (index)
+    scf.yield %bound : index
+  }
+  return %ret : index
 }

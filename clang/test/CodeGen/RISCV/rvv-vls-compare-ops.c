@@ -40,7 +40,7 @@ typedef vfloat64m1_t fixed_float64m1_t __attribute__((riscv_rvv_vector_bits(__ri
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t eq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -53,7 +53,7 @@ fixed_int8m1_t eq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t eq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -66,7 +66,7 @@ fixed_int16m1_t eq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t eq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -79,7 +79,7 @@ fixed_int32m1_t eq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t eq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -92,7 +92,7 @@ fixed_int64m1_t eq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t eq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -105,7 +105,7 @@ fixed_int8m1_t eq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t eq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -118,7 +118,7 @@ fixed_int16m1_t eq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t eq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -131,7 +131,7 @@ fixed_int32m1_t eq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t eq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -144,7 +144,7 @@ fixed_int64m1_t eq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t eq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -157,7 +157,7 @@ fixed_int32m1_t eq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t eq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
@@ -172,7 +172,7 @@ fixed_int64m1_t eq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t neq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -185,7 +185,7 @@ fixed_int8m1_t neq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t neq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -198,7 +198,7 @@ fixed_int16m1_t neq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t neq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -211,7 +211,7 @@ fixed_int32m1_t neq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t neq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -224,7 +224,7 @@ fixed_int64m1_t neq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t neq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -237,7 +237,7 @@ fixed_int8m1_t neq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t neq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -250,7 +250,7 @@ fixed_int16m1_t neq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t neq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -263,7 +263,7 @@ fixed_int32m1_t neq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t neq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -276,7 +276,7 @@ fixed_int64m1_t neq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp une <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t neq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -289,7 +289,7 @@ fixed_int32m1_t neq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp une <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t neq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
@@ -304,7 +304,7 @@ fixed_int64m1_t neq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t lt_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -317,7 +317,7 @@ fixed_int8m1_t lt_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t lt_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -330,7 +330,7 @@ fixed_int16m1_t lt_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t lt_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -343,7 +343,7 @@ fixed_int32m1_t lt_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t lt_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -356,7 +356,7 @@ fixed_int64m1_t lt_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t lt_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -369,7 +369,7 @@ fixed_int8m1_t lt_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t lt_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -382,7 +382,7 @@ fixed_int16m1_t lt_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t lt_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -395,7 +395,7 @@ fixed_int32m1_t lt_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t lt_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -408,7 +408,7 @@ fixed_int64m1_t lt_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t lt_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -421,7 +421,7 @@ fixed_int32m1_t lt_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t lt_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
@@ -436,7 +436,7 @@ fixed_int64m1_t lt_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sle <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t leq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -449,7 +449,7 @@ fixed_int8m1_t leq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sle <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t leq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -462,7 +462,7 @@ fixed_int16m1_t leq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sle <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t leq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -475,7 +475,7 @@ fixed_int32m1_t leq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sle <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t leq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -488,7 +488,7 @@ fixed_int64m1_t leq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ule <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t leq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -501,7 +501,7 @@ fixed_int8m1_t leq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ule <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t leq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -514,7 +514,7 @@ fixed_int16m1_t leq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ule <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t leq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -527,7 +527,7 @@ fixed_int32m1_t leq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ule <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t leq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -540,7 +540,7 @@ fixed_int64m1_t leq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t leq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -553,7 +553,7 @@ fixed_int32m1_t leq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t leq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
@@ -568,7 +568,7 @@ fixed_int64m1_t leq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t gt_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -581,7 +581,7 @@ fixed_int8m1_t gt_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t gt_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -594,7 +594,7 @@ fixed_int16m1_t gt_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t gt_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -607,7 +607,7 @@ fixed_int32m1_t gt_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t gt_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -620,7 +620,7 @@ fixed_int64m1_t gt_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t gt_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -633,7 +633,7 @@ fixed_int8m1_t gt_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t gt_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -646,7 +646,7 @@ fixed_int16m1_t gt_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t gt_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -659,7 +659,7 @@ fixed_int32m1_t gt_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t gt_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -672,7 +672,7 @@ fixed_int64m1_t gt_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t gt_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -685,7 +685,7 @@ fixed_int32m1_t gt_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t gt_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
@@ -700,7 +700,7 @@ fixed_int64m1_t gt_f64(fixed_float64m1_t a, fixed_float64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sge <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t geq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
@@ -713,7 +713,7 @@ fixed_int8m1_t geq_i8(fixed_int8m1_t a, fixed_int8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sge <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t geq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
@@ -726,7 +726,7 @@ fixed_int16m1_t geq_i16(fixed_int16m1_t a, fixed_int16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sge <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t geq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
@@ -739,7 +739,7 @@ fixed_int32m1_t geq_i32(fixed_int32m1_t a, fixed_int32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sge <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t geq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
@@ -752,7 +752,7 @@ fixed_int64m1_t geq_i64(fixed_int64m1_t a, fixed_int64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp uge <32 x i8> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x i8> [[CAST_SCALABLE]]
 //
 fixed_int8m1_t geq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
@@ -765,7 +765,7 @@ fixed_int8m1_t geq_u8(fixed_uint8m1_t a, fixed_uint8m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <16 x i16> @llvm.vector.extract.v16i16.nxv4i16(<vscale x 4 x i16> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp uge <16 x i16> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> undef, <16 x i16> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 4 x i16> @llvm.vector.insert.nxv4i16.v16i16(<vscale x 4 x i16> poison, <16 x i16> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i16> [[CAST_SCALABLE]]
 //
 fixed_int16m1_t geq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
@@ -778,7 +778,7 @@ fixed_int16m1_t geq_u16(fixed_uint16m1_t a, fixed_uint16m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp uge <8 x i32> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t geq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
@@ -791,7 +791,7 @@ fixed_int32m1_t geq_u32(fixed_uint32m1_t a, fixed_uint32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = icmp uge <4 x i64> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t geq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
@@ -804,7 +804,7 @@ fixed_int64m1_t geq_u64(fixed_uint64m1_t a, fixed_uint64m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <8 x float> @llvm.vector.extract.v8f32.nxv2f32(<vscale x 2 x float> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <8 x float> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 fixed_int32m1_t geq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
@@ -817,7 +817,7 @@ fixed_int32m1_t geq_f32(fixed_float32m1_t a, fixed_float32m1_t b) {
 // CHECK-NEXT:    [[B:%.*]] = call <4 x double> @llvm.vector.extract.v4f64.nxv1f64(<vscale x 1 x double> [[B_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <4 x double> [[A]], [[B]]
 // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[SEXT]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[SEXT]], i64 0)
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 fixed_int64m1_t geq_f64(fixed_float64m1_t a, fixed_float64m1_t b) {

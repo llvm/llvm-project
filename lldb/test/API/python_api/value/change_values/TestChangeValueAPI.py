@@ -2,7 +2,6 @@
 Test some SBValue APIs.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class ChangeValueAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -21,7 +22,7 @@ class ChangeValueAPITestCase(TestBase):
         self.end_line = line_number("main.c", "// Set a breakpoint here at the end")
 
     @expectedFlakeyLinux("llvm.org/pr25652")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
+    @skipIfWasm  # Wasm exposes no stack pointer register
     def test_change_value(self):
         """Exercise the SBValue::SetValueFromCString API."""
         d = {"EXE": self.exe_name}
@@ -74,6 +75,23 @@ class ChangeValueAPITestCase(TestBase):
         self.assertSuccess(error, "Got a changed value from val")
         self.assertEqual(actual_value, 12345, "Got the right changed value from val")
 
+        # A normal variable backed by memory reports that it can be modified.
+        self.assertSuccess(val_value.CanSet(), "val can be modified")
+        self.assertTrue(val_value.CanSetValue(), "val can be modified")
+
+        # A constant expression result has no writable storage, so it cannot be
+        # modified and CanSet() returns an error.
+        const_value = frame0.EvaluateExpression("val + 1")
+        self.assertTrue(const_value.IsValid(), "Got a valid expression result")
+        can_set_error = const_value.CanSet()
+        self.assertTrue(can_set_error.Fail(), "A constant cannot be modified")
+        self.assertIn("not in a writable location", can_set_error.GetCString())
+        self.assertFalse(const_value.CanSetValue(), "A constant cannot be modified")
+        error.Clear()
+        result = const_value.SetValueFromCString("0", error)
+        self.assertFalse(result, "SetValueFromCString on a constant failed")
+        self.assertIn("not in a writable location", error.GetCString())
+
         # Now check that we can set a structure element:
 
         mine_value = frame0.FindVariable("mine")
@@ -111,6 +129,30 @@ class ChangeValueAPITestCase(TestBase):
             actual_value, 98765, "Got the right changed value from ptr->second_val"
         )
 
+        ptr_fourth_value = ptr_value.GetChildMemberWithName("fourth_val")
+        self.assertTrue(ptr_fourth_value.IsValid(), "Got fourth_val from ptr")
+        fourth_actual_value = ptr_fourth_value.GetValueAsUnsigned(error, 1)
+        self.assertTrue(error.Success(), "Got an unsigned value for ptr->fourth_val")
+        self.assertEqual(fourth_actual_value, 0)
+
+        result = ptr_fourth_value.SetValueFromCString("true")
+        self.assertTrue(result, "Success setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got a changed value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value, 1, "Got the right changed value from ptr->fourth_val"
+        )
+
+        result = ptr_fourth_value.SetValueFromCString("NO")
+        self.assertFalse(result, "Failed setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got the original value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value,
+            1,
+            "Got the original changed value from ptr->fourth_val",
+        )
+
         # gcc may set multiple locations for breakpoint
         breakpoint.SetEnabled(False)
 
@@ -125,7 +167,7 @@ class ChangeValueAPITestCase(TestBase):
         )
 
         expected_value = (
-            "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
+            "Val - 12345 Mine - 55, 98765, 55555555, 0. Ptr - 66, 98765, 66666666, 1"
         )
         stdout = process.GetSTDOUT(1000)
         self.assertIn(expected_value, stdout, "STDOUT showed changed values.")

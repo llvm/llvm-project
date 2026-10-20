@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
 
 ; The zeroext attribute below should be silently ignored because
 ; we can pass a 32-bit integer across a function call without

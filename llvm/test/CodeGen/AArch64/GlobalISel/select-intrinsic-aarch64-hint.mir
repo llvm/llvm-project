@@ -14,7 +14,7 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: gpr }
 
@@ -24,6 +24,6 @@ body:             |
   bb.0:
     liveins: $w0
 
-    %0(s32) = G_CONSTANT i32 1
+    %0(i32) = G_CONSTANT i32 1
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %0
 ...

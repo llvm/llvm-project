@@ -1,5 +1,5 @@
-; RUN: opt -S  -dxil-intrinsic-expansion  < %s | FileCheck %s --check-prefixes=CHECK,EXPCHECK
-; RUN: opt -S  -dxil-op-lower  < %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
+; RUN: opt -S  -dxil-intrinsic-expansion  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,EXPCHECK
+; RUN: opt -S  -dxil-intrinsic-expansion -dxil-op-lower  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,DOPCHECK
 
 ; Make sure dxil operation function calls for abs are generated for int16_t/int/int64_t.
 
@@ -32,6 +32,11 @@ entry:
   %elt.abs = call i64 @llvm.abs.i64(i64 %a, i1 false)
   ret i64 %elt.abs
 }
+
+; DOPCHECK-DAG: declare i16 @dx.op.binary.i16(i32, i16, i16) #[[#ATTR0:]]
+; DOPCHECK-DAG: declare i32 @dx.op.binary.i32(i32, i32, i32) #[[#ATTR0]]
+; DOPCHECK-DAG: declare i64 @dx.op.binary.i64(i32, i64, i64) #[[#ATTR0]]
+; DOPCHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare i16 @llvm.abs.i16(i16, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)

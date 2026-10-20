@@ -25,10 +25,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -49,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -143,12 +146,35 @@ public:
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
   /// or SetNoExternalVisibleDeclsForName.
+  /// \param DC The context for lookup in. \c DC should be a primary context.
+  /// \param Name The name to look for.
+  /// \param OriginalDC The original context for lookup.  \c OriginalDC can
+  /// provide more information than \c DC. e.g., The same namespace can appear
+  /// in multiple module units. So we need the \c OriginalDC to tell us what
+  /// the module the lookup come from.
+  ///
   /// \return \c true if any declarations might have been found, \c false if
   /// we definitely have no declarations with tbis name.
   ///
   /// The default implementation of this method is a no-op returning \c false.
+  virtual bool FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                              DeclarationName Name,
+                                              const DeclContext *OriginalDC);
+
+  /// Load all the external specializations for the Decl \param D if \param
+  /// OnlyPartial is false. Otherwise, load all the external **partial**
+  /// specializations for the \param D.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
+  virtual bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial);
+
+  /// Load all the specializations for the Decl \param D with the same template
+  /// args specified by \param TemplateArgs.
+  ///
+  /// Return true if any new specializations get loaded. Return false otherwise.
   virtual bool
-  FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name);
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs);
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
@@ -165,6 +191,10 @@ public:
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
   virtual ExtKind hasExternalDefinitions(const Decl *D);
+
+  /// True if this function declaration was a definition before in its own
+  /// module.
+  virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
 
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.
@@ -326,29 +356,49 @@ struct LazyOffsetPtr {
   ///
   /// If the low bit is clear, a pointer to the AST node. If the low
   /// bit is set, the upper 63 bits are the offset.
-  mutable uint64_t Ptr = 0;
+  static constexpr size_t DataSize = std::max(sizeof(uint64_t), sizeof(T *));
+  alignas(uint64_t) alignas(T *) mutable unsigned char Data[DataSize] = {};
+
+  unsigned char GetLSB() const {
+    return Data[llvm::sys::IsBigEndianHost ? DataSize - 1 : 0];
+  }
+
+  template <typename U> U &As(bool New) const {
+    unsigned char *Obj =
+        Data + (llvm::sys::IsBigEndianHost ? DataSize - sizeof(U) : 0);
+    if (New)
+      return *new (Obj) U;
+    return *std::launder(reinterpret_cast<U *>(Obj));
+  }
+
+  T *&GetPtr() const { return As<T *>(false); }
+  uint64_t &GetU64() const { return As<uint64_t>(false); }
+  void SetPtr(T *Ptr) const { As<T *>(true) = Ptr; }
+  void SetU64(uint64_t U64) const { As<uint64_t>(true) = U64; }
 
 public:
   LazyOffsetPtr() = default;
-  explicit LazyOffsetPtr(T *Ptr) : Ptr(reinterpret_cast<uint64_t>(Ptr)) {}
+  explicit LazyOffsetPtr(T *Ptr) : Data() { SetPtr(Ptr); }
 
-  explicit LazyOffsetPtr(uint64_t Offset) : Ptr((Offset << 1) | 0x01) {
+  explicit LazyOffsetPtr(uint64_t Offset) : Data() {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
+      SetPtr(nullptr);
+    else
+      SetU64((Offset << 1) | 0x01);
   }
 
   LazyOffsetPtr &operator=(T *Ptr) {
-    this->Ptr = reinterpret_cast<uint64_t>(Ptr);
+    SetPtr(Ptr);
     return *this;
   }
 
   LazyOffsetPtr &operator=(uint64_t Offset) {
     assert((Offset << 1 >> 1) == Offset && "Offsets must require < 63 bits");
     if (Offset == 0)
-      Ptr = 0;
+      SetPtr(nullptr);
     else
-      Ptr = (Offset << 1) | 0x01;
+      SetU64((Offset << 1) | 0x01);
 
     return *this;
   }
@@ -356,15 +406,15 @@ public:
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  explicit operator bool() const { return Ptr != 0; }
+  explicit operator bool() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is non-NULL.
   ///
   /// This operation does not require the AST node to be deserialized.
-  bool isValid() const { return Ptr != 0; }
+  bool isValid() const { return isOffset() || GetPtr() != nullptr; }
 
   /// Whether this pointer is currently stored as an offset.
-  bool isOffset() const { return Ptr & 0x01; }
+  bool isOffset() const { return GetLSB() & 0x01; }
 
   /// Retrieve the pointer to the AST node that this lazy pointer points to.
   ///
@@ -375,9 +425,9 @@ public:
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
+      SetPtr((Source->*Get)(OffsT(GetU64() >> 1)));
     }
-    return reinterpret_cast<T*>(Ptr);
+    return GetPtr();
   }
 
   /// Retrieve the address of the AST node pointer. Deserializes the pointee if
@@ -385,52 +435,42 @@ public:
   T **getAddressOfPointer(ExternalASTSource *Source) const {
     // Ensure the integer is in pointer form.
     (void)get(Source);
-    return reinterpret_cast<T**>(&Ptr);
+    return &GetPtr();
   }
 };
 
-/// A lazy value (of type T) that is within an AST node of type Owner,
-/// where the value might change in later generations of the external AST
-/// source.
-template<typename Owner, typename T, void (ExternalASTSource::*Update)(Owner)>
-struct LazyGenerationalUpdatePtr {
+/// A lazy Decl value where the value might change in later generations of the
+/// external AST source.
+struct LazyGenerationalDeclPtr {
   /// A cache of the value of this pointer, in the most recent generation in
   /// which we queried it.
   struct LazyData {
     ExternalASTSource *ExternalSource;
     uint32_t LastGeneration = 0;
-    T LastValue;
+    Decl *LastValue;
 
-    LazyData(ExternalASTSource *Source, T Value)
+    LazyData(ExternalASTSource *Source, Decl *Value)
         : ExternalSource(Source), LastValue(Value) {}
   };
 
-  // Our value is represented as simply T if there is no external AST source.
-  using ValueType = llvm::PointerUnion<T, LazyData*>;
+  // Our value is represented as simply a Decl pointer if there is no external
+  // AST source.
+  using ValueType = llvm::PointerUnion<Decl *, LazyData *>;
   ValueType Value;
 
-  LazyGenerationalUpdatePtr(ValueType V) : Value(V) {}
+  LazyGenerationalDeclPtr(ValueType V) : Value(V) {}
 
-  // Defined in ASTContext.h
-  static ValueType makeValue(const ASTContext &Ctx, T Value);
+  static ValueType makeValue(const ASTContext &Ctx, Decl *Value);
 
 public:
-  explicit LazyGenerationalUpdatePtr(const ASTContext &Ctx, T Value = T())
+  explicit LazyGenerationalDeclPtr(const ASTContext &Ctx, Decl *Value = nullptr)
       : Value(makeValue(Ctx, Value)) {}
 
-  /// Create a pointer that is not potentially updated by later generations of
-  /// the external AST source.
-  enum NotUpdatedTag { NotUpdated };
-  LazyGenerationalUpdatePtr(NotUpdatedTag, T Value = T())
-      : Value(Value) {}
-
   /// Forcibly set this pointer (which must be lazy) as needing updates.
-  void markIncomplete() {
-    Value.template get<LazyData *>()->LastGeneration = 0;
-  }
+  void markIncomplete() { cast<LazyData *>(Value)->LastGeneration = 0; }
 
   /// Set the value of this pointer, in the current generation.
-  void set(T NewValue) {
+  void set(Decl *NewValue) {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
       LazyVal->LastValue = NewValue;
       return;
@@ -438,31 +478,28 @@ public:
     Value = NewValue;
   }
 
-  /// Set the value of this pointer, for this and all future generations.
-  void setNotUpdated(T NewValue) { Value = NewValue; }
-
   /// Get the value of this pointer, updating its owner if necessary.
-  T get(Owner O) {
+  Decl *get(const Decl *O) {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
       if (LazyVal->LastGeneration != LazyVal->ExternalSource->getGeneration()) {
         LazyVal->LastGeneration = LazyVal->ExternalSource->getGeneration();
-        (LazyVal->ExternalSource->*Update)(O);
+        LazyVal->ExternalSource->CompleteRedeclChain(O);
       }
       return LazyVal->LastValue;
     }
-    return Value.template get<T>();
+    return cast<Decl *>(Value);
   }
 
   /// Get the most recently computed value of this pointer without updating it.
-  T getNotUpdated() const {
+  Decl *getNotUpdated() const {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>())
       return LazyVal->LastValue;
-    return Value.template get<T>();
+    return cast<Decl *>(Value);
   }
 
   void *getOpaqueValue() { return Value.getOpaqueValue(); }
-  static LazyGenerationalUpdatePtr getFromOpaqueValue(void *Ptr) {
-    return LazyGenerationalUpdatePtr(ValueType::getFromOpaqueValue(Ptr));
+  static LazyGenerationalDeclPtr getFromOpaqueValue(void *Ptr) {
+    return LazyGenerationalDeclPtr(ValueType::getFromOpaqueValue(Ptr));
   }
 };
 
@@ -470,108 +507,21 @@ public:
 
 namespace llvm {
 
-/// Specialize PointerLikeTypeTraits to allow LazyGenerationalUpdatePtr to be
+/// Specialize PointerLikeTypeTraits to allow LazyGenerationalDeclPtr to be
 /// placed into a PointerUnion.
-template<typename Owner, typename T,
-         void (clang::ExternalASTSource::*Update)(Owner)>
-struct PointerLikeTypeTraits<
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>> {
-  using Ptr = clang::LazyGenerationalUpdatePtr<Owner, T, Update>;
+template <> struct PointerLikeTypeTraits<clang::LazyGenerationalDeclPtr> {
+  using Ptr = clang::LazyGenerationalDeclPtr;
 
   static void *getAsVoidPointer(Ptr P) { return P.getOpaqueValue(); }
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
 
   static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1;
+      PointerLikeTypeTraits<typename Ptr::ValueType>::NumLowBitsAvailable;
 };
 
 } // namespace llvm
 
 namespace clang {
-
-/// Represents a lazily-loaded vector of data.
-///
-/// The lazily-loaded vector of data contains data that is partially loaded
-/// from an external source and partially added by local translation. The
-/// items loaded from the external source are loaded lazily, when needed for
-/// iteration over the complete vector.
-template<typename T, typename Source,
-         void (Source::*Loader)(SmallVectorImpl<T>&),
-         unsigned LoadedStorage = 2, unsigned LocalStorage = 4>
-class LazyVector {
-  SmallVector<T, LoadedStorage> Loaded;
-  SmallVector<T, LocalStorage> Local;
-
-public:
-  /// Iteration over the elements in the vector.
-  ///
-  /// In a complete iteration, the iterator walks the range [-M, N),
-  /// where negative values are used to indicate elements
-  /// loaded from the external source while non-negative values are used to
-  /// indicate elements added via \c push_back().
-  /// However, to provide iteration in source order (for, e.g., chained
-  /// precompiled headers), dereferencing the iterator flips the negative
-  /// values (corresponding to loaded entities), so that position -M
-  /// corresponds to element 0 in the loaded entities vector, position -M+1
-  /// corresponds to element 1 in the loaded entities vector, etc. This
-  /// gives us a reasonably efficient, source-order walk.
-  ///
-  /// We define this as a wrapping iterator around an int. The
-  /// iterator_adaptor_base class forwards the iterator methods to basic integer
-  /// arithmetic.
-  class iterator
-      : public llvm::iterator_adaptor_base<
-            iterator, int, std::random_access_iterator_tag, T, int, T *, T &> {
-    friend class LazyVector;
-
-    LazyVector *Self;
-
-    iterator(LazyVector *Self, int Position)
-        : iterator::iterator_adaptor_base(Position), Self(Self) {}
-
-    bool isLoaded() const { return this->I < 0; }
-
-  public:
-    iterator() : iterator(nullptr, 0) {}
-
-    typename iterator::reference operator*() const {
-      if (isLoaded())
-        return Self->Loaded.end()[this->I];
-      return Self->Local.begin()[this->I];
-    }
-  };
-
-  iterator begin(Source *source, bool LocalOnly = false) {
-    if (LocalOnly)
-      return iterator(this, 0);
-
-    if (source)
-      (source->*Loader)(Loaded);
-    return iterator(this, -(int)Loaded.size());
-  }
-
-  iterator end() {
-    return iterator(this, Local.size());
-  }
-
-  void push_back(const T& LocalValue) {
-    Local.push_back(LocalValue);
-  }
-
-  void erase(iterator From, iterator To) {
-    if (From.isLoaded() && To.isLoaded()) {
-      Loaded.erase(&*From, &*To);
-      return;
-    }
-
-    if (From.isLoaded()) {
-      Loaded.erase(&*From, Loaded.end());
-      From = begin(nullptr, true);
-    }
-
-    Local.erase(&*From, &*To);
-  }
-};
 
 /// A lazy pointer to a statement.
 using LazyDeclStmtPtr =

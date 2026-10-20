@@ -2,19 +2,25 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("DebugInfoLogicalViewTests") {
   deps = [
+    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/LogicalView",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "../DWARF/DwarfGenerator.cpp",
+    "../DWARF/DwarfUtils.cpp",
     "CodeViewReaderTest.cpp",
     "CommandLineOptionsTest.cpp",
     "CompareElementsTest.cpp",
+    "DWARFGeneratedTest.cpp",
     "DWARFReaderTest.cpp",
+    "IRReaderTest.cpp",
     "LocationRangesTest.cpp",
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",
@@ -31,7 +37,7 @@ unittest("DebugInfoLogicalViewTests") {
   # dependency, and the cwd while tests requiring input files run should
   # be required to be some fixed directory.
   # FIXME: Also, the GN way is to write this file at build time. But since
-  # there's only two uses of this, and since this is a pattern that hopefully
+  # there's only three uses of this, and since this is a pattern that hopefully
   # will disappear again, and since it doesn't have any measurable performance
   # hit, write the file at GN time.
   # Note: This line here implicitly depends on unittest() setting output_dir to

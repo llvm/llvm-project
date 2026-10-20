@@ -3,8 +3,8 @@
 
 %struct.MaskedType = type { i8, i8 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 declare void @MaskedFunction1(ptr, ptr addrspace(1))
 declare void @MaskedFunction2(ptr, ptr)
 
@@ -13,11 +13,11 @@ define i8 @test_gep_not_modified(ptr %in0, ptr %in1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FUNCALLOC:%.*]] = alloca [[STRUCT_MASKEDTYPE:%.*]], align 4
 ; CHECK-NEXT:    [[PTRALLOC:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[PTRALLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PTRALLOC]])
 ; CHECK-NEXT:    [[ADDRSPACECAST:%.*]] = addrspacecast ptr [[PTRALLOC]] to ptr addrspace(1)
 ; CHECK-NEXT:    call void @MaskedFunction1(ptr [[IN1:%.*]], ptr addrspace(1) [[ADDRSPACECAST]])
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[PTRALLOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[PTRALLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PTRALLOC]])
 ; CHECK-NEXT:    [[GETELEMPTR1:%.*]] = getelementptr inbounds [[STRUCT_MASKEDTYPE]], ptr [[FUNCALLOC]], i32 0, i32 1
 ; CHECK-NEXT:    store i8 [[LOAD1]], ptr [[GETELEMPTR1]], align 1
 ; CHECK-NEXT:    ret i8 0
@@ -25,11 +25,11 @@ define i8 @test_gep_not_modified(ptr %in0, ptr %in1) {
 entry:
   %funcAlloc = alloca %struct.MaskedType, align 4
   %ptrAlloc = alloca i8, align 1
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ptrAlloc) #0
+  call void @llvm.lifetime.start.p0(ptr %ptrAlloc) #0
   %addrspaceCast = addrspacecast ptr %ptrAlloc to ptr addrspace(1)
   call void @MaskedFunction1(ptr %in1, ptr addrspace(1) %addrspaceCast)
   %load1 = load i8, ptr %ptrAlloc, align 1
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ptrAlloc) #0
+  call void @llvm.lifetime.end.p0(ptr %ptrAlloc) #0
   %getElemPtr1 = getelementptr inbounds %struct.MaskedType, ptr %funcAlloc, i32 0, i32 1
   store i8 %load1, ptr %getElemPtr1, align 1
   ret i8 0
@@ -40,19 +40,19 @@ define i8 @test_gep_modified(ptr %in0, ptr %in1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FUNCALLOC:%.*]] = alloca [[STRUCT_MASKEDTYPE:%.*]], align 4
 ; CHECK-NEXT:    [[PTRALLOC:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[PTRALLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PTRALLOC]])
 ; CHECK-NEXT:    [[GETELEMPTR1:%.*]] = getelementptr inbounds [[STRUCT_MASKEDTYPE]], ptr [[FUNCALLOC]], i32 0, i32 1
 ; CHECK-NEXT:    call void @MaskedFunction2(ptr [[IN1:%.*]], ptr [[GETELEMPTR1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[PTRALLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PTRALLOC]])
 ; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %funcAlloc = alloca %struct.MaskedType, align 4
   %ptrAlloc = alloca i8, align 1
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ptrAlloc) #0
+  call void @llvm.lifetime.start.p0(ptr %ptrAlloc) #0
   call void @MaskedFunction2(ptr %in1, ptr %ptrAlloc)
   %load1 = load i8, ptr %ptrAlloc, align 1
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ptrAlloc) #0
+  call void @llvm.lifetime.end.p0(ptr %ptrAlloc) #0
   %getElemPtr1 = getelementptr inbounds %struct.MaskedType, ptr %funcAlloc, i32 0, i32 1
   store i8 %load1, ptr %getElemPtr1, align 1
   ret i8 0

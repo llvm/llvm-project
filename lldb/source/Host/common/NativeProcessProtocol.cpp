@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <iterator>
 #include <optional>
 
 using namespace lldb;
@@ -34,7 +35,7 @@ NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
 lldb_private::Status NativeProcessProtocol::Interrupt() {
   Status error;
 #if !defined(SIGSTOP)
-  error.SetErrorString("local host does not support signaling");
+  error = Status::FromErrorString("local host does not support signaling");
   return error;
 #else
   return Signal(SIGSTOP);
@@ -43,7 +44,7 @@ lldb_private::Status NativeProcessProtocol::Interrupt() {
 
 Status NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
   m_signals_to_ignore.clear();
-  m_signals_to_ignore.insert(signals.begin(), signals.end());
+  m_signals_to_ignore.insert_range(signals);
   return Status();
 }
 
@@ -51,20 +52,20 @@ lldb_private::Status
 NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                            MemoryRegionInfo &range_info) {
   // Default: not implemented.
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 lldb_private::Status
 NativeProcessProtocol::ReadMemoryTags(int32_t type, lldb::addr_t addr,
                                       size_t len, std::vector<uint8_t> &tags) {
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 lldb_private::Status
 NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
                                        size_t len,
                                        const std::vector<uint8_t> &tags) {
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 std::optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
@@ -215,17 +216,17 @@ Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   for (const auto &thread : m_threads) {
     assert(thread && "thread list should not have a NULL thread!");
 
-    const Status thread_error = thread->RemoveWatchpoint(addr);
+    Status thread_error = thread->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
       // Keep track of the first thread error if any threads fail. We want to
       // try to remove the watchpoint from every thread, though, even if one or
       // more have errors.
       if (!overall_error.Fail())
-        overall_error = thread_error;
+        overall_error = std::move(thread_error);
     }
   }
-  const Status error = m_watchpoint_list.Remove(addr);
-  return overall_error.Fail() ? overall_error : error;
+  Status error = m_watchpoint_list.Remove(addr);
+  return overall_error.Fail() ? std::move(overall_error) : std::move(error);
 }
 
 const HardwareBreakpointMap &
@@ -248,7 +249,8 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
 
   if (hw_debug_cap == std::nullopt || hw_debug_cap->first == 0 ||
       hw_debug_cap->first <= m_hw_breakpoints_map.size())
-    return Status("Target does not have required no of hardware breakpoints");
+    return Status::FromErrorString(
+        "Target does not have required no of hardware breakpoints");
 
   // Vector below stores all thread pointer for which we have we successfully
   // set this hardware breakpoint. If any of the current process threads fails
@@ -343,13 +345,11 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   LLDB_LOG(log, "addr = {0:x}, size_hint = {1}", addr, size_hint);
 
   auto it = m_software_breakpoints.find(addr);
-  if (it != m_software_breakpoints.end()) {
-    ++it->second.ref_count;
+  if (it != m_software_breakpoints.end())
     return Status();
-  }
   auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
   if (!expected_bkpt)
-    return Status(expected_bkpt.takeError());
+    return Status::FromError(expected_bkpt.takeError());
 
   m_software_breakpoints.emplace(addr, std::move(*expected_bkpt));
   return Status();
@@ -360,32 +360,36 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   LLDB_LOG(log, "addr = {0:x}", addr);
   auto it = m_software_breakpoints.find(addr);
   if (it == m_software_breakpoints.end())
-    return Status("Breakpoint not found.");
-  assert(it->second.ref_count > 0);
-  if (--it->second.ref_count > 0)
-    return Status();
+    return Status::FromErrorString("Breakpoint not found.");
+
+  // Remove the entry from m_software_breakpoints rightaway, so that we don't
+  // leave behind an entry in case one of the following conditions returns an
+  // error. The breakpoint is moved so that it can be accessed below.
+  SoftwareBreakpoint bkpt = std::move(it->second);
+  m_software_breakpoints.erase(it);
 
   // This is the last reference. Let's remove the breakpoint.
   Status error;
 
   // Clear a software breakpoint instruction
-  llvm::SmallVector<uint8_t, 4> curr_break_op(
-      it->second.breakpoint_opcodes.size(), 0);
+  llvm::SmallVector<uint8_t, 4> curr_break_op(bkpt.breakpoint_opcodes.size(),
+                                              0);
 
   // Read the breakpoint opcode
   size_t bytes_read = 0;
   error =
       ReadMemory(addr, curr_break_op.data(), curr_break_op.size(), bytes_read);
   if (error.Fail() || bytes_read < curr_break_op.size()) {
-    return Status("addr=0x%" PRIx64
-                  ": tried to read %zu bytes but only read %zu",
-                  addr, curr_break_op.size(), bytes_read);
+    return Status::FromErrorStringWithFormat(
+        "addr=0x%" PRIx64 ": tried to read %zu bytes but only read %zu", addr,
+        curr_break_op.size(), bytes_read);
   }
-  const auto &saved = it->second.saved_opcodes;
+  const auto &saved = bkpt.saved_opcodes;
   // Make sure the breakpoint opcode exists at this address
-  if (llvm::ArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
-    if (curr_break_op != it->second.saved_opcodes)
-      return Status("Original breakpoint trap is no longer in memory.");
+  if (llvm::ArrayRef(curr_break_op) != bkpt.breakpoint_opcodes) {
+    if (curr_break_op != bkpt.saved_opcodes)
+      return Status::FromErrorString(
+          "Original breakpoint trap is no longer in memory.");
     LLDB_LOG(log,
              "Saved opcodes ({0:@[x]}) have already been restored at {1:x}.",
              llvm::make_range(saved.begin(), saved.end()), addr);
@@ -393,11 +397,11 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
     // We found a valid breakpoint opcode at this address, now restore the
     // saved opcode.
     size_t bytes_written = 0;
-    error = WriteMemory(addr, saved.data(), saved.size(), bytes_written);
+    error = DoWriteMemory(addr, saved.data(), saved.size(), bytes_written);
     if (error.Fail() || bytes_written < saved.size()) {
-      return Status("addr=0x%" PRIx64
-                    ": tried to write %zu bytes but only wrote %zu",
-                    addr, saved.size(), bytes_written);
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+          addr, saved.size(), bytes_written);
     }
 
     // Verify that our original opcode made it back to the inferior
@@ -406,16 +410,16 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
     error = ReadMemory(addr, verify_opcode.data(), verify_opcode.size(),
                        verify_bytes_read);
     if (error.Fail() || verify_bytes_read < verify_opcode.size()) {
-      return Status("addr=0x%" PRIx64
-                    ": tried to read %zu verification bytes but only read %zu",
-                    addr, verify_opcode.size(), verify_bytes_read);
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64
+          ": tried to read %zu verification bytes but only read %zu",
+          addr, verify_opcode.size(), verify_bytes_read);
     }
     if (verify_opcode != saved)
       LLDB_LOG(log, "Restoring bytes at {0:x}: {1:@[x]}", addr,
                llvm::make_range(saved.begin(), saved.end()));
   }
 
-  m_software_breakpoints.erase(it);
   return Status();
 }
 
@@ -451,8 +455,8 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
 
   // Write a software breakpoint in place of the original opcode.
   size_t bytes_written = 0;
-  error = WriteMemory(addr, expected_trap->data(), expected_trap->size(),
-                      bytes_written);
+  error = DoWriteMemory(addr, expected_trap->data(), expected_trap->size(),
+                        bytes_written);
   if (error.Fail())
     return error.ToError();
 
@@ -494,7 +498,7 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
   }
 
   LLDB_LOG(log, "addr = {0:x}: SUCCESS", addr);
-  return SoftwareBreakpoint{1, saved_opcode_bytes, *expected_trap};
+  return SoftwareBreakpoint{saved_opcode_bytes, *expected_trap};
 }
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>
@@ -615,7 +619,7 @@ void NativeProcessProtocol::FixupBreakpointPCAsNeeded(
     // We didn't find one at a software probe location.  Nothing to do.
     LLDB_LOG(log,
              "pid {0} no lldb software breakpoint found at current pc with "
-             "adjustment: {1}",
+             "adjustment: {1:x}",
              GetID(), breakpoint_addr);
     return;
   }
@@ -646,13 +650,97 @@ Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
     return RemoveSoftwareBreakpoint(addr);
 }
 
-Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
-                                                    void *buf, size_t size,
-                                                    size_t &bytes_read) {
-  Status error = ReadMemory(addr, buf, size, bytes_read);
+Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
+                                          size_t size, size_t &bytes_written) {
+  Status error;
+  bytes_written = 0;
+
+  if (!size)
+    return error;
+
+  if (m_software_breakpoints.empty())
+    return DoWriteMemory(addr, buf, size, bytes_written);
+
+  // Find first breakpoint that starts >= addr.
+  std::map<lldb::addr_t, SoftwareBreakpoint>::iterator bkpt =
+      m_software_breakpoints.lower_bound(addr);
+
+  // it points to the first breakpoint starting at >= addr, but the one
+  // immediately before it may extend over addr, or begin exactly at addr.
+  if (bkpt != m_software_breakpoints.begin())
+    bkpt = std::prev(bkpt);
+
+  const uint8_t *byte_buf = static_cast<const uint8_t *>(buf);
+  for (; bkpt != m_software_breakpoints.end(); ++bkpt) {
+    auto &[sbp_addr, sbp_data] = *bkpt;
+    // If the address is before a breakpoint site, write up to the site, or to
+    // the end of the write. Whichever comes first.
+    if (addr < sbp_addr) {
+      const size_t to_write =
+          std::min(static_cast<addr_t>(size), sbp_addr - addr);
+      size_t part_bytes_written = 0;
+      error = DoWriteMemory(addr, byte_buf, to_write, part_bytes_written);
+      bytes_written += part_bytes_written;
+
+      if (error.Fail() || part_bytes_written < to_write) {
+        return Status::FromErrorStringWithFormat(
+            "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+            addr, to_write, part_bytes_written);
+      }
+
+      byte_buf += to_write;
+      addr += to_write;
+      size -= to_write;
+
+      if (!size)
+        break;
+    }
+
+    // If the address is within a breakpoint site, update the saved opcodes
+    // for that site.
+    if ((addr >= sbp_addr) &&
+        (addr < (sbp_addr + sbp_data.saved_opcodes.size()))) {
+      // Instead of writing this chunk, update the saved bytes in the
+      // breakpoint.
+      const size_t idx = addr - sbp_addr;
+      const size_t to_write =
+          std::min(size, sbp_data.saved_opcodes.size() - idx);
+      for (size_t copied = 0; copied < to_write;
+           ++bytes_written, ++byte_buf, ++addr, --size, ++copied)
+        sbp_data.saved_opcodes[idx + copied] = *byte_buf;
+    }
+
+    if (!size)
+      break;
+  }
+
+  // If the write range extends beyond the last breakpoint site, write the
+  // remaining data.
+  if (size) {
+    // Write the remaining part after the last breakpoint, or the whole range
+    // in the case that there were no breakpoints.
+    size_t part_bytes_written = 0;
+    error = DoWriteMemory(addr, byte_buf, size, part_bytes_written);
+    bytes_written += part_bytes_written;
+    if (error.Fail() || part_bytes_written < size) {
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+          addr, size, part_bytes_written);
+    }
+  }
+
+  return Status();
+}
+
+Status
+NativeProcessProtocol::ReadMemoryWithoutTrap(const ProcessAddress &process_addr,
+                                             void *buf, size_t size,
+                                             size_t &bytes_read) {
+  Status error = ReadMemory(process_addr, buf, size, bytes_read);
   if (error.Fail())
     return error;
 
+  lldb::addr_t addr = process_addr.GetValue();
   llvm::MutableArrayRef data(static_cast<uint8_t *>(buf), bytes_read);
   for (const auto &pair : m_software_breakpoints) {
     lldb::addr_t bp_addr = pair.first;
@@ -713,7 +801,7 @@ NativeProcessProtocol::ReadCStringFromMemory(lldb::addr_t addr, char *buffer,
 
   string_size = total_bytes_read - 1;
 
-  // Make sure we return a null terminated string.
+  // Make sure we return a null-terminated string.
   if (bytes_left == 0 && max_size > 0 && buffer[max_size - 1] != '\0') {
     buffer[max_size - 1] = '\0';
     total_bytes_read--;

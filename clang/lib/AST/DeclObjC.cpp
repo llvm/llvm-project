@@ -24,12 +24,9 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -868,6 +865,27 @@ ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C,
                                     Selector(), QualType(), nullptr, nullptr);
 }
 
+void ObjCMethodDecl::getNameForDiagnostic(raw_ostream &OS,
+                                          const PrintingPolicy &Policy,
+                                          bool Qualified) const {
+  if (!Qualified) {
+    printName(OS, Policy);
+    return;
+  }
+
+  OS << (isInstanceMethod() ? '-' : '+');
+  OS << '[';
+  if (const auto *ID = getClassInterface()) {
+    OS << ID->getName();
+  } else if (const auto *PD = dyn_cast<ObjCProtocolDecl>(getDeclContext())) {
+    OS << PD->getName();
+  } else {
+    assert(false && "Context should be set for ObjCMethodDecl");
+    OS << "<Unknown>";
+  }
+  OS << ' ' << getSelector() << ']';
+}
+
 bool ObjCMethodDecl::isDirectMethod() const {
   return hasAttr<ObjCDirectAttr>() &&
          !getASTContext().getLangOpts().ObjCDisableDirectMethodsForTesting;
@@ -931,8 +949,8 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
-  std::uninitialized_copy(Params.begin(), Params.end(), getParams());
-  std::uninitialized_copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
+  llvm::uninitialized_copy(Params, getParams());
+  llvm::uninitialized_copy(SelLocs, getStoredSelLocs());
 }
 
 void ObjCMethodDecl::getSelectorLocs(
@@ -947,12 +965,12 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
   assert((!SelLocs.empty() || isImplicit()) &&
          "No selector locs for non-implicit method");
   if (isImplicit())
-    return setParamsAndSelLocs(C, Params, std::nullopt);
+    return setParamsAndSelLocs(C, Params, {});
 
   setSelLocsKind(hasStandardSelectorLocs(getSelector(), SelLocs, Params,
                                         DeclEndLoc));
   if (getSelLocsKind() != SelLoc_NonStandard)
-    return setParamsAndSelLocs(C, Params, std::nullopt);
+    return setParamsAndSelLocs(C, Params, {});
 
   setParamsAndSelLocs(C, Params, SelLocs);
 }
@@ -1203,9 +1221,10 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
   if (selfIsPseudoStrong)
     Self->setARCPseudoStrong(true);
 
-  setCmdDecl(ImplicitParamDecl::Create(
+  auto *CmdDecl = ImplicitParamDecl::Create(
       Context, this, SourceLocation(), &Context.Idents.get("_cmd"),
-      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd));
+      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd);
+  setCmdDecl(CmdDecl);
 }
 
 ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {
@@ -1514,7 +1533,7 @@ ObjCTypeParamList::ObjCTypeParamList(SourceLocation lAngleLoc,
                                      ArrayRef<ObjCTypeParamDecl *> typeParams,
                                      SourceLocation rAngleLoc)
     : Brackets(lAngleLoc, rAngleLoc), NumParams(typeParams.size()) {
-  std::copy(typeParams.begin(), typeParams.end(), begin());
+  llvm::copy(typeParams, begin());
 }
 
 ObjCTypeParamList *ObjCTypeParamList::create(
@@ -2365,6 +2384,36 @@ ObjCPropertyDecl *ObjCPropertyDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) ObjCPropertyDecl(nullptr, SourceLocation(), nullptr,
                                       SourceLocation(), SourceLocation(),
                                       QualType(), nullptr, None);
+}
+
+void ObjCPropertyDecl::getNameForDiagnostic(raw_ostream &OS,
+                                            const PrintingPolicy &Policy,
+                                            bool Qualified) const {
+  if (!Qualified) {
+    printName(OS, Policy);
+    return;
+  }
+
+  OS << (isInstanceProperty() ? '-' : '+');
+  OS << '[';
+  const ObjCContainerDecl *Parent = nullptr;
+  if (const auto *MD = getGetterMethodDecl()) {
+    Parent = MD->getClassInterface();
+    if (!Parent)
+      Parent = dyn_cast<ObjCProtocolDecl>(MD->getDeclContext());
+  }
+  if (!Parent) {
+    Parent = dyn_cast<ObjCContainerDecl>(getDeclContext());
+  }
+
+  if (Parent) {
+    OS << Parent->getName();
+  } else {
+    assert(false && "Parent should not be null");
+    OS << "<Unknown>";
+  }
+
+  OS << ' ' << getName() << ']';
 }
 
 QualType ObjCPropertyDecl::getUsageType(QualType objectType) const {

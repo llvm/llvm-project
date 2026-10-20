@@ -12,9 +12,11 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/StreamString.h"
 #include <optional>
 
@@ -45,14 +47,16 @@ BreakpointResolverSP BreakpointResolverFileLine::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(GetKey(OptionNames::FileName),
                                                 filename);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find filename entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find filename entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsInteger(
       GetKey(OptionNames::LineNumber), line);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find line number entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find line number entry.");
     return nullptr;
   }
 
@@ -66,21 +70,24 @@ BreakpointResolverSP BreakpointResolverFileLine::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(GetKey(OptionNames::Inlines),
                                                  check_inlines);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find check inlines entry.");
+    error = Status::FromErrorString(
+        "BRFL::CFSD: Couldn't find check inlines entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::SkipPrologue), skip_prologue);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find skip prologue entry.");
+    error = Status::FromErrorString(
+        "BRFL::CFSD: Couldn't find skip prologue entry.");
     return nullptr;
   }
 
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::ExactMatch), exact_match);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find exact match entry.");
     return nullptr;
   }
 
@@ -133,21 +140,23 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     if (!sc.block)
       continue;
 
-    FileSpec file;
+    SupportFileNSP file_sp = std::make_shared<SupportFile>();
     uint32_t line;
     const Block *inline_block = sc.block->GetContainingInlinedBlock();
     if (inline_block) {
       const Declaration &inline_declaration = inline_block->GetInlinedFunctionInfo()->GetDeclaration();
       if (!inline_declaration.IsValid())
         continue;
-      file = inline_declaration.GetFile();
+      file_sp = std::make_shared<SupportFile>(inline_declaration.GetFile());
       line = inline_declaration.GetLine();
     } else if (sc.function)
-      sc.function->GetStartLineSourceInfo(file, line);
+      sc.function->GetStartLineSourceInfo(file_sp, line);
     else
       continue;
 
-    if (file != sc.line_entry.GetFile()) {
+    if (!file_sp ||
+        !file_sp->Equal(*sc.line_entry.file_sp,
+                        SupportFile::eEqualFileSpecAndChecksumIfSet)) {
       LLDB_LOG(log, "unexpected symbol context file {0}",
                sc.line_entry.GetFile());
       continue;
@@ -184,7 +193,8 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     const int decl_line_is_too_late_fudge = 1;
     if (line &&
         m_location_spec.GetLine() < line - decl_line_is_too_late_fudge) {
-      LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
+      LLDB_LOG(log, "removing symbol context at {0}:{1}",
+               file_sp->GetSpecOnly(), line);
       sc_list.RemoveContextAtIndex(i);
       --i;
     }
@@ -229,9 +239,8 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;
 
-    llvm::StringRef sc_file_dir = sc_file.GetDirectory().GetStringRef();
-    llvm::StringRef request_file_dir =
-        request_file.GetDirectory().GetStringRef();
+    llvm::StringRef sc_file_dir = sc_file.GetDirectory();
+    llvm::StringRef request_file_dir = request_file.GetDirectory();
 
     llvm::StringRef new_mapping_from;
     llvm::SmallString<256> new_mapping_to;
@@ -290,23 +299,34 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   const uint32_t line = m_location_spec.GetLine().value_or(0);
   const std::optional<uint16_t> column = m_location_spec.GetColumn();
 
-  const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
-  for (size_t i = 0; i < num_comp_units; i++) {
-    CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
-    if (cu_sp) {
-      if (filter.CompUnitPasses(*cu_sp))
+  Target &target = GetBreakpoint()->GetTarget();
+  RealpathPrefixes realpath_prefixes = target.GetSourceRealpathPrefixes();
+
+  if (const auto sym_file = context.module_sp->GetSymbolFileLocked()) {
+    const size_t num_comp_units = sym_file->GetNumCompileUnits();
+    for (size_t i = 0; i < num_comp_units; i++) {
+
+      if (const auto cu_sp = sym_file->GetCompileUnitAtIndex(i);
+          cu_sp && filter.CompUnitPasses(*cu_sp)) {
         cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
-                                    sc_list);
+                                    sc_list, &realpath_prefixes);
+      }
     }
   }
+
+  // Gather stats into the Target
+  target.GetStatistics().IncreaseSourceRealpathAttemptCount(
+      realpath_prefixes.GetSourceRealpathAttemptCount());
+  target.GetStatistics().IncreaseSourceRealpathCompatibleCount(
+      realpath_prefixes.GetSourceRealpathCompatibleCount());
 
   FilterContexts(sc_list);
 
   DeduceSourceMapping(sc_list);
 
   StreamString s;
-  s.Printf("for %s:%d ",
-           m_location_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"),
+  s.Format("for {0}:{1} ",
+           m_location_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>"),
            line);
 
   SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString(), line,

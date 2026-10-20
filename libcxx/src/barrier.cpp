@@ -10,14 +10,13 @@
 #include <thread>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if !defined(_LIBCPP_HAS_NO_TREE_BARRIER)
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class __barrier_algorithm_base {
 public:
   struct alignas(64) /* naturally-align the heap state */ __state_t {
     struct {
-      __atomic_base<__barrier_phase_t> __phase{0};
+      atomic<__barrier_phase_t> __phase{0};
     } __tickets[64];
   };
 
@@ -62,14 +61,14 @@ public:
 _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base* __construct_barrier_algorithm_base(ptrdiff_t& __expected) {
   return new __barrier_algorithm_base(__expected);
 }
-_LIBCPP_EXPORTED_FROM_ABI bool
-__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI bool __arrive_barrier_algorithm_base(
+    _LIBCPP_NOESCAPE __barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) noexcept {
   return __barrier->__arrive(__old_phase);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void
+__destroy_barrier_algorithm_base(_LIBCPP_NOESCAPE __barrier_algorithm_base* __barrier) noexcept {
   delete __barrier;
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_TREE_BARRIER)
-
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

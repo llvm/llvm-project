@@ -88,7 +88,7 @@ int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
         // Okay, now search backwards from that to see if there is a
         // slash in the name.  Note, even though we got all the args we don't
         // care
-        // because the list data is just a bunch of concatenated null terminated
+        // because the list data is just a bunch of concatenated null-terminated
         // strings
         // so strrchr will start from the end of argv0.
 
@@ -208,8 +208,8 @@ int ListApplications(std::string &plist, bool opt_runningApps,
   GetProcesses(plistMutableArray.get(), all_users);
 #endif
 
-  CFReleaser<CFDataRef> plistData(
-      ::CFPropertyListCreateXMLData(alloc, plistMutableArray.get()));
+  CFReleaser<CFDataRef> plistData(::CFPropertyListCreateData(
+      alloc, plistMutableArray.get(), kCFPropertyListXMLFormat_v1_0, 0, NULL));
 
   // write plist to service port
   if (plistData.get() != NULL) {

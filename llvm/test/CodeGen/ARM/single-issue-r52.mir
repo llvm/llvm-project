@@ -1,7 +1,7 @@
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
 # REQUIRES: asserts
 --- |
   ; ModuleID = 'foo.ll'
@@ -20,7 +20,7 @@
   }
   declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0(ptr, i32)
 
-# CHECK: ********** MI Scheduling **********
+# CHECK: Current Schedule Region
 # CHECK: ScheduleDAGMILive::schedule starting
 # CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0:gpr, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
 # CHECK: Latency            : 8

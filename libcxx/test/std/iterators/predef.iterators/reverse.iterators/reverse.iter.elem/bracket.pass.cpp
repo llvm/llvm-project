@@ -33,6 +33,10 @@ TEST_CONSTEXPR_CXX17 bool tests() {
     const char* s = "1234567890";
     test(random_access_iterator<const char*>(s+5), 4, '1');
     test(random_access_iterator<const char*>(s+5), 0, '5');
+#if TEST_STD_VER >= 20
+    test(cpp20_random_access_iterator<const char*>(s + 5), 4, '1');
+    test(cpp20_random_access_iterator<const char*>(s + 5), 0, '5');
+#endif
     test(s+5, 4, '1');
     test(s+5, 0, '5');
     return true;

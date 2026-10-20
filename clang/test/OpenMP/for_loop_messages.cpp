@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -fnamed-loops -verify=expected,omp4 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -fnamed-loops -verify=expected,omp5 %s -Wuninitialized
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -fnamed-loops -verify=expected,omp4 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -fnamed-loops -verify=expected,omp5 %s -Wuninitialized
 
 class S {
   int a;
@@ -307,6 +307,24 @@ int test_iteration_spaces() {
       for (jj = 10 + 25; jj < 1000; jj += 1)
         for (kk = ii * 10 + 25; kk < jj - 23; kk += 1)
           ;
+
+// expected-error@+3 {{statement expression is not supported in the loop initializer of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = ({int s = ii; s; }); kk < 10; kk += 1)
+        ;
+
+// expected-error@+3 {{statement expression is not supported in the loop condition of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = 0; kk < ({int s = ii; s; }); kk += 1)
+        ;
+
+// expected-error@+3 {{statement expression is not supported in the loop condition of a non-rectangular loop nest}}
+#pragma omp for collapse(2)
+    for (ii = 0; ii < 10; ii += 1)
+      for (kk = ii; kk < ({int s = 10; s; }); kk += 1)
+        ;
 
 #pragma omp parallel
 // expected-note@+2  {{defined as firstprivate}}
@@ -840,5 +858,24 @@ void test_static_data_member() {
     class X {
       static int x; // expected-error {{static data member 'x' not allowed in local class 'X'}}
     };
+  }
+}
+
+void test_labeled_break() {
+#pragma omp parallel
+#pragma omp for
+  a: // expected-error {{statement after '#pragma omp for' must be a for loop}}
+  for (int i = 0; i < 16; ++i) {
+    break a; // expected-error {{'break' statement cannot be used in OpenMP for loop}}
+    continue a;
+  }
+
+  b: while (1) {
+#pragma omp parallel
+#pragma omp for
+    for (int i = 0; i < 16; ++i) {
+      break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
+    }
   }
 }

@@ -16,13 +16,59 @@ define void @f2(i1 %c1) {
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[G_0_SROA_SPECULATE_LOAD_CLEANUP:%.*]] = load i16, ptr @a, align 1
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
 ; CHECK:       lbl1:
 ; CHECK-NEXT:    [[G_0_SROA_SPECULATED:%.*]] = phi i16 [ [[G_0_SROA_SPECULATE_LOAD_CLEANUP]], [[CLEANUP]] ], [ [[G_0_SROA_SPECULATE_LOAD_CLEANUP]], [[CLEANUP]] ], [ undef, [[IF_ELSE]] ]
+; CHECK-NEXT:    unreachable
+; CHECK:       cleanup7:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %e = alloca i16, align 1
+  br i1 %c1, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  br label %cleanup
+
+cleanup:                                          ; preds = %if.then
+  switch i32 2, label %cleanup7 [
+  i32 0, label %lbl1
+  i32 2, label %lbl1
+  ]
+
+if.else:                                          ; preds = %entry
+  br label %lbl1
+
+lbl1:                                             ; preds = %if.else, %cleanup, %cleanup
+  %g.0 = phi ptr [ @a, %cleanup ], [ @a, %cleanup ], [ %e, %if.else ]
+  %0 = load i16, ptr %g.0, align 1
+  unreachable
+
+cleanup7:                                         ; preds = %cleanup
+  ret void
+}
+
+define void @f2_hwasan(i1 %c1) sanitize_hwaddress {
+; CHECK-LABEL: @f2_hwasan(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
+; CHECK-NEXT:    ]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[LBL1]]
+; CHECK:       lbl1:
+; CHECK-NEXT:    [[G_0:%.*]] = phi ptr [ @a, [[CLEANUP]] ], [ @a, [[CLEANUP]] ], [ [[E]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[G_0]], align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cleanup7:
 ; CHECK-NEXT:    ret void
@@ -61,8 +107,8 @@ define void @f3(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -112,8 +158,8 @@ define void @f4(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -165,8 +211,8 @@ define void @f5(i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]
@@ -216,8 +262,8 @@ define void @f6(i1 %c1) {
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    switch i32 2, label [[CLEANUP7:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LBL1:%.*]]
-; CHECK-NEXT:    i32 2, label [[LBL1]]
+; CHECK-NEXT:      i32 0, label [[LBL1:%.*]]
+; CHECK-NEXT:      i32 2, label [[LBL1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LBL1]]

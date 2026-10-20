@@ -40,7 +40,7 @@ void test9(short v) {
 
   old = __sync_fetch_and_add();  // expected-error {{too few arguments to function call}}
   old = __sync_fetch_and_add(&old);  // expected-error {{too few arguments to function call}}
-  old = __sync_fetch_and_add((unsigned*)0, 42i); // expected-warning {{imaginary constants are a GNU extension}}
+  old = __sync_fetch_and_add((unsigned*)0, 42i); // expected-warning {{imaginary constants are a C2y extension}}
 
   // PR7600: Pointers are implicitly casted to integers and back.
   void *old_ptr = __sync_val_compare_and_swap((void**)0, 0, 0);
@@ -171,8 +171,8 @@ void test17(void) {
 #define OPT(...) (__builtin_constant_p(__VA_ARGS__) && strlen(__VA_ARGS__) < 4)
   // FIXME: These are incorrectly treated as ICEs because strlen is treated as
   // a builtin.
-  ASSERT(OPT("abc"));
-  ASSERT(!OPT("abcd"));
+  ASSERT(OPT("abc")); // expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+  ASSERT(!OPT("abcd")); // expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
   // In these cases, the strlen is non-constant, but the __builtin_constant_p
   // is 0: the array size is not an ICE but is foldable.
   ASSERT(!OPT(test17_c));
@@ -222,14 +222,16 @@ void Test19(void)
         static char b[40];
         static char buf[20];
 
-        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \\
-                                    // expected-note {{change size argument to be the size of the destination}}
+        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 20, but size argument is 40}}
         __builtin___strlcpy_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcpy_chk' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}} \
 				    // expected-warning {{'strlcpy' will always overflow; destination buffer has size 20, but size argument is 40}}
 
         strlcat(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} \
-                                    // expected-note {{change size argument to be the size of the destination}}
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcat' size argument is too large; destination buffer has size 20, but size argument is 40}}
 
         __builtin___strlcat_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcat_chk' call appears to be size of the source; expected the size of the destination}} \
                                                                                    // expected-note {{change size argument to be the size of the destination}} \

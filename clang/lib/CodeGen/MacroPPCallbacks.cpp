@@ -185,7 +185,7 @@ void MacroPPCallbacks::MacroDefined(const Token &MacroNameTok,
   writeMacroDefinition(*Id, *MD->getMacroInfo(), PP, Name, Value);
   Gen->getCGDebugInfo()->CreateMacro(getCurrentScope(),
                                      llvm::dwarf::DW_MACINFO_define, location,
-                                     Name.str(), Value.str());
+                                     NameBuffer, ValueBuffer);
 }
 
 void MacroPPCallbacks::MacroUndefined(const Token &MacroNameTok,

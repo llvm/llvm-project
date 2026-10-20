@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextPOSIXCore_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -24,55 +24,76 @@ std::unique_ptr<RegisterContextCorePOSIX_arm64>
 RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
                                        const DataExtractor &gpregset,
                                        llvm::ArrayRef<CoreNote> notes) {
-  Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
+  Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
 
   DataExtractor ssve_data =
       getRegset(notes, arch.GetTriple(), AARCH64_SSVE_Desc);
   if (ssve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSSVE);
 
   DataExtractor sve_data = getRegset(notes, arch.GetTriple(), AARCH64_SVE_Desc);
   if (sve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSVE);
 
   // Pointer Authentication register set data is based on struct
   // user_pac_mask declared in ptrace.h. See reference implementation
   // in Linux kernel source at arch/arm64/include/uapi/asm/ptrace.h.
   DataExtractor pac_data = getRegset(notes, arch.GetTriple(), AARCH64_PAC_Desc);
   if (pac_data.GetByteSize() >= sizeof(uint64_t) * 2)
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPAuth);
 
   DataExtractor tls_data = getRegset(notes, arch.GetTriple(), AARCH64_TLS_Desc);
   // A valid note will always contain at least one register, "tpidr". It may
   // expand in future.
   if (tls_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskTLS);
 
   DataExtractor za_data = getRegset(notes, arch.GetTriple(), AARCH64_ZA_Desc);
   // Nothing if ZA is not present, just the header if it is disabled.
   if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZA);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZA);
 
   DataExtractor mte_data = getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
   if (mte_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskMTE);
 
   DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
   // Although ZT0 can be in a disabled state like ZA can, the kernel reports
   // its content as 0s in that state. Therefore even a disabled ZT0 will have
   // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
   if (zt_data.GetByteSize() >= 64)
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZT);
+
+  DataExtractor fpmr_data =
+      getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
+  if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskFPMR);
+
+  DataExtractor gcs_data = getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
+  struct __attribute__((packed)) gcs_regs {
+    uint64_t features_enabled;
+    uint64_t features_locked;
+    uint64_t gcspr_e0;
+  };
+  if (gcs_data.GetByteSize() >= sizeof(gcs_regs))
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskGCS);
+
+  DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
+  struct poe_regs {
+    uint64_t por_el0_reg;
+  };
+  if (poe_data.GetByteSize() >= sizeof(poe_regs))
+    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPOE);
 
   auto register_info_up =
-      std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
+      std::make_unique<RegisterInfo_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
       new RegisterContextCorePOSIX_arm64(thread, std::move(register_info_up),
                                          gpregset, notes));
 }
 
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
@@ -82,16 +103,21 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
   llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
   if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
     AuxVector aux_vec(process->GetAuxvData());
-    std::optional<uint64_t> auxv_at_hwcap = aux_vec.GetAuxValue(
-        os == llvm::Triple::FreeBSD ? AuxVector::AUXV_FREEBSD_AT_HWCAP
-                                    : AuxVector::AUXV_AT_HWCAP);
+    bool is_freebsd = os == llvm::Triple::FreeBSD;
+    std::optional<uint64_t> auxv_at_hwcap =
+        aux_vec.GetAuxValue(is_freebsd ? AuxVector::AUXV_FREEBSD_AT_HWCAP
+                                       : AuxVector::AUXV_AT_HWCAP);
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+    std::optional<uint64_t> auxv_at_hwcap3 =
+        is_freebsd ? std::nullopt
+                   : aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
 
-    m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                           auxv_at_hwcap2.value_or(0));
-    m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
-                                                 GetRegisterCount());
+    m_register_type_detector.DetectTypes(auxv_at_hwcap.value_or(0),
+                                         auxv_at_hwcap2.value_or(0),
+                                         auxv_at_hwcap3.value_or(0));
+    m_register_type_detector.UpdateRegisterInfo(GetRegisterInfo(),
+                                                GetRegisterCount());
   }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
@@ -127,6 +153,15 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsZTPresent())
     m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
+
+  if (m_register_info_up->IsFPMRPresent())
+    m_fpmr_data = getRegset(notes, target_triple, AARCH64_FPMR_Desc);
+
+  if (m_register_info_up->IsGCSPresent())
+    m_gcs_data = getRegset(notes, target_triple, AARCH64_GCS_Desc);
+
+  if (m_register_info_up->IsPOEPresent())
+    m_poe_data = getRegset(notes, target_triple, AARCH64_POE_Desc);
 
   ConfigureRegisterContext();
 }
@@ -322,6 +357,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < m_mte_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsGCS(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetGCSOffset();
+    assert(offset < m_gcs_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_gcs_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
     // be a ZA header. No header, no SME at all.
@@ -370,6 +410,16 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
           *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
           reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
     }
+  } else if (IsFPMR(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
+    assert(offset < m_fpmr_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_fpmr_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsPOE(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetPOEOffset();
+    assert(offset < m_poe_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_poe_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;
 

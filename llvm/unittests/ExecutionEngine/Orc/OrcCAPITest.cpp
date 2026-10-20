@@ -11,8 +11,10 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/Target.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -31,6 +33,20 @@ using namespace llvm::orc;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
+
+// A class that sets strings for extension attributes by querying
+// TargetLibraryInfo.
+struct TargetI32ArgExtensions {
+  std::string Ret;
+  std::string Arg;
+  TargetI32ArgExtensions(std::string TargetTriple, bool Signed = true) {
+    Triple T(TargetTriple);
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T, Signed))
+      Ret = Attribute::getNameFromAttrKind(AK).str() + " ";
+    if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T, Signed))
+      Arg = Attribute::getNameFromAttrKind(AK).str() + " ";
+  }
+};
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
 // written for the LLVM-C API. It provides the following helpers:
@@ -90,6 +106,31 @@ public:
 
     LLVMOrcDisposeLLJIT(J);
     TargetSupported = true;
+
+    // Create test functions in text format, with the proper extension
+    // attributes.
+    if (SumExample.empty()) {
+      TargetI32ArgExtensions ArgExt(TargetTriple);
+      std::ostringstream OS;
+      OS << "define " << ArgExt.Ret << "i32 "
+         << "@sum(i32 " << ArgExt.Arg << "%x, i32 " << ArgExt.Arg << "%y)"
+         << R"( {
+          entry:
+          %r = add nsw i32 %x, %y
+          ret i32 %r
+          }
+        )";
+      SumExample = OS.str();
+
+      OS << R"(
+          !llvm.module.flags = !{!0}
+          !llvm.dbg.cu = !{!1}
+          !0 = !{i32 2, !"Debug Info Version", i32 3}
+          !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
+          !2 = !DIFile(filename: "sum.c", directory: "/tmp")
+        )";
+      SumDebugExample = OS.str();
+    }
   }
 
   void SetUp() override {
@@ -180,6 +221,7 @@ protected:
                                                      StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
     return wrap(new ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
 
@@ -187,6 +229,7 @@ protected:
                                               StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
 
     auto JTMB = cantFail(JITTargetMachineBuilder::detectHost());
     M->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
@@ -199,37 +242,16 @@ protected:
 
   static std::string TargetTriple;
   static bool TargetSupported;
+
+  static std::string SumExample;
+  static std::string SumDebugExample;
 };
 
 std::string OrcCAPITestBase::TargetTriple;
 bool OrcCAPITestBase::TargetSupported = false;
 
-namespace {
-
-constexpr StringRef SumExample =
-    R"(
-    define i32 @sum(i32 %x, i32 %y) {
-    entry:
-      %r = add nsw i32 %x, %y
-      ret i32 %r
-    }
-  )";
-
-constexpr StringRef SumDebugExample =
-    R"(
-    define i32 @sum(i32 %x, i32 %y) {
-    entry:
-      %r = add nsw i32 %x, %y
-      ret i32 %r
-    }
-    !llvm.module.flags = !{!0}
-    !llvm.dbg.cu = !{!1}
-    !0 = !{i32 2, !"Debug Info Version", i32 3}
-    !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
-    !2 = !DIFile(filename: "sum.c", directory: "/tmp")
-  )";
-
-} // end anonymous namespace.
+std::string OrcCAPITestBase::SumExample;
+std::string OrcCAPITestBase::SumDebugExample;
 
 // Consumes the given error ref and returns the string error message.
 static std::string toString(LLVMErrorRef E) {
@@ -514,7 +536,7 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
@@ -528,7 +550,6 @@ TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
 }
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
@@ -575,7 +596,9 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
-  auto *SumFn = (SumFunctionType)(TestFnAddr);
+  // FIXME: We use ExecutorAddr::toPtr here to sign arm64e pointers. We should
+  //        develop a C API solution for this.
+  auto *SumFn = ExecutorAddr(TestFnAddr).toPtr<SumFunctionType>();
   int32_t Result = SumFn(1, 1);
   ASSERT_EQ(2, Result);
 }

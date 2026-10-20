@@ -6,24 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Option/ArgList.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/Option.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -134,7 +135,7 @@ void ArgList::AddAllArgsExcept(ArgStringList &Output,
 /// This is a nicer interface when you don't have a list of Ids to exclude.
 void ArgList::addAllArgs(ArgStringList &Output,
                          ArrayRef<OptSpecifier> Ids) const {
-  ArrayRef<OptSpecifier> Exclude = std::nullopt;
+  ArrayRef<OptSpecifier> Exclude = {};
   AddAllArgsExcept(Output, Ids, Exclude);
 }
 
@@ -202,6 +203,43 @@ void ArgList::print(raw_ostream &O) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
+
+StringRef ArgList::getSubCommand(
+    ArrayRef<OptTable::SubCommand> AllSubCommands,
+    std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+    std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals,
+    bool AllowSubCommandNamesAsPositionals) const {
+
+  SmallVector<StringRef, 4> SubCommands;
+  SmallVector<StringRef, 4> OtherPositionals;
+  for (const Arg *A : *this) {
+    if (A->getOption().getKind() != Option::InputClass)
+      continue;
+
+    StringRef CmdName = A->getValue();
+    bool IsCandidate =
+        !AllowSubCommandNamesAsPositionals || SubCommands.empty();
+    if (IsCandidate &&
+        llvm::any_of(AllSubCommands, [&](const OptTable::SubCommand &CMD) {
+          return CmdName == CMD.Name;
+        }))
+      SubCommands.push_back(CmdName);
+    else
+      OtherPositionals.push_back(CmdName);
+  }
+
+  // Invoke callbacks if necessary.
+  if (SubCommands.size() > 1) {
+    HandleMultipleSubcommands(SubCommands);
+    return {};
+  }
+  if (!OtherPositionals.empty())
+    HandleOtherPositionals(OtherPositionals);
+
+  if (SubCommands.size() == 1)
+    return SubCommands.front();
+  return {}; // No valid usage of subcommand found.
+}
 
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.

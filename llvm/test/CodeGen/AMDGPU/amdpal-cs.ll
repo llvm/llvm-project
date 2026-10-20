@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; GCN-LABEL: {{^}}cs_amdpal:
 ; GCN:           .amdgpu_pal_metadata
@@ -8,7 +8,8 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
-; GCN-NEXT:         .entry_point:    cs_amdpal
+; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
+; GCN-NEXT:         .entry_point_symbol:    cs_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2e12 (COMPUTE_PGM_RSRC1)':

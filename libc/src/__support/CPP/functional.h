@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/is_convertible.h"
 #include "src/__support/CPP/type_traits/is_same.h"
@@ -17,10 +18,9 @@
 #include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/CPP/utility/forward.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-#include <stdint.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 /// A function type adapted from LLVM's function_ref.
@@ -65,6 +65,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H

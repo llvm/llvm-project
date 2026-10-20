@@ -8,11 +8,6 @@
 
 # Bijective Internal Name Uniquing
 
-```{contents}
----
-local:
----
-```
 
 FIR has a flat namespace. No two objects may have the same name at the module
 level. (These would be functions, globals, etc.) This necessitates some sort

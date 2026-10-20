@@ -21,11 +21,12 @@ void main() {
 }
 
 // This tests reference like `this` in HLSL
-  // CHECK:       %call = call noundef i32 @"?getFirst@Pair@@QAAHXZ"(ptr noundef nonnull align 4 dereferenceable(8) %Vals)
-  // CHECK-NEXT:  %First = getelementptr inbounds %struct.Pair, ptr %Vals, i32 0, i32 0
-  // CHECK-NEXT:  store i32 %call, ptr %First, align 4
-  // CHECK-NEXT:  %call1 = call noundef float @"?getSecond@Pair@@QAAMXZ"(ptr noundef nonnull align 4 dereferenceable(8) %Vals)
-  // CHECK-NEXT:  %Second = getelementptr inbounds %struct.Pair, ptr %Vals, i32 0, i32 1
+  // CHECK:       %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK:       %[[CALL1:.*]] = call noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 1 dereferenceable(8) %Vals) #{{[0-9]+}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+  // CHECK-NEXT:  %First = getelementptr inbounds nuw %struct.Pair, ptr %Vals, i32 0, i32 0
+  // CHECK-NEXT:  store i32 %[[CALL1]], ptr %First, align 1
+  // CHECK-NEXT:  %[[CALL2:.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @_ZN4Pair9getSecondEv(ptr noundef nonnull align 1 dereferenceable(8) %Vals) #{{[0-9]+}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+  // CHECK-NEXT:  %Second = getelementptr inbounds nuw %struct.Pair, ptr %Vals, i32 0, i32 1
 
 // CHECK: [[Pair:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Pair"
 // CHECK: [[getFirst:![0-9]+]] = distinct !DISubprogram(name: "getFirst"

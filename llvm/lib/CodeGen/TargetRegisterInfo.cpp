@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -51,15 +49,17 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *const *SRINames,
-    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
-    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
+    const TargetRegisterInfoDesc *ID, const char *SubRegIndexStrings,
+    ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const SubRegCoveredBits *SubRegIdxRanges,
+    const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
+    const RegClassInfo *const RCInfos,
     const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
-    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
-      SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
-      CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
-      HwMode(Mode) {}
+    : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
+      SubRegIndexNameOffsets(SubRegIndexNameOffsets),
+      SubRegIdxRanges(SubRegIdxRanges),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks), CoveringLanes(CoveringLanes),
+      RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 
@@ -103,24 +103,22 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
   return true;
 }
 
-namespace llvm {
-
-Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
-                   unsigned SubIdx, const MachineRegisterInfo *MRI) {
+Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
+                         unsigned SubIdx, const MachineRegisterInfo *MRI) {
   return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)
       OS << "$noreg";
-    else if (Register::isStackSlot(Reg))
-      OS << "SS#" << Register::stackSlot2Index(Reg);
+    else if (Reg.isStack())
+      OS << "SS#" << Reg.stackSlotIndex();
     else if (Reg.isVirtual()) {
       StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
       if (Name != "") {
         OS << '%' << Name;
       } else {
-        OS << '%' << Register::virtReg2Index(Reg);
+        OS << '%' << Reg.virtRegIndex();
       }
     } else if (!TRI)
-      OS << '$' << "physreg" << Reg;
+      OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
       printLowerCase(TRI->getName(Reg), OS);
@@ -136,17 +134,17 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
   });
 }
 
-Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
+Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     // Generic printout when TRI is missing.
     if (!TRI) {
-      OS << "Unit~" << Unit;
+      OS << "Unit~" << static_cast<unsigned>(Unit);
       return;
     }
 
     // Check for invalid register units.
-    if (Unit >= TRI->getNumRegUnits()) {
-      OS << "BadUnit~" << Unit;
+    if (static_cast<unsigned>(Unit) >= TRI->getNumRegUnits()) {
+      OS << "BadUnit~" << static_cast<unsigned>(Unit);
       return;
     }
 
@@ -159,18 +157,20 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
-Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
-  return Printable([Unit, TRI](raw_ostream &OS) {
-    if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register::virtReg2Index(Unit);
+Printable llvm::printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
+                                const TargetRegisterInfo *TRI) {
+  return Printable([VRegOrUnit, TRI](raw_ostream &OS) {
+    if (VRegOrUnit.isVirtualReg()) {
+      OS << '%' << VRegOrUnit.asVirtualReg().virtRegIndex();
     } else {
-      OS << printRegUnit(Unit, TRI);
+      OS << printRegUnit(VRegOrUnit.asMCRegUnit(), TRI);
     }
   });
 }
 
-Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
-                              const TargetRegisterInfo *TRI) {
+Printable llvm::printRegClassOrBank(Register Reg,
+                                    const MachineRegisterInfo &RegInfo,
+                                    const TargetRegisterInfo *TRI) {
   return Printable([Reg, &RegInfo, TRI](raw_ostream &OS) {
     if (RegInfo.getRegClassOrNull(Reg))
       OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
@@ -183,8 +183,6 @@ Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
     }
   });
 }
-
-} // end namespace llvm
 
 /// getAllocatableClass - Return the maximal subclass of the given register
 /// class that is alloctable, or NULL.
@@ -202,21 +200,17 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
   return nullptr;
 }
 
-/// getMinimalPhysRegClass - Returns the Register Class of a physical
-/// register of the given type, picking the most sub register class of
-/// the right type that contains this physreg.
-const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
-  assert(Register::isPhysicalRegister(reg) &&
-         "reg must be a physical register");
+static const TargetRegisterClass *
+getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
+                             MCRegister Reg2) {
+  assert(Reg1.isPhysical() && Reg2.isPhysical() &&
+         "Reg1/Reg2 must be a physical register");
 
-  // Pick the most sub register class of the right type that contains
-  // this physreg.
-  const TargetRegisterClass* BestRC = nullptr;
-  for (const TargetRegisterClass* RC : regclasses()) {
-    if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
-        RC->contains(reg) && (!BestRC || BestRC->hasSubClass(RC)))
-      BestRC = RC;
+  // Pick the most specific register class that contains both physregs.
+  const TargetRegisterClass *BestRC = nullptr;
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(&RC)))
+      BestRC = &RC;
   }
 
   assert(BestRC && "Couldn't find the register class");
@@ -224,20 +218,9 @@ TargetRegisterInfo::getMinimalPhysRegClass(MCRegister reg, MVT VT) const {
 }
 
 const TargetRegisterClass *
-TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
-  assert(Register::isPhysicalRegister(reg) &&
-         "reg must be a physical register");
-
-  // Pick the most sub register class of the right type that contains
-  // this physreg.
-  const TargetRegisterClass *BestRC = nullptr;
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if ((!Ty.isValid() || isTypeLegalForClass(*RC, Ty)) && RC->contains(reg) &&
-        (!BestRC || BestRC->hasSubClass(RC)))
-      BestRC = RC;
-  }
-
-  return BestRC;
+TargetRegisterInfo::getCommonMinimalPhysRegClass(MCRegister Reg1,
+                                                 MCRegister Reg2) const {
+  return ::getCommonMinimalPhysRegClass(this, Reg1, Reg2);
 }
 
 /// getAllocatableSetForRC - Toggle the bits that represent allocatable
@@ -245,7 +228,8 @@ TargetRegisterInfo::getMinimalPhysRegClassLLT(MCRegister reg, LLT Ty) const {
 static void getAllocatableSetForRC(const MachineFunction &MF,
                                    const TargetRegisterClass *RC, BitVector &R){
   assert(RC->isAllocatable() && "invalid for nonallocatable sets");
-  ArrayRef<MCPhysReg> Order = RC->getRawAllocationOrder(MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  ArrayRef<MCPhysReg> Order = TRI.getRawAllocationOrder(*RC, MF);
   for (MCPhysReg PR : Order)
     R.set(PR);
 }
@@ -259,9 +243,9 @@ BitVector TargetRegisterInfo::getAllocatableSet(const MachineFunction &MF,
     if (SubClass)
       getAllocatableSetForRC(MF, SubClass, Allocatable);
   } else {
-    for (const TargetRegisterClass *C : regclasses())
-      if (C->isAllocatable())
-        getAllocatableSetForRC(MF, C, Allocatable);
+    for (const TargetRegisterClass &C : regclasses())
+      if (C.isAllocatable())
+        getAllocatableSetForRC(MF, &C, Allocatable);
   }
 
   // Mask out the reserved registers
@@ -374,22 +358,21 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
   return BestRC;
 }
 
-/// Check if the registers defined by the pair (RegisterClass, SubReg)
-/// share the same register file.
-static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
-                                  const TargetRegisterClass *DefRC,
-                                  unsigned DefSubReg,
-                                  const TargetRegisterClass *SrcRC,
-                                  unsigned SrcSubReg) {
+const TargetRegisterClass *TargetRegisterInfo::findCommonRegClass(
+    const TargetRegisterClass *DefRC, unsigned DefSubReg,
+    const TargetRegisterClass *SrcRC, unsigned SrcSubReg) const {
   // Same register class.
-  if (DefRC == SrcRC)
-    return true;
+  //
+  // When processing uncoalescable copies / bitcasts, it is possible we reach
+  // here with the same register class, but mismatched subregister indices.
+  if (DefRC == SrcRC && DefSubReg == SrcSubReg)
+    return DefRC;
 
   // Both operands are sub registers. Check if they share a register class.
   unsigned SrcIdx, DefIdx;
   if (SrcSubReg && DefSubReg) {
-    return TRI.getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg,
-                                      SrcIdx, DefIdx) != nullptr;
+    return getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg, SrcIdx,
+                                  DefIdx);
   }
 
   // At most one of the register is a sub register, make it Src to avoid
@@ -401,33 +384,32 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
 
   // One of the register is a sub register, check if we can get a superclass.
   if (SrcSubReg)
-    return TRI.getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg) != nullptr;
+    return getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg);
 
   // Plain copy.
-  return TRI.getCommonSubClass(DefRC, SrcRC) != nullptr;
+  return getCommonSubClass(DefRC, SrcRC);
 }
 
-bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                              unsigned DefSubReg,
-                                              const TargetRegisterClass *SrcRC,
-                                              unsigned SrcSubReg) const {
-  // If this source does not incur a cross register bank copy, use it.
-  return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
+float TargetRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return 1.0;
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
 bool TargetRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<unsigned, SmallVector<Register, 4>> &Hints_MRI =
+  const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
       MRI.getRegAllocationHints(VirtReg);
 
-  SmallSet<Register, 32> HintedRegs;
+  if (!Hints_MRI)
+    return false;
+
   // First hint may be a target hint.
-  bool Skip = (Hints_MRI.first != 0);
-  for (auto Reg : Hints_MRI.second) {
+  bool Skip = (Hints_MRI->first != 0);
+  for (auto Reg : Hints_MRI->second) {
     if (Skip) {
       Skip = false;
       continue;
@@ -438,10 +420,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
     if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
-    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
-    // registers allocated to the same physreg).
-    if (!HintedRegs.insert(Phys).second)
-      continue;
     // Check that Phys is a valid hint in VirtReg's register class.
     if (!Phys.isPhysical())
       continue;
@@ -454,21 +432,68 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys);
+    Hints.insert(Phys);
   }
   return false;
 }
 
+bool TargetRegisterInfo::isAntiHintedReg(
+    MCPhysReg Reg, const BitVector &AntiHintedRegUnits) const {
+  return llvm::any_of(regunits(Reg), [&](MCRegUnit Unit) {
+    return AntiHintedRegUnits.test(static_cast<unsigned>(Unit));
+  });
+}
+
+void TargetRegisterInfo::applyRegAllocationAntiHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  if (AntiHintedRegUnits.none())
+    return;
+
+  assert(HintsAndCustomOrder.size() == NumHints &&
+         "HintsAndCustomOrder should only contain the hints here.");
+  HintsAndCustomOrder.append(Order.begin(), Order.end());
+
+  // Custom reordering of the allocation order.
+  filterAndSortForAntiHintedRegs(
+      VirtReg,
+      MutableArrayRef<MCPhysReg>(HintsAndCustomOrder).drop_front(NumHints),
+      AntiHintedRegUnits, MF, Matrix, RegClassInfo);
+}
+
+void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  // Partition non-anti-hinted register go first.
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
+      CustomOrder.begin(), CustomOrder.end(),
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
+
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(CustomOrder.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, CustomOrder.end());
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n";
+  });
+}
+
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
     MCRegister PhysReg, const MachineFunction &MF) const {
-  if (PhysReg == 0)
+  if (!PhysReg)
     return false;
   const uint32_t *callerPreservedRegs =
       getCallPreservedMask(MF, MF.getFunction().getCallingConv());
   if (callerPreservedRegs) {
-    assert(Register::isPhysicalRegister(PhysReg) &&
-           "Expected physical register");
-    return (callerPreservedRegs[PhysReg / 32] >> PhysReg % 32) & 1;
+    assert(PhysReg.isPhysical() && "Expected physical register");
+    return (callerPreservedRegs[PhysReg.id() / 32] >> PhysReg.id() % 32) & 1;
   }
   return false;
 }
@@ -513,15 +538,15 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
 }
 
 bool TargetRegisterInfo::getCoveringSubRegIndexes(
-    const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
-    LaneBitmask LaneMask, SmallVectorImpl<unsigned> &NeededIndexes) const {
+    const TargetRegisterClass *RC, LaneBitmask LaneMask,
+    SmallVectorImpl<unsigned> &NeededIndexes) const {
   SmallVector<unsigned, 8> PossibleIndexes;
   unsigned BestIdx = 0;
   unsigned BestCover = 0;
 
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
-    if (getSubClassWithSubReg(RC, Idx) != RC)
+    if (!isSubRegValidForRegClass(RC, Idx))
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
     // Early exit if we found a perfect match.
@@ -587,6 +612,27 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
   return BestIdx;
 }
 
+bool TargetRegisterInfo::checkSubRegInterference(Register RegA, unsigned SubA,
+                                                 Register RegB,
+                                                 unsigned SubB) const {
+  if (RegA == RegB && SubA == SubB)
+    return true;
+  if (RegA.isVirtual() && RegB.isVirtual()) {
+    if (RegA != RegB)
+      return false;
+    LaneBitmask LA = getSubRegIndexLaneMask(SubA);
+    LaneBitmask LB = getSubRegIndexLaneMask(SubB);
+    return (LA & LB).any();
+  }
+  if (RegA.isPhysical() && RegB.isPhysical()) {
+    MCRegister MCRegA = SubA ? getSubReg(RegA, SubA) : RegA.asMCReg();
+    MCRegister MCRegB = SubB ? getSubReg(RegB, SubB) : RegB.asMCReg();
+    assert(MCRegB.isValid() && MCRegA.isValid() && "invalid subregister");
+    return MCRegisterInfo::regsOverlap(MCRegA, MCRegB);
+  }
+  llvm_unreachable("mixed virtual and physical registers");
+}
+
 unsigned TargetRegisterInfo::getSubRegIdxSize(unsigned Idx) const {
   assert(Idx && Idx < getNumSubRegIndices() &&
          "This is not a subregister index");
@@ -604,7 +650,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return SrcReg;
 
     Register CopySrcReg;
@@ -612,7 +658,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     if (!CopySrcReg.isVirtual())
@@ -627,7 +673,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
     // Found the real definition, return it if it has a single use.
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return MRI->hasOneNonDBGUse(SrcReg) ? SrcReg : Register();
 
     Register CopySrcReg;
@@ -635,7 +681,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     // Continue only if the next definition in the chain is for a virtual

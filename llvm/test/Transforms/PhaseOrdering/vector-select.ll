@@ -19,9 +19,9 @@ define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
   store <4 x float> %extractVec1, ptr %b.addr, align 16
   %extractVec3 = shufflevector <3 x i32> %c, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   store <4 x i32> %extractVec3, ptr %c.addr, align 16
-  call void @llvm.lifetime.start.p0(i64 16, ptr %zero) #2
+  call void @llvm.lifetime.start.p0(ptr %zero) #2
   store <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr %zero, align 16
-  call void @llvm.lifetime.start.p0(i64 16, ptr %mask) #2
+  call void @llvm.lifetime.start.p0(ptr %mask) #2
   %loadVec4 = load <4 x i32>, ptr %zero, align 16
   %extractVec6 = shufflevector <4 x i32> %loadVec4, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %loadVec48 = load <4 x i32>, ptr %c.addr, align 16
@@ -30,7 +30,7 @@ define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
   %sext = sext <3 x i1> %cmp to <3 x i32>
   %extractVec10 = shufflevector <3 x i32> %sext, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   store <4 x i32> %extractVec10, ptr %mask, align 16
-  call void @llvm.lifetime.start.p0(i64 16, ptr %res) #2
+  call void @llvm.lifetime.start.p0(ptr %res) #2
   %loadVec413 = load <4 x i32>, ptr %mask, align 16
   %extractVec14 = shufflevector <4 x i32> %loadVec413, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %loadVec416 = load <4 x float>, ptr %b.addr, align 16
@@ -51,9 +51,9 @@ define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
   %extractVec32 = shufflevector <4 x i32> %loadVec431, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %or = or <3 x i32> %and29, %extractVec32
   %astype33 = bitcast <3 x i32> %or to <3 x float>
-  call void @llvm.lifetime.end.p0(i64 16, ptr %res) #2
-  call void @llvm.lifetime.end.p0(i64 16, ptr %mask) #2
-  call void @llvm.lifetime.end.p0(i64 16, ptr %zero) #2
+  call void @llvm.lifetime.end.p0(ptr %res) #2
+  call void @llvm.lifetime.end.p0(ptr %mask) #2
+  call void @llvm.lifetime.end.p0(ptr %zero) #2
   ret <3 x float> %astype33
 }
 
@@ -112,5 +112,5 @@ for.end:
   ret <4 x i32> %min.addr.0
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1

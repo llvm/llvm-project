@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/CodeGen/RegAllocScore.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -24,19 +25,17 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-extern cl::opt<double> CopyWeight;
-extern cl::opt<double> LoadWeight;
-extern cl::opt<double> StoreWeight;
-extern cl::opt<double> CheapRematWeight;
-extern cl::opt<double> ExpensiveRematWeight;
 
 namespace {
+// Defaults of -regalloc-*-weight.
+constexpr double CopyWeight = 0.2, LoadWeight = 4.0, StoreWeight = 1.0,
+                 CheapRematWeight = 0.2, ExpensiveRematWeight = 1.0;
+
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 

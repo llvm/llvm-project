@@ -12,7 +12,7 @@
 
 # This test also checks that pairwise store STP is generated.
 
-# CHECK-LABLE: test
+# CHECK-LABEL: test
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x17, $x18
 # CHECK: renamable $q13_q14_q15 = LD3Threev16b undef renamable $x17 :: (load (s384) from `ptr undef`, align 64)

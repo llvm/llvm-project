@@ -13,12 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/CodeGen/CPPGen.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/ODS/Operation.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -95,7 +93,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
 
   // Emit function to add the generated matchers to the pattern list.
   os << "template <typename... ConfigsT>\n"
-        "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
+        "[[maybe_unused]] static void populateGeneratedPDLLPatterns("
         "::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {\n";
   for (const auto &name : patternNames)
     os << "  patterns.add<" << name

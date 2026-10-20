@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/Float2Int.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -20,7 +21,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
@@ -39,12 +39,6 @@ using namespace llvm;
 // If a non-mappable instruction is seen, this entire def-use graph is marked
 // as non-transformable. If we see an instruction that converts from the
 // integer domain to FP domain (uitofp,sitofp), we terminate our walk.
-
-/// The largest integer type worth dealing with.
-static cl::opt<unsigned>
-MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
-             cl::desc("Max integer bitwidth to consider in float2int"
-                      "(default=64)"));
 
 // Given a FCmp predicate, return a matching ICmp predicate if one
 // exists, otherwise return BAD_ICMP_PREDICATE.
@@ -115,11 +109,7 @@ void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
   LLVM_DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
-  auto IT = SeenInsts.find(I);
-  if (IT != SeenInsts.end())
-    IT->second = std::move(R);
-  else
-    SeenInsts.insert(std::make_pair(I, std::move(R)));
+  SeenInsts.insert_or_assign(I, std::move(R));
 }
 
 // Helper - get a range representing a poison value.
@@ -241,10 +231,14 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
       // OK, it's representable. Now get it.
       APSInt Int(MaxIntegerBW+1, false);
       bool Exact;
-      CF->getValueAPF().convertToInteger(Int,
-                                         APFloat::rmNearestTiesToEven,
-                                         &Exact);
-      OpRanges.push_back(ConstantRange(Int));
+      APFloat::opStatus Status = CF->getValueAPF().convertToInteger(
+          Int, APFloat::rmNearestTiesToEven, &Exact);
+      // Although the round above is loseless, we still need to check if the
+      // floating-point value can be represented in the integer type.
+      if (Status == APFloat::opOK || Status == APFloat::opInexact)
+        OpRanges.push_back(ConstantRange(Int));
+      else
+        return badRange();
     } else {
       llvm_unreachable("Should have already marked this as badRange!");
     }
@@ -315,16 +309,17 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
   bool MadeChange = false;
 
   // Iterate over every disjoint partition of the def-use graph.
-  for (auto It = ECs.begin(), E = ECs.end(); It != E; ++It) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
+
     ConstantRange R(MaxIntegerBW + 1, false);
     bool Fail = false;
     Type *ConvertedToTy = nullptr;
 
     // For every member of the partition, union all the ranges together.
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI) {
-      Instruction *I = *MI;
-      auto SeenI = SeenInsts.find(I);
+    for (Instruction *I : ECs.members(*E)) {
+      auto *SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
         continue;
 
@@ -352,8 +347,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
     // If the set was empty, or we failed, or the range is poisonous,
     // bail out.
-    if (ECs.member_begin(It) == ECs.member_end() || Fail ||
-        R.isFullSet() || R.isSignWrappedSet())
+    if (ECs.member_begin(*E) == ECs.member_end() || Fail || R.isFullSet() ||
+        R.isSignWrappedSet())
       continue;
     assert(ConvertedToTy && "Must have set the convertedtoty by this point!");
 
@@ -392,9 +387,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       }
     }
 
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI)
-      convert(*MI, Ty);
+    for (Instruction *I : ECs.members(*E))
+      convert(I, Ty);
     MadeChange = true;
   }
 
@@ -402,9 +396,9 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 }
 
 Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
-  if (ConvertedInsts.contains(I))
+  if (auto It = ConvertedInsts.find(I); It != ConvertedInsts.end())
     // Already converted this instruction.
-    return ConvertedInsts[I];
+    return It->second;
 
   SmallVector<Value*,4> NewOperands;
   for (Value *V : I->operands()) {
@@ -491,6 +485,8 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   Roots.clear();
 
   Ctx = &F.getParent()->getContext();
+  MaxIntegerBW =
+      Ctx->getLibraryOptions().get<ScalarOptions>().float2int_max_integer_bw;
 
   findRoots(F, DT);
 

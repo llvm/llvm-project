@@ -15,13 +15,13 @@
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
-class RISCVTargetMachine : public LLVMTargetMachine {
+class RISCVTargetMachine : public CodeGenTargetMachineImpl {
+  const RISCVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
 
@@ -32,6 +32,7 @@ public:
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
 
+  const RISCVOptions &getCLOpts() const { return CLOpts; }
   const RISCVSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
@@ -50,7 +51,8 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DstAS) const override;
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *
@@ -60,7 +62,20 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
+
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI);
+
 } // namespace llvm
 
 #endif

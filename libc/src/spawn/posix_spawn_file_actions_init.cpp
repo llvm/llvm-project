@@ -9,10 +9,11 @@
 #include "posix_spawn_file_actions_init.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <spawn.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_init,
                    (posix_spawn_file_actions_t * actions)) {
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_init,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 define void @foo(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind optsize {
 entry:

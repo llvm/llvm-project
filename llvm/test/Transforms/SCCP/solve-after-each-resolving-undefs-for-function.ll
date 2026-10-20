@@ -16,7 +16,7 @@ entry:
   br i1 %c, label %if.cond, label %if.end
 
 if.cond:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry, %if.then
   ret i32 11

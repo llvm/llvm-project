@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
 
 define i64 @add64(i64 %u, i64 %v) nounwind  {
 entry:

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/windows.h"
 #include <cstdio>
 
@@ -22,6 +23,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 
 // Windows includes
@@ -29,6 +31,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+using llvm::sys::windows::UTF8ToUTF16;
 
 static bool GetTripleForProcess(const FileSpec &executable,
                                 llvm::Triple &triple) {
@@ -74,7 +78,11 @@ static bool GetExecutableForProcess(const AutoHandle &handle,
   DWORD dwSize = buffer.size();
   if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
     return false;
-  return llvm::convertWideToUTF8(buffer.data(), path);
+  if (!llvm::convertWideToUTF8(buffer.data(), path))
+    return false;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  path = StripExtendedLengthPrefix(path);
+  return true;
 }
 
 static void GetProcessExecutableAndTriple(const AutoHandle &handle,
@@ -103,15 +111,17 @@ lldb::thread_t Host::GetCurrentThread() {
 }
 
 void Host::Kill(lldb::pid_t pid, int signo) {
-  TerminateProcess((HANDLE)pid, 1);
+  AutoHandle handle(::OpenProcess(PROCESS_TERMINATE, FALSE, pid), nullptr);
+  if (handle.IsValid())
+    ::TerminateProcess(handle.get(), 1);
 }
 
-const char *Host::GetSignalAsCString(int signo) { return NULL; }
+const char *Host::GetSignalAsCString(int signo) { return nullptr; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
 
-  HMODULE hmodule = NULL;
+  HMODULE hmodule = nullptr;
   if (!::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            (LPCTSTR)host_addr, &hmodule))
     return module_filespec;
@@ -131,11 +141,25 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   return module_filespec;
 }
 
+// CreateToolhelp32Snapshot walks a process list that other processes are
+// concurrently modifying, and fails with ERROR_BAD_LENGTH when it loses that
+// race. The documented remedy is to retry.
+static HANDLE CreateProcessSnapshot() {
+  constexpr int max_attempts = 10;
+  for (int attempt = 0; attempt < max_attempts; ++attempt) {
+    HANDLE snapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot != INVALID_HANDLE_VALUE ||
+        ::GetLastError() != ERROR_BAD_LENGTH)
+      return snapshot;
+  }
+  return INVALID_HANDLE_VALUE;
+}
+
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   process_infos.clear();
 
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  AutoHandle snapshot(CreateProcessSnapshot());
   if (!snapshot.IsValid())
     return 0;
 
@@ -174,24 +198,23 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   process_info.SetProcessID(pid);
   GetProcessExecutableAndTriple(handle, process_info);
 
-  // Need to read the PEB to get parent process and command line arguments.
-
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  AutoHandle snapshot(CreateProcessSnapshot());
   if (!snapshot.IsValid())
-    return false;
+    return true;
 
   PROCESSENTRY32W pe;
   pe.dwSize = sizeof(PROCESSENTRY32W);
-  if (Process32FirstW(snapshot.get(), &pe)) {
-    do {
-      if (pe.th32ProcessID == pid) {
-        process_info.SetParentProcessID(pe.th32ParentProcessID);
-        return true;
-      }
-    } while (Process32NextW(snapshot.get(), &pe));
-  }
+  if (!Process32FirstW(snapshot.get(), &pe))
+    return true;
 
-  return false;
+  do {
+    if (pe.th32ProcessID == pid) {
+      process_info.SetParentProcessID(pe.th32ParentProcessID);
+      break;
+    }
+  } while (Process32NextW(snapshot.get(), &pe));
+
+  return true;
 }
 
 llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
@@ -199,18 +222,20 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
   return HostThread();
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
     if (!expand_tool_spec) {
-      error.SetErrorString("could not find support executable directory for "
-                           "the lldb-argdumper tool");
+      error = Status::FromErrorString(
+          "could not find support executable directory for "
+          "the lldb-argdumper tool");
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper.exe");
     if (!FileSystem::Instance().Exists(expand_tool_spec)) {
-      error.SetErrorString("could not find the lldb-argdumper tool");
+      error = Status::FromErrorString("could not find the lldb-argdumper tool");
       return error;
     }
 
@@ -227,38 +252,38 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     std::string command = expand_command.GetString().str();
     Status e =
         RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
-                        &status, nullptr, &output, std::chrono::seconds(10));
+                        &status, nullptr, &output, nullptr, timeout);
 
     if (e.Fail())
       return e;
 
     if (status != 0) {
-      error.SetErrorStringWithFormat("lldb-argdumper exited with error %d",
-                                     status);
+      error = Status::FromErrorStringWithFormat(
+          "lldb-argdumper exited with error %d", status);
       return error;
     }
 
     auto data_sp = StructuredData::ParseJSON(output);
     if (!data_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto dict_sp = data_sp->GetAsDictionary();
     if (!dict_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_sp = dict_sp->GetObjectForDotSeparatedPath("arguments");
     if (!args_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_array_sp = args_sp->GetAsArray();
     if (!args_array_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
@@ -281,7 +306,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
 Environment Host::GetEnvironment() {
   Environment env;
-  // The environment block on Windows is a contiguous buffer of NULL terminated
+  // The environment block on Windows is a contiguous buffer of null-terminated
   // strings, where the end of the environment block is indicated by two
   // consecutive NULLs.
   LPWCH environment_block = ::GetEnvironmentStringsW();
@@ -298,4 +323,29 @@ Environment Host::GetEnvironment() {
     environment_block += current_var_size;
   }
   return env;
+}
+
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
+  if (message.empty())
+    return;
+
+  std::string log_msg;
+  llvm::raw_string_ostream stream(log_msg);
+
+  switch (severity) {
+  case lldb::eSeverityWarning:
+    stream << "[Warning] ";
+    break;
+  case lldb::eSeverityError:
+    stream << "[Error] ";
+    break;
+  case lldb::eSeverityInfo:
+    stream << "[Info] ";
+    break;
+  }
+
+  stream << message;
+  stream.flush();
+
+  OutputDebugStringA(log_msg.c_str());
 }

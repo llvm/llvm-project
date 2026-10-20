@@ -27,6 +27,7 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -36,7 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <list>
-#include <map>
 #include <plugin-api.h>
 #include <string>
 #include <system_error>
@@ -154,6 +154,8 @@ namespace options {
   static std::string extra_library_path;
   static std::string triple;
   static std::string mcpu;
+  // Tells plugin to use unified lto
+  static bool unifiedlto = false;
   // When the thinlto plugin option is specified, only read the function
   // the information from intermediate files and write a combined
   // global index for the ThinLTO backends.
@@ -222,6 +224,9 @@ namespace options {
   static std::string cs_profile_path;
   static bool cs_pgo_gen = false;
 
+  // When true, MergeFunctions pass is used in LTO link pipeline.
+  static bool merge_functions = false;
+
   // Time trace options.
   static std::string time_trace_file;
   static unsigned time_trace_granularity = 500;
@@ -248,6 +253,8 @@ namespace options {
       TheOutputType = OT_DISABLE;
     } else if (opt == "emit-asm") {
       TheOutputType = OT_ASM_ONLY;
+    } else if (opt == "unifiedlto") {
+      unifiedlto = true;
     } else if (opt == "thinlto") {
       thinlto = true;
     } else if (opt == "thinlto-index-only") {
@@ -288,6 +295,8 @@ namespace options {
       sample_profile = std::string(opt);
     } else if (opt == "cs-profile-generate") {
       cs_pgo_gen = true;
+    } else if (opt == "merge-functions") {
+      merge_functions = true;
     } else if (opt.consume_front("cs-profile-path=")) {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
@@ -864,11 +873,13 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
 /// OnIndexWrite is callback to let caller know when LTO writes index files.
 /// LinkedObjectsFile is an output stream to write the list of object files for
 /// the final ThinLTO linking. Can be nullptr.
-static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
-                                      raw_fd_ostream *LinkedObjectsFile) {
+static std::unique_ptr<LTO>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          IndexWriteCallback OnIndexWrite, raw_fd_ostream *LinkedObjectsFile) {
   Config Conf;
   ThinBackend Backend;
 
+  Conf.LibraryOptions = &LibraryOptions;
   Conf.CPU = options::mcpu;
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
 
@@ -891,15 +902,18 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
+  Conf.PTO.MergeFunctions = options::merge_functions;
+  Conf.PTO.UnifiedLTO = options::unifiedlto;
   Conf.AlwaysEmitRegularLTOObj = !options::obj_path.empty();
 
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
     Backend = createWriteIndexesThinBackend(
-        OldPrefix, NewPrefix,
+        llvm::hardware_concurrency(options::Parallelism), OldPrefix, NewPrefix,
         // TODO: Add support for optional native object path in
         // thinlto_prefix_replace option to match lld.
         /*NativeObjectPrefix=*/"", options::thinlto_emit_imports_files,
@@ -972,8 +986,13 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.TimeTraceEnabled = !options::time_trace_file.empty();
   Conf.TimeTraceGranularity = options::time_trace_granularity;
 
+  LTO::LTOKind ltoKind = LTO::LTOK_Default;
+  if (options::unifiedlto)
+    ltoKind =
+        options::thinlto ? LTO::LTOK_UnifiedThin : LTO::LTOK_UnifiedRegular;
   return std::make_unique<LTO>(std::move(Conf), Backend,
-                                options::ParallelCodeGenParallelismLevel);
+                               options::ParallelCodeGenParallelismLevel,
+                               ltoKind);
 }
 
 // Write empty files that may be expected by a distributed build
@@ -1031,7 +1050,8 @@ static std::unique_ptr<raw_fd_ostream> CreateLinkedObjectsFile() {
 }
 
 /// Runs LTO and return a list of pairs <FileName, IsTemporary>.
-static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
+static std::vector<std::pair<SmallString<128>, bool>>
+runLTO(const cl::LibraryOptionsContext &LibraryOptions) {
   // Map to own RAII objects that manage the file opening and releasing
   // interfaces with gold. This is needed only for ThinLTO mode, since
   // unlike regular LTO, where addModule will result in the opened file
@@ -1044,6 +1064,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
 
   std::unique_ptr<raw_fd_ostream> LinkedObjects = CreateLinkedObjectsFile();
   std::unique_ptr<LTO> Lto = createLTO(
+      LibraryOptions,
       [&ObjectToIndexFileState](const std::string &Identifier) {
         ObjectToIndexFileState[Identifier] = true;
       },
@@ -1057,9 +1078,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   getThinLTOOldAndNewSuffix(OldSuffix, NewSuffix);
 
   for (claimed_file &F : Modules) {
-    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
-      HandleToInputFile.insert(std::make_pair(
-          F.leader_handle, std::make_unique<PluginInputFile>(F.handle)));
+    if (options::thinlto) {
+      auto [It, Inserted] = HandleToInputFile.try_emplace(F.leader_handle);
+      if (Inserted)
+        It->second = std::make_unique<PluginInputFile>(F.handle);
+    }
     // In case we are thin linking with a minimized bitcode file, ensure
     // the module paths encoded in the index reflect where the backends
     // will locate the full bitcode files for compiling/importing.
@@ -1099,9 +1122,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, const Twine &moduleName,
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
                        std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task, moduleName)->OS << MB->getBuffer();
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
   };
 
   FileCache Cache;
@@ -1129,15 +1154,16 @@ static ld_plugin_status allSymbolsReadHook() {
   if (Modules.empty())
     return LDPS_OK;
 
-  if (unsigned NumOpts = options::extra.size())
-    cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  if (!options::extra.empty())
+    cl::parseCommandLineOptions(LibraryOptions, options::extra);
 
   // Initialize time trace profiler
   if (!options::time_trace_file.empty())
     llvm::timeTraceProfilerInitialize(options::time_trace_granularity,
                                       options::extra.size() ? options::extra[0]
                                                             : "LLVMgold");
-  auto FinalizeTimeTrace = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeTimeTrace([&]() {
     if (!llvm::timeTraceProfilerEnabled())
       return;
     assert(!options::time_trace_file.empty());
@@ -1145,7 +1171,7 @@ static ld_plugin_status allSymbolsReadHook() {
     llvm::timeTraceProfilerCleanup();
   });
 
-  std::vector<std::pair<SmallString<128>, bool>> Files = runLTO();
+  std::vector<std::pair<SmallString<128>, bool>> Files = runLTO(LibraryOptions);
 
   if (options::TheOutputType == options::OT_DISABLE ||
       options::TheOutputType == options::OT_BC_ONLY ||
@@ -1201,7 +1227,7 @@ static ld_plugin_status cleanup_hook(void) {
   // Prune cache
   if (!options::cache_dir.empty()) {
     CachePruningPolicy policy = check(parseCachePruningPolicy(options::cache_policy));
-    pruneCache(options::cache_dir, policy);
+    check(pruneCache(options::cache_dir, policy));
   }
 
   return LDPS_OK;

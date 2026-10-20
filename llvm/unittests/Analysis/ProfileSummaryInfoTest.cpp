@@ -12,21 +12,24 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-extern llvm::cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace llvm {
+
+LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
 namespace {
 
 class ProfileSummaryInfoTest : public testing::Test {
@@ -34,16 +37,17 @@ protected:
   LLVMContext C;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<CycleInfo> CI;
 
   ProfileSummaryInfo buildPSI(Module *M) {
     return ProfileSummaryInfo(*M);
   }
   BlockFrequencyInfo buildBFI(Function &F) {
     DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
-    BPI.reset(new BranchProbabilityInfo(F, *LI));
-    return BlockFrequencyInfo(F, *BPI, *LI);
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI));
+    return BlockFrequencyInfo(F, *BPI, *CI);
   }
   std::unique_ptr<Module> makeLLVMModule(const char *ProfKind = nullptr,
                                          uint64_t NumCounts = 3,
@@ -146,7 +150,7 @@ TEST_F(ProfileSummaryInfoTest, TestNoProfile) {
   EXPECT_FALSE(PSI.isHotBlock(&BB0, &BFI));
   EXPECT_FALSE(PSI.isColdBlock(&BB0, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
   EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_FALSE(PSI.isColdCallSite(CS1, &BFI));
 }
@@ -240,8 +244,8 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
-  auto *CI2 = BB2->getFirstNonPHI();
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
+  BasicBlock::iterator CI2 = BB2->getFirstNonPHIIt();
   CallBase &CS2 = cast<CallBase>(*CI2);
 
   EXPECT_TRUE(PSI.isHotCallSite(CS1, &BFI));
@@ -336,8 +340,8 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
-  auto *CI2 = BB2->getFirstNonPHI();
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
+  BasicBlock::iterator CI2 = BB2->getFirstNonPHIIt();
   // Manually attach branch weights metadata to the call instruction.
   SmallVector<uint32_t, 1> Weights;
   Weights.push_back(1000);
@@ -427,6 +431,76 @@ TEST_F(ProfileSummaryInfoTest, PartialSampleProfWorkingSetSize) {
   EXPECT_TRUE(PSI3.hasPartialSampleProfile());
   EXPECT_TRUE(PSI3.hasHugeWorkingSetSize());
   EXPECT_TRUE(PSI3.hasLargeWorkingSetSize());
+}
+
+// The hot attribute is documented (LangRef, and Clang's AttributeReference for
+// __attribute__((hot))) to take precedence over profile information, so that
+// users can compensate for training input that does not cover all of the hot
+// functions. These tests pin that behavior down for every hotness query.
+
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeInstrProf) {
+  auto M = makeLLVMModule("InstrProf");
+  // @g has an entry count of 1, which is cold under this summary.
+  Function *G = M->getFunction("g");
+  BlockFrequencyInfo BFI = buildBFI(*G);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.isFunctionEntryHot(G));
+    EXPECT_TRUE(PSI.isFunctionEntryCold(G));
+    EXPECT_FALSE(PSI.isFunctionHotInCallGraph(G, BFI));
+    EXPECT_TRUE(PSI.isFunctionColdInCallGraph(G, BFI));
+  }
+
+  G->addFnAttr(Attribute::Hot);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_TRUE(PSI.isFunctionEntryHot(G));
+    EXPECT_FALSE(PSI.isFunctionEntryCold(G));
+    EXPECT_TRUE(PSI.isFunctionHotInCallGraph(G, BFI));
+    EXPECT_FALSE(PSI.isFunctionColdInCallGraph(G, BFI));
+  }
+}
+
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeSampleProf) {
+  auto M = makeLLVMModule("SampleProfile");
+  Function *G = M->getFunction("g");
+  BlockFrequencyInfo BFI = buildBFI(*G);
+
+  G->addFnAttr(Attribute::Hot);
+
+  ProfileSummaryInfo PSI = buildPSI(M.get());
+  EXPECT_TRUE(PSI.isFunctionEntryHot(G));
+  EXPECT_FALSE(PSI.isFunctionEntryCold(G));
+  EXPECT_TRUE(PSI.isFunctionHotInCallGraph(G, BFI));
+  EXPECT_FALSE(PSI.isFunctionColdInCallGraph(G, BFI));
+}
+
+// The attribute is a manual alternative to PGO data, so it must also apply when
+// there is no profile summary at all.
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeNoProfile) {
+  auto M = makeLLVMModule(/*ProfKind=*/nullptr);
+  Function *F = M->getFunction("f");
+  BlockFrequencyInfo BFI = buildBFI(*F);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.hasProfileSummary());
+    EXPECT_FALSE(PSI.isFunctionEntryHot(F));
+    EXPECT_FALSE(PSI.isFunctionHotInCallGraph(F, BFI));
+  }
+
+  F->addFnAttr(Attribute::Hot);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.hasProfileSummary());
+    EXPECT_TRUE(PSI.isFunctionEntryHot(F));
+    EXPECT_FALSE(PSI.isFunctionEntryCold(F));
+    EXPECT_TRUE(PSI.isFunctionHotInCallGraph(F, BFI));
+    EXPECT_FALSE(PSI.isFunctionColdInCallGraph(F, BFI));
+  }
 }
 
 } // end anonymous namespace

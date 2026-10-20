@@ -58,7 +58,7 @@ TEST(FileDistanceTests, BadSource) {
 }
 
 // Force the unittest URI scheme to be linked,
-static int LLVM_ATTRIBUTE_UNUSED UseUnittestScheme = UnittestSchemeAnchorSource;
+[[maybe_unused]] static int UseUnittestScheme = UnittestSchemeAnchorSource;
 
 TEST(FileDistanceTests, URI) {
   FileDistanceOptions Opts;

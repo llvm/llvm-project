@@ -1,0 +1,669 @@
+#include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/Testing/Support/Error.h"
+
+#include "gtest/gtest.h"
+
+#include <limits>
+
+using namespace lldb_private;
+using namespace lldb;
+using namespace FormatterBytecode;
+using llvm::FailedWithMessage;
+using llvm::StringRef;
+
+namespace {
+class FormatterBytecodeTest : public ::testing::Test {};
+} // namespace
+
+static bool Interpret(std::vector<uint8_t> code, DataStack &data,
+                      uint32_t version = 1) {
+  auto buf =
+      StringRef(reinterpret_cast<const char *>(code.data()), code.size());
+  ControlStack control({buf});
+  if (auto error = Interpret(control, data, sig_summary, version)) {
+#ifndef NDEBUG
+    llvm::errs() << llvm::toString(std::move(error)) << '\n';
+#else
+    llvm::consumeError(std::move(error));
+#endif
+    return false;
+  }
+  return true;
+}
+
+/// Like Interpret() above, but returns (instead of discarding) the Error,
+/// allowing tests to assert on the error message.
+static llvm::Error InterpretFail(std::vector<uint8_t> code) {
+  auto buf =
+      StringRef(reinterpret_cast<const char *>(code.data()), code.size());
+  ControlStack control({buf});
+  DataStack data;
+  return Interpret(control, data, sig_summary, /*version=*/1);
+}
+
+TEST_F(FormatterBytecodeTest, StackOps) {
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 23, op_dup, op_plus}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 46u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_drop}, data));
+    ASSERT_EQ(data.size(), 0u);
+  }
+  {
+    for (unsigned char i = 0; i < 3; ++i) {
+      DataStack data;
+
+      ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_lit_uint, 2,
+                             op_lit_uint, i, op_pick},
+                            data));
+      ASSERT_EQ(data.Pop<uint64_t>(), i);
+    }
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_over}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_swap}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret(
+        {op_lit_uint, 0, op_lit_uint, 1, op_lit_uint, 2, op_rot}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_EQ(data.Pop<uint64_t>(), 2u);
+  }
+}
+
+TEST_F(FormatterBytecodeTest, ControlOps) {
+  {
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_lit_uint, 0, op_begin, 2, op_lit_uint, 42, op_if}, data));
+    ASSERT_EQ(data.size(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_lit_uint, 1, op_begin, 2, op_lit_uint, 42, op_if}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 42u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_begin, 2, op_lit_uint, 42,
+                           op_begin, 2, op_lit_uint, 23, op_ifelse},
+                          data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 23u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_begin, 2, op_lit_uint, 42,
+                           op_begin, 2, op_lit_uint, 23, op_ifelse},
+                          data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 42u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_begin, 3, op_lit_uint, 42,
+                           op_return, op_if, op_lit_uint, 23},
+                          data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 42u);
+  }
+}
+
+TEST_F(FormatterBytecodeTest, ConversionOps) {
+  {
+    DataStack data(lldb::ValueObjectSP{});
+    ASSERT_TRUE(Interpret({op_is_null}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null}, data));
+    ASSERT_FALSE(data.Pop<lldb::ValueObjectSP>());
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null, op_is_null}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1u, op_as_int}, data));
+    ASSERT_EQ(data.Pop<int64_t>(), 1);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_int, 126, op_as_uint}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), ~1ULL);
+  }
+}
+
+TEST_F(FormatterBytecodeTest, ArithOps) {
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 2, op_lit_uint, 3, op_plus}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 5u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 3, op_lit_uint, 2, op_minus}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 3, op_lit_uint, 2, op_mul}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 6u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 6, op_lit_uint, 2, op_div}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 3u);
+  }
+  {
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_uint, 23, op_lit_uint, 0, op_div}, data));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 2, op_shl}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 4u);
+  }
+  {
+    DataStack data;
+    unsigned char minus_one = 127;
+    ASSERT_FALSE(
+        Interpret({op_lit_int, minus_one, op_lit_uint, 2, op_shl}, data));
+    unsigned char minus_two = 126;
+    ASSERT_TRUE(
+        Interpret({op_lit_int, minus_two, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<int64_t>(), -1);
+  }
+  {
+    DataStack data;
+    ASSERT_FALSE(Interpret({op_lit_uint, 1, op_lit_uint, 65, op_shl}, data));
+    ASSERT_FALSE(Interpret({op_lit_uint, 1, op_lit_uint, 65, op_shr}, data));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_and}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_and}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_or}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_or}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 0, op_or}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_xor}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_xor}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 0, op_xor}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_not}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0xffffffffffffffff);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_eq}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 0, op_eq}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_neq}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 0, op_neq}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_lt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 0, op_lt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_lt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 0, op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_le}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 0, op_le}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_le}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_uint, 0, op_lit_uint, 1, op_ge}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 0, op_ge}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+    ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_ge}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+}
+
+TEST_F(FormatterBytecodeTest, IntegerOps) {
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 23, op_dup, op_plus}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(46));
+  }
+  {
+    DataStack data;
+    unsigned char minus_one = 127;
+    ASSERT_TRUE(Interpret({op_lit_integer, minus_one}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(-1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_lit_integer, 6, op_lit_integer, 2, op_div}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(3));
+  }
+  {
+    DataStack data;
+    ASSERT_FALSE(
+        Interpret({op_lit_integer, 23, op_lit_integer, 0, op_div}, data));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 1, op_lit_uint, 2, op_shl}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(4));
+  }
+  {
+    // Bitwise/shift ops operate on the two's complement bit pattern: a
+    // negative operand's bits are used as-is, and >> is always logical
+    // (zero-filling), so shifting -2 right is not the same as dividing by 2.
+    DataStack data;
+    unsigned char minus_two = 126;
+    ASSERT_TRUE(
+        Interpret({op_lit_integer, minus_two, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(),
+              llvm::APSInt::get(std::numeric_limits<int64_t>::max()));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 4, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 1, op_eq}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(0));
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 0, op_eq}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 1, op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 5, op_not}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(-6));
+  }
+  {
+    // ~ also operates on the bit pattern: ~(-1) is 0, not an error.
+    DataStack data;
+    unsigned char minus_one = 127;
+    ASSERT_TRUE(Interpret({op_lit_integer, minus_one, op_not}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(0));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, IntegerSignednessOps) {
+  {
+    // Every Integer on the stack is signed; nothing today produces an
+    // unsigned-tagged one, so mismatched tags on +/-/etc are rejected. This
+    // only guards direct DataStack use bypassing the bytecode.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_FALSE(Interpret({op_plus}, data));
+  }
+  {
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_FALSE(Interpret({op_lt}, data));
+  }
+  {
+    // Matching signedness still works.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    // Mismatched bit widths are allowed for arithmetic: the narrower
+    // operand is sign-extended to match the wider one, and the result is
+    // at the wider width, mirroring C's usual arithmetic conversions.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1).trunc(32));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_plus}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_EQ(result.getBitWidth(), 64u);
+    ASSERT_EQ(result, llvm::APSInt::get(0));
+  }
+  {
+    // Same for comparisons.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1).trunc(32));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    // Bitwise ops, unlike arithmetic, don't care about the tag at all: they
+    // operate on the two's complement bit pattern directly, so a negative
+    // (or mismatched-tag) operand is not an error.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_TRUE(Interpret({op_and}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_FALSE(result.isUnsigned());
+    ASSERT_EQ(result, llvm::APSInt::get(1));
+  }
+  {
+    // Mismatched widths implicitly zero-extend the narrower operand by
+    // default: an 8-bit -1 (0xFF) widens to 0x00FF, not 0xFFFF, since a
+    // bitwise op has no basis for assuming anything about the bits above
+    // what it was given.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1).trunc(8));
+    data.Push(llvm::APSInt(llvm::APInt(16, 0x0100), /*isUnsigned=*/false));
+    ASSERT_TRUE(Interpret({op_and}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_EQ(result.getBitWidth(), 16u);
+    ASSERT_EQ(result, llvm::APSInt(llvm::APInt(16, 0), /*isUnsigned=*/false));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, OutOfBounds) {
+  // op_lit_uint's ULEB128 operand is truncated: the interpreter runs off
+  // the end of the buffer while decoding it.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+
+  // op_begin claims a block that is longer than the remaining bytecode.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_begin, 5, op_lit_uint, 42}),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x4 while reading [0x2, 0x7)"));
+
+  // The ULEB128 byte's continuation bit is set, but there is no
+  // terminating byte.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint, 0x80}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed uleb128, extends past end"));
+
+  // Same as above, but for op_lit_int's SLEB128 operand.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_int, 0x80}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "malformed sleb128, extends past end"));
+
+  // The ULEB128 operand encodes a value that doesn't fit into a uint64_t:
+  // 9 continuation bytes (63 bits) followed by a final byte contributing
+  // more than the single remaining bit.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_uint, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                     0x80, 0x80, 0x02}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "uleb128 too big for uint64"));
+
+  // Same as above, but for op_lit_int's SLEB128 operand not fitting into
+  // an int64_t.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_int, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                     0x80, 0x02}),
+      FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                        "sleb128 too big for int64"));
+}
+
+TEST_F(FormatterBytecodeTest, EmptyBytecode) {
+  DataStack data;
+  ASSERT_TRUE(Interpret({}, data));
+  ASSERT_EQ(data.size(), 0u);
+}
+
+TEST_F(FormatterBytecodeTest, UnknownSelector) {
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_selector, 0xff, op_call}),
+      FailedWithMessage(
+          "selector not implemented (opcode=call, selector=@255)"));
+}
+
+TEST_F(FormatterBytecodeTest, UnknownOpcode) {
+  EXPECT_THAT_ERROR(InterpretFail({0xaa}),
+                    FailedWithMessage("opcode not implemented(opcode=170)"));
+}
+
+TEST_F(FormatterBytecodeTest, CallOps) {
+  {
+    DataStack data;
+    data.Push(std::string{"hello"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_strlen, op_call}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 5u);
+  }
+  {
+    // Version 2 selectors return Integer instead of UInt.
+    DataStack data;
+    data.Push(std::string{"hello"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_strlen, op_call}, data,
+                          /*version=*/2));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(5));
+  }
+  {
+    DataStack data;
+    data.Push(std::string{"A"});
+    data.Push(std::string{"B"});
+    data.Push(std::string{"{1}{0}"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+    ASSERT_EQ(data.Pop<std::string>(), "BA");
+  }
+  {
+    DataStack data;
+    data.Push(std::string{"{0}"});
+    ASSERT_FALSE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, DictionaryOps) {
+  {
+    // Set key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 42,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+
+  {
+    // Add keys a and b, then read them back.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_lit_integer,
+                           1,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_lit_integer,
+                           2,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_dict_get,
+                           op_swap,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_dict_get},
+                          data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  {
+    // Set key a, reassign key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_lit_integer,
+                   2, op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  // Error: get value of missing key.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_dict, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("key not found in dictionary(opcode=dict_get)"));
+  // Error: get value from a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("expected Dictionary"));
+  // Error: check for key in a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_has}),
+      FailedWithMessage("expected Dictionary"));
+
+  {
+    // Check a key, then get its value.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_dict_has,
+                   op_swap, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Check for a non-existing key.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_lit_string, 1, 'a', op_dict_has}, data));
+    ASSERT_FALSE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Use dict_has in combination with `if`.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_has, op_begin, 2,
+                   op_lit_integer, 42, op_if},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+
+  {
+    // dict_has yields a signed Integer, usable with comparison operators.
+    DataStack data;
+    ASSERT_TRUE(Interpret(
+        {op_dict, op_lit_string, 1, 'a', op_dict_has, op_lit_integer, 0, op_eq},
+        data));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Dictionaries can be nested.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_dup, op_lit_string, 1, 'k', op_dict,
+                           op_dict_set, op_lit_string, 1, 'k', op_dict_get},
+                          data));
+    ASSERT_TRUE(data.Pop<std::shared_ptr<Dictionary>>());
+  }
+
+  // Error: store a dictionary in itself.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict, op_dup, op_lit_string, 1, 'k', op_over, op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+  // Error: store b in a, when a is already in b.
+  EXPECT_THAT_ERROR(
+      InterpretFail(
+          {op_dict,     op_dict,     op_dup,  op_lit_string, 1,
+           'k',         op_lit_uint, 0,       op_pick,       op_dict_set,
+           op_lit_uint, 0,           op_pick, op_lit_string, 1,
+           'k',         op_lit_uint, 1,       op_pick,       op_dict_set}),
+      FailedWithMessage(
+          "dict_set would create a reference cycle(opcode=dict_set)"));
+
+  {
+    // Dictionaries shared by multiple parents. Starting from [d0 d0], each
+    // level turns [.. p] into [.. n] where n["a"] and n["b"] are both p. The
+    // number of paths to d0 doubles per level, so cycle detection must not
+    // walk every path.
+    std::vector<uint8_t> code = {op_dict, op_dup};
+    for (int i = 0; i < 64; ++i)
+      code.insert(code.end(),
+                  {op_dict, op_swap, op_over, op_over, op_lit_string, 1, 'a',
+                   op_swap, op_dict_set, op_over, op_over, op_lit_string, 1,
+                   'b', op_swap, op_dict_set, op_drop});
+    {
+      DataStack data;
+      ASSERT_TRUE(Interpret(code, data));
+      ASSERT_EQ(data.size(), 2u);
+    }
+    // Error: store the top dictionary in d0, which it reaches via sharing.
+    code.insert(code.end(), {op_over, op_swap, op_lit_string, 1, 'k', op_swap,
+                             op_dict_set});
+    EXPECT_THAT_ERROR(
+        InterpretFail(code),
+        FailedWithMessage(
+            "dict_set would create a reference cycle(opcode=dict_set)"));
+  }
+}

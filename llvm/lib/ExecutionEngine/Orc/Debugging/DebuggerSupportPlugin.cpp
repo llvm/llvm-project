@@ -11,8 +11,9 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -39,7 +40,7 @@ public:
 
   MachODebugObjectSynthesizerBase(LinkGraph &G, ExecutorAddr RegisterActionAddr)
       : G(G), RegisterActionAddr(RegisterActionAddr) {}
-  virtual ~MachODebugObjectSynthesizerBase() = default;
+  ~MachODebugObjectSynthesizerBase() override = default;
 
   Error preserveDebugSections() {
     if (G.findSectionByName(SynthDebugSectionName)) {
@@ -64,7 +65,7 @@ public:
       LLVM_DEBUG({
         dbgs() << "  Preserving debug section " << Sec.getName() << "\n";
       });
-      SmallSet<Block *, 8> PreservedBlocks;
+      SmallPtrSet<Block *, 8> PreservedBlocks;
       for (auto *Sym : Sec.symbols()) {
         bool NewPreservedBlock =
             PreservedBlocks.insert(&Sym->getBlock()).second;
@@ -121,18 +122,14 @@ public:
 
     // Write MachO header and debug section load commands.
     Builder.Header.filetype = MachO::MH_OBJECT;
-    switch (G.getTargetTriple().getArch()) {
-    case Triple::x86_64:
-      Builder.Header.cputype = MachO::CPU_TYPE_X86_64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
-      break;
-    case Triple::aarch64:
-      Builder.Header.cputype = MachO::CPU_TYPE_ARM64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
-      break;
-    default:
-      llvm_unreachable("Unsupported architecture");
-    }
+    if (auto CPUType = MachO::getCPUType(G.getTargetTriple()))
+      Builder.Header.cputype = *CPUType;
+    else
+      return CPUType.takeError();
+    if (auto CPUSubType = MachO::getCPUSubType(G.getTargetTriple()))
+      Builder.Header.cpusubtype = *CPUSubType;
+    else
+      return CPUSubType.takeError();
 
     Seg = &Builder.addSegment("");
 
@@ -148,7 +145,7 @@ public:
         DSec.BuilderSec->align = Log2_64(SR.getFirstBlock()->getAlignment());
         StringRef SectionData(SR.getFirstBlock()->getContent().data(),
                               SR.getFirstBlock()->getSize());
-        DebugSectionMap[SecName] =
+        DebugSectionMap[SecName.drop_front(2)] = // drop "__" prefix.
             MemoryBuffer::getMemBuffer(SectionData, G.getName(), false);
         if (SecName == "__debug_line")
           DebugLineSectionData = SectionData;
@@ -167,11 +164,10 @@ public:
           DebugLineSectionData, G.getEndianness() == llvm::endianness::little,
           G.getPointerSize());
       uint64_t Offset = 0;
-      DWARFDebugLine::LineTable LineTable;
+      DWARFDebugLine::Prologue P;
 
       // Try to parse line data. Consume error on failure.
-      if (auto Err = LineTable.parse(DebugLineData, &Offset, *DWARFCtx, nullptr,
-                                     consumeError)) {
+      if (auto Err = P.parse(DebugLineData, &Offset, consumeError, *DWARFCtx)) {
         handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
           LLVM_DEBUG({
             dbgs() << "Cannot parse line table for \"" << G.getName() << "\": ";
@@ -180,15 +176,26 @@ public:
           });
         });
       } else {
-        if (!LineTable.Prologue.FileNames.empty())
-          FileName = *dwarf::toString(LineTable.Prologue.FileNames[0].Name);
+        for (auto &FN : P.FileNames)
+          if ((FileName = dwarf::toString(FN.Name))) {
+            LLVM_DEBUG({
+              dbgs() << "Using FileName = \"" << *FileName
+                     << "\" from DWARF line table\n";
+            });
+            break;
+          }
       }
     }
 
     // If no line table (or unable to use) then use graph name.
     // FIXME: There are probably other debug sections we should look in first.
-    if (!FileName)
-      FileName = StringRef(G.getName());
+    if (!FileName) {
+      LLVM_DEBUG({
+        dbgs() << "Could not find source name from DWARF line table. "
+                  "Using FileName = \"\"\n";
+      });
+      FileName = "";
+    }
 
     Builder.addSymbol("", MachO::N_SO, 0, 0, 0);
     Builder.addSymbol(*FileName, MachO::N_SO, 0, 0, 0);
@@ -214,8 +221,8 @@ public:
 
         Builder.addSymbol("", MachO::N_BNSYM, 1, 0, 0);
         StabSymbols.push_back(
-            {*Sym, Builder.addSymbol(Sym->getName(), SymType, 1, 0, 0),
-             Builder.addSymbol(Sym->getName(), SymType, 0, 0, 0)});
+            {*Sym, Builder.addSymbol(*Sym->getName(), SymType, 1, 0, 0),
+             Builder.addSymbol(*Sym->getName(), SymType, 0, 0, 0)});
         Builder.addSymbol("", MachO::N_ENSYM, 1, 0, 0);
       }
     }
@@ -278,12 +285,11 @@ public:
 
     Builder.write(MachOContainerBlock->getAlreadyMutableContent());
 
-    static constexpr bool AutoRegisterCode = true;
     SectionRange R(MachOContainerBlock->getSection());
     G.allocActions().push_back(
         {cantFail(shared::WrapperFunctionCall::Create<
-                  shared::SPSArgList<shared::SPSExecutorAddrRange, bool>>(
-             RegisterActionAddr, R.getRange(), AutoRegisterCode)),
+                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
+             RegisterActionAddr, R.getRange())),
          {}});
 
     return Error::success();
@@ -322,14 +328,11 @@ namespace orc {
 
 Expected<std::unique_ptr<GDBJITDebugInfoRegistrationPlugin>>
 GDBJITDebugInfoRegistrationPlugin::Create(ExecutionSession &ES,
-                                          JITDylib &ProcessJD,
-                                          const Triple &TT) {
-  auto RegisterActionAddr =
-      TT.isOSBinFormatMachO()
-          ? ES.intern("_llvm_orc_registerJITLoaderGDBAllocAction")
-          : ES.intern("llvm_orc_registerJITLoaderGDBAllocAction");
+                                          JITDylib &BootstrapJD) {
+  auto RegisterActionName =
+      MangleAndInterner(ES)(rt::RegisterJITLoaderGDBAllocActionName);
 
-  if (auto RegisterSym = ES.lookup({&ProcessJD}, RegisterActionAddr))
+  if (auto RegisterSym = ES.lookup({&BootstrapJD}, RegisterActionName))
     return std::make_unique<GDBJITDebugInfoRegistrationPlugin>(
         RegisterSym->getAddress());
   else

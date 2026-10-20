@@ -27,7 +27,7 @@ entry:
 define <4 x i8> @AddToSelf_i8(<4 x i8> %InVec)  {
 ; CHECK-LABEL: @AddToSelf_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <4 x i8> [[MUL]]
 ;
 entry:
@@ -38,7 +38,7 @@ entry:
 define <4 x i8> @SplatPow2Test1_i8(<4 x i8> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test1_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], splat (i8 2)
 ; CHECK-NEXT:    ret <4 x i8> [[MUL]]
 ;
 entry:
@@ -49,7 +49,7 @@ entry:
 define <4 x i8> @SplatPow2Test2_i8(<4 x i8> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test2_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], <i8 3, i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i8> [[INVEC:%.*]], splat (i8 3)
 ; CHECK-NEXT:    ret <4 x i8> [[MUL]]
 ;
 entry:
@@ -71,7 +71,7 @@ entry:
 define <4 x i8> @MulTest2_i8(<4 x i8> %InVec)  {
 ; CHECK-LABEL: @MulTest2_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i8> [[INVEC:%.*]], <i8 3, i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i8> [[INVEC:%.*]], splat (i8 3)
 ; CHECK-NEXT:    ret <4 x i8> [[MUL]]
 ;
 entry:
@@ -124,7 +124,7 @@ entry:
 define <4 x i16> @AddToSelf_i16(<4 x i16> %InVec)  {
 ; CHECK-LABEL: @AddToSelf_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
 entry:
@@ -135,7 +135,7 @@ entry:
 define <4 x i16> @SplatPow2Test1_i16(<4 x i16> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test1_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], <i16 2, i16 2, i16 2, i16 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], splat (i16 2)
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
 entry:
@@ -146,7 +146,7 @@ entry:
 define <4 x i16> @SplatPow2Test2_i16(<4 x i16> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test2_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], <i16 3, i16 3, i16 3, i16 3>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[INVEC:%.*]], splat (i16 3)
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
 entry:
@@ -168,7 +168,7 @@ entry:
 define <4 x i16> @MulTest2_i16(<4 x i16> %InVec)  {
 ; CHECK-LABEL: @MulTest2_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[INVEC:%.*]], <i16 3, i16 3, i16 3, i16 3>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[INVEC:%.*]], splat (i16 3)
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
 entry:
@@ -221,7 +221,7 @@ entry:
 define <4 x i32> @AddToSelf_i32(<4 x i32> %InVec)  {
 ; CHECK-LABEL: @AddToSelf_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <4 x i32> [[MUL]]
 ;
 entry:
@@ -232,7 +232,7 @@ entry:
 define <4 x i32> @SplatPow2Test1_i32(<4 x i32> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test1_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], splat (i32 2)
 ; CHECK-NEXT:    ret <4 x i32> [[MUL]]
 ;
 entry:
@@ -243,7 +243,7 @@ entry:
 define <4 x i32> @SplatPow2Test2_i32(<4 x i32> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test2_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INVEC:%.*]], splat (i32 3)
 ; CHECK-NEXT:    ret <4 x i32> [[MUL]]
 ;
 entry:
@@ -265,7 +265,7 @@ entry:
 define <4 x i32> @MulTest2_i32(<4 x i32> %InVec)  {
 ; CHECK-LABEL: @MulTest2_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[INVEC:%.*]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[INVEC:%.*]], splat (i32 3)
 ; CHECK-NEXT:    ret <4 x i32> [[MUL]]
 ;
 entry:
@@ -318,7 +318,7 @@ entry:
 define <4 x i64> @AddToSelf_i64(<4 x i64> %InVec)  {
 ; CHECK-LABEL: @AddToSelf_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], splat (i64 1)
 ; CHECK-NEXT:    ret <4 x i64> [[MUL]]
 ;
 entry:
@@ -329,7 +329,7 @@ entry:
 define <4 x i64> @SplatPow2Test1_i64(<4 x i64> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test1_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], <i64 2, i64 2, i64 2, i64 2>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], splat (i64 2)
 ; CHECK-NEXT:    ret <4 x i64> [[MUL]]
 ;
 entry:
@@ -340,7 +340,7 @@ entry:
 define <4 x i64> @SplatPow2Test2_i64(<4 x i64> %InVec)  {
 ; CHECK-LABEL: @SplatPow2Test2_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i64> [[INVEC:%.*]], splat (i64 3)
 ; CHECK-NEXT:    ret <4 x i64> [[MUL]]
 ;
 entry:
@@ -362,7 +362,7 @@ entry:
 define <4 x i64> @MulTest2_i64(<4 x i64> %InVec)  {
 ; CHECK-LABEL: @MulTest2_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[INVEC:%.*]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[INVEC:%.*]], splat (i64 3)
 ; CHECK-NEXT:    ret <4 x i64> [[MUL]]
 ;
 entry:
@@ -399,7 +399,7 @@ entry:
 define <4 x i8> @ShiftMulTest1(<4 x i8> %InVec) {
 ; CHECK-LABEL: @ShiftMulTest1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i8> [[INVEC:%.*]], <i8 12, i8 12, i8 12, i8 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i8> [[INVEC:%.*]], splat (i8 12)
 ; CHECK-NEXT:    ret <4 x i8> [[MUL]]
 ;
 entry:
@@ -411,7 +411,7 @@ entry:
 define <4 x i16> @ShiftMulTest2(<4 x i16> %InVec) {
 ; CHECK-LABEL: @ShiftMulTest2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[INVEC:%.*]], <i16 12, i16 12, i16 12, i16 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[INVEC:%.*]], splat (i16 12)
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
 entry:
@@ -423,7 +423,7 @@ entry:
 define <4 x i32> @ShiftMulTest3(<4 x i32> %InVec) {
 ; CHECK-LABEL: @ShiftMulTest3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[INVEC:%.*]], <i32 12, i32 12, i32 12, i32 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[INVEC:%.*]], splat (i32 12)
 ; CHECK-NEXT:    ret <4 x i32> [[MUL]]
 ;
 entry:
@@ -435,7 +435,7 @@ entry:
 define <4 x i64> @ShiftMulTest4(<4 x i64> %InVec) {
 ; CHECK-LABEL: @ShiftMulTest4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[INVEC:%.*]], <i64 12, i64 12, i64 12, i64 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[INVEC:%.*]], splat (i64 12)
 ; CHECK-NEXT:    ret <4 x i64> [[MUL]]
 ;
 entry:

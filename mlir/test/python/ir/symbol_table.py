@@ -56,6 +56,7 @@ def testSymbolTableInsert():
         print(m1)
         assert "bar" not in symbol_table
 
+        bar._set_invalid()
         try:
             print(bar)
         except RuntimeError as e:
@@ -176,5 +177,6 @@ def testWalkSymbolTables():
         try:
             SymbolTable.walk_symbol_tables(m.operation, True, error_callback)
         except RuntimeError as e:
-            # CHECK: GOT EXCEPTION: Exception raised in callback: AssertionError: Raised from python
+            # CHECK: GOT EXCEPTION: Exception raised in callback:
+            # CHECK: AssertionError: Raised from python
             print(f"GOT EXCEPTION: {e}")

@@ -1,13 +1,13 @@
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s -check-prefix=mips16
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips < %s | FileCheck %s \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s -check-prefix=mips16
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips < %s | FileCheck %s \
 ; RUN:    -check-prefix=MM32
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips < %s | FileCheck %s \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips < %s | FileCheck %s \
 ; RUN:    -check-prefix=MM32
 
 ; CHECK:  rotrv $2, $4
 ; mips16: .ent rot0
-; MM32:   li16  $2, 32
+; MM32:   li16  $2, 0
 ; MM32:   subu16  $2, $2, $5
 ; MM32:   rotrv $2, $4, $2
 define i32 @rot0(i32 %a, i32 %b) nounwind readnone {

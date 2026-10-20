@@ -10,7 +10,7 @@
 // a correct traceback when the function raising the signal does not save
 // the link register or does not store the stack back chain.
 
-// REQUIRES: target=powerpc{{(64)?}}-ibm-aix
+// REQUIRES: target={{.+}}-aix{{.*}}
 
 // Test when the function raising the signal does not save the link register
 // RUN: %{cxx} -x c++ %s -o %t.exe -DCXX_CODE %{flags} %{compile_flags}
@@ -126,10 +126,11 @@ extern "C" __attribute__((noinline)) void foo() {
   bar();
 }
 
-int main() {
+int main(int, char**) {
   // Set signal handler for SIGSEGV.
   signal(SIGSEGV, handler);
   foo();
+  return 0;
 }
 
 #else // Assembly code for abc().
@@ -168,7 +169,7 @@ L..abc0:
         .vbyte  4, 0x00000000           # Traceback table begin
         .byte   0x00                    # Version = 0
         .byte   0x09                    # Language = CPlusPlus
-        .byte   0x20                    # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+        .byte   0x20                    # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
                                         # +HasTraceBackTableOffset, -IsInternalProcedure
                                         # -HasControlledStorage, -IsTOCless
                                         # -IsFloatingPointPresent
@@ -218,7 +219,7 @@ L..abc0:
         .vbyte  4, 0x00000000           # Traceback table begin
         .byte   0x00                    # Version = 0
         .byte   0x09                    # Language = CPlusPlus
-        .byte   0x20                    # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+        .byte   0x20                    # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
                                         # +HasTraceBackTableOffset, -IsInternalProcedure
                                         # -HasControlledStorage, -IsTOCless
                                         # -IsFloatingPointPresent

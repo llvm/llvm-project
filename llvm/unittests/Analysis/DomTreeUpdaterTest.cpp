@@ -7,16 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 
 using namespace llvm;
 
@@ -179,7 +183,7 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   // Add a block as the new function entry BB. We also link it to BB0.
   BasicBlock *NewEntry =
       BasicBlock::Create(F->getContext(), "new_entry", F, BB0);
-  BranchInst::Create(BB0, NewEntry);
+  UncondBrInst::Create(BB0, NewEntry);
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
@@ -193,7 +197,7 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   // CFG Change: remove new_edge -> bb0 and redirect to new_edge -> bb1.
   EXPECT_EQ(NewEntry->getTerminator()->getNumSuccessors(), 1u);
   NewEntry->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, NewEntry);
+  UncondBrInst::Create(BB1, NewEntry);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU. At this point bb0 now has no predecessors but is still a
@@ -270,7 +274,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   // CFG Change: remove edge bb0 -> bb3 and one duplicate edge bb0 -> bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 4u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB2, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Verify. Updates to DTU must be applied *after* all changes to the CFG
@@ -285,7 +289,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   // We don't defer this action because it can cause problems for other
   // transforms or analysis as it's part of the actual CFG. We only defer
   // updates to the DominatorTrees. This code will crash if it is placed before
-  // the BranchInst::Create() call above. After a deletion of a BasicBlock. Only
+  // the CondBrInst::Create() call above. After a deletion of a BasicBlock. Only
   // an explicit flush event can trigger the flushing of deleteBBs. Because some
   // passes using Lazy UpdateStrategy rely on this behavior.
 
@@ -368,7 +372,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   // remove bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 3u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB3, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB3, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Test callback utils.
@@ -397,7 +401,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   // CFG Change: bb0 now only branches to bb3. We are preparing to remove bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB3, BB0);
+  UncondBrInst::Create(BB3, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Remove bb1 from F. This has to happen before the call to
@@ -482,7 +486,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   // CFG Change: remove edge bb0 -> bb3 and one duplicate edge bb0 -> bb2.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 4u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB2, ConstantInt::getTrue(F->getContext()), BB0);
+  CondBrInst::Create(ConstantInt::getTrue(F->getContext()), BB1, BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 2u);
 
   // Deletion of a BasicBlock is an immediate event. We remove all uses to the
@@ -491,7 +495,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   // called. We don't defer this action because it can cause problems for other
   // transforms or analysis as it's part of the actual CFG. We only defer
   // updates to the DominatorTree. This code will crash if it is placed before
-  // the BranchInst::Create() call above.
+  // the CondBrInst::Create() call above.
   bool CallbackFlag = false;
   ASSERT_FALSE(isa<UnreachableInst>(BB3->getTerminator()));
   EXPECT_FALSE(DTU.isBBPendingDeletion(BB3));
@@ -549,7 +553,7 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   // Add a block as the new function entry BB. We also link it to BB0.
   BasicBlock *NewEntry =
       BasicBlock::Create(F->getContext(), "new_entry", F, BB0);
-  BranchInst::Create(BB0, NewEntry);
+  UncondBrInst::Create(BB0, NewEntry);
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
@@ -566,7 +570,7 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   // CFG Change: remove new_edge -> bb0 and redirect to new_edge -> bb1.
   EXPECT_EQ(NewEntry->getTerminator()->getNumSuccessors(), 1u);
   NewEntry->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, NewEntry);
+  UncondBrInst::Create(BB1, NewEntry);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU. At this point bb0 now has no predecessors but is still a
@@ -752,7 +756,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   // CFG Change: remove bb0 -> bb1 and add back bb0 -> bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   BB0->getTerminator()->eraseFromParent();
-  BranchInst::Create(BB1, BB0);
+  UncondBrInst::Create(BB1, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
   // Update the DTU and simulate duplicates.
@@ -772,6 +776,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   // CFG Change: remove bb0 -> bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   BB0->getTerminator()->eraseFromParent();
+  new UnreachableInst(Context, BB0);
 
   // Update the DTU and simulate invalid updates.
   DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1},
@@ -782,8 +787,266 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   ASSERT_TRUE(DTU.hasPendingUpdates());
 
   // CFG Change: add bb0 -> bb2.
-  BranchInst::Create(BB2, BB0);
+  UncondBrInst::Create(BB2, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   DTU.applyUpdates({{DominatorTree::Insert, BB0, BB2}});
   ASSERT_TRUE(DTU.getDomTree().verify());
+}
+
+TEST(DomTreeUpdater, CriticalEdgeSplitTest) {
+  StringRef FuncName = "f";
+  StringRef ModuleString = R"(
+declare void @use1(i32)
+
+define void @f(i32 %i, i1 %c) {
+entry:
+	%A = icmp eq i32 %i, 0		; <i1> [#uses=1]
+	br i1 %A, label %brtrue, label %brfalse
+
+brtrue:  ; preds = %entry
+  call void @use1( i32 %i )
+  br label %brfalse
+
+brfalse: ; preds = %brtrue, %entry
+  call void @use1( i32 %i )
+  ret void
+}
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *F = M->getFunction(FuncName);
+
+  // Make the DTU.
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(&DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_TRUE(DTU.getDomTree().verify());
+
+  CriticalEdgeSplittingOptions Opts;
+  SplitAllCriticalEdges(*F, Opts);
+
+  Function::iterator FI = F->begin();
+  BasicBlock *BBEntry = &*FI++;
+  BasicBlock *SplitB = &*FI++;
+  [[maybe_unused]] BasicBlock *BBTrue = &*FI++;
+  BasicBlock *BBFalse = &*FI++;
+  DTU.splitCriticalEdge(BBEntry, BBFalse, SplitB);
+  DominatorTree NewDT(*F);
+  ASSERT_FALSE(NewDT.compare(DTU.getDomTree()));
+}
+
+TEST(DomTreeUpdater, BlockStillReachable) {
+  StringRef ModuleString = R"(
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @the_caller(i1 %arg) personality ptr null {
+bb:
+  br i1 %arg, label %bb9, label %bb1
+
+bb1:                                              ; preds = %bb
+  br i1 %arg, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb1
+  br i1 %arg, label %bb3, label %bb6
+
+bb3:                                              ; preds = %bb2
+  invoke void @the_callee(ptr null)
+          to label %bb4 unwind label %bb5
+
+bb4:                                              ; preds = %bb3
+  unreachable
+
+bb5:                                              ; preds = %bb3
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  br label %bb8
+
+bb6:                                              ; preds = %bb2
+  br label %bb8
+
+bb8:                                              ; preds = %bb6, %bb5
+  br label %bb12
+
+bb9:                                              ; preds = %bb
+  ret i32 0
+
+bb10:                                             ; preds = %bb1
+  br label %bb12
+
+bb12:                                             ; preds = %bb10, %bb8
+  resume { ptr, i32 } zeroinitializer
+}
+
+
+define void @the_callee(ptr %arg) alwaysinline personality ptr null {
+bb:
+  invoke void @foo(ptr null, ptr null)
+          to label %bb1 unwind label %bb2
+
+bb1:                                              ; preds = %bb
+  unreachable
+
+bb2:                                              ; preds = %bb
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } zeroinitializer
+}
+
+declare void @foo(ptr, ptr)
+
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *Caller = M->getFunction("the_caller");
+  Function *Callee = M->getFunction("the_callee");
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_NE(Callee, nullptr);
+  InvokeInst *CallWombat1 = [&]() -> InvokeInst * {
+    for (auto &BB : *Caller)
+      for (auto &I : BB)
+        if (auto *Inv = dyn_cast<InvokeInst>(&I))
+          if (Inv->getCalledFunction() && (Inv->getCalledFunction() == Callee))
+            return Inv;
+    return nullptr;
+  }();
+  ASSERT_NE(CallWombat1, nullptr);
+  DominatorTree DT(*Caller);
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+
+  InlineFunctionInfo IFI;
+  InlineFunction(*CallWombat1, IFI);
+
+  auto GetBBByName = [&](StringRef Name) -> BasicBlock * {
+    for (auto &BB : *Caller)
+      if (BB.getName() == Name)
+        return &BB;
+    return nullptr;
+  };
+  SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb1.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb2.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb4")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb5")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb5"), GetBBByName("bb8")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+}
+
+TEST(DomTreeUpdater, BlockStillReachableStepByStep) {
+  StringRef ModuleString = R"(
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @the_caller(i1 %arg) personality ptr null {
+bb:
+  br i1 %arg, label %bb9, label %bb1
+
+bb1:                                              ; preds = %bb
+  br i1 %arg, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb1
+  br i1 %arg, label %bb3, label %bb6
+
+bb3:                                              ; preds = %bb2
+  invoke void @the_callee(ptr null)
+          to label %bb4 unwind label %bb5
+
+bb4:                                              ; preds = %bb3
+  unreachable
+
+bb5:                                              ; preds = %bb3
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  br label %bb8
+
+bb6:                                              ; preds = %bb2
+  br label %bb8
+
+bb8:                                              ; preds = %bb6, %bb5
+  br label %bb12
+
+bb9:                                              ; preds = %bb
+  ret i32 0
+
+bb10:                                             ; preds = %bb1
+  br label %bb12
+
+bb12:                                             ; preds = %bb10, %bb8
+  resume { ptr, i32 } zeroinitializer
+}
+
+
+define void @the_callee(ptr %arg) alwaysinline personality ptr null {
+bb:
+  invoke void @foo(ptr null, ptr null)
+          to label %bb1 unwind label %bb2
+
+bb1:                                              ; preds = %bb
+  unreachable
+
+bb2:                                              ; preds = %bb
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } zeroinitializer
+}
+
+declare void @foo(ptr, ptr)
+
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *Caller = M->getFunction("the_caller");
+  Function *Callee = M->getFunction("the_callee");
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_NE(Callee, nullptr);
+  InvokeInst *CallWombat1 = [&]() -> InvokeInst * {
+    for (auto &BB : *Caller)
+      for (auto &I : BB)
+        if (auto *Inv = dyn_cast<InvokeInst>(&I))
+          if (Inv->getCalledFunction() && (Inv->getCalledFunction() == Callee))
+            return Inv;
+    return nullptr;
+  }();
+  ASSERT_NE(CallWombat1, nullptr);
+  DominatorTree DT(*Caller);
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+
+  InlineFunctionInfo IFI;
+  InlineFunction(*CallWombat1, IFI);
+
+  auto GetBBByName = [&](StringRef Name) -> BasicBlock * {
+    for (auto &BB : *Caller)
+      if (BB.getName() == Name)
+        return &BB;
+    return nullptr;
+  };
+  SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb1.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb2.i")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_NE(DT.getNode(GetBBByName("bb5.body")), nullptr);
+
+  DomTreeUpdates.clear();
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb4")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb5")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb5"), GetBBByName("bb8")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
 }

@@ -1,7 +1,7 @@
-; RUN: llc -march=sparc --relocation-model=pic < %s | FileCheck %s --check-prefix=V8
-; RUN: llc -march=sparcv9 --relocation-model=pic < %s | FileCheck %s --check-prefix=V9
-; RUN: llc -march=sparc   --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V8UNOPT
-; RUN: llc -march=sparcv9 --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V9UNOPT
+; RUN: llc -mtriple=sparc --relocation-model=pic < %s | FileCheck %s --check-prefix=V8
+; RUN: llc -mtriple=sparcv9 --relocation-model=pic < %s | FileCheck %s --check-prefix=V9
+; RUN: llc -mtriple=sparc --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V8UNOPT
+; RUN: llc -mtriple=sparcv9 --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V9UNOPT
 
 
 ; V8-LABEL: func

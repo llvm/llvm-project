@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbs -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbs -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s  -triple=riscv64 -mattr=+zbs \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
@@ -38,21 +38,21 @@ bext x5, x6, 8
 li x5, 2147485013
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 572348
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -1093
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -1093
 # CHECK-S-OBJ-NOALIAS-NEXT: bclri t1, t1, 44
 # CHECK-S-OBJ-NOALIAS-NEXT: bclri t1, t1, 63
 # CHECK-S-OBJ: lui t1, 572348
-# CHECK-S-OBJ-NEXT: addiw t1, t1, -1093
+# CHECK-S-OBJ-NEXT: addi t1, t1, -1093
 # CHECK-S-OBJ-NEXT: bclri t1, t1, 44
 # CHECK-S-OBJ-NEXT: bclri t1, t1, 63
 li x6, 9223354442718100411
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 506812
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -1093
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -1093
 # CHECK-S-OBJ-NOALIAS-NEXT: bseti t1, t1, 46
 # CHECK-S-OBJ-NOALIAS-NEXT: bseti t1, t1, 63
 # CHECK-S-OBJ: lui t1, 506812
-# CHECK-S-OBJ-NEXT: addiw t1, t1, -1093
+# CHECK-S-OBJ-NEXT: addi t1, t1, -1093
 # CHECK-S-OBJ-NEXT: bseti t1, t1, 46
 # CHECK-S-OBJ-NEXT: bseti t1, t1, 63
 li x6, -9223301666034697285

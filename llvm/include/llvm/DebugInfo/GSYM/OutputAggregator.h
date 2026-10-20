@@ -27,15 +27,22 @@ protected:
   // in a predictable order.
   std::map<std::string, unsigned> Aggregation;
   raw_ostream *Out;
+  // Whether to suppress printing the detail messages passed to Report().
+  // Anything written through operator<< is unaffected, as is the aggregated
+  // summary.
+  bool Quiet;
 
 public:
-  OutputAggregator(raw_ostream *out) : Out(out) {}
+  OutputAggregator(raw_ostream *out, bool Quiet = false)
+      : Out(out), Quiet(Quiet) {}
 
   size_t GetNumCategories() const { return Aggregation.size(); }
 
+  bool IsQuiet() const { return Quiet; }
+
   void Report(StringRef s, std::function<void(raw_ostream &o)> detailCallback) {
     Aggregation[std::string(s)]++;
-    if (GetOS())
+    if (GetOS() && !Quiet)
       detailCallback(*Out);
   }
 
@@ -60,11 +67,8 @@ public:
   // then merge it in here. Note that this is *not* thread safe. It is up to
   // the caller to ensure that this is only called from one thread at a time.
   void Merge(const OutputAggregator &other) {
-    for (auto &&[name, count] : other.Aggregation) {
-      auto [it, inserted] = Aggregation.emplace(name, count);
-      if (!inserted)
-        it->second += count;
-    }
+    for (auto &&[name, count] : other.Aggregation)
+      Aggregation[name] += count;
   }
 };
 

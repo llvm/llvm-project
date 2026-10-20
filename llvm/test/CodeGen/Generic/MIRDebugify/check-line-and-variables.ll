@@ -1,5 +1,4 @@
 ; RUN: llc -debugify-check-and-strip-all-safe -o - %s 2>&1 | FileCheck %s
-; RUN: llc --experimental-debuginfo-iterators=false -debugify-check-and-strip-all-safe -o - %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'main.c'
 source_filename = "main.c"

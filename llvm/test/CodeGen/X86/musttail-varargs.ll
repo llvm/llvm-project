@@ -2,6 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=LINUX-X32
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-windows | FileCheck %s --check-prefix=WINDOWS
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-uefi | FileCheck %s --check-prefix=WINDOWS
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows | FileCheck %s --check-prefix=X86 --check-prefix=X86-NOSSE
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows -mattr=+sse2 | FileCheck %s --check-prefix=X86 --check-prefix=X86-SSE
 
@@ -228,11 +229,13 @@ define void @f_thunk(ptr %this, ...) {
 ; WINDOWS-NEXT:    movq %rbx, %rdx
 ; WINDOWS-NEXT:    movq %rdi, %r8
 ; WINDOWS-NEXT:    movq %rsi, %r9
+; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $72, %rsp
 ; WINDOWS-NEXT:    popq %rbx
 ; WINDOWS-NEXT:    popq %rdi
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
+; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:    .seh_endproc
 ;
@@ -242,7 +245,7 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-16, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $16, %esp
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %esi
 ; X86-NOSSE-NEXT:    leal 12(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
@@ -261,7 +264,7 @@ define void @f_thunk(ptr %this, ...) {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
-; X86-SSE-NEXT:    subl $80, %esp
+; X86-SSE-NEXT:    subl $64, %esp
 ; X86-SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill

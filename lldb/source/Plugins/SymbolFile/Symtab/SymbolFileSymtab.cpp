@@ -60,9 +60,13 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
   if (m_objfile_sp) {
     const Symtab *symtab = m_objfile_sp->GetSymtab();
     if (symtab) {
-      // The snippet of code below will get the indexes the module symbol table
-      // entries that are code, data, or function related (debug info), sort
-      // them by value (address) and dump the sorted symbols.
+      if (symtab->GetNumSymbols() > 0)
+        abilities |= Symbols;
+
+      // Get the indexes of source, code, data, and function-related entries in
+      // the module symbol table. Only source-file entries provide a genuine
+      // debug-info ability. Code and data entries remain available as symbols
+      // but are not equivalent to debug-info functions or global variables.
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile,
                                               m_source_indexes)) {
         abilities |= CompileUnits;
@@ -72,20 +76,17 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
               eSymbolTypeCode, Symtab::eDebugYes, Symtab::eVisibilityAny,
               m_func_indexes)) {
         symtab->SortSymbolIndexesByValue(m_func_indexes, true);
-        abilities |= Functions;
       }
 
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugNo,
                                               Symtab::eVisibilityAny,
                                               m_code_indexes)) {
         symtab->SortSymbolIndexesByValue(m_code_indexes, true);
-        abilities |= Functions;
       }
 
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeData,
                                               m_data_indexes)) {
         symtab->SortSymbolIndexesByValue(m_data_indexes, true);
-        abilities |= GlobalVariables;
       }
 
       lldb_private::Symtab::IndexCollection objc_class_indexes;
@@ -120,9 +121,10 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
     const Symbol *cu_symbol =
         m_objfile_sp->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);
     if (cu_symbol)
-      cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
-                                            cu_symbol->GetName().AsCString(), 0,
-                                            eLanguageTypeUnknown, eLazyBoolNo);
+      cu_sp =
+          std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
+                                        cu_symbol->GetName().AsCString(nullptr),
+                                        0, eLanguageTypeUnknown, eLazyBoolNo);
   }
   return cu_sp;
 }
@@ -179,14 +181,14 @@ size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
               }
             }
 
-            FunctionSP func_sp(
-                new Function(&comp_unit,
-                             symbol_idx,       // UserID is the DIE offset
-                             LLDB_INVALID_UID, // We don't have any type info
-                                               // for this function
-                             curr_symbol->GetMangled(), // Linker/mangled name
-                             nullptr, // no return type for a code symbol...
-                             func_range)); // first address range
+            FunctionSP func_sp(new Function(
+                &comp_unit,
+                symbol_idx,                // UserID is the DIE offset
+                LLDB_INVALID_UID,          // We don't have any type info
+                                           // for this function
+                curr_symbol->GetMangled(), // Linker/mangled name
+                nullptr, // no return type for a code symbol...
+                curr_symbol->GetAddress(), AddressRanges{func_range}));
 
             if (func_sp.get() != nullptr) {
               comp_unit.AddFunction(func_sp);

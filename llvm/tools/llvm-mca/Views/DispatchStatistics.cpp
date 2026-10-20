@@ -44,7 +44,6 @@ void DispatchStatistics::printDispatchHistogram(raw_ostream &OS) const {
                << "%)\n";
   }
 
-  TempStream.flush();
   OS << Buffer;
 }
 
@@ -79,7 +78,6 @@ void DispatchStatistics::printDispatchStalls(raw_ostream &OS) const {
   SS << "\nUSH     - Uncategorised Structural Hazard:           ";
   printStalls(SS, HWStalls[HWStallEvent::CustomBehaviourStall], NumCycles);
   SS << '\n';
-  SS.flush();
   OS << Buffer;
 }
 

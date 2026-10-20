@@ -1,13 +1,14 @@
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-size=32" | FileCheck %s
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="cache-size=512" | FileCheck %s --check-prefix=MODEL
+// RUN: mlir-opt %s -split-input-file -affine-loop-tile="cache-size=0" | FileCheck %s --check-prefix=ZERO-CACHE
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-size=32 separate" | FileCheck %s --check-prefix=SEPARATE
-
-// -----
 
 // CHECK-DAG: [[$UB:#map[0-9]*]] = affine_map<(d0) -> (d0 + 32)>
 // CHECK-DAG: [[$UB_MIN:#map[0-9]*]] = affine_map<(d0) -> (d0 + 32, 50)>
 // CHECK-DAG: [[$ID:#map[0-9]*]] = affine_map<(d0) -> (d0)>
 // CHECK-DAG: [[$ID_PLUS_21:#map[0-9]*]] = affine_map<(d0) -> (d0 + 21)>
+// ZERO-CACHE-DAG: affine_map<(d0) -> (d0)>
+// ZERO-CACHE-DAG: affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: func @loop_tiling()
 // CHECK-NEXT:   affine.for %{{.*}} = 0 to 256 step 32 {

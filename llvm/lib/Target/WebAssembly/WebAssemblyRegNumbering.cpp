@@ -15,15 +15,14 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -31,7 +30,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-reg-numbering"
 
 namespace {
-class WebAssemblyRegNumbering final : public MachineFunctionPass {
+class WebAssemblyRegNumberingLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Register Numbering";
   }
@@ -45,20 +44,20 @@ class WebAssemblyRegNumbering final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyRegNumbering() : MachineFunctionPass(ID) {}
+  WebAssemblyRegNumberingLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegNumbering::ID = 0;
-INITIALIZE_PASS(WebAssemblyRegNumbering, DEBUG_TYPE,
+char WebAssemblyRegNumberingLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegNumberingLegacy, DEBUG_TYPE,
                 "Assigns WebAssembly register numbers for virtual registers",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblyRegNumbering() {
-  return new WebAssemblyRegNumbering();
+FunctionPass *llvm::createWebAssemblyRegNumberingLegacyPass() {
+  return new WebAssemblyRegNumberingLegacy();
 }
 
-bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
+static bool regNumbering(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Register Numbering **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -76,7 +75,7 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
       break;
 
     int64_t Imm = MI.getOperand(1).getImm();
-    LLVM_DEBUG(dbgs() << "Arg VReg " << MI.getOperand(0).getReg()
+    LLVM_DEBUG(dbgs() << "Arg VReg " << printReg(MI.getOperand(0).getReg())
                       << " -> WAReg " << Imm << "\n");
     MFI.setWAReg(MI.getOperand(0).getReg(), Imm);
   }
@@ -95,16 +94,29 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
       continue;
     // Handle stackified registers.
     if (MFI.isVRegStackified(VReg)) {
-      LLVM_DEBUG(dbgs() << "VReg " << VReg << " -> WAReg "
+      LLVM_DEBUG(dbgs() << "VReg " << printReg(VReg) << " -> WAReg "
                         << (INT32_MIN | NumStackRegs) << "\n");
       MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
       continue;
     }
     if (MFI.getWAReg(VReg) == WebAssembly::UnusedReg) {
-      LLVM_DEBUG(dbgs() << "VReg " << VReg << " -> WAReg " << CurReg << "\n");
+      LLVM_DEBUG(dbgs() << "VReg " << printReg(VReg) << " -> WAReg " << CurReg
+                        << "\n");
       MFI.setWAReg(VReg, CurReg++);
     }
   }
 
   return true;
+}
+
+bool WebAssemblyRegNumberingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return regNumbering(MF);
+}
+
+PreservedAnalyses
+WebAssemblyRegNumberingPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  return regNumbering(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                .preserveSet<CFGAnalyses>()
+                          : PreservedAnalyses::all();
 }

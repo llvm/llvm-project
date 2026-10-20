@@ -39,7 +39,7 @@ public:
   using DivFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(DivFunc func) {
-    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
     for (InStorageType i = 0, v = 0, w = IN_MAX_SUBNORMAL_U; i <= COUNT;
@@ -47,28 +47,30 @@ public:
       InType x = InFPBits(v).get_val();
       InType y = InFPBits(w).get_val();
       mpfr::BinaryInput<InType> input{x, y};
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
                                      0.5);
     }
   }
 
   void test_normal_range(DivFunc func) {
-    constexpr InStorageType COUNT = 100'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
     for (InStorageType i = 0, v = 0, w = IN_MAX_NORMAL_U; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       InType x = InFPBits(v).get_val();
       InType y = InFPBits(w).get_val();
       mpfr::BinaryInput<InType> input{x, y};
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Div, input, func(x, y),
                                      0.5);
     }
   }
 };
 
-#define LIST_DIV_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcDivTest = DivTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcDivTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcDivTest, NormalRange) { test_normal_range(&func); }
+#define LIST_DIV_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = DivTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_DIVTEST_H

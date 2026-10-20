@@ -253,25 +253,25 @@ struct TrivialCopyAssignment {
 struct NontrivialCopyAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct NontrivialCopyAssignment definition
   // CHECK: CopyAssignment {{.*}}non_trivial{{.*}}
-  NontrivialCopyAssignment& operator=(const NontrivialCopyAssignment&) {}
+  NontrivialCopyAssignment& operator=(const NontrivialCopyAssignment&) { return *this; }
 };
 
 struct CopyAssignmentHasConstParam {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct CopyAssignmentHasConstParam definition
   // CHECK: CopyAssignment {{.*}}has_const_param{{.*}}
-  CopyAssignmentHasConstParam& operator=(const CopyAssignmentHasConstParam&) {}
+  CopyAssignmentHasConstParam& operator=(const CopyAssignmentHasConstParam&) { return *this; }
 };
 
 struct CopyAssignmentDoesNotHaveConstParam {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct CopyAssignmentDoesNotHaveConstParam definition
   // CHECK-NOT: CopyAssignment {{.*}} has_const_param{{.*}}
-  CopyAssignmentDoesNotHaveConstParam& operator=(CopyAssignmentDoesNotHaveConstParam&) {}
+  CopyAssignmentDoesNotHaveConstParam& operator=(CopyAssignmentDoesNotHaveConstParam&) { return *this; }
 };
 
 struct UserDeclaredCopyAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct UserDeclaredCopyAssignment definition
   // CHECK: CopyAssignment {{.*}}user_declared{{.*}}
-  UserDeclaredCopyAssignment& operator=(const UserDeclaredCopyAssignment&) {}
+  UserDeclaredCopyAssignment& operator=(const UserDeclaredCopyAssignment&) { return *this; }
 };
 
 struct NonUserDeclaredCopyAssignment {
@@ -288,7 +288,7 @@ struct NeedsImplicitCopyAssignment {
 struct DoesNotNeedImplicitCopyAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct DoesNotNeedImplicitCopyAssignment definition
   // CHECK-NOT: CopyAssignment {{.*}}needs_implicit{{.*}}
-  DoesNotNeedImplicitCopyAssignment& operator=(const DoesNotNeedImplicitCopyAssignment&) {}
+  DoesNotNeedImplicitCopyAssignment& operator=(const DoesNotNeedImplicitCopyAssignment&) { return *this; }
 };
 
 struct DeclaresCopyAssignment {
@@ -352,13 +352,13 @@ struct TrivialMoveAssignment {
 struct NontrivialMoveAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct NontrivialMoveAssignment definition
   // CHECK: MoveAssignment {{.*}}non_trivial{{.*}}
-  NontrivialMoveAssignment& operator=(NontrivialMoveAssignment&&) {}
+  NontrivialMoveAssignment& operator=(NontrivialMoveAssignment&&) { return *this; }
 };
 
 struct UserDeclaredMoveAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct UserDeclaredMoveAssignment definition
   // CHECK: MoveAssignment {{.*}}user_declared{{.*}}
-  UserDeclaredMoveAssignment& operator=(UserDeclaredMoveAssignment&&) {}
+  UserDeclaredMoveAssignment& operator=(UserDeclaredMoveAssignment&&) { return *this; }
 };
 
 struct NonUserDeclaredMoveAssignment {
@@ -375,7 +375,7 @@ struct NeedsImplicitMoveAssignment {
 struct DoesNotNeedImplicitMoveAssignment {
   // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+3]]:1> line:[[@LINE-1]]:8 struct DoesNotNeedImplicitMoveAssignment definition
   // CHECK-NOT: MoveAssignment {{.*}}needs_implicit{{.*}}
-  DoesNotNeedImplicitMoveAssignment& operator=(DoesNotNeedImplicitMoveAssignment&&) {}
+  DoesNotNeedImplicitMoveAssignment& operator=(DoesNotNeedImplicitMoveAssignment&&) { return *this; }
 };
 
 struct MoveAssignmentNeedsOverloadResolution : virtual DeletedDestructor {

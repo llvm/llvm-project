@@ -1,5 +1,6 @@
-// RUN: %clang_hwasan -Wl,--build-id -g %s -o %t
-// RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
+// RUN: rm -rf %t; mkdir %t
+// RUN: %clang_hwasan -Wl,--build-id -g %s -o %t/hwasan_uas
+// RUN: %env_hwasan_opts=symbolize=0 not %run %t/hwasan_uas 2>&1 | hwasan_symbolize --symbols %t --index | FileCheck %s
 
 // This doesn't work on X86, because that uses instrument-with-calls which
 // disables frame records.

@@ -10,10 +10,10 @@ target triple = "aarch64"
 ; due to invalid cost decisions. The loop below has a low maximum trip count,
 ; so will be masked.
 
-; COST: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %0 = load
+; COST: Cost of 3000000 for VF 2: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 4: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 8: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 16: REPLICATE ir<%0> = load
 ; COST: LV: Selecting VF: 1.
 
 define i32 @test(ptr nocapture noundef readonly %pInVec, ptr nocapture noundef readonly %pInA1, ptr nocapture noundef readonly %pInA2, ptr nocapture noundef readonly %pInA3, ptr nocapture noundef readonly %pInA4, i32 noundef %numCols) {
@@ -79,7 +79,7 @@ entry:
   %cmp.not32 = icmp eq i32 %and, 0
   br i1 %cmp.not32, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pInVec.addr.042 = phi ptr [ %incdec.ptr, %while.body ], [ %pInVec, %entry ]
   %sum4.041 = phi i32 [ %add14, %while.body ], [ 0, %entry ]
   %sum3.040 = phi i32 [ %add10, %while.body ], [ 0, %entry ]
@@ -117,13 +117,13 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %5 = add nsw i32 %add6, %add
   %6 = add nsw i32 %5, %add10
   %7 = add nsw i32 %6, %add14
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %add17 = phi i32 [ %7, %while.end.loopexit ], [ 0, %entry ]
   ret i32 %add17
 }

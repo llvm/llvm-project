@@ -62,7 +62,7 @@ thunk:
 
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows undef-func.s -o undef-func.obj
 // RUN: not lld-link -machine:arm64ec -dll -noentry -out:test.dll undef-func.obj 2>&1 | FileCheck -check-prefix=UNDEF-FUNC %s
-// UNDEF-FUNC: error: undefined symbol: func
+// UNDEF-FUNC: error: undefined symbol: func (EC symbol)
 
 #--- undef-thunk.s
     .section .text,"xr",discard,func
@@ -79,7 +79,7 @@ func:
 
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows undef-thunk.s -o undef-thunk.obj
 // RUN: not lld-link -machine:arm64ec -dll -noentry -out:test.dll undef-thunk.obj 2>&1 | FileCheck -check-prefix=UNDEF-THUNK %s
-// UNDEF-THUNK: error: undefined symbol: thunk
+// UNDEF-THUNK: error: undefined symbol: thunk (EC symbol)
 
 #--- invalid-type.s
     .section .text,"xr",discard,func

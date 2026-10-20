@@ -15,9 +15,9 @@ int main() {
   // CHECK: [[ADDR]] is located 0 bytes inside of 32-byte region
   // CHECK: freed by thread T0 here:
   // CHECK-NEXT: {{#0 .* realloc }}
-  // CHECK: {{ #[1-2] .* main .*use_after_realloc.cpp}}:[[@LINE-9]]
+  // CHECK: {{ #[1-3] .* main .*use_after_realloc.cpp}}:[[@LINE-9]]
   // CHECK: previously allocated by thread T0 here:
   // CHECK-NEXT: {{#0 .* realloc }}
-  // CHECK: {{ #[1-2] .* main .*use_after_realloc.cpp}}:[[@LINE-14]]
+  // CHECK: {{ #[1-3] .* main .*use_after_realloc.cpp}}:[[@LINE-14]]
   free(buffer);
 }

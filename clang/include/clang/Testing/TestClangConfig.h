@@ -27,37 +27,90 @@ struct TestClangConfig {
   /// The argument of the `-target` command line flag.
   std::string Target;
 
-  bool isC() const { return Language == Lang_C89 || Language == Lang_C99; }
+  bool isC() const {
+    return false
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  || Language == Lang_##lang##version
+#include "clang/Testing/TestLanguage.def"
+        ;
+  }
 
-  bool isC99OrLater() const { return Language == Lang_C99; }
+  bool isC(int Version) const {
+    return false
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  || (Version == version && Language == Lang_##lang##version)
+#include "clang/Testing/TestLanguage.def"
+        ;
+  }
+
+  bool isCOrLater(int MinimumStdVersion) const {
+    const auto MinimumStdVersionIndex = 0
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  +(MinimumStdVersion == version ? version_index : 0)
+#include "clang/Testing/TestLanguage.def"
+        ;
+    switch (Language) {
+#define TESTLANGUAGE_C(lang, version, std_flag, version_index)                 \
+  case Lang_##lang##version:                                                   \
+    return MinimumStdVersionIndex <= version_index;
+#include "clang/Testing/TestLanguage.def"
+    default:
+      return false;
+    }
+  }
+
+  bool isC99OrLater() const { return isCOrLater(99); }
+
+  bool isCOrEarlier(int MaximumStdVersion) const {
+    return isC() && (isC(MaximumStdVersion) || !isCOrLater(MaximumStdVersion));
+  }
 
   bool isCXX() const {
-    return Language == Lang_CXX03 || Language == Lang_CXX11 ||
-           Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20 || Language == Lang_CXX23;
+    return false
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  || Language == Lang_##lang##version
+#include "clang/Testing/TestLanguage.def"
+        ;
   }
 
-  bool isCXX11OrLater() const {
-    return Language == Lang_CXX11 || Language == Lang_CXX14 ||
-           Language == Lang_CXX17 || Language == Lang_CXX20 ||
-           Language == Lang_CXX23;
+  bool isCXX(int Version) const {
+    return false
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  || (Version == version && Language == Lang_##lang##version)
+#include "clang/Testing/TestLanguage.def"
+        ;
   }
 
-  bool isCXX14OrLater() const {
-    return Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20 || Language == Lang_CXX23;
+  bool isCXXOrLater(int MinimumStdVersion) const {
+    const auto MinimumStdVersionIndex = 0
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  +(MinimumStdVersion == version ? version_index : 0)
+#include "clang/Testing/TestLanguage.def"
+        ;
+    switch (Language) {
+#define TESTLANGUAGE_CXX(lang, version, std_flag, version_index)               \
+  case Lang_##lang##version:                                                   \
+    return MinimumStdVersionIndex <= version_index;
+#include "clang/Testing/TestLanguage.def"
+    default:
+      return false;
+    }
   }
 
-  bool isCXX17OrLater() const {
-    return Language == Lang_CXX17 || Language == Lang_CXX20 ||
-           Language == Lang_CXX23;
-  }
+  bool isCXX11OrLater() const { return isCXXOrLater(11); }
 
-  bool isCXX20OrLater() const {
-    return Language == Lang_CXX20 || Language == Lang_CXX23;
-  }
+  bool isCXX14OrLater() const { return isCXXOrLater(14); }
 
-  bool isCXX23OrLater() const { return Language == Lang_CXX23; }
+  bool isCXX17OrLater() const { return isCXXOrLater(17); }
+
+  bool isCXX20OrLater() const { return isCXXOrLater(20); }
+
+  bool isCXX23OrLater() const { return isCXXOrLater(23); }
+
+  bool isCXXOrEarlier(int MaximumStdVersion) const {
+    return isCXX() &&
+           (isCXX(MaximumStdVersion) || !isCXXOrLater(MaximumStdVersion));
+  }
 
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
@@ -72,6 +125,30 @@ struct TestClangConfig {
     std::vector<std::string> Result = getCommandLineArgsForTesting(Language);
     Result.push_back("-target");
     Result.push_back(Target);
+    return Result;
+  }
+
+  std::string toShortString() const {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    switch (Language) {
+#define TESTLANGUAGE(lang, version, std_flag, version_index)                   \
+  case Lang_##lang##version:                                                   \
+    OS << (#lang #version);                                                    \
+    break;
+#include "clang/Testing/TestLanguage.def"
+    case Lang_OpenCL:
+      OS << "OpenCL";
+      break;
+    case Lang_OBJC:
+      OS << "OBJC";
+      break;
+    case Lang_OBJCXX:
+      OS << "OBJCXX";
+      break;
+    }
+
+    OS << (Target.find("win") != std::string::npos ? "_win" : "");
     return Result;
   }
 

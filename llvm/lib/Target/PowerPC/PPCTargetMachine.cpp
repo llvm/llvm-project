@@ -20,14 +20,11 @@
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -40,6 +37,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -51,29 +49,31 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableBranchCoalescing(
+    "ppc-branch-coalesce", cl::Hidden,
+    cl::desc("enable coalescing of duplicate branches for PPC"));
+static cl::opt<bool> EnableCTRLoops("ppc-ctr-loops",
+                                    cl::desc("Enable CTR loops for PPC"),
+                                    cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-    EnableBranchCoalescing("enable-ppc-branch-coalesce", cl::Hidden,
-                           cl::desc("enable coalescing of duplicate branches for PPC"));
-static cl::
-opt<bool> DisableCTRLoops("disable-ppc-ctrloops", cl::Hidden,
-                        cl::desc("Disable CTR loops for PPC"));
-
-static cl::
-opt<bool> DisableInstrFormPrep("disable-ppc-instr-form-prep", cl::Hidden,
-                            cl::desc("Disable PPC loop instr form prep"));
+    EnableInstrFormPrep("ppc-instr-form-prep",
+                        cl::desc("Enable PPC loop instr form prep"),
+                        cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-VSXFMAMutateEarly("schedule-ppc-vsx-fma-mutation-early",
-  cl::Hidden, cl::desc("Schedule VSX FMA instruction mutation early"));
+    VSXFMAMutateEarly("ppc-schedule-vsx-fma-mutation-early", cl::Hidden,
+                      cl::desc("Schedule VSX FMA instruction mutation early"));
 
-static cl::
-opt<bool> DisableVSXSwapRemoval("disable-ppc-vsx-swap-removal", cl::Hidden,
-                                cl::desc("Disable VSX Swap Removal for PPC"));
+static cl::opt<bool>
+    EnableVSXSwapRemoval("ppc-vsx-swap-removal",
+                         cl::desc("Enable VSX Swap Removal for PPC"),
+                         cl::init(true), cl::Hidden);
 
-static cl::
-opt<bool> DisableMIPeephole("disable-ppc-peephole", cl::Hidden,
-                            cl::desc("Disable machine peepholes for PPC"));
+static cl::opt<bool>
+    EnableMIPeephole("ppc-peephole",
+                     cl::desc("Enable machine peepholes for PPC"),
+                     cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnableGEPOpt("ppc-gep-opt", cl::Hidden,
@@ -81,14 +81,14 @@ EnableGEPOpt("ppc-gep-opt", cl::Hidden,
              cl::init(true));
 
 static cl::opt<bool>
-EnablePrefetch("enable-ppc-prefetching",
-                  cl::desc("enable software prefetching on PPC"),
-                  cl::init(false), cl::Hidden);
+    EnablePrefetch("ppc-prefetching",
+                   cl::desc("enable software prefetching on PPC"),
+                   cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-EnableExtraTOCRegDeps("enable-ppc-extra-toc-reg-deps",
-                      cl::desc("Add extra TOC register dependencies"),
-                      cl::init(true), cl::Hidden);
+    EnableExtraTOCRegDeps("ppc-extra-toc-reg-deps",
+                          cl::desc("Add extra TOC register dependencies"),
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnableMachineCombinerPass("ppc-machine-combiner",
@@ -100,18 +100,23 @@ static cl::opt<bool>
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> MergeStringPool(
-    "ppc-merge-string-pool",
-    cl::desc("Merge all of the strings in a module into one pool"),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> EnablePPCGenScalarMASSEntries(
-    "enable-ppc-gen-scalar-mass", cl::init(false),
+cl::opt<bool> EnablePPCGenScalarMASSEntries(
+    "ppc-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
     cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
+static cl::opt<bool>
+    EnableGlobalMerge("ppc-global-merge", cl::Hidden, cl::init(false),
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<unsigned>
+    GlobalMergeMaxOffset("ppc-global-merge-max-offset", cl::Hidden,
+                         cl::init(0x7fff),
+                         cl::desc("Maximum global merge offset"));
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
   RegisterTargetMachine<PPCTargetMachine> B(getThePPC32LETarget());
@@ -125,14 +130,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCLoopInstrFormPrepPass(PR);
   initializePPCTOCRegDepsPass(PR);
   initializePPCEarlyReturnPass(PR);
-  initializePPCVSXCopyPass(PR);
+  initializePPCVSXWACCCopyPass(PR);
   initializePPCVSXFMAMutatePass(PR);
   initializePPCVSXSwapRemovalPass(PR);
   initializePPCReduceCRLogicalsPass(PR);
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
   initializePPCBoolRetToIntPass(PR);
-  initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
   initializePPCTLSDynamicCallPass(PR);
   initializePPCMIPeepholePass(PR);
@@ -142,59 +146,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
-  initializePPCMergeStringPoolPass(PR);
-}
-
-static bool isLittleEndianTriple(const Triple &T) {
-  return T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
-}
-
-/// Return the datalayout string of a subtarget.
-static std::string getDataLayoutString(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
-  std::string Ret;
-
-  // Most PPC* platforms are big endian, PPC(64)LE is little endian.
-  if (isLittleEndianTriple(T))
-    Ret = "e";
-  else
-    Ret = "E";
-
-  Ret += DataLayout::getManglingComponent(T);
-
-  // PPC32 has 32 bit pointers. The PS3 (OS Lv2) is a PPC64 machine with 32 bit
-  // pointers.
-  if (!is64Bit || T.getOS() == Triple::Lv2)
-    Ret += "-p:32:32";
-
-  // If the target ABI uses function descriptors, then the alignment of function
-  // pointers depends on the alignment used to emit the descriptor. Otherwise,
-  // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
-    Ret += "-Fi64";
-  } else if (T.isOSAIX()) {
-    Ret += is64Bit ? "-Fi64" : "-Fi32";
-  } else {
-    Ret += "-Fn32";
-  }
-
-  // Note, the alignment values for f64 and i64 on ppc64 in Darwin
-  // documentation are wrong; these are correct (i.e. "what gcc does").
-  Ret += "-i64:64";
-
-  // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
-  if (is64Bit)
-    Ret += "-n32:64";
-  else
-    Ret += "-n32";
-
-  // Specify the vector alignment explicitly. For v256i1 and v512i1, the
-  // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
-  // which is 256 and 512 bytes - way over aligned.
-  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
-    Ret += "-S128-v256:256:256-v512:512:512";
-
-  return Ret;
+  initializePPCPrepareIFuncsOnAIXPass(PR);
+  initializePPCLinuxAsmPrinterPass(PR);
+  initializePPCAIXAsmPrinterPass(PR);
 }
 
 static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
@@ -202,7 +156,7 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
   std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
-  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+  if (TT.isPPC64()) {
     if (!FullFS.empty())
       FullFS = "+64bit," + FullFS;
     else
@@ -240,26 +194,23 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<PPC64LinuxTargetObjectFile>();
 }
 
-static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
-                                                 const TargetOptions &Options) {
-  if (Options.MCOptions.getABIName().starts_with("elfv1"))
-    return PPCTargetMachine::PPC_ABI_ELFv1;
-  else if (Options.MCOptions.getABIName().starts_with("elfv2"))
-    return PPCTargetMachine::PPC_ABI_ELFv2;
+// An explicit ABI name takes precedence; otherwise use the triple default.
+PPCABI PPCTargetMachine::computeABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.starts_with("elfv1"))
+    return PPC_ABI_ELFv1;
+  if (ABIName.starts_with("elfv2"))
+    return PPC_ABI_ELFv2;
 
-  assert(Options.MCOptions.getABIName().empty() &&
-         "Unknown target-abi option!");
+  if (TT.isOSAIX())
+    return ABIName == "vec-extabi" ? PPC_ABI_AIX_EXTABI : PPC_ABI_UNKNOWN;
 
   switch (TT.getArch()) {
   case Triple::ppc64le:
-    return PPCTargetMachine::PPC_ABI_ELFv2;
+    return PPC_ABI_ELFv2;
   case Triple::ppc64:
-    if (TT.isPPC64ELFv2ABI())
-      return PPCTargetMachine::PPC_ABI_ELFv2;
-    else
-      return PPCTargetMachine::PPC_ABI_ELFv1;
+    return TT.isPPC64ELFv2ABI() ? PPC_ABI_ELFv2 : PPC_ABI_ELFv1;
   default:
-    return PPCTargetMachine::PPC_ABI_UNKNOWN;
+    return PPC_ABI_UNKNOWN;
   }
 }
 
@@ -293,8 +244,12 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
   if (JIT)
     return CodeModel::Small;
-  if (TT.isOSAIX())
+  if (TT.isOSAIX()) {
+    // Use large code model for 64-bit AIX by default.
+    if (TT.isArch64Bit())
+      return CodeModel::Large;
     return CodeModel::Small;
+  }
 
   assert(TT.isOSBinFormatELF() && "All remaining PPC OSes are ELF based.");
 
@@ -308,30 +263,27 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
 static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMILive *DAG =
-    new ScheduleDAGMILive(C, ST.usePPCPreRASchedStrategy() ?
-                          std::make_unique<PPCPreRASchedStrategy>(C) :
-                          std::make_unique<GenericScheduler>(C));
+  ScheduleDAGMILive *DAG = ST.usePPCPreRASchedStrategy()
+                               ? createSchedLive<PPCPreRASchedStrategy>(C)
+                               : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
 
   return DAG;
 }
 
-static ScheduleDAGInstrs *createPPCPostMachineScheduler(
-  MachineSchedContext *C) {
+static ScheduleDAGInstrs *
+createPPCPostMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMI *DAG =
-    new ScheduleDAGMI(C, ST.usePPCPostRASchedStrategy() ?
-                      std::make_unique<PPCPostRASchedStrategy>(C) :
-                      std::make_unique<PostGenericScheduler>(C), true);
+  ScheduleDAGMI *DAG = ST.usePPCPostRASchedStrategy()
+                           ? createSchedPostRA<PPCPostRASchedStrategy>(C)
+                           : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
   return DAG;
@@ -339,21 +291,19 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
 
 // The FeatureString here is a little subtle. We are modifying the feature
 // string with what are (currently) non-function specific overrides as it goes
-// into the LLVMTargetMachine constructor and then using the stored value in the
-// Subtarget constructor below it.
+// into the CodeGenTargetMachineImpl constructor and then using the stored value
+// in the Subtarget constructor below it.
 PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, getDataLayoutString(TT), TT, CPU,
-                        computeFSAdditions(FS, OL, TT), Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectivePPCCodeModel(TT, CM, JIT), OL),
+    : CodeGenTargetMachineImpl(T, TT, CPU, computeFSAdditions(FS, OL, TT),
+                               Options, getEffectiveRelocModel(TT, RM),
+                               getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
-      TargetABI(computeTargetABI(TT, Options)),
-      Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
+      Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
 
@@ -383,12 +333,12 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   if (SoftFloat)
     FS += FS.empty() ? "-hard-float" : ",-hard-float";
 
-  auto &I = SubtargetMap[CPU + TuneCPU + FS];
+  // Prefer the "target-abi" module flag, falling back to the -target-abi
+  // option.
+  StringRef ABIName = getTargetABIName(*F.getParent());
+
+  auto &I = SubtargetMap[CPU + TuneCPU + FS + ABIName.str()];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<PPCSubtarget>(
         TargetTriple, CPU, TuneCPU,
         // FIXME: It would be good to have the subtarget additions here
@@ -397,9 +347,20 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
         // shouldn't require adding them. Fixing this means pulling Feature64Bit
         // out of most of the target cpus in the .td file and making it set only
         // as part of initialization via the TargetTriple.
-        computeFSAdditions(FS, getOptLevel(), getTargetTriple()), *this);
+        computeFSAdditions(FS, getOptLevel(), getTargetTriple()), ABIName,
+        *this);
   }
   return I.get();
+}
+
+ScheduleDAGInstrs *
+PPCTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createPPCMachineScheduler(C);
+}
+
+ScheduleDAGInstrs *
+PPCTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return createPPCPostMachineScheduler(C);
 }
 
 //===----------------------------------------------------------------------===//
@@ -437,15 +398,6 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCMachineScheduler(C);
-  }
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCPostMachineScheduler(C);
-  }
 };
 
 } // end anonymous namespace
@@ -465,10 +417,8 @@ void PPCPassConfig::addIRPasses() {
   // Generate PowerPC target-specific entries for scalar math functions
   // that are available in IBM MASS (scalar) library.
   if (TM->getOptLevel() == CodeGenOptLevel::Aggressive &&
-      EnablePPCGenScalarMASSEntries) {
-    TM->Options.PPCGenScalarMASSEntries = EnablePPCGenScalarMASSEntries;
+      EnablePPCGenScalarMASSEntries)
     addPass(createPPCGenScalarMASSEntriesPass());
-  }
 
   // If explicitly requested, add explicit data prefetch intrinsics.
   if (EnablePrefetch.getNumOccurrences() > 0)
@@ -487,24 +437,32 @@ void PPCPassConfig::addIRPasses() {
     addPass(createLICMPass());
   }
 
+  if (TM->getTargetTriple().isOSAIX())
+    addPass(createPPCPrepareIFuncsOnAIXPass());
+
   TargetPassConfig::addIRPasses();
 }
 
 bool PPCPassConfig::addPreISel() {
-  if (MergeStringPool && getOptLevel() != CodeGenOptLevel::None)
-    addPass(createPPCMergeStringPoolPass());
+  // The GlobalMerge pass is intended to be on by default on AIX.
+  // Specifying the command line option overrides the AIX default.
+  if ((EnableGlobalMerge.getNumOccurrences() > 0)
+          ? EnableGlobalMerge
+          : getOptLevel() != CodeGenOptLevel::None)
+    addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
+                                  true));
 
-  if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
 
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createHardwareLoopsLegacyPass());
 
   return false;
 }
 
 bool PPCPassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
 
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
@@ -517,18 +475,18 @@ bool PPCPassConfig::addInstSelector() {
   addPass(createPPCISelDag(getPPCTargetMachine(), getOptLevel()));
 
 #ifndef NDEBUG
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCCTRLoopsVerify());
 #endif
 
-  addPass(createPPCVSXCopyPass());
+  addPass(createPPCVSXWACCCopyPass());
   return false;
 }
 
 void PPCPassConfig::addMachineSSAOptimization() {
   // Run CTR loops pass before any cfg modification pass to prevent the
   // canonical form of hardware loop from being destroied.
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCCTRLoopsPass());
 
   // PPCBranchCoalescingPass need to be done before machine sinking
@@ -539,14 +497,14 @@ void PPCPassConfig::addMachineSSAOptimization() {
   // For little endian, remove where possible the vector swap instructions
   // introduced at code generation to normalize vector element order.
   if (TM->getTargetTriple().getArch() == Triple::ppc64le &&
-      !DisableVSXSwapRemoval)
+      EnableVSXSwapRemoval)
     addPass(createPPCVSXSwapRemovalPass());
   // Reduce the number of cr-logical ops.
   if (ReduceCRLogical && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCReduceCRLogicalsPass());
   // Target-specific peephole cleanups performed after instruction
   // selection.
-  if (!DisableMIPeephole) {
+  if (EnableMIPeephole) {
     addPass(createPPCMIPeepholePass());
     addPass(&DeadMachineInstructionElimID);
   }
@@ -554,8 +512,8 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
-    insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
+    insertPass(VSXFMAMutateEarly ? &TwoAddressInstructionPassID
+                                 : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
 
@@ -582,7 +540,6 @@ void PPCPassConfig::addPreSched2() {
 
 void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCPreEmitPeepholePass());
-  addPass(createPPCExpandISELPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCEarlyReturnPass());
@@ -599,7 +556,7 @@ void PPCPassConfig::addPreEmitPass2() {
 
 TargetTransformInfo
 PPCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(PPCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<PPCTTIImpl>(this, F));
 }
 
 bool PPCTargetMachine::isLittleEndian() const {
@@ -626,21 +583,21 @@ PPCPostRASchedRegistry("ppc-postra",
 
 // Global ISEL
 bool PPCPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 
 bool PPCPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool PPCPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool PPCPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

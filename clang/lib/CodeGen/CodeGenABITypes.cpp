@@ -21,8 +21,6 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/PreprocessorOptions.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -59,14 +57,23 @@ CodeGen::arrangeCXXMethodType(CodeGenModule &CGM,
   return CGM.getTypes().arrangeCXXMethodType(RD, FTP, MD);
 }
 
-const CGFunctionInfo &
-CodeGen::arrangeFreeFunctionCall(CodeGenModule &CGM,
-                                 CanQualType returnType,
-                                 ArrayRef<CanQualType> argTypes,
-                                 FunctionType::ExtInfo info,
-                                 RequiredArgs args) {
-  return CGM.getTypes().arrangeLLVMFunctionInfo(returnType, FnInfoOpts::None,
-                                                argTypes, info, {}, args);
+const CGFunctionInfo &CodeGen::arrangeCXXMethodCall(
+    CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD) {
+  return CGM.getTypes().arrangeLLVMFunctionInfo(
+      returnType, FnInfoOpts::IsInstanceMethod, argTypes, info, paramInfos,
+      args, CallerFD);
+}
+
+const CGFunctionInfo &CodeGen::arrangeFreeFunctionCall(
+    CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD) {
+  return CGM.getTypes().arrangeLLVMFunctionInfo(
+      returnType, FnInfoOpts::None, argTypes, info, paramInfos, args, CallerFD);
 }
 
 ImplicitCXXConstructorArgs
@@ -123,7 +130,7 @@ llvm::Value *CodeGen::getCXXDestructorImplicitParam(
   CGF.CurCodeDecl = D;
   CGF.CurFuncDecl = D;
   CGF.CurFn = InsertBlock->getParent();
-  CGF.Builder.SetInsertPoint(InsertBlock, InsertPoint);
+  CGF.Builder.SetInsertPoint(InsertPoint);
   return CGM.getCXXABI().getCXXDestructorImplicitParam(
       CGF, D, Type, ForVirtualBase, Delegating);
 }

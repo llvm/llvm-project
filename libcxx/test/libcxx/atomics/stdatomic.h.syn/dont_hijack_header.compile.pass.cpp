@@ -8,8 +8,9 @@
 
 // UNSUPPORTED: no-threads
 
-// This test ensures that we don't hijack the <stdatomic.h> header even when compiling
-// before C++23, since Clang used to provide that header before libc++ provided one.
+// This test ensures that we don't hijack the <stdatomic.h> header (e.g. by providing
+// an empty header) even when compiling before C++23, since some users were using the
+// Clang or platform provided header before libc++ added its own.
 
 // On GCC, the compiler-provided <stdatomic.h> is not C++ friendly, so including <stdatomic.h>
 // doesn't work at all if we don't use the <stdatomic.h> provided by libc++ in C++23 and above.

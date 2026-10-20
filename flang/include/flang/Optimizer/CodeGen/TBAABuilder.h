@@ -55,7 +55,7 @@ namespace fir {
 //                  <@type_desc_3, 20>, // rank
 //                  <@type_desc_3, 21>, // type
 //                  <@type_desc_3, 22>, // attribute
-//                  <@type_desc_3, 23>} // f18Addendum
+//                  <@type_desc_3, 23>} // extra
 //   }
 //   llvm.tbaa_type_desc @type_desc_5 {
 //       id = "CFI_cdesc_t_dim1",
@@ -65,7 +65,7 @@ namespace fir {
 //                  <@type_desc_3, 20>, // rank
 //                  <@type_desc_3, 21>, // type
 //                  <@type_desc_3, 22>, // attribute
-//                  <@type_desc_3, 23>, // f18Addendum
+//                  <@type_desc_3, 23>, // extra
 //                  <@type_desc_3, 24>, // dim[0].lower_bound
 //                  <@type_desc_3, 32>, // dim[0].extent
 //                  <@type_desc_3, 40>} // dim[0].sm
@@ -78,7 +78,7 @@ namespace fir {
 //                  <@type_desc_3, 20>, // rank
 //                  <@type_desc_3, 21>, // type
 //                  <@type_desc_3, 22>, // attribute
-//                  <@type_desc_3, 23>, // f18Addendum
+//                  <@type_desc_3, 23>, // extra
 //                  <@type_desc_3, 24>, // dim[0].lower_bound
 //                  <@type_desc_3, 32>, // dim[0].extent
 //                  <@type_desc_3, 40>, // dim[0].sm

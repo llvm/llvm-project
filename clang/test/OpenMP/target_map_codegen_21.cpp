@@ -37,64 +37,64 @@
 // CK22-DAG: [[STT:%.+]] = type { i32 }
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK22: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
+// CK22: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
-// CK22: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 400, i64 0]
+// CK22: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE02:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
-// CK22: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
+// CK22: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
-// CK22: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 16, i64 0]
+// CK22: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE04:@.+]] = private {{.*}}constant [1 x i64] [i64 20]
-// CK22: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 51]
+// CK22: [[SIZE04:@.+]] = private {{.*}}constant [3 x i64] [i64 20, i64 {{4|8}}, i64 0]
+// CK22: [[MTYPE04:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK22: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE05:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
+// CK22: [[MTYPE05:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE06:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
-// CK22: [[MTYPE06:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE06:@.+]] = private {{.*}}constant [2 x i64] [i64 400, i64 0]
+// CK22: [[MTYPE06:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE07:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
-// CK22: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE07:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
+// CK22: [[MTYPE07:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE08:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
-// CK22: [[MTYPE08:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE08:@.+]] = private {{.*}}constant [2 x i64] [i64 16, i64 0]
+// CK22: [[MTYPE08:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 20]
-// CK22: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 51]
+// CK22: [[SIZE09:@.+]] = private {{.*}}constant [3 x i64] [i64 20, i64 {{4|8}}, i64 0]
+// CK22: [[MTYPE09:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE10:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK22: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE10:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
+// CK22: [[MTYPE10:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE11:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
-// CK22: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE11:@.+]] = private {{.*}}constant [2 x i64] [i64 400, i64 0]
+// CK22: [[MTYPE11:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE12:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
-// CK22: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE12:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
+// CK22: [[MTYPE12:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE13:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
-// CK22: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK22: [[SIZE13:@.+]] = private {{.*}}constant [2 x i64] [i64 16, i64 0]
+// CK22: [[MTYPE13:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
 
 // CK22-LABEL: @.__omp_offloading_{{.*}}explicit_maps_globals{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK22: [[SIZE14:@.+]] = private {{.*}}constant [1 x i64] [i64 20]
-// CK22: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 51]
+// CK22: [[SIZE14:@.+]] = private {{.*}}constant [3 x i64] [i64 20, i64 {{4|8}}, i64 0]
+// CK22: [[MTYPE14:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
 
 int a;
 int c[100];
@@ -133,7 +133,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @a, ptr [[BP0]]
 // CK22-DAG: store ptr @a, ptr [[P0]]
 
-// CK22: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(a)
   { a+=1; }
 
@@ -151,7 +151,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @c, ptr [[BP0]]
 // CK22-DAG: store ptr @c, ptr [[P0]]
 
-// CK22: call void [[CALL01:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(c)
   { c[3]+=1; }
 
@@ -169,7 +169,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @d, ptr [[BP0]]
 // CK22-DAG: store ptr @d, ptr [[P0]]
 
-// CK22: call void [[CALL02:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(d)
   { d[3]+=1; }
 
@@ -185,13 +185,17 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @c, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x i32], ptr @c, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw (i8, ptr @c, i{{32|64}} 4), ptr [[P0]]
 
-// CK22: call void [[CALL03:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(c [1:4])
   { c[3]+=1; }
 
 // Region 04
+
+//  &d[0], &d[2], 5 * sizeof(d[0]), TO | FROM | PARAM
+//  &d,    &d[2], sizeof(d),        ATTACH
+
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK22-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -202,12 +206,20 @@ int explicit_maps_globals(void){
 
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK22-DAG: store ptr @d, ptr [[BP0]]
+// CK22-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
 // CK22-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK22-DAG: [[RVAR0]] = load ptr, ptr @d
 // CK22-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 2
 // CK22-DAG: [[RVAR00]] = load ptr, ptr @d
 
-// CK22: call void [[CALL04:@.+]](ptr {{[^,]+}})
+// CK22-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: store ptr @d, ptr [[BP1]]
+// CK22-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+// CK22-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 2
+// CK22-DAG: [[RVAR1]] = load ptr, ptr @d
+
+// CK22: call void [[CALL04:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(d [2:5])
   { d[3]+=1; }
 
@@ -225,7 +237,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @sa, ptr [[BP0]]
 // CK22-DAG: store ptr @sa, ptr [[P0]]
 
-// CK22: call void [[CALL05:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL05:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sa)
   { sa.fa+=1; }
 
@@ -243,7 +255,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @sc, ptr [[BP0]]
 // CK22-DAG: store ptr @sc, ptr [[P0]]
 
-// CK22: call void [[CALL06:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL06:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sc)
   { sc[3].fa+=1; }
 
@@ -261,7 +273,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @sd, ptr [[BP0]]
 // CK22-DAG: store ptr @sd, ptr [[P0]]
 
-// CK22: call void [[CALL07:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL07:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sd)
   { sd[3].fa+=1; }
 
@@ -277,13 +289,17 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @sc, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x [[ST]]], ptr @sc, i{{.+}} 0, i{{.+}} 1), ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw (i8, ptr @sc, i{{32|64}} 4), ptr [[P0]]
 
-// CK22: call void [[CALL08:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL08:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sc [1:4])
   { sc[3].fa+=1; }
 
 // Region 09
+
+//  &sd[0], &sd[2], 5 * sizeof(sd[0]), TO | FROM | ATTACH
+//  &sd,    &sd[2], sizeof(sd),        ATTACH
+
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK22-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -294,12 +310,20 @@ int explicit_maps_globals(void){
 
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK22-DAG: store ptr @sd, ptr [[BP0]]
+// CK22-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
 // CK22-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK22-DAG: [[RVAR0]] = load ptr, ptr @sd
 // CK22-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 2
 // CK22-DAG: [[RVAR00]] = load ptr, ptr @sd
 
-// CK22: call void [[CALL09:@.+]](ptr {{[^,]+}})
+// CK22-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: store ptr @sd, ptr [[BP1]]
+// CK22-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+// CK22-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 2
+// CK22-DAG: [[RVAR1]] = load ptr, ptr @sd
+
+// CK22: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sd [2:5])
   { sd[3].fa+=1; }
 
@@ -317,7 +341,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @sta, ptr [[BP0]]
 // CK22-DAG: store ptr @sta, ptr [[P0]]
 
-// CK22: call void [[CALL10:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL10:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(sta)
   { sta.fa+=1; }
 
@@ -335,7 +359,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @stc, ptr [[BP0]]
 // CK22-DAG: store ptr @stc, ptr [[P0]]
 
-// CK22: call void [[CALL11:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL11:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(stc)
   { stc[3].fa+=1; }
 
@@ -353,7 +377,7 @@ int explicit_maps_globals(void){
 // CK22-DAG: store ptr @std, ptr [[BP0]]
 // CK22-DAG: store ptr @std, ptr [[P0]]
 
-// CK22: call void [[CALL12:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL12:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(std)
   { std[3].fa+=1; }
 
@@ -369,13 +393,17 @@ int explicit_maps_globals(void){
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: store ptr @stc, ptr [[BP0]]
-// CK22-DAG: store ptr getelementptr inbounds ([100 x [[STT]]], ptr @stc, i{{.+}} 0, i{{.+}} 1),  ptr [[P0]]
+// CK22-DAG: store ptr getelementptr inbounds nuw (i8, ptr @stc, i{{32|64}} 4),  ptr [[P0]]
 
-// CK22: call void [[CALL13:@.+]](ptr {{[^,]+}})
+// CK22: call void [[CALL13:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(stc [1:4])
   { stc[3].fa+=1; }
 
 // Region 14
+
+//  &std[0], &std[2], 5 * sizeof(std[0]), TO | FROM | ATTACH
+//  &std,    &std[2], sizeof(std),        ATTACH
+
 // CK22-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK22-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK22-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -386,12 +414,20 @@ int explicit_maps_globals(void){
 
 // CK22-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK22-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK22-DAG: store ptr @std, ptr [[BP0]]
+// CK22-DAG: store ptr [[RVAR0:%.+]], ptr [[BP0]]
 // CK22-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
+// CK22-DAG: [[RVAR0]] = load ptr, ptr @std
 // CK22-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[RVAR00:%.+]], i{{.+}} 2
 // CK22-DAG: [[RVAR00]] = load ptr, ptr @std
 
-// CK22: call void [[CALL14:@.+]](ptr {{[^,]+}})
+// CK22-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK22-DAG: store ptr @std, ptr [[BP1]]
+// CK22-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+// CK22-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 2
+// CK22-DAG: [[RVAR1]] = load ptr, ptr @std
+
+// CK22: call void [[CALL14:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(std [2:5])
   { std[3].fa+=1; }
 

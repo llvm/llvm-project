@@ -20,50 +20,58 @@
 namespace __asan {
 
 AsanThreadIdAndName::AsanThreadIdAndName(AsanThreadContext *t) {
-  Init(t->tid, t->name);
-}
-
-AsanThreadIdAndName::AsanThreadIdAndName(u32 tid) {
-  if (tid == kInvalidTid) {
-    Init(tid, "");
-  } else {
-    asanThreadRegistry().CheckLocked();
-    AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-    Init(tid, t->name);
+  if (!t) {
+    internal_snprintf(name, sizeof(name), "T-1");
+    return;
   }
-}
-
-void AsanThreadIdAndName::Init(u32 tid, const char *tname) {
-  int len = internal_snprintf(name, sizeof(name), "T%d", tid);
+  int len = internal_snprintf(name, sizeof(name), "T%llu", t->unique_id);
   CHECK(((unsigned int)len) < sizeof(name));
-  if (tname[0] != '\0')
-    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", tname);
+  if (internal_strlen(t->name))
+    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", t->name);
 }
 
-void DescribeThread(AsanThreadContext *context) {
-  CHECK(context);
+AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
+    : AsanThreadIdAndName(
+          tid == kInvalidTid ? nullptr : GetThreadContextByTidLocked(tid)) {
   asanThreadRegistry().CheckLocked();
-  // No need to announce the main thread.
-  if (context->tid == kMainTid || context->announced) {
-    return;
-  }
-  context->announced = true;
-  InternalScopedString str;
-  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
-  if (context->parent_tid == kInvalidTid) {
-    str.Append(" created by unknown thread\n");
+}
+
+// Prints this thread and, if flags()->print_full_thread_history, its ancestors
+void DescribeThread(AsanThreadContext *context) {
+  while (true) {
+    CHECK(context);
+    asanThreadRegistry().CheckLocked();
+    // No need to announce the main thread.
+    if (context->tid == kMainTid || context->announced) {
+      return;
+    }
+    context->announced = true;
+
+    InternalScopedString str;
+    str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
+
+    AsanThreadContext* parent_context =
+        context->parent_tid == kInvalidTid
+            ? nullptr
+            : GetThreadContextByTidLocked(context->parent_tid);
+
+    // `context->parent_tid` may point to reused slot. Check `unique_id` which
+    // is always smaller for the parent, always greater for a new user.
+    if (!parent_context || context->unique_id <= parent_context->unique_id) {
+      str.Append(" created by unknown thread\n");
+      Printf("%s", str.data());
+      return;
+    }
+    str.AppendF(" created by %s here:\n",
+                AsanThreadIdAndName(context->parent_tid).c_str());
     Printf("%s", str.data());
-    return;
-  }
-  str.AppendF(" created by %s here:\n",
-              AsanThreadIdAndName(context->parent_tid).c_str());
-  Printf("%s", str.data());
-  StackDepotGet(context->stack_id).Print();
-  // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
-    DescribeThread(parent_context);
+    StackDepotGet(context->stack_id).Print();
+
+    // Describe parent thread if requested
+    if (flags()->print_full_thread_history)
+      context = parent_context;
+    else
+      return;
   }
 }
 
@@ -209,10 +217,10 @@ bool GetStackAddressInformation(uptr addr, uptr access_size,
   descr->frame_pc = access.frame_pc;
   descr->frame_descr = access.frame_descr;
 
-#if SANITIZER_PPC64V1
-  // On PowerPC64 ELFv1, the address of a function actually points to a
-  // three-doubleword data structure with the first field containing
-  // the address of the function's code.
+#if SANITIZER_PPC64V1 || SANITIZER_AIX
+  // On PowerPC64 ELFv1 or AIX, the address of a function actually points to a
+  // three-doubleword (or three-word for 32-bit AIX) data structure with
+  // the first field containing the address of the function's code.
   descr->frame_pc = *reinterpret_cast<uptr *>(descr->frame_pc);
 #endif
   descr->frame_pc += 16;
@@ -292,7 +300,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
   str.AppendF(" global variable '%s' defined in '",
               MaybeDemangleGlobalName(g.name));
   PrintGlobalLocation(&str, g, /*print_module_name=*/false);
-  str.AppendF("' (0x%zx) of size %zu\n", g.beg, g.size);
+  str.AppendF("' (%p) of size %zu\n", (void *)g.beg, g.size);
   str.Append(d.Default());
   PrintGlobalNameIfASCII(&str, g);
   Printf("%s", str.data());
@@ -442,6 +450,18 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     data.kind = kAddressKindShadow;
     return;
   }
+
+  // Check global first. On AIX, some global data defined in shared libraries
+  // are put to the STACK region for unknown reasons. Check global first can
+  // workaround this issue.
+  // TODO: Look into whether there's a different solution to this problem.
+#if SANITIZER_AIX
+  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+#endif
+
   if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
     data.kind = kAddressKindHeap;
     return;
@@ -459,10 +479,14 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     return;
   }
 
+// GetGlobalAddressInformation is called earlier on AIX due to a workaround
+#if !SANITIZER_AIX
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
     data.kind = kAddressKindGlobal;
     return;
   }
+#endif
+
   data.kind = kAddressKindWild;
   data.wild.addr = addr;
   data.wild.access_size = access_size;

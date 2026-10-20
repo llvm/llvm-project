@@ -206,7 +206,7 @@ int min7 = std::min(1, std::min(2, 3, fless_than), fgreater_than);
 // CHECK-FIXES: int min7 = std::min(1, std::min(2, 3, fless_than), fgreater_than);
 
 int max8 = std::max(1, std::max(2, 3, fless_than), less_than);
-// CHECK-FIXES: int max8 = std::max(1, std::max(2, 3, fless_than), less_than)
+// CHECK-FIXES: int max8 = std::max(1, std::max(2, 3, fless_than), less_than);
 
 int min8 = std::min(1, std::min(2, 3, fless_than), less_than);
 // CHECK-FIXES: int min8 = std::min(1, std::min(2, 3, fless_than), less_than);
@@ -321,6 +321,12 @@ struct GH91982 {
 // CHECK-FIXES-NEXT: fun2Args(0, 1),
 // CHECK-FIXES-NEXT: fun3Args(0, 1, 2), fun4Args(0, 1, 2, 3)});
   }
+};
+
+struct GH107594 {
+    int foo(int a, int b, char c) {
+        return std::max<int>({a, b, c});
+    }
 };
 
 } // namespace

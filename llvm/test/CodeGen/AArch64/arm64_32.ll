@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -filetype=obj -o - -disable-post-ra -frame-pointer=non-leaf | \
 ; RUN:     llvm-objdump --private-headers - | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-MACHO
-; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
+; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf -aarch64-br-merging-base-cost=-1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
 ; RUN: llc -mtriple=arm64_32-apple-ios7.0 %s -o - -fast-isel -aarch64-enable-atomic-cfg-tidy=0 -disable-post-ra -frame-pointer=non-leaf | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FAST
 
 ; CHECK-MACHO: Mach header
@@ -598,7 +598,7 @@ define void @test_asm_memory(ptr %base.addr) {
 
 define void @test_unsafe_asm_memory(i64 %val) {
 ; CHECK-LABEL: test_unsafe_asm_memory:
-; CHECK: and x[[ADDR:[0-9]+]], x0, #0xffffffff
+; CHECK: mov w[[ADDR:[0-9]+]], w0
 ; CHECK: str wzr, [x[[ADDR]]]
   %addr_int = trunc i64 %val to i32
   %addr = inttoptr i32 %addr_int to ptr
@@ -615,7 +615,8 @@ define [9 x ptr] @test_demoted_return(ptr %in) {
 
 define ptr @test_inttoptr(i64 %in) {
 ; CHECK-LABEL: test_inttoptr:
-; CHECK: and x0, x0, #0xffffffff
+; CHECK-OPT: mov w0, w0
+; CHECK-FAST: and x0, x0, #0xffffffff
   %res = inttoptr i64 %in to ptr
   ret ptr %res
 }
@@ -676,7 +677,7 @@ declare i64 @get_int()
 
 define i1 @test_icmp_ptr(ptr %in) {
 ; CHECK-LABEL: test_icmp_ptr
-; CHECK: ubfx x0, x0, #31, #1
+; CHECK: lsr w0, w0, #31
   %res = icmp slt ptr %in, null
   ret i1 %res
 }
@@ -732,7 +733,7 @@ define ptr @test_gep_nonpow2(ptr %a0, i32 %a1) {
 define void @test_memset(i64 %in, i8 %value)  {
 ; CHECK-LABEL: test_memset:
 ; CHECK-DAG: lsr x2, x0, #32
-; CHECK-DAG: and x0, x0, #0xffffffff
+; CHECK-DAG: mov w0, w0
 ; CHECK: b _memset
 
   %ptr.i32 = trunc i64 %in to i32
@@ -746,7 +747,7 @@ define void @test_memset(i64 %in, i8 %value)  {
 define void @test_bzero(i64 %in)  {
 ; CHECK-LABEL: test_bzero:
 ; CHECK-DAG: lsr x1, x0, #32
-; CHECK-DAG: and x0, x0, #0xffffffff
+; CHECK-DAG: mov w0, w0
 ; CHECK: b _bzero
 
   %ptr.i32 = trunc i64 %in to i32

@@ -63,7 +63,7 @@ def main():
         "-iregex",
         metavar="PATTERN",
         default=r".*\.(?:cpp|cc|c\+\+|cxx|cppm|ccm|cxxm|c\+\+m|c|cl|h|hh|hpp"
-        r"|hxx|m|mm|inc|js|ts|proto|protodevel|java|cs|json|s?vh?)",
+        r"|hxx|m|mm|inc|js|ts|proto|protodevel|java|cs|json|ipynb|s?vh?)",
         help="custom pattern selecting file paths to reformat "
         "(case insensitive, overridden by -regex)",
     )
@@ -102,7 +102,7 @@ def main():
     filename = None
     lines_by_file = {}
     for line in sys.stdin:
-        match = re.search(r"^\+\+\+\ (.*?/){%s}(\S*)" % args.p, line)
+        match = re.search(r"^\+\+\+\ (.*?/){%s}(.+)" % args.p, line.rstrip())
         if match:
             filename = match.group(2)
         if filename is None:
@@ -134,7 +134,7 @@ def main():
             if line_count != 0:
                 end_line += line_count - 1
             lines_by_file.setdefault(filename, []).extend(
-                ["-lines", str(start_line) + ":" + str(end_line)]
+                ["--lines", str(start_line) + ":" + str(end_line)]
             )
 
     # Reformat files containing changes in place.
@@ -146,12 +146,12 @@ def main():
         if args.i:
             command.append("-i")
         if args.sort_includes:
-            command.append("-sort-includes")
+            command.append("--sort-includes")
         command.extend(lines)
         if args.style:
-            command.extend(["-style", args.style])
+            command.extend(["--style", args.style])
         if args.fallback_style:
-            command.extend(["-fallback-style", args.fallback_style])
+            command.extend(["--fallback-style", args.fallback_style])
 
         try:
             p = subprocess.Popen(
@@ -168,7 +168,7 @@ def main():
                 'Failed to run "%s" - %s"' % (" ".join(command), e.strerror)
             )
 
-        stdout, stderr = p.communicate()
+        stdout, _stderr = p.communicate()
         if p.returncode != 0:
             return p.returncode
 

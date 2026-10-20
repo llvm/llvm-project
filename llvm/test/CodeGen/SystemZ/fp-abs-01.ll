@@ -3,6 +3,17 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
+; Test f16.
+declare half @llvm.fabs.f16(half %f)
+define half @f0(half %f) {
+; CHECK-LABEL: f0:
+; CHECK:      # %bb.0:
+; CHECK-NEXT: lpdfr %f0, %f0
+; CHECK-NEXT: br %r14
+  %res = call half @llvm.fabs.f16(half %f)
+  ret half %res
+}
+
 ; Test f32.
 declare float @llvm.fabs.f32(float %f)
 define float @f1(float %f) {

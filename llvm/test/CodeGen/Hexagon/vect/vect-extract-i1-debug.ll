@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -debug-only=isel < %s 2>/dev/null
+; RUN: llc -mtriple=hexagon -debug-only=isel < %s 2>/dev/null
 ; REQUIRES: asserts
 
 ; Make sure that this doesn't crash. Debug option enabled a failing assertion

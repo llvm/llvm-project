@@ -20,7 +20,6 @@ TypedPointerType *TypedPointerType::get(Type *EltTy, unsigned AddressSpace) {
 
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
 
-  // Since AddressSpace #0 is the common case, we special case it.
   TypedPointerType *&Entry =
       CImpl->ASTypedPointerTypes[std::make_pair(EltTy, AddressSpace)];
 

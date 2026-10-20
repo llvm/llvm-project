@@ -26,11 +26,8 @@ std::string FormatExtensionFlags(uint64_t Flags) {
     Features.push_back("none");
   CSKY::getExtensionFeatures(Flags, Features);
 
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }

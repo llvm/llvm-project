@@ -4,7 +4,7 @@
 ; structures. We manually validate the CFG with FileCheck because currently we
 ; can't cause a failure when LoopSimplify fails to be preserved.
 
-define void @PR18643() {
+define void @PR18643(i1 %arg) {
 ; CHECK-LABEL: @PR18643(
 entry:
   br label %outer.header
@@ -12,7 +12,7 @@ entry:
 
 outer.header:
 ; CHECK: outer.header:
-  br i1 undef, label %inner.header, label %outer.body
+  br i1 %arg, label %inner.header, label %outer.body
 ; CHECK-NEXT: br i1 {{[^,]*}}, label %[[INNER_PREROTATE_PREHEADER:[^,]*]], label %outer.body
 
 ; CHECK: [[INNER_PREROTATE_PREHEADER]]:
@@ -24,13 +24,13 @@ outer.header:
 inner.header:
 ; Now the latch!
 ; CHECK: inner.header:
-  br i1 undef, label %return, label %inner.body
+  br i1 %arg, label %return, label %inner.body
 ; CHECK-NEXT: br i1 {{[^,]*}}, label %[[INNER_SPLIT_RETURN:[^,]*]], label %inner.body
 
 inner.body:
 ; Now the header!
 ; CHECK: inner.body:
-  br i1 undef, label %outer.latch, label %inner.latch
+  br i1 %arg, label %outer.latch, label %inner.latch
 ; CHECK-NEXT: br i1 {{[^,]*}}, label %[[INNER_SPLIT_OUTER_LATCH:[^,]*]], label %inner.header
 
 inner.latch:

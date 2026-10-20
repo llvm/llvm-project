@@ -36,7 +36,7 @@ size_t writeMachOStruct(MutableArrayRef<char> Buf, size_t Offset, MachOStruct S,
 
 /// Base type for MachOBuilder load command wrappers.
 struct MachOBuilderLoadCommandBase {
-  virtual ~MachOBuilderLoadCommandBase() {}
+  virtual ~MachOBuilderLoadCommandBase() = default;
   virtual size_t size() const = 0;
   virtual size_t write(MutableArrayRef<char> Buf, size_t Offset,
                        bool SwapStruct) = 0;
@@ -82,21 +82,35 @@ public:
 };
 
 template <>
-struct MachOBuilderLoadCommand<MachO::LC_ID_DYLIB>
-    : public MachOBuilderLoadCommandImplBase<MachO::LC_ID_DYLIB> {
+struct MachOBuilderLoadCommand<MachO::LC_UUID>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_UUID> {
+  MachOBuilderLoadCommand(const uint8_t (&UUID)[16])
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID, sizeof(uuid));
+  }
 
-  MachOBuilderLoadCommand(std::string Name, uint32_t Timestamp,
-                          uint32_t CurrentVersion,
-                          uint32_t CompatibilityVersion)
-      : MachOBuilderLoadCommandImplBase(
+  MachOBuilderLoadCommand(const std::array<uint8_t, 16> &UUID)
+      : MachOBuilderLoadCommandImplBase<MachO::LC_UUID>() {
+    memcpy(uuid, UUID.data(), sizeof(uuid));
+  }
+};
+
+template <MachO::LoadCommandType LCType>
+struct MachOBuilderDylibLoadCommand
+    : public MachOBuilderLoadCommandImplBase<LCType> {
+
+  MachOBuilderDylibLoadCommand(std::string Name, uint32_t Timestamp,
+                               uint32_t CurrentVersion,
+                               uint32_t CompatibilityVersion)
+      : MachOBuilderLoadCommandImplBase<LCType>(
             MachO::dylib{24, Timestamp, CurrentVersion, CompatibilityVersion}),
         Name(std::move(Name)) {
-    cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
+    this->cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
   }
 
   size_t write(MutableArrayRef<char> Buf, size_t Offset,
                bool SwapStruct) override {
-    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    Offset = writeMachOStruct(Buf, Offset, this->rawStruct(), SwapStruct);
     strcpy(Buf.data() + Offset, Name.data());
     return Offset + ((Name.size() + 1 + 3) & ~0x3);
   }
@@ -105,26 +119,21 @@ struct MachOBuilderLoadCommand<MachO::LC_ID_DYLIB>
 };
 
 template <>
+struct MachOBuilderLoadCommand<MachO::LC_ID_DYLIB>
+    : public MachOBuilderDylibLoadCommand<MachO::LC_ID_DYLIB> {
+  using MachOBuilderDylibLoadCommand::MachOBuilderDylibLoadCommand;
+};
+
+template <>
 struct MachOBuilderLoadCommand<MachO::LC_LOAD_DYLIB>
-    : public MachOBuilderLoadCommandImplBase<MachO::LC_LOAD_DYLIB> {
+    : public MachOBuilderDylibLoadCommand<MachO::LC_LOAD_DYLIB> {
+  using MachOBuilderDylibLoadCommand::MachOBuilderDylibLoadCommand;
+};
 
-  MachOBuilderLoadCommand(std::string Name, uint32_t Timestamp,
-                          uint32_t CurrentVersion,
-                          uint32_t CompatibilityVersion)
-      : MachOBuilderLoadCommandImplBase(
-            MachO::dylib{24, Timestamp, CurrentVersion, CompatibilityVersion}),
-        Name(std::move(Name)) {
-    cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
-  }
-
-  size_t write(MutableArrayRef<char> Buf, size_t Offset,
-               bool SwapStruct) override {
-    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
-    strcpy(Buf.data() + Offset, Name.data());
-    return Offset + ((Name.size() + 1 + 3) & ~0x3);
-  }
-
-  std::string Name;
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_LOAD_WEAK_DYLIB>
+    : public MachOBuilderDylibLoadCommand<MachO::LC_LOAD_WEAK_DYLIB> {
+  using MachOBuilderDylibLoadCommand::MachOBuilderDylibLoadCommand;
 };
 
 template <>
@@ -143,6 +152,25 @@ struct MachOBuilderLoadCommand<MachO::LC_RPATH>
   }
 
   std::string Path;
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_TARGET_TRIPLE>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_TARGET_TRIPLE> {
+  MachOBuilderLoadCommand(std::string TargetTriple)
+      : MachOBuilderLoadCommandImplBase(12u),
+        TargetTriple(std::move(TargetTriple)) {
+    cmdsize += (this->TargetTriple.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, TargetTriple.data());
+    return Offset + ((TargetTriple.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string TargetTriple;
 };
 
 // Builds MachO objects.
@@ -460,8 +488,8 @@ private:
       return;
 
     StrTab.resize(Strings.size());
-    for (auto &KV : Strings)
-      StrTab[KV.second] = {KV.first, 0};
+    for (auto &[Str, Idx] : Strings)
+      StrTab[Idx] = {Str, 0};
     size_t Offset = 0;
     for (auto &Elem : StrTab) {
       Elem.Offset = Offset;

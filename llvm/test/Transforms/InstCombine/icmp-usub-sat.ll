@@ -275,7 +275,7 @@ define i1 @icmp_eq_multiuse_negative(i8 %arg) {
 define <2 x i1> @icmp_eq_vector_positive_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_positive_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], <i8 7, i8 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 7)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 2, i8 2>)
@@ -298,7 +298,7 @@ define <2 x i1> @icmp_eq_vector_positive_unequal(<2 x i8> %arg) {
 define <2 x i1> @icmp_ne_vector_positive_equal(<2 x i16> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_ne_vector_positive_equal
 ; CHECK-SAME: (<2 x i16> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ARG]], <i16 37, i16 37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i16> [[ARG]], splat (i16 37)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i16> @llvm.usub.sat.v2i16(<2 x i16> %arg, <2 x i16> <i16 32, i16 32>)
@@ -321,7 +321,7 @@ define <2 x i1> @icmp_ne_vector_positive_unequal(<2 x i16> %arg) {
 define <2 x i1> @icmp_ule_vector_positive_equal(<2 x i32> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_positive_equal
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], <i32 37, i32 37>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], splat (i32 37)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i32> @llvm.usub.sat.v2i32(<2 x i32> %arg, <2 x i32> <i32 32, i32 32>)
@@ -344,8 +344,8 @@ define <2 x i1> @icmp_ule_vector_positive_unequal(<2 x i32> %arg) {
 define <2 x i1> @icmp_sgt_vector_positive_equal(<2 x i64> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_positive_equal
 ; CHECK-SAME: (<2 x i64> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[ARG]], <i64 -410858, i64 -410858>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[TMP1]], <i64 9223372036854774573, i64 9223372036854774573>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[ARG]], splat (i64 -410858)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[TMP1]], splat (i64 9223372036854774573)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i64> @llvm.usub.sat.v2i64(<2 x i64> %arg, <2 x i64> <i64 409623, i64 409623>)
@@ -371,7 +371,7 @@ define <2 x i1> @icmp_sgt_vector_positive_unequal(<2 x i64> %arg) {
 define <2 x i1> @icmp_eq_vector_negative_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_negative_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], <i8 -3, i8 -3>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 -3)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 -5, i8 -5>)
@@ -397,8 +397,8 @@ define <2 x i1> @icmp_eq_vector_negative_unequal(<2 x i8> %arg) {
 define <2 x i1> @icmp_eq_vector_multiuse_positive_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_positive_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 2, i8 2>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], <i8 5, i8 5>
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 2))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], splat (i8 5)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[SUB]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -414,8 +414,8 @@ define <2 x i1> @icmp_eq_vector_multiuse_positive_equal(<2 x i8> %arg) {
 define <2 x i1> @icmp_eq_vector_multiuse_negative_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_negative_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 -20, i8 -20>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], <i8 5, i8 5>
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 -20))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], splat (i8 5)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[SUB]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -423,6 +423,185 @@ define <2 x i1> @icmp_eq_vector_multiuse_negative_equal(<2 x i8> %arg) {
   %cmp = icmp eq <2 x i8> %sub, <i8 5, i8 5>
   call void @use.v2i8(<2 x i8> %sub)
   ret <2 x i1> %cmp
+}
+
+; usub.sat(X, C) == X  --> X == 0 (C is nonzero constant)
+define i1 @icmp_eq_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp eq i64 %sat, %x
+  ret i1 %cmp
+}
+
+; Commuted form: icmp eq X, usub.sat(X, C)  --> X == 0
+define i1 @icmp_eq_usub_sat_lhs_nonzero_constant_commuted(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_nonzero_constant_commuted
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp eq i64 %x, %sat
+  ret i1 %cmp
+}
+
+; samesign form: icmp samesign eq usub.sat(X, C), X  --> X == 0
+define i1 @icmp_samesign_eq_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_samesign_eq_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp samesign eq i64 %sat, %x
+  ret i1 %cmp
+}
+
+; usub.sat(X, C) < X  --> X != 0 (ULT is the same as < for unsigned)
+define i1 @icmp_ult_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_ult_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp ult i64 %sat, %x
+  ret i1 %cmp
+}
+
+; samesign ULT form
+define i1 @icmp_samesign_ult_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_samesign_ult_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp samesign ult i64 %sat, %x
+  ret i1 %cmp
+}
+
+; usub.sat(X, C) != X  --> X != 0
+define i1 @icmp_ne_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_ne_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp ne i64 %sat, %x
+  ret i1 %cmp
+}
+
+; X > usub.sat(X, C)  --> X != 0 (UGT commuted)
+define i1 @icmp_ugt_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_ugt_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp ugt i64 %x, %sat
+  ret i1 %cmp
+}
+
+; Multiuse: intrinsic is used elsewhere, only icmp is folded
+define i1 @icmp_eq_usub_sat_lhs_nonzero_constant_multiuse(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_nonzero_constant_multiuse
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[X]], i64 10)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    call void @use.i64(i64 [[SAT]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp eq i64 %sat, %x
+  call void @use.i64(i64 %sat)
+  ret i1 %cmp
+}
+
+; Multiuse ULT
+define i1 @icmp_ult_usub_sat_lhs_nonzero_constant_multiuse(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_ult_usub_sat_lhs_nonzero_constant_multiuse
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[X]], i64 10)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    call void @use.i64(i64 [[SAT]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp ult i64 %sat, %x
+  call void @use.i64(i64 %sat)
+  ret i1 %cmp
+}
+
+; Zero constant: usub.sat(X, 0) == X is always true (negative test)
+define i1 @icmp_eq_usub_sat_lhs_zero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_zero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 0)
+  %cmp = icmp eq i64 %sat, %x
+  ret i1 %cmp
+}
+
+; Vector types
+define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 10, i8 10>)
+  %cmp = icmp ult <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+; Vector nonsplat constant (all elements nonzero)
+define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector_nonsplat(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector_nonsplat
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 1, i8 10>)
+  %cmp = icmp ult <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+; Vector with some zero elements (negative test - fold not applicable)
+define <2 x i1> @icmp_ult_usub_sat_lhs_zero_constant_vector(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ult_usub_sat_lhs_zero_constant_vector
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[X]], <2 x i8> <i8 1, i8 0>)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[SAT]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 1, i8 0>)
+  %cmp = icmp ult <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+; Non-constant but known-nonzero RHS via assume (negative test - fold only applies to constants)
+define i1 @icmp_eq_usub_sat_lhs_known_nonzero_rhs(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_known_nonzero_rhs
+; CHECK-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i64 [[Y]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SAT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cond = icmp ne i64 %y, 0
+  call void @llvm.assume(i1 %cond)
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 %y)
+  %cmp = icmp eq i64 %sat, %x
+  ret i1 %cmp
 }
 
 declare i8 @llvm.usub.sat.i8(i8, i8)
@@ -435,5 +614,8 @@ declare <2 x i32> @llvm.usub.sat.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i16> @llvm.usub.sat.v2i16(<2 x i16>, <2 x i16>)
 declare <2 x i8> @llvm.usub.sat.v2i8(<2 x i8>, <2 x i8>)
 
+declare void @llvm.assume(i1)
+
 declare void @use.i8(i8)
 declare void @use.v2i8(<2 x i8>)
+declare void @use.i64(i64)

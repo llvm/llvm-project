@@ -19,7 +19,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV1Model : SchedMachineModel {
-  let IssueWidth            =  15; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   8; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that this
+                                   // value is better.
   let MicroOpBufferSize     = 256; // Micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
@@ -29,7 +31,7 @@ def NeoverseV1Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCPA,
-                                                    HasCSSC]);
+                                                    HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -55,10 +57,10 @@ def V1UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def V1UnitV1  : ProcResource<1>;  // FP/ASIMD 1
 def V1UnitV2  : ProcResource<1>;  // FP/ASIMD 2
 def V1UnitV3  : ProcResource<1>;  // FP/ASIMD 3
+def V1UnitFlg : ProcResource<3>;  // Flags
 
 def V1UnitI   : ProcResGroup<[V1UnitS,
                               V1UnitM0, V1UnitM1]>;   // Integer units
-def V1UnitJ   : ProcResGroup<[V1UnitS, V1UnitM0]>;    // Integer 0-2 units
 def V1UnitM   : ProcResGroup<[V1UnitM0, V1UnitM1]>;   // Integer multicycle units
 def V1UnitL   : ProcResGroup<[V1UnitL01, V1UnitL2]>;  // Load units
 def V1UnitV   : ProcResGroup<[V1UnitV0, V1UnitV1,
@@ -92,29 +94,29 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 let Latency = 0, NumMicroOps = 0 in
 def V1Write_0c_0Z : SchedWriteRes<[]>;
 
+def V1Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 //===----------------------------------------------------------------------===//
 // Define generic 1 micro-op types
 
 def V1Write_1c_1B      : SchedWriteRes<[V1UnitB]>   { let Latency = 1; }
 def V1Write_1c_1I      : SchedWriteRes<[V1UnitI]>   { let Latency = 1; }
-def V1Write_1c_1J      : SchedWriteRes<[V1UnitJ]>   { let Latency = 1; }
+def V1Write_1c_1I_1Flg : SchedWriteRes<[V1UnitI, V1UnitFlg]>   { let Latency = 1; }
 def V1Write_4c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 4; }
 def V1Write_6c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 6; }
 def V1Write_1c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 1; }
 def V1Write_4c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 4; }
 def V1Write_6c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 6; }
 def V1Write_2c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 2; }
+def V1Write_2c_1M_1Flg : SchedWriteRes<[V1UnitM, V1UnitFlg]>   { let Latency = 2; }
 def V1Write_3c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 3; }
 def V1Write_4c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 4; }
 def V1Write_1c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 1; }
 def V1Write_2c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 2; }
 def V1Write_3c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 3; }
 def V1Write_5c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 5; }
-def V1Write_12c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 12;
-                                                      let ReleaseAtCycles = [5]; }
-def V1Write_20c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 20;
-                                                      let ReleaseAtCycles = [5]; }
+def V1Write_7c7_1M0    : SchedWriteRes<[V1UnitM0]>  { let Latency = 7;
+                                                      let ReleaseAtCycles = [7]; }
 def V1Write_2c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 2; }
 def V1Write_3c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 3; }
 def V1Write_4c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 4; }
@@ -141,6 +143,9 @@ def V1Write_4c_1V01    : SchedWriteRes<[V1UnitV01]> { let Latency = 4; }
 def V1Write_5c_1V01    : SchedWriteRes<[V1UnitV01]> { let Latency = 5; }
 def V1Write_3c_1V02    : SchedWriteRes<[V1UnitV02]> { let Latency = 3; }
 def V1Write_4c_1V02    : SchedWriteRes<[V1UnitV02]> { let Latency = 4; }
+def V1Write_4c_2V02    : SchedWriteRes<[V1UnitV02, V1UnitV02]> { let Latency = 4; }
+def V1Write_6c_4V02    : SchedWriteRes<[V1UnitV02, V1UnitV02,
+                                        V1UnitV02, V1UnitV02]> { let Latency = 6; }
 def V1Write_7c7_1V02   : SchedWriteRes<[V1UnitV02]> { let Latency = 7;
                                                       let ReleaseAtCycles = [7]; }
 def V1Write_10c7_1V02  : SchedWriteRes<[V1UnitV02]> { let Latency = 10;
@@ -228,8 +233,6 @@ let Latency = 2, NumMicroOps = 2 in
 def V1Write_2c_2V01      : SchedWriteRes<[V1UnitV01, V1UnitV01]>;
 let Latency = 4, NumMicroOps = 2 in
 def V1Write_4c_2V01      : SchedWriteRes<[V1UnitV01, V1UnitV01]>;
-let Latency = 4, NumMicroOps = 2 in
-def V1Write_4c_2V02      : SchedWriteRes<[V1UnitV02, V1UnitV02]>;
 let Latency = 6, NumMicroOps = 2 in
 def V1Write_6c_2V02      : SchedWriteRes<[V1UnitV02, V1UnitV02]>;
 let Latency = 4, NumMicroOps = 2 in
@@ -248,6 +251,8 @@ let Latency = 8, NumMicroOps = 3 in
 def V1Write_8c_1L_2V        : SchedWriteRes<[V1UnitL, V1UnitV, V1UnitV]>;
 let Latency = 6, NumMicroOps = 3 in
 def V1Write_6c_3L           : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
+let Latency = 1, NumMicroOps = 3 in
+def V1Write_1c_1I_1L01_1D: SchedWriteRes<[V1UnitI, V1UnitL01, V1UnitD]>;
 let Latency = 2, NumMicroOps = 3 in
 def V1Write_2c_1L01_1S_1V   : SchedWriteRes<[V1UnitL01, V1UnitS, V1UnitV]>;
 let Latency = 4, NumMicroOps = 3 in
@@ -310,8 +315,6 @@ def V1Write_6c_4V0          : SchedWriteRes<[V1UnitV0, V1UnitV0,
 let Latency = 12, NumMicroOps = 4 in
 def V1Write_12c_4V01        : SchedWriteRes<[V1UnitV01, V1UnitV01,
                                              V1UnitV01, V1UnitV01]>;
-let Latency = 6, NumMicroOps = 4 in
-def V1Write_6c_4V02         : SchedWriteRes<[V1UnitV02, V1UnitV02]>;
 
 //===----------------------------------------------------------------------===//
 // Define generic 5 micro-op types
@@ -469,6 +472,122 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
                                             V1UnitV, V1UnitV, V1UnitV,
                                             V1UnitV, V1UnitV, V1UnitV]>;
 
+//===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def V1Write_ArithI : SchedWriteVariant<[
+                       SchedVar<IsCheapLSL,  [V1Write_1c_1I]>,
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
+
+def V1Write_ArithS : SchedWriteVariant<[
+                       SchedVar<IsCheapLSL,  [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M_1Flg]>]>;
+
+def V1Write_ArithWExtend : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V1Write_2c_1M]>,
+                       SchedVar<NoSchedPred,	    [V1Write_1c_1I]>]>;
+
+def V1Write_ArithWExtendS : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V1Write_2c_1M_1Flg]>,
+                       SchedVar<NoSchedPred,	    [V1Write_1c_1I_1Flg]>]>;
+
+def V1Write_Logical : SchedWriteVariant<[
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred,   [V1Write_2c_1M_1Flg]>]>;
+
+def V1Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
+
+def V1Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_3c_1M0]>]>;
+
+//===----------------------------------------------------------------------===//
+// Define forwarded types
+
+// NOTE: SOG, p. 20, n. 2: Accumulator forwarding is not supported for
+// consumers of 64 bit multiply high operations?
+def V1Wr_IM   : SchedWriteRes<[V1UnitM]>  { let Latency = 2; }
+def V1Wr_IMA  : SchedWriteRes<[V1UnitM0]> { let Latency = 2; }
+def V1WriteIM : SchedWriteVariant<
+                  [SchedVar<NeoverseMULIdiomPred, [V1Wr_IM]>,
+                   SchedVar<NoSchedPred,          [V1Wr_IMA]>]>;
+def V1Rd_IMA : SchedReadAdvance<1, [V1Wr_IMA]>;
+
+def V1Wr_FMA : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
+def V1Rd_FMA : SchedReadAdvance<2, [WriteFMul, V1Wr_FMA]>;
+
+def V1Wr_ADA : SchedWriteRes<[V1UnitV13]> { let Latency = 4; }
+def V1Rd_ADA : SchedReadAdvance<3, [V1Wr_ADA]>;
+
+def V1Wr_VDOT : SchedWriteRes<[V1UnitV]> { let Latency = 3; }
+def V1Rd_VDOT : SchedReadAdvance<2, [V1Wr_VDOT]>;
+
+def V1Wr_VMMA : SchedWriteRes<[V1UnitV]> { let Latency = 3; }
+def V1Rd_VMMA : SchedReadAdvance<2, [V1Wr_VMMA]>;
+
+def V1Wr_VMA : SchedWriteRes<[V1UnitV02]> { let Latency = 4; }
+def V1Rd_VMA : SchedReadAdvance<3, [V1Wr_VMA]>;
+
+def V1Wr_VMAL : SchedWriteRes<[V1UnitV02]> { let Latency = 4; }
+def V1Rd_VMAL : SchedReadAdvance<3, [V1Wr_VMAL]>;
+
+def V1Wr_VSA : SchedWriteRes<[V1UnitV13]> { let Latency = 4; }
+def V1Rd_VSA : SchedReadAdvance<3, [V1Wr_VSA]>;
+
+def V1Wr_FCMA : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
+def V1Rd_FCMA : SchedReadAdvance<2, [V1Wr_FCMA]>;
+
+def V1Wr_FPM : SchedWriteRes<[V1UnitV]> { let Latency = 3; }
+def V1Wr_FPMA : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
+def V1Rd_FPMA : SchedReadAdvance<2, [V1Wr_FPM, V1Wr_FPMA]>;
+
+def V1Wr_FPMAL : SchedWriteRes<[V1UnitV]> { let Latency = 5; }
+def V1Rd_FPMAL : SchedReadAdvance<3, [V1Wr_FPMAL]>;
+
+def V1Wr_BFD : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
+def V1Rd_BFD : SchedReadAdvance<2, [V1Wr_BFD]>;
+
+def V1Wr_BFMMA : SchedWriteRes<[V1UnitV]> { let Latency = 5; }
+def V1Rd_BFMMA : SchedReadAdvance<2, [V1Wr_BFMMA]>;
+
+def V1Wr_BFMLA : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
+def V1Rd_BFMLA : SchedReadAdvance<2, [V1Wr_BFMLA]>;
+
+def V1Wr_CRC : SchedWriteRes<[V1UnitM0]> { let Latency = 2; }
+def V1Rd_CRC : SchedReadAdvance<1, [V1Wr_CRC]>;
+
+def V1Wr_ZDOTB : SchedWriteRes<[V1UnitV01]> { let Latency = 3; }
+def V1Rd_ZDOTB : SchedReadAdvance<2, [V1Wr_ZDOTB]>;
+
+def V1Wr_ZUDOTB : SchedWriteRes<[V1UnitV]> { let Latency = 3; }
+def V1Rd_ZUDOTB : SchedReadAdvance<2, [V1Wr_ZUDOTB]>;
+
+def V1Wr_ZDOTH : SchedWriteRes<[V1UnitV0]> { let Latency = 4; }
+def V1Rd_ZDOTH : SchedReadAdvance<3, [V1Wr_ZDOTH]>;
+
+def V1Wr_ZMMA : SchedWriteRes<[V1UnitV01]> { let Latency = 3; }
+def V1Rd_ZMMA : SchedReadAdvance<2, [V1Wr_ZMMA]>;
+
+let Latency = 5, NumMicroOps = 2 in
+def V1Wr_ZMAD : SchedWriteRes<[V1UnitV0, V1UnitV0]>;
+def V1Rd_ZMAD : SchedReadAdvance<3, [V1Wr_ZMAD]>;
+
+def V1Wr_ZFCMA : SchedWriteRes<[V1UnitV01]> { let Latency = 5; }
+def V1Rd_ZFCMA : SchedReadAdvance<3, [V1Wr_ZFCMA]>;
+
+def V1Wr_ZFMA : SchedWriteRes<[V1UnitV01]> { let Latency = 4; }
+def V1Rd_ZFMA : SchedReadAdvance<2, [V1Wr_ZFMA]>;
+
+def V1Wr_ZBFDOT : SchedWriteRes<[V1UnitV01]> { let Latency = 4; }
+def V1Rd_ZBFDOT : SchedReadAdvance<2, [V1Wr_ZBFDOT]>;
+def V1Wr_ZBFMMA : SchedWriteRes<[V1UnitV01]> { let Latency = 5; }
+def V1Rd_ZBFMMA : SchedReadAdvance<2, [V1Wr_ZBFMMA]>;
+def V1Wr_ZBFMAL : SchedWriteRes<[V1UnitV01]> { let Latency = 5; }
+def V1Rd_ZBFMAL : SchedReadAdvance<3, [V1Wr_ZBFMAL]>;
 
 // Miscellaneous Instructions
 // -----------------------------------------------------------------------------
@@ -494,9 +613,6 @@ def : SchedAlias<WriteBrReg, V1Write_1c_1B>;
 // Branch and link, register
 def : InstRW<[V1Write_1c_1B_1S], (instrs BL, BLR)>;
 
-// Compare and branch
-def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
-
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
@@ -512,57 +628,60 @@ def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
 def : SchedAlias<WriteI, V1Write_1c_1I>;
 
 // ALU, basic, flagset
-def : InstRW<[V1Write_1c_1J],
+def : InstRW<[V1Write_1c_1I_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
-                        "^ANDS[WX]ri$",
-                        "^(AND|BIC)S[WX]rr$")>;
+                        "^ANDS[WX]ri$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V1Write_2c_1M>;
 
+def : InstRW<[V1Write_ArithWExtend], (instrs ADDWrx, SUBWrx)>;
+def : InstRW<[V1Write_1c_1I], (instrs ADDXrx64, SUBXrx64)>;
+
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
-def V1WriteISReg : SchedWriteVariant<
-                     [SchedVar<IsCheapLSL,  [V1Write_1c_1I]>,
-                      SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
-def              : SchedAlias<WriteISReg, V1WriteISReg>;
+def : SchedAlias<WriteISReg, V1Write_ArithI>;
 
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, flagset, LSR/ASR/ROR shift or LSL shift > 4
-def V1WriteISRegS : SchedWriteVariant<
-                      [SchedVar<IsCheapLSL,  [V1Write_1c_1J]>,
-                       SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
-def               : InstRW<[V1WriteISRegS],
-                           (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
+def : InstRW<[V1Write_ArithWExtendS], (instrs ADDSWrx, SUBSWrx)>;
+def : InstRW<[V1Write_2c_1M_1Flg], (instrs ADDSXrx, SUBSXrx)>;
+def : InstRW<[V1Write_1c_1I_1Flg], (instrs ADDSXrx64, SUBSXrx64)>;
+def : InstRW<[V1Write_ArithS], (instregex "^(ADD|SUB)S(Wrs|Xrs)$")>;
 
 // Logical, shift, no flagset
-def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
-def : InstRW<[V1Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
+def : InstRW<[V1Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Flag manipulation instructions
-def : InstRW<[V1Write_1c_1J], (instrs SETF8, SETF16, RMIF, CFINV)>;
+def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
 
 
 // Divide and multiply instructions
 // -----------------------------------------------------------------------------
 
 // Divide
-def : SchedAlias<WriteID32, V1Write_12c5_1M0>;
-def : SchedAlias<WriteID64, V1Write_20c5_1M0>;
+def : SchedAlias<WriteID32, V1Write_7c7_1M0>;
+def : SchedAlias<WriteID64, V1Write_7c7_1M0>;
+
+def : SchedAlias<WriteIM32, V1Write_2c_1M>;
+def : SchedAlias<WriteIM64, V1Write_2c_1M>;
 
 // Multiply
-// Multiply accumulate
-// Multiply accumulate, long
-// Multiply long
-def V1WriteIM : SchedWriteVariant<
-                  [SchedVar<NeoverseMULIdiomPred, [V1Write_2c_1M]>,
-                   SchedVar<NoSchedPred,          [V1Write_2c_1M0]>]>;
-def           : SchedAlias<WriteIM32, V1WriteIM>;
-def           : SchedAlias<WriteIM64, V1WriteIM>;
+// Multiply accumulate, W-form
+// Multiply accumulate, X-form
+def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_IMA],
+             (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
+// Multiply accumulate long
+// Multiply long
+def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_IMA],
+             (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 // Multiply high
 def : InstRW<[V1Write_3c_1M, ReadIM, ReadIM], (instrs SMULHrr, UMULHrr)>;
 
@@ -622,6 +741,13 @@ def : SchedAlias<WriteLD, V1Write_4c_1L>;
 def : SchedAlias<WriteLDIdx, V1Write_4c_1L>;
 def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 
+// Load register, register offset, extend, scale by 2
+// Load register, register offset, extend
+def V1WriteLDRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_5c_1I_1L]>,
+  SchedVar<NoSchedPred,	  [V1Write_4c_1L]>]>;
+def : InstRW<[V1WriteLDRH, ReadAdrBase], (instregex "^LDRS?H[HWX]ro[WX]$")>;
+
 // Load pair, immed offset
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
@@ -644,6 +770,13 @@ def : SchedAlias<WriteST, V1Write_1c_1L01_1D>;
 
 // Store register, immed offset, index
 def : SchedAlias<WriteSTIdx, V1Write_1c_1L01_1D>;
+
+// Store register, register offset, scaled by 2
+// Store register, register offset, extend, scale by 1
+def V1WriteSTRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_1c_1I_1L01_1D]>,
+  SchedVar<NoSchedPred,	  [V1Write_1c_1L01_1D]>]>;
+def : InstRW<[V1WriteSTRH], (instregex "^STRS?H[HWX]ro[WX]$")>;
 
 // Store pair, immed offset
 def : SchedAlias<WriteSTP, V1Write_1c_1L01_1D>;
@@ -680,10 +813,11 @@ def : InstRW<[V1Write_15c7_1V02], (instrs FDIVDrr)>;
 def : InstRW<[V1Write_16c7_1V02], (instrs FSQRTDr)>;
 
 // FP multiply
-def : SchedAlias<WriteFMul, V1Write_3c_1V>;
+def : WriteRes<WriteFMul, [V1UnitV]> { let Latency = 3; }
 
 // FP multiply accumulate
-def : InstRW<[V1Write_4c_1V], (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
+def : InstRW<[V1Wr_FMA, ReadDefault, ReadDefault, V1Rd_FMA],
+             (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
 
 // FP round to integral
 def : InstRW<[V1Write_3c_1V02], (instregex "^FRINT[AIMNPXZ][HSD]r$",
@@ -700,7 +834,7 @@ def : InstRW<[V1Write_2c_1V01], (instregex "^FCSEL[HSD]rrr$")>;
 def : InstRW<[V1Write_3c_1M0], (instregex "^[SU]CVTF[SU][WX][HSD]ri$")>;
 
 // FP convert, from vec to gen reg
-def : InstRW<[V1Write_3c_1V0], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
+def : InstRW<[V1Write_3c_1V0], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]ri?$")>;
 
 // FP convert, Javascript from vec to gen reg
 def : InstRW<[V1Write_3c_1V0], (instrs FJCVTZS)>;
@@ -824,7 +958,7 @@ def : SchedAlias<WriteVq, V1Write_2c_1V>;
 // ASIMD absolute diff accum
 // ASIMD absolute diff accum long
 // ASIMD pairwise add and accumulate long
-def : InstRW<[V1Write_4c_1V13], (instregex "^[SU]ABAL?v", "^[SU]ADALPv")>;
+def : InstRW<[V1Wr_ADA, V1Rd_ADA], (instregex "^[SU]ABAL?v", "^[SU]ADALPv")>;
 
 // ASIMD arith, reduce, 4H/4S
 // ASIMD max/min, reduce, 4H/4S
@@ -843,23 +977,26 @@ def : InstRW<[V1Write_4c_2V13], (instregex "^(ADD|[SU]ADDL)Vv16i8v$",
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
-def : InstRW<[V1Write_2c_1V], (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
+def : InstRW<[V1Wr_VDOT, V1Rd_VDOT],
+             (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
 
-// ASIMD matrix multiply- accumulate
-def : InstRW<[V1Write_3c_1V], (instrs SMMLA, UMMLA, USMMLA)>;
+// ASIMD matrix multiply-accumulate
+def : InstRW<[V1Wr_VMMA, V1Rd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
 
 // ASIMD multiply
+def : InstRW<[V1Write_4c_1V02], (instregex "^MULv", "^SQ(R)?DMULHv")>;
+
 // ASIMD multiply accumulate
+def : InstRW<[V1Wr_VMA, V1Rd_VMA], (instregex "^MLAv", "^MLSv")>;
+
 // ASIMD multiply accumulate long
+def : InstRW<[V1Wr_VMAL, V1Rd_VMAL], (instregex "^[SU]MLALv", "^[SU]MLSLv")>;
+
 // ASIMD multiply accumulate high
+def : InstRW<[V1Write_4c_1V02], (instregex "^SQRDMLAHv", "^SQRDMLSHv")>;
+
 // ASIMD multiply accumulate saturating long
-def : InstRW<[V1Write_4c_1V02], 
-             (instregex "^MUL(v[148]i16|v[124]i32)$",
-                        "^SQR?DMULH(v[48]i16|v[24]i32)$",
-                        "^ML[AS](v[148]i16|v[124]i32)$",
-                        "^[SU]ML[AS]Lv",
-                        "^SQRDML[AS]H(v[148]i16|v[124]i32)$",
-                        "^SQDML[AS]Lv")>;
+def : InstRW<[V1Write_4c_1V02], (instregex "^SQDML[AS]L[iv]")>;
 
 // ASIMD multiply/multiply long (8x8) polynomial
 def : InstRW<[V1Write_3c_1V01], (instregex "^PMULL?v(8|16)i8$")>;
@@ -868,11 +1005,12 @@ def : InstRW<[V1Write_3c_1V01], (instregex "^PMULL?v(8|16)i8$")>;
 def : InstRW<[V1Write_3c_1V02], (instregex "^([SU]|SQD)MULLv")>;
 
 // ASIMD shift accumulate
+def : InstRW<[V1Wr_VSA, V1Rd_VSA], (instregex "^[SU]SRAv", "^[SU]RSRAv")>;
+
 // ASIMD shift by immed, complex
 // ASIMD shift by register, complex
 def : InstRW<[V1Write_4c_1V13],
-             (instregex "^[SU]R?SRAv",
-                        "^RSHRNv", "^SQRSHRU?Nv", "^(SQSHLU?|UQSHL)[bhsd]$",
+             (instregex "^RSHRNv", "^SQRSHRU?Nv", "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
                         "^SQSHU?RNv", "^[SU]RSHRv", "^UQR?SHRNv", 
                         "^[SU]Q?RSHLv", "^[SU]QSHLv")>;
@@ -890,16 +1028,25 @@ def : InstRW<[V1Write_2c_1V13], (instregex "^SHLL?v", "^SHRNv", "^[SU]SHLLv",
 // ASIMD FP absolute value/difference
 // ASIMD FP arith, normal
 // ASIMD FP compare
-// ASIMD FP complex add
 // ASIMD FP max/min, normal
 // ASIMD FP max/min, pairwise
 // ASIMD FP negate
 // Covered by "SchedAlias (WriteV[dq]...)" above
 
+// ASIMD FP complex add
+def : InstRW<[V1Write_4c_1V], (instregex "^FCADD(v[48]f16|v[24]f32|v2f64)$")>;
+
 // ASIMD FP complex multiply add
+def : InstRW<[V1Wr_FCMA, V1Rd_FCMA], (instregex "^FCMLAv")>;
+
+// ASIMD FP multiply
+def : InstRW<[V1Wr_FPM], (instregex "^FMULX?v", "^FMULX(16|32|64)$")>;
+
 // ASIMD FP multiply accumulate
-def : InstRW<[V1Write_4c_1V], (instregex "^FCADD(v[48]f16|v[24]f32|v2f64)$",
-                                         "^FML[AS]v")>;
+def : InstRW<[V1Wr_FPMA, V1Rd_FPMA], (instregex "^FML[AS]v")>;
+
+// ASIMD FP multiply accumulate long
+def : InstRW<[V1Wr_FPMAL, V1Rd_FPMAL], (instregex "^FML[AS]L2?v")>;
 
 // ASIMD FP convert, long (F16 to F32)
 def : InstRW<[V1Write_4c_2V02], (instregex "^FCVTLv[48]i16$")>;
@@ -915,16 +1062,31 @@ def : InstRW<[V1Write_3c_1V02], (instregex "^FCVTNv[24]i32$",
                                            "^FCVTXN(v[24]f32|v1i64)$")>;
 
 // ASIMD FP convert, other, D-form F32 and Q-form F64
-def : InstRW<[V1Write_3c_1V02], (instregex "^[FSU]CVT[AMNPZ][SU]v2f(32|64)$",
-                                           "^[SU]CVTFv2f(32|64)$")>;
+// Includes the scalar H, S and D forms (SCVTFh, FCVTZSs, ...)
+def : InstRW<[V1Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
+                                           "^FCVT[AMNPZ][SU]v1f16$",
+                                           "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
+                                           "^FCVT[AMNPZ][SU]v1i64$",
+                                           "^FCVT[AMNPZ][SU]v1i32$",
+                                           "^[SU]CVTFv2f(32|64)$",
+                                           "^[SU]CVTFv2i(32|64)_shift$",
+                                           "^[SU]CVTFv1i16$",
+                                           "^[SU]CVTFv1i32$",
+                                           "^[SU]CVTFv1i64$",
+                                           "^FCVTZ[SU][hsd]$",
+                                           "^[SU]CVTF[hsd]$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
-def : InstRW<[V1Write_4c_2V02], (instregex "^[FSU]CVT[AMNPZ][SU]v4f(16|32)$",
-                                           "^[SU]CVTFv4f(16|32)$")>;
+def : InstRW<[V1Write_4c_2V02], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
+                                           "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
+                                           "^[SU]CVTFv4f(16|32)$",
+                                           "^[SU]CVTFv4i(16|32)_shift$")>;
 
 // ASIMD FP convert, other, Q-form F16
-def : InstRW<[V1Write_6c_4V02], (instregex "^[FSU]CVT[AMNPZ][SU]v8f16$",
-                                           "^[SU]CVTFv8f16$")>;
+def : InstRW<[V1Write_6c_4V02], (instregex "^FCVT[AMNPZ][SU]v8f16$",
+                                           "^FCVT[AMNPZ][SU]v8i16_shift$",
+                                           "^[SU]CVTFv8f16$",
+                                           "^[SU]CVTFv8i16_shift$")>;
 
 // ASIMD FP divide, D-form, F16
 // ASIMD FP square root, D-form, F16
@@ -953,12 +1115,6 @@ def : InstRW<[V1Write_4c_2V], (instregex "^F(MAX|MIN)(NM)?Vv4(i16|i32)v$")>;
 // ASIMD FP max/min, reduce, Q-form F16
 def : InstRW<[V1Write_6c_3V], (instregex "^F(MAX|MIN)(NM)?Vv8i16v$")>;
 
-// ASIMD FP multiply
-def : InstRW<[V1Write_3c_1V], (instregex "^FMULX?v")>;
-
-// ASIMD FP multiply accumulate long
-def : InstRW<[V1Write_5c_1V], (instregex "^FML[AS]L2?v")>;
-
 // ASIMD FP round, D-form F32 and Q-form F64
 def : InstRW<[V1Write_3c_1V02], (instregex "^FRINT[AIMNPXZ]v2f(32|64)$")>;
 
@@ -973,16 +1129,16 @@ def : InstRW<[V1Write_6c_4V02], (instregex "^FRINT[AIMNPXZ]v8f16$")>;
 // -----------------------------------------------------------------------------
 
 // ASIMD convert, F32 to BF16
-def : InstRW<[V1Write_4c_1V02], (instrs BFCVTN, BFCVTN2)>;
+def : InstRW<[V1Write_4c_2V02], (instrs BFCVTN, BFCVTN2)>;
 
 // ASIMD dot product
-def : InstRW<[V1Write_4c_1V], (instregex "^BF(DOT|16DOTlane)v[48]bf16$")>;
+def : InstRW<[V1Wr_BFD, V1Rd_BFD], (instregex "^BF(DOT|16DOTlane)v[48]bf16$")>;
 
 // ASIMD matrix multiply accumulate
-def : InstRW<[V1Write_5c_1V], (instrs BFMMLA)>;
+def : InstRW<[V1Wr_BFMMA, V1Rd_BFMMA], (instrs BFMMLA)>;
 
 // ASIMD multiply accumulate long
-def : InstRW<[V1Write_4c_1V], (instregex "^BFMLAL[BT](Idx)?$")>;
+def : InstRW<[V1Wr_BFMLA, V1Rd_BFMLA], (instregex "^BFMLAL[BT](Idx)?$")>;
 
 // Scalar convert, F32 to BF16
 def : InstRW<[V1Write_3c_1V02], (instrs BFCVT)>;
@@ -1300,7 +1456,7 @@ def : InstRW<[V1Write_2c_1V0], (instrs BCAX, EOR3, RAX1, XAR)>;
 // -----------------------------------------------------------------------------
 
 // CRC checksum ops
-def : InstRW<[V1Write_2c_1M0], (instregex "^CRC32C?[BHWX]rr$")>;
+def : InstRW<[V1Wr_CRC, V1Rd_CRC], (instregex "^CRC32C?[BHWX]rr$")>;
 
 
 // SVE Predicate instructions
@@ -1355,7 +1511,7 @@ def : InstRW<[V1Write_2c_1M0], (instregex "^REV_PP_[BHSD]$",
 
 // Predicate set/initialize/find next
 // Predicate unpack and widen
-def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP,
+def : InstRW<[V1Write_2c_1M0], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST,
                                        PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate select
@@ -1378,9 +1534,9 @@ def : InstRW<[V1Write_2c_1V01],
                         "^ADR_LSL_ZZZ_[SD]_[0123]$",
                         "^[SU]ABD_ZP[mZ]Z_[BHSD]",
                         "^[SU](MAX|MIN)_Z(I|P[mZ]Z)_[BHSD]",
-                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]$",
+                        "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]",
                         "^SUBR_Z(I|P[mZ]Z)_[BHSD]",
-                        "^(AND|EOR|ORR)_ZI$",
+                        "^(AND|EOR|ORR)_ZI(_PSEUDO)?$",
                         "^(AND|BIC|EOR|EOR(BT|TB)?|ORR)_ZP?ZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]$",
                         "^(AND|BIC|EOR|NOT|ORR)_ZPmZ_[BHSD]")>;
@@ -1440,13 +1596,14 @@ def : InstRW<[V1Write_20c7_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                              "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V1Write_3c_1V01], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
-def : InstRW<[V1Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
+def : InstRW<[V1Wr_ZUDOTB, V1Rd_ZUDOTB],
+             (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
 
 // Dot product, 16 bit
-def : InstRW<[V1Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V1Write_2c_1V01], (instregex "^DUP_ZI_[BHSD]$",
@@ -1461,7 +1618,7 @@ def : InstRW<[V1Write_2c_1V1], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                           "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[V1Write_2c_1V01], (instrs EXT_ZZI)>;
+def : InstRW<[V1Write_2c_1V01], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE)>;
 
 // Extract/insert operation, SIMD and FP scalar form
 def : InstRW<[V1Write_3c_1V1], (instregex "^LAST[AB]_VPZ_[BHSD]$",
@@ -1488,7 +1645,7 @@ def : InstRW<[V1Write_2c_1V01], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]$",
                                            "^MOVPRFX_ZZ$")>;
 
 // Matrix multiply-accumulate
-def : InstRW<[V1Write_3c_1V01], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
+def : InstRW<[V1Wr_ZMMA, V1Rd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
 
 // Multiply, B, H, S element size
 def : InstRW<[V1Write_4c_1V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]",
@@ -1497,12 +1654,16 @@ def : InstRW<[V1Write_4c_1V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHS]",
                                           "^[SU]MULH_ZPZZ_[BHS]")>;
 
 // Multiply, D element size
-// Multiply accumulate, D element size
 def : InstRW<[V1Write_5c_2V0], (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_D",
                                           "^MUL_ZPZZ_D",
                                           "^[SU]MULH_(ZPmZ|ZZZ)_D",
-                                          "^[SU]MULH_ZPZZ_D",
-                                          "^(MLA|MLS|MAD|MSB)_(ZPmZZ|ZPZZZ)_D")>;
+                                          "^[SU]MULH_ZPZZ_D")>;
+
+// Multiply accumulate, D element size
+def : InstRW<[V1Wr_ZMAD, V1Rd_ZMAD],
+             (instregex "^ML[AS]_ZPZZZ_D")>;
+def : InstRW<[V1Wr_ZMAD, ReadDefault, V1Rd_ZMAD],
+             (instregex "^(ML[AS]|MAD|MSB)_ZPmZZ_D")>;
 
 // Multiply accumulate, B, H, S element size
 // NOTE: This is not specified in the SOG.
@@ -1583,8 +1744,8 @@ def : InstRW<[V1Write_2c_1V0], (instregex "^FAC(GE|GT)_PPzZZ_[HSD]$",
 def : InstRW<[V1Write_3c_1V01], (instregex "^FCADD_ZPmZ_[HSD]$")>;
 
 // Floating point complex multiply add
-def : InstRW<[V1Write_5c_1V01], (instregex "^FCMLA_ZPmZZ_[HSD]$",
-                                           "^FCMLA_ZZZI_[HS]$")>;
+def : InstRW<[V1Wr_ZFCMA, ReadDefault, V1Rd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
+def : InstRW<[V1Wr_ZFCMA, V1Rd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]")>;
 
 // Floating point convert, long or narrow (F16 to F32 or F32 to F16)
 // Floating point convert to integer, F32
@@ -1617,17 +1778,21 @@ def : InstRW<[V1Write_2c_1V01], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                            "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V1Write_3c_1V01], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[V1Write_3c_1V01], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                            "^FMULX_ZPZZ_[HSD]",
                                            "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                            "^FMUL_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply accumulate
+def : InstRW<[V1Wr_ZFMA, ReadDefault, V1Rd_ZFMA],
+             (instregex "^FN?ML[AS]_ZPmZZ_[HSD]",
+                        "^FN?(MAD|MSB)_ZPmZZ_[HSD]")>;
+def : InstRW<[V1Wr_ZFMA, V1Rd_ZFMA],
+             (instregex "^FML[AS]_ZZZI_[HSD]",
+                        "^FN?ML[AS]_ZPZZZ_[HSD]")>;
+
 // Floating point reciprocal step
-def : InstRW<[V1Write_4c_1V01], (instregex "^F(N?M(AD|SB)|N?ML[AS])_ZPmZZ_[HSD]$",
-                                           "^FN?ML[AS]_ZPZZZ_[HSD]",
-                                           "^FML[AS]_ZZZI_[HSD]$",
-                                           "^F(RECPS|RSQRTS)_ZZZ_[HSD]$")>;
+def : InstRW<[V1Write_4c_1V01], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
 
 // Floating point reciprocal estimate, F16
 def : InstRW<[V1Write_6c_4V0], (instrs FRECPE_ZZ_H, FRSQRTE_ZZ_H)>;
@@ -1681,13 +1846,13 @@ def : InstRW<[V1Write_3c_1V01], (instregex "^FEXPA_ZZ_[HSD]$",
 def : InstRW<[V1Write_4c_1V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 
 // Dot product
-def : InstRW<[V1Write_4c_1V01], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
+def : InstRW<[V1Wr_ZBFDOT, V1Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[V1Write_5c_1V01], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[V1Wr_ZBFMMA, V1Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
-def : InstRW<[V1Write_5c_1V01], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;
+def : InstRW<[V1Wr_ZBFMAL, V1Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;
 
 
 // SVE Load instructions

@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strxfrm.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Add support for locales.
 LLVM_LIBC_FUNCTION(size_t, strxfrm,
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(size_t, strxfrm,
   return len;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

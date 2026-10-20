@@ -74,14 +74,14 @@ TEST(APSIntTest, getExtValue) {
   EXPECT_TRUE(APSInt(APInt(3, 7), false).isSigned());
   EXPECT_TRUE(APSInt(APInt(4, 7), true).isUnsigned());
   EXPECT_TRUE(APSInt(APInt(4, 7), false).isSigned());
-  EXPECT_TRUE(APSInt(APInt(4, -7), true).isUnsigned());
-  EXPECT_TRUE(APSInt(APInt(4, -7), false).isSigned());
+  EXPECT_TRUE(APSInt(APInt(4, -7, true), true).isUnsigned());
+  EXPECT_TRUE(APSInt(APInt(4, -7, true), false).isSigned());
   EXPECT_EQ(7, APSInt(APInt(3, 7), true).getExtValue());
   EXPECT_EQ(-1, APSInt(APInt(3, 7), false).getExtValue());
   EXPECT_EQ(7, APSInt(APInt(4, 7), true).getExtValue());
   EXPECT_EQ(7, APSInt(APInt(4, 7), false).getExtValue());
-  EXPECT_EQ(9, APSInt(APInt(4, -7), true).getExtValue());
-  EXPECT_EQ(-7, APSInt(APInt(4, -7), false).getExtValue());
+  EXPECT_EQ(9, APSInt(APInt(4, -7, true), true).getExtValue());
+  EXPECT_EQ(-7, APSInt(APInt(4, -7, true), false).getExtValue());
 }
 TEST(APSIntTest, tryExtValue) {
   ASSERT_EQ(-7, APSInt(APInt(64, -7), false).tryExtValue().value_or(42));

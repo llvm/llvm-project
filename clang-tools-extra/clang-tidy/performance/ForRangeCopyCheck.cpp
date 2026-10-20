@@ -1,4 +1,4 @@
-//===--- ForRangeCopyCheck.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
@@ -36,10 +35,10 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   // Match loop variables that are not references or pointers or are already
   // initialized through MaterializeTemporaryExpr which indicates a type
   // conversion.
-  auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
+  const auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
       unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
                    hasDeclaration(namedDecl(
-                       matchers::matchesAnyListedName(AllowedTypes)))))));
+                       matchers::matchesAnyListedRegexName(AllowedTypes)))))));
   auto IteratorReturnsValueType = cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
       callee(
@@ -47,7 +46,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   auto NotConstructedByCopy = cxxConstructExpr(
       hasDeclaration(cxxConstructorDecl(unless(isCopyConstructor()))));
   auto ConstructedByConversion = cxxMemberCallExpr(callee(cxxConversionDecl()));
-  auto LoopVar =
+  const auto LoopVar =
       varDecl(HasReferenceOrPointerTypeOrIsAllowed,
               unless(hasInitializer(expr(hasDescendant(expr(
                   anyOf(materializeTemporaryExpr(), IteratorReturnsValueType,
@@ -84,14 +83,14 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (!Expensive || !*Expensive)
     return false;
-  auto Diagnostic =
+  const auto Diagnostic =
       diag(LoopVar.getLocation(),
            "the loop variable's type is not a reference type; this creates a "
            "copy in each iteration; consider making this a reference")
       << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diagnostic << *Fix;
   }
   return true;
@@ -123,13 +122,13 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
   // Since this case is very rare, it is safe to ignore it.
   if (!ExprMutationAnalyzer(*ForRange.getBody(), Context).isMutated(&LoopVar) &&
       isReferenced(LoopVar, *ForRange.getBody(), Context)) {
-    auto Diag = diag(
+    const auto Diag = diag(
         LoopVar.getLocation(),
         "loop variable is copied but only used as const reference; consider "
         "making it a const reference");
 
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diag << *Fix << utils::fixit::changeVarDeclToReference(LoopVar, Context);
 
     return true;

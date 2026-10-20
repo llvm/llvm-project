@@ -12,9 +12,11 @@
 #ifndef LLVM_TRANSFORMS_UTILS_GUARDUTILS_H
 #define LLVM_TRANSFORMS_UTILS_GUARDUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
-class BranchInst;
+class CondBrInst;
 class CallInst;
 class Function;
 class Value;
@@ -26,18 +28,18 @@ class Value;
 /// deoptimize function \p DeoptIntrinsic.  If 'UseWC' is set, preserve the
 /// widenable nature of the guard by lowering to equivelent form.  If not set,
 /// lower to a form without widenable semantics.
-void makeGuardControlFlowExplicit(Function *DeoptIntrinsic, CallInst *Guard,
-                                  bool UseWC);
+LLVM_ABI void makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
+                                           CallInst *Guard, bool UseWC);
 
 /// Given a branch we know is widenable (defined per Analysis/GuardUtils.h),
 /// widen it such that condition 'NewCond' is also known to hold on the taken
 /// path.  Branch remains widenable after transform.
-void widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond);
+LLVM_ABI void widenWidenableBranch(CondBrInst *WidenableBR, Value *NewCond);
 
 /// Given a branch we know is widenable (defined per Analysis/GuardUtils.h),
 /// *set* it's condition such that (only) 'Cond' is known to hold on the taken
 /// path and that the branch remains widenable after transform.
-void setWidenableBranchCond(BranchInst *WidenableBR, Value *Cond);
+LLVM_ABI void setWidenableBranchCond(CondBrInst *WidenableBR, Value *Cond);
 
 } // llvm
 

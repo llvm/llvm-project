@@ -837,10 +837,11 @@ static void InitializeModuleAndManagers() {
   // Open a new context and module.
   TheContext = std::make_unique<LLVMContext>();
   TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
+  TheModule->setTargetTriple(TheJIT->getTargetTriple());
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();
@@ -917,7 +918,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = ExprSymbol.getAddress().toPtr<double (*)()>();
+      double (*FP)() = ExprSymbol.toPtr<double (*)()>();
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.

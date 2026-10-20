@@ -3,6 +3,7 @@
 import gc
 
 from mlir.ir import *
+from mlir.dialects._ods_common import equally_sized_accessor
 
 
 def run(f):
@@ -208,3 +209,70 @@ def testOdsBuildDefaultCastError():
 
 
 run(testOdsBuildDefaultCastError)
+
+
+def testOdsEquallySizedAccessor():
+    class TestOpMultiResultSegments(OpView):
+        OPERATION_NAME = "custom.test_op"
+        _ODS_REGIONS = (1, True)
+
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        m = Module.create()
+        with InsertionPoint(m.body):
+            v = add_dummy_value()
+            ts = [IntegerType.get_signless(i * 8) for i in range(4)]
+
+            op = TestOpMultiResultSegments.build_generic(
+                results=[ts[0], ts[1], ts[2], ts[3]], operands=[v]
+            )
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 3, 1, 0)
+            # CHECK: start: 1, elements_per_group: 1
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
+            # CHECK: i8
+            print(op.results[start].type)
+
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 3, 1, 1)
+            # CHECK: start: 2, elements_per_group: 1
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
+            # CHECK: i16
+            print(op.results[start].type)
+
+
+run(testOdsEquallySizedAccessor)
+
+
+def testOdsEquallySizedAccessorMultipleSegments():
+    class TestOpMultiResultSegments(OpView):
+        OPERATION_NAME = "custom.test_op"
+        _ODS_REGIONS = (1, True)
+        _ODS_RESULT_SEGMENTS = [0, -1, -1]
+
+    def types(lst):
+        return [e.type for e in lst]
+
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        m = Module.create()
+        with InsertionPoint(m.body):
+            v = add_dummy_value()
+            ts = [IntegerType.get_signless(i * 8) for i in range(7)]
+
+            op = TestOpMultiResultSegments.build_generic(
+                results=[ts[0], [ts[1], ts[2], ts[3]], [ts[4], ts[5], ts[6]]],
+                operands=[v],
+            )
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 2, 1, 0)
+            # CHECK: start: 1, elements_per_group: 3
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
+            # CHECK: [IntegerType(i8), IntegerType(i16), IntegerType(i24)]
+            print(types(op.results[start : start + elements_per_group]))
+
+            start, elements_per_group = equally_sized_accessor(op.results, 1, 2, 1, 1)
+            # CHECK: start: 4, elements_per_group: 3
+            print(f"start: {start}, elements_per_group: {elements_per_group}")
+            # CHECK: [IntegerType(i32), IntegerType(i40), IntegerType(i48)]
+            print(types(op.results[start : start + elements_per_group]))
+
+
+run(testOdsEquallySizedAccessorMultipleSegments)

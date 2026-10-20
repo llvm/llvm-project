@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc
+; RUN: llc < %s -mtriple=sparc
 
 ; CHECK: call func
 ; CHECK: st %i0, [%sp+64]

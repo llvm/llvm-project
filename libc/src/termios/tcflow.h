@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_TCFLOW_H
 #define LLVM_LIBC_SRC_TERMIOS_TCFLOW_H
 
-#include <termios.h>
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int tcflow(int fd, int action);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TERMIOS_TCFLOW_H

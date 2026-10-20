@@ -292,3 +292,49 @@ func.func @slicing_test_multiple_return(%arg0: index) -> (index, index) {
   %0:2 = "slicing-test-op"(%arg0, %arg0): (index, index) -> (index, index)
   return %0#0, %0#1 : index, index
 }
+
+// -----
+
+// FWD-LABEL: graph_region_with_cycle
+// BWD-LABEL: graph_region_with_cycle
+// FWDBWD-LABEL: graph_region_with_cycle
+func.func @graph_region_with_cycle() {
+  test.isolated_graph_region {
+    // FWD: matched: [[V0:%.+]] = "slicing-test-op"([[V1:%.+]]) : (i1) -> i1 forward static slice:
+    // FWD: [[V1]] = "slicing-test-op"([[V0]]) : (i1) -> i1 
+    // FWD: matched: [[V1]] = "slicing-test-op"([[V0]]) : (i1) -> i1 forward static slice:
+    // FWD: [[V0]] = "slicing-test-op"([[V1]]) : (i1) -> i1 
+    
+    // BWD: matched: [[V0:%.+]] = "slicing-test-op"([[V1:%.+]]) : (i1) -> i1 backward static slice:
+    // BWD: [[V1]] = "slicing-test-op"([[V0]]) : (i1) -> i1 
+    // BWD: matched: [[V1]] = "slicing-test-op"([[V0]]) : (i1) -> i1 backward static slice:
+    // BWD: [[V0]] = "slicing-test-op"([[V1]]) : (i1) -> i1 
+    %0 = "slicing-test-op"(%1) : (i1) -> i1
+    %1 = "slicing-test-op"(%0) : (i1) -> i1
+  }
+
+  return
+}
+
+// -----
+
+// FWD-LABEL: graph_region_with_double_cycle
+// BWD-LABEL: graph_region_with_double_cycle
+// FWDBWD-LABEL: graph_region_with_double_cycle
+func.func @graph_region_with_double_cycle() {
+  test.isolated_graph_region {
+    // FWD: matched: [[V0:%.+]] = "slicing-test-op"([[V1:%.+]], [[V1]]) : (i1, i1) -> i1 forward static slice:
+    // FWD: [[V1]] = "slicing-test-op"([[V0]], [[V0]]) : (i1, i1) -> i1 
+    // FWD: matched: [[V1]] = "slicing-test-op"([[V0]], [[V0]]) : (i1, i1) -> i1 forward static slice:
+    // FWD: [[V0]] = "slicing-test-op"([[V1]], [[V1]]) : (i1, i1) -> i1 
+    
+    // BWD: matched: [[V0:%.+]] = "slicing-test-op"([[V1:%.+]], [[V1]]) : (i1, i1) -> i1 backward static slice:
+    // BWD: [[V1]] = "slicing-test-op"([[V0]], [[V0]]) : (i1, i1) -> i1 
+    // BWD: matched: [[V1]] = "slicing-test-op"([[V0]], [[V0]]) : (i1, i1) -> i1 backward static slice:
+    // BWD: [[V0]] = "slicing-test-op"([[V1]], [[V1]]) : (i1, i1) -> i1 
+    %0 = "slicing-test-op"(%1, %1) : (i1, i1) -> i1
+    %1 = "slicing-test-op"(%0, %0) : (i1, i1) -> i1
+  }
+
+  return
+}

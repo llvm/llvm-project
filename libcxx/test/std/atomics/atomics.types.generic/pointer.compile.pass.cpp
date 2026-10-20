@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-synchronization_library-missing
-
 // <atomic>
 
 // Tests the basic features and makes sure they work with a hijacking operator&.
@@ -128,9 +126,11 @@ void test() {
   a += 0;
   a -= 0;
 
+#if TEST_STD_VER >= 20
   a.wait(v);
   a.notify_one();
   a.notify_all();
+#endif
 }
 
 void test() {

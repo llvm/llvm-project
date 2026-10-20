@@ -52,7 +52,7 @@ void bar() {
 //CHECK: store i32 {{%[a-z0-9]+}}, ptr [[E_ADDR]]
 //CHECK: [[THIS1:%[.a-z0-9]+]] = load ptr addrspace(4), ptr [[THIS_ADDR]]
 //CHECK: [[E:%[0-9]+]] = load i32, ptr [[E_ADDR]]
-//CHECK: [[ME:%[a-z0-9]+]] = getelementptr inbounds %class.C, ptr addrspace(4) [[THIS1]], i32 0, i32 0
+//CHECK: [[ME:%[a-z0-9]+]] = getelementptr inbounds nuw %class.C, ptr addrspace(4) [[THIS1]], i32 0, i32 0
 //CHECK: store i32 [[E]], ptr addrspace(4) [[ME]]
 
 //CHECK: define linkonce_odr spir_func void @_ZNU3AS41C8OrAssignE1E(ptr addrspace(4) {{[^,]*}} {{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
@@ -62,6 +62,6 @@ void bar() {
 //CHECK: store i32 {{%[a-z0-9]+}}, ptr [[E_ADDR]]
 //CHECK: [[THIS1:%[.a-z0-9]+]] = load ptr addrspace(4), ptr [[THIS_ADDR]]
 //CHECK: [[E:%[0-9]+]] = load i32, ptr [[E_ADDR]]
-//CHECK: [[MI_GEP:%[a-z0-9]+]] = getelementptr inbounds %class.C, ptr addrspace(4) [[THIS1]], i32 0, i32 1
+//CHECK: [[MI_GEP:%[a-z0-9]+]] = getelementptr inbounds nuw %class.C, ptr addrspace(4) [[THIS1]], i32 0, i32 1
 //CHECK: [[MI:%[0-9]+]] = load i32, ptr addrspace(4) [[MI_GEP]]
 //CHECK: %or = or i32 [[MI]], [[E]]

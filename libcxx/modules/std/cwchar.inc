@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::mbstate_t _LIBCPP_USING_IF_EXISTS;
   using std::size_t _LIBCPP_USING_IF_EXISTS;
   using std::wint_t _LIBCPP_USING_IF_EXISTS;
@@ -76,5 +76,5 @@ export namespace std {
   using std::mbsrtowcs _LIBCPP_USING_IF_EXISTS;
   using std::wcrtomb _LIBCPP_USING_IF_EXISTS;
   using std::wcsrtombs _LIBCPP_USING_IF_EXISTS;
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 } // namespace std

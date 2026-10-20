@@ -17,7 +17,9 @@ module mod { header "mod.h" }
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full 2>&1 > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,context-hash,clang-context-hash,command-line,file-deps,clang-module-deps,clang-modulemap-file,link-libraries,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // Check that the '-Wno-error=invalid-ios-deployment-target' option is being
 // respected and invalid arguments like '-target i386-apple-ios14.0-simulator'
@@ -34,8 +36,8 @@ module mod { header "mod.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD:.*]]",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/mod.h"
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"

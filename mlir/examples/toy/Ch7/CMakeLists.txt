@@ -36,14 +36,8 @@ add_toy_chapter(toyc-ch7
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 target_link_libraries(toyc-ch7
   PRIVATE
-    ${dialect_libs}
-    ${conversion_libs}
-    ${extension_libs}
     MLIRAnalysis
     MLIRBuiltinToLLVMIRTranslation
     MLIRCallInterfaces
@@ -56,7 +50,10 @@ target_link_libraries(toyc-ch7
     MLIRMemRefDialect
     MLIRParser
     MLIRPass
+    MLIRRegisterAllDialects
+    MLIRRegisterAllExtensions
+    MLIRRegisterAllPasses
     MLIRSideEffectInterfaces
     MLIRTargetLLVMIRExport
     MLIRTransforms
-    )
+  )

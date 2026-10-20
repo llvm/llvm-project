@@ -30,8 +30,7 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
-                                               BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI) const {
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
 
   Register Dst = Extract->getReg(0);
@@ -79,17 +78,14 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // Fold extractVectorElement(Vector, TOOLARGE) -> undef
   if (IndexC && VectorTy.isFixedVector() &&
       IndexC->uge(VectorTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    // For fixed-length vectors, it's invalid to extract out-of-range elements.
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
     return true;
-  }
 
   return false;
 }
 
 bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+    const MachineOperand &MO, BuildFnTy &MatchInfo) const {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
 
@@ -146,9 +142,10 @@ bool CombinerHelper::matchExtractVectorElementWithDifferentIndices(
 }
 
 bool CombinerHelper::matchExtractVectorElementWithBuildVector(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
-  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
-  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
+    const MachineInstr &MI, const MachineInstr &MI2,
+    BuildFnTy &MatchInfo) const {
+  const GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
+  const GBuildVector *Build = cast<GBuildVector>(&MI2);
 
   //
   //  %zero:_(s64) = G_CONSTANT i64 0
@@ -160,23 +157,8 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
   //  %extract:_(32) = COPY %arg1(s32)
   //
   //
-  //
-  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
-  //
-  //  -->
-  //
-  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
-  //
 
   Register Vector = Extract->getVectorReg();
-
-  // We expect a buildVector on the Vector register.
-  GBuildVector *Build = getOpcodeDef<GBuildVector>(Vector, MRI);
-  if (!Build)
-    return false;
-
   LLT VectorTy = MRI.getType(Vector);
 
   // There is a one-use check. There are more combines on build vectors.
@@ -185,13 +167,12 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
       !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
     return false;
 
-  Register Index = Extract->getIndexReg();
+  APInt Index = getIConstantFromReg(Extract->getIndexReg(), MRI);
 
-  // If the Index is constant, then we can extract the element from the given
-  // offset.
-  std::optional<ValueAndVReg> MaybeIndex =
-      getIConstantVRegValWithLookThrough(Index, MRI);
-  if (!MaybeIndex)
+  // An out-of-bounds constant index extracts undef; it is handled by
+  // extract_vec_elt_out_of_bounds. Bail out here so we never read past the
+  // G_BUILD_VECTOR's sources.
+  if (Index.uge(Build->getNumSources()))
     return false;
 
   // We now know that there is a buildVector def'd on the Vector register and
@@ -200,14 +181,14 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
   Register Dst = Extract->getReg(0);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getZExtValue()));
+    B.buildCopy(Dst, Build->getSourceReg(Index.getZExtValue()));
   };
 
   return true;
 }
 
 bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+    const MachineOperand &MO, BuildFnTy &MatchInfo) const {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
   GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
 
@@ -255,6 +236,12 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   if (!MaybeIndex)
     return false;
 
+  // An out-of-bounds constant index extracts undef; it is handled by
+  // extract_vec_elt_out_of_bounds. Bail out so we never read past the
+  // G_BUILD_VECTOR_TRUNC's sources.
+  if (MaybeIndex->Value.uge(Build->getNumSources()))
+    return false;
+
   // We now know that there is a buildVectorTrunc def'd on the Vector register
   // and the index is const. The combine will succeed.
 
@@ -274,9 +261,10 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
 }
 
 bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
-    const MachineOperand &MO, BuildFnTy &MatchInfo) {
-  GExtractVectorElement *Extract =
-      cast<GExtractVectorElement>(getDefIgnoringCopies(MO.getReg(), MRI));
+    const MachineInstr &MI, const MachineInstr &MI2,
+    BuildFnTy &MatchInfo) const {
+  const GExtractVectorElement *Extract = cast<GExtractVectorElement>(&MI);
+  const GShuffleVector *Shuffle = cast<GShuffleVector>(&MI2);
 
   //
   //  %zero:_(s64) = G_CONSTANT i64 0
@@ -302,32 +290,12 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   //  %extract:_(s32) = G_IMPLICIT_DEF
   //
   //
-  //
-  //
-  //
-  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
-  //                     shufflemask(0, 0, 0, -1)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %opaque(s64)
-  //
-  //  -->
-  //
-  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
-  //                     shufflemask(0, 0, 0, -1)
-  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %opaque(s64)
-  //
 
-  // We try to get the value of the Index register.
-  std::optional<ValueAndVReg> MaybeIndex =
-      getIConstantVRegValWithLookThrough(Extract->getIndexReg(), MRI);
-  if (!MaybeIndex)
-    return false;
-
-  GShuffleVector *Shuffle =
-      cast<GShuffleVector>(getDefIgnoringCopies(Extract->getVectorReg(), MRI));
+  APInt Index = getIConstantFromReg(Extract->getIndexReg(), MRI);
 
   ArrayRef<int> Mask = Shuffle->getMask();
 
-  unsigned Offset = MaybeIndex->Value.getZExtValue();
+  unsigned Offset = Index.getZExtValue();
   int SrcIdx = Mask[Offset];
 
   LLT Src1Type = MRI.getType(Shuffle->getSrc1Reg());
@@ -379,8 +347,7 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   return true;
 }
 
-bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
-                                                 BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI) const {
   GInsertVectorElement *Insert = cast<GInsertVectorElement>(&MI);
 
   Register Dst = Insert->getReg(0);
@@ -394,21 +361,18 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
       getIConstantVRegValWithLookThrough(Index, MRI);
 
   if (MaybeIndex && MaybeIndex->Value.uge(DstTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
     return true;
-  }
 
   return false;
 }
 
 bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
-  GAdd *Add = cast<GAdd>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getLHSReg()));
-  GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getRHSReg()));
-
-  Register Dst = Add->getReg(0);
+                                      BuildFnTy &MatchInfo) const {
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale, *RHSVScale;
+  if (!mi_match(Dst, MRI, m_GAdd(m_GVScale(LHSVScale), m_GVScale(RHSVScale))))
+    return false;
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHSVScale->getReg(0)))
@@ -422,15 +386,16 @@ bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
-  GMul *Mul = cast<GMul>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Mul->getLHSReg()));
-
-  std::optional<APInt> MaybeRHS = getIConstantVRegVal(Mul->getRHSReg(), MRI);
-  if (!MaybeRHS)
+                                      BuildFnTy &MatchInfo) const {
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale;
+  Register RHSReg;
+  if (!mi_match(Dst, MRI, m_GMul(m_GVScale(LHSVScale), m_Reg(RHSReg))))
     return false;
 
-  Register Dst = MO.getReg();
+  std::optional<APInt> MaybeRHS = getIConstantVRegVal(RHSReg, MRI);
+  if (!MaybeRHS)
+    return false;
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)))
     return false;
@@ -443,11 +408,15 @@ bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
-  GSub *Sub = cast<GSub>(MRI.getVRegDef(MO.getReg()));
-  GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Sub->getRHSReg()));
-
+                                      BuildFnTy &MatchInfo) const {
   Register Dst = MO.getReg();
+  Register SubLHS;
+  GVScale *RHSVScale;
+  uint32_t Flags;
+  if (!mi_match(Dst, MRI,
+                m_GSub(m_Reg(SubLHS), m_GVScale(RHSVScale), m_MIFlags(Flags))))
+    return false;
+
   LLT DstTy = MRI.getType(Dst);
 
   if (!MRI.hasOneNonDBGUse(RHSVScale->getReg(0)) ||
@@ -456,22 +425,24 @@ bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto VScale = B.buildVScale(DstTy, -RHSVScale->getSrc());
-    B.buildAdd(Dst, Sub->getLHSReg(), VScale, Sub->getFlags());
+    B.buildAdd(Dst, SubLHS, VScale, Flags);
   };
 
   return true;
 }
 
 bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
-  GShl *Shl = cast<GShl>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Shl->getSrcReg()));
+                                      BuildFnTy &MatchInfo) const {
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale;
+  Register ShiftReg;
+  if (!mi_match(Dst, MRI, m_GShl(m_GVScale(LHSVScale), m_Reg(ShiftReg))))
+    return false;
 
-  std::optional<APInt> MaybeRHS = getIConstantVRegVal(Shl->getShiftReg(), MRI);
+  std::optional<APInt> MaybeRHS = getIConstantVRegVal(ShiftReg, MRI);
   if (!MaybeRHS)
     return false;
 
-  Register Dst = MO.getReg();
   LLT DstTy = MRI.getType(Dst);
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)) ||

@@ -30,7 +30,7 @@
 #  define __MM_MALLOC_H
 #  include <emmintrin.h>
 #  include <smmintrin.h>
-#  define VECTOR_ALIGNED ALIGNED(16)
+#  define VECTOR_ALIGNED alignas(16)
 typedef __m128i m128;
 #else
 #  define VECTOR_ALIGNED
@@ -199,8 +199,7 @@ enum ExternalTag : uptr {
 };
 
 enum {
-  MutexTypeReport = MutexLastCommon,
-  MutexTypeSyncVar,
+  MutexTypeSyncVar = MutexLastCommon,
   MutexTypeAnnotations,
   MutexTypeAtExit,
   MutexTypeFired,

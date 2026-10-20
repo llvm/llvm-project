@@ -476,55 +476,46 @@ doze32
 
 # CHECK-ASM: br32 .L.test
 # CHECK-ASM: encoding: [A,0xe8'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test, kind: fixup_csky_pcrel_imm16_scale2
 .L.test:
 br32 .L.test
 
 # CHECK-ASM: bt32 .L.test2
 # CHECK-ASM: encoding: [0x60'A',0xe8'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test2, kind: fixup_csky_pcrel_imm16_scale2
 .L.test2:
 bt32 .L.test2
 
 # CHECK-ASM: bf32 .L.test3
 # CHECK-ASM: encoding: [0x40'A',0xe8'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test3, kind: fixup_csky_pcrel_imm16_scale2
 .L.test3:
 bf32 .L.test3
 
 # CHECK-ASM: bez32 a0, .L.test4
 # CHECK-ASM: encoding: [A,0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test4, kind: fixup_csky_pcrel_imm16_scale2
 .L.test4:
 bez32 a0, .L.test4
 
 # CHECK-ASM: bnez32 a0, .L.test5
 # CHECK-ASM: encoding: [0x20'A',0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test5, kind: fixup_csky_pcrel_imm16_scale2
 .L.test5:
 bnez32 a0, .L.test5
 
 # CHECK-ASM: bhz32 a0, .L.test6
 # CHECK-ASM: encoding: [0x40'A',0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test6, kind: fixup_csky_pcrel_imm16_scale2
 .L.test6:
 bhz32 a0, .L.test6
 
 # CHECK-ASM: blsz32 a0, .L.test7
 # CHECK-ASM: encoding: [0x60'A',0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test7, kind: fixup_csky_pcrel_imm16_scale2
 .L.test7:
 blsz32 a0, .L.test7
 
 # CHECK-ASM: blz32 a0, .L.test8
 # CHECK-ASM: encoding: [0x80'A',0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test8, kind: fixup_csky_pcrel_imm16_scale2
 .L.test8:
 blz32 a0, .L.test8
 
 # CHECK-ASM: bhsz32 a0, .L.test9
 # CHECK-ASM: encoding: [0xa0'A',0xe9'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test9, kind: fixup_csky_pcrel_imm16_scale2
 .L.test9:
 bhsz32 a0, .L.test9
 
@@ -534,13 +525,11 @@ jmp32 a3
 
 # CHECK-ASM: jmpi32 [.L.test10]
 # CHECK-ASM: encoding: [0xc0'A',0xea'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test10, kind: fixup_csky_pcrel_uimm16_scale4
 .L.test10:
 jmpi32 [.L.test10]
 
 # CHECK-ASM: bsr32 .L.test11
 # CHECK-ASM: encoding: [A,0xe0'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test11, kind: fixup_csky_pcrel_imm26_scale2
 .L.test11:
 bsr32 .L.test11
 
@@ -550,19 +539,16 @@ jsr32 a3
 
 # CHECK-ASM: jsri32 [.L.test12]
 # CHECK-ASM: encoding: [0xe0'A',0xea'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test12, kind: fixup_csky_pcrel_uimm16_scale4
 .L.test12:
 jsri32 [.L.test12]
 
 # CHECK-ASM: grs32 a0, .L.test13
 # CHECK-ASM: encoding: [0x0c'A',0xcc'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test13, kind: fixup_csky_pcrel_imm18_scale2
 .L.test13:
 grs32 a0, .L.test13
 
 # CHECK-ASM: lrw32 a0, [.L.test14]
 # CHECK-ASM: encoding: [0x80'A',0xea'A',A,A]
-# CHECK-ASM: fixup A - offset: 0, value: .L.test14, kind: fixup_csky_pcrel_uimm16_scale4
 .L.test14:
 lrw32 a0, [.L.test14]
 

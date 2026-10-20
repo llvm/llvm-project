@@ -10,9 +10,7 @@ define <vscale x 16 x i8> @usra_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = lshr <vscale x 16 x i8> %b, %splat
+  %shift = lshr <vscale x 16 x i8> %b, splat(i8 1)
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -22,9 +20,7 @@ define <vscale x 8 x i16> @usra_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = lshr <vscale x 8 x i16> %b, %splat
+  %shift = lshr <vscale x 8 x i16> %b, splat(i16 2)
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -34,9 +30,7 @@ define <vscale x 4 x i32> @usra_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = lshr <vscale x 4 x i32> %b, %splat
+  %shift = lshr <vscale x 4 x i32> %b, splat(i32 3)
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -46,9 +40,7 @@ define <vscale x 2 x i64> @usra_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = lshr <vscale x 2 x i64> %b, %splat
+  %shift = lshr <vscale x 2 x i64> %b, splat(i64 4)
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -58,10 +50,7 @@ define <vscale x 16 x i8> @usra_intr_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> %splat)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 1))
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -71,10 +60,7 @@ define <vscale x 8 x i16> @usra_intr_i16(<vscale x 8 x i16> %a, <vscale x 8 x i1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> %splat)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 2))
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -84,10 +70,7 @@ define <vscale x 4 x i32> @usra_intr_i32(<vscale x 4 x i32> %a, <vscale x 4 x i3
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %splat)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 3))
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -97,10 +80,7 @@ define <vscale x 2 x i64> @usra_intr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i6
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> %splat)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 4))
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -110,9 +90,7 @@ define <vscale x 16 x i8> @usra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> %splat)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 1))
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -122,9 +100,7 @@ define <vscale x 8 x i16> @usra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> %splat)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 2))
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -134,9 +110,7 @@ define <vscale x 4 x i32> @usra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %splat)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 3))
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -146,9 +120,7 @@ define <vscale x 2 x i64> @usra_intr_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    usra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> %splat)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 4))
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -160,9 +132,7 @@ define <vscale x 16 x i8> @ssra_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = ashr <vscale x 16 x i8> %b, %splat
+  %shift = ashr <vscale x 16 x i8> %b, splat(i8 1)
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -172,9 +142,7 @@ define <vscale x 8 x i16> @ssra_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = ashr <vscale x 8 x i16> %b, %splat
+  %shift = ashr <vscale x 8 x i16> %b, splat(i16 2)
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -184,9 +152,7 @@ define <vscale x 4 x i32> @ssra_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = ashr <vscale x 4 x i32> %b, %splat
+  %shift = ashr <vscale x 4 x i32> %b, splat(i32 3)
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -196,9 +162,7 @@ define <vscale x 2 x i64> @ssra_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = ashr <vscale x 2 x i64> %b, %splat
+  %shift = ashr <vscale x 2 x i64> %b, splat(i64 4)
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -208,10 +172,7 @@ define <vscale x 16 x i8> @ssra_intr_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> %splat)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 1))
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -221,10 +182,7 @@ define <vscale x 8 x i16> @ssra_intr_i16(<vscale x 8 x i16> %a, <vscale x 8 x i1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> %splat)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 2))
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -234,10 +192,7 @@ define <vscale x 4 x i32> @ssra_intr_i32(<vscale x 4 x i32> %a, <vscale x 4 x i3
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %splat)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 3))
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -247,10 +202,7 @@ define <vscale x 2 x i64> @ssra_intr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i6
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> %splat)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 4))
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -260,9 +212,7 @@ define <vscale x 16 x i8> @ssra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> %splat)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 1))
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -272,9 +222,7 @@ define <vscale x 8 x i16> @ssra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> %splat)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 2))
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -284,9 +232,7 @@ define <vscale x 4 x i32> @ssra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %splat)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 3))
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -296,26 +242,313 @@ define <vscale x 2 x i64> @ssra_intr_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ssra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> %splat)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 4))
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
 
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 immarg)
+; USRA
 
-declare <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
-declare <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+define <vscale x 16 x i8> @usra_disjoint_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 16 x i8> %b, splat(i8 4)
+  %add = or disjoint <vscale x 16 x i8> %a, %shift
+  ret <vscale x 16 x i8> %add
+}
 
-declare <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
-declare <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+define <vscale x 8 x i16> @usra_disjoint_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.h, z1.h, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 8 x i16> %b, splat(i16 4)
+  %add = or disjoint <vscale x 8 x i16> %a, %shift
+  ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 4 x i32> @usra_disjoint_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.s, z1.s, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 4 x i32> %b, splat(i32 4)
+  %add = or disjoint <vscale x 4 x i32> %a, %shift
+  ret <vscale x 4 x i32> %add
+}
+
+define <vscale x 2 x i64> @usra_disjoint_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.d, z1.d, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 2 x i64> %b, splat(i64 4)
+  %add = or disjoint <vscale x 2 x i64> %a, %shift
+  ret <vscale x 2 x i64> %add
+}
+
+define <vscale x 16 x i8> @ssra_disjoint_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 16 x i8> %b, splat(i8 4)
+  %add = or disjoint <vscale x 16 x i8> %a, %shift
+  ret <vscale x 16 x i8> %add
+}
+
+define <vscale x 8 x i16> @ssra_disjoint_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.h, z1.h, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 8 x i16> %b, splat(i16 4)
+  %add = or disjoint <vscale x 8 x i16> %a, %shift
+  ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 4 x i32> @ssra_disjoint_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.s, z1.s, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 4 x i32> %b, splat(i32 4)
+  %add = or disjoint <vscale x 4 x i32> %a, %shift
+  ret <vscale x 4 x i32> %add
+}
+
+define <vscale x 2 x i64> @ssra_disjoint_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.d, z1.d, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 2 x i64> %b, splat(i64 4)
+  %add = or disjoint <vscale x 2 x i64> %a, %shift
+  ret <vscale x 2 x i64> %add
+}
+
+define <vscale x 16 x i8> @usra_disjoint_shift_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shift_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.b, z0.b, #7
+; CHECK-NEXT:    usra z0.b, z1.b, #1
+; CHECK-NEXT:    ret
+  %shl = shl <vscale x 16 x i8> %a, splat (i8 7)
+  %srl = lshr <vscale x 16 x i8> %b, splat (i8 1)
+  %r = or <vscale x 16 x i8> %shl, %srl
+  ret <vscale x 16 x i8> %r
+}
+
+define <vscale x 8 x i16> @usra_disjoint_shift_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shift_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.h, z0.h, #7
+; CHECK-NEXT:    usra z0.h, z1.h, #9
+; CHECK-NEXT:    ret
+  %shl = shl <vscale x 8 x i16> %a, splat (i16 7)
+  %srl = lshr <vscale x 8 x i16> %b, splat (i16 9)
+  %r = or <vscale x 8 x i16> %shl, %srl
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 4 x i32> @usra_disjoint_shift_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shift_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #7
+; CHECK-NEXT:    usra z0.s, z1.s, #25
+; CHECK-NEXT:    ret
+  %shl = shl <vscale x 4 x i32> %a, splat (i32 7)
+  %srl = lshr <vscale x 4 x i32> %b, splat (i32 25)
+  %r = or <vscale x 4 x i32> %shl, %srl
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @usra_disjoint_shift_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shift_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #7
+; CHECK-NEXT:    usra z0.d, z1.d, #57
+; CHECK-NEXT:    ret
+  %shl = shl <vscale x 2 x i64> %a, splat (i64 7)
+  %srl = lshr <vscale x 2 x i64> %b, splat (i64 57)
+  %r = or <vscale x 2 x i64> %shl, %srl
+  ret <vscale x 2 x i64> %r
+}
+
+; SSRA
+
+define <vscale x 16 x i8> @ssra_disjoint_shift_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.b, z0.b, #2
+; CHECK-NEXT:    lsl z1.b, z1.b, #7
+; CHECK-NEXT:    ssra z0.b, z1.b, #1
+; CHECK-NEXT:    ret
+  %acc = lshr <vscale x 16 x i8> %a, splat (i8 2)
+  %sign = shl <vscale x 16 x i8> %b, splat (i8 7)
+  %sra = ashr <vscale x 16 x i8> %sign, splat (i8 1)
+  %r = or <vscale x 16 x i8> %acc, %sra
+  ret <vscale x 16 x i8> %r
+}
+
+define <vscale x 8 x i16> @ssra_disjoint_shift_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.h, z0.h, #10
+; CHECK-NEXT:    lsl z1.h, z1.h, #15
+; CHECK-NEXT:    ssra z0.h, z1.h, #9
+; CHECK-NEXT:    ret
+  %acc = lshr <vscale x 8 x i16> %a, splat (i16 10)
+  %sign = shl <vscale x 8 x i16> %b, splat (i16 15)
+  %sra = ashr <vscale x 8 x i16> %sign, splat (i16 9)
+  %r = or <vscale x 8 x i16> %acc, %sra
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 4 x i32> @ssra_disjoint_shift_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.s, z0.s, #26
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    ssra z0.s, z1.s, #25
+; CHECK-NEXT:    ret
+  %acc = lshr <vscale x 4 x i32> %a, splat (i32 26)
+  %sign = shl <vscale x 4 x i32> %b, splat (i32 31)
+  %sra = ashr <vscale x 4 x i32> %sign, splat (i32 25)
+  %r = or <vscale x 4 x i32> %acc, %sra
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @ssra_disjoint_shift_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.d, z0.d, #58
+; CHECK-NEXT:    lsl z1.d, z1.d, #63
+; CHECK-NEXT:    ssra z0.d, z1.d, #57
+; CHECK-NEXT:    ret
+  %acc = lshr <vscale x 2 x i64> %a, splat (i64 58)
+  %sign = shl <vscale x 2 x i64> %b, splat (i64 63)
+  %sra = ashr <vscale x 2 x i64> %sign, splat (i64 57)
+  %r = or <vscale x 2 x i64> %acc, %sra
+  ret <vscale x 2 x i64> %r
+}
+
+; USRA
+
+define <vscale x 16 x i8> @usra_disjoint_shl_lsr_or16xi8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shl_lsr_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.b, z0.b, #4
+; CHECK-NEXT:    usra z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %ptrue = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %shl = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.u.nxv16i8(<vscale x 16 x i1> %ptrue, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat(i8 4))
+  %srl = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> %ptrue, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 4))
+  %r = or <vscale x 16 x i8> %shl, %srl
+  ret <vscale x 16 x i8> %r
+}
+
+define <vscale x 8 x i16> @usra_disjoint_shl_lsr_or8xi16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shl_lsr_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.h, z0.h, #8
+; CHECK-NEXT:    usra z0.h, z1.h, #8
+; CHECK-NEXT:    ret
+  %ptrue = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %shl = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u.nxv8i16(<vscale x 8 x i1> %ptrue, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat(i16 8))
+  %srl = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> %ptrue, <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 8))
+  %r = or <vscale x 8 x i16> %shl, %srl
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 4 x i32> @usra_disjoint_shl_lsr_or4xi32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shl_lsr_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    usra z0.s, z1.s, #16
+; CHECK-NEXT:    ret
+  %ptrue = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %shl = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u.nxv4i32(<vscale x 4 x i1> %ptrue, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat(i32 16))
+  %srl = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> %ptrue, <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 16))
+  %r = or <vscale x 4 x i32> %shl, %srl
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @usra_disjoint_shl_lsr_or2xi64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: usra_disjoint_shl_lsr_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #32
+; CHECK-NEXT:    usra z0.d, z1.d, #32
+; CHECK-NEXT:    ret
+  %ptrue = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %shl = call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.u.nxv2i64(<vscale x 2 x i1> %ptrue, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat(i64 32))
+  %srl = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> %ptrue, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 32))
+  %r = or <vscale x 2 x i64> %shl, %srl
+  ret <vscale x 2 x i64> %r
+}
+
+; SSRA
+
+define <vscale x 16 x i8> @ssra_disjoint_shift_intr_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_intr_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.b, z0.b, #2
+; CHECK-NEXT:    lsl z1.b, z1.b, #7
+; CHECK-NEXT:    ssra z0.b, z1.b, #1
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %acc = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat(i8 2))
+  %sign = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat(i8 7))
+  %sra = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %sign, <vscale x 16 x i8> splat(i8 1))
+  %r = or <vscale x 16 x i8> %acc, %sra
+  ret <vscale x 16 x i8> %r
+}
+
+define <vscale x 8 x i16> @ssra_disjoint_shift_intr_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_intr_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.h, z0.h, #10
+; CHECK-NEXT:    lsl z1.h, z1.h, #15
+; CHECK-NEXT:    ssra z0.h, z1.h, #9
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %acc = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat(i16 10))
+  %sign = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, <vscale x 8 x i16> splat(i16 15))
+  %sra = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %sign, <vscale x 8 x i16> splat(i16 9))
+  %r = or <vscale x 8 x i16> %acc, %sra
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 4 x i32> @ssra_disjoint_shift_intr_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_intr_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.s, z0.s, #26
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    ssra z0.s, z1.s, #25
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %acc = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat(i32 26))
+  %sign = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> splat(i32 31))
+  %sra = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %sign, <vscale x 4 x i32> splat(i32 25))
+  %r = or <vscale x 4 x i32> %acc, %sra
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @ssra_disjoint_shift_intr_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_shift_intr_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr z0.d, z0.d, #58
+; CHECK-NEXT:    lsl z1.d, z1.d, #63
+; CHECK-NEXT:    ssra z0.d, z1.d, #57
+; CHECK-NEXT:    ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %acc = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat(i64 58))
+  %sign = call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat(i64 63))
+  %sra = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %sign, <vscale x 2 x i64> splat(i64 57))
+  %r = or <vscale x 2 x i64> %acc, %sra
+  ret <vscale x 2 x i64> %r
+}
 
 attributes #0 = { "target-features"="+sve,+sve2" }

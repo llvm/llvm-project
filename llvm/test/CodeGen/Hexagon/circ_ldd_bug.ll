@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  -O2 < %s
+; RUN: llc -mtriple=hexagon -O2 < %s
 
 target triple = "hexagon"
 

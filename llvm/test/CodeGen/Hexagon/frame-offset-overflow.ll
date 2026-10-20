@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon --stats -o - 2>&1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon --stats -o - 2>&1 < %s | FileCheck %s
 
 ; Check that the compilation succeeded and that some code was generated.
 ; CHECK: vadd
@@ -34,7 +34,7 @@ for.body:                                         ; preds = %for.body, %entry
   %optr.0102 = phi ptr [ %incdec.ptr24.3, %for.body ], [ %p3, %entry ]
   %iptr4.0101 = phi ptr [ %incdec.ptr23.3, %for.body ], [ %incdec.ptr18, %entry ]
   %iptr3.0100 = phi ptr [ %incdec.ptr22.3, %for.body ], [ %incdec.ptr17, %entry ]
-  %iptr2.099 = phi ptr [ undef, %for.body ], [ %incdec.ptr16, %entry ]
+  %iptr2.099 = phi ptr [ poison, %for.body ], [ %incdec.ptr16, %entry ]
   %iptr1.098 = phi ptr [ %incdec.ptr20.3, %for.body ], [ %incdec.ptr15, %entry ]
   %iptr0.097 = phi ptr [ %incdec.ptr19.3, %for.body ], [ %incdec.ptr, %entry ]
   %dVsumv1.096 = phi <32 x i32> [ %60, %for.body ], [ undef, %entry ]

@@ -37,6 +37,8 @@ define void @func() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %ebx
 ; CHECK-NEXT:    calll static_func
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    #APP
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    calll static_func
@@ -52,6 +54,8 @@ define void @func() local_unnamed_addr #0 {
 ; CHECK-NEXT:    shrl $0, %esp
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    addl $12, %esp
+; CHECK-NEXT:    popl %ebp
 entry:
   %call = tail call i32 @static_func()
 ;; We test call, CALL, and jmp.

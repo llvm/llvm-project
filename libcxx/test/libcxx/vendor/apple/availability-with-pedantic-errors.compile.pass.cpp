@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: stdlib=apple-libc++
+// UNSUPPORTED: libcpp-has-no-availability-markup
 
 // Test that using -pedantic-errors doesn't turn off availability annotations.
 // This used to be the case because we used __has_extension(...) to enable the
@@ -17,6 +18,6 @@
 
 #include <__config>
 
-#if defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+#if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 #  error Availability annotations should be enabled on Apple platforms in the system configuration!
 #endif

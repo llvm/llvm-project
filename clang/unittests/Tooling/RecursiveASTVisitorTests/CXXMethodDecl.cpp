@@ -13,34 +13,30 @@ using namespace clang;
 
 namespace {
 
-class CXXMethodDeclVisitor
-    : public ExpectedLocationVisitor<CXXMethodDeclVisitor> {
+class CXXMethodDeclVisitor : public ExpectedLocationVisitor {
 public:
-  CXXMethodDeclVisitor(bool VisitImplicitCode)
-      : VisitImplicitCode(VisitImplicitCode) {}
+  CXXMethodDeclVisitor(bool VisitImplicitCode) {
+    ShouldVisitImplicitCode = VisitImplicitCode;
+  }
 
-  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
-
-  bool VisitDeclRefExpr(DeclRefExpr *D) {
+  bool VisitDeclRefExpr(DeclRefExpr *D) override {
     Match("declref", D->getLocation());
     return true;
   }
-  bool VisitParmVarDecl(ParmVarDecl *P) {
+
+  bool VisitParmVarDecl(ParmVarDecl *P) override {
     Match("parm", P->getLocation());
     return true;
   }
-
-private:
-  bool VisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, CXXMethodDeclNoDefaultBodyVisited) {
   for (bool VisitImplCode : {false, true}) {
     CXXMethodDeclVisitor Visitor(VisitImplCode);
     if (VisitImplCode)
-      Visitor.ExpectMatch("declref", 8, 28);
+      Visitor.ExpectMatch("declref", 8, 32);
     else
-      Visitor.DisallowMatch("declref", 8, 28);
+      Visitor.DisallowMatch("declref", 8, 32);
 
     Visitor.ExpectMatch("parm", 8, 27);
     llvm::StringRef Code = R"cpp(
@@ -60,9 +56,9 @@ TEST(RecursiveASTVisitor, FunctionDeclNoDefaultBodyVisited) {
   for (bool VisitImplCode : {false, true}) {
     CXXMethodDeclVisitor Visitor(VisitImplCode);
     if (VisitImplCode)
-      Visitor.ExpectMatch("declref", 4, 58, /*Times=*/2);
+      Visitor.ExpectMatch("declref", 4, 52, /*Times=*/2);
     else
-      Visitor.DisallowMatch("declref", 4, 58);
+      Visitor.DisallowMatch("declref", 4, 52);
     llvm::StringRef Code = R"cpp(
       struct s {
         int x;

@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRGPUDialect
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
+  IR/ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -11,6 +12,10 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRGPUOpsEnumsGen
   MLIRGPUOpInterfacesIncGen
   MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRParallelLoopMapperEnumsGen
+  MLIRGPUDeviceMapperEnumsGen
+  # GPU dialect sources include llvm/IR/Attributes.h.
+  intrinsics_gen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
@@ -19,6 +24,8 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR
+  MLIRLoopLikeInterface
+  MLIRMathDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRSupport
@@ -28,20 +35,23 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
   Transforms/BufferDeallocationOpInterfaceImpl.cpp
-  Transforms/DecomposeMemrefs.cpp
+  Transforms/DecomposeMemRefs.cpp
   Transforms/EliminateBarriers.cpp
   Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
+  Transforms/IndexedAccessOpInterfaceImpl.cpp
   Transforms/MemoryPromotion.cpp
   Transforms/ModuleToBinary.cpp
   Transforms/NVVMAttachTarget.cpp
   Transforms/ParallelLoopMapper.cpp
+  Transforms/PromoteShuffleToAMDGPU.cpp
   Transforms/ROCDLAttachTarget.cpp
-  Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
+  Transforms/ShuffleRewriter.cpp
+  Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
-  Transforms/Utils.cpp
-  
+  Transforms/XeVMAttachTarget.cpp
+
   OBJECT
 
   ADDITIONAL_HEADER_DIRS
@@ -52,27 +62,33 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
+  MLIRAMDGPUDialect
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
+  MLIRDialectUtils
   MLIRExecutionEngineUtils
   MLIRGPUDialect
+  MLIRGPUUtils
   MLIRIR
   MLIRIndexDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRNVVMTarget
   MLIRPass
-  MLIRSCFDialect
-  MLIRSideEffectInterfaces
-  MLIRSPIRVTarget
-  MLIRSupport
+  MLIRROCDLDialect
   MLIRROCDLTarget
+  MLIRSCFDialect
+  MLIRSPIRVTarget
+  MLIRSideEffectInterfaces
+  MLIRSupport
   MLIRTransformUtils
   MLIRVectorDialect
+  MLIRXeVMDialect
   )
 
 add_subdirectory(TransformOps)
 add_subdirectory(Pipelines)
+add_subdirectory(Utils)

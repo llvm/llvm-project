@@ -232,7 +232,7 @@ define i1 @sub_swap(i8 %x) {
 
 define <2 x i1> @sub_odd(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_odd(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %sub = sub <2 x i8> <i8 3, i8 3>, %x
   %cmp = icmp ne <2 x i8> %sub, %x
@@ -241,7 +241,7 @@ define <2 x i1> @sub_odd(<2 x i8> %x) {
 
 define <2 x i1> @sub_odd_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_odd_poison(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %sub = sub <2 x i8> <i8 poison, i8 1>, %x
   %cmp = icmp ne <2 x i8> %sub, %x

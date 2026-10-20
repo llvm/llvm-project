@@ -14,10 +14,7 @@
 // Note instantiation for certain type combinations are ill-formed. These are
 // tested in is_specialization.verify.cpp.
 
-#include <type_traits>
-
-#include <array>
-#include <concepts>
+#include <__type_traits/is_specialization.h>
 #include <string_view>
 #include <tuple>
 #include <utility>

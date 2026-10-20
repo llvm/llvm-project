@@ -22,6 +22,32 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
+def TestTransformSingleBlockNormalForm
+    : AttrDef<Transform_Dialect, "TestSingleBlockNormalForm",
+              [DeclareAttrInterfaceMethods<
+                  NormalFormAttrInterface, ["checkOperation"]>]> {
+  let description = [{
+    Normal form checking that the regions of the payload operation have a single
+    block.
+  }];
+  let parameters = (ins "BoolAttr":$check_nested);
+  let mnemonic = "test_single_block_normal_form";
+  let assemblyFormat = "`<` `nested` $check_nested `>`";
+}
+
+def TestTransformCountingNormalForm
+    : AttrDef<Transform_Dialect, "TestCountingNormalForm",
+              [DeclareAttrInterfaceMethods<
+                  NormalFormAttrInterface, ["checkOperation"]>]> {
+  let description = [{
+    Normal form that always succeeds and updates a counter attribute on an
+    operation every time the check runs.
+  }];
+  let parameters = (ins);
+  let mnemonic = "test_counting_normal_form";
+  let assemblyFormat = "";
+}
+
 def TestTransformTestDialectHandleType
   : TypeDef<Transform_Dialect, "TestDialectOp",
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
@@ -105,7 +131,7 @@ def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
     Optional<TransformHandleTypeInterface>:$second_operand,
     UnitAttr:$allow_repeated_handles);
   let assemblyFormat = 
-      "$operand (`,` $second_operand^)? attr-dict `:` type($operand)"
+      "$operand (`,` $second_operand^)? oilist(`allow_repeated_handles` $allow_repeated_handles) attr-dict `:` type($operand)"
       "(`,` type($second_operand)^)?";
   let cppNamespace = "::mlir::test";
 }
@@ -223,7 +249,7 @@ def TestEmitRemarkAndEraseOperandOp
      FunctionalStyleTransformOpTrait]> {
   let arguments = (ins TransformHandleTypeInterface:$target, StrAttr:$remark,
                    UnitAttr:$fail_after_erase);
-  let assemblyFormat = "$target `,` $remark attr-dict `:` type($target)";
+  let assemblyFormat = "$target `,` $remark oilist(`fail_after_erase` $fail_after_erase) attr-dict `:` type($target)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -385,7 +411,7 @@ def TestProduceTransformParamOrForwardOperandOp
                        UnitAttr:$second_result_is_handle);
   let results = (outs AnyType:$out,
                       TransformParamTypeInterface:$param);
-  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = "$in oilist(`first_result_is_param` $first_result_is_param | `first_result_is_null` $first_result_is_null | `second_result_is_handle` $second_result_is_handle) attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
 
   let extraClassDeclaration = [{
@@ -442,7 +468,7 @@ def TestRequiredMemoryEffectsOp
                        UnitAttr:$has_result_effect,
                        UnitAttr:$modifies_payload);
   let results = (outs TransformHandleTypeInterface:$out);
-  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = "$in oilist(`has_operand_effect` $has_operand_effect | `has_result_effect` $has_result_effect | `modifies_payload` $modifies_payload) attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -458,7 +484,7 @@ def TestDummyPayloadOp
   let arguments = (ins Variadic<AnyType>:$args,
                        UnitAttr:$fail_to_verify);
   let results = (outs Variadic<AnyType>:$outs);
-  let assemblyFormat = "$args attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = "$args oilist(`fail_to_verify` $fail_to_verify) attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
   let hasVerifier = 1;
 
@@ -547,6 +573,15 @@ def TestProduceInvalidIR
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def TestInitializerExtensionOp
+  : Op<Transform_Dialect, "test_initializer_extension",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        NoMemoryEffect]> {
+  let arguments = (ins StrAttr:$type);
+  let assemblyFormat = "$type attr-dict";
+  let cppNamespace = "::mlir::test";
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

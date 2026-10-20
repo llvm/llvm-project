@@ -19,11 +19,26 @@
 // GGDB0-NOT: -debug-info-kind=
 
 // Check to make sure clang with -g on a .s file gets passed.
-// RUN: %clang -### -c -integrated-as -g -x assembler %s 2>&1 \
+// This requires a target that defaults to DWARF.
+// RUN: %clang -### --target=x86_64-linux-gnu -c -integrated-as -g -x assembler %s 2>&1 \
 // RUN:   | FileCheck %s
 //
 // CHECK: "-cc1as"
 // CHECK: "-debug-info-kind=constructor"
+
+// Check that a plain -g, without any -gdwarf, for a MSVC target, doesn't
+// trigger producing DWARF output.
+// RUN: %clang -### --target=x86_64-windows-msvc -c -integrated-as -g -x assembler %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSVC %s
+//
+// MSVC: "-cc1as"
+// MSVC-NOT: "-debug-info-kind=constructor"
+
+// Check that clang-cl with the -Z7 option works the same, not triggering
+// any DWARF output.
+//
+// RUN: %clang_cl -### --target=x86_64-pc-windows-msvc -c -Z7 -x assembler -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MSVC %s
 
 // Check to make sure clang with -g on a .s file gets passed -dwarf-debug-producer.
 // RUN: %clang -### -c -integrated-as -g -x assembler %s 2>&1 \

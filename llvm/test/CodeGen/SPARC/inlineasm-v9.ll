@@ -1,4 +1,4 @@
-; RUN: llc -march=sparcv9 <%s | FileCheck %s
+; RUN: llc -mtriple=sparcv9 <%s | FileCheck %s
 
 ;; Ensures that inline-asm accepts and uses 'f' and 'e' register constraints.
 ; CHECK-LABEL: faddd:
@@ -57,4 +57,13 @@ Entry:
   %val = load i64, ptr %arg1
   tail call void asm sideeffect "", "{o0}"(i64 %val)
   ret void
+}
+
+; CHECK-LABEL: test_twinword:
+; CHECK: rd  %pc, %i1
+; CHECK: srlx %i1, 32, %i0
+
+define i64 @test_twinword(){
+  %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i0}"()
+  ret i64 %1
 }

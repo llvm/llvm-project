@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler
@@ -20,6 +21,7 @@ add_llvm_library(LLVMBOLTCore
   BinaryFunctionCallGraph.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp
+  BranchLivenessInfo.cpp
   CallGraph.cpp
   CallGraphWalker.cpp
   DebugData.cpp
@@ -31,10 +33,12 @@ add_llvm_library(LLVMBOLTCore
   GDBIndex.cpp
   HashUtilities.cpp
   JumpTable.cpp
+  MCInstUtils.cpp
   MCPlusBuilder.cpp
   ParallelUtilities.cpp
   Relocation.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}

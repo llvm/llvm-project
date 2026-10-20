@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck %s
 
 namespace Test1 {
   struct B1 {

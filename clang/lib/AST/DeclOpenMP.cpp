@@ -30,7 +30,7 @@ OMPThreadPrivateDecl *OMPThreadPrivateDecl::Create(ASTContext &C,
                                                    SourceLocation L,
                                                    ArrayRef<Expr *> VL) {
   auto *D = OMPDeclarativeDirective::createDirective<OMPThreadPrivateDecl>(
-      C, DC, std::nullopt, VL.size(), L);
+      C, DC, {}, VL.size(), L);
   D->setVars(VL);
   return D;
 }
@@ -43,6 +43,34 @@ OMPThreadPrivateDecl *OMPThreadPrivateDecl::CreateDeserialized(ASTContext &C,
 }
 
 void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
+  assert(VL.size() == Data->getNumChildren() &&
+         "Number of variables is not the same as the preallocated buffer");
+  llvm::copy(VL, getVars().begin());
+}
+
+//===----------------------------------------------------------------------===//
+// OMPGroupPrivateDecl Implementation.
+//===----------------------------------------------------------------------===//
+
+void OMPGroupPrivateDecl::anchor() {}
+
+OMPGroupPrivateDecl *OMPGroupPrivateDecl::Create(ASTContext &C, DeclContext *DC,
+                                                 SourceLocation L,
+                                                 ArrayRef<Expr *> VL) {
+  auto *D = OMPDeclarativeDirective::createDirective<OMPGroupPrivateDecl>(
+      C, DC, {}, VL.size(), L);
+  D->setVars(VL);
+  return D;
+}
+
+OMPGroupPrivateDecl *OMPGroupPrivateDecl::CreateDeserialized(ASTContext &C,
+                                                             GlobalDeclID ID,
+                                                             unsigned N) {
+  return OMPDeclarativeDirective::createEmptyDirective<OMPGroupPrivateDecl>(
+      C, ID, 0, N);
+}
+
+void OMPGroupPrivateDecl::setVars(ArrayRef<Expr *> VL) {
   assert(VL.size() == Data->getNumChildren() &&
          "Number of variables is not the same as the preallocated buffer");
   llvm::copy(VL, getVars().begin());

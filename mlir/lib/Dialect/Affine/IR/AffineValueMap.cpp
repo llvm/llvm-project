@@ -109,4 +109,12 @@ ArrayRef<Value> AffineValueMap::getOperands() const {
 
 AffineMap AffineValueMap::getAffineMap() const { return map.getAffineMap(); }
 
+bool AffineValueMap::operator==(const AffineValueMap &other) const {
+  AffineValueMap diff;
+  AffineValueMap::difference(*this, other, &diff);
+  return llvm::all_of(diff.getAffineMap().getResults(), [](AffineExpr e) {
+    return e == getAffineConstantExpr(0, e.getContext());
+  });
+}
+
 AffineValueMap::~AffineValueMap() = default;

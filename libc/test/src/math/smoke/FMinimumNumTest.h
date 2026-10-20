@@ -29,10 +29,10 @@ public:
     EXPECT_FP_EQ(neg_inf, func(neg_inf, aNaN));
     EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_inf, sNaN), FE_INVALID);
     EXPECT_EQ(FPBits(aNaN).uintval(), FPBits(func(aNaN, aNaN)).uintval());
-    EXPECT_FP_EQ(0.0, func(aNaN, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, aNaN));
-    EXPECT_FP_EQ_WITH_EXCEPTION(0.0, func(sNaN, 0.0), FE_INVALID);
-    EXPECT_FP_EQ_WITH_EXCEPTION(-0.0, func(-0.0, sNaN), FE_INVALID);
+    EXPECT_FP_EQ(zero, func(aNaN, zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, aNaN));
+    EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(sNaN, zero), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_zero, func(neg_zero, sNaN), FE_INVALID);
     EXPECT_FP_EQ(T(-1.2345), func(aNaN, T(-1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), aNaN));
     EXPECT_FP_EQ_WITH_EXCEPTION(T(-1.2345), func(sNaN, T(-1.2345)), FE_INVALID);
@@ -46,29 +46,29 @@ public:
 
   void testInfArg(FMinimumNumFunc func) {
     EXPECT_FP_EQ(neg_inf, func(neg_inf, inf));
-    EXPECT_FP_EQ(0.0, func(inf, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, inf));
+    EXPECT_FP_EQ(zero, func(inf, zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, inf));
     EXPECT_FP_EQ(T(1.2345), func(inf, T(1.2345)));
     EXPECT_FP_EQ(T(-1.2345), func(T(-1.2345), inf));
   }
 
   void testNegInfArg(FMinimumNumFunc func) {
     EXPECT_FP_EQ(neg_inf, func(inf, neg_inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, 0.0));
-    EXPECT_FP_EQ(neg_inf, func(-0.0, neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, zero));
+    EXPECT_FP_EQ(neg_inf, func(neg_zero, neg_inf));
     EXPECT_FP_EQ(neg_inf, func(neg_inf, T(-1.2345)));
     EXPECT_FP_EQ(neg_inf, func(T(1.2345), neg_inf));
   }
 
   void testBothZero(FMinimumNumFunc func) {
-    EXPECT_FP_EQ(0.0, func(0.0, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, 0.0));
-    EXPECT_FP_EQ(-0.0, func(0.0, -0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, -0.0));
+    EXPECT_FP_EQ(zero, func(zero, zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, zero));
+    EXPECT_FP_EQ(neg_zero, func(zero, neg_zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, neg_zero));
   }
 
   void testRange(FMinimumNumFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0, w = STORAGE_MAX;
@@ -80,7 +80,7 @@ public:
         continue;
       T x = xbits.get_val();
       T y = ybits.get_val();
-      if ((x == 0) && (y == 0))
+      if ((x == T(0)) && (y == T(0)))
         continue;
 
       if (x > y)
@@ -91,12 +91,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_NUM_TESTS(T, func)                                       \
-  using LlvmLibcFMinimumNumTest = FMinimumNumTest<T>;                          \
-  TEST_F(LlvmLibcFMinimumNumTest, NaN) { testNaN(&func); }                     \
-  TEST_F(LlvmLibcFMinimumNumTest, InfArg) { testInfArg(&func); }               \
-  TEST_F(LlvmLibcFMinimumNumTest, NegInfArg) { testNegInfArg(&func); }         \
-  TEST_F(LlvmLibcFMinimumNumTest, BothZero) { testBothZero(&func); }           \
-  TEST_F(LlvmLibcFMinimumNumTest, Range) { testRange(&func); }
+#define LIST_FMINIMUM_NUM_TESTS(Name, T, func)                                 \
+  using LlvmLibc##Name##Test = FMinimumNumTest<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMNUMTEST_H

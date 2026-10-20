@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "LinkerOptimizationHints.h"
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -25,11 +26,10 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/thread.h"
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
@@ -66,7 +66,6 @@ public:
 
   template <class LP> void run();
 
-  DefaultThreadPool threadPool;
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
@@ -410,6 +409,31 @@ private:
   StringRef path;
 };
 
+class LCSubClient final : public LoadCommand {
+public:
+  explicit LCSubClient(StringRef client) : client(client) {}
+
+  uint32_t getSize() const override {
+    return alignToPowerOf2(sizeof(sub_client_command) + client.size() + 1,
+                           target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<sub_client_command *>(buf);
+    buf += sizeof(sub_client_command);
+
+    c->cmd = LC_SUB_CLIENT;
+    c->cmdsize = getSize();
+    c->client = sizeof(sub_client_command);
+
+    memcpy(buf, client.data(), client.size());
+    buf[client.size()] = '\0';
+  }
+
+private:
+  StringRef client;
+};
+
 class LCDyldEnv final : public LoadCommand {
 public:
   explicit LCDyldEnv(StringRef name) : name(name) {}
@@ -638,8 +662,14 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
+// Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
+// reference to a thread-local both want the same value -- the address of its
+// TLV descriptor -- so one __got entry serves both, and the result no longer
+// depends on which reference the relocation scan reaches first.
+static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const lld::macho::Reloc &r) {
+                                    const Relocation &r) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -658,10 +688,10 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
-      in.tlvPointers->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
@@ -683,11 +713,11 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      lld::macho::Reloc &r = *it;
+      Relocation &r = *it;
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+      if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
         r.referent = referentIsec->canonical();
 
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
@@ -701,7 +731,7 @@ void Writer::scanRelocations() {
           it->referent = referentIsec->canonical();
         continue;
       }
-      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
@@ -823,6 +853,8 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
                                             config->dylibCompatibilityVersion,
                                             config->dylibCurrentVersion));
+    for (StringRef client : config->allowableClients)
+      in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
     break;
@@ -912,17 +944,20 @@ template <class LP> void Writer::createLoadCommands() {
     }
 
     ordinal = dylibFile->ordinal = dylibOrdinal++;
-    LoadCommandType lcType =
-        dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
-            ? LC_LOAD_WEAK_DYLIB
-            : LC_LOAD_DYLIB;
+    LoadCommandType lcType = LC_LOAD_DYLIB;
+    if (dylibFile->reexport) {
+      if (dylibFile->forceWeakImport)
+        warn(path::filename(dylibFile->getName()) +
+             " is re-exported so cannot be weak-linked");
+
+      lcType = LC_REEXPORT_DYLIB;
+    } else if (dylibFile->forceWeakImport ||
+               dylibFile->refState == RefState::Weak) {
+      lcType = LC_LOAD_WEAK_DYLIB;
+    }
     in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
                                             dylibFile->compatibilityVersion,
                                             dylibFile->currentVersion));
-
-    if (dylibFile->reexport)
-      in.header->addLoadCommand(
-          make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
   }
 
   for (const auto &dyldEnv : config->dyldEnvs)
@@ -942,6 +977,45 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+// __objc_stubs is synthetic, so the input section sorting in
+// sortSegmentsAndSections() does not reach its entries. Order each stub by the
+// priority of the earliest-laid-out section that calls it, which keeps the
+// stubs reached during startup together.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &priorities) {
+  if (priorities.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  // ICF may make the prioritized section differ from the section whose
+  // relocations describe the original calls. Use the canonical section for
+  // priority lookup, but scan the original section's relocations.
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const ConcatInputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    const auto *priorityIsec = cast<ConcatInputSection>(isec->canonical());
+    if (priorityIsec->shouldOmitFromOutput())
+      continue;
+    auto prio = priorities.find(priorityIsec);
+    if (prio == priorities.end())
+      continue;
+    for (const Relocation &r : isec->relocs) {
+      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
+        continue;
+      auto *stub = dyn_cast_if_present<Symbol *>(r.referent);
+      if (!stub || !ObjCStubsSection::isObjCStubSymbol(stub))
+        continue;
+      auto [it, inserted] = stubPriority.try_emplace(stub, prio->second);
+      if (!inserted)
+        it->second = std::min(it->second, prio->second);
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  in.objcStubs->sortSymbols(stubPriority);
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -949,8 +1023,10 @@ static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
   sortOutputSegments();
 
-  DenseMap<const InputSection *, size_t> isecPriorities =
+  DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -978,12 +1054,16 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
-              });
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
+        if (!isecPriorities.empty()) {
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }
@@ -1121,14 +1201,12 @@ void Writer::finalizeLinkEditSegment() {
       symtabSection,     indirectSymtabSection,
       dataInCodeSection, functionStartsSection,
   };
-  SmallVector<std::shared_future<void>> threadFutures;
-  threadFutures.reserve(linkEditSections.size());
-  for (LinkEditSection *osec : linkEditSections)
-    if (osec)
-      threadFutures.emplace_back(threadPool.async(
-          [](LinkEditSection *osec) { osec->finalizeContents(); }, osec));
-  for (std::shared_future<void> &future : threadFutures)
-    future.wait();
+
+  parallelForEach(linkEditSections.begin(), linkEditSections.end(),
+                  [](LinkEditSection *osec) {
+                    if (osec)
+                      osec->finalizeContents();
+                  });
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -1170,6 +1248,8 @@ void Writer::openFile() {
 }
 
 void Writer::writeSections() {
+  TimeTraceScope timeScope("Write output sections");
+
   uint8_t *buf = buffer->getBufferStart();
   std::vector<const OutputSection *> osecs;
   for (const OutputSegment *seg : outputSegments)
@@ -1181,14 +1261,15 @@ void Writer::writeSections() {
 }
 
 void Writer::applyOptimizationHints() {
-  if (config->arch() != AK_arm64 || config->ignoreOptimizationHints)
+  if (!is_contained({AK_arm64, AK_arm64e, AK_arm64_32}, config->arch()) ||
+      config->ignoreOptimizationHints)
     return;
 
   uint8_t *buf = buffer->getBufferStart();
   TimeTraceScope timeScope("Apply linker optimization hints");
   parallelForEach(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
-      target->applyOptimizationHints(buf, *objFile);
+      macho::applyOptimizationHints(buf, *objFile);
   });
 }
 
@@ -1200,18 +1281,15 @@ void Writer::writeUuid() {
 
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
   std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
+
   // Leave one slot for filename
   std::vector<uint64_t> hashes(chunks.size() + 1);
-  SmallVector<std::shared_future<void>> threadFutures;
-  threadFutures.reserve(chunks.size());
-  for (size_t i = 0; i < chunks.size(); ++i)
-    threadFutures.emplace_back(threadPool.async(
-        [&](size_t j) { hashes[j] = xxh3_64bits(chunks[j]); }, i));
-  for (std::shared_future<void> &future : threadFutures)
-    future.wait();
+  parallelFor(0, chunks.size(),
+              [&](size_t i) { hashes[i] = xxh3_64bits(chunks[i]); });
   // Append the output filename so that identical binaries with different names
   // don't get the same UUID.
   hashes[chunks.size()] = xxh3_64bits(sys::path::filename(config->finalOutput));
+
   uint64_t digest = xxh3_64bits({reinterpret_cast<uint8_t *>(hashes.data()),
                                  hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
@@ -1330,15 +1408,18 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
-  threadPool.async([&] {
+
+  llvm::thread mapFileWriter([&] {
     if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
       timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
     writeMapFile();
     if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
       timeTraceProfilerFinishThread();
   });
+
   finalizeLinkEditSegment();
   writeOutputFile();
+  mapFileWriter.join();
 }
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }
@@ -1347,13 +1428,11 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupStrings)
-    in.cStringSection =
-        make<DeduplicatedCStringSection>(section_names::cString);
-  else
-    in.cStringSection = make<CStringSection>(section_names::cString);
-  in.objcMethnameSection =
-      make<DeduplicatedCStringSection>(section_names::objcMethname);
+  // Materialize cstring and objcMethname sections
+  in.cStringSection = in.getOrCreateCStringSection(section_names::cString);
+  in.objcMethnameSection = cast<DeduplicatedCStringSection>(
+      in.getOrCreateCStringSection(section_names::objcMethname,
+                                   /*forceDedupStrings=*/true));
   in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();
@@ -1367,7 +1446,6 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

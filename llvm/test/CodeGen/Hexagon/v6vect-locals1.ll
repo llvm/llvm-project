@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; Checking for alignment of stack to 64.
 ; CHECK: r{{[0-9]+}} = and(r{{[0-9]+}},#-64)

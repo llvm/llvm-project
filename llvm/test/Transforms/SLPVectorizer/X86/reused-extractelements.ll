@@ -7,8 +7,7 @@
 ; YAML-NEXT: Name:            NotPossible
 ; YAML-NEXT: Function:        g
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'Cannot SLP vectorize list: vectorization was impossible'
-; YAML-NEXT:   - String:          ' with available vectorization factors'
+; YAML-NEXT:   - String:          'Cannot SLP vectorize list: only 2 elements of buildvector, trying reduction first.'
 
 define <2 x i32> @g(<2 x i32> %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: @g(

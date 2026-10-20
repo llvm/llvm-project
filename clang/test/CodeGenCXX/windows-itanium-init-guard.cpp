@@ -11,9 +11,9 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps4 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllexport)" | FileCheck %s --check-prefixes=EXPORT
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps4 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllimport)" | FileCheck %s --check-prefixes=IMPORT
 
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI= | FileCheck %s --check-prefixes=NONE
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllexport)" | FileCheck %s --check-prefixes=EXPORT
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllimport)" | FileCheck %s --check-prefixes=IMPORT
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-sie-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI= | FileCheck %s --check-prefixes=NONE
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-sie-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllexport)" | FileCheck %s --check-prefixes=EXPORT
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-sie-ps5 -fdeclspec %s -O1 -disable-llvm-passes -o - -DAPI="__declspec(dllimport)" | FileCheck %s --check-prefixes=IMPORT
 
 //NONE: @_ZZN3foo3GetEvE9Singleton = linkonce_odr {{(dso_local )?}}global
 //NONE: @_ZGVZN3foo3GetEvE9Singleton = linkonce_odr {{(dso_local )?}}global

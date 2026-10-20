@@ -32,7 +32,9 @@ module Dependency { header "dependency.h" }
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/deps.json
 
 // Check that FW is reported to depend on FW_Private.
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
@@ -42,8 +44,8 @@ module Dependency { header "dependency.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules/dependency.h",
-// CHECK-NEXT:         "[[PREFIX]]/modules/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/modules/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/modules/dependency.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Dependency"
@@ -60,9 +62,9 @@ module Dependency { header "dependency.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {
@@ -110,8 +112,7 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
-// CHECK-NEXT:           "file-deps": [
+// CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"

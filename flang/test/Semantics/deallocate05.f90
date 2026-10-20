@@ -27,6 +27,11 @@ Integer :: pi
 Character(256) :: ee
 Procedure(Real) :: prp
 
+type at
+  real, allocatable :: a
+end type
+type(at) :: c[*]
+
 Allocate(rp)
 Deallocate(rp)
 
@@ -66,5 +71,8 @@ Deallocate(x, errmsg=ee, errmsg=ee)
 Deallocate(x, stat=s, errmsg=ee, stat=s)
 !ERROR: ERRMSG may not be duplicated in a DEALLOCATE statement
 Deallocate(x, stat=s, errmsg=ee, errmsg=ee)
+
+!ERROR: Component in DEALLOCATE statement may not be coindexed
+deallocate(c[1]%a)
 
 End Program deallocatetest

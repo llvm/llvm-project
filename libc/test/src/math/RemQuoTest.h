@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 
 #include "hdr/math_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -18,6 +19,7 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::Sign;
 
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -103,8 +105,10 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr StorageType COUNT = 1'231;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
          v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
       T x = FPBits(v).get_val(), y = FPBits(w).get_val();
@@ -116,7 +120,7 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr StorageType COUNT = 1'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
          v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
@@ -127,7 +131,7 @@ public:
 
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. Hence we test for them separately.
-      if (isnan(x) || isnan(y)) {
+      if (FPBits(v).is_nan() || FPBits(w).is_nan()) {
         ASSERT_FP_EQ(result.f, nan);
         continue;
       }
@@ -137,13 +141,13 @@ public:
   }
 };
 
-#define LIST_REMQUO_TESTS(T, func)                                             \
-  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
-  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
+#define LIST_REMQUO_TESTS(Name, T, func)                                       \
+  using LlvmLibc##Name##Test = RemQuoTestTemplate<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, EqualNumeratorAndDenominator) {                 \
     testEqualNumeratorAndDenominator(&func);                                   \
   }                                                                            \
-  TEST_F(LlvmLibcRemQuoTest, SubnormalRange) { testSubnormalRange(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H

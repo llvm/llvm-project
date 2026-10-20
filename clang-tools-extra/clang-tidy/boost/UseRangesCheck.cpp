@@ -1,4 +1,4 @@
-//===--- UseRangesCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <utility>
 
 // FixItHint - Let the docs script know that this class does provide fixits
 
@@ -200,31 +201,30 @@ private:
 } // namespace
 
 utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
-
   ReplacerMap Results;
   static const Signature SingleSig = {{0}};
   static const Signature TwoSig = {{0}, {2}};
-  static const auto AddFrom =
+  const auto AddFrom =
       [&Results](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
                  std::initializer_list<StringRef> Names, StringRef Prefix) {
-        llvm::SmallString<64> Buffer;
+        SmallString<64> Buffer;
         for (const auto &Name : Names) {
           Buffer.assign({"::", Prefix, (Prefix.empty() ? "" : "::"), Name});
           Results.try_emplace(Buffer, Replacer);
         }
       };
 
-  static const auto AddFromStd =
-      [](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
-         std::initializer_list<StringRef> Names) {
-        AddFrom(Replacer, Names, "std");
+  const auto AddFromStd =
+      [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
+          std::initializer_list<StringRef> Names) {
+        AddFrom(std::move(Replacer), Names, "std");
       };
 
-  static const auto AddFromBoost =
-      [](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
-         std::initializer_list<
-             std::pair<StringRef, std::initializer_list<StringRef>>>
-             NamespaceAndNames) {
+  const auto AddFromBoost =
+      [&](const llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> &Replacer,
+          std::initializer_list<
+              std::pair<StringRef, std::initializer_list<StringRef>>>
+              NamespaceAndNames) {
         for (auto [Namespace, Names] : NamespaceAndNames)
           AddFrom(Replacer, Names,
                   SmallString<64>{"boost", (Namespace.empty() ? "" : "::"),
@@ -331,21 +331,24 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
 
 UseRangesCheck::UseRangesCheck(StringRef Name, ClangTidyContext *Context)
     : utils::UseRangesCheck(Name, Context),
-      IncludeBoostSystem(Options.get("IncludeBoostSystem", true)) {}
+      IncludeBoostSystem(Options.get("IncludeBoostSystem", true)),
+      UseReversePipe(Options.get("UseReversePipe", false)) {}
 
 void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   utils::UseRangesCheck::storeOptions(Opts);
   Options.store(Opts, "IncludeBoostSystem", IncludeBoostSystem);
+  Options.store(Opts, "UseReversePipe", UseReversePipe);
 }
+
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {
-  DiagnosticBuilder D =
+  const DiagnosticBuilder D =
       diag(Call.getBeginLoc(), "use a %0 version of this algorithm");
   D << (Call.getDirectCallee()->isInStdNamespace() ? "boost" : "ranged");
   return D;
 }
 ArrayRef<std::pair<StringRef, StringRef>>
 UseRangesCheck::getFreeBeginEndMethods() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::begin", "::std::end"},
       {"::std::cbegin", "::std::cend"},
       {"::boost::range_adl_barrier::begin", "::boost::range_adl_barrier::end"},
@@ -356,16 +359,16 @@ UseRangesCheck::getFreeBeginEndMethods() const {
 }
 std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"},
       {"::std::crbegin", "::std::crend"},
       {"::boost::rbegin", "::boost::rend"},
       {"::boost::const_rbegin", "::boost::const_rend"},
   };
-  return ReverseIteratorDescriptor{"boost::adaptors::reverse",
-                                   IncludeBoostSystem
-                                       ? "<boost/range/adaptor/reversed.hpp>"
-                                       : "boost/range/adaptor/reversed.hpp",
-                                   Refs};
+  return ReverseIteratorDescriptor{
+      UseReversePipe ? "boost::adaptors::reversed" : "boost::adaptors::reverse",
+      IncludeBoostSystem ? "<boost/range/adaptor/reversed.hpp>"
+                         : "boost/range/adaptor/reversed.hpp",
+      Refs, UseReversePipe};
 }
 } // namespace clang::tidy::boost

@@ -72,4 +72,11 @@ contains
     !$acc routine seq bind(dummy_sub)
   end subroutine sub6
 
+  subroutine sub7(a)
+    real :: a(:)
+    !ERROR: SHORTLOOP clause is not allowed on the KERNELS directive
+    !$acc kernels shortloop
+    !$acc end kernels
+  end subroutine sub7
+
 end module openacc_routine_validity

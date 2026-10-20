@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc < %s | FileCheck %s
+; RUN: llc -mtriple=sparc < %s | FileCheck %s
 
 ;; Verify that g1 (the output of first asm) is properly understood to
 ;; be clobbered by the call instruction, and moved out of the way

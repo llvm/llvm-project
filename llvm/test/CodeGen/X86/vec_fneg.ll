@@ -3,13 +3,13 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX1
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX512,X86-AVX512VL
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X86,X86-AVX512,X86-AVX512FP16
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX512,X86-AVX512FP16
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512dq,+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX512,X86-AVX512VLDQ
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X64,X64-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX512,X64-AVX512VL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X64,X64-AVX512,X64-AVX512FP16
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX512,X64-AVX512FP16
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX512,X64-AVX512VLDQ
 
 ;
@@ -34,7 +34,7 @@ define <2 x double> @fneg_v2f64(<2 x double> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v2f64:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v2f64:
@@ -59,7 +59,7 @@ define <2 x double> @fneg_v2f64(<2 x double> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v2f64:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; X64-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v2f64:
@@ -94,7 +94,7 @@ define <4 x float> @fneg_v4f32(<4 x float> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v4f32:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
+; X86-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v4f32:
@@ -125,7 +125,7 @@ define <4 x float> @fneg_v4f32(<4 x float> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v4f32:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; X64-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v4f32:
@@ -223,7 +223,7 @@ define <4 x double> @fneg_v4f64(<4 x double> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v4f64:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
+; X86-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v4f64:
@@ -256,7 +256,7 @@ define <4 x double> @fneg_v4f64(<4 x double> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v4f64:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; X64-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v4f64:
@@ -293,7 +293,7 @@ define <8 x float> @fneg_v8f32(<8 x float> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v8f32:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v8f32:
@@ -326,7 +326,7 @@ define <8 x float> @fneg_v8f32(<8 x float> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v8f32:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v8f32:
@@ -432,7 +432,7 @@ define <8 x double> @fneg_v8f64(<8 x double> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v8f64:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
+; X86-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v8f64:
@@ -463,7 +463,7 @@ define <8 x double> @fneg_v8f64(<8 x double> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v8f64:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; X64-AVX512FP16-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v8f64:
@@ -504,7 +504,7 @@ define <16 x float> @fneg_v16f32(<16 x float> %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v16f32:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
+; X86-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fneg_v16f32:
@@ -535,7 +535,7 @@ define <16 x float> @fneg_v16f32(<16 x float> %p) nounwind {
 ;
 ; X64-AVX512FP16-LABEL: fneg_v16f32:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; X64-AVX512FP16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fneg_v16f32:

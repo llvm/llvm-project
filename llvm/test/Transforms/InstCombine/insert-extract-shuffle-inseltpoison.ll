@@ -725,7 +725,7 @@ define <4 x float> @insert_demanded_element_op1(<4 x float> %x, <4 x float> %y) 
 define <4 x float> @splat_constant(<4 x float> %x) {
 ; CHECK-LABEL: @splat_constant(
 ; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x float> [[X:%.*]], float 3.000000e+00, i64 3
-; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[INS3]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[INS3]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %ins3 = insertelement <4 x float> %x, float 3.0, i32 3

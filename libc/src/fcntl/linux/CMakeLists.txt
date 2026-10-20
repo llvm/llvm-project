@@ -5,9 +5,22 @@ add_entrypoint_object(
   HDRS
     ../creat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fallocate
+  SRCS
+    fallocate.cpp
+  HDRS
+    ../fallocate.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.hdr.types.off_t
 )
 
 add_entrypoint_object(
@@ -17,8 +30,10 @@ add_entrypoint_object(
   HDRS
     ../fcntl.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -28,8 +43,9 @@ add_entrypoint_object(
   HDRS
     ../open.h
   DEPENDS
-    libc.include.fcntl
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.errno.errno
 )
 
@@ -40,7 +56,47 @@ add_entrypoint_object(
   HDRS
     ../openat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.types.mode_t
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  posix_fadvise
+  SRCS
+    posix_fadvise.cpp
+  HDRS
+    ../posix_fadvise.h
+  DEPENDS
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fadvise64
+  SRCS
+    posix_fadvise64.cpp
+  HDRS
+    ../posix_fadvise64.h
+  DEPENDS
+    libc.hdr.types.off64_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fallocate
+  SRCS
+    posix_fallocate.cpp
+  HDRS
+    ../posix_fallocate.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )

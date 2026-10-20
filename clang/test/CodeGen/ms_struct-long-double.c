@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple i686-windows-gnu -fdump-record-layouts %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm-only -triple i686-windows-cygnus -fdump-record-layouts %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm-only -triple i686-linux -fdump-record-layouts -Wno-incompatible-ms-struct %s | FileCheck %s
 // RUN: not %clang_cc1 -emit-llvm-only -triple i686-linux -fdump-record-layouts %s 2>&1 | FileCheck %s -check-prefix=ERROR
 

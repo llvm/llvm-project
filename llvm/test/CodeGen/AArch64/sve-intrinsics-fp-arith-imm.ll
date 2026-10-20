@@ -8,11 +8,9 @@ define <vscale x 8 x half> @fadd_h_immhalf(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -23,12 +21,10 @@ define <vscale x 8 x half> @fadd_h_immhalf_zero(<vscale x 8 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -37,11 +33,9 @@ define <vscale x 8 x half> @fadd_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x h
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -51,12 +45,10 @@ define <vscale x 8 x half> @fadd_h_immone_zero(<vscale x 8 x i1> %pg, <vscale x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -65,11 +57,9 @@ define <vscale x 4 x float> @fadd_s_immhalf(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -79,12 +69,10 @@ define <vscale x 4 x float> @fadd_s_immhalf_zero(<vscale x 4 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -93,11 +81,9 @@ define <vscale x 4 x float> @fadd_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -107,12 +93,10 @@ define <vscale x 4 x float> @fadd_s_immone_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -121,11 +105,9 @@ define <vscale x 2 x double> @fadd_d_immhalf(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -135,12 +117,10 @@ define <vscale x 2 x double> @fadd_d_immhalf_zero(<vscale x 2 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -149,11 +129,9 @@ define <vscale x 2 x double> @fadd_d_immone(<vscale x 2 x i1> %pg, <vscale x 2 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -163,12 +141,10 @@ define <vscale x 2 x double> @fadd_d_immone_zero(<vscale x 2 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -177,11 +153,9 @@ define <vscale x 8 x half> @fmax_h_immzero(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmax.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -191,12 +165,10 @@ define <vscale x 8 x half> @fmax_h_immzero_zero(<vscale x 8 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmax.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -205,11 +177,9 @@ define <vscale x 8 x half> @fmax_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x h
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmax.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -219,12 +189,10 @@ define <vscale x 8 x half> @fmax_h_immone_zero(<vscale x 8 x i1> %pg, <vscale x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmax.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -233,11 +201,9 @@ define <vscale x 4 x float> @fmax_s_immzero(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmax.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -247,12 +213,10 @@ define <vscale x 4 x float> @fmax_s_immzero_zero(<vscale x 4 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmax.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -261,11 +225,9 @@ define <vscale x 4 x float> @fmax_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmax.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -275,12 +237,10 @@ define <vscale x 4 x float> @fmax_s_immone_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmax.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -289,11 +249,9 @@ define <vscale x 2 x double> @fmax_d_immzero(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmax.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -303,12 +261,10 @@ define <vscale x 2 x double> @fmax_d_immzero_zero(<vscale x 2 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmax.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -317,11 +273,9 @@ define <vscale x 2 x double> @fmax_d_immone(<vscale x 2 x i1> %pg, <vscale x 2 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmax.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -331,12 +285,10 @@ define <vscale x 2 x double> @fmax_d_immone_zero(<vscale x 2 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmax.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -345,11 +297,9 @@ define <vscale x 8 x half> @fmaxnm_h_immzero(<vscale x 8 x i1> %pg, <vscale x 8 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -359,12 +309,10 @@ define <vscale x 8 x half> @fmaxnm_h_immzero_zero(<vscale x 8 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a_z,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a_z,
+                                                                   <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -373,11 +321,9 @@ define <vscale x 8 x half> @fmaxnm_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -387,12 +333,10 @@ define <vscale x 8 x half> @fmaxnm_h_immone_zero(<vscale x 8 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a_z,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a_z,
+                                                                   <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -401,11 +345,9 @@ define <vscale x 4 x float> @fmaxnm_s_immzero(<vscale x 4 x i1> %pg, <vscale x 4
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -415,12 +357,10 @@ define <vscale x 4 x float> @fmaxnm_s_immzero_zero(<vscale x 4 x i1> %pg, <vscal
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a_z,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a_z,
+                                                                    <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -429,11 +369,9 @@ define <vscale x 4 x float> @fmaxnm_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -443,12 +381,10 @@ define <vscale x 4 x float> @fmaxnm_s_immone_zero(<vscale x 4 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a_z,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a_z,
+                                                                    <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -457,11 +393,9 @@ define <vscale x 2 x double> @fmaxnm_d_immzero(<vscale x 2 x i1> %pg, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -471,12 +405,10 @@ define <vscale x 2 x double> @fmaxnm_d_immzero_zero(<vscale x 2 x i1> %pg, <vsca
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a_z,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a_z,
+                                                                     <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -485,11 +417,9 @@ define <vscale x 2 x double> @fmaxnm_d_immone(<vscale x 2 x i1> %pg, <vscale x 2
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -499,12 +429,10 @@ define <vscale x 2 x double> @fmaxnm_d_immone_zero(<vscale x 2 x i1> %pg, <vscal
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a_z,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a_z,
+                                                                     <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -513,11 +441,9 @@ define <vscale x 8 x half> @fmin_h_immzero(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmin.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -527,12 +453,10 @@ define <vscale x 8 x half> @fmin_h_immzero_zero(<vscale x 8 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmin.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -541,11 +465,9 @@ define <vscale x 8 x half> @fmin_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x h
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmin.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -555,12 +477,10 @@ define <vscale x 8 x half> @fmin_h_immone_zero(<vscale x 8 x i1> %pg, <vscale x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmin.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -569,11 +489,9 @@ define <vscale x 4 x float> @fmin_s_immzero(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmin.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -583,12 +501,10 @@ define <vscale x 4 x float> @fmin_s_immzero_zero(<vscale x 4 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmin.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -597,11 +513,9 @@ define <vscale x 4 x float> @fmin_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmin.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -611,12 +525,10 @@ define <vscale x 4 x float> @fmin_s_immone_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmin.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -625,11 +537,9 @@ define <vscale x 2 x double> @fmin_d_immzero(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmin.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -639,12 +549,10 @@ define <vscale x 2 x double> @fmin_d_immzero_zero(<vscale x 2 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmin.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -653,11 +561,9 @@ define <vscale x 2 x double> @fmin_d_immone(<vscale x 2 x i1> %pg, <vscale x 2 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmin.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -667,12 +573,10 @@ define <vscale x 2 x double> @fmin_d_immone_zero(<vscale x 2 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmin.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -681,11 +585,9 @@ define <vscale x 8 x half> @fminnm_h_immzero(<vscale x 8 x i1> %pg, <vscale x 8 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fminnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -695,12 +597,10 @@ define <vscale x 8 x half> @fminnm_h_immzero_zero(<vscale x 8 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fminnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a_z,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a_z,
+                                                                   <vscale x 8 x half> zeroinitializer)
   ret <vscale x 8 x half> %out
 }
 
@@ -709,11 +609,9 @@ define <vscale x 8 x half> @fminnm_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fminnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -723,12 +621,10 @@ define <vscale x 8 x half> @fminnm_h_immone_zero(<vscale x 8 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fminnm.nxv8f16(<vscale x 8 x i1> %pg,
-                                                              <vscale x 8 x half> %a_z,
-                                                              <vscale x 8 x half> %splat)
+                                                                   <vscale x 8 x half> %a_z,
+                                                                   <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -737,11 +633,9 @@ define <vscale x 4 x float> @fminnm_s_immzero(<vscale x 4 x i1> %pg, <vscale x 4
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fminnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -751,12 +645,10 @@ define <vscale x 4 x float> @fminnm_s_immzero_zero(<vscale x 4 x i1> %pg, <vscal
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fminnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a_z,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a_z,
+                                                                    <vscale x 4 x float> zeroinitializer)
   ret <vscale x 4 x float> %out
 }
 
@@ -765,11 +657,9 @@ define <vscale x 4 x float> @fminnm_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fminnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -779,12 +669,10 @@ define <vscale x 4 x float> @fminnm_s_immone_zero(<vscale x 4 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fminnm.nxv4f32(<vscale x 4 x i1> %pg,
-                                                               <vscale x 4 x float> %a_z,
-                                                               <vscale x 4 x float> %splat)
+                                                                    <vscale x 4 x float> %a_z,
+                                                                    <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -793,11 +681,9 @@ define <vscale x 2 x double> @fminnm_d_immzero(<vscale x 2 x i1> %pg, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fminnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -807,12 +693,10 @@ define <vscale x 2 x double> @fminnm_d_immzero_zero(<vscale x 2 x i1> %pg, <vsca
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, #0.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fminnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a_z,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a_z,
+                                                                     <vscale x 2 x double> zeroinitializer)
   ret <vscale x 2 x double> %out
 }
 
@@ -821,11 +705,9 @@ define <vscale x 2 x double> @fminnm_d_immone(<vscale x 2 x i1> %pg, <vscale x 2
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fminnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -835,12 +717,10 @@ define <vscale x 2 x double> @fminnm_d_immone_zero(<vscale x 2 x i1> %pg, <vscal
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fminnm.nxv2f64(<vscale x 2 x i1> %pg,
-                                                                <vscale x 2 x double> %a_z,
-                                                                <vscale x 2 x double> %splat)
+                                                                     <vscale x 2 x double> %a_z,
+                                                                     <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -849,11 +729,9 @@ define <vscale x 8 x half> @fmul_h_immhalf(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -863,12 +741,10 @@ define <vscale x 8 x half> @fmul_h_immhalf_zero(<vscale x 8 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -877,11 +753,9 @@ define <vscale x 8 x half> @fmul_h_immtwo(<vscale x 8 x i1> %pg, <vscale x 8 x h
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 2.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -891,12 +765,10 @@ define <vscale x 8 x half> @fmul_h_immtwo_zero(<vscale x 8 x i1> %pg, <vscale x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 2.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -905,11 +777,9 @@ define <vscale x 4 x float> @fmul_s_immhalf(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -919,12 +789,10 @@ define <vscale x 4 x float> @fmul_s_immhalf_zero(<vscale x 4 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -933,11 +801,9 @@ define <vscale x 4 x float> @fmul_s_immtwo(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 2.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -947,12 +813,10 @@ define <vscale x 4 x float> @fmul_s_immtwo_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 2.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -961,11 +825,9 @@ define <vscale x 2 x double> @fmul_d_immhalf(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -975,12 +837,10 @@ define <vscale x 2 x double> @fmul_d_immhalf_zero(<vscale x 2 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -989,11 +849,9 @@ define <vscale x 2 x double> @fmul_d_immtwo(<vscale x 2 x i1> %pg, <vscale x 2 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 2.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1003,12 +861,10 @@ define <vscale x 2 x double> @fmul_d_immtwo_zero(<vscale x 2 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, #2.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 2.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 2.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1017,11 +873,9 @@ define <vscale x 8 x half> @fsub_h_immhalf(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1031,12 +885,10 @@ define <vscale x 8 x half> @fsub_h_immhalf_zero(<vscale x 8 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1045,11 +897,9 @@ define <vscale x 8 x half> @fsub_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x h
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1059,12 +909,10 @@ define <vscale x 8 x half> @fsub_h_immone_zero(<vscale x 8 x i1> %pg, <vscale x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.nxv8f16(<vscale x 8 x i1> %pg,
-                                                            <vscale x 8 x half> %a_z,
-                                                            <vscale x 8 x half> %splat)
+                                                                 <vscale x 8 x half> %a_z,
+                                                                 <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1073,11 +921,9 @@ define <vscale x 4 x float> @fsub_s_immhalf(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1087,12 +933,10 @@ define <vscale x 4 x float> @fsub_s_immhalf_zero(<vscale x 4 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1101,11 +945,9 @@ define <vscale x 4 x float> @fsub_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1115,12 +957,10 @@ define <vscale x 4 x float> @fsub_s_immone_zero(<vscale x 4 x i1> %pg, <vscale x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.nxv4f32(<vscale x 4 x i1> %pg,
-                                                             <vscale x 4 x float> %a_z,
-                                                             <vscale x 4 x float> %splat)
+                                                                  <vscale x 4 x float> %a_z,
+                                                                  <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1129,11 +969,9 @@ define <vscale x 2 x double> @fsub_d_immhalf(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1143,12 +981,10 @@ define <vscale x 2 x double> @fsub_d_immhalf_zero(<vscale x 2 x i1> %pg, <vscale
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1157,11 +993,9 @@ define <vscale x 2 x double> @fsub_d_immone(<vscale x 2 x i1> %pg, <vscale x 2 x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1171,12 +1005,10 @@ define <vscale x 2 x double> @fsub_d_immone_zero(<vscale x 2 x i1> %pg, <vscale 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> %pg,
-                                                              <vscale x 2 x double> %a_z,
-                                                              <vscale x 2 x double> %splat)
+                                                                   <vscale x 2 x double> %a_z,
+                                                                   <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1186,12 +1018,10 @@ define <vscale x 8 x half> @fsubr_h_immhalf(<vscale x 8 x i1> %pg, <vscale x 8 x
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsubr.nxv8f16(<vscale x 8 x i1> %pg,
-                                                             <vscale x 8 x half> %a_z,
-                                                             <vscale x 8 x half> %splat)
+                                                                  <vscale x 8 x half> %a_z,
+                                                                  <vscale x 8 x half> splat(half 0.500000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1201,12 +1031,10 @@ define <vscale x 8 x half> @fsubr_h_immone(<vscale x 8 x i1> %pg, <vscale x 8 x 
 ; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
 ; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> zeroinitializer
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsubr.nxv8f16(<vscale x 8 x i1> %pg,
-                                                             <vscale x 8 x half> %a_z,
-                                                             <vscale x 8 x half> %splat)
+                                                                  <vscale x 8 x half> %a_z,
+                                                                  <vscale x 8 x half> splat(half 1.000000e+00))
   ret <vscale x 8 x half> %out
 }
 
@@ -1216,12 +1044,10 @@ define <vscale x 4 x float> @fsubr_s_immhalf(<vscale x 4 x i1> %pg, <vscale x 4 
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsubr.nxv4f32(<vscale x 4 x i1> %pg,
-                                                              <vscale x 4 x float> %a_z,
-                                                              <vscale x 4 x float> %splat)
+                                                                   <vscale x 4 x float> %a_z,
+                                                                   <vscale x 4 x float> splat(float 0.500000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1231,12 +1057,10 @@ define <vscale x 4 x float> @fsubr_s_immone(<vscale x 4 x i1> %pg, <vscale x 4 x
 ; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
 ; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> zeroinitializer
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsubr.nxv4f32(<vscale x 4 x i1> %pg,
-                                                              <vscale x 4 x float> %a_z,
-                                                              <vscale x 4 x float> %splat)
+                                                                   <vscale x 4 x float> %a_z,
+                                                                   <vscale x 4 x float> splat(float 1.000000e+00))
   ret <vscale x 4 x float> %out
 }
 
@@ -1246,12 +1070,10 @@ define <vscale x 2 x double> @fsubr_d_immhalf(<vscale x 2 x i1> %pg, <vscale x 2
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, #0.5
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsubr.nxv2f64(<vscale x 2 x i1> %pg,
-                                                               <vscale x 2 x double> %a_z,
-                                                               <vscale x 2 x double> %splat)
+                                                                    <vscale x 2 x double> %a_z,
+                                                                    <vscale x 2 x double> splat(double 0.500000e+00))
   ret <vscale x 2 x double> %out
 }
 
@@ -1261,17 +1083,12 @@ define <vscale x 2 x double> @fsubr_d_immone(<vscale x 2 x i1> %pg, <vscale x 2 
 ; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
 ; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, #1.0
 ; CHECK-NEXT:    ret
-  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
-  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> zeroinitializer
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsubr.nxv2f64(<vscale x 2 x i1> %pg,
-                                                               <vscale x 2 x double> %a_z,
-                                                               <vscale x 2 x double> %splat)
+                                                                    <vscale x 2 x double> %a_z,
+                                                                    <vscale x 2 x double> splat(double 1.000000e+00))
   ret <vscale x 2 x double> %out
 }
-
-
-;; Arithmetic intrinsic declarations
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)

@@ -40,11 +40,11 @@ unwind_sources = [
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
   "assembly.h",
-  "cet_unwind.h",
   "config.h",
   "dwarf2.h",
   "libunwind.cpp",
   "libunwind_ext.h",
+  "shadow_stack_unwind.h",
 ]
 if (current_os == "aix") {
   unwind_sources += [ "Unwind_AIXExtras.cpp" ]

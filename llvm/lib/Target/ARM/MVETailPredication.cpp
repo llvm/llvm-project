@@ -44,8 +44,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -94,10 +92,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 
@@ -205,8 +201,8 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   if (!L->makeLoopInvariant(ElemCount, Changed))
     return nullptr;
 
-  auto *EC= SE->getSCEV(ElemCount);
-  auto *TC = SE->getSCEV(TripCount);
+  const SCEV *EC = SE->getSCEV(ElemCount);
+  const SCEV *TC = SE->getSCEV(TripCount);
   int VectorWidth =
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
   if (VectorWidth != 2 && VectorWidth != 4 && VectorWidth != 8 &&
@@ -228,7 +224,7 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   // different counter. Using SCEV, we check that the induction is of the
   // form i = i + 4, where the increment must be equal to the VectorWidth.
   auto *IV = ActiveLaneMask->getOperand(0);
-  auto *IVExpr = SE->getSCEV(IV);
+  const SCEV *IVExpr = SE->getSCEV(IV);
   auto *AddExpr = dyn_cast<SCEVAddRecExpr>(IVExpr);
 
   if (!AddExpr) {
@@ -291,14 +287,16 @@ const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     //
     // which what we will be using here.
     //
-    auto *VW = SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
+    const SCEV *VW =
+        SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
     // ElementCount + (VW-1):
-    auto *Start = AddExpr->getStart();
-    auto *ECPlusVWMinus1 = SE->getAddExpr(EC,
+    const SCEV *Start = AddExpr->getStart();
+    const SCEV *ECPlusVWMinus1 = SE->getAddExpr(
+        EC,
         SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
 
     // Ceil = ElementCount + (VW-1) / VW
-    auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
+    const SCEV *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
 
     // Prevent unused variable warnings with TC
     (void)TC;
@@ -381,11 +379,11 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
 
   // Insert a phi to count the number of elements processed by the loop.
-  Builder.SetInsertPoint(L->getHeader(), L->getHeader()->getFirstNonPHIIt());
+  Builder.SetInsertPoint(L->getHeader()->getFirstNonPHIIt());
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
-  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
+  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinsic, and
   // thus represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor = ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);
@@ -399,8 +397,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   case 8:  VCTPID = Intrinsic::arm_mve_vctp16; break;
   case 16: VCTPID = Intrinsic::arm_mve_vctp8; break;
   }
-  Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
-  Value *VCTPCall = Builder.CreateCall(VCTP, Processed);
+  Value *VCTPCall = Builder.CreateIntrinsic(VCTPID, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
 
   // Add the incoming value to the new phi.
@@ -436,8 +433,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
                       << "\n");
-    SCEVExpander Expander(*SE, L->getHeader()->getDataLayout(),
-                          "start");
+    SCEVExpander Expander(*SE, "start");
     Instruction *Ins = L->getLoopPreheader()->getTerminator();
     Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);
     LLVM_DEBUG(dbgs() << "ARM TP: Created start value " << *Start << "\n");
@@ -458,5 +454,4 @@ Pass *llvm::createMVETailPredicationPass() {
 
 char MVETailPredication::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MVETailPredication, DEBUG_TYPE, DESC, false, false)
-INITIALIZE_PASS_END(MVETailPredication, DEBUG_TYPE, DESC, false, false)
+INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)

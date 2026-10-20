@@ -1,4 +1,4 @@
-//===-- cpu_model_common.c - Utilities for cpu model detection ----*- C -*-===//
+//===-- cpu_model/cpu_model.h - Utilities for cpu model detection -*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef COMPILER_RT_LIB_BUILTINS_CPU_MODEL_COMMON_H
-#define COMPILER_RT_LIB_BUILTINS_CPU_MODEL_COMMON_H
+#ifndef COMPILER_RT_LIB_BUILTINS_CPU_MODEL_CPU_MODEL_H
+#define COMPILER_RT_LIB_BUILTINS_CPU_MODEL_CPU_MODEL_H
 
 #define bool int
 #define true 1
@@ -31,7 +31,15 @@
 // We're choosing init priority 90 to force our constructors to run before any
 // constructors in the end user application (starting at priority 101). This
 // value matches the libgcc choice for the same functions.
-#define CONSTRUCTOR_ATTRIBUTE __attribute__((constructor(90)))
+#ifdef _WIN32
+// Contructor that replaces the ifunc runs currently with prio 10, see
+// the LowerIFuncPass. The resolver of FMV depends on the cpu features so set
+// the priority to 9.
+#define CONSTRUCTOR_PRIORITY 9
+#else
+#define CONSTRUCTOR_PRIORITY 90
+#endif
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((constructor(CONSTRUCTOR_PRIORITY)))
 #else
 // FIXME: For MSVC, we should make a function pointer global in .CRT$X?? so that
 // this runs during initialization.

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify -fexperimental-new-constant-interpreter %s
 
 #include "non-trivial-c-union.h"
 
@@ -51,6 +52,7 @@ void testAssignment(void) {
 U0 ug2 = (U0){ .f1 = 0 }; // expected-error {{cannot copy-initialize an object of type 'U0' since it is a union that is non-trivial to copy}}
 S0 sg3 = (S0){ .f0 = {0}, .f1 = 0 }; // expected-error {{cannot copy-initialize an object of type 'S0' since it contains a union that is non-trivial to copy}}
 S0 *sg4 = &(S0){ .f1 = 0 }; // expected-error {{cannot default-initialize an object of type 'U0' since it is a union that is non-trivial to default-initialize}}
+S0 *sg5 = &(S0){ .f0 = {0}, .f1 = 0 };
 
 void testCompoundLiteral(void) {
   const U0 *t0 = &(U0){ .f0 = g0 }; // expected-error {{cannot construct an automatic compound literal of type 'U0' since it is a union that is non-trivial to destruct}}
@@ -86,3 +88,10 @@ void testVolatileLValueToRValue(volatile U0 *a) {
 void unionInSystemHeader0(U0_SystemHeader);
 
 void unionInSystemHeader1(U1_SystemHeader); // expected-error {{cannot use type 'U1_SystemHeader' for a function/method parameter since it is a union that is non-trivial to destruct}} expected-error {{cannot use type 'U1_SystemHeader' for a function/method parameter since it is a union that is non-trivial to copy}}
+
+void testAddressof(void) {
+  extern volatile U0 t0;
+  // These don't dereference so they shouldn't cause an error.
+  (void)&t0;
+  (void)__builtin_addressof(t0);
+}

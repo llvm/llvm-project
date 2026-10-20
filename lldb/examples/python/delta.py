@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ----------------------------------------------------------------------
 # This module will enable GDB remote packet logging when the
@@ -35,7 +35,8 @@ def start_gdb_log(debugger, command, result, dict):
     else:
         args_len = len(args)
         if args_len == 0:
-            log_file = tempfile.mktemp()
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                log_file = tmp.name
         elif len(args) == 1:
             log_file = args[0]
 
@@ -99,7 +100,7 @@ def parse_log_file(file, options):
     print("# Log file: '%s'" % file)
     print("#----------------------------------------------------------------------")
 
-    timestamp_regex = re.compile("(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$")
+    timestamp_regex = re.compile(r"(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$")
 
     base_time = 0.0
     last_time = 0.0

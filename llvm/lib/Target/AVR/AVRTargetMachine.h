@@ -13,8 +13,8 @@
 #ifndef LLVM_AVR_TARGET_MACHINE_H
 #define LLVM_AVR_TARGET_MACHINE_H
 
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetMachine.h"
 
 #include "AVRFrameLowering.h"
 #include "AVRISelLowering.h"
@@ -27,7 +27,7 @@
 namespace llvm {
 
 /// A generic AVR implementation.
-class AVRTargetMachine : public LLVMTargetMachine {
+class AVRTargetMachine : public CodeGenTargetMachineImpl {
 public:
   AVRTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
@@ -48,13 +48,16 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAs, unsigned DestAs) const override {
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAs,
+                           unsigned DestAs) const override {
     // While AVR has different address spaces, they are all represented by
     // 16-bit pointers that can be freely casted between (of course, a pointer
     // must be cast back to its original address space to be dereferenceable).
     // To be safe, also check the pointer size in case we implement __memx
     // pointers.
-    return getPointerSize(SrcAs) == getPointerSize(DestAs);
+    return DL.getPointerSize(SrcAs) == DL.getPointerSize(DestAs);
   }
 
 private:

@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <vector>
@@ -176,6 +177,21 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+class HotPatchFuncSym : public SymbolRecord {
+public:
+  explicit HotPatchFuncSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  HotPatchFuncSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::HotPatchFuncSym),
+        RecordOffset(RecordOffset) {}
+
+  // This is an ItemID in the IPI stream, which points to an LF_FUNC_ID or
+  // LF_MFUNC_ID record.
+  TypeIndex Function;
+  StringRef Name;
+
+  uint32_t RecordOffset = 0;
+};
+
 struct DecodedAnnotation {
   StringRef Name;
   ArrayRef<uint8_t> Bytes;
@@ -224,8 +240,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t FirstByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FirstByte = Annotations.consume_front();
 
     if ((FirstByte & 0x80) == 0x00)
       return FirstByte;
@@ -233,8 +248,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t SecondByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t SecondByte = Annotations.consume_front();
 
     if ((FirstByte & 0xC0) == 0x80)
       return ((FirstByte & 0x3F) << 8) | SecondByte;
@@ -242,14 +256,12 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t ThirdByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t ThirdByte = Annotations.consume_front();
 
     if (Annotations.empty())
       return -1;
 
-    uint8_t FourthByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FourthByte = Annotations.consume_front();
 
     if ((FirstByte & 0xE0) == 0xC0)
       return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |
@@ -403,7 +415,7 @@ public:
         RecordOffset(RecordOffset) {}
 
   TypeIndex Index;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -617,6 +629,49 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+struct DefRangeRegisterRelIndirHeader {
+  ulittle16_t Register;
+  ulittle16_t Flags;
+  little32_t BasePointerOffset;
+  /// Offset to add after dereferencing `Register + BasePointerOffset`.
+  little32_t OffsetInUdt;
+};
+
+/// S_DEFRANGE_REGISTER_REL_INDIR
+///
+/// The local is located at `*(Register + BasePointerOffset) + OffsetInUDT`.
+class DefRangeRegisterRelIndirSym : public SymbolRecord {
+public:
+  explicit DefRangeRegisterRelIndirSym(SymbolRecordKind Kind)
+      : SymbolRecord(Kind) {}
+  explicit DefRangeRegisterRelIndirSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelIndirSym),
+        RecordOffset(RecordOffset) {}
+
+  // These flags are the same as in DefRangeRegisterRelSym.
+  // The flags implement this notional bitfield:
+  //   uint16_t IsSubfield : 1;
+  //   uint16_t Padding : 3;
+  //   uint16_t OffsetInParent : 12;
+  enum : uint16_t {
+    IsSubfieldFlag = 1,
+    OffsetInParentShift = 4,
+  };
+
+  bool hasSpilledUDTMember() const { return Hdr.Flags & IsSubfieldFlag; }
+  uint16_t offsetInParent() const { return Hdr.Flags >> OffsetInParentShift; }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + sizeof(DefRangeRegisterRelIndirHeader);
+  }
+
+  DefRangeRegisterRelIndirHeader Hdr;
+  LocalVariableAddrRange Range;
+  std::vector<LocalVariableAddrGap> Gaps;
+
+  uint32_t RecordOffset = 0;
+};
+
 // S_BLOCK32
 class BlockSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 16;
@@ -800,16 +855,51 @@ public:
   uint16_t SectionIdOfExceptionHandler = 0;
   FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
+  FrameProcedureOptions getFlags() const {
+    return Flags & ~FrameProcedureOptions::EncodedPointersMask;
+  }
+
+  void setFlags(FrameProcedureOptions O) {
+    Flags = (Flags & FrameProcedureOptions::EncodedPointersMask) |
+            (O & ~FrameProcedureOptions::EncodedPointersMask);
+  }
+
+  void setEncodedLocalFramePtrReg(EncodedFramePtrReg R) {
+    FrameProcedureOptions RegFlags{(static_cast<uint32_t>(R) & 3U) << 14U};
+    Flags = (Flags & ~FrameProcedureOptions::EncodedLocalBasePointerMask) |
+            RegFlags;
+  }
+
+  void setLocalFramePtrReg(RegisterId Reg, CPUType CPU) {
+    setEncodedLocalFramePtrReg(encodeFramePtrReg(Reg, CPU));
+  }
+
+  void setEncodedParamFramePtrReg(EncodedFramePtrReg R) {
+    FrameProcedureOptions RegFlags{(static_cast<uint32_t>(R) & 3U) << 16U};
+    Flags = (Flags & ~FrameProcedureOptions::EncodedParamBasePointerMask) |
+            RegFlags;
+  }
+
+  void setParamFramePtrReg(RegisterId Reg, CPUType CPU) {
+    setEncodedParamFramePtrReg(encodeFramePtrReg(Reg, CPU));
+  }
+
+  EncodedFramePtrReg getEncodedLocalFramePtrReg() const {
+    return EncodedFramePtrReg((uint32_t(Flags) >> 14U) & 0x3U);
+  }
+
   /// Extract the register this frame uses to refer to local variables.
   RegisterId getLocalFramePtrReg(CPUType CPU) const {
-    return decodeFramePtrReg(
-        EncodedFramePtrReg((uint32_t(Flags) >> 14U) & 0x3U), CPU);
+    return decodeFramePtrReg(getEncodedLocalFramePtrReg(), CPU);
+  }
+
+  EncodedFramePtrReg getEncodedParamFramePtrReg() const {
+    return EncodedFramePtrReg((uint32_t(Flags) >> 16U) & 0x3U);
   }
 
   /// Extract the register this frame uses to refer to parameters.
   RegisterId getParamFramePtrReg(CPUType CPU) const {
-    return decodeFramePtrReg(
-        EncodedFramePtrReg((uint32_t(Flags) >> 16U) & 0x3U), CPU);
+    return decodeFramePtrReg(getEncodedParamFramePtrReg(), CPU);
   }
 
   uint32_t RecordOffset = 0;
@@ -931,7 +1021,27 @@ public:
 
   uint32_t Offset = 0;
   TypeIndex Type;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
+  StringRef Name;
+
+  uint32_t RecordOffset = 0;
+};
+
+/// S_REGREL32_INDIR
+///
+/// \p Name is located at `*($Register + Offset) + OffsetInUDT` with type
+/// \p Type.
+class RegRelativeIndirSym : public SymbolRecord {
+public:
+  explicit RegRelativeIndirSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit RegRelativeIndirSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::RegRelativeIndirSym),
+        RecordOffset(RecordOffset) {}
+
+  uint32_t Offset = 0;
+  TypeIndex Type;
+  uint32_t OffsetInUdt = 0;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -1023,8 +1133,28 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
-                                        uint32_t Offset);
+/// `S_ASSOCIATION` - Associates a symbol with another one.
+///
+/// For coroutines, the associated symbol is the primary coroutine function in
+/// case this symbol is contained in an init/resume/destroy coroutine. It's also
+/// present in the primary coroutine function where it points to one of the
+/// generated init/resume/destroy symbols.
+class AssociationSym : public SymbolRecord {
+public:
+  explicit AssociationSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit AssociationSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::AssociationSym),
+        RecordOffset(RecordOffset) {}
+
+  AssociationKind AssocKind = AssociationKind::None;
+  uint32_t CodeOffset = 0;
+  uint16_t Segment = 0;
+
+  uint32_t RecordOffset = 0;
+};
+
+LLVM_ABI Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
+                                                 uint32_t Offset);
 
 } // end namespace codeview
 } // end namespace llvm

@@ -14,5 +14,6 @@
 // CHECK: "-gno-column-info"
 
 // RUN: %clang_cl -### /Z7 -gcolumn-info -- %s 2>&1 | FileCheck --check-prefix=COLUMN %s
+// RUN: %clang_cl -### --target=x86_64-windows-msvc /Z7 -fprofile-sample-use=%S/Inputs/file.prof -- %s 2>&1 | FileCheck --check-prefix=COLUMN %s
 
 // COLUMN-NOT: "-gno-column-info"

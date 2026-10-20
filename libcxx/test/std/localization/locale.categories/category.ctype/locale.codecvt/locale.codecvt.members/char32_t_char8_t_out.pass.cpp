@@ -10,6 +10,10 @@
 
 // XFAIL: availability-char8_t_support-missing
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
+// This test runs in C++20, but we have deprecated codecvt<char32_t, char8_t, mbstate_t> in C++20.
+
 // <locale>
 
 // template <> class codecvt<char32_t, char8_t, mbstate_t>
@@ -34,6 +38,6 @@ int main(int, char**) {
   assert(from_next - from == 9);
   assert(to_next - to == 9);
   for (unsigned i = 0; i < 9; ++i)
-    assert(to[i] == from[i]);
+    assert(static_cast<char32_t>(to[i]) == from[i]);
   return 0;
 }

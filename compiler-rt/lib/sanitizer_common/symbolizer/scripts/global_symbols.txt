@@ -100,9 +100,11 @@ fork U
 fprintf U
 fputc U
 fputwc U
+fread U
 free U
 freelocale U
 fwrite U
+getauxval U
 getc U
 getcwd U
 getenv U
@@ -149,6 +151,8 @@ posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
 posix_spawn_file_actions_destroy U
 posix_spawn_file_actions_init U
+printf U
+putchar U
 qsort U
 raise U
 rand U
@@ -184,6 +188,7 @@ strrchr U
 strsep U
 strtod U
 strtod_l U
+strtof U
 strtof_l U
 strtok_r U
 strtol U

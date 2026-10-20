@@ -6,7 +6,6 @@ entry:
   %1 = select i1 %0, ptr blockaddress(@foo, %bb1), ptr blockaddress(@foo, %bb2) ; <ptr> [#uses=1]
   indirectbr ptr %1, [label %bb1, label %bb2]
 
-; CHECK:         .text
 ; CHECK:         .section .text.foo,"ax",@progbits
 ; CHECK-LABEL: foo:
 ; CHECK:         movl    $.Ltmp0, %eax

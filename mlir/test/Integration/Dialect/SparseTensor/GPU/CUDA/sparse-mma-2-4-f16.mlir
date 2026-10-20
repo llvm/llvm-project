@@ -2,10 +2,10 @@
 // NOTE: this test requires gpu-sm80
 //
 // RUN: mlir-opt \
-// RUN: --pass-pipeline="builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm,affine-expand-index-ops,lower-affine,convert-arith-to-llvm),convert-vector-to-llvm,canonicalize,cse)" \
+// RUN: --pass-pipeline="builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm,affine-expand-index-ops,lower-affine,arith-expand,convert-arith-to-llvm),convert-vector-to-llvm,canonicalize,cse)" \
 // RUN: %s \
 // RUN: | mlir-opt --gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 cubin-features=+ptx71 cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
@@ -193,8 +193,7 @@ module attributes {gpu.container_module} {
       // Sparsity selector. For 16x8x32, the default "0" means threads T0/T1
       // within each group of four threads contribute metadata.
       %d = nvgpu.mma.sp.sync(%A_data, %B_data, %accum)
-           metadata(%meta)
-           {mmaShape = [16, 8, 32]} : (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+           metadata(%meta) mmaShape = [16, 8, 32] : (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
 
       //===----------------------------------------------------------------------===//
       // Write back results to gpu global memory

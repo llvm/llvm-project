@@ -16,7 +16,7 @@ bl __tls_get_addr(d@tlsld)@PLT+32768
 bl __tls_get_addr+32768(e@tlsld)@plt  # gcc -fPIC
 
 ## These are not present in the wild, but just to test we can parse them.
-# ASM: bl __tls_get_addr(f@tlsld)@PLT+1+(-2)
+# ASM: bl __tls_get_addr(f@tlsld)@PLT+1+-2
 bl __tls_get_addr+1(f@tlsld)@PLT+-2
 # ASM: bl __tls_get_addr(g@tlsld)@PLT+1+(y-x)
 x:
@@ -48,6 +48,6 @@ bl __tls_get_addr(d@tlsld)@invalid
 # ERR: :[[#@LINE+1]]:31: error: unexpected token
 bl __tls_get_addr(d@tlsld)@plt-32768
 
-# ERR: :[[#@LINE+1]]:21: error: invalid memory operand
+# ERR: :[[#@LINE+1]]:21: error: identifier expands to invalid register number
 bl __tls_get_addr-1(f@tlsld)@plt
 .endif

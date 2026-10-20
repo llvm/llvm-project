@@ -24,15 +24,22 @@ define void @mixed2() {
   ret void
 }
 
+; convergence control token can be used on non-convergent calls,
+; but it has no effect.
+define void @mixed3() {
+  %t05_tok1 = call token @llvm.experimental.convergence.anchor()
+  call void @g() [ "convergencectrl"(token %t05_tok1) ]
+  ret void
+}
 
-define void @region_nesting1() convergent {
+define void @region_nesting1(i1 %arg) convergent {
 A:
   %tok1 = call token @llvm.experimental.convergence.entry()
   %tok2 = call token @llvm.experimental.convergence.anchor()
   br label %B
 
 B:
-  br i1 undef, label %C, label %D
+  br i1 %arg, label %C, label %D
 
 C:
   call void @f() [ "convergencectrl"(token %tok1) ]
@@ -44,14 +51,14 @@ D:
 }
 
 ; Mirror image of @region_nesting1
-define void @region_nesting2() {
+define void @region_nesting2(i1 %arg) {
 A:
   %tok1 = call token @llvm.experimental.convergence.anchor()
   %tok2 = call token @llvm.experimental.convergence.anchor()
   br label %B
 
 B:
-  br i1 undef, label %C, label %D
+  br i1 %arg, label %C, label %D
 
 C:
   call void @f() [ "convergencectrl"(token %tok2) ]
@@ -62,14 +69,14 @@ D:
   ret void
 }
 
-define void @loop_nesting() convergent {
+define void @loop_nesting(i1 %arg) convergent {
 A:
   %a = call token @llvm.experimental.convergence.entry()
   br label %B
 
 B:
   %b = call token @llvm.experimental.convergence.anchor()
-  br i1 undef, label %C, label %D
+  br i1 %arg, label %C, label %D
 
 C:
   %c = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %b) ]
@@ -78,7 +85,7 @@ C:
 
 D:
   call void @f() [ "convergencectrl"(token %b) ]
-  br i1 undef, label %B, label %E
+  br i1 %arg, label %B, label %E
 
 E:
   ret void

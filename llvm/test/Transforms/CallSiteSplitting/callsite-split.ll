@@ -72,7 +72,7 @@ declare void @dummy1(ptr, ptr, ptr, ptr, ptr, ptr)
 ;CHECK: call void @dummy4()
 ;CHECK-LABEL: NextCond.split:
 ;CHECK: call void @dummy3()
-;CheCK-LABEL: CallSiteBB:
+;CHECK-LABEL: CallSiteBB:
 ;CHECK: call void @foo(i1 %tobool1)
 define void @caller2(i1 %c, ptr %a_elt, ptr %b_elt, ptr %c_elt) {
 entry:

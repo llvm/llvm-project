@@ -1,10 +1,5 @@
 # RUN: llvm-mc -triple=wasm32 -mattr=+tail-call %s 2>&1
 
-# XFAIL: *
-
-# FIXME: These shouldn't produce an error, as return will implicitly drop any
-# superfluous values.
-
 return_superfluous_return_values:
   .functype return_superfluous_return_values () -> ()
   i32.const 1

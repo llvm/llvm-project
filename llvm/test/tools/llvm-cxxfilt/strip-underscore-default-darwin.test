@@ -1,7 +1,0 @@
-REQUIRES: system-darwin
-
-## Show that on darwin, the default is to strip the leading underscore.
-
-RUN: llvm-cxxfilt __Z1fv _Z2bav | FileCheck %s
-CHECK: f()
-CHECK: _Z2bav

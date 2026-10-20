@@ -17,9 +17,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
-#include <algorithm>
-#include <optional>
-
 #define DEBUG_TYPE "format-qualifier-alignment-fixer"
 
 namespace clang {
@@ -33,24 +30,28 @@ void addQualifierAlignmentFixerPasses(const FormatStyle &Style,
   prepareLeftRightOrderingForQualifierAlignmentFixer(
       Style.QualifierOrder, LeftOrder, RightOrder, ConfiguredQualifierTokens);
 
+  const auto AddPass = [&](const std::string &Qualifier, bool RightAlign) {
+    Passes.emplace_back([&, Qualifier, ConfiguredQualifierTokens,
+                         RightAlign](const Environment &Env) {
+      return LeftRightQualifierAlignmentFixer(
+                 Env, Style, Qualifier, ConfiguredQualifierTokens, RightAlign)
+          .process();
+    });
+  };
+
   // Handle the left and right alignment separately.
   for (const auto &Qualifier : LeftOrder) {
-    Passes.emplace_back(
-        [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
-          return LeftRightQualifierAlignmentFixer(Env, Style, Qualifier,
-                                                  ConfiguredQualifierTokens,
-                                                  /*RightAlign=*/false)
-              .process();
-        });
+    AddPass(Qualifier, /*RightAlign=*/false);
+    // Unlike the other declaration specifiers, `long` can legally occur twice
+    // in the same sequence. A pass moves one occurrence across the type, so a
+    // second pass is needed for `long long` and is otherwise a no-op.
+    if (Qualifier == "long")
+      AddPass(Qualifier, /*RightAlign=*/false);
   }
   for (const auto &Qualifier : RightOrder) {
-    Passes.emplace_back(
-        [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
-          return LeftRightQualifierAlignmentFixer(Env, Style, Qualifier,
-                                                  ConfiguredQualifierTokens,
-                                                  /*RightAlign=*/true)
-              .process();
-        });
+    AddPass(Qualifier, /*RightAlign=*/true);
+    if (Qualifier == "long")
+      AddPass(Qualifier, /*RightAlign=*/true);
   }
 }
 
@@ -132,8 +133,10 @@ static void rotateTokens(const SourceManager &SourceMgr,
   // Then move through the other tokens.
   auto *Tok = Begin;
   while (Tok != End) {
-    if (!NewText.empty() && !endsWithSpace(NewText))
+    if (!NewText.empty() && !endsWithSpace(NewText) &&
+        Tok->isNot(tok::coloncolon)) {
       NewText += " ";
+    }
 
     NewText += Tok->TokenText;
     Tok = Tok->Next;
@@ -170,6 +173,19 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw_constexpr:
   case tok::kw_restrict:
   case tok::kw_friend:
+  case tok::kw__Nonnull:
+  case tok::kw__Nullable:
+  case tok::kw__Null_unspecified:
+  case tok::kw___ptr32:
+  case tok::kw___ptr64:
+  case tok::kw___funcref:
+  case tok::kw_typedef:
+  case tok::kw_consteval:
+  case tok::kw_constinit:
+  case tok::kw_thread_local:
+  case tok::kw_extern:
+  case tok::kw_mutable:
+  case tok::kw_explicit:
     return true;
   default:
     return false;
@@ -183,8 +199,11 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // We only need to think about streams that begin with a qualifier.
   if (Tok->isNot(QualifierType))
     return Tok;
+
+  const auto *Next = Tok->getNextNonComment();
+
   // Don't concern yourself if nothing follows the qualifier.
-  if (!Tok->Next)
+  if (!Next)
     return Tok;
 
   // Skip qualifiers to the left to find what preceeds the qualifiers.
@@ -248,9 +267,15 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   }();
 
   // Find the last qualifier to the right.
-  const FormatToken *LastQual = Tok;
-  while (isQualifier(LastQual->getNextNonComment()))
-    LastQual = LastQual->getNextNonComment();
+  const auto *LastQual = Tok;
+  for (; isQualifier(Next); Next = Next->getNextNonComment())
+    LastQual = Next;
+
+  if (!LastQual || !Next ||
+      (LastQual->isOneOf(tok::kw_const, tok::kw_volatile) &&
+       Next->isOneOf(Keywords.kw_override, Keywords.kw_final))) {
+    return Tok;
+  }
 
   // If this qualifier is to the right of a type or pointer do a partial sort
   // and return.
@@ -265,7 +290,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     return Tok;
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // The case `const long long int volatile` -> `long long int const volatile`
@@ -348,7 +373,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
-    if (Next->is(tok::kw_auto))
+    if (Next && Next->is(tok::kw_auto))
       TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.
@@ -386,7 +411,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
@@ -401,7 +427,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   }
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // Examples given in order of ['const', 'volatile', 'type']
@@ -411,6 +437,14 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
+    for (const auto *Prev = TypeToken->Previous;
+         Prev && Prev->is(tok::coloncolon); Prev = Prev->Previous) {
+      TypeToken = Prev;
+      Prev = Prev->Previous;
+      if (!(Prev && Prev->is(tok::identifier)))
+        break;
+      TypeToken = Prev;
+    }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
@@ -500,7 +534,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }
@@ -521,6 +555,17 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("constexpr", tok::kw_constexpr)
       .Case("restrict", tok::kw_restrict)
       .Case("friend", tok::kw_friend)
+      .Case("typedef", tok::kw_typedef)
+      .Case("consteval", tok::kw_consteval)
+      .Case("constinit", tok::kw_constinit)
+      .Case("thread_local", tok::kw_thread_local)
+      .Case("extern", tok::kw_extern)
+      .Case("mutable", tok::kw_mutable)
+      .Case("signed", tok::kw_signed)
+      .Case("unsigned", tok::kw_unsigned)
+      .Case("long", tok::kw_long)
+      .Case("short", tok::kw_short)
+      .Case("explicit", tok::kw_explicit)
       .Default(tok::identifier);
 }
 
@@ -563,7 +608,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
-      if (Tok->MustBreakBefore)
+      if (Tok->MustBreakBefore && Tok != First)
         break;
       if (Tok->is(tok::comment))
         continue;
@@ -600,8 +645,33 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
 
     tok::TokenKind QualifierToken =
         LeftRightQualifierAlignmentFixer::getTokenFromQualifier(s);
-    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier)
+    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier) {
       Qualifiers.push_back(QualifierToken);
+
+      // Ensure signed/unsigned and long/short qualifier pairs are positioned
+      // together by default unless the user has explicitly specified both in
+      // the QualifierOrder. This allows users to override the default pairing
+      // by listing both qualifiers in the order.
+      auto AddPairedQualifier = [&](tok::TokenKind PairedToken,
+                                    const std::string &PairedName) {
+        if (!llvm::is_contained(Order, PairedName)) {
+          Qualifiers.push_back(PairedToken);
+          if (left)
+            LeftOrder.insert(LeftOrder.begin(), PairedName);
+          else
+            RightOrder.push_back(PairedName);
+        }
+      };
+
+      if (QualifierToken == tok::kw_unsigned)
+        AddPairedQualifier(tok::kw_signed, "signed");
+      else if (QualifierToken == tok::kw_signed)
+        AddPairedQualifier(tok::kw_unsigned, "unsigned");
+      else if (QualifierToken == tok::kw_long)
+        AddPairedQualifier(tok::kw_short, "short");
+      else if (QualifierToken == tok::kw_short)
+        AddPairedQualifier(tok::kw_long, "long");
+    }
 
     if (left) {
       // Reverse the order for left aligned items.
@@ -622,20 +692,6 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const LangOptions &LangOpts) {
   return Tok && (Tok->isTypeName(LangOpts) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
-}
-
-// If a token is an identifier and it's upper case, it could
-// be a macro and hence we need to be able to ignore it.
-bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
-  if (Tok->isNot(tok::identifier))
-    return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
 }
 
 } // namespace format

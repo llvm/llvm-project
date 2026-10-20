@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <map>
 
 using namespace llvm;
@@ -99,6 +100,7 @@ static inline bool inheritsFrom(InstructionContext child,
             (noPrefix && inheritsFrom(child, IC_XS, noPrefix)));
   case IC_64BIT:
     return (inheritsFrom(child, IC_64BIT_REXW) ||
+            inheritsFrom(child, IC_64BIT_REX2) ||
             (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE, noPrefix)) ||
             (!AdSize64 && inheritsFrom(child, IC_64BIT_ADSIZE)) ||
             (noPrefix && inheritsFrom(child, IC_64BIT_XD, noPrefix)) ||
@@ -151,8 +153,10 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_REXW_XS:
   case IC_64BIT_REXW_OPSIZE:
   case IC_64BIT_REXW_ADSIZE:
-  case IC_64BIT_REX2:
+  case IC_64BIT_REX2_REXW:
     return false;
+  case IC_64BIT_REX2:
+    return inheritsFrom(child, IC_64BIT_REX2_REXW);
   case IC_VEX:
     return (VEX_LIG && WIG && inheritsFrom(child, IC_VEX_L_W)) ||
            (WIG && inheritsFrom(child, IC_VEX_W)) ||
@@ -268,6 +272,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ));
   case IC_EVEX_W:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W));
   case IC_EVEX_W_XS:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS)) ||
@@ -454,6 +459,7 @@ static inline bool inheritsFrom(InstructionContext child,
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_OPSIZE_KZ_B));
   case IC_EVEX_W_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_B)) ||
+           inheritsFrom(child, IC_EVEX_W_OPSIZE_B) ||
            (VEX_LIG && inheritsFrom(child, IC_EVEX_L2_W_B));
   case IC_EVEX_W_XS_B:
     return (VEX_LIG && inheritsFrom(child, IC_EVEX_L_W_XS_B)) ||
@@ -575,9 +581,33 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_W_NF:
   case IC_EVEX_W_B_NF:
     return false;
+  case IC_EVEX_B_U:
+  case IC_EVEX_XS_B_U:
+  case IC_EVEX_XD_B_U:
+  case IC_EVEX_OPSIZE_B_U:
+  case IC_EVEX_W_B_U:
+  case IC_EVEX_W_XS_B_U:
+  case IC_EVEX_W_XD_B_U:
+  case IC_EVEX_W_OPSIZE_B_U:
+  case IC_EVEX_K_B_U:
+  case IC_EVEX_XS_K_B_U:
+  case IC_EVEX_XD_K_B_U:
+  case IC_EVEX_OPSIZE_K_B_U:
+  case IC_EVEX_W_K_B_U:
+  case IC_EVEX_W_XS_K_B_U:
+  case IC_EVEX_W_XD_K_B_U:
+  case IC_EVEX_W_OPSIZE_K_B_U:
+  case IC_EVEX_KZ_B_U:
+  case IC_EVEX_XS_KZ_B_U:
+  case IC_EVEX_XD_KZ_B_U:
+  case IC_EVEX_OPSIZE_KZ_B_U:
+  case IC_EVEX_W_KZ_B_U:
+  case IC_EVEX_W_XS_KZ_B_U:
+  case IC_EVEX_W_XD_KZ_B_U:
+  case IC_EVEX_W_OPSIZE_KZ_B_U:
+    return false;
   default:
-    errs() << "Unknown instruction class: "
-           << stringForContext((InstructionContext)parent) << "\n";
+    errs() << "Unknown instruction class: " << stringForContext(parent) << "\n";
     llvm_unreachable("Unknown instruction class");
   }
 }
@@ -612,7 +642,7 @@ static inline bool outranks(InstructionContext upper,
 ///
 /// @param decision - The decision to be compacted.
 /// @return         - The compactest available representation for the decision.
-static ModRMDecisionType getDecisionType(ModRMDecision &decision) {
+static ModRMDecisionType getDecisionType(const ModRMDecision &decision) {
   bool satisfiesOneEntry = true;
   bool satisfiesSplitRM = true;
   bool satisfiesSplitReg = true;
@@ -679,13 +709,13 @@ DisassemblerTables::DisassemblerTables() {
   HasConflicts = false;
 }
 
-DisassemblerTables::~DisassemblerTables() {}
+DisassemblerTables::~DisassemblerTables() = default;
 
 void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
                                            unsigned &i1, unsigned &i2,
                                            unsigned &ModRMTableNum,
                                            ModRMDecision &decision) const {
-  static uint32_t sEntryNumber = 1;
+  static uint64_t sEntryNumber = 1;
   ModRMDecisionType dt = getDecisionType(decision);
 
   if (dt == MODRM_ONEENTRY && decision.instructionIDs[0] == 0) {
@@ -719,8 +749,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    for (unsigned short InstructionID : decision.instructionIDs)
-      ModRMDecision.push_back(InstructionID);
+    llvm::append_range(ModRMDecision, decision.instructionIDs);
     break;
   }
 
@@ -760,9 +789,9 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     break;
   }
 
-  // We assume that the index can fit into uint16_t.
-  assert(sEntryNumber < 65536U &&
-         "Index into ModRMDecision is too large for uint16_t!");
+  // We assume that the index can fit into uint32_t.
+  assert(sEntryNumber < -1U &&
+         "Index into ModRMDecision is too large for uint32_t!");
   (void)sEntryNumber;
 }
 
@@ -819,7 +848,6 @@ void DisassemblerTables::emitContextDecision(raw_ostream &o1, raw_ostream &o2,
     o2.indent(i2) << "/*";
     o2 << stringForContext((InstructionContext)index);
     o2 << "*/ ";
-
     emitOpcodeDecision(o1, o2, i1, i2, ModRMTableNum,
                        decision.opcodeDecisions[index]);
   }
@@ -836,8 +864,8 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
   o << "static const struct OperandSpecifier x86OperandSets[]["
     << X86_MAX_OPERANDS << "] = {\n";
 
-  typedef SmallVector<std::pair<OperandEncoding, OperandType>, X86_MAX_OPERANDS>
-      OperandListTy;
+  using OperandListTy =
+      SmallVector<std::pair<OperandEncoding, OperandType>, X86_MAX_OPERANDS>;
   std::map<OperandListTy, unsigned> OperandSets;
 
   unsigned OperandSetNum = 0;
@@ -847,7 +875,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -856,9 +884,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     N = ++OperandSetNum;
 
     o << "  { /* " << (OperandSetNum - 1) << " */\n";
-    for (unsigned i = 0, e = OperandList.size(); i != e; ++i) {
-      const char *Encoding = stringForOperandEncoding(OperandList[i].first);
-      const char *Type = stringForOperandType(OperandList[i].second);
+    for (const auto &[Enc, Ty] : OperandList) {
+      const char *Encoding = stringForOperandEncoding(Enc);
+      const char *Type = stringForOperandType(Ty);
       o << "    { " << Encoding << ", " << Type << " },\n";
     }
     o << "  },\n";
@@ -879,7 +907,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 
@@ -926,7 +954,9 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
       else
         o << "IC_VEX";
 
-      if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
+      if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+        ; // Ignore ATTR_VEXL and ATTR_EVEXL2 under YMM rounding.
+      else if ((index & ATTR_EVEX) && (index & ATTR_EVEXL2))
         o << "_L2";
       else if (index & ATTR_VEXL)
         o << "_L";
@@ -949,10 +979,15 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
 
         if (index & ATTR_EVEXB)
           o << "_B";
+
+        if ((index & ATTR_EVEXB) && (index & ATTR_EVEXU))
+          o << "_U";
       }
-    } else if ((index & ATTR_64BIT) && (index & ATTR_REX2))
+    } else if ((index & ATTR_64BIT) && (index & ATTR_REX2)) {
       o << "IC_64BIT_REX2";
-    else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XS))
+      if (index & ATTR_REXW)
+        o << "_REXW";
+    } else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XS))
       o << "IC_64BIT_REXW_XS";
     else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XD))
       o << "IC_64BIT_REXW_XD";
@@ -1017,21 +1052,91 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
 void DisassemblerTables::emitContextDecisions(raw_ostream &o1, raw_ostream &o2,
                                               unsigned &i1, unsigned &i2,
                                               unsigned &ModRMTableNum) const {
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[0], ONEBYTE_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[1], TWOBYTE_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[2],
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[ONEBYTE],
+                      ONEBYTE_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[TWOBYTE],
+                      TWOBYTE_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[THREEBYTE_38],
                       THREEBYTE38_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[3],
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[THREEBYTE_3A],
                       THREEBYTE3A_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[4], XOP8_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[5], XOP9_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[6], XOPA_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[7],
-                      THREEDNOW_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[8], MAP4_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[9], MAP5_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[10], MAP6_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[11], MAP7_STR);
+
+  using OpcodeDecisionKey = std::vector<uint16_t>;
+  std::map<OpcodeDecisionKey, unsigned> OpcodeDecisionMap;
+  static_assert(XOP8_MAP == 4 && MAP7 == 11);
+  std::array<std::array<unsigned, IC_max>, MAP7 - XOP8_MAP + 1> Indices;
+
+  o2 << "static const struct OpcodeDecision " SPARSE_OPCODE_DECISIONS_STR
+        "[] = {\n";
+  ++i2;
+
+  for (unsigned TableIndex = XOP8_MAP; TableIndex <= MAP7; ++TableIndex) {
+    for (unsigned ContextIndex = 0; ContextIndex < IC_max; ++ContextIndex) {
+      OpcodeDecision &Decision =
+          Tables[TableIndex]->opcodeDecisions[ContextIndex];
+      OpcodeDecisionKey Key;
+
+      for (const ModRMDecision &ModRM : Decision.modRMDecisions) {
+        ModRMDecisionType Type = getDecisionType(ModRM);
+        Key.push_back(Type);
+
+        switch (Type) {
+        default:
+          llvm_unreachable("Unknown decision type");
+        case MODRM_ONEENTRY:
+          Key.push_back(ModRM.instructionIDs[0]);
+          break;
+        case MODRM_SPLITRM:
+          Key.push_back(ModRM.instructionIDs[0x00]);
+          Key.push_back(ModRM.instructionIDs[0xc0]);
+          break;
+        case MODRM_SPLITREG:
+          for (unsigned Index = 0; Index < 64; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          for (unsigned Index = 0xc0; Index < 256; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          break;
+        case MODRM_SPLITMISC:
+          for (unsigned Index = 0; Index < 64; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          for (unsigned Index = 0xc0; Index < 256; ++Index)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          break;
+        case MODRM_FULL:
+          llvm::append_range(Key, ModRM.instructionIDs);
+          break;
+        }
+      }
+
+      auto [It, Inserted] = OpcodeDecisionMap.try_emplace(
+          std::move(Key), OpcodeDecisionMap.size());
+      Indices[TableIndex - XOP8_MAP][ContextIndex] = It->second;
+      if (Inserted)
+        emitOpcodeDecision(o1, o2, i1, i2, ModRMTableNum, Decision);
+    }
+  }
+
+  --i2;
+  o2 << "};\n\n";
+
+  assert(OpcodeDecisionMap.size() <= UINT16_MAX &&
+         "Too many unique sparse opcode decisions");
+  o2 << "static const uint16_t " SPARSE_OPCODE_DECISION_INDICES_STR
+        "[][IC_max] = {\n";
+  ++i2;
+  for (const auto &Table : Indices) {
+    o2.indent(i2) << "{\n";
+    ++i2;
+    for (auto [ContextIndex, DecisionIndex] : enumerate(Table)) {
+      o2.indent(i2) << DecisionIndex << ", // "
+                    << stringForContext(InstructionContext(ContextIndex))
+                    << "\n";
+    }
+    --i2;
+    o2.indent(i2) << "},\n";
+  }
+  --i2;
+  o2 << "};\n";
 }
 
 void DisassemblerTables::emit(raw_ostream &o) const {

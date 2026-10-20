@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This creates a CSV file from the output of the debug output of subtarget:
 #   llvm-tblgen --gen-subtarget --debug-only=subtarget-emitter
@@ -25,7 +25,7 @@ def add(instr, model, resource=None):
 def filter_model(m):
     global filt
     if m and filt:
-        return filt.search(m) != None
+        return filt.search(m) is not None
     else:
         return True
 

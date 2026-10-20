@@ -3,7 +3,7 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOFP16FML
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a,+fullfp16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOFP16FML
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a,+fp16fml,-fullfp16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOFP16FML
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a,-neon,+fp16fml < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-NEON
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a,+fp16fml,-neon < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FP16FML-NOR-NEON
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a,-neon < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FP16FML-NOR-NEON
 
 //------------------------------------------------------------------------------
@@ -36,15 +36,6 @@ FMLSL2  V0.4S, V1.4H, V2.4H
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
-
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
 
 //CHECK-NO-FP16FML-NOR-NEON: error: instruction requires: fp16fml neon{{$}}
 //CHECK-NO-FP16FML-NOR-NEON: error: instruction requires: fp16fml neon{{$}}
@@ -110,23 +101,6 @@ fmlsl2  V0.4s, v1.4h, v2.h[5]
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
 //CHECK-NOFP16FML: error: instruction requires: fp16fml{{$}}
-
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
-//CHECK-NO-NEON: error: instruction requires: neon{{$}}
 
 //CHECK-NO-FP16FML-NOR-NEON: error: instruction requires: fp16fml neon{{$}}
 //CHECK-NO-FP16FML-NOR-NEON: error: instruction requires: fp16fml neon{{$}}

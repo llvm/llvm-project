@@ -50,20 +50,22 @@ class ompd_init(gdb.Command):
                     "No ompd_dll_locations symbol in execution, make sure to have an OMPD enabled OpenMP runtime"
                 )
 
-            while gdb.parse_and_eval("(char**)ompd_dll_locations") == False:
+            while not gdb.parse_and_eval("(char**)ompd_dll_locations"):
                 gdb.execute("tbreak ompd_dll_locations_valid")
                 gdb.execute("continue")
 
             lib_list = gdb.parse_and_eval("(char**)ompd_dll_locations")
 
             i = 0
+            last_dl_error = None
             while lib_list[i]:
                 ret = ompdModule.ompd_open(lib_list[i].string())
                 if ret == -1:
                     raise ValueError("Handle of OMPD library is not a valid string!")
                 if ret == -2:
+                    last_dl_error = ompdModule.ompd_get_dl_error()
                     print("ret == -2")
-                    pass  # It's ok to fail on dlopen
+                    pass  # It's ok to fail on dlopen; try the next path
                 if ret == -3:
                     print("ret == -3")
                     pass  # It's ok to fail on dlsym
@@ -80,6 +82,8 @@ class ompd_init(gdb.Command):
                     return
                 i = i + 1
 
+            if last_dl_error:
+                raise ValueError("OMPD library could not be loaded: %s" % last_dl_error)
             raise ValueError("OMPD library could not be loaded!")
         except:
             traceback.print_exc()

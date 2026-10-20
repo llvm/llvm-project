@@ -31,7 +31,7 @@ template class A<0>;
 // CHECK-NEXT:    [[CAPTURE:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[PTR2]], ptr [[PTR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
@@ -48,7 +48,7 @@ template class A<0>;
 // SIMD-ONLY0-NEXT:    [[CAPTURE:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw [[CLASS_A:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    store ptr [[PTR2]], ptr [[PTR]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8

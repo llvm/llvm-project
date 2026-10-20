@@ -17,7 +17,6 @@
 
 #include "ARM.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
@@ -61,6 +61,7 @@ public:
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -196,7 +197,7 @@ static void RevertWhileLoopSetup(MachineInstr *MI, const TargetInstrInfo *TII) {
   MIB.add(MI->getOperand(1));
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(Register());
   MIB.addReg(ARM::CPSR, RegState::Define);
 
   // Attempt to find a t2WhileLoopStart and revert to a t2Bcc.
@@ -251,7 +252,8 @@ bool MVETPAndVPTOptimisations::LowerWhileLoopStart(MachineLoop *ML) {
       BuildMI(*WLSIt->getParent(), *WLSIt, WLSIt->getDebugLoc(),
               TII->get(ARM::t2WhileLoopStartLR), LR)
           .add(LoopStart->getOperand(1))
-          .add(WLSIt->getOperand(1));
+          .add(WLSIt->getOperand(1))
+          .setOperandDead(3); // implicit-def $cpsr
   (void)MI;
   LLVM_DEBUG(dbgs() << "Lowered WhileLoopStart into: " << *MI.getInstr());
 
@@ -304,8 +306,7 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
     }
 
     Visited.insert(MBB);
-    for (auto *Pred : MBB->predecessors())
-      Worklist.push_back(Pred);
+    llvm::append_range(Worklist, MBB->predecessors());
   }
   return LoopStart;
 }
@@ -420,7 +421,8 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
       BuildMI(*LoopEnd->getParent(), *LoopEnd, LoopEnd->getDebugLoc(),
               TII->get(ARM::t2LoopEndDec), DecReg)
           .addReg(PhiReg)
-          .add(LoopEnd->getOperand(1));
+          .add(LoopEnd->getOperand(1))
+          .setOperandDead(3); // implicit-def $cpsr
   (void)MI;
   LLVM_DEBUG(dbgs() << "Merged LoopDec and End into: " << *MI.getInstr());
 
@@ -524,7 +526,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
           .add(LoopStart->getOperand(1))
           .addReg(CountReg);
   if (NewOpc == ARM::t2WhileLoopStartTP)
-    MI.add(LoopStart->getOperand(2));
+    MI.add(LoopStart->getOperand(2)).setOperandDead(4); // implicit-def $cpsr
   LLVM_DEBUG(dbgs() << "Replacing " << *LoopStart << "  with "
                     << *MI.getInstr());
   MRI->constrainRegClass(CountReg, &ARM::rGPRRegClass);
@@ -536,7 +538,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     Register LR = LoopPhi->getOperand(0).getReg();
     for (MachineInstr *MI : MVEInstrs) {
       int Idx = findFirstVPTPredOperandIdx(*MI);
-      MI->getOperand(Idx + 2).setReg(LR);
+      MI->getOperand(Idx + ARM::SUBOP_vpred_n_tp_reg).setReg(LR);
     }
   }
 
@@ -860,7 +862,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
       if (MachineOperand *MO =
               Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
                                            /*TRI=*/nullptr, /*isKill*/ true)) {
-        // If we come accross the instr that kills PrevVCMP's result, record it
+        // If we come across the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
       }
@@ -924,7 +926,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
   // the function.
   unsigned LastVPTImm = 0;
   Register LastVPTReg = 0;
-  SmallSet<MachineInstr *, 4> DeadInstructions;
+  SmallPtrSet<MachineInstr *, 4> DeadInstructions;
 
   for (MachineInstr &Instr : MBB.instrs()) {
     // Look for predicated MVE instructions.
@@ -986,6 +988,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
         if (MRI->hasOneUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
+      MRI->clearKillFlags(LastVPTReg);
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
                         << Instr);
       VPR = NewVPR;

@@ -34,9 +34,9 @@ define void @sext_v8i8_v8i32(ptr %x, ptr %z) {
 ; CHECK-LABEL: sext_v8i8_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsext.vf4 v10, v8
-; CHECK-NEXT:    vse32.v v10, (a1)
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vsext.vf4 v8, v10
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = sext <8 x i8> %a to <8 x i32>
@@ -49,9 +49,9 @@ define void @sext_v32i8_v32i32(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsext.vf4 v16, v8
-; CHECK-NEXT:    vse32.v v16, (a1)
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vsext.vf4 v8, v16
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = sext <32 x i8> %a to <32 x i32>

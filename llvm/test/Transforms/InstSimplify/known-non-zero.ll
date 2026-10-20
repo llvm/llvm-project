@@ -192,7 +192,7 @@ define <4 x i1> @shuf_nonzero_both(<4 x i8> %xx, <4 x i8> %yy) {
 
 define <4 x i1> @shuf_nonzero_both_fail(<4 x i8> %xx, <4 x i8> %yy) {
 ; CHECK-LABEL: @shuf_nonzero_both_fail(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[Y:%.*]] = add nuw <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 0>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
@@ -208,8 +208,8 @@ define <4 x i1> @shuf_nonzero_both_fail(<4 x i8> %xx, <4 x i8> %yy) {
 
 define <4 x i1> @shuf_nonzero_both_fail2(<4 x i8> %xx, <4 x i8> %yy) {
 ; CHECK-LABEL: @shuf_nonzero_both_fail2(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add <4 x i8> [[YY:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
@@ -390,7 +390,7 @@ define i1 @nonzero_reduce_or(<2 x i8> %xx) {
 
 define i1 @nonzero_reduce_or_fail(<2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_or_fail(
-; CHECK-NEXT:    [[X:%.*]] = add nsw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nsw <2 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -581,5 +581,46 @@ define i1 @src_x_uadd.sat_c1_fail(i8 %x, i1 %c1) {
   %v = call i8 @llvm.uadd.sat.i8(i8 %y, i8 %x)
   %r = icmp eq i8 %v, 0
   ret i1 %r
+}
+
+define i1 @trunc_dom_cond(i64 %x) {
+; CHECK-LABEL: @trunc_dom_cond(
+; CHECK-NEXT:    [[ISZERO:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[NON_ZERO:%.*]], label [[ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       zero:
+; CHECK-NEXT:    ret i1 false
+;
+  %iszero = trunc i64 %x to i1
+  br i1 %iszero, label %non_zero, label %zero
+
+non_zero:
+  %result = icmp eq i64 %x, 0
+  ret i1 %result
+
+zero:
+  ret i1 false
+}
+
+define i1 @neg_trunc_dom_cond(i64 %x) {
+; CHECK-LABEL: @neg_trunc_dom_cond(
+; CHECK-NEXT:    [[ISZERO:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[NON_ZERO:%.*]], label [[ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       zero:
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %iszero = trunc i64 %x to i1
+  br i1 %iszero, label %non_zero, label %zero
+
+non_zero:
+  ret i1 false
+
+zero:
+  %result = icmp eq i64 %x, 0
+  ret i1 %result
 }
 

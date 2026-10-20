@@ -371,7 +371,7 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_i64_v8i16(i64 %a) {
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    strd r0, r1, [sp]
+; CHECK-LE-NEXT:    str r0, [sp]
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrh.u32 q0, [r0]
 ; CHECK-LE-NEXT:    vmov r0, s0
@@ -420,7 +420,7 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_i64_v8i16_lane1(i64 %a) {
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    strd r0, r1, [sp]
+; CHECK-LE-NEXT:    str r0, [sp]
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrh.u32 q0, [r0]
 ; CHECK-LE-NEXT:    vmov r0, s1

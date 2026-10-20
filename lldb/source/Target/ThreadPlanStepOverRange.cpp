@@ -11,10 +11,12 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/LineTable.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanSingleThreadTimeout.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -24,7 +26,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
-uint32_t ThreadPlanStepOverRange::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOverRange::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 // ThreadPlanStepOverRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
@@ -36,7 +39,8 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
     : ThreadPlanStepRange(ThreadPlan::eKindStepOverRange,
                           "Step range stepping over", thread, range,
                           addr_context, stop_others),
-      ThreadPlanShouldStopHere(this), m_first_resume(true) {
+      ThreadPlanShouldStopHere(this), TimeoutResumeAll(thread),
+      m_first_resume(true), m_run_mode(stop_others) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 }
@@ -52,21 +56,21 @@ void ThreadPlanStepOverRange::GetDescription(Stream *s,
   };
 
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step over");
+    s->PutCString("step over");
     PrintFailureIfAny();
     return;
   }
 
-  s->Printf("Stepping over");
+  s->PutCString("Stepping over");
   bool printed_line_info = false;
   if (m_addr_context.line_entry.IsValid()) {
-    s->Printf(" line ");
+    s->PutCString(" line ");
     m_addr_context.line_entry.DumpStopContext(s, false);
     printed_line_info = true;
   }
 
   if (!printed_line_info || level == eDescriptionLevelVerbose) {
-    s->Printf(" using ranges: ");
+    s->PutCString(" using ranges: ");
     DumpRanges(s);
   }
 
@@ -101,6 +105,10 @@ void ThreadPlanStepOverRange::SetupAvoidNoDebug(
 
 bool ThreadPlanStepOverRange::IsEquivalentContext(
     const SymbolContext &context) {
+  if (Language *language = Language::FindPlugin(context.GetLanguage()))
+    if (std::optional<bool> maybe_equivalent =
+            language->AreEqualForFrameComparison(context, m_addr_context))
+      return *maybe_equivalent;
   // Match as much as is specified in the m_addr_context: This is a fairly
   // loose sanity check.  Note, sometimes the target doesn't get filled in so I
   // left out the target check.  And sometimes the module comes in as the .o
@@ -124,6 +132,11 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
   return m_addr_context.symbol && m_addr_context.symbol == context.symbol;
 }
 
+void ThreadPlanStepOverRange::SetStopOthers(bool stop_others) {
+  if (!stop_others)
+    m_stop_others = RunMode::eAllThreads;
+}
+
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
   Thread &thread = GetThread();
@@ -134,6 +147,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                 GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }
+  ClearNextBranchBreakpointExplainedStop();
 
   // If we're out of the range but in the same frame or in our caller's frame
   // then we should stop. When stepping out we only stop others if we are
@@ -141,6 +155,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   bool stop_others = (m_stop_others == lldb::eOnlyThisThread);
   ThreadPlanSP new_plan_sp;
   FrameComparison frame_order = CompareCurrentFrameToStartFrame();
+  LLDB_LOGF(log, "ThreadPlanStepOverRange compare frame result: %d.",
+            frame_order);
 
   if (frame_order == eFrameCompareOlder) {
     // If we're in an older frame then we should stop.
@@ -337,6 +353,12 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     return false;
 }
 
+void ThreadPlanStepOverRange::DidPush() {
+  ThreadPlanStepRange::DidPush();
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    PushNewTimeout();
+}
+
 bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
   // For crashes, breakpoint hits, signals, etc, let the base plan (or some
   // plan above us) handle the stop.  That way the user can see the stop, step
@@ -381,7 +403,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       if (in_inlined_stack) {
         Log *log = GetLog(LLDBLog::Step);
         LLDB_LOGF(log,
-                  "ThreadPlanStepInRange::DoWillResume: adjusting range to "
+                  "ThreadPlanStepOverRange::DoWillResume: adjusting range to "
                   "the frame at inlined depth %d.",
                   thread.GetCurrentInlinedDepth());
         StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
@@ -399,7 +421,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
                   frame_block->GetInlinedFunctionInfo();
               const char *name;
               if (inline_info)
-                name = inline_info->GetName().AsCString();
+                name = inline_info->GetName().AsCString("");
               else
                 name = "<unknown-notinlined>";
 
@@ -414,6 +436,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       }
     }
   }
-
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    ResumeWithTimeout();
   return true;
 }

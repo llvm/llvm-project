@@ -12,7 +12,7 @@ declare void @f2()
 
 ;CHECK-LABEL: @func
 
-define void @func() personality ptr @gxx_personality {
+define void @func(i1 %arg) personality ptr @gxx_personality {
   invoke void @f0()
           to label %3 unwind label %1
 
@@ -23,7 +23,7 @@ define void @func() personality ptr @gxx_personality {
   br label %16
 
 3:
-  br i1 undef, label %4, label %10
+  br i1 %arg, label %4, label %10
 
 ;CHECK:       4:
 ;CHECK-NEXT:    %5 = load ptr, ptr undef, align 8

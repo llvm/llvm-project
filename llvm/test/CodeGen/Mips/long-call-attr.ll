@@ -1,10 +1,10 @@
-; RUN: llc -march=mips -target-abi o32 --mattr=+long-calls,+noabicalls < %s \
+; RUN: llc -mtriple=mips -target-abi o32 --mattr=+long-calls,+noabicalls < %s \
 ; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefix=O32 %s
-; RUN: llc -march=mips -target-abi o32 --mattr=-long-calls,+noabicalls < %s \
+; RUN: llc -mtriple=mips -target-abi o32 --mattr=-long-calls,+noabicalls < %s \
 ; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefix=O32 %s
-; RUN: llc -march=mips64 -target-abi n64 --mattr=+long-calls,+noabicalls < %s \
+; RUN: llc -mtriple=mips64 -target-abi n64 --mattr=+long-calls,+noabicalls < %s \
 ; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefix=N64 %s
-; RUN: llc -march=mips64 -target-abi n64 --mattr=-long-calls,+noabicalls < %s \
+; RUN: llc -mtriple=mips64 -target-abi n64 --mattr=-long-calls,+noabicalls < %s \
 ; RUN:   -mips-jalr-reloc=false | FileCheck -check-prefix=N64 %s
 
 declare void @far() #0

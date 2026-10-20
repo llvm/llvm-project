@@ -24,12 +24,6 @@ class MachineInstr;
 class MachineFunction;
 class Register;
 
-inline unsigned succ_size(const MachineBasicBlock *BB) {
-  return BB->succ_size();
-}
-inline unsigned pred_size(const MachineBasicBlock *BB) {
-  return BB->pred_size();
-}
 inline auto instrs(const MachineBasicBlock &BB) { return BB.instrs(); }
 
 template <> struct GenericSSATraits<MachineFunction> {

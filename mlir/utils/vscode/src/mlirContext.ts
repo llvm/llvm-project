@@ -93,6 +93,14 @@ export class MLIRContext implements vscode.Disposable {
       folderContext = new WorkspaceFolderContext();
       this.workspaceFolders.set(workspaceFolderStr, folderContext);
     }
+
+    // Check to see if the language client should be enabled.
+    const enableSettingName =
+        (languageId === 'mlir') ? 'enable' : `${languageId}_enable`;
+    if (!config.get<boolean>(enableSettingName, workspaceFolder, true)) {
+      return null;
+    }
+
     // Start the client for this language if necessary.
     let client = folderContext.clients.get(languageId);
     if (!client) {
@@ -176,6 +184,7 @@ export class MLIRContext implements vscode.Disposable {
     let configsToWatch: string[] = [];
     let filepathsToWatch: string[] = [];
     let additionalServerArgs: string[] = [];
+    additionalServerArgs = config.get<string[]>(languageName + "_additional_server_args", null, []);
 
     // Initialize additional configurations for this server.
     if (languageName === 'pdll') {
@@ -193,6 +202,10 @@ export class MLIRContext implements vscode.Disposable {
         workspaceFolder, outputChannel, serverSettingName, languageName,
         additionalServerArgs);
     configsToWatch.push(serverSettingName);
+
+    const enableSettingName =
+        (languageName === 'mlir') ? 'enable' : `${languageName}_enable`;
+    configsToWatch.push(enableSettingName);
     filepathsToWatch.push(serverPath);
 
     // Watch for configuration changes on this folder.

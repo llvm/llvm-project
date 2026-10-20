@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -19,18 +20,29 @@
 #include <expected>
 #include <utility>
 
-struct Error{
+struct Error {
   int i;
   friend constexpr bool operator==(const Error&, const Error&) = default;
+  friend constexpr bool operator==(const Error& lhs, int rhs) noexcept { return lhs.i == rhs; }
 };
 
 constexpr bool test() {
   std::unexpected<Error> unex1(Error{2});
   std::unexpected<Error> unex2(Error{3});
   std::unexpected<Error> unex3(Error{2});
+
   assert(unex1 == unex3);
   assert(unex1 != unex2);
   assert(unex2 != unex3);
+
+  std::unexpected<int> unex_i1(1);
+  std::unexpected<int> unex_i2(2);
+
+  assert(unex1 != unex_i1);
+  assert(unex_i1 != unex1);
+  assert(unex1 == unex_i2);
+  assert(unex_i2 == unex1);
+
   return true;
 }
 

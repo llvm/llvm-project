@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -passes=post-RA-sched -o - %s | FileCheck %s
 # RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s -experimental-debug-variable-locations| FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -passes=post-RA-sched -o - %s -experimental-debug-variable-locations| FileCheck %s
 
 # Test that multiple DBG_VALUE's and DBG_PHIs following an instruction whose
 # register needs # to be changed during the post-RA scheduler pass are updated

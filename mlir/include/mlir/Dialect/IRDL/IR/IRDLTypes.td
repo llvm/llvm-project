@@ -14,7 +14,7 @@
 #define MLIR_DIALECT_IRDL_IR_IRDLTYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "IRDL.td"
+include "mlir/Dialect/IRDL/IR/IRDL.td"
 
 class IRDL_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<IRDL_Dialect, name, traits> {
@@ -32,13 +32,13 @@ def IRDL_AttributeType : IRDL_Type<"Attribute", "attribute"> {
     Example:
 
     ```mlir
-    irdl.dialect cmath {
+    irdl.dialect @cmath {
 
       irdl.type @complex { /* ... */ }
 
       irdl.operation @norm {
         %0 = irdl.any
-        %1 = irdl.parametric @complex<%0>
+        %1 = irdl.parametric @cmath::@complex<%0>
         irdl.operands(%1)
         irdl.results(%0)
       }

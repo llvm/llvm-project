@@ -9,13 +9,20 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
 
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 LIBC_INLINE constexpr bool is_constant_evaluated() {
+#if LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
   return __builtin_is_constant_evaluated();
+#else
+  return false;
+#endif
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H

@@ -42,12 +42,12 @@ main_body:
   %17 = fadd float %16, %8
   %18 = fmul float %11, %11
   %19 = fadd float %18, %0
-  %20 = insertelement <4 x float> undef, float %13, i32 0
+  %20 = insertelement <4 x float> poison, float %13, i32 0
   %21 = insertelement <4 x float> %20, float %15, i32 1
   %22 = insertelement <4 x float> %21, float %17, i32 2
   %23 = insertelement <4 x float> %22, float %19, i32 3
   %24 = call float @llvm.r600.dot4(<4 x float> %23, <4 x float> %10)
-  %25 = insertelement <4 x float> undef, float %24, i32 0
+  %25 = insertelement <4 x float> poison, float %24, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %25, i32 0, i32 2)
   ret void
 }

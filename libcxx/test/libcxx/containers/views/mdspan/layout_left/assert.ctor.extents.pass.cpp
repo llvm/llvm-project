@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
-
 
 // constexpr mapping(const extents_type& e) noexcept;
 //
@@ -32,7 +29,7 @@ int main(int, char**) {
   {
     // the extents are representable but the product is not, so we can't use it for layout_left
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_left::mapping<std::extents<char, D, 5>> m(std::extents<char, D, 5>(100)); }()),
+        ([=] { std::layout_left::mapping<std::extents<signed char, D, 5>> m(std::extents<signed char, D, 5>(100)); }()),
         "layout_left::mapping extents ctor: product of extents must be representable as index_type.");
   }
   return 0;

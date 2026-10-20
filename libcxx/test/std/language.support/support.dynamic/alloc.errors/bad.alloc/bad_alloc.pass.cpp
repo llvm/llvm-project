@@ -9,8 +9,9 @@
 // test bad_alloc
 
 #include <new>
-#include <type_traits>
 #include <cassert>
+#include <exception>
+#include <type_traits>
 
 #include "test_macros.h"
 

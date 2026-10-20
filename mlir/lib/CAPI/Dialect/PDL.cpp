@@ -32,8 +32,16 @@ bool mlirTypeIsAPDLAttributeType(MlirType type) {
   return isa<pdl::AttributeType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLAttributeTypeGetTypeID(void) {
+  return wrap(pdl::AttributeType::getTypeID());
+}
+
 MlirType mlirPDLAttributeTypeGet(MlirContext ctx) {
   return wrap(pdl::AttributeType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirPDLAttributeTypeGetName(void) {
+  return wrap(pdl::AttributeType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -44,8 +52,16 @@ bool mlirTypeIsAPDLOperationType(MlirType type) {
   return isa<pdl::OperationType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLOperationTypeGetTypeID(void) {
+  return wrap(pdl::OperationType::getTypeID());
+}
+
 MlirType mlirPDLOperationTypeGet(MlirContext ctx) {
   return wrap(pdl::OperationType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirPDLOperationTypeGetName(void) {
+  return wrap(pdl::OperationType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -56,8 +72,16 @@ bool mlirTypeIsAPDLRangeType(MlirType type) {
   return isa<pdl::RangeType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLRangeTypeGetTypeID(void) {
+  return wrap(pdl::RangeType::getTypeID());
+}
+
 MlirType mlirPDLRangeTypeGet(MlirType elementType) {
   return wrap(pdl::RangeType::get(unwrap(elementType)));
+}
+
+MlirStringRef mlirPDLRangeTypeGetName(void) {
+  return wrap(pdl::RangeType::name);
 }
 
 MlirType mlirPDLRangeTypeGetElementType(MlirType type) {
@@ -72,9 +96,15 @@ bool mlirTypeIsAPDLTypeType(MlirType type) {
   return isa<pdl::TypeType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLTypeTypeGetTypeID(void) {
+  return wrap(pdl::TypeType::getTypeID());
+}
+
 MlirType mlirPDLTypeTypeGet(MlirContext ctx) {
   return wrap(pdl::TypeType::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirPDLTypeTypeGetName(void) { return wrap(pdl::TypeType::name); }
 
 //===---------------------------------------------------------------------===//
 // ValueType
@@ -84,6 +114,14 @@ bool mlirTypeIsAPDLValueType(MlirType type) {
   return isa<pdl::ValueType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLValueTypeGetTypeID(void) {
+  return wrap(pdl::ValueType::getTypeID());
+}
+
 MlirType mlirPDLValueTypeGet(MlirContext ctx) {
   return wrap(pdl::ValueType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirPDLValueTypeGetName(void) {
+  return wrap(pdl::ValueType::name);
 }

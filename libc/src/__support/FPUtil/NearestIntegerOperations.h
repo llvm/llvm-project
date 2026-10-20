@@ -16,12 +16,13 @@
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T trunc(T x) {
+LIBC_INLINE constexpr T trunc(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -51,7 +52,7 @@ LIBC_INLINE T trunc(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T ceil(T x) {
+LIBC_INLINE constexpr T ceil(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
@@ -75,14 +76,16 @@ LIBC_INLINE T ceil(T x) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  bits.set_mantissa(trunc_mantissa);
-  T trunc_value = bits.get_val();
+  StorageType x_u = bits.uintval();
+  StorageType trunc_u =
+      static_cast<StorageType>((x_u >> trim_size) << trim_size);
 
   // If x is already an integer, return it.
-  if (trunc_value == x)
+  if (trunc_u == x_u)
     return x;
+
+  bits.set_uintval(trunc_u);
+  T trunc_value = bits.get_val();
 
   // If x is negative, the ceil operation is equivalent to the trunc operation.
   if (is_neg)
@@ -92,7 +95,7 @@ LIBC_INLINE T ceil(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T floor(T x) {
+LIBC_INLINE constexpr T floor(T x) {
   FPBits<T> bits(x);
   if (bits.is_neg()) {
     return -ceil(-x);
@@ -102,50 +105,48 @@ LIBC_INLINE T floor(T x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T round(T x) {
+LIBC_INLINE constexpr T round(T x) {
   using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
-  // If x is infinity NaN or zero, return it.
-  if (bits.is_inf_or_nan() || bits.is_zero())
-    return x;
+  // x86 binary80 has NaN encodings with a non-all-ones exponent, so the
+  // biased-exponent check below does not cover every NaN representation.
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
+    if (LIBC_UNLIKELY(bits.is_nan()))
+      return x;
+  }
 
-  int exponent = bits.get_exponent();
+  uint16_t biased_exponent = bits.get_biased_exponent();
 
-  // If the exponent is greater than the most negative mantissa
-  // exponent, then x is already an integer.
-  if (exponent >= static_cast<int>(FPBits<T>::FRACTION_LEN))
-    return x;
+  if (biased_exponent <= FPBits<T>::EXP_BIAS - 2 ||
+      LIBC_UNLIKELY(biased_exponent >=
+                    FPBits<T>::EXP_BIAS + FPBits<T>::FRACTION_LEN)) {
+    // Outside the middle range, the exponent's top bit selects x or signed
+    // zero without another branch.
+    StorageType keep_mask = static_cast<StorageType>(
+        StorageType(0) -
+        static_cast<StorageType>(biased_exponent / (FPBits<T>::EXP_BIAS + 1)));
+    bits.set_uintval(static_cast<StorageType>(
+        bits.uintval() & (keep_mask | FPBits<T>::SIGN_MASK)));
+    return bits.get_val();
+  }
 
-  if (exponent == -1) {
-    // Absolute value of x is greater than equal to 0.5 but less than 1.
+  if (biased_exponent == FPBits<T>::EXP_BIAS - 1) {
+    // Absolute value of x is greater than or equal to 0.5 but less than 1.
     return FPBits<T>::one(bits.sign()).get_val();
   }
 
-  if (exponent <= -2) {
-    // Absolute value of x is less than 0.5.
-    return FPBits<T>::zero(bits.sign()).get_val();
-  }
-
-  uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  bool half_bit_set =
-      bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  bits.set_mantissa(trunc_mantissa);
-  T trunc_value = bits.get_val();
-
-  // If x is already an integer, return it.
-  if (trunc_value == x)
-    return x;
-
-  if (!half_bit_set) {
-    // Franctional part is less than 0.5 so round value is the
-    // same as the trunc value.
-    return trunc_value;
-  } else {
-    return bits.is_neg() ? trunc_value - T(1.0) : trunc_value + T(1.0);
-  }
+  // 1 <= abs(x) < 2^FRACTION_LEN. Add the rounding bit and clear all
+  // fractional bits below the resulting integral value.
+  int exponent = static_cast<int>(biased_exponent) - FPBits<T>::EXP_BIAS;
+  StorageType x_u = bits.uintval();
+  StorageType round_bit = static_cast<StorageType>(
+      StorageType(1) << (FPBits<T>::FRACTION_LEN - exponent - 1));
+  StorageType mask = static_cast<StorageType>((round_bit << 1) - 1);
+  bits.set_uintval(static_cast<StorageType>((x_u + round_bit) & ~mask));
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80)
+    bits.set_implicit_bit(true);
+  return bits.get_val();
 }
 
 template <typename T>
@@ -188,15 +189,16 @@ round_using_specific_rounding_mode(T x, int rnd) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  FPBits<T> new_bits = bits;
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  new_bits.set_mantissa(trunc_mantissa);
-  T trunc_value = new_bits.get_val();
+  StorageType x_u = bits.uintval();
+  StorageType trunc_u =
+      static_cast<StorageType>((x_u >> trim_size) << trim_size);
 
   // If x is already an integer, return it.
-  if (trunc_value == x)
+  if (trunc_u == x_u)
     return x;
+
+  FPBits<T> new_bits(trunc_u);
+  T trunc_value = new_bits.get_val();
 
   StorageType trim_value =
       bits.get_mantissa() &
@@ -238,8 +240,11 @@ round_using_specific_rounding_mode(T x, int rnd) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 round_using_current_rounding_mode(T x) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  return round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+#else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   int rounding_mode = quick_get_round();
 
   switch (rounding_mode) {
@@ -254,6 +259,7 @@ round_using_current_rounding_mode(T x) {
   default:
     __builtin_unreachable();
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
 template <bool IsSigned, typename T>
@@ -340,13 +346,14 @@ fromfpx(T x, int rnd, unsigned int width) {
 
 namespace internal {
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I rounded_float_to_signed_integer(F x) {
-  constexpr I INTEGER_MIN = (I(1) << (sizeof(I) * 8 - 1));
-  constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
-  FPBits<F> bits(x);
+LIBC_INLINE constexpr IntType rounded_float_to_signed_integer(FloatType x) {
+  constexpr IntType INTEGER_MIN = (IntType(1) << (sizeof(IntType) * 8 - 1));
+  constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
+  FPBits<FloatType> bits(x);
   auto set_domain_error_and_raise_invalid = []() {
     set_errno_if_required(EDOM);
     raise_except_if_required(FE_INVALID);
@@ -358,7 +365,7 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   }
 
   int exponent = bits.get_exponent();
-  constexpr int EXPONENT_LIMIT = sizeof(I) * 8 - 1;
+  constexpr int EXPONENT_LIMIT = sizeof(IntType) * 8 - 1;
   if (exponent > EXPONENT_LIMIT) {
     set_domain_error_and_raise_invalid();
     return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
@@ -368,33 +375,37 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
       return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
     }
     // If the control reaches here, then it means that the rounded
-    // value is the most negative number for the signed integer type I.
+    // value is the most negative number for the signed integer type IntType.
   }
 
-  // For all other cases, if `x` can fit in the integer type `I`,
+  // For all other cases, if `x` can fit in the integer type `IntType`,
   // we just return `x`. static_cast will convert the floating
   // point value to the exact integer value.
-  return static_cast<I>(x);
+  return static_cast<IntType>(x);
 }
 
 } // namespace internal
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I round_to_signed_integer(F x) {
-  return internal::rounded_float_to_signed_integer<F, I>(round(x));
+LIBC_INLINE constexpr IntType round_to_signed_integer(FloatType x) {
+  return internal::rounded_float_to_signed_integer<FloatType, IntType>(
+      round(x));
 }
 
-template <typename F, typename I,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<I>,
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
                            int> = 0>
-LIBC_INLINE I round_to_signed_integer_using_current_rounding_mode(F x) {
-  return internal::rounded_float_to_signed_integer<F, I>(
+LIBC_INLINE constexpr IntType
+round_to_signed_integer_using_current_rounding_mode(FloatType x) {
+  return internal::rounded_float_to_signed_integer<FloatType, IntType>(
       round_using_current_rounding_mode(x));
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H

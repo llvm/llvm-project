@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
 
 ; Check that store is post-incremented.
 ; CHECK: memh(r{{[0-9]+}}++#2)
@@ -67,4 +67,4 @@ polly.stmt.for.body29:                            ; preds = %polly.stmt.for.body
   br i1 %exitcond, label %for.end.loopexit, label %polly.stmt.for.body29
 }
 
-attributes #0 = { nounwind "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="static" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind "frame-pointer"="non-leaf" "realign-stack" }

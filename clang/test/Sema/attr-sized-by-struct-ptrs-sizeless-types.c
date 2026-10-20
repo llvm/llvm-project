@@ -1,5 +1,6 @@
 // __SVInt8_t is specific to ARM64 so specify that in the target triple
 // RUN: %clang_cc1 -triple arm64-apple-darwin -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -triple arm64-apple-darwin -fsyntax-only -verify %s
 
 #define __sized_by(f)  __attribute__((sized_by(f)))
 

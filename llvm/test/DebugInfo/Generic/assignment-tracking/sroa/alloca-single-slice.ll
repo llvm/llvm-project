@@ -1,7 +1,5 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ; Check that single sliced allocas retain their assignment tracking debug info.
 

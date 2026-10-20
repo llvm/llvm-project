@@ -9,11 +9,17 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/Register.h"
+#include "Utils/AArch64BaseInfo.h"
 
 namespace llvm {
 namespace AArch64PAuth {
+
+/// PAuth key to be used with function pointers in .init_array and .fini_array.
+constexpr AArch64PACKey::ID InitFiniKey = AArch64PACKey::IA;
+
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr unsigned InitFiniPointerConstantDiscriminator = 0xD9D4;
 
 /// Variants of check performed on an authenticated pointer.
 ///
@@ -35,27 +41,29 @@ namespace AArch64PAuth {
 /// ```
 ///   <authenticate LR>
 ///   <method-specific checker>
-/// ret_block:
-///   <more instructions>
-///   ...
-///
-/// break_block:
+/// on_fail:
 ///   brk <code>
+/// on_success:
+///   <more instructions>
+///
 /// ```
 enum class AuthCheckMethod {
   /// Do not check the value at all
   None,
+
   /// Perform a load to a temporary register
   DummyLoad,
+
   /// Check by comparing bits 62 and 61 of the authenticated address.
   ///
   /// This method modifies control flow and inserts the following checker:
   ///
   /// ```
   ///   eor Xtmp, Xn, Xn, lsl #1
-  ///   tbnz Xtmp, #62, break_block
+  ///   tbz Xtmp, #62, on_success
   /// ```
   HighBitsNoTBI,
+
   /// Check by comparing the authenticated value with an XPAC-ed one without
   /// using PAuth instructions not encoded as HINT. Can only be applied to LR.
   ///
@@ -68,40 +76,46 @@ enum class AuthCheckMethod {
   ///   ; the authentication succeeded and the temporary register contains the
   ///   ; *real* result of authentication.
   ///   cmp Xtmp, LR
-  ///   b.ne break_block
+  ///   b.eq on_success
   /// ```
   XPACHint,
+
+  /// Similar to XPACHint but using Armv8.3-only XPAC instruction, thus
+  /// not restricted to LR:
+  /// ```
+  ///   mov Xtmp, Xn
+  ///   xpac(i|d) Xn
+  ///   cmp Xtmp, Xn
+  ///   b.eq on_success
+  /// ```
+  XPAC,
 };
 
-#define AUTH_CHECK_METHOD_CL_VALUES_COMMON                                     \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::None, "none",                  \
-                 "Do not check authenticated address"),                        \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::DummyLoad, "load",             \
-                 "Perform dummy load from authenticated address"),             \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::HighBitsNoTBI,                 \
-                 "high-bits-notbi",                                            \
-                 "Compare bits 62 and 61 of address (TBI should be disabled)")
+/// Ways to check pointer authentication auth/resign failures.
+enum class PtrauthCheckMode { Unchecked, Poison, Trap };
 
-#define AUTH_CHECK_METHOD_CL_VALUES_LR                                         \
-      AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                      \
-      clEnumValN(AArch64PAuth::AuthCheckMethod::XPACHint, "xpac-hint",         \
-                 "Compare with the result of XPACLRI")
-
-/// Explicitly checks that pointer authentication succeeded.
+/// Control the emission of .cfi_set_ra_state, which replaces the
+/// deprecated .cfi_negate_ra_state_with_pc [1].
 ///
-/// Assuming AuthenticatedReg contains a value returned by one of the AUT*
-/// instructions, check the value using Method just before the instruction
-/// pointed to by MBBI. If the check succeeds, execution proceeds to the
-/// instruction pointed to by MBBI, otherwise a CPU exception is generated.
+/// The latter is fundamentally unable to express some program orders [2], as
+/// the dwarf 'program' reads functions in a linear scan of their addresses to
+/// reconstruct the state of the frame, whereas control flow may enter and exit
+/// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
+/// fucntions), and thus the negate-based cfi is unable to encode the address of
+/// the signing instruciton in all program orders.
 ///
-/// Some of the methods may need to know if the pointer was authenticated
-/// using an I-key or D-key and which register can be used as temporary.
-/// If an explicit BRK instruction is used to generate an exception, BrkImm
-/// specifies its immediate operand.
-void checkAuthenticatedRegister(MachineBasicBlock::iterator MBBI,
-                                AuthCheckMethod Method,
-                                Register AuthenticatedReg, Register TmpReg,
-                                bool UseIKey, unsigned BrkImm);
+/// Since .cfi_negate_ra_state is still sufficient for describing
+/// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
+/// DW_CFA_AARCH64_negate_ra_state has a smaller encoding than
+/// DW_CFA_AARCH64_set_ra_state.
+///
+/// 1: https://github.com/ARM-software/abi-aa/pull/346
+/// 2: https://github.com/ARM-software/abi-aa/issues/327
+enum class SetRAStateMode {
+  Never,   // Always use .cfi_negate_ra_state(_with_pc)
+  PAuthLR, // Use .cfi_set_ra_state only for PAuth_LR
+  Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
+};
 
 /// Returns the number of bytes added by checkAuthenticatedRegister.
 unsigned getCheckerSizeInBytes(AuthCheckMethod Method);

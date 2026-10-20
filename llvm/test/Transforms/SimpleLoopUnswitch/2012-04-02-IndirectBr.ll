@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes=simple-loop-unswitch -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
+; RUN: opt < %s -S -passes="loop-mssa(simple-loop-unswitch)" -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
 ; PR12343: -passes=simple-loop-unswitch crash on indirect branch
 
 ; CHECK:       %0 = icmp eq i64 undef, 0

@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O0 < %s | FileCheck %s
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -O0 < %s | \
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -O0 < %s | \
 ; RUN: FileCheck -check-prefix=CHECK-CALL %s
 ; Hexagon Programmer's Reference Manual 11.10.1 XTYPE/ALU
 

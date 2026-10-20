@@ -14,6 +14,12 @@ import lldbsuite.test.lldbutil
 class AttachCancelTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfRemote
+    @skipIfWasm  # the Wasm platform cannot attach to a process by name
+    @skipIf(
+        hostoslist=["windows", "linux"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/115618",
+    )
     def test_scripted_implementation(self):
         """Test that cancelling a stuck "attach waitfor" works."""
         # First make an empty target for the attach:

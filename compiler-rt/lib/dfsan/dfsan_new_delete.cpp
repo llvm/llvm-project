@@ -16,6 +16,7 @@
 #include "dfsan.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 
 using namespace __dfsan;
@@ -30,16 +31,20 @@ enum class align_val_t : size_t {};
 #define OPERATOR_NEW_BODY(nothrow)   \
   void *res = dfsan_malloc(size);    \
   if (!nothrow && UNLIKELY(!res)) {  \
-    BufferedStackTrace stack;        \
+    UNINITIALIZED BufferedStackTrace stack;        \
     ReportOutOfMemory(size, &stack); \
   }                                  \
   return res
-#define OPERATOR_NEW_BODY_ALIGN(nothrow)         \
-  void *res = dfsan_memalign((uptr)align, size); \
-  if (!nothrow && UNLIKELY(!res)) {              \
-    BufferedStackTrace stack;                    \
-    ReportOutOfMemory(size, &stack);             \
-  }                                              \
+#define OPERATOR_NEW_BODY_ALIGN(nothrow)                   \
+  if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align))) {  \
+    UNINITIALIZED BufferedStackTrace stack;                \
+    ReportInvalidAllocationAlignment((uptr)align, &stack); \
+  }                                                        \
+  void* res = dfsan_memalign((uptr)align, size);           \
+  if (!nothrow && UNLIKELY(!res)) {                        \
+    UNINITIALIZED BufferedStackTrace stack;                \
+    ReportOutOfMemory(size, &stack);                       \
+  }                                                        \
   return res;
 
 INTERCEPTOR_ATTRIBUTE

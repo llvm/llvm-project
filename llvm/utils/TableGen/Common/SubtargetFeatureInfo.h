@@ -6,31 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
-#define LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#ifndef LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
+#define LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 struct SubtargetFeatureInfo;
 using SubtargetFeatureInfoMap =
-    std::map<Record *, SubtargetFeatureInfo, LessRecordByID>;
+    std::map<const Record *, SubtargetFeatureInfo, LessRecordByID>;
+using SubtargetFeaturesInfoVec =
+    std::vector<std::pair<const Record *, SubtargetFeatureInfo>>;
 
 /// Helper class for storing information on a subtarget feature which
 /// participates in instruction matching.
 struct SubtargetFeatureInfo {
   /// The predicate record for this feature.
-  Record *TheDef;
+  const Record *TheDef;
 
   /// An unique index assigned to represent this feature.
   uint64_t Index;
 
-  SubtargetFeatureInfo(Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
+  SubtargetFeatureInfo(const Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
 
   /// The name of the enumerated constant identifying this feature.
   std::string getEnumName() const {
@@ -48,8 +52,8 @@ struct SubtargetFeatureInfo {
   }
 
   void dump() const;
-  static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
-  getAll(const RecordKeeper &Records);
+
+  static SubtargetFeaturesInfoVec getAll(const RecordKeeper &Records);
 
   /// Emit the subtarget feature flag definitions.
   ///
@@ -99,7 +103,33 @@ struct SubtargetFeatureInfo {
   static void emitComputeAssemblerAvailableFeatures(
       StringRef TargetName, StringRef ClassName, StringRef FuncName,
       SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS);
+
+  static void emitPredicateCheck(raw_ostream &OS,
+                                 ArrayRef<const Record *> Predicates);
+
+  static void emitMCPredicateCheck(raw_ostream &OS, StringRef TargetName,
+                                   ArrayRef<const Record *> Predicates);
 };
+
+struct SubtargetFeatureLiteral {
+  StringRef Feature;
+  bool IsNot;
+
+  bool operator<(const SubtargetFeatureLiteral &Other) const {
+    return std::tie(Feature, IsNot) < std::tie(Other.Feature, Other.IsNot);
+  }
+  bool operator==(const SubtargetFeatureLiteral &Other) const {
+    return Feature == Other.Feature && IsNot == Other.IsNot;
+  }
+};
+
+/// Populates \p FeaturesSet and \p AnyOfFeatureSets from \p ReqPredicates.
+/// Returns true if all predicates were assembler predicates with a valid
+/// AssemblerCondDag, or false if any non-assembler predicates were skipped.
+bool getRequiredFeatures(
+    std::set<SubtargetFeatureLiteral> &FeaturesSet,
+    std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,
+    ArrayRef<const Record *> ReqPredicates);
 } // end namespace llvm
 
-#endif // LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

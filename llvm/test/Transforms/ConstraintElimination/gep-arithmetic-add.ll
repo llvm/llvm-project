@@ -389,8 +389,7 @@ define i1 @gep_count_add_1_sge_known_ult_1(i32 %count, ptr %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
 ; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_SUB]], [[GEP_COUNT]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %sge = icmp sge i32 %count, 1
@@ -415,8 +414,7 @@ define i1 @gep_count_add_1_sge_known_uge_1(i32 %count, ptr %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[COUNT]], -1
 ; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[GEP_SUB:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[SUB_EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_SUB]], [[P]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %sge = icmp sge i32 %count, 1

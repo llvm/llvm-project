@@ -11,12 +11,13 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -39,23 +40,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
-#include "Opts.inc"
-#undef PREFIX
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class CvtResOptTable : public opt::GenericOptTable {
+class CvtResOptTable : public opt::OptTable {
 public:
-  CvtResOptTable() : opt::GenericOptTable(InfoTable, true) {}
+  CvtResOptTable() : opt::OptTable(optionTables(), true) {}
 };
 } // namespace
 

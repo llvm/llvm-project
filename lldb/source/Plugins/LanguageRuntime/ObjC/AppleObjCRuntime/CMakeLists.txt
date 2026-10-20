@@ -1,6 +1,5 @@
 add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
   AppleObjCRuntime.cpp
-  AppleObjCRuntimeV1.cpp
   AppleObjCRuntimeV2.cpp
   AppleObjCTrampolineHandler.cpp
   AppleObjCDeclVendor.cpp
@@ -8,6 +7,8 @@ add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
   AppleObjCClassDescriptorV2.cpp
   AppleObjCTypeEncodingParser.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -17,11 +18,10 @@ add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginExpressionParserClang
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
-  LINK_COMPONENTS
-    Support
   )

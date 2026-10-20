@@ -36,14 +36,13 @@ public:
     WCharType = UnsignedChar;
     WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
-    resetDataLayout("e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32"
-                    "-f64:32-a:0:32-n32");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -60,7 +59,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

@@ -29,7 +29,7 @@ class LLVM_LIBRARY_VISIBILITY CSKYAsmPrinter : public AsmPrinter {
 
   void expandTLSLA(const MachineInstr *MI);
   void emitCustomConstantPool(const MachineInstr *MI);
-  void emitAttributes();
+  void emitAttributes(Module &M);
 
 public:
   explicit CSKYAsmPrinter(TargetMachine &TM,
@@ -41,8 +41,7 @@ public:
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 

@@ -10,6 +10,8 @@
 
 import argparse
 import os
+import re
+import shlex
 import subprocess
 import sys
 from typing import List, Optional
@@ -20,8 +22,8 @@ the coding style of LLVM. It can also be installed as a pre-commit git hook to
 check the coding style before submitting it. The canonical source of this script
 is in the LLVM source tree under llvm/utils/git.
 
-For C/C++ code it uses clang-format and for Python code it uses darker (which
-in turn invokes black).
+For C/C++ code it uses clang-format, for Python code it uses darker (which
+in turn invokes black), and for LLVM-libc CMake files it uses cmake_format.py.
 
 You can learn more about the LLVM coding style on llvm.org:
 https://llvm.org/docs/CodingStandards.html
@@ -31,8 +33,9 @@ directory:
 
 ln -s $(pwd)/llvm/utils/git/code-format-helper.py .git/hooks/pre-commit
 
-You can control the exact path to clang-format or darker with the following
-environment variables: $CLANG_FORMAT_PATH and $DARKER_FORMAT_PATH.
+You can control the exact path to clang-format, darker, or cmake_format.py with
+the following environment variables: $CLANG_FORMAT_PATH, $DARKER_FORMAT_PATH,
+and $CMAKE_FORMAT_PATH.
 """
 
 
@@ -90,6 +93,12 @@ You can test this locally with the following command:
 {self.instructions}
 ``````````
 
+:warning:
+The reproduction instructions above might return results for more than one PR
+in a stack if you are using a stacked PR workflow. You can limit the results by
+changing `origin/main` to the base branch/commit you want to compare against.
+:warning:
+
 </details>
 
 <details>
@@ -116,7 +125,7 @@ View the diff from {self.name} here.
         import github
         from github import IssueComment, PullRequest
 
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = self.comment_tag + "\n\n" + comment_text
@@ -165,7 +174,8 @@ View the diff from {self.name} here.
                 f":warning: The {self.friendly_name} failed without printing "
                 "a diff. Check the logs for stderr output. :warning:"
             )
-            self.update_pr(comment_text, args, create_new=False)
+            if should_update_gh:
+                self.update_pr(comment_text, args, create_new=False)
             return False
 
 
@@ -173,9 +183,33 @@ class ClangFormatHelper(FormatHelper):
     name = "clang-format"
     friendly_name = "C/C++ code formatter"
 
+    def _construct_command(self, diff_expression: list[str] | None):
+        cf_cmd = [self.clang_fmt_path, "--diff"]
+
+        if diff_expression:
+            cf_cmd.extend(diff_expression)
+
+        # Gather the extension of all modified files and pass them explicitly to git-clang-format.
+        # This prevents git-clang-format from applying its own filtering rules on top of ours.
+        extensions = set()
+        for file in self._cpp_files:
+            _, ext = os.path.splitext(file)
+            extensions.add(
+                ext.strip(".")
+            )  # Exclude periods since git-clang-format takes extensions without them
+        cf_cmd.append("--extensions")
+        cf_cmd.append(",".join(extensions))
+
+        cf_cmd.append("--")
+        cf_cmd += self._cpp_files
+        return cf_cmd
+
     @property
     def instructions(self) -> str:
-        return " ".join(self.cf_cmd)
+        return (
+            " ".join(self._construct_command(["origin/main", "HEAD"]))
+            + " --diff_from_common_commit"
+        )
 
     def should_include_extensionless_file(self, path: str) -> bool:
         return path.startswith("libcxx/include")
@@ -184,7 +218,17 @@ class ClangFormatHelper(FormatHelper):
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
-            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
+            if ext in (
+                ".cpp",
+                ".c",
+                ".h",
+                ".hpp",
+                ".hxx",
+                ".cxx",
+                ".inc",
+                ".cppm",
+                ".cl",
+            ):
                 filtered_files.append(path)
             elif ext == "" and self.should_include_extensionless_file(path):
                 filtered_files.append(path)
@@ -206,22 +250,19 @@ class ClangFormatHelper(FormatHelper):
         return proc.returncode == 0
 
     def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
-        cpp_files = self.filter_changed_files(changed_files)
-        if not cpp_files:
+        self._cpp_files = self.filter_changed_files(changed_files)
+        if not self._cpp_files:
             return None
 
-        cf_cmd = [self.clang_fmt_path, "--diff"]
-
+        diff_expression = []
         if args.start_rev and args.end_rev:
-            cf_cmd.append(args.start_rev)
-            cf_cmd.append(args.end_rev)
+            diff_expression.append(args.start_rev)
+            diff_expression.append(args.end_rev)
 
-        cf_cmd.append("--")
-        cf_cmd += cpp_files
+        cf_cmd = self._construct_command(diff_expression)
 
         if args.verbose:
             print(f"Running: {' '.join(cf_cmd)}")
-        self.cf_cmd = cf_cmd
         proc = subprocess.run(cf_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sys.stdout.write(proc.stderr.decode("utf-8"))
 
@@ -240,9 +281,20 @@ class DarkerFormatHelper(FormatHelper):
     name = "darker"
     friendly_name = "Python code formatter"
 
+    def _construct_command(self, diff_expression: str | None) -> str:
+        darker_cmd = [
+            self.darker_fmt_path,
+            "--check",
+            "--diff",
+        ]
+        if diff_expression:
+            darker_cmd += ["-r", diff_expression]
+        darker_cmd += self._py_files
+        return darker_cmd
+
     @property
     def instructions(self) -> str:
-        return " ".join(self.darker_cmd)
+        return " ".join(self._construct_command("origin/main...HEAD"))
 
     def filter_changed_files(self, changed_files: List[str]) -> List[str]:
         filtered_files = []
@@ -272,17 +324,13 @@ class DarkerFormatHelper(FormatHelper):
         py_files = self.filter_changed_files(changed_files)
         if not py_files:
             return None
-        darker_cmd = [
-            self.darker_fmt_path,
-            "--check",
-            "--diff",
-        ]
+        self._py_files = py_files
+        diff_expression = None
         if args.start_rev and args.end_rev:
-            darker_cmd += ["-r", f"{args.start_rev}...{args.end_rev}"]
-        darker_cmd += py_files
+            diff_expression = f"{args.start_rev}...{args.end_rev}"
+        darker_cmd = self._construct_command(diff_expression)
         if args.verbose:
             print(f"Running: {' '.join(darker_cmd)}")
-        self.darker_cmd = darker_cmd
         proc = subprocess.run(
             darker_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
@@ -301,13 +349,247 @@ class DarkerFormatHelper(FormatHelper):
             return None
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
+class UndefGetFormatHelper(FormatHelper):
+    name = "undef deprecator"
+    friendly_name = "undef deprecator"
+
+    @property
+    def instructions(self) -> str:
+        return " ".join(shlex.quote(c) for c in self.cmd)
+
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+        filtered_files = []
+        for path in changed_files:
+            _, ext = os.path.splitext(path)
+            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm", ".ll"):
+                filtered_files.append(path)
+        return filtered_files
+
+    def has_tool(self) -> bool:
+        return True
+
+    def pr_comment_text_for_diff(self, diff: str) -> str:
+        return f"""
+:warning: {self.name} found issues in your code. :warning:
+
+<details>
+<summary>
+You can test this locally with the following command:
+</summary>
+
+``````````bash
+{self.instructions}
+``````````
+
+</details>
+
+{diff}
+"""
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        files = self.filter_changed_files(changed_files)
+        if not files:
+            return None
+
+        # Use git to find files that have had a change in the number of undefs
+        regex = "([^a-zA-Z0-9#_-]undef([^a-zA-Z0-9_-]|$)|UndefValue::get)"
+        cmd = ["git", "diff", "-U0", "--pickaxe-regex", "-S", regex]
+
+        if args.start_rev and args.end_rev:
+            cmd.append(args.start_rev)
+            cmd.append(args.end_rev)
+
+        cmd += files
+        self.cmd = cmd
+
+        if args.verbose:
+            print(f"Running: {self.instructions}")
+
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+        )
+        sys.stdout.write(proc.stderr)
+        stdout = proc.stdout
+
+        if not stdout:
+            return None
+
+        files = []
+
+        # Split the diff so we have one array entry per file.
+        # Each file is prefixed like:
+        # diff --git a/file b/file
+        for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
+            lines = file.splitlines()
+            match = re.match("a/([^ ]+)", lines[0] if lines else "")
+            filename = match[1] if match else ""
+            if filename.endswith(".ll"):
+                undef_regex = r"^[+][^;\n]*(?<!%)\bundef\b"
+            else:
+                undef_regex = r"^[+].*UndefValue::get"
+            # search for additions of undef
+            if re.search(undef_regex, file, re.MULTILINE):
+                files.append(filename)
+
+        if not files:
+            return None
+
+        files = "\n".join(" - " + f for f in files)
+        report = f"""
+The following files introduce new uses of undef:
+{files}
+
+[Undef](https://llvm.org/docs/LangRef.html#undefined-values) is now deprecated and should only be used in the rare cases where no replacement is possible. For example, a load of uninitialized memory yields `undef`. You should use `poison` values for placeholders instead.
+
+In tests, avoid using `undef` and having tests that trigger undefined behavior. If you need an operand with some unimportant value, you can add a new argument to the function and use that instead.
+
+For example, this is considered a bad practice:
+```llvm
+define void @fn() {{
+  ...
+  br i1 undef, ...
+}}
+```
+
+Please use the following instead:
+```llvm
+define void @fn(i1 %cond) {{
+  ...
+  br i1 %cond, ...
+}}
+```
+
+Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedBehavior.html) for more information.
+"""
+        if args.verbose:
+            print(f"error: {self.name} failed")
+            print(report)
+        return report
+
+
+class CMakeFormatHelper(FormatHelper):
+    name = "cmake-format"
+    friendly_name = "CMake code formatter"
+
+    def _construct_command(self) -> List[str]:
+        return [
+            sys.executable,
+            self.cmake_fmt_path,
+            "--dry-run",
+            "--diff",
+        ] + self._cmake_files
+
+    @property
+    def instructions(self) -> str:
+        return " ".join(["python3", self.cmake_fmt_path, "-i"] + self._cmake_files)
+
+    @property
+    def check_instructions(self) -> str:
+        return " ".join(
+            ["python3", self.cmake_fmt_path, "--dry-run", "--diff"] + self._cmake_files
+        )
+
+    def pr_comment_text_for_diff(self, diff: str) -> str:
+        return f"""
+:warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
+
+<details>
+<summary>
+You can fix this locally with the following command:
+</summary>
+
+``````````bash
+{self.instructions}
+``````````
+
+You can also preview the formatting diff without modifying files:
+
+``````````bash
+{self.check_instructions}
+``````````
+
+</details>
+
+<details>
+<summary>
+View the diff from {self.name} here.
+</summary>
+
+``````````diff
+{diff}
+``````````
+
+</details>
+"""
+
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+        filtered_files = []
+        for path in changed_files:
+            if not path.startswith("libc/"):
+                continue
+            if os.path.basename(path) == "CMakeLists.txt" or path.endswith(".cmake"):
+                if os.path.exists(path):
+                    filtered_files.append(path)
+        return filtered_files
+
+    @property
+    def cmake_fmt_path(self) -> str:
+        if "CMAKE_FORMAT_PATH" in os.environ:
+            return os.environ["CMAKE_FORMAT_PATH"]
+        return "libc/utils/cmake_format.py"
+
+    def has_tool(self) -> bool:
+        return os.path.isfile(self.cmake_fmt_path)
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        cmake_files = self.filter_changed_files(changed_files)
+        if not cmake_files:
+            return None
+        self._cmake_files = cmake_files
+        cmake_cmd = self._construct_command()
+        if args.verbose:
+            print(f"Running: {' '.join(cmake_cmd)}")
+        proc = subprocess.run(cmake_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if args.verbose:
+            sys.stdout.write(proc.stderr.decode("utf-8"))
+
+        if proc.returncode != 0:
+            # formatting needed, or the command otherwise failed
+            stdout = proc.stdout.decode("utf-8")
+            if args.verbose:
+                print(f"error: {self.name} exited with code {proc.returncode}")
+                if stdout:
+                    print(
+                        "error: CMake files are not formatted according to "
+                        "LLVM-libc style."
+                    )
+                    print(f"To fix this locally, run:\n  {self.instructions}")
+                    print(
+                        "To preview the formatting diff locally, run:\n"
+                        f"  {self.check_instructions}"
+                    )
+                    # Print the diff in the log so that it is viewable there
+                    print(stdout)
+            elif stdout:
+                print(f"To fix CMake formatting, run:\n  {self.instructions}")
+            return stdout
+        else:
+            sys.stdout.write(proc.stdout.decode("utf-8"))
+            return None
+
+
+ALL_FORMATTERS = (
+    DarkerFormatHelper(),
+    ClangFormatHelper(),
+    CMakeFormatHelper(),
+    UndefGetFormatHelper(),
+)
 
 
 def hook_main():
     # fill out args
     args = FormatArgs()
-    args.verbose = False
+    args.verbose = os.getenv("FORMAT_HOOK_VERBOSE", False)
 
     # find the changed files
     cmd = ["git", "diff", "--cached", "--name-only", "--diff-filter=d"]
@@ -321,12 +603,13 @@ def hook_main():
         if fmt.has_tool():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
-            if fmt.comment:
-                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
     if len(failed_fmts) > 0:
+        print(
+            "Pre-commit format hook failed, rerun with FORMAT_HOOK_VERBOSE=1 environment for verbose output"
+        )
         sys.exit(1)
 
     sys.exit(0)
@@ -340,7 +623,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--token", type=str, required=True, help="GitHub authentiation token"
+        "--token", type=str, required=True, help="GitHub authentication token"
     )
     parser.add_argument(
         "--repo",

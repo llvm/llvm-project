@@ -683,7 +683,7 @@ define void @crash() nounwind alwaysinline {
 ; X86-NEXT:    je LBB33_1
 ; X86-NEXT:  ## %bb.2: ## %ret
 ; X86-NEXT:    retl
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  LBB33_1: ## %footer329VF
 ; X86-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    jmp LBB33_1
@@ -695,7 +695,7 @@ define void @crash() nounwind alwaysinline {
 ; X64-NEXT:    je LBB33_1
 ; X64-NEXT:  ## %bb.2: ## %ret
 ; X64-NEXT:    retq
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  LBB33_1: ## %footer329VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    jmp LBB33_1
@@ -1133,7 +1133,7 @@ define void @isel_crash_32b(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1153,7 +1153,7 @@ define void @isel_crash_32b(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $96, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vpbroadcastb (%rdi), %ymm1
@@ -1224,7 +1224,7 @@ define void @isel_crash_16w(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1244,7 +1244,7 @@ define void @isel_crash_16w(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $96, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vpbroadcastw (%rdi), %ymm1
@@ -1315,7 +1315,7 @@ define void @isel_crash_8d(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1335,7 +1335,7 @@ define void @isel_crash_8d(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $96, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm1
@@ -1405,7 +1405,7 @@ define void @isel_crash_4q(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1425,7 +1425,7 @@ define void @isel_crash_4q(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $96, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm1
@@ -1449,31 +1449,24 @@ eintry:
   ret void
 }
 
-define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
+define <8 x i16> @broadcast_x86_mmx(<1 x i64> %tmp) nounwind {
 ; X86-LABEL: broadcast_x86_mmx:
 ; X86:       ## %bb.0: ## %bb
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: broadcast_x86_mmx:
 ; X64-AVX2:       ## %bb.0: ## %bb
-; X64-AVX2-NEXT:    movdq2q %xmm0, %mm0
-; X64-AVX2-NEXT:    movq %mm0, %rax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm0
+; X64-AVX2-NEXT:    vmovq %rdi, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: broadcast_x86_mmx:
 ; X64-AVX512VL:       ## %bb.0: ## %bb
-; X64-AVX512VL-NEXT:    movdq2q %xmm0, %mm0
-; X64-AVX512VL-NEXT:    movq %mm0, %rax
-; X64-AVX512VL-NEXT:    vpbroadcastq %rax, %xmm0
+; X64-AVX512VL-NEXT:    vpbroadcastq %rdi, %xmm0
 ; X64-AVX512VL-NEXT:    retq
 bb:
-  %tmp1 = bitcast x86_mmx %tmp to i64
+  %tmp1 = bitcast <1 x i64> %tmp to i64
   %tmp2 = insertelement <2 x i64> undef, i64 %tmp1, i32 0
   %tmp3 = bitcast <2 x i64> %tmp2 to <8 x i16>
   %tmp4 = shufflevector <8 x i16> %tmp3, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>

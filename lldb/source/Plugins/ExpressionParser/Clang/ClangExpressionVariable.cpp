@@ -9,12 +9,12 @@
 #include "ClangExpressionVariable.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "clang/AST/ASTContext.h"
 
 using namespace lldb_private;
@@ -59,6 +59,6 @@ ClangExpressionVariable::ClangExpressionVariable(
 }
 
 TypeFromUser ClangExpressionVariable::GetTypeFromUser() {
-  TypeFromUser tfu(m_frozen_sp->GetCompilerType());
+  TypeFromUser tfu(GetValueObject()->GetCompilerType());
   return tfu;
 }

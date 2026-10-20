@@ -16,6 +16,7 @@
 
 #  include "sanitizer_dbghelp.h"
 #  include "sanitizer_symbolizer_internal.h"
+#  include "sanitizer_symbolizer_libbacktrace.h"
 
 namespace __sanitizer {
 
@@ -65,12 +66,13 @@ void InitializeDbgHelpIfNeeded() {
   HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
   CHECK(dbghelp && "failed to load dbghelp.dll");
 
-#define DBGHELP_IMPORT(name)                                                  \
-  do {                                                                        \
-    name =                                                                    \
-        reinterpret_cast<decltype(::name) *>(GetProcAddress(dbghelp, #name)); \
-    CHECK(name != nullptr);                                                   \
-  } while (0)
+#  define DBGHELP_IMPORT(name)                     \
+    do {                                           \
+      name = reinterpret_cast<decltype(::name) *>( \
+          (void *)GetProcAddress(dbghelp, #name)); \
+      CHECK(name != nullptr);                      \
+    } while (0)
+
   DBGHELP_IMPORT(StackWalk64);
   DBGHELP_IMPORT(SymCleanup);
   DBGHELP_IMPORT(SymFromAddr);
@@ -278,6 +280,12 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
     return;
   }
 
+#  if defined(__GNUC__) && !defined(__clang__)
+  if (SymbolizerTool* tool = LibbacktraceSymbolizer::get(allocator)) {
+    VReport(2, "Using libbacktrace symbolizer.\n");
+    list->push_back(tool);
+  }
+#  else
   // Add llvm-symbolizer.
   const char *user_path = common_flags()->external_symbolizer_path;
 
@@ -300,6 +308,7 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   } else {
     VReport(2, "External symbolizer is not present.\n");
   }
+#  endif
 
   // Add the dbghelp based symbolizer.
   list->push_back(new(*allocator) WinSymbolizerTool());

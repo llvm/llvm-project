@@ -44,6 +44,8 @@ Parts:
       AtomicInt64OnHeapResource: false
       AdvancedTextureOps: false
       WriteableMSAATextures: false
+      SampleCmpWithGradientOrBias: false
+      ExtendedCommandInfo: false
       NextUnusedBit:   false
   - Name:            ISG1
     Size:            52
@@ -70,12 +72,13 @@ Parts:
       NumThreadsZ:     0
       ResourceStride:  24
       Resources:
-        - Type:            2
+        - Type:            CBV
           Space:           0
           LowerBound:      0
           UpperBound:      0
-          Kind:            13
-          Flags:           0
+          Kind:            CBuffer
+          Flags:
+            UsedByAtomic64:  true
       SigInputElements:
         - Name:            AAA_HSFoo
           Indices:         [ 0 ]

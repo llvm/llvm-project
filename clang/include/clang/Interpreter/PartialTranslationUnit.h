@@ -31,6 +31,9 @@ struct PartialTranslationUnit {
 
   /// The llvm IR produced for the input.
   std::unique_ptr<llvm::Module> TheModule;
+  bool operator==(const PartialTranslationUnit &other) {
+    return other.TUPart == TUPart && other.TheModule == TheModule;
+  }
 };
 } // namespace clang
 

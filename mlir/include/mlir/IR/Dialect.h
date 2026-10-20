@@ -368,7 +368,6 @@ private:
   DenseSet<std::pair<TypeID, TypeID>> unresolvedPromisedInterfaces;
 
   friend class DialectRegistry;
-  friend void registerDialect();
   friend class MLIRContext;
 };
 

@@ -15,12 +15,9 @@
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEARGUMENTS_H
 
 #include "Delta.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceArgumentsDeltaPass(TestRunner &Test);
+void reduceArgumentsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

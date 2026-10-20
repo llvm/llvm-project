@@ -104,12 +104,12 @@ define void @test_mmx(ptr nocapture %a0, ptr nocapture %a1) {
 ; ALL-NEXT:    movntq %mm0, (%rsi)
 ; ALL-NEXT:    retq
 entry:
-  %0 = load x86_mmx, ptr %a0
-  %1 = call x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx %0, i32 3)
-  store x86_mmx %1, ptr %a1, align 8, !nontemporal !1
+  %0 = load <1 x i64>, ptr %a0
+  %1 = call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> %0, i32 3)
+  store <1 x i64> %1, ptr %a1, align 8, !nontemporal !1
   ret void
 }
-declare x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx, i32) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64>, i32) nounwind readnone
 
 ;
 ; 128-bit Vector Stores

@@ -30,4 +30,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Vector, vector);
 }
 #endif
 
+#include "mlir/Dialect/Vector/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_VECTOR_H

@@ -1,7 +1,6 @@
 ! RUN: %flang_fc1 -fdebug-unparse-no-sema -fopenmp %s | FileCheck --ignore-case %s
 ! Verifies the unparsing of the Openmp Target Device constructs
 PROGRAM main
-    USE OMP_LIB
     IMPLICIT NONE
     INTEGER:: X, Y
     INTEGER:: M = 1
@@ -45,7 +44,7 @@ PROGRAM main
 !--------------------------------------------
 ! Ancestor followed by constant argument
 !--------------------------------------------
-!CHECK: !$OMP TARGET DEVICE(ANCESTOR:0)
+!CHECK: !$OMP TARGET DEVICE(ANCESTOR: 0)
 !CHECK: !$OMP END TARGET
 !$OMP TARGET DEVICE(ANCESTOR: 0)
   M = M + 1
@@ -54,7 +53,7 @@ PROGRAM main
 !--------------------------------------------
 ! Device_Num followed by constant argument
 !--------------------------------------------
-!CHECK: !$OMP TARGET DEVICE(DEVICE_NUM:1)
+!CHECK: !$OMP TARGET DEVICE(DEVICE_NUM: 1)
 !CHECK: !$OMP END TARGET
 !$OMP TARGET DEVICE(DEVICE_NUM: 1)
   M = M + 1
@@ -63,7 +62,7 @@ PROGRAM main
 !--------------------------------------------
 ! Ancestor followed by variable expression argument
 !--------------------------------------------
-!CHECK: !$OMP TARGET DEVICE(ANCESTOR:X+Y)
+!CHECK: !$OMP TARGET DEVICE(ANCESTOR: X+Y)
 !CHECK: !$OMP END TARGET
 !$OMP TARGET DEVICE(ANCESTOR: X + Y)
   M = M + 1
@@ -72,7 +71,7 @@ PROGRAM main
 !--------------------------------------------
 ! Device_Num followed by variable expression argument
 !--------------------------------------------
-!CHECK: !$OMP TARGET DEVICE(DEVICE_NUM:X-Y)
+!CHECK: !$OMP TARGET DEVICE(DEVICE_NUM: X-Y)
 !CHECK: !$OMP END TARGET
 !$OMP TARGET DEVICE(DEVICE_NUM: X - Y)
   M = M + 1

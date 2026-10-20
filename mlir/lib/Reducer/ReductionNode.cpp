@@ -18,7 +18,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <algorithm>
 #include <limits>
 
 using namespace mlir;
@@ -76,7 +75,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   // final ranges vector will be {{1, 3}, {4, 6}, {6, 9}}.
   auto maxElement =
       llvm::max_element(ranges, [](const Range &lhs, const Range &rhs) {
-        return (lhs.second - lhs.first) > (rhs.second - rhs.first);
+        return (lhs.second - lhs.first) < (rhs.second - rhs.first);
       });
 
   // The length of range is less than 1, we can't split it to create new

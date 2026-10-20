@@ -15,9 +15,11 @@
 #include "M68kISelLowering.h"
 #include "M68kCallingConv.h"
 #include "M68kMachineFunction.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kSubtarget.h"
 #include "M68kTargetMachine.h"
 #include "M68kTargetObjectFile.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -45,11 +47,13 @@ STATISTIC(NumTailCalls, "Number of tail calls");
 
 M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
                                        const M68kSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI), TM(TM) {
+    : TargetLowering(TM, STI), Subtarget(STI), TM(TM) {
 
   MVT PtrVT = MVT::i32;
 
-  setBooleanContents(ZeroOrOneBooleanContent);
+  // This is based on M68k SetCC (scc) setting the destination byte to all 1s.
+  // See also getSetCCResultType().
+  setBooleanContents(ZeroOrNegativeOneBooleanContent);
 
   auto *RegInfo = Subtarget.getRegisterInfo();
   setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
@@ -73,17 +77,30 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setTruncStoreAction(MVT::i32, MVT::i8, Expand);
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i8, Promote);
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
-  if (Subtarget.atLeastM68020())
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, Legal);
-  else
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, LibCall);
+  // M68k can't natively div/rem 8-bit values, but we define our own patterns
+  // that handle the integer promotion, so it's marked as legal here.
+  setOperationAction(ISD::MUL, MVT::i8, Promote);
+  setOperationAction(ISD::MUL, MVT::i16, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i8, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
+
+  if (Subtarget.atLeastM68020()) {
+    setOperationAction(ISD::MUL, MVT::i32, Legal);
+    setOperationAction(ISD::SDIV, MVT::i32, Legal);
+    setOperationAction(ISD::UDIV, MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::MUL, MVT::i32, LibCall);
+    setOperationAction(ISD::SDIV, MVT::i32, LibCall);
+    setOperationAction(ISD::UDIV, MVT::i32, LibCall);
+  }
   setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
-  for (auto OP :
-       {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
-        ISD::MULHS, ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i8, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i16, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i32, LibCall);
+
+  for (auto OP : {ISD::UDIVREM, ISD::SDIVREM, ISD::MULHS, ISD::MULHU,
+                  ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
     setOperationAction(OP, MVT::i8, Promote);
     setOperationAction(OP, MVT::i16, Legal);
     setOperationAction(OP, MVT::i32, LibCall);
@@ -95,7 +112,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   }
 
   for (auto OP : {ISD::SMULO, ISD::UMULO}) {
-    setOperationAction(OP, MVT::i8,  Custom);
+    setOperationAction(OP, MVT::i8, Custom);
     setOperationAction(OP, MVT::i16, Custom);
     setOperationAction(OP, MVT::i32, Custom);
   }
@@ -130,8 +147,11 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction(ISD::SETCCCARRY, VT, Custom);
   }
 
+  setOperationAction(ISD::BSWAP, MVT::i8, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
-    setOperationAction(ISD::BSWAP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
@@ -187,19 +207,21 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 }
 
 TargetLoweringBase::AtomicExpansionKind
-M68kTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   return Subtarget.atLeastM68020()
              ? TargetLoweringBase::AtomicExpansionKind::CmpXChg
              : TargetLoweringBase::AtomicExpansionKind::None;
 }
 
 Register
-M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+M68kTargetLowering::getExceptionPointerRegister(ExceptionHandling EH,
+                                                const Constant *) const {
   return M68k::D0;
 }
 
 Register
-M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+M68kTargetLowering::getExceptionSelectorRegister(ExceptionHandling EH,
+                                                 const Constant *) const {
   return M68k::D1;
 }
 
@@ -226,6 +248,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "M68kGenCallingConv.inc"
 
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };
@@ -264,11 +287,12 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &DL) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
+  Align Alignment = Flags.getNonZeroByValAlign();
 
-  return DAG.getMemcpy(
-      Chain, DL, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile=*/false, /*AlwaysInline=*/true,
-      /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
+  return DAG.getMemcpy(Chain, DL, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -810,8 +834,6 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         S->getSymbol(), getPointerTy(DAG.getDataLayout()), OpFlags);
   }
 
-  // Returns a chain & a flag for retval copy to use.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && IsTailCall) {
@@ -842,10 +864,11 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(M68kISD::TC_RETURN, DL, NodeTys, Ops);
+    return DAG.getNode(M68kISD::TC_RETURN, DL, MVT::Other, Ops);
   }
 
-  Chain = DAG.getNode(M68kISD::CALL, DL, NodeTys, Ops);
+  // Returns a chain & a flag for retval copy to use.
+  Chain = DAG.getNode(M68kISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
   InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -1061,7 +1084,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
 bool M68kTargetLowering::CanLowerReturn(
     CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);
@@ -1101,7 +1125,7 @@ M68kTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CCID,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), ValToCopy);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), ValToCopy);
@@ -1452,10 +1476,7 @@ SDValue M68kTargetLowering::getTLSGetAddr(GlobalAddressSDNode *GA,
   PointerType *PtrTy = PointerType::get(*DAG.getContext(), 0);
 
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty = PtrTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Arg, PtrTy);
   return LowerExternalSymbolCall(DAG, SDLoc(GA), "__tls_get_addr",
                                  std::move(Args));
 }
@@ -1594,13 +1615,13 @@ static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
   case ISD::UMULO:
     PromoteMULO(ISD::ZERO_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::UMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::UMUL;
     CC = M68k::COND_VS;
     break;
   case ISD::SMULO:
     PromoteMULO(ISD::SIGN_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::SMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::SMUL;
     CC = M68k::COND_VS;
     break;
   }
@@ -1663,10 +1684,10 @@ static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
   if (Src.getValueType() != BitNo.getValueType())
     BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
 
-  SDValue BTST = DAG.getNode(M68kISD::BTST, DL, MVT::i32, Src, BitNo);
+  SDValue BTST = DAG.getNode(M68kISD::BTST, DL, MVT::i8, Src, BitNo);
 
-  // NOTE BTST sets CCR.Z flag
-  M68k::CondCode Cond = CC == ISD::SETEQ ? M68k::COND_NE : M68k::COND_EQ;
+  // NOTE BTST sets CCR.Z flag if bit is 0, same as AND with bitmask
+  M68k::CondCode Cond = CC == ISD::SETEQ ? M68k::COND_EQ : M68k::COND_NE;
   return DAG.getNode(M68kISD::SETCC, DL, MVT::i8,
                      DAG.getConstant(Cond, DL, MVT::i8), BTST);
 }
@@ -1849,12 +1870,12 @@ static SDValue LowerTruncateToBTST(SDValue Op, ISD::CondCode CC,
 static bool hasNonFlagsUse(SDValue Op) {
   for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
        ++UI) {
-    SDNode *User = *UI;
-    unsigned UOpNo = UI.getOperandNo();
+    SDNode *User = UI->getUser();
+    unsigned UOpNo = UI->getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look pass truncate.
-      UOpNo = User->use_begin().getOperandNo();
-      User = *User->use_begin();
+      // Look past truncate.
+      UOpNo = User->use_begin()->getOperandNo();
+      User = User->use_begin()->getUser();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -1991,7 +2012,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   case ISD::XOR:
     // Due to the ISEL shortcoming noted above, be conservative if this op is
     // likely to be selected as part of a load-modify-store instruction.
-    for (const auto *U : Op.getNode()->uses())
+    for (const auto *U : Op.getNode()->users())
       if (U->getOpcode() == ISD::STORE)
         goto default_case;
 
@@ -2079,26 +2100,6 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   return SDValue(New.getNode(), 1);
 }
 
-/// \brief Return true if the condition is an unsigned comparison operation.
-static bool isM68kCCUnsigned(unsigned M68kCC) {
-  switch (M68kCC) {
-  default:
-    llvm_unreachable("Invalid integer condition!");
-  case M68k::COND_EQ:
-  case M68k::COND_NE:
-  case M68k::COND_CS:
-  case M68k::COND_HI:
-  case M68k::COND_LS:
-  case M68k::COND_CC:
-    return true;
-  case M68k::COND_GT:
-  case M68k::COND_GE:
-  case M68k::COND_LT:
-  case M68k::COND_LE:
-    return false;
-  }
-}
-
 SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   if (isNullConstant(Op1))
@@ -2107,24 +2108,7 @@ SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
   assert(!(isa<ConstantSDNode>(Op1) && Op0.getValueType() == MVT::i1) &&
          "Unexpected comparison operation for MVT::i1 operands");
 
-  if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
-       Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
-    // Only promote the compare up to I32 if it is a 16 bit operation
-    // with an immediate.  16 bit immediates are to be avoided.
-    if ((Op0.getValueType() == MVT::i16 &&
-         (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
-        !DAG.getMachineFunction().getFunction().hasMinSize()) {
-      unsigned ExtendOp =
-          isM68kCCUnsigned(M68kCC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-      Op0 = DAG.getNode(ExtendOp, DL, MVT::i32, Op0);
-      Op1 = DAG.getNode(ExtendOp, DL, MVT::i32, Op1);
-    }
-    // Use SUB instead of CMP to enable CSE between SUB and CMP.
-    SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i8);
-    SDValue Sub = DAG.getNode(M68kISD::SUB, DL, VTs, Op0, Op1);
-    return SDValue(Sub.getNode(), 1);
-  }
-  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op0, Op1);
+  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op1, Op0);
 }
 
 /// Result of 'and' or 'trunc to i1' is compared against zero.
@@ -2186,7 +2170,7 @@ SDValue M68kTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
   if (Op0.getValueType() == MVT::i1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     if (isOneConstant(Op1)) {
-      ISD::CondCode NewCC = ISD::GlobalISel::getSetCCInverse(CC, true);
+      ISD::CondCode NewCC = ISD::getSetCCInverse(CC, Op0.getValueType());
       return DAG.getSetCC(DL, VT, Op0, DAG.getConstant(0, DL, MVT::i1), NewCC);
     }
     if (!isNullConstant(Op1)) {
@@ -2400,8 +2384,8 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         // Block CopyFromReg so partial register stalls are avoided.
         T1.getOpcode() != ISD::CopyFromReg &&
         T2.getOpcode() != ISD::CopyFromReg) {
-      SDVTList VTs = DAG.getVTList(T1.getValueType(), MVT::Glue);
-      SDValue Cmov = DAG.getNode(M68kISD::CMOV, DL, VTs, T2, T1, CC, Cond);
+      SDValue Cmov =
+          DAG.getNode(M68kISD::CMOV, DL, T1.getValueType(), T2, T1, CC, Cond);
       return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
     }
   }
@@ -2419,9 +2403,8 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // M68kISD::CMOV means set the result (which is operand 1) to the RHS if
   // condition is true.
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {Op2, Op1, CC, Cond};
-  return DAG.getNode(M68kISD::CMOV, DL, VTs, Ops);
+  return DAG.getNode(M68kISD::CMOV, DL, Op.getValueType(), Ops);
 }
 
 /// Return true if node is an ISD::AND or ISD::OR of two M68k::SETcc nodes
@@ -2544,7 +2527,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
               (M68k::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
           CCode = M68k::GetOppositeBranchCondition(CCode);
           CC = DAG.getConstant(CCode, DL, MVT::i8);
-          SDNode *User = *Op.getNode()->use_begin();
+          SDNode *User = *Op.getNode()->user_begin();
           // Look for an unconditional branch following this conditional branch.
           // We need this because we need to reverse the successors in order
           // to implement FCMP_OEQ.
@@ -2832,8 +2815,7 @@ unsigned M68kTargetLowering::getJumpTableEncoding() const {
 const MCExpr *M68kTargetLowering::LowerCustomJumpTableEntry(
     const MachineJumpTableInfo *MJTI, const MachineBasicBlock *MBB,
     unsigned uid, MCContext &Ctx) const {
-  return MCSymbolRefExpr::create(MBB->getSymbol(), MCSymbolRefExpr::VK_GOTOFF,
-                                 Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), M68k::S_GOTOFF, Ctx);
 }
 
 SDValue M68kTargetLowering::getPICJumpTableRelocBase(SDValue Table,
@@ -2949,7 +2931,7 @@ void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         llvm_unreachable("Unhandled constant constraint");
       }
 
-      Result = DAG.getTargetConstant(Val, SDLoc(Op), Op.getValueType());
+      Result = DAG.getSignedTargetConstant(Val, SDLoc(Op), Op.getValueType());
       break;
     }
     default:
@@ -2985,7 +2967,7 @@ void M68kTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
           llvm_unreachable("Unhandled constant constraint");
         }
 
-        Result = DAG.getTargetConstant(Val, SDLoc(Op), Op.getValueType());
+        Result = DAG.getSignedTargetConstant(Val, SDLoc(Op), Op.getValueType());
         break;
       }
       default:
@@ -3417,7 +3399,7 @@ SDValue M68kTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     Result = DAG.getNode(ISD::SUB, DL, VT, SP, Size); // Value
     if (Align > StackAlign)
       Result = DAG.getNode(ISD::AND, DL, VT, Result,
-                           DAG.getConstant(-(uint64_t)Align, DL, VT));
+                           DAG.getSignedConstant(-(uint64_t)Align, DL, VT));
     Chain = DAG.getCopyToReg(Chain, DL, SPReg, Result); // Output chain
   }
 
@@ -3444,7 +3426,7 @@ SDValue M68kTargetLowering::LowerShiftLeftParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue MinusRegisterSize = DAG.getSignedConstant(-32, DL, VT);
   SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
   SDValue ShamtMinusRegisterSize =
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
@@ -3496,7 +3478,7 @@ SDValue M68kTargetLowering::LowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusRegisterSize = DAG.getConstant(-32, DL, VT);
+  SDValue MinusRegisterSize = DAG.getSignedConstant(-32, DL, VT);
   SDValue RegisterSizeMinus1 = DAG.getConstant(32 - 1, DL, VT);
   SDValue ShamtMinusRegisterSize =
       DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusRegisterSize);
@@ -3640,64 +3622,6 @@ SDValue M68kTargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
-}
-
-//===----------------------------------------------------------------------===//
-// M68kISD Node Names
-//===----------------------------------------------------------------------===//
-const char *M68kTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case M68kISD::CALL:
-    return "M68kISD::CALL";
-  case M68kISD::TAIL_CALL:
-    return "M68kISD::TAIL_CALL";
-  case M68kISD::RET:
-    return "M68kISD::RET";
-  case M68kISD::TC_RETURN:
-    return "M68kISD::TC_RETURN";
-  case M68kISD::ADD:
-    return "M68kISD::ADD";
-  case M68kISD::SUB:
-    return "M68kISD::SUB";
-  case M68kISD::ADDX:
-    return "M68kISD::ADDX";
-  case M68kISD::SUBX:
-    return "M68kISD::SUBX";
-  case M68kISD::SMUL:
-    return "M68kISD::SMUL";
-  case M68kISD::UMUL:
-    return "M68kISD::UMUL";
-  case M68kISD::OR:
-    return "M68kISD::OR";
-  case M68kISD::XOR:
-    return "M68kISD::XOR";
-  case M68kISD::AND:
-    return "M68kISD::AND";
-  case M68kISD::CMP:
-    return "M68kISD::CMP";
-  case M68kISD::BTST:
-    return "M68kISD::BTST";
-  case M68kISD::SELECT:
-    return "M68kISD::SELECT";
-  case M68kISD::CMOV:
-    return "M68kISD::CMOV";
-  case M68kISD::BRCOND:
-    return "M68kISD::BRCOND";
-  case M68kISD::SETCC:
-    return "M68kISD::SETCC";
-  case M68kISD::SETCC_CARRY:
-    return "M68kISD::SETCC_CARRY";
-  case M68kISD::GLOBAL_BASE_REG:
-    return "M68kISD::GLOBAL_BASE_REG";
-  case M68kISD::Wrapper:
-    return "M68kISD::Wrapper";
-  case M68kISD::WrapperPC:
-    return "M68kISD::WrapperPC";
-  case M68kISD::SEG_ALLOCA:
-    return "M68kISD::SEG_ALLOCA";
-  default:
-    return NULL;
-  }
 }
 
 CCAssignFn *M68kTargetLowering::getCCAssignFn(CallingConv::ID CC, bool Return,

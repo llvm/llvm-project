@@ -4,7 +4,6 @@ add_llvm_component_library(LLVMLanaiDesc
   LanaiInstPrinter.cpp
   LanaiMCAsmInfo.cpp
   LanaiMCCodeEmitter.cpp
-  LanaiMCExpr.cpp
   LanaiMCTargetDesc.cpp
 
   LINK_COMPONENTS

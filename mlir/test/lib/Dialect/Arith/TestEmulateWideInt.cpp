@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Arith/Transforms/WideIntEmulationConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -59,8 +59,8 @@ struct TestEmulateWideIntPass
     // TODO: Consider extending `arith.bitcast` to support scalar-to-1D-vector
     // casts (and vice versa) and using it insted of `llvm.bitcast`.
     auto addBitcast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                         Location loc) -> std::optional<Value> {
-      auto cast = builder.create<LLVM::BitcastOp>(loc, type, inputs);
+                         Location loc) -> Value {
+      auto cast = LLVM::BitcastOp::create(builder, loc, type, inputs);
       return cast->getResult(0);
     };
     typeConverter.addSourceMaterialization(addBitcast);

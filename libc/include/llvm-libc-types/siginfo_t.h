@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_TYPES_SIGINFO_T_H
 #define LLVM_LIBC_TYPES_SIGINFO_T_H
 
-#include "llvm-libc-types/clock_t.h"
-#include "llvm-libc-types/pid_t.h"
-#include "llvm-libc-types/uid_t.h"
-#include "llvm-libc-types/union_sigval.h"
+#include "clock_t.h"
+#include "pid_t.h"
+#include "uid_t.h"
+#include "union_sigval.h"
 
 #define SI_MAX_SIZE 128
 
@@ -33,7 +33,7 @@ typedef struct {
     /* POSIX.1b timers */
     struct {
       int si_tid;             /* timer id */
-      int _overrun;           /* overrun count */
+      int si_overrun;         /* overrun count */
       union sigval si_sigval; /* same as below */
     } _timer;
 

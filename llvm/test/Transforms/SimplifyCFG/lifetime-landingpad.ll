@@ -5,32 +5,32 @@ define void @foo() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[A]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[A]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %a = alloca i8
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %a) nounwind
+  call void @llvm.lifetime.start.p0(ptr nonnull %a) nounwind
   invoke void @bar() to label %invoke.cont unwind label %lpad
 
 invoke.cont:
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %a) nounwind
+  call void @llvm.lifetime.end.p0(ptr nonnull %a) nounwind
   ret void
 
 lpad:
   %b = landingpad { ptr, i32 }
   cleanup
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %a) nounwind
+  call void @llvm.lifetime.end.p0(ptr nonnull %a) nounwind
   resume { ptr, i32 } %b
 }
 
 declare void @bar()
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 
 declare i32 @__gxx_personality_v0(...)
 ;.

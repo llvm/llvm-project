@@ -2,6 +2,8 @@
 
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -fexceptions -fobjc-exceptions -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s --check-prefix=CHECK-EH
+
 
 #ifndef HEADER
 #define HEADER
@@ -219,9 +221,9 @@ void test_copy_assignment_StrongOuter(StrongOuter *d, StrongOuter *s) {
 }
 
 // CHECK: define{{.*}} void @test_move_constructor_StrongOuter()
-// CHECK: %[[T1:.*]] = getelementptr inbounds %[[STRUCT_BLOCK_BYREF_T]], ptr %{{.*}}, i32 0, i32 7
+// CHECK: %[[T1:.*]] = getelementptr inbounds nuw %[[STRUCT_BLOCK_BYREF_T]], ptr %{{.*}}, i32 0, i32 7
 // CHECK: call void @__default_constructor_8_S_s16_s24(ptr %[[T1]])
-// CHECK: %[[T2:.*]] = getelementptr inbounds %[[STRUCT_BLOCK_BYREF_T]], ptr %{{.*}}, i32 0, i32 7
+// CHECK: %[[T2:.*]] = getelementptr inbounds nuw %[[STRUCT_BLOCK_BYREF_T]], ptr %{{.*}}, i32 0, i32 7
 // CHECK: call void @__destructor_8_S_s16_s24(ptr %[[T2]])
 
 // CHECK: define internal void @__Block_byref_object_copy_(ptr noundef %0, ptr noundef %1)
@@ -470,7 +472,7 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 // CHECK: %[[ADDR_CUR1:.*]] = phi ptr
 
 // CHECK: %[[V6:.*]] = load volatile i8, ptr %[[ADDR_CUR1]], align 1
-// CHECK: %[[TOBOOL:.*]] = trunc i8 %[[V6]] to i1
+// CHECK: %[[TOBOOL:.*]] = icmp ne i8 %[[V6]], 0
 // CHECK: %[[FROMBOOL:.*]] = zext i1 %[[TOBOOL]] to i8
 // CHECK: store volatile i8 %[[FROMBOOL]], ptr %[[ADDR_CUR]], align 1
 
@@ -616,8 +618,8 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 // CHECK: store i32 %[[V21]], ptr %{{.*}}, align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 12, i1 false)
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 9, i1 false)
-// CHECK: %[[I5:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V0:.*]], i32 0, i32 8
-// CHECK: %[[I51:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V1:.*]], i32 0, i32 8
+// CHECK: %[[I5:.*]] = getelementptr inbounds nuw %[[STRUCT_BITFIELD1]], ptr %[[V0:.*]], i32 0, i32 8
+// CHECK: %[[I51:.*]] = getelementptr inbounds nuw %[[STRUCT_BITFIELD1]], ptr %[[V1:.*]], i32 0, i32 8
 // CHECK: %[[BF_LOAD:.*]] = load volatile i8, ptr %[[I51]], align 8
 // CHECK: %[[BF_SHL:.*]] = shl i8 %[[BF_LOAD]], 5
 // CHECK: %[[BF_ASHR:.*]] = ashr i8 %[[BF_SHL]], 6
@@ -629,8 +631,8 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 // CHECK: %[[BF_CLEAR:.*]] = and i8 %[[BF_LOAD2]], -7
 // CHECK: %[[BF_SET:.*]] = or i8 %[[BF_CLEAR]], %[[BF_SHL3]]
 // CHECK: store volatile i8 %[[BF_SET]], ptr %[[I5]], align 8
-// CHECK: %[[I6:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V0]], i32 0, i32 9
-// CHECK: %[[I64:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V1]], i32 0, i32 9
+// CHECK: %[[I6:.*]] = getelementptr inbounds nuw %[[STRUCT_BITFIELD1]], ptr %[[V0]], i32 0, i32 9
+// CHECK: %[[I64:.*]] = getelementptr inbounds nuw %[[STRUCT_BITFIELD1]], ptr %[[V1]], i32 0, i32 9
 // CHECK: %[[V59:.*]] = load volatile i8, ptr %[[I64]], align 1
 // CHECK: store volatile i8 %[[V59]], ptr %[[I6]], align 1
 
@@ -658,15 +660,15 @@ void test_copy_constructor_VolatileArray(VolatileArray *a) {
 // CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
 // CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
 
-// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: %[[I:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
 // CHECK: store i32 1, ptr %[[I]], align 8
-// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: %[[F1:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F1]], align 8
 // CHECK: store i1 true, ptr %[[CLEANUP_COND]], align 1
 
-// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: %[[I2:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 0
 // CHECK: store i32 2, ptr %[[I2]], align 8
-// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: %[[F13:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F13]], align 8
 // CHECK: store i1 true, ptr %[[CLEANUP_COND4]], align 1
 
@@ -678,6 +680,14 @@ void test_copy_constructor_VolatileArray(VolatileArray *a) {
 
 // CHECK: call void @__destructor_8_s8(ptr %[[_COMPOUNDLITERAL]])
 
+// CHECK-EH: define{{.*}} void @test_compound_literal0(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+// CHECK-EH: call void @__destructor_8_s8(
+
 void test_compound_literal0(int c) {
   StrongSmall *p = c ? &(StrongSmall){ 1, 0 } : &(StrongSmall){ 2, 0 };
   func(0);
@@ -688,14 +698,14 @@ void test_compound_literal0(int c) {
 // CHECK: define{{.*}} void @test_compound_literal1(
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
 
-// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 0
+// CHECK: %[[I:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 0
 // CHECK: store i32 1, ptr %[[I]], align 8
-// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 1
+// CHECK: %[[F1:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F1]], align 8
 
-// CHECK: %[[I1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 0
+// CHECK: %[[I1:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 0
 // CHECK: store i32 2, ptr %[[I1]], align 8
-// CHECK: %[[F12:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 1
+// CHECK: %[[F12:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[T]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F12]], align 8
 
 // CHECK: call void @func(
@@ -716,16 +726,16 @@ void test_compound_literal1(int c) {
 // CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[P_ADDR]], align 8
 
-// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: %[[I:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 0
 // CHECK: store i32 1, ptr %[[I]], align 8
-// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: %[[F1:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F1]], align 8
 // CHECK: store i1 true, ptr %[[CLEANUP_COND]], align 1
 // CHECK: call void @__copy_assignment_8_8_t0w4_s8(ptr %[[V0]], ptr %[[_COMPOUNDLITERAL]])
 
-// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: %[[I2:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 0
 // CHECK: store i32 2, ptr %[[I2]], align 8
-// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: %[[F13:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONGSMALL]], ptr %[[_COMPOUNDLITERAL1]], i32 0, i32 1
 // CHECK: store ptr null, ptr %[[F13]], align 8
 // CHECK: store i1 true, ptr %[[CLEANUP_COND4]], align 1
 // CHECK: call void @__copy_assignment_8_8_t0w4_s8(ptr %[[V0]], ptr %[[_COMPOUNDLITERAL1]])
@@ -736,10 +746,35 @@ void test_compound_literal1(int c) {
 
 // CHECK: call void @__destructor_8_s8(ptr %[[_COMPOUNDLITERAL]])
 
+// CHECK-EH: define{{.*}} void @test_compound_literal2(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+// CHECK-EH: call void @__destructor_8_s8(
+
 void test_compound_literal2(int c, StrongSmall *p) {
   *p = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
   func(0);
 }
+
+// CHECK: define{{.*}} void @test_compound_literal3(
+// CHECK: call void @func(
+// CHECK: call void @__destructor_8_s8(
+
+// CHECK-EH: define{{.*}} void @test_compound_literal3(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+
+void test_compound_literal3(int c) {
+  StrongSmall *p = c ? (StrongSmall[]){ {1, 0}, {2, 0} } : 0;
+  func(0);
+}
+
 
 // CHECK: define{{.*}} void @test_member_access(
 // CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]],
@@ -819,10 +854,10 @@ id test_conditional0(int c) {
   return (c ? g2 : g1).f1;
 }
 
-// CHECK-LABEL: define{{.*}} ptr @test_conditional1(
+// CHECK-LABEL: define{{.*}} void @test_conditional1(
 // CHECK-NOT: call void @__destructor
 
-id test_conditional1(int c) {
+void test_conditional1(int c) {
   calleeStrongSmall(c ? g2 : g1);
 }
 
@@ -836,10 +871,10 @@ id test_assignment0(void) {
   return (g2 = g1).f1;
 }
 
-// CHECK-LABEL: define{{.*}} ptr @test_assignment1(
+// CHECK-LABEL: define{{.*}} void @test_assignment1(
 // CHECK-NOT: call void @__destructor
 
-id test_assignment1(void) {
+void test_assignment1(void) {
   calleeStrongSmall(g2 = g1);
 }
 

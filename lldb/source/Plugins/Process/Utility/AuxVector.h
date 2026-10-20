@@ -57,6 +57,7 @@ public:
     AUXV_AT_BASE_PLATFORM = 24, ///< String identifying real platforms.
     AUXV_AT_RANDOM = 25,        ///< Address of 16 random bytes.
     AUXV_AT_HWCAP2 = 26,        ///< Extension of AT_HWCAP.
+    AUXV_AT_HWCAP3 = 29,        ///< Extension of AT_HWCAP.
     AUXV_AT_EXECFN = 31,        ///< Filename of executable.
     AUXV_AT_SYSINFO = 32, ///< Pointer to the global system page used for system
                           /// calls and other nice things.
@@ -69,6 +70,10 @@ public:
     // Platform specific values which may overlap the Linux values.
 
     AUXV_FREEBSD_AT_HWCAP = 25, ///< FreeBSD specific AT_HWCAP value.
+    // FreeBSD and Linux use the same AT_HWCAP2 value.
+    AUXV_FREEBSD_AT_HWCAP3 = 38, ///< FreeBSD specific AT_HWCAP3 value.
+    AUXV_FREEBSD_AT_HWCAP4 = 39, ///< FreeBSD specific AT_HWCAP4 value.
+
   };
 
   std::optional<uint64_t> GetAuxValue(enum EntryType entry_type) const;

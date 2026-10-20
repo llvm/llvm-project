@@ -14,7 +14,7 @@ int foo(int x) {
 int bar(int x)
 {
   // good-no-diagnostics
-  // longcall-error@+2 {{'musttail' attribute for this call is impossible because long calls can not be tail called on PPC}}
+  // longcall-error@+2 {{'musttail' attribute for this call is impossible because long calls cannot be tail called on PPC}}
   // aix-error@+1 {{'musttail' attribute is not supported on AIX}}
  [[clang::musttail]] return foo(1);
 }

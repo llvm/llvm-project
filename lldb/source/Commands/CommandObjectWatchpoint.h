@@ -22,7 +22,7 @@ public:
 
   ~CommandObjectMultiwordWatchpoint() override;
 
-  static bool VerifyWatchpointIDs(Target *target, Args &args,
+  static bool VerifyWatchpointIDs(Target &target, Args &args,
                                   std::vector<uint32_t> &wp_ids);
 };
 

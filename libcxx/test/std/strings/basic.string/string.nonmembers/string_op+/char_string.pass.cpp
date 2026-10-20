@@ -16,39 +16,32 @@
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(charT lhs, basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
+#include <cassert>
 #include <string>
 #include <utility>
-#include <cassert>
 
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0(typename S::value_type lhs, const S& rhs, const S& x) {
-  assert(lhs + rhs == x);
-  LIBCPP_ASSERT(is_string_asan_correct(lhs + rhs));
-}
-
-#if TEST_STD_VER >= 11
-template <class S>
-TEST_CONSTEXPR_CXX20 void test1(typename S::value_type lhs, S&& rhs, const S& x) {
-  assert(lhs + std::move(rhs) == x);
-}
-#endif
-
-template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  test0('a', S(""), S("a"));
-  test0('a', S("12345"), S("a12345"));
-  test0('a', S("1234567890"), S("a1234567890"));
-  test0('a', S("12345678901234567890"), S("a12345678901234567890"));
+  const char* test_data[] = {"", "12345", "1234567890", "12345678901234567890"};
+  const char* results[]   = {"a", "a12345", "a1234567890", "a12345678901234567890"};
+
+  for (size_t i = 0; i != 4; ++i) {
+    { // operator+(value_type, const string&);
+      const S str(test_data[i]);
+      assert('a' + str == results[i]);
+      LIBCPP_ASSERT(is_string_asan_correct('a' + str));
+    }
 #if TEST_STD_VER >= 11
-  test1('a', S(""), S("a"));
-  test1('a', S("12345"), S("a12345"));
-  test1('a', S("1234567890"), S("a1234567890"));
-  test1('a', S("12345678901234567890"), S("a12345678901234567890"));
+    { // operator+(value_type, string&&);
+      S str(test_data[i]);
+      assert('a' + std::move(str) == results[i]);
+    }
 #endif
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -58,12 +51,23 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
 #endif
 
+  { // check that growing to max_size() works
+    using string_type = std::basic_string<char, std::char_traits<char>, tiny_size_allocator<29, char> >;
+    string_type str;
+    str.resize(str.max_size() - 1);
+    string_type result = 'a' + str;
+
+    assert(result.size() == result.max_size());
+    assert(result.front() == 'a');
+    assert(result.capacity() <= result.get_allocator().max_size());
+  }
+
   return true;
 }
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
 

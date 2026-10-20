@@ -81,7 +81,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -97,18 +96,19 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class ICF {
 public:
+  ICF(Ctx &ctx) : ctx(ctx) {}
   void run();
 
 private:
   void segregate(size_t begin, size_t end, uint32_t eqClassBase, bool constant);
 
   template <class RelTy>
-  bool constantEq(const InputSection *a, ArrayRef<RelTy> relsA,
-                  const InputSection *b, ArrayRef<RelTy> relsB);
+  bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
+                  const InputSection *b, Relocs<RelTy> relsB);
 
   template <class RelTy>
-  bool variableEq(const InputSection *a, ArrayRef<RelTy> relsA,
-                  const InputSection *b, ArrayRef<RelTy> relsB);
+  bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
+                  const InputSection *b, Relocs<RelTy> relsB);
 
   bool equalsConstant(const InputSection *a, const InputSection *b);
   bool equalsVariable(const InputSection *a, const InputSection *b);
@@ -118,8 +118,9 @@ private:
   void forEachClassRange(size_t begin, size_t end,
                          llvm::function_ref<void(size_t, size_t)> fn);
 
-  void forEachClass(llvm::function_ref<void(size_t, size_t)> fn);
+  void parallelForEachClass(llvm::function_ref<void(size_t, size_t)> fn);
 
+  Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
 
   // We repeat the main loop while `Repeat` is true.
@@ -232,17 +233,29 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
   }
 }
 
+// A section symbol's addend is not validated until getSymVA. Return nullopt
+// to conservatively disable folding for such an out-of-range offset.
+static std::optional<uint64_t> getMergeOffset(const Defined &d,
+                                              uint64_t addend) {
+  auto &ms = cast<MergeInputSection>(*d.section);
+  if (!d.isSection())
+    return ms.getOffset(d.value) + addend;
+  if (addend >= ms.content().size())
+    return std::nullopt;
+  return ms.getOffset(addend);
+}
+
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
-                           const InputSection *secB, ArrayRef<RelTy> rb) {
+bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
+                           const InputSection *secB, Relocs<RelTy> rb) {
   if (ra.size() != rb.size())
     return false;
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
   for (; rai != rae; ++rai, ++rbi) {
     if (rai->r_offset != rbi->r_offset ||
-        rai->getType(config->isMips64EL) != rbi->getType(config->isMips64EL))
+        rai->getType(ctx.arg.isMips64EL) != rbi->getType(ctx.arg.isMips64EL))
       return false;
 
     uint64_t addA = getAddend<ELFT>(*rai);
@@ -250,11 +263,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
 
     Symbol &sa = secA->file->getRelocTargetSym(*rai);
     Symbol &sb = secB->file->getRelocTargetSym(*rbi);
-    if (&sa == &sb) {
-      if (addA == addB)
-        continue;
-      return false;
-    }
+    if (&sa == &sb && addA == addB)
+      continue;
 
     auto *da = dyn_cast<Defined>(&sa);
     auto *db = dyn_cast<Defined>(&sb);
@@ -298,11 +308,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
     if (x->getParent() != y->getParent())
       return false;
 
-    uint64_t offsetA =
-        sa.isSection() ? x->getOffset(addA) : x->getOffset(da->value) + addA;
-    uint64_t offsetB =
-        sb.isSection() ? y->getOffset(addB) : y->getOffset(db->value) + addB;
-    if (offsetA != offsetB)
+    auto offA = getMergeOffset(*da, addA);
+    if (!offA || offA != getMergeOffset(*db, addB))
       return false;
   }
 
@@ -324,6 +331,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
+    return constantEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? constantEq(a, ra.rels, b, rb.rels)
              : constantEq(a, ra.relas, b, rb.relas);
@@ -333,8 +342,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection *secA, ArrayRef<RelTy> ra,
-                           const InputSection *secB, ArrayRef<RelTy> rb) {
+bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
+                           const InputSection *secB, Relocs<RelTy> rb) {
   assert(ra.size() == rb.size());
 
   auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
@@ -374,6 +383,8 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
+  if (ra.areRelocsCrel() || rb.areRelocsCrel())
+    return variableEq(a, ra.crels, b, rb.crels);
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? variableEq(a, ra.rels, b, rb.rels)
              : variableEq(a, ra.relas, b, rb.relas);
@@ -403,8 +414,10 @@ void ICF<ELFT>::forEachClassRange(size_t begin, size_t end,
 }
 
 // Call Fn on each equivalence class.
+
 template <class ELFT>
-void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
+void ICF<ELFT>::parallelForEachClass(
+    llvm::function_ref<void(size_t, size_t)> fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
   if (parallel::strategy.ThreadsRequested == 1 || sections.size() < 1024) {
@@ -441,7 +454,7 @@ void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
 // hash.
 template <class RelTy>
 static void combineRelocHashes(unsigned cnt, InputSection *isec,
-                               ArrayRef<RelTy> rels) {
+                               Relocs<RelTy> rels) {
   uint32_t hash = isec->eqClass[cnt % 2];
   for (RelTy rel : rels) {
     Symbol &s = isec->file->getRelocTargetSym(rel);
@@ -453,20 +466,8 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
   isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
 }
 
-static void print(const Twine &s) {
-  if (config->printIcfSections)
-    message(s);
-}
-
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
-  // Compute isPreemptible early. We may add more symbols later, so this loop
-  // cannot be merged with the later computeIsPreemptible() pass which is used
-  // by scanRelocations().
-  if (config->hasDynSymTab)
-    for (Symbol *sym : symtab.getSymbols())
-      sym->isPreemptible = computeIsPreemptible(*sym);
-
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a
   // text section is referenced by a .eh_frame FDE with LSDA, it is not
@@ -476,9 +477,8 @@ template <class ELFT> void ICF<ELFT>::run() {
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
   uint32_t uniqueId = 0;
-  for (Partition &part : partitions)
-    part.ehFrame->iterateFDEWithLSDA<ELFT>(
-        [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
+  ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
+      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
   // Collect sections to merge.
   for (InputSectionBase *sec : ctx.inputSections) {
@@ -505,7 +505,9 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (unsigned cnt = 0; cnt != 2; ++cnt) {
     parallelForEach(sections, [&](InputSection *s) {
       const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-      if (rels.areRelocsRel())
+      if (rels.areRelocsCrel())
+        combineRelocHashes(cnt, s, rels.crels);
+      else if (rels.areRelocsRel())
         combineRelocHashes(cnt, s, rels.rels);
       else
         combineRelocHashes(cnt, s, rels.relas);
@@ -514,35 +516,38 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.
-  llvm::stable_sort(sections, [](const InputSection *a, const InputSection *b) {
-    return a->eqClass[0] < b->eqClass[0];
+  SmallVector<uint64_t, 0> keys(sections.size());
+  parallelFor(0, sections.size(), [&](size_t i) {
+    keys[i] = uint64_t(sections[i]->eqClass[0]) << 32 | i;
   });
+  parallelSort(keys.begin(), keys.end());
+  SmallVector<InputSection *, 0> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(sections[uint32_t(k)]);
+  sections = std::move(sorted);
 
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with
   // the unique IDs already assigned.
   uint32_t eqClassBase = ++uniqueId;
-  forEachClass([&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     repeat = false;
-    forEachClass([&](size_t begin, size_t end) {
+    parallelForEachClass([&](size_t begin, size_t end) {
       segregate(begin, end, eqClassBase, false);
     });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
-    if (end - begin == 1)
-      return;
-    print("selected section " + toString(sections[begin]));
     for (size_t i = begin + 1; i < end; ++i) {
-      print("  removing identical section " + toString(sections[i]));
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence
@@ -553,6 +558,22 @@ template <class ELFT> void ICF<ELFT>::run() {
     }
   });
 
+  // Print classes in input order, independent of the hash.
+  if (ctx.arg.printIcfSections) {
+    DenseMap<InputSection *, SmallVector<InputSection *, 0>> folded;
+    for (InputSectionBase *sec : ctx.inputSections)
+      if (auto *s = dyn_cast<InputSection>(sec); s && s->repl != s)
+        folded[s->repl].push_back(s);
+    for (InputSectionBase *sec : ctx.inputSections) {
+      auto it = folded.find(dyn_cast<InputSection>(sec));
+      if (it == folded.end())
+        continue;
+      Msg(ctx) << "selected section " << sec;
+      for (InputSection *s : it->second)
+        Msg(ctx) << "  removing identical section " << s;
+    }
+  }
+
   // Change Defined symbol's section field to the canonical one.
   auto fold = [](Symbol *sym) {
     if (auto *d = dyn_cast<Defined>(sym))
@@ -562,7 +583,7 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     fold(sym);
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
@@ -571,7 +592,7 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // InputSectionDescription::sections is populated by processSectionCommands().
   // ICF may fold some input sections assigned to output sections. Remove them.
-  for (SectionCommand *cmd : script->sectionCommands)
+  for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       for (SectionCommand *subCmd : osd->osec.commands)
         if (auto *isd = dyn_cast<InputSectionDescription>(subCmd))
@@ -580,12 +601,12 @@ template <class ELFT> void ICF<ELFT>::run() {
 }
 
 // ICF entry point function.
-template <class ELFT> void elf::doIcf() {
+template <class ELFT> void elf::doIcf(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("ICF");
-  ICF<ELFT>().run();
+  ICF<ELFT>(ctx).run();
 }
 
-template void elf::doIcf<ELF32LE>();
-template void elf::doIcf<ELF32BE>();
-template void elf::doIcf<ELF64LE>();
-template void elf::doIcf<ELF64BE>();
+template void elf::doIcf<ELF32LE>(Ctx &);
+template void elf::doIcf<ELF32BE>(Ctx &);
+template void elf::doIcf<ELF64LE>(Ctx &);
+template void elf::doIcf<ELF64BE>(Ctx &);

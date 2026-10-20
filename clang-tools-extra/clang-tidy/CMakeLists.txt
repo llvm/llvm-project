@@ -8,7 +8,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/clang-tidy-config.h)
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_clang_library(clangTidy
+add_clang_library(clangTidy STATIC
   ClangTidy.cpp
   ClangTidyCheck.cpp
   ClangTidyModule.cpp
@@ -35,7 +35,6 @@ clang_target_link_libraries(clangTidy
   clangFrontend
   clangLex
   clangRewrite
-  clangSema
   clangSerialization
   clangTooling
   clangToolingCore
@@ -59,10 +58,10 @@ add_subdirectory(bugprone)
 add_subdirectory(cert)
 add_subdirectory(concurrency)
 add_subdirectory(cppcoreguidelines)
+add_subdirectory(custom)
 add_subdirectory(darwin)
 add_subdirectory(fuchsia)
 add_subdirectory(google)
-add_subdirectory(hicpp)
 add_subdirectory(linuxkernel)
 add_subdirectory(llvm)
 add_subdirectory(llvmlibc)
@@ -76,7 +75,6 @@ add_subdirectory(openmp)
 add_subdirectory(performance)
 add_subdirectory(portability)
 add_subdirectory(readability)
-add_subdirectory(zircon)
 set(ALL_CLANG_TIDY_CHECKS
   clangTidyAndroidModule
   clangTidyAbseilModule
@@ -89,7 +87,6 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyDarwinModule
   clangTidyFuchsiaModule
   clangTidyGoogleModule
-  clangTidyHICPPModule
   clangTidyLinuxKernelModule
   clangTidyLLVMModule
   clangTidyLLVMLibcModule
@@ -100,8 +97,11 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyPerformanceModule
   clangTidyPortabilityModule
   clangTidyReadabilityModule
-  clangTidyZirconModule
   )
+
+if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
+  list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyCustomModule)
+endif()
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
   list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyMPIModule)
 endif()

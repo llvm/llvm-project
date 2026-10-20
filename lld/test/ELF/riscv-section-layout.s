@@ -15,12 +15,13 @@
 # RUN: ld.lld -pie %t.64s.o -o %t.64s
 # RUN: llvm-readelf -S -sX %t.64s | FileCheck %s
 
-# NOSDATA:      .text
+# NOSDATA:      .rodata  PROGBITS
+# NOSDATA-NEXT: .text    PROGBITS
 # NOSDATA-NEXT: .tdata   PROGBITS [[#%x,TDATA:]]
-# NOSDATA-NEXT: .tbss
-# NOSDATA-NEXT: .dynamic
-# NOSDATA-NEXT: .got
-# NOSDATA-NEXT: .relro_padding
+# NOSDATA-NEXT: .tbss    NOBITS
+# NOSDATA-NEXT: .dynamic DYNAMIC
+# NOSDATA-NEXT: .got     PROGBITS
+# NOSDATA-NEXT: .relro_padding NOBITS
 # NOSDATA-NEXT: .data    PROGBITS [[#%x,DATA:]]
 # NOSDATA-NEXT: .bss     NOBITS   [[#%x,BSS:]]
 
@@ -33,16 +34,18 @@
 # NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] (.bss) __bss_start
 # NOSDATA-DAG:  [[#]]: {{0*}}800              0 NOTYPE  GLOBAL DEFAULT  1 (.dynsym) __global_pointer$
 
-# CHECK:      .text
-# CHECK-NEXT: .tdata
-# CHECK-NEXT: .tbss
-# CHECK-NEXT: .dynamic
-# CHECK-NEXT: .got
-# CHECK-NEXT: .relro_padding
-# CHECK-NEXT: .data
+# CHECK:      .rodata    PROGBITS
+# CHECK-NEXT: .srodata   PROGBITS
+# CHECK-NEXT: .text      PROGBITS
+# CHECK-NEXT: .tdata     PROGBITS
+# CHECK-NEXT: .tbss      NOBITS
+# CHECK-NEXT: .dynamic   DYNAMIC
+# CHECK-NEXT: .got       PROGBITS
+# CHECK-NEXT: .relro_padding NOBITS
+# CHECK-NEXT: .data      PROGBITS
 # CHECK-NEXT: .sdata     PROGBITS [[#%x,SDATA:]]
 # CHECK-NEXT: .sbss      NOBITS   [[#%x,SBSS:]]
-# CHECK-NEXT: .bss
+# CHECK-NEXT: .bss       NOBITS
 
 # CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] (.sdata) _edata
 # CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] (.sbss) __bss_start
@@ -51,11 +54,16 @@
 .globl _etext, _edata, __bss_start
   lla gp, __global_pointer$
 
+.section .rodata,"a",@progbits; .space 1
 .section .data,"aw",@progbits; .long _GLOBAL_OFFSET_TABLE_ - .
 .section .bss,"aw",@nobits; .space 1
 .section .tdata,"awT",@progbits; .space 1
 .section .tbss,"awT",@nobits; .space 1
 .ifdef SDATA
 .section .sdata,"aw",@progbits; .space 1
+.section .sdata.suffix,"aw",@progbits; .space 1
 .section .sbss,"aw",@nobits; .space 1
+.section .sbss.suffix,"aw",@nobits; .space 1
+.section .srodata,"a",@progbits; .space 1
+.section .srodata.suffix,"a",@progbits; .space 1
 .endif

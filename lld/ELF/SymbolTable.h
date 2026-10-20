@@ -15,7 +15,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace lld::elf {
-
+struct Ctx;
 class InputFile;
 class SharedFile;
 
@@ -38,6 +38,7 @@ struct ArmCmseEntryFunction {
 // is one add* function per symbol type.
 class SymbolTable {
 public:
+  SymbolTable(Ctx &ctx) : ctx(ctx) {}
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
 
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
@@ -46,16 +47,14 @@ public:
 
   template <typename T> Symbol *addSymbol(const T &newSym) {
     Symbol *sym = insert(newSym.getName());
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
     return sym;
   }
-  Symbol *addAndCheckDuplicate(const Defined &newSym);
+  Symbol *addAndCheckDuplicate(Ctx &, const Defined &newSym);
 
   void scanVersionScript();
 
   Symbol *find(StringRef name);
-
-  void handleDynamicList();
 
   Symbol *addUnusedUndefined(StringRef name,
                              uint8_t binding = llvm::ELF::STB_GLOBAL);
@@ -82,14 +81,11 @@ public:
 
 private:
   SmallVector<Symbol *, 0> findByVersion(SymbolVersion ver);
-  SmallVector<Symbol *, 0> findAllByVersion(SymbolVersion ver,
-                                            bool includeNonDefault);
 
   llvm::StringMap<SmallVector<Symbol *, 0>> &getDemangledSyms();
-  bool assignExactVersion(SymbolVersion ver, uint16_t versionId,
-                          StringRef versionName, bool includeNonDefault);
-  void assignWildcardVersion(SymbolVersion ver, uint16_t versionId,
-                             bool includeNonDefault);
+  bool assignExactVersion(SymbolVersion ver, uint16_t versionId);
+
+  Ctx &ctx;
 
   // Global symbols and a map from symbol name to the index. The order is not
   // defined. We can use an arbitrary order, but it has to be deterministic even
@@ -103,8 +99,6 @@ private:
   // directive in version scripts.
   std::optional<llvm::StringMap<SmallVector<Symbol *, 0>>> demangledSyms;
 };
-
-LLVM_LIBRARY_VISIBILITY extern SymbolTable symtab;
 
 } // namespace lld::elf
 

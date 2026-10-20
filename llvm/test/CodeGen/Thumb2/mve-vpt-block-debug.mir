@@ -81,7 +81,7 @@ body:             |
     ; CHECK-NEXT: DBG_VALUE $q2, $noreg, !19, !DIExpression(), debug-location !21
     ; CHECK-NEXT: DBG_VALUE $q2, $noreg, !19, !DIExpression(), debug-location !21
     ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !20, !DIExpression(), debug-location !21
-    ; CHECK-NEXT: BUNDLE implicit-def dead $vpr, implicit-def $q2, implicit-def $d4, implicit-def $s8, implicit-def $s9, implicit-def $d5, implicit-def $s10, implicit-def $s11, implicit killed $q1, implicit killed $q0, implicit killed $q2, debug-location !23 {
+    ; CHECK-NEXT: BUNDLE implicit-def dead $vpr, implicit-def $q2, implicit killed $q1, implicit killed $q0, implicit killed $q2, debug-location !23 {
     ; CHECK-NEXT:   MVE_VPTv4s32 12, renamable $q1, renamable $q0, 10, implicit-def $vpr, debug-location !23
     ; CHECK-NEXT:   renamable $q2 = MVE_VADDi32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q2, debug-location !23
     ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !20, !DIExpression(), debug-location !21

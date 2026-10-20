@@ -6,22 +6,24 @@ define <8 x i32> @select00(i32 %a, <8 x i32> %b) nounwind {
 ; X86-LABEL: select00:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB0_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_1:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    vmovaps %ymm0, %ymm1
-; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select00:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    je .LBB0_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB0_1:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    vmovaps %ymm0, %ymm1
-; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
@@ -34,22 +36,24 @@ define <4 x i64> @select01(i32 %a, <4 x i64> %b) nounwind {
 ; X86-LABEL: select01:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB1_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB1_1:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    je .LBB1_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    vmovaps %ymm0, %ymm1
-; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select01:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    je .LBB1_1
+; X64-NEXT:  # %bb.2:
+; X64-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB1_1:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    je .LBB1_2
-; X64-NEXT:  # %bb.1:
-; X64-NEXT:    vmovaps %ymm0, %ymm1
-; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
@@ -84,7 +88,7 @@ head:
   %isneg = icmp slt <4 x i32> %v3, zeroinitializer
   %or0 = select <4 x i1> %isneg, <4 x i32> <i32 26146, i32 -1257, i32 -2, i32 -3052>, <4 x i32> <i32 -24947, i32 7802, i32 29242, i32 15858>
   %or1 = shufflevector <4 x i32> %or0, <4 x i32> <i32 29361, i32 -16094, i32 -3080, i32 -26286>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  br i1 undef, label %exit, label %head
+  br i1 poison, label %exit, label %head
 
 exit:
   store <8 x i32> %or1, ptr addrspace(1) undef, align 32

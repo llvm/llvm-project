@@ -23,16 +23,16 @@ using namespace ento;
 namespace {
 class UndefinedAssignmentChecker
   : public Checker<check::Bind> {
-  const BugType BT{this, "Assigned value is garbage or undefined"};
+  const BugType BT{this, "Assigned value is uninitialized"};
 
 public:
-  void checkBind(SVal location, SVal val, const Stmt *S,
+  void checkBind(SVal location, SVal val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const;
 };
 }
 
 void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
-                                           const Stmt *StoreE,
+                                           const Stmt *StoreE, bool AtDeclInit,
                                            CheckerContext &C) const {
   if (!val.isUndef())
     return;
@@ -57,8 +57,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
   while (StoreE) {
     if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
-      OS << "The expression is an uninitialized value. "
-            "The computed value will also be garbage";
+      OS << "The expression uses uninitialized memory";
 
       ex = U->getSubExpr();
       break;
@@ -67,13 +66,28 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
         if (C.getSVal(B->getLHS()).isUndef()) {
-          OS << "The left expression of the compound assignment is an "
-                "uninitialized value. The computed value will also be garbage";
+          OS << "The left expression of the compound assignment uses "
+             << "uninitialized memory";
           ex = B->getLHS();
           break;
         }
       }
 
+      if (const auto *MD =
+              dyn_cast<CXXMethodDecl>(C.getStackFrame()->getDecl())) {
+        if ((MD->isCopyAssignmentOperator() ||
+             MD->isMoveAssignmentOperator()) &&
+            MD->isDefaulted() && B->isAssignmentOp() &&
+            isa<MemberExpr>(B->getLHS()->IgnoreImpCasts())) {
+          OS << "Value assigned to field '"
+             << cast<MemberExpr>(B->getLHS()->IgnoreImpCasts())
+                    ->getMemberDecl()
+                    ->getName()
+             << "' in " << (!MD->isImplicit() ? "default" : "implicit")
+             << " assignment operator is uninitialized";
+          break;
+        }
+      }
       ex = B->getRHS();
       break;
     }
@@ -89,7 +103,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
         for (auto *I : CD->inits()) {
           if (I->getInit()->IgnoreImpCasts() == StoreE) {
             OS << "Value assigned to field '" << I->getMember()->getName()
-               << "' in implicit constructor is garbage or undefined";
+               << "' in implicit constructor is uninitialized";
             break;
           }
         }

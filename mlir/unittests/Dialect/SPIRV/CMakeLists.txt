@@ -1,8 +1,9 @@
 add_mlir_unittest(MLIRSPIRVImportExportTests
   DeserializationTest.cpp
   SerializationTest.cpp
+  SPIRVTypeTest.cpp
 )
-target_link_libraries(MLIRSPIRVImportExportTests
+mlir_target_link_libraries(MLIRSPIRVImportExportTests
   PRIVATE
   MLIRIR
   MLIRSPIRVDialect

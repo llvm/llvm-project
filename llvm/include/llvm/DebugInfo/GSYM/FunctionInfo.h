@@ -10,11 +10,15 @@
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
+#include "llvm/DebugInfo/GSYM/MergedFunctionsInfo.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -22,7 +26,29 @@ class raw_ostream;
 
 namespace gsym {
 
+class GsymCreator;
 class GsymReader;
+class GsymDataExtractor;
+
+/// Byte-size accounting for a FunctionInfo, broken down by field / InfoType.
+/// Populated by FunctionInfo::parseStatistics. Every value is a byte count and
+/// each on-disk byte of a FunctionInfo is attributed to exactly one member:
+///   FunctionInfo = SizeAndName + LineTableInfo + InlineInfo + CallSiteInfo +
+///                  MergedFuncInfo + EndOfList
+/// (the per-InfoType members include that section's 8-byte InfoType+InfoLength
+/// header). InfoTypeInfoLengthCountAndFnSize is only used for the inner
+/// (merged) breakdown and captures the MergedFunctionsInfo structural bytes:
+/// its own InfoType+InfoLength (8) plus Count (4) plus each FnSize (4).
+struct FunctionInfoStats {
+  uint64_t SizeAndName = 0;
+  uint64_t LineTableInfo = 0;
+  uint64_t InlineInfo = 0;
+  uint64_t CallSiteInfo = 0;
+  uint64_t MergedFuncInfo = 0;
+  uint64_t EndOfList = 0;
+  uint64_t InfoTypeInfoLengthCountAndFnSize = 0;
+};
+
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
 /// need to be encoded using multiple FunctionInfo objects.
@@ -62,7 +88,9 @@ class GsymReader;
 ///   enum InfoType {
 ///     EndOfList = 0u,
 ///     LineTableInfo = 1u,
-///     InlineInfo = 2u
+///     InlineInfo = 2u,
+///     MergedFunctionsInfo = 3u,
+///     CallSiteInfo = 4u
 ///   };
 ///
 /// This stream of tuples is terminated by a "InfoType" whose value is
@@ -72,7 +100,7 @@ class GsymReader;
 /// clients to still parse the format and skip over any data that they don't
 /// understand or want to parse.
 ///
-/// So the function information encoding essientially looks like:
+/// So the function information encoding essentially looks like:
 ///
 /// struct {
 ///   uint32_t Size;
@@ -87,16 +115,18 @@ class GsymReader;
 /// Where "N" is the number of tuples.
 struct FunctionInfo {
   AddressRange Range;
-  uint32_t Name; ///< String table offset in the string table.
+  gsym_strp_t Name; ///< String table offset in the string table.
   std::optional<LineTable> OptLineTable;
   std::optional<InlineInfo> Inline;
+  std::optional<MergedFunctionsInfo> MergedFunctions;
+  std::optional<CallSiteInfoCollection> CallSites;
   /// If we encode a FunctionInfo during segmenting so we know its size, we can
   /// cache that encoding here so we don't need to re-encode it when saving the
   /// GSYM file.
   SmallString<32> EncodingCache;
 
-  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
-      : Range(Addr, Addr + Size), Name(N) {}
+  FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, gsym_strp_t Name = 0)
+      : Range(Addr, Addr + Size), Name(Name) {}
 
   /// Query if a FunctionInfo has rich debug info.
   ///
@@ -105,7 +135,7 @@ struct FunctionInfo {
   /// debug info, we might end up with multiple FunctionInfo objects for the
   /// same range and we need to be able to tell which one is the better object
   /// to use.
-  bool hasRichInfo() const { return OptLineTable || Inline; }
+  bool hasRichInfo() const { return OptLineTable || Inline || CallSites; }
 
   /// Query if a FunctionInfo object is valid.
   ///
@@ -132,17 +162,25 @@ struct FunctionInfo {
   ///
   /// \returns An FunctionInfo or an error describing the issue that was
   /// encountered during decoding.
-  static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
-                                             uint64_t BaseAddr);
+  LLVM_ABI static llvm::Expected<FunctionInfo> decode(GsymDataExtractor &Data,
+                                                      uint64_t BaseAddr);
 
   /// Encode this object into FileWriter stream.
   ///
   /// \param O The binary stream to write the data to at the current file
   /// position.
   ///
+  /// \param NoPadding Directly write the FunctionInfo data, without any padding
+  /// By default, FunctionInfo will be 4-byte aligned by padding with
+  /// 0's at the start. This is OK since the function will return the offset of
+  /// actual data in the stream. However when writing FunctionInfo's as a
+  /// stream, the padding will break the decoding of the data - since the offset
+  /// where the FunctionInfo starts is not kept in this scenario.
+  ///
   /// \returns An error object that indicates failure or the offset of the
   /// function info that was successfully written into the stream.
-  llvm::Expected<uint64_t> encode(FileWriter &O) const;
+  LLVM_ABI llvm::Expected<uint64_t> encode(FileWriter &O,
+                                           bool NoPadding = false) const;
 
   /// Encode this function info into the internal byte cache and return the size
   /// in bytes.
@@ -154,7 +192,7 @@ struct FunctionInfo {
   ///
   /// \returns The size in bytes of the FunctionInfo if it were to be encoded
   /// into a byte stream.
-  uint64_t cacheEncoding();
+  LLVM_ABI uint64_t cacheEncoding(GsymCreator &GC);
 
   /// Lookup an address within a FunctionInfo object's data stream.
   ///
@@ -174,13 +212,34 @@ struct FunctionInfo {
   ///
   /// \param Addr The address to lookup.
   ///
+  /// \param MergedFuncsData A pointer to an optional GsymDataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An LookupResult or an error describing the issue that was
   /// encountered during decoding. An error should only be returned if the
   /// address is not contained in the FunctionInfo or if the data is corrupted.
-  static llvm::Expected<LookupResult> lookup(DataExtractor &Data,
-                                             const GsymReader &GR,
-                                             uint64_t FuncAddr,
-                                             uint64_t Addr);
+  LLVM_ABI static llvm::Expected<LookupResult>
+  lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
+         uint64_t Addr,
+         std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
+
+  /// Parse the function info data and accumulate the byte size of each field /
+  /// InfoType into \a Stats.
+  ///
+  /// \param Data The binary stream to read the data from. Its string-offset
+  /// size is used to size the FunctionInfo Name field (4 bytes in GSYM v1,
+  /// 1-8 bytes in v2).
+  ///
+  /// \param Stats Updated with the per-field byte sizes for this FunctionInfo.
+  ///
+  /// \param MergedFuncInfoStats If non-null, and a MergedFunctionsInfo section
+  /// is present, this is updated with the byte breakdown of the inner
+  /// FunctionInfos plus the MergedFunctionsInfo structural bytes
+  /// (InfoTypeInfoLengthCountAndFnSize).
+  LLVM_ABI static void
+  parseStatistics(GsymDataExtractor &Data, FunctionInfoStats &Stats,
+                  FunctionInfoStats *MergedFuncInfoStats = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }
@@ -196,7 +255,8 @@ struct FunctionInfo {
 
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return LHS.Range == RHS.Range && LHS.Name == RHS.Name &&
-         LHS.OptLineTable == RHS.OptLineTable && LHS.Inline == RHS.Inline;
+         LHS.OptLineTable == RHS.OptLineTable && LHS.Inline == RHS.Inline &&
+         LHS.CallSites == RHS.CallSites;
 }
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return !(LHS == RHS);
@@ -212,19 +272,20 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 /// inline information with the most entries will appeear last. If the inline
 /// information match, either by both function infos not having any or both
 /// being exactly the same, we will then compare line tables. Comparing line
-/// tables allows the entry with the most line entries to appear last. This
-/// ensures we are able to save the FunctionInfo with the most debug info into
-/// the GSYM file.
+/// tables allows the entry with the most line entries to appear last. As a
+/// final tiebreaker, an entry that has call site information sorts after one
+/// that does not, so that within a single address range the entry with the
+/// most debug info always appears last. This ensures we are able to save the
+/// FunctionInfo with the most debug info into the GSYM file.
 inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   // First sort by address range
-  if (LHS.Range != RHS.Range)
-    return LHS.Range < RHS.Range;
-  if (LHS.Inline == RHS.Inline)
-    return LHS.OptLineTable < RHS.OptLineTable;
-  return LHS.Inline < RHS.Inline;
+  const bool LHSHasCallSites = LHS.CallSites.has_value();
+  const bool RHSHasCallSites = RHS.CallSites.has_value();
+  return std::tie(LHS.Range, LHS.Inline, LHS.OptLineTable, LHSHasCallSites) <
+         std::tie(RHS.Range, RHS.Inline, RHS.OptLineTable, RHSHasCallSites);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
 
 } // namespace gsym
 } // namespace llvm

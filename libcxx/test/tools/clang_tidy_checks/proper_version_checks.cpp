@@ -39,6 +39,9 @@ private:
     if (preprocessor_.getSourceManager().isInMainFile(location))
       return;
 
+    if (condition == "__cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)")
+      return;
+
     if (condition.starts_with("_LIBCPP_STD_VER") && condition.find(">") != std::string_view::npos &&
         condition.find(">=") == std::string_view::npos)
       check_.diag(location, "_LIBCPP_STD_VER >= version should be used instead of _LIBCPP_STD_VER > prev_version");
@@ -50,10 +53,10 @@ private:
       check_.diag(location, "_LIBCPP_STD_VER >= 11 is always true. Did you mean '#ifndef _LIBCPP_CXX03_LANG'?");
 
     else if (condition.starts_with("_LIBCPP_STD_VER >= ") &&
-             std::ranges::none_of(std::array{"14", "17", "20", "23", "26"}, [&](auto val) {
+             std::ranges::none_of(std::array{"14", "17", "20", "23", "26", "29"}, [&](auto val) {
                return condition.find(val) != std::string_view::npos;
              }))
-      check_.diag(location, "Not a valid value for _LIBCPP_STD_VER. Use 14, 17, 20, 23, or 26");
+      check_.diag(location, "Not a valid value for _LIBCPP_STD_VER. Use 14, 17, 20, 23, 26 or 29");
   }
 
   clang::Preprocessor& preprocessor_;

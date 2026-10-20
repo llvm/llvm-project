@@ -107,7 +107,7 @@ bool RRInfo::Merge(const RRInfo &Other) {
   CFGHazardAfflicted |= Other.CFGHazardAfflicted;
 
   // Merge the call sets.
-  Calls.insert(Other.Calls.begin(), Other.Calls.end());
+  Calls.insert_range(Other.Calls);
 
   // Merge the insert point sets. If there are any differences,
   // that makes this a partial merge.
@@ -272,9 +272,6 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     } else {
       InsertAfter = std::next(Inst->getIterator());
     }
-
-    if (InsertAfter != BB->end())
-      InsertAfter = skipDebugIntrinsics(InsertAfter);
 
     InsertReverseInsertPt(&*InsertAfter);
 

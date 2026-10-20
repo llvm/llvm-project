@@ -6,19 +6,19 @@ define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; CHECK:    movl (%rsi), %eax
 ; CHECK:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK:    vmovntps %ymm0, (%rdi)
-; CHECK:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0
+; CHECK:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0 # [1,2,3,4]
 ; CHECK:    addl (%rsi), %eax
 ; CHECK:    vmovntdq %ymm0, (%rdi)
 ; CHECK:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; CHECK:    addl (%rsi), %eax
 ; CHECK:    vmovntpd %ymm0, (%rdi)
-; CHECK:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm0
+; CHECK:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm0 # [1,2,3,4,5,6,7,8]
 ; CHECK:    addl (%rsi), %eax
 ; CHECK:    vmovntdq %ymm0, (%rdi)
-; CHECK:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm0
+; CHECK:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; CHECK:    addl (%rsi), %eax
 ; CHECK:    vmovntdq %ymm0, (%rdi)
-; CHECK:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0
+; CHECK:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; CHECK:    addl (%rsi), %eax
 ; CHECK:    vmovntdq %ymm0, (%rdi)
   %v0 = load i32, i32* %loadptr, align 1

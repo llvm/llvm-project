@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -fms-extensions -o - | FileCheck %s
 
 class A {
 public:
@@ -42,6 +42,16 @@ void foo(int i, A *ap, B *bp) {
 
   A *newA = new B();
   delete newA;
+  [[clang::nomerge]] __debugbreak();
+  [[clang::nomerge]] __debugbreak();
+}
+
+void foo_trap() {
+  [[clang::nomerge]] __builtin_trap();
+}
+
+void foo_verbose_trap() {
+  [[clang::nomerge]] __builtin_verbose_trap("check null", "Argument must not be null.");
 }
 
 int g(int i);
@@ -62,22 +72,22 @@ void something_else_again() {
   g(1);
 }
 
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0:[0-9]+]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0:[0-9]+]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
 // CHECK: call void @_Z1fbb({{.*}}) #[[ATTR0]]
 // CHECK: %[[FPTR:.*]] = load ptr, ptr @fptr
 // CHECK-NEXT: call void %[[FPTR]]() #[[ATTR0]]
 // CHECK: call void @"_ZZ3fooiP1AP1BENK3$_0clEv"{{.*}} #[[ATTR0]]
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.cond:
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK-LABEL: for.inc:
-// CHECK: call noundef zeroext i1 @_Z3barv() #[[ATTR0]]
+// CHECK: call noundef{{.*}} i1 @_Z3barv() #[[ATTR0]]
 // CHECK: call void asm sideeffect "nop"{{.*}} #[[ATTR1:[0-9]+]]
-// CHECK: call noundef zeroext i1 @_Z3barv(){{$}}
+// CHECK: call noundef{{.*}} i1 @_Z3barv(){{$}}
 // CHECK: load ptr, ptr
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr
@@ -97,7 +107,18 @@ void something_else_again() {
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr
 // CHECK-NEXT: call void %[[AG]](ptr {{.*}}) #[[ATTR1]]
+// CHECK: call void @llvm.debugtrap() #[[ATTR1]]
+// CHECK: call void @llvm.debugtrap() #[[ATTR1]]
 // CHECK: call void  @_ZN1AD1Ev(ptr {{.*}}) #[[ATTR1]]
+
+// CHECK-LABEL: define dso_local void @_Z8foo_trapv()
+// CHECK: call void @llvm.trap() #[[ATTR_TRAP:[0-9]+]]
+// CHECK-NEXT: unreachable
+
+// CHECK-LABEL: define dso_local void @_Z16foo_verbose_trapv()
+// CHECK: call void @llvm.trap() #[[ATTR_TRAP]]
+// CHECK-NEXT: unreachable
 
 // CHECK-DAG: attributes #[[ATTR0]] = {{{.*}}nomerge{{.*}}}
 // CHECK-DAG: attributes #[[ATTR1]] = {{{.*}}nomerge{{.*}}}
+// CHECK-DAG: attributes #[[ATTR_TRAP]] = {{{.*}}nomerge{{.*}}}

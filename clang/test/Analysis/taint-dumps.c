@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.security.taint\
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.taint\
 // RUN:                    -analyzer-checker=debug.ExprInspection %s\
 // RUN:                                          2>&1 | FileCheck %s
 

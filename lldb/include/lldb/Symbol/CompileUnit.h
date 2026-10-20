@@ -19,11 +19,13 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
+
 /// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
 /// A class that describes a compilation unit.
 ///
@@ -91,7 +93,7 @@ public:
   /// \param[in] user_data
   ///     User data where the SymbolFile parser can store data.
   ///
-  /// \param[in] support_file_sp
+  /// \param[in] support_file_nsp
   ///     The file specification for the source file of this compile
   ///     unit.
   ///
@@ -116,7 +118,7 @@ public:
   ///     An rvalue list of already parsed support files.
   /// \see lldb::LanguageType
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-              lldb::SupportFileSP support_file_sp, lldb::user_id_t uid,
+              SupportFileNSP support_file_nsp, lldb::user_id_t uid,
               lldb::LanguageType language, lldb_private::LazyBool is_optimized,
               SupportFileList &&support_files = {});
 
@@ -228,12 +230,12 @@ public:
 
   /// Return the primary source spec associated with this compile unit.
   const FileSpec &GetPrimaryFile() const {
-    return m_primary_support_file_sp->GetSpecOnly();
+    return m_primary_support_file_nsp->GetSpecOnly();
   }
 
   /// Return the primary source file associated with this compile unit.
-  lldb::SupportFileSP GetPrimarySupportFile() const {
-    return m_primary_support_file_sp;
+  SupportFileNSP GetPrimarySupportFile() const {
+    return m_primary_support_file_nsp;
   }
 
   /// Get the line table for the compile unit.
@@ -337,6 +339,11 @@ public:
   ///     a NULL Function pointer.
   lldb::FunctionSP FindFunctionByUID(lldb::user_id_t uid);
 
+  /// Return the index of this compile unit in its module.
+  uint32_t GetIndex() const { return m_index; }
+
+  void SetIndex(uint32_t index) { m_index = index; }
+
   /// Set the line table for the compile unit.
   ///
   /// Called by the SymbolFile plug-in when if first parses the line table and
@@ -389,10 +396,15 @@ public:
   ///     A SymbolContext list class that will get any matching
   ///     entries appended to.
   ///
+  /// \param[in] realpath_prefixes
+  ///     Paths that start with one of the prefixes in this list will be
+  ///     realpath'ed to resolve any symlinks.
+  ///
   /// \see enum SymbolContext::Scope
   void ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                             lldb::SymbolContextItem resolve_scope,
-                            SymbolContextList &sc_list);
+                            SymbolContextList &sc_list,
+                            RealpathPrefixes *realpath_prefixes = nullptr);
 
   /// Get whether compiler optimizations were enabled for this compile unit
   ///
@@ -423,7 +435,7 @@ protected:
   /// compile unit.
   std::vector<SourceModule> m_imported_modules;
   /// The primary file associated with this compile unit.
-  lldb::SupportFileSP m_primary_support_file_sp;
+  SupportFileNSP m_primary_support_file_nsp;
   /// Files associated with this compile unit's line table and declarations.
   SupportFileList m_support_files;
   /// Line table that will get parsed on demand.
@@ -435,6 +447,8 @@ protected:
   /// eLazyBoolYes if this compile unit was compiled with
   /// optimization.
   lldb_private::LazyBool m_is_optimized;
+  /// Index of this compile unit in its module.
+  uint32_t m_index = LLDB_INVALID_INDEX32;
 
 private:
   enum {
@@ -452,6 +466,8 @@ private:
     flagsParsedDebugMacros =
         (1u << 6) ///< Have we parsed the debug macros already?
   };
+
+  std::recursive_mutex &GetMutex() const;
 
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;

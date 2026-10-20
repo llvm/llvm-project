@@ -2,7 +2,7 @@ function(add_startup_object name)
   cmake_parse_arguments(
     "ADD_STARTUP_OBJECT"
     "ALIAS" # Option argument
-    "SRC"   # Single value arguments
+    "SRC" # Single value arguments
     "DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
@@ -18,7 +18,7 @@ function(add_startup_object name)
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
     COMPILE_OPTIONS ${ADD_STARTUP_OBJECT_COMPILE_OPTIONS}
-    ${ADD_STARTUP_OBJECT_UNPARSED_ARGUMENTS}
+      ${ADD_STARTUP_OBJECT_UNPARSED_ARGUMENTS}
     DEPENDS ${ADD_STARTUP_OBJECT_DEPENDS}
   )
   set_target_properties(
@@ -26,17 +26,30 @@ function(add_startup_object name)
     PROPERTIES
       OUTPUT_NAME ${name}.o
   )
-endfunction()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
-  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-endif()
+  # Make a relocatable bitcode object for clang if needed.
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    llvm_link_bitcode(${fq_target_name}.exe
+      OUTPUT ${LIBC_LIBRARY_DIR}/${name}.o
+      INPUTS $<TARGET_OBJECTS:${fq_target_name}>
+      DEPENDS ${fq_target_name}
+    )
+  endif()
+endfunction()
 
 add_startup_object(
   crt1
-  ALIAS
+  SRC
+    start.cpp
   DEPENDS
-  .${LIBC_TARGET_ARCHITECTURE}.crt1
+    libc.config.app_h
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
+  COMPILE_OPTIONS
+    -ffreestanding # To avoid compiler warnings about calling the main function.
+    -fno-builtin
 )
 
 add_custom_target(libc-startup)
@@ -45,7 +58,7 @@ foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.gpu.${target})
   add_dependencies(libc-startup ${fq_target_name})
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-          RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          COMPONENT libc)
+    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+    COMPONENT libc)
 endforeach()

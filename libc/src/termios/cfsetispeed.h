@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_CFSETISPEED_H
 #define LLVM_LIBC_SRC_TERMIOS_CFSETISPEED_H
 
-#include <termios.h>
+#include "hdr/types/speed_t.h"
+#include "hdr/types/struct_termios.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-int cfsetispeed(struct termios *t, speed_t speed);
+int cfsetispeed(termios *t, speed_t speed);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TERMIOS_CFSETISPEED_H

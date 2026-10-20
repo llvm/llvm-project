@@ -10,18 +10,18 @@ define i32 @test(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i8> [[TMP2]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP11]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;

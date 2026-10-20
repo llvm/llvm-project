@@ -53,8 +53,8 @@ baz:
 
 
 #--- script.t
-PROVIDE(unused = bar + used);
-PROVIDE(used = another_used);
+PROVIDE(unused = bar + "used");
+PROVIDE("used" = another_used);
 PROVIDE(baz_ref = baz);
 PROVIDE(another_used = baz_ref);
 PROVIDE(another_unused = unused + bar + 0x1);

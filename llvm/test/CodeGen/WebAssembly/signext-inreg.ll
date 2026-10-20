@@ -1,6 +1,7 @@
-; RUN: llc < %s -mattr=+sign-ext -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
-
+; RUN: llc < %s -mattr=+sign-ext -fast-isel=0 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefixes=CHECK,SLOW
+; RUN: llc < %s -mattr=-sign-ext -asm-verbose=false -fast-isel=0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
+; RUN: llc < %s -mattr=+sign-ext -fast-isel=1 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefixes=CHECK,FAST
+; RUN: llc < %s -mattr=-sign-ext -asm-verbose=false -fast-isel=1 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=NOSIGNEXT
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: i32_extend8_s:
@@ -60,5 +61,26 @@ define i64 @i64_extend16_s(i16 %x) {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_extend32_s(i32 %x) {
   %a = sext i32 %x to i64
+  ret i64 %a
+}
+
+; CHECK-LABEL: i64_extend1_s:
+; CHECK-NEXT: .functype i64_extend1_s (i32) -> (i64){{$}}
+; SLOW-NEXT: i64.const $push[[NUM3:[0-9]+]]=, 0{{$}}
+; SLOW-NEXT: i64.extend_i32_u $push[[NUM0:[0-9]+]]=, $0{{$}}
+; SLOW-NEXT: i64.const $push[[NUM1:[0-9]+]]=, 1{{$}}
+; SLOW-NEXT: i64.and $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
+; SLOW-NEXT: i64.sub $push[[NUM4:[0-9]+]]=, $pop[[NUM3]], $pop[[NUM2]]{{$}}
+; SLOW-NEXT: return $pop[[NUM4]]{{$}}
+; FAST-NEXT: i32.const $push[[NUM1:[0-9]+]]=, 31{{$}}
+; FAST-NEXT: i32.shl $push[[NUM0:[0-9]+]]=, $0, $pop[[NUM1]]{{$}}
+; FAST-NEXT: i32.const $push[[NUM4:[0-9]+]]=, 31{{$}}
+; FAST-NEXT: i32.shr_s $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM4]]{{$}}
+; FAST-NEXT: i64.extend_i32_s $push[[NUM3:[0-9]+]]=, $pop[[NUM2]]{{$}}
+; FAST-NEXT: return $pop[[NUM3]]{{$}}
+
+; NOSIGNEXT-LABEL: i64_extend1_s
+define i64 @i64_extend1_s(i1 %x) {
+  %a = sext i1 %x to i64
   ret i64 %a
 }

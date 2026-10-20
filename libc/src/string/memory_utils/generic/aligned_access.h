@@ -13,14 +13,14 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 
-#include "src/__support/macros/config.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_generic.h" // generic::splat
 #include "src/string/memory_utils/utils.h"      // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[maybe_unused]] LIBC_INLINE uint32_t load32_aligned(CPtr ptr, size_t offset,
                                                      size_t alignment) {
@@ -202,6 +202,6 @@ inline_memcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
   return inline_memcmp_byte_per_byte(p1, p2, count, offset);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H

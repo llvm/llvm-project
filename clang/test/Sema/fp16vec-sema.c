@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fsyntax-only -Wno-unused-value -verify %s
 
 typedef __fp16 half4 __attribute__ ((vector_size (8)));
 typedef float float4 __attribute__ ((vector_size (16)));
@@ -43,7 +44,7 @@ void testFP16Vec(int c) {
   hv0 = c ? hv0 : fv1; // expected-error{{cannot convert between vector}}
   sv0 = hv0 == fv1; // expected-error{{cannot convert between vector}}
   sv0 = hv0 < fv1; // expected-error{{cannot convert between vector}}
-  sv0 = hv0 || fv1; // expected-error{{cannot convert between vector}} expected-error{{invalid operands to binary expression}}
+  sv0 = hv0 || fv1; // expected-error{{cannot convert between vector}}
   iv0 = hv0 == hv1; // expected-error{{assigning to}}
 
   // FIXME: clang currently disallows using these operators on vectors, which is

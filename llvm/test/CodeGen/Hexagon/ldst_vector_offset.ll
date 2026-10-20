@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -O3 -march=hexagon < %s -o /dev/null
+; RUN: llc -O3 -mtriple=hexagon < %s -o /dev/null
 ; Make sure that this doesn't crash.
 ; This test validates that the compiler would not assert when analyzing the
 ; offset of V6_vS32b_pred_ai instruction
@@ -55,5 +55,5 @@ bb25:                                             ; preds = %bb22
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
-attributes #2 = { noinline nounwind "target-cpu"="hexagonv68" "target-features"="+hvx-length128b,+hvxv68,+v68,+hvx-ieee-fp,-long-calls,-small-data" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #2 = { noinline nounwind "target-cpu"="hexagonv68" "target-features"="+hvx-length128b,+hvxv68,+v68,+hvx-ieee-fp,-long-calls,-small-data" "use-soft-float"="false" }
 attributes #3 = { nounwind }

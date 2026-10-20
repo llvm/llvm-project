@@ -1,7 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
 ; FIXME: i16 promotion pass ruins the scalar cases when legal.
 ; FIXME: r600 fails verifier
@@ -419,8 +419,11 @@ define amdgpu_kernel void @testcase_3(ptr addrspace(1) %out, i8 %a) #0 {
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 8
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 8
 define amdgpu_kernel void @vgpr_sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
-  %loada = load <4 x i32>, ptr addrspace(1) %a, align 16
-  %loadb = load <4 x i32>, ptr addrspace(1) %b, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %a.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %a, i32 %tid
+  %b.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %b, i32 %tid
+  %loada = load <4 x i32>, ptr addrspace(1) %a.tid, align 16
+  %loadb = load <4 x i32>, ptr addrspace(1) %b.tid, align 16
   %c = add <4 x i32> %loada, %loadb ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 24, i32 24, i32 24, i32 24>
   %ashr = ashr <4 x i32> %shl, <i32 24, i32 24, i32 24, i32 24>
@@ -432,8 +435,11 @@ define amdgpu_kernel void @vgpr_sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out,
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 16
 ; GCN: v_bfe_i32 [[EXTRACT:v[0-9]+]], {{v[0-9]+}}, 0, 16
 define amdgpu_kernel void @vgpr_sext_in_reg_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
-  %loada = load <4 x i32>, ptr addrspace(1) %a, align 16
-  %loadb = load <4 x i32>, ptr addrspace(1) %b, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %a.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %a, i32 %tid
+  %b.tid = getelementptr inbounds <4 x i32>, ptr addrspace(1) %b, i32 %tid
+  %loada = load <4 x i32>, ptr addrspace(1) %a.tid, align 16
+  %loadb = load <4 x i32>, ptr addrspace(1) %b.tid, align 16
   %c = add <4 x i32> %loada, %loadb ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 16, i32 16, i32 16, i32 16>
   %ashr = ashr <4 x i32> %shl, <i32 16, i32 16, i32 16, i32 16>
@@ -521,13 +527,10 @@ define amdgpu_kernel void @v_sext_in_reg_i32_to_i64_move_use(ptr addrspace(1) %o
 ; FUNC-LABEL: {{^}}s_sext_in_reg_i1_i16:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 
-; SI: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x10000
-; SI: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
-; SI: buffer_store_short [[VBFE]]
+; GCN: s_bfe_i32 [[BFE:s[0-9]+]], [[VAL]], 0x10000
+; GCN: v_mov_b32_e32 [[VBFE:v[0-9]+]], [[BFE]]
+; GCN: buffer_store_short [[VBFE]]
 
-; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
-; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
-; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 15
 define amdgpu_kernel void @s_sext_in_reg_i1_i16(ptr addrspace(1) %out, ptr addrspace(4) %ptr) #0 {
   %ld = load i32, ptr addrspace(4) %ptr
   %in = trunc i32 %ld to i16
@@ -622,9 +625,7 @@ define amdgpu_kernel void @s_sext_in_reg_i2_i16_arg(ptr addrspace(1) %out, i16 %
 ; SI: v_mov_b32_e32 [[VSEXT:v[0-9]+]], [[SSEXT]]
 ; SI: buffer_store_short [[VSEXT]]
 
-; GFX89: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8{{$}}
-; GFX89: s_sext_i32_i16 s{{[0-9]+}}, s{{[0-9]+}}
-; GFX89: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8{{$}}
+; GFX89: s_bfe_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000
 define amdgpu_kernel void @s_sext_in_reg_i8_i16_arg(ptr addrspace(1) %out, i16 %in) #0 {
   %shl = shl i16 %in, 8
   %sext = ashr i16 %shl, 8

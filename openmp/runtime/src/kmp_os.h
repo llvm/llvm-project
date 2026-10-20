@@ -77,7 +77,7 @@
 
 #if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD || KMP_OS_NETBSD ||      \
      KMP_OS_DRAGONFLY || KMP_OS_AIX) &&                                        \
-    !KMP_OS_WASI
+    !KMP_OS_WASI && !KMP_OS_EMSCRIPTEN
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -153,7 +153,7 @@ typedef struct kmp_struct64 kmp_uint64;
 #undef KMP_USE_X87CONTROL
 #define KMP_USE_X87CONTROL 1
 #endif
-#if KMP_ARCH_X86_64 || KMP_ARCH_AARCH64
+#if KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM64EC
 #define KMP_INTPTR 1
 typedef __int64 kmp_intptr_t;
 typedef unsigned __int64 kmp_uintptr_t;
@@ -178,18 +178,19 @@ typedef unsigned long long kmp_uint64;
 #define KMP_UINT64_SPEC "llu"
 #endif /* KMP_OS_UNIX */
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
-    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM32 ||        \
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64 || KMP_ARCH_WASM64 ||    \
+    KMP_ARCH_ARM64EC
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM || KMP_ARCH_PPC
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM32 || KMP_ARCH_PPC
 #define KMP_SIZE_T_MAX (0xFFFFFFFF)
 #else
 #define KMP_SIZE_T_MAX (0xFFFFFFFFFFFFFFFF)
@@ -218,8 +219,10 @@ typedef kmp_uint32 kmp_uint;
 #define KMP_INT_MIN ((kmp_int32)0x80000000)
 
 // stdarg handling
-#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM) &&  \
-    (KMP_OS_FREEBSD || KMP_OS_LINUX || KMP_OS_WASI)
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM32 || \
+     KMP_ARCH_WASM64) &&                                                       \
+    (KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || KMP_OS_DRAGONFLY ||  \
+     KMP_OS_LINUX || KMP_OS_WASI)
 typedef va_list *kmp_va_list;
 #define kmp_va_deref(ap) (*(ap))
 #define kmp_va_addr_of(ap) (&(ap))
@@ -463,7 +466,9 @@ enum kmp_mem_fence_type {
 
 // Synchronization primitives
 
-#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !((KMP_ARCH_AARCH64 || KMP_ARCH_ARM) && (KMP_COMPILER_CLANG || KMP_COMPILER_GCC))
+#if KMP_ASM_INTRINS && KMP_OS_WINDOWS &&                                       \
+    !((KMP_ARCH_AARCH64 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC) &&                \
+      (KMP_COMPILER_CLANG || KMP_COMPILER_GCC))
 
 #if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
@@ -1051,7 +1056,8 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS ||     \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 ||    \
+    KMP_ARCH_SPARC || KMP_ARCH_ARM64EC
 #if KMP_OS_WINDOWS
 #undef KMP_MB
 #define KMP_MB() std::atomic_thread_fence(std::memory_order_seq_cst)
@@ -1151,7 +1157,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   KMP_COMPARE_AND_STORE_REL64((volatile kmp_int64 *)(volatile void *)&(a),     \
                               (kmp_int64)(b), (kmp_int64)(c))
 
-#if KMP_ARCH_X86 || KMP_ARCH_MIPS || KMP_ARCH_WASM || KMP_ARCH_PPC
+#if KMP_ARCH_X86 || KMP_ARCH_MIPS || KMP_ARCH_WASM32 || KMP_ARCH_PPC
 // What about ARM?
 #define TCR_PTR(a) ((void *)TCR_4(a))
 #define TCW_PTR(a, b) TCW_4((a), (b))
@@ -1293,7 +1299,7 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
 extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #define KMP_DLSYM(name) __kmp_lookup_symbol(name)
 #define KMP_DLSYM_NEXT(name) __kmp_lookup_symbol(name, true)
-#elif KMP_OS_WASI
+#elif KMP_OS_WASI || KMP_OS_EMSCRIPTEN
 #define KMP_DLSYM(name) nullptr
 #define KMP_DLSYM_NEXT(name) nullptr
 #else

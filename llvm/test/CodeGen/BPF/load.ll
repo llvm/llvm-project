@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 | FileCheck %s
 
 define i16 @am1(ptr %a) nounwind {
   %1 = load i16, ptr %a

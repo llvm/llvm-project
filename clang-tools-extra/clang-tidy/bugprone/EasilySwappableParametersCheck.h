@@ -1,4 +1,4 @@
-//===--- EasilySwappableParametersCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// swapped (or badly ordered) arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
 class EasilySwappableParametersCheck : public ClangTidyCheck {
 public:
   EasilySwappableParametersCheck(StringRef Name, ClangTidyContext *Context);
@@ -54,7 +54,7 @@ public:
   /// either end for the report about the parameters to be silenced.
   /// E.g. the names "LHS" and "RHS" are 1-dissimilar suffixes of each other,
   /// while "Text1" and "Text2" are 1-dissimilar prefixes of each other.
-  const std::size_t NamePrefixSuffixSilenceDissimilarityTreshold;
+  const std::size_t NamePrefixSuffixSilenceDissimilarityThreshold;
 };
 
 } // namespace clang::tidy::bugprone

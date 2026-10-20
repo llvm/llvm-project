@@ -111,7 +111,8 @@ __device__ void dev_fun(int *out) {
   // Check ODR-use of host variables in namespace is not allowed.
   *out = X::host_var; // dev-error {{reference to __host__ variable 'host_var' in __device__ function}}
 
-  // Check ODR-use of static host varables in class or file scope is not allowed.
+  // Check ODR-use of static host variables in class or file scope is not
+  // allowed.
   *out = A::host_var; // dev-error {{reference to __host__ variable 'host_var' in __device__ function}}
   *out = static_host_var; // dev-error {{reference to __host__ variable 'static_host_var' in __device__ function}}
 

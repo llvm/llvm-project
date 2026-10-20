@@ -1,0 +1,150 @@
+## Test the --symtab-file option to specify a separate file for the symbol table.
+## We create two ELF files: one with DWARF debug info (but no function symbols)
+## and one with function symbols (but no DWARF). Then we use --symtab-file to
+## combine them during GSYM conversion.
+
+# RUN: split-file %s %t
+
+## Create the debug-only and symtab-only ELF files.
+# RUN: yaml2obj %t/debug.yaml -o %t/debug.elf
+# RUN: yaml2obj %t/symtab.yaml -o %t/symtab.elf
+
+## Test 1: Basic --symtab-file usage.
+# RUN: llvm-gsymutil --convert %t/debug.elf --symtab-file=%t/symtab.elf -o %t/out.gsym 2>&1 | FileCheck %s --check-prefix=BASIC
+# BASIC: Input file: {{.*}}debug.elf
+# BASIC: Output file (x86_64): {{.*}}out.gsym
+# BASIC: Using symbol table file: {{.*}}symtab.elf
+# BASIC: Loaded 2 functions from symbol table.
+
+## Test 2: Architecture mismatch error.
+# RUN: yaml2obj %t/aarch64-symtab.yaml -o %t/aarch64-symtab.elf
+# RUN: not llvm-gsymutil --convert %t/debug.elf --symtab-file=%t/aarch64-symtab.elf -o %t/mismatch.gsym 2>&1 | FileCheck %s --check-prefix=MISMATCH
+# MISMATCH: architecture mismatch: input file is x86_64 but symbol table file '{{.*}}aarch64-symtab.elf' is aarch64
+
+## Test 3: Invalid symtab file error.
+# RUN: not llvm-gsymutil --convert %t/debug.elf --symtab-file=%t/debug.yaml -o %t/invalid.gsym 2>&1 | FileCheck %s --check-prefix=INVALID
+# INVALID: The file was not recognized as a valid object file
+
+#--- debug.yaml
+## An x86_64 ELF with DWARF debug info for one function (main) but no function
+## symbols in the symbol table.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  Entry:   0x0000000000401000
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000401000
+    AddressAlign: 0x10
+    ## Simple function: push rbp; mov rbp,rsp; xor eax,eax; pop rbp; ret
+    Content: 554889E531C05DC3
+  - Name:    .debug_abbrev
+    Type:    SHT_PROGBITS
+    AddressAlign: 0x1
+    ## Abbrev 1: DW_TAG_compile_unit (DW_CHILDREN_yes)
+    ##   DW_AT_low_pc (DW_FORM_addr), DW_AT_high_pc (DW_FORM_data4),
+    ##   DW_AT_name (DW_FORM_strp)
+    ## Abbrev 2: DW_TAG_subprogram (DW_CHILDREN_no)
+    ##   DW_AT_low_pc (DW_FORM_addr), DW_AT_high_pc (DW_FORM_data4),
+    ##   DW_AT_name (DW_FORM_strp)
+    Content: 01110100110112060000023F19030E3A0B3B0B491311011207401897421901130000022E003F19030E110112070000022E00110112060003080000
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    AddressAlign: 0x1
+    ## Compile unit header + DIEs referencing .debug_abbrev and .debug_str
+    Content: 2900000004000000000008010010400000000000080000000000000002001040000000000008000000050000
+  - Name:    .debug_str
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign: 0x1
+    EntSize:  0x1
+    ## "test.cpp\0main\0"
+    Content: 746573742E63707000006D61696E00
+  - Name:    .debug_line
+    Type:    SHT_PROGBITS
+    AddressAlign: 0x1
+    Content: 3300000002001F0000000101FB0E0D000101010100000001000001007465737400746573742E637070000000000000090200104000000000000105030A0101
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x0000000000400000
+    Align: 0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols: []
+...
+
+#--- symtab.yaml
+## An x86_64 ELF with function symbols but no DWARF debug info.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  Entry:   0x0000000000401000
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000401000
+    AddressAlign: 0x10
+    Content: 554889E531C05DC3
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x0000000000400000
+    Align: 0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000401000
+    Size:    0x0000000000000008
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000401000
+    Size:    0x0000000000000008
+...
+
+#--- aarch64-symtab.yaml
+## An AArch64 ELF to test architecture mismatch.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+  Entry:   0x0000000000401000
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000401000
+    AddressAlign: 0x10
+    Content: C0035FD6
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x0000000000400000
+    Align: 0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000401000
+    Size:    0x0000000000000004
+...

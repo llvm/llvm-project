@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 
 ; We shouldn't generate a hardware loop in this case because the initial
 ; value may be zero, which means the endloop instruction will not decrement

@@ -1,0 +1,88 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test detection of CUDA Fortran data transfer in presence of associuate
+! statement.
+
+module m
+  real(8), device, dimension(10,10,10) :: d
+end module m
+
+subroutine foo
+  use m
+  !@CUF associate(d1 => d)
+  d1 = 0.0
+  !@CUF end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPfoo()
+! CHECK: %[[D:.*]] = fir.address_of(@_QMmEd) : !fir.ref<!fir.array<10x10x10xf64>>
+! CHECK: %[[D_DECL:.*]]:2 = hlfir.declare %[[D]](%{{.*}}) uniq_name("_QMmEd") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
+! CHECK: %[[D1_DECL:.*]]:2 = hlfir.declare %[[D_DECL]]#0(%4) uniq_name("_QFfooEd1") : (!fir.ref<!fir.array<10x10x10xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x10xf64>>, !fir.ref<!fir.array<10x10x10xf64>>)
+! CHECK: cuf.data_transfer %{{.*}} to %[[D1_DECL]]#0 transfer_kind(host_device) : f64, !fir.ref<!fir.array<10x10x10xf64>>
+
+module m2
+  type :: t1
+    real(8), allocatable, managed :: a(:,:)
+    real(8) :: s
+  end type
+  type :: t2
+    integer :: n
+  end type
+  type :: t3
+    type(t1) :: x
+    type(t2), allocatable, managed :: y
+  end type
+end module m2
+
+! An associate name designating a managed component is managed data: the
+! element assignment is done on the host.
+subroutine bar(g, i, j, r)
+  use m2
+  type(t3) :: g
+  integer :: i, j
+  real(8) :: r
+  associate(px => g%x, py => g%y)
+    px%a(i,j) = r + px%s * real(i + py%n, 8)
+  end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPbar(
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
+! CHECK-NOT: cuf.data_transfer
+! CHECK: return
+
+! An associate name designating a managed object is managed data, but its
+! device component is device data: the element assignment is a transfer.
+subroutine baz(g)
+  type :: t
+    real, allocatable, device :: d(:)
+  end type
+  type(t), managed :: g
+  associate(p => g)
+    p%d(1) = 1.0
+  end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPbaz(
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} transfer_kind(host_device) hasManagedOrUnifedSymbols : f32, !fir.ref<f32>
+
+subroutine nested_association(g)
+  type :: t
+    real, allocatable, managed :: m(:)
+    real, allocatable, device :: d(:)
+  end type
+  type(t), managed :: g
+
+  associate(p => g)
+    associate(q => p)
+      q%m(1) = 2.0  ! Host assignment
+      q%d(1) = 1.0  ! Host-to-device transfer
+    end associate
+  end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnested_association(
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} transfer_kind(host_device) hasManagedOrUnifedSymbols : f32, !fir.ref<f32>

@@ -3,7 +3,7 @@ set_target_properties(Kaleidoscope PROPERTIES FOLDER "LLVM/Examples")
 
 macro(add_kaleidoscope_chapter name)
   add_dependencies(Kaleidoscope ${name})
-  add_llvm_example(${name} ${ARGN})
+  add_llvm_example(${name} EXPORT_SYMBOLS ${ARGN})
 endmacro(add_kaleidoscope_chapter name)
 
 add_subdirectory(BuildingAJIT)

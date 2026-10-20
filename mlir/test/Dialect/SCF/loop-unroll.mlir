@@ -3,9 +3,11 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=5 cleanup-unroll=true' | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
-// RUN: mlir-opt %s --affine-loop-unroll --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=6 unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
+// RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=false' | FileCheck %s --check-prefix NO-PROMOTE-BY-3
+// RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=true' | FileCheck %s --check-prefix PROMOTE-BY-3
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll))" --split-input-file | FileCheck %s
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
@@ -448,3 +450,331 @@ func.func @loop_unroll_yield_iter_arg() {
 // CHECK-NEXT:      affine.yield %[[ITER_ARG]] : index
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
+
+// -----
+
+// Test the loop unroller works with integer IV type.
+func.func @static_loop_unroll_with_integer_iv() -> (f32, f32) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : i32
+  %ub = arith.constant 20 : i32
+  %step = arith.constant 1 : i32
+  %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%arg0 = %0, %arg1 = %0) -> (f32, f32) : i32{
+    %add = arith.addf %arg0, %arg1 : f32
+    %mul = arith.mulf %arg0, %arg1 : f32
+    scf.yield %add, %mul : f32, f32
+  }
+  return %result#0, %result#1 : f32, f32
+}
+// UNROLL-BY-3-LABEL: func @static_loop_unroll_with_integer_iv
+//
+//   UNROLL-BY-3-DAG:   %[[CST:.*]] = arith.constant {{.*}} : f32
+//   UNROLL-BY-3-DAG:   %[[C0:.*]] = arith.constant 0 : i32
+//   UNROLL-BY-3-DAG:   %[[C1:.*]] = arith.constant 1 : i32
+//   UNROLL-BY-3-DAG:   %[[C20:.*]] = arith.constant 20 : i32
+//   UNROLL-BY-3-DAG:   %[[C18:.*]] = arith.constant 18 : i32
+//   UNROLL-BY-3-DAG:   %[[C3:.*]] = arith.constant 3 : i32
+//       UNROLL-BY-3:   %[[FOR:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C18]] step %[[C3]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[ARG0:.*]] = %[[CST]], %[[ARG1:.*]] = %[[CST]]) -> (f32, f32)  : i32 {
+//  UNROLL-BY-3-NEXT:     %[[ADD0:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD1:.*]] = arith.addf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL2:.*]] = arith.mulf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[ADD2]], %[[MUL2]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//       UNROLL-BY-3:   %[[EFOR:.*]]:2 = scf.for %[[EIV:.*]] = %[[C18]] to %[[C20]] step %[[C1]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[EARG0:.*]] = %[[FOR]]#0, %[[EARG1:.*]] = %[[FOR]]#1) -> (f32, f32)  : i32 {
+//  UNROLL-BY-3-NEXT:     %[[EADD:.*]] = arith.addf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[EMUL:.*]] = arith.mulf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[EADD]], %[[EMUL]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//  UNROLL-BY-3-NEXT:   return %[[EFOR]]#0, %[[EFOR]]#1 : f32, f32
+
+// -----
+
+// Test loop unrolling when the yielded value is defined above the loop.
+func.func @loop_unroll_static_yield_value_defined_above(%init: i32) {
+  %c42 = arith.constant 42 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %103:2 = scf.for %i = %c0 to %c4 step %c1
+      iter_args(%iter1 = %c42, %iter2 = %init) -> (i32, i32) {
+    %0 = arith.andi %iter2, %iter1 : i32
+    scf.yield %0, %init : i32, i32
+  }
+  return
+}
+// UNROLL-OUTER-BY-2-LABEL: @loop_unroll_static_yield_value_defined_above(
+// UNROLL-OUTER-BY-2-SAME:    %[[INIT:.*]]: i32) {
+// UNROLL-OUTER-BY-2-DAG:   %[[C42:.*]] = arith.constant 42 : i32
+// UNROLL-OUTER-BY-2-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// UNROLL-OUTER-BY-2-DAG:   %[[C4:.*]] = arith.constant 4 : index
+// UNROLL-OUTER-BY-2-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// UNROLL-OUTER-BY-2:       scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C2]]
+// UNROLL-OUTER-BY-2-SAME:      iter_args(%[[ITER1:.*]] = %[[C42]],
+// UNROLL-OUTER-BY-2-SAME:                %[[ITER2:.*]] = %[[INIT]])
+// UNROLL-OUTER-BY-2:         %[[SUM:.*]] = arith.andi %[[ITER2]], %[[ITER1]]
+// UNROLL-OUTER-BY-2:         %[[SUM1:.*]] = arith.andi %[[INIT]], %[[SUM]]
+// UNROLL-OUTER-BY-2:         scf.yield %[[SUM1]], %[[INIT]] : i32, i32
+
+// -----
+
+// Test unrolling an unsigned scf.for whose bounds use narrow integer types.
+// The unsigned upper bound 2 in i2 has the same bit pattern as signed -2, so
+// getConstantIntValue (which sign-extends) would return -2. The fix ensures we
+// zero-extend when the loop comparison is unsigned.
+
+// Case 1: trip count 2 (i2 unsigned: lb=0, ub=2, step=1), unroll by 2 =>
+// fully unrolled, no residual loop.
+func.func @unroll_unsigned_i2_tc2() -> (i32, i32) {
+  %0 = arith.constant 7 : i32
+  %lb = arith.constant 0 : i2
+  %ub = arith.constant 2 : i2
+  %step = arith.constant 1 : i2
+  %result:2 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%arg0 = %0, %arg1 = %0) -> (i32, i32) : i2 {
+    %add = arith.addi %arg0, %arg1 : i32
+    %mul = arith.muli %arg0, %arg1 : i32
+    scf.yield %add, %mul : i32, i32
+  }
+  return %result#0, %result#1 : i32, i32
+}
+// UNROLL-BY-2-LABEL: @unroll_unsigned_i2_tc2
+// UNROLL-BY-2-NOT:   scf.for
+// UNROLL-BY-2:       arith.addi
+// UNROLL-BY-2:       arith.muli
+// UNROLL-BY-2:       arith.addi
+// UNROLL-BY-2:       arith.muli
+// UNROLL-BY-2:       return
+
+// -----
+
+// Case 2: trip count 4 (i3 unsigned: lb=0, ub=4, step=1), unroll by 2 =>
+// main loop with step 2 and 2 copies of body, no epilogue.
+func.func @unroll_unsigned_i3_tc4() -> (i32, i32) {
+  %0 = arith.constant 7 : i32
+  %lb = arith.constant 0 : i3
+  %ub = arith.constant 4 : i3
+  %step = arith.constant 1 : i3
+  %result:2 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%arg0 = %0, %arg1 = %0) -> (i32, i32) : i3 {
+    %add = arith.addi %arg0, %arg1 : i32
+    %mul = arith.muli %arg0, %arg1 : i32
+    scf.yield %add, %mul : i32, i32
+  }
+  return %result#0, %result#1 : i32, i32
+}
+// UNROLL-BY-2-LABEL: @unroll_unsigned_i3_tc4
+// UNROLL-BY-2:       scf.for unsigned %{{.*}} = %{{.*}} to %c-4_i3 step %c2_i3
+// UNROLL-BY-2:         arith.addi
+// UNROLL-BY-2:         arith.muli
+// UNROLL-BY-2:         arith.addi
+// UNROLL-BY-2:         arith.muli
+// UNROLL-BY-2-NOT:   scf.for
+// UNROLL-BY-2:       return
+
+// -----
+
+// Case 3: trip count 1 (i1 unsigned: lb=0, ub=1, step=1), unroll by 2 =>
+// tripCountEvenMultiple=0, so the main loop has zero iterations and is elided;
+// the single iteration is handled by the epilogue (promoted out of loop).
+// Exercises both Bug 1 (sext(1:i1)=-1 would suppress the epilogue) and Bug 2
+// (stepCst*2=2, truncated to i1, wraps to 0, preventing zero-trip elision).
+func.func @unroll_unsigned_i1_tc1() -> (i32, i32) {
+  %0 = arith.constant 7 : i32
+  %lb = arith.constant 0 : i1
+  %ub = arith.constant 1 : i1
+  %step = arith.constant 1 : i1
+  %result:2 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%arg0 = %0, %arg1 = %0) -> (i32, i32) : i1 {
+    %add = arith.addi %arg0, %arg1 : i32
+    %mul = arith.muli %arg0, %arg1 : i32
+    scf.yield %add, %mul : i32, i32
+  }
+  return %result#0, %result#1 : i32, i32
+}
+// UNROLL-BY-2-LABEL: @unroll_unsigned_i1_tc1
+// UNROLL-BY-2-NOT:   scf.for
+// UNROLL-BY-2:       arith.addi
+// UNROLL-BY-2:       arith.muli
+// UNROLL-BY-2:       return
+
+// -----
+
+// Case 4: trip count 5 (i3 unsigned: lb=0, ub=5, step=1), unroll by 2 =>
+// main loop runs twice with step 2 (4 of 5 iterations), epilogue runs once.
+// In i3, ub=5 has the same bit pattern as signed -3; with the old sign-extended
+// ubCst=-3 the comparison upperBoundUnrolledCst(4) < ubCst(-3) would be false,
+// suppressing the epilogue. This tests Bug 1 independently of Bug 2.
+func.func @unroll_unsigned_i3_tc5_with_epilogue() -> (i32, i32) {
+  %0 = arith.constant 7 : i32
+  %lb = arith.constant 0 : i3
+  %ub = arith.constant 5 : i3
+  %step = arith.constant 1 : i3
+  %result:2 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%arg0 = %0, %arg1 = %0) -> (i32, i32) : i3 {
+    %add = arith.addi %arg0, %arg1 : i32
+    %mul = arith.muli %arg0, %arg1 : i32
+    scf.yield %add, %mul : i32, i32
+  }
+  return %result#0, %result#1 : i32, i32
+}
+// UNROLL-BY-2-LABEL: @unroll_unsigned_i3_tc5_with_epilogue
+// Main loop (4 of 5 iterations unrolled, step=2, body appears twice).
+// In i3, the unrolled upper bound 4 is printed as -4 (signed 2's complement).
+// UNROLL-BY-2:       scf.for unsigned %{{.*}} = %{{.*}} to %c-4_i3 step %c2_i3
+// UNROLL-BY-2:         arith.addi
+// UNROLL-BY-2:         arith.muli
+// UNROLL-BY-2:         arith.addi
+// UNROLL-BY-2:         arith.muli
+// Epilogue (1 remaining iteration, promoted out of loop).
+// UNROLL-BY-2-NOT:   scf.for
+// UNROLL-BY-2:       arith.addi
+// UNROLL-BY-2:       arith.muli
+// UNROLL-BY-2:       return
+
+// -----
+
+// Case 5: trip count 1 (i2 unsigned: lb=0, ub=2, step=2), unroll by 2 =>
+// tripCountEvenMultiple=0 with step > 1. Without the Bug 2 fix, stepCst*2=4
+// would be truncated to i2 (4 mod 4 = 0), creating a zero step. A zero step
+// causes constantTripCount to return nullopt instead of 0, preventing the
+// zero-trip main loop from being elided.
+// Expected: no scf.for, single body copy (epilogue promoted), then return.
+func.func @unroll_unsigned_i2_step2_bug2() -> (i32, i32) {
+  %0 = arith.constant 7 : i32
+  %lb = arith.constant 0 : i2
+  %ub = arith.constant 2 : i2
+  %step = arith.constant 2 : i2
+  %result:2 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%arg0 = %0, %arg1 = %0) -> (i32, i32) : i2 {
+    %add = arith.addi %arg0, %arg1 : i32
+    %mul = arith.muli %arg0, %arg1 : i32
+    scf.yield %add, %mul : i32, i32
+  }
+  return %result#0, %result#1 : i32, i32
+}
+// UNROLL-BY-2-LABEL: @unroll_unsigned_i2_step2_bug2
+// UNROLL-BY-2-NOT:   scf.for
+// UNROLL-BY-2:       arith.addi
+// UNROLL-BY-2:       arith.muli
+// UNROLL-BY-2:       return
+
+// -----
+
+// Test unrolling by 3 on a 10-iteration loop, which leaves a single-iteration
+// epilogue. Exercises the promote-single-iteration option: when false the
+// epilogue stays an scf.for; when true it is promoted to a memref.store.
+func.func @static_loop_unroll_by_3_no_promote_epilogue(%arg0 : memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 10 : index
+  %step = arith.constant 1 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %arg0[%i0] : memref<?xf32>
+  }
+  return
+}
+// Promotion disabled keeps the epilogue as an scf.for.
+//
+// NO-PROMOTE-BY-3-LABEL: func @static_loop_unroll_by_3_no_promote_epilogue
+//       NO-PROMOTE-BY-3: scf.for %{{.*}} = %c0 to %c9 step %c3
+//  NO-PROMOTE-BY-3: memref.store
+//  NO-PROMOTE-BY-3: memref.store
+//  NO-PROMOTE-BY-3: memref.store
+//       NO-PROMOTE-BY-3: scf.for %{{.*}} = %c9 to %c10 step %c1
+//  NO-PROMOTE-BY-3: memref.store
+
+// With promotion enabled, the single-iteration epilogue is promoted out of the
+// loop.
+//
+// PROMOTE-BY-3-LABEL: func @static_loop_unroll_by_3_no_promote_epilogue
+//       PROMOTE-BY-3: scf.for %{{.*}} = %c0 to %c9 step %c3
+//  PROMOTE-BY-3: memref.store
+//  PROMOTE-BY-3: memref.store
+//  PROMOTE-BY-3: memref.store
+// PROMOTE-BY-3-NOT: scf.for
+//  PROMOTE-BY-3: memref.store
+
+// -----
+
+// Dynamic bounds with a constant zero step: splitForOpAtPoint fails the static
+// step check, so unrolling does not rewrite the loop.
+func.func @dynamic_unroll_zero_step(%lb: index, %ub: index,
+                                    %mem: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %step = arith.constant 0 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %mem[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @dynamic_unroll_zero_step
+//  UNROLL-BY-2-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index
+//       UNROLL-BY-2: scf.for %{{.*}} = %[[LB]] to %[[UB]] step %{{.*}}
+//  UNROLL-BY-2-NEXT:   memref.store
+//  UNROLL-BY-2-NEXT: }
+//  UNROLL-BY-2-NEXT: return
+
+// -----
+
+// `scf.for` has a statically known trip count whenever the lower and the upper
+// bound are the same value, even when that value is not a constant. Unrolling
+// must not read the bounds as constants in that case.
+func.func @unroll_static_trip_count_dynamic_equal_bounds(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  scf.for %i0 = %arg0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_equal_bounds
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for the single-iteration case recognised from a zero lower bound and an
+// upper bound equal to the step. Here the lower bound is a constant but the
+// other two are not.
+func.func @unroll_static_trip_count_dynamic_ub_eq_step(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c0 = arith.constant 0 : index
+  scf.for %i0 = %c0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_ub_eq_step
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for an upper bound that is a constant offset from a non-constant lower
+// bound. The trip count is known, the lower and upper bound are not constants.
+func.func @unroll_static_trip_count_ub_offset_from_lb(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %ub = arith.addi %arg0, %c16 overflow<nsw> : index
+  scf.for %i0 = %arg0 to %ub step %c4 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_ub_offset_from_lb
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store

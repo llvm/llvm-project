@@ -25,8 +25,8 @@ public:
   void testNaN(FMinimumFunc func) {
     EXPECT_FP_EQ(aNaN, func(aNaN, inf));
     EXPECT_FP_EQ(aNaN, func(neg_inf, aNaN));
-    EXPECT_FP_EQ(aNaN, func(aNaN, 0.0));
-    EXPECT_FP_EQ(aNaN, func(-0.0, aNaN));
+    EXPECT_FP_EQ(aNaN, func(aNaN, zero));
+    EXPECT_FP_EQ(aNaN, func(neg_zero, aNaN));
     EXPECT_FP_EQ(aNaN, func(aNaN, T(-1.2345)));
     EXPECT_FP_EQ(aNaN, func(T(1.2345), aNaN));
     EXPECT_FP_EQ(aNaN, func(aNaN, aNaN));
@@ -34,29 +34,29 @@ public:
 
   void testInfArg(FMinimumFunc func) {
     EXPECT_FP_EQ(neg_inf, func(neg_inf, inf));
-    EXPECT_FP_EQ(0.0, func(inf, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, inf));
+    EXPECT_FP_EQ(zero, func(inf, zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, inf));
     EXPECT_FP_EQ(T(1.2345), func(inf, T(1.2345)));
     EXPECT_FP_EQ(T(1.2345), func(T(1.2345), inf));
   }
 
   void testNegInfArg(FMinimumFunc func) {
     EXPECT_FP_EQ(neg_inf, func(inf, neg_inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, 0.0));
-    EXPECT_FP_EQ(neg_inf, func(-0.0, neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(neg_inf, zero));
+    EXPECT_FP_EQ(neg_inf, func(neg_zero, neg_inf));
     EXPECT_FP_EQ(neg_inf, func(neg_inf, T(-1.2345)));
     EXPECT_FP_EQ(neg_inf, func(T(1.2345), neg_inf));
   }
 
   void testBothZero(FMinimumFunc func) {
-    EXPECT_FP_EQ(0.0, func(0.0, 0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, 0.0));
-    EXPECT_FP_EQ(-0.0, func(0.0, -0.0));
-    EXPECT_FP_EQ(-0.0, func(-0.0, -0.0));
+    EXPECT_FP_EQ(zero, func(zero, zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, zero));
+    EXPECT_FP_EQ(neg_zero, func(zero, neg_zero));
+    EXPECT_FP_EQ(neg_zero, func(neg_zero, neg_zero));
   }
 
   void testRange(FMinimumFunc func) {
-    constexpr int COUNT = 100'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0, w = STORAGE_MAX;
@@ -68,7 +68,7 @@ public:
         continue;
       T x = xbits.get_val();
       T y = ybits.get_val();
-      if ((x == 0) && (y == 0))
+      if ((x == T(0)) && (y == T(0)))
         continue;
 
       if (x > y)
@@ -79,12 +79,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_TESTS(T, func)                                           \
-  using LlvmLibcFMinimumTest = FMinimumTest<T>;                                \
-  TEST_F(LlvmLibcFMinimumTest, NaN) { testNaN(&func); }                        \
-  TEST_F(LlvmLibcFMinimumTest, InfArg) { testInfArg(&func); }                  \
-  TEST_F(LlvmLibcFMinimumTest, NegInfArg) { testNegInfArg(&func); }            \
-  TEST_F(LlvmLibcFMinimumTest, BothZero) { testBothZero(&func); }              \
-  TEST_F(LlvmLibcFMinimumTest, Range) { testRange(&func); }
+#define LIST_FMINIMUM_TESTS(Name, T, func)                                     \
+  using LlvmLibc##Name##Test = FMinimumTest<T>;                                \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMTEST_H

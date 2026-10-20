@@ -195,6 +195,15 @@ public:
   Error runOnFunctions(BinaryContext &BC) override;
 };
 
+/// Initialize the output function list.
+class PopulateOutputFunctions : public BinaryFunctionPass {
+public:
+  explicit PopulateOutputFunctions() : BinaryFunctionPass(false) {}
+
+  const char *getName() const override { return "populate-output-functions"; }
+  Error runOnFunctions(BinaryContext &BC) override;
+};
+
 /// Fix the CFI state and exception handling information after all other
 /// passes have completed.
 class FinalizeFunctions : public BinaryFunctionPass {

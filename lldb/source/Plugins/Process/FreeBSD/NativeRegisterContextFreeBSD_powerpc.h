@@ -17,7 +17,7 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
 
 #include <array>
 #include <optional>
@@ -31,7 +31,7 @@ class NativeRegisterContextFreeBSD_powerpc
     : public NativeRegisterContextFreeBSD {
 public:
   NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+                                       NativeThreadFreeBSD &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -64,7 +64,7 @@ private:
   Status ReadRegisterSet(RegSetKind set);
   Status WriteRegisterSet(RegSetKind set);
 
-  RegisterContextFreeBSD_powerpc &GetRegisterInfo() const;
+  RegisterInfoFreeBSD_powerpc &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

@@ -5,7 +5,6 @@
 
 ; Should be no changes without profile data
 ; RUN: opt < %s -passes=pgo-force-function-attrs                                  -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=NONE,CHECK
-; RUN: opt < %s -passes='default<O2>' -enable-pgo-force-function-attrs            -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=O2
 
 ; NONE-NOT: Function Attrs:
 ; OPTSIZE: Function Attrs: optsize{{$}}
@@ -74,6 +73,15 @@ define void @cold_attr() cold {
 }
 
 define void @hot() !prof !28 {
+  %l = load i32, ptr @s, align 4
+  %add = add nsw i32 %l, 4
+  store i32 %add, ptr @s, align 4
+  ret void
+}
+
+; The hot attribute takes precedence over the profile, so this must not be
+; treated as cold even though its entry count is.
+define void @hot_attr_cold_count() hot !prof !27 {
   %l = load i32, ptr @s, align 4
   %add = add nsw i32 %l, 4
   store i32 %add, ptr @s, align 4

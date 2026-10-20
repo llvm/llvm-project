@@ -42,7 +42,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
@@ -80,6 +79,7 @@ struct PPCVSXSwapEntry {
   unsigned int SpecialHandling : 3;
   unsigned int WebRejected : 1;
   unsigned int WillRemove : 1;
+  unsigned int HasUnanalyzableDef : 1;
 };
 
 enum SHValues {
@@ -111,9 +111,7 @@ struct PPCVSXSwapRemoval : public MachineFunctionPass {
   // Swap entries are represented by their VSEId fields.
   EquivalenceClasses<int> *EC;
 
-  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {
-    initializePPCVSXSwapRemovalPass(*PassRegistry::getPassRegistry());
-  }
+  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize data structures.
@@ -212,6 +210,7 @@ public:
     return Changed;
   }
 };
+} // end anonymous namespace
 
 // Initialize data structures for this pass.  In particular, clear the
 // swap vector and allocate the equivalence class mapping before
@@ -396,10 +395,10 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         // (FIXME) a cost model could be used.  However, introduced
         // swaps could potentially be CSEd, so this is not trivial.
         if (isVecReg(MI.getOperand(0).getReg()) &&
-            isVecReg(MI.getOperand(2).getReg()))
+            isVecReg(MI.getOperand(1).getReg()))
           SwapVector[VecIdx].IsSwappable = 1;
         else if (isVecReg(MI.getOperand(0).getReg()) &&
-                 isScalarVecReg(MI.getOperand(2).getReg())) {
+                 isScalarVecReg(MI.getOperand(1).getReg())) {
           SwapVector[VecIdx].IsSwappable = 1;
           SwapVector[VecIdx].SpecialHandling = SHValues::SH_COPYWIDEN;
         }
@@ -561,13 +560,9 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
   if (!MI->isCopyLike())
     return SrcReg;
 
-  unsigned CopySrcReg;
-  if (MI->isCopy())
-    CopySrcReg = MI->getOperand(1).getReg();
-  else {
-    assert(MI->isSubregToReg() && "bad opcode for lookThruCopyLike");
-    CopySrcReg = MI->getOperand(2).getReg();
-  }
+  assert((MI->isCopy() || MI->isSubregToReg()) &&
+         "bad opcode for lookThruCopyLike");
+  unsigned CopySrcReg = MI->getOperand(1).getReg();
 
   if (!Register::isVirtualRegister(CopySrcReg)) {
     if (!isScalarVecReg(CopySrcReg))
@@ -617,7 +612,12 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!MO.isUse())
         continue;
 
-      MachineInstr* DefMI = MRI->getVRegDef(Reg);
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
+      if (!DefMI) {
+        SwapVector[EntryIdx].HasUnanalyzableDef = 1;
+        continue;
+      }
+
       assert(SwapMap.contains(DefMI) &&
              "Inconsistency: def of vector reg not found in swap map!");
       int DefIdx = SwapMap[DefMI];
@@ -653,14 +653,14 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
     // permuted region.
     if (SwapVector[EntryIdx].MentionsPhysVR ||
         SwapVector[EntryIdx].MentionsPartialVR ||
+        SwapVector[EntryIdx].HasUnanalyzableDef ||
         !(SwapVector[EntryIdx].IsSwappable || SwapVector[EntryIdx].IsSwap)) {
 
       SwapVector[Repr].WebRejected = 1;
 
-      LLVM_DEBUG(
-          dbgs() << format("Web %d rejected for physreg, partial reg, or not "
-                           "swap[pable]\n",
-                           Repr));
+      LLVM_DEBUG(dbgs() << format("Web %d rejected for physreg, partial reg, "
+                                  "unanalyzable def, or not swap[pable]\n",
+                                  Repr));
       LLVM_DEBUG(dbgs() << "  in " << EntryIdx << ": ");
       LLVM_DEBUG(SwapVector[EntryIdx].VSEMI->dump());
       LLVM_DEBUG(dbgs() << "\n");
@@ -1013,6 +1013,8 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
       dbgs() << "physreg ";
     if (SwapVector[EntryIdx].MentionsPartialVR)
       dbgs() << "partialreg ";
+    if (SwapVector[EntryIdx].HasUnanalyzableDef)
+      dbgs() << "unanalyzabledef ";
 
     if (SwapVector[EntryIdx].IsSwappable) {
       dbgs() << "swappable ";
@@ -1061,8 +1063,6 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
   dbgs() << "\n";
 }
 #endif
-
-} // end default namespace
 
 INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
                       "PowerPC VSX Swap Removal", false, false)

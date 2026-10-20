@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -19,45 +17,38 @@
 #include <system_error>
 
 #include "test_macros.h"
+#include "checking_mutex.h"
 
-bool unlock_called = false;
+int main(int, char**) {
+  checking_mutex mux;
+  std::unique_lock<checking_mutex> lock(mux);
+  assert(mux.current_state == checking_mutex::locked_via_lock);
+  lock.unlock();
+  assert(mux.current_state == checking_mutex::unlocked);
+  assert(!lock.owns_lock());
 
-struct mutex
-{
-    void lock() {}
-    void unlock() {unlock_called = true;}
-};
-
-mutex m;
-
-int main(int, char**)
-{
-    std::unique_lock<mutex> lk(m);
-    lk.unlock();
-    assert(unlock_called == true);
-    assert(lk.owns_lock() == false);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        lk.unlock();
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EPERM);
-    }
+  try {
+    mux.last_try = checking_mutex::none;
+    lock.unlock();
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(mux.last_try == checking_mutex::none);
+    assert(e.code() == std::errc::operation_not_permitted);
+  }
 #endif
-    lk.release();
+
+  lock.release();
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        lk.unlock();
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EPERM);
-    }
+  try {
+    mux.last_try = checking_mutex::none;
+    lock.unlock();
+    assert(false);
+  } catch (std::system_error& e) {
+    assert(mux.last_try == checking_mutex::none);
+    assert(e.code() == std::errc::operation_not_permitted);
+  }
 #endif
 
   return 0;

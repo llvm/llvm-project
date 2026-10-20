@@ -14,14 +14,11 @@
 
 #include "basic-parsers.h"
 #include "type-parsers.h"
-#include "flang/Common/idioms.h"
 #include "flang/Parser/char-set.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/instrumented-parser.h"
-#include "flang/Parser/provenance.h"
 #include <cstddef>
 #include <cstring>
-#include <functional>
 #include <limits>
 #include <list>
 #include <optional>
@@ -215,6 +212,10 @@ template <class PA> inline constexpr auto bracketed(const PA &p) {
   return "[" >> p / "]";
 }
 
+template <class PA> inline constexpr auto braced(const PA &p) {
+  return "{" >> p / "}";
+}
+
 // Quoted character literal constants.
 struct CharLiteralChar {
   using resultType = std::pair<char, bool /* was escaped */>;
@@ -393,12 +394,12 @@ struct DigitString64 {
     bool overflow{false};
     static constexpr auto getDigit{attempt(digit)};
     while (auto nextDigit{getDigit.Parse(state)}) {
-      if (value > std::numeric_limits<std::uint64_t>::max() / 10) {
+      if (value > common::numeric_limits<std::uint64_t>::max() / 10) {
         overflow = true;
       }
       value *= 10;
       int digitValue = **nextDigit - '0';
-      if (value > std::numeric_limits<std::uint64_t>::max() - digitValue) {
+      if (value > common::numeric_limits<std::uint64_t>::max() - digitValue) {
         overflow = true;
       }
       value += digitValue;
@@ -421,7 +422,7 @@ static std::optional<std::int64_t> SignedInteger(
   if (!x) {
     return std::nullopt;
   }
-  std::uint64_t limit{std::numeric_limits<std::int64_t>::max()};
+  std::uint64_t limit{common::numeric_limits<std::int64_t>::max()};
   if (negate) {
     limit = -(limit + 1);
   }
@@ -464,12 +465,12 @@ struct DigitStringIgnoreSpaces {
     bool overflow{false};
     static constexpr auto getDigit{space >> attempt(digit)};
     while (auto nextDigit{getDigit.Parse(state)}) {
-      if (value > std::numeric_limits<std::uint64_t>::max() / 10) {
+      if (value > common::numeric_limits<std::uint64_t>::max() / 10) {
         overflow = true;
       }
       value *= 10;
       int digitValue = **nextDigit - '0';
-      if (value > std::numeric_limits<std::uint64_t>::max() - digitValue) {
+      if (value > common::numeric_limits<std::uint64_t>::max() - digitValue) {
         overflow = true;
       }
       value += digitValue;

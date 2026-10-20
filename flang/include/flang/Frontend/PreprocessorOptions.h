@@ -56,6 +56,9 @@ struct PreprocessorOptions {
   // -fno-reformat: Emit cooked character stream as -E output
   bool noReformat{false};
 
+  // -fpreprocess-include-lines: Treat INCLUDE as #include for -E output
+  bool preprocessIncludeLines{false};
+
   // -dM: Show macro definitions with -dM -E
   bool showMacros{false};
 

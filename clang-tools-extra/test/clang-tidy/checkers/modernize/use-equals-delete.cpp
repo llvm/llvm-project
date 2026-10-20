@@ -194,28 +194,73 @@ private:
 
 namespace PR33759 {
 
-  class Number {
-    private:
-      Number();
-      ~Number();
+class Number {
+  private:
+    Number();
+    ~Number();
 
-    public:
-      static Number& getNumber() {
-        static Number number;
-        return number;
-      }
+  public:
+    static Number& getNumber() {
+      static Number number;
+      return number;
+    }
 
-      int getIntValue() { return (int)someFloat; }
-      float getFloatValue() { return someFloat; }
-    private:
-      float someFloat;
-  };
+    int getIntValue() { return (int)someFloat; }
+    float getFloatValue() { return someFloat; }
+  private:
+    float someFloat;
+};
 
-  class Number2 {
-    private:
-      Number2();
-      ~Number2();
-    public:
-      static Number& getNumber();
-  };
+class Number2 {
+  private:
+    Number2();
+    ~Number2();
+  public:
+    static Number& getNumber();
+};
+}
+
+namespace PR54276 {
+
+class PrivateDeletedFunctionWithPublicOverload {
+  public:
+    void foo() {}
+  private:
+    void foo(int) = delete;
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: deleted member function should be public [modernize-use-equals-delete]
+};
+
+class PrivateDeletedFunctionWithPrivateOverload {
+  private:
+    void foo() {}
+    void foo(int) = delete;
+};
+
+class PrivateDeletedFunctionTemplateWithPublicOverload {
+  public:
+    template<typename T>
+    void foo(T) {}
+  private:
+    template<typename T>
+    void foo(T, int) = delete;
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: deleted member function should be public [modernize-use-equals-delete]
+};
+
+class PrivateDeletedFunctionTemplateWithPrivateOverload {
+  private:
+    template<typename T>
+    void foo(T) {}
+    template<typename T>
+    void foo(T, int) = delete;
+};
+
+class PrivateDeletedFunctionTemplateWithProtectedOverload {
+  protected:
+    template<typename T>
+    void foo(T) {}
+  private:
+    template<typename T>
+    void foo(T, int) = delete;
+};
+
 }

@@ -89,13 +89,16 @@ define void @test6(float %f, ptr %p1, ptr %p2) {
 }
 
 ; Min/max operands may be commuted in the compare and select.
+; We no longer try to fold these in EarlyCSE, and wait for them to
+; be canonicalized to intrinsics instead.
 
 define i8 @smin_commute(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smin_commute(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[M1]], [[M1]]
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[M1]], [[M2]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp slt i8 %a, %b
@@ -113,7 +116,9 @@ define i1 @smin_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[B]], i8 [[A]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp1 = icmp sgt i8 %a, %b
   %cmp2 = icmp slt i8 %a, %b
@@ -145,7 +150,9 @@ define i8 @smax_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp sgt i8 %a, %b
   %cmp2 = icmp sgt i8 %b, %a
@@ -160,7 +167,9 @@ define i8 @smax_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[B]], i8 [[A]]
-; CHECK-NEXT:    ret i8 1
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp slt i8 %a, %b
   %cmp2 = icmp sgt i8 %a, %b
@@ -190,7 +199,9 @@ define i8 @umin_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %a, %b
   %cmp2 = icmp ult i8 %b, %a
@@ -207,7 +218,9 @@ define <2 x i8> @umin_swapped(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i8> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> [[A]], [[B]]
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[CMP1]], <2 x i8> [[B]], <2 x i8> [[A]]
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[M2:%.*]] = select <2 x i1> [[CMP2]], <2 x i8> [[A]], <2 x i8> [[B]]
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[M2]], [[M1]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %cmp1 = icmp ugt <2 x i8> %a, %b
   %cmp2 = icmp ult <2 x i8> %a, %b
@@ -237,7 +250,9 @@ define i8 @umax_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[B]]
-; CHECK-NEXT:    ret i8 1
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ugt i8 %a, %b
   %cmp2 = icmp ugt i8 %b, %a
@@ -252,7 +267,8 @@ define i8 @umax_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[B]], i8 [[A]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[M1]], [[M1]]
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M2]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %a, %b
@@ -483,9 +499,9 @@ define i32 @select_not_cond(i1 %cond, i32 %t, i32 %f) {
 
 define <2 x double> @select_not_cond_commute_vec(<2 x i1> %cond, <2 x double> %t, <2 x double> %f) {
 ; CHECK-LABEL: @select_not_cond_commute_vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[COND:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[COND:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[COND]], <2 x double> [[T:%.*]], <2 x double> [[F:%.*]]
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %not = xor <2 x i1> %cond, <i1 -1, i1 -1>
   %m1 = select <2 x i1> %cond, <2 x double> %t, <2 x double> %f
@@ -833,7 +849,7 @@ define float @maxnum(float %a, float %b) {
 define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @minnum(
 ; CHECK-NEXT:    [[X:%.*]] = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %x = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b)
   %y = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> %b, <2 x float> %a)
@@ -844,7 +860,7 @@ define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
 define <2 x double> @maximum(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @maximum(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %x = call fast <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)
   %y = call <2 x double> @llvm.maximum.v2f64(<2 x double> %b, <2 x double> %a)
@@ -1109,7 +1125,7 @@ define float @fma_different_add_ops(float %a, float %b, float %c, float %d) {
 define <2 x double> @fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: @fmuladd(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
   %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %a, <2 x double> %c)

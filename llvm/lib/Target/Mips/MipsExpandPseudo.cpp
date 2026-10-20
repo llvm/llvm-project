@@ -41,8 +41,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -81,7 +80,7 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   DebugLoc DL = I->getDebugLoc();
   unsigned LL, SC;
 
-  unsigned ZERO = Mips::ZERO;
+  unsigned ZERO = Mips::R0;
   unsigned BNE = Mips::BNE;
   unsigned BEQ = Mips::BEQ;
   unsigned SEOp =
@@ -229,12 +228,12 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
       BEQ = Mips::BEQ;
     }
 
-    ZERO = Mips::ZERO;
+    ZERO = Mips::R0;
     MOVE = Mips::OR;
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
-    ZERO = Mips::ZERO_64;
+    ZERO = Mips::R0_64;
     BNE = Mips::BNE64;
     BEQ = Mips::BEQ64;
     MOVE = Mips::OR64;
@@ -433,13 +432,24 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   Register OldVal = I->getOperand(6).getReg();
   Register BinOpRes = I->getOperand(7).getReg();
   Register StoreVal = I->getOperand(8).getReg();
+  bool NoMovnInstr = (IsMin || IsMax) && !STI->hasMips4() && !STI->hasMips32();
 
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
+  if (NoMovnInstr) {
+    loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+    loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  }
   MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineFunction::iterator It = ++BB.getIterator();
   MF->insert(It, loopMBB);
+  if (NoMovnInstr) {
+    MF->insert(It, loop1MBB);
+    MF->insert(It, loop2MBB);
+  }
   MF->insert(It, sinkMBB);
   MF->insert(It, exitMBB);
 
@@ -447,9 +457,19 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   exitMBB->transferSuccessorsAndUpdatePHIs(&BB);
 
   BB.addSuccessor(loopMBB, BranchProbability::getOne());
-  loopMBB->addSuccessor(sinkMBB);
-  loopMBB->addSuccessor(loopMBB);
-  loopMBB->normalizeSuccProbs();
+  if (NoMovnInstr) {
+    loopMBB->addSuccessor(loop1MBB);
+    loopMBB->addSuccessor(loop2MBB);
+  } else {
+    loopMBB->addSuccessor(sinkMBB);
+    loopMBB->addSuccessor(loopMBB);
+    loopMBB->normalizeSuccProbs();
+  }
+  if (NoMovnInstr) {
+    loop1MBB->addSuccessor(loop2MBB);
+    loop2MBB->addSuccessor(loopMBB);
+    loop2MBB->addSuccessor(sinkMBB);
+  }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
   if (IsNand) {
@@ -460,7 +480,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
         .addReg(OldVal)
         .addReg(Incr);
     BuildMI(loopMBB, DL, TII->get(Mips::NOR), BinOpRes)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addReg(BinOpRes);
     BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
         .addReg(BinOpRes)
@@ -497,7 +517,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
           .addImm(ShiftImm);
     }
     BuildMI(loopMBB, DL, TII->get(Mips::OR), Dest)
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addReg(StoreVal);
     DestOK = true;
     BuildMI(loopMBB, DL, TII->get(Mips::SLLV), StoreVal)
@@ -526,24 +546,71 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
           .addReg(BinOpRes)
           .addReg(Scratch4);
-    } else {
+    } else if (STI->hasMips4() || STI->hasMips32()) {
       // max: move BinOpRes, StoreVal
       //      movn BinOpRes, Incr, Scratch4, BinOpRes
       // min: move BinOpRes, StoreVal
       //      movz BinOpRes, Incr, Scratch4, BinOpRes
       BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
           .addReg(StoreVal)
-          .addReg(Mips::ZERO);
+          .addReg(Mips::R0);
       BuildMI(loopMBB, DL, TII->get(MOVIncr), BinOpRes)
           .addReg(Incr)
           .addReg(Scratch4)
           .addReg(BinOpRes);
+    } else {
+      // if min:
+      // loopMBB:  move BinOpRes, StoreVal
+      //           beq Scratch4, 0, loop1MBB
+      //           j loop2MBB
+      // loop1MBB: move BinOpRes, Incr
+      // loop2MBB: and BinOpRes, BinOpRes, Mask
+      //           and StoreVal, OlddVal, Mask2
+      //           or StoreVal, StoreVal, BinOpRes
+      //           StoreVal<tied1> = sc StoreVal, 0(Ptr)
+      //           beq StoreVal, zero, loopMBB
+      //
+      // if max:
+      // loopMBB:  move BinOpRes, Incr
+      //           beq Scratch4, 0, loop1MBB
+      //           j loop2MBB
+      // loop1MBB: move BinOpRes, StoreVal
+      // loop2MBB: and BinOpRes, BinOpRes, Mask
+      //           and StoreVal, OlddVal, Mask2
+      //           or StoreVal, StoreVal, BinOpRes
+      //           StoreVal<tied1> = sc StoreVal, 0(Ptr)
+      //           beq StoreVal, zero, loopMBB
+      if (IsMin) {
+        BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
+            .addReg(StoreVal)
+            .addReg(Mips::R0);
+        BuildMI(loop1MBB, DL, TII->get(OR), BinOpRes)
+            .addReg(Incr)
+            .addReg(Mips::R0);
+      } else {
+        BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
+            .addReg(Incr)
+            .addReg(Mips::R0);
+        BuildMI(loop1MBB, DL, TII->get(OR), BinOpRes)
+            .addReg(StoreVal)
+            .addReg(Mips::R0);
+      }
+      BuildMI(loopMBB, DL, TII->get(BEQ))
+          .addReg(Scratch4)
+          .addReg(Mips::R0)
+          .addMBB(loop1MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
-        .addReg(BinOpRes)
-        .addReg(Mask);
+    if (NoMovnInstr)
+      BuildMI(loop2MBB, DL, TII->get(Mips::AND), BinOpRes)
+          .addReg(BinOpRes)
+          .addReg(Mask);
+    else
+      BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+          .addReg(BinOpRes)
+          .addReg(Mask);
 
   } else if (!IsSwap) {
     //  <binop> binopres, oldval, incr2
@@ -565,14 +632,37 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   // or StoreVal, StoreVal, BinOpRes
   // StoreVal<tied1> = sc StoreVal, 0(Ptr)
   // beq StoreVal, zero, loopMBB
-  BuildMI(loopMBB, DL, TII->get(Mips::AND), StoreVal)
-    .addReg(OldVal).addReg(Mask2);
-  BuildMI(loopMBB, DL, TII->get(Mips::OR), StoreVal)
-    .addReg(StoreVal).addReg(BinOpRes);
-  BuildMI(loopMBB, DL, TII->get(SC), StoreVal)
-    .addReg(StoreVal).addReg(Ptr).addImm(0);
-  BuildMI(loopMBB, DL, TII->get(BEQ))
-    .addReg(StoreVal).addReg(Mips::ZERO).addMBB(loopMBB);
+  if (NoMovnInstr) {
+    BuildMI(loop2MBB, DL, TII->get(Mips::AND), StoreVal)
+        .addReg(OldVal)
+        .addReg(Mask2);
+    BuildMI(loop2MBB, DL, TII->get(Mips::OR), StoreVal)
+        .addReg(StoreVal)
+        .addReg(BinOpRes);
+    BuildMI(loop2MBB, DL, TII->get(SC), StoreVal)
+        .addReg(StoreVal)
+        .addReg(Ptr)
+        .addImm(0);
+    BuildMI(loop2MBB, DL, TII->get(BEQ))
+        .addReg(StoreVal)
+        .addReg(Mips::R0)
+        .addMBB(loopMBB);
+  } else {
+    BuildMI(loopMBB, DL, TII->get(Mips::AND), StoreVal)
+        .addReg(OldVal)
+        .addReg(Mask2);
+    BuildMI(loopMBB, DL, TII->get(Mips::OR), StoreVal)
+        .addReg(StoreVal)
+        .addReg(BinOpRes);
+    BuildMI(loopMBB, DL, TII->get(SC), StoreVal)
+        .addReg(StoreVal)
+        .addReg(Ptr)
+        .addImm(0);
+    BuildMI(loopMBB, DL, TII->get(BEQ))
+        .addReg(StoreVal)
+        .addReg(Mips::R0)
+        .addMBB(loopMBB);
+  }
 
   //  sinkMBB:
   //    and     maskedoldval1,oldval,mask
@@ -601,6 +691,11 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
+    computeAndAddLiveIns(LiveRegs, *loop1MBB);
+    computeAndAddLiveIns(LiveRegs, *loop2MBB);
+  }
   computeAndAddLiveIns(LiveRegs, *sinkMBB);
   computeAndAddLiveIns(LiveRegs, *exitMBB);
 
@@ -650,11 +745,11 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
       SELEQZ = Mips::SELEQZ;
     }
 
-    ZERO = Mips::ZERO;
+    ZERO = Mips::R0;
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
-    ZERO = Mips::ZERO_64;
+    ZERO = Mips::R0_64;
     BEQ = Mips::BEQ64;
     SLT = Mips::SLT64;
     SLTu = Mips::SLTu64;
@@ -747,25 +842,73 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     llvm_unreachable("Unknown pseudo atomic!");
   }
 
+  bool NoMovnInstr = (IsMin || IsMax) && !STI->hasMips4() && !STI->hasMips32();
   const BasicBlock *LLVM_BB = BB.getBasicBlock();
   MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *loop1MBB = nullptr;
+  MachineBasicBlock *loop2MBB = nullptr;
+  if (NoMovnInstr) {
+    loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+    loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  }
   MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineFunction::iterator It = ++BB.getIterator();
   MF->insert(It, loopMBB);
+  if (NoMovnInstr) {
+    MF->insert(It, loop1MBB);
+    MF->insert(It, loop2MBB);
+  }
   MF->insert(It, exitMBB);
 
   exitMBB->splice(exitMBB->begin(), &BB, std::next(I), BB.end());
   exitMBB->transferSuccessorsAndUpdatePHIs(&BB);
 
   BB.addSuccessor(loopMBB, BranchProbability::getOne());
-  loopMBB->addSuccessor(exitMBB);
-  loopMBB->addSuccessor(loopMBB);
+  if (NoMovnInstr) {
+    loopMBB->addSuccessor(loop1MBB);
+    loopMBB->addSuccessor(loop2MBB);
+  } else {
+    loopMBB->addSuccessor(exitMBB);
+    loopMBB->addSuccessor(loopMBB);
+  }
   loopMBB->normalizeSuccProbs();
+  if (NoMovnInstr) {
+    loop1MBB->addSuccessor(loop2MBB);
+    loop2MBB->addSuccessor(loopMBB);
+    loop2MBB->addSuccessor(exitMBB);
+  }
 
   BuildMI(loopMBB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
   assert((OldVal != Ptr) && "Clobbered the wrong ptr reg!");
   assert((OldVal != Incr) && "Clobbered the wrong reg!");
   if (IsMin || IsMax) {
+    // Remove trailing kill/dead register operands added by
+    // MachineInstr::addRegisterKilled. These are super-register markers that
+    // must correspond to one of the physical registers in operands 1-4.
+    // The kill/dead markers may also appear on preceding subregs.
+    const TargetRegisterInfo *TRI = STI->getRegisterInfo();
+    while (I->getNumOperands() > 5) {
+      auto &Op = I->getOperand(I->getNumOperands() - 1);
+      // Check if this register overlaps with any physical register in
+      // operands 1-4 that has kill/dead marker (i.e., it's a super-register
+      // marker for subregs).
+      bool HasOverlapWithKill = false;
+      for (unsigned i = 1; i <= 4; ++i) {
+        auto &RefOp = I->getOperand(i);
+        if (RefOp.isReg() && RefOp.getReg().isPhysical() &&
+            TRI->regsOverlap(Op.getReg(), RefOp.getReg()) &&
+            (RefOp.isKill() || RefOp.isDead())) {
+          HasOverlapWithKill = true;
+          break;
+        }
+      }
+      // Remove if HasOverlapWithKill is true or Op has kill/dead marker.
+      bool HasKillOrDead = Op.isReg() && Op.getReg().isPhysical() &&
+                           (Op.isKill() || Op.isDead());
+      if (!HasOverlapWithKill && !HasKillOrDead)
+        break;
+      I->removeOperand(I->getNumOperands() - 1);
+    }
 
     assert(I->getNumOperands() == 5 &&
            "Atomics min|max|umin|umax use an additional register");
@@ -803,7 +946,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
       BuildMI(loopMBB, DL, TII->get(OR), Scratch)
           .addReg(Scratch)
           .addReg(Scratch2);
-    } else {
+    } else if (STI->hasMips4() || STI->hasMips32()) {
       // max: move Scratch, OldVal
       //      movn Scratch, Incr, Scratch2, Scratch
       // min: move Scratch, OldVal
@@ -815,6 +958,38 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
           .addReg(Incr)
           .addReg(Scratch2)
           .addReg(Scratch);
+    } else {
+      // if min:
+      // loopMBB:  move Scratch, OldVal
+      //           beq Scratch2_32, 0, loop1MBB
+      //           j loop2MBB
+      // loop1MBB: move Scratch, Incr
+      // loop2MBB: sc $2, 0($4)
+      //           beqz	$2, $BB0_1
+      //           nop
+      //
+      // if max:
+      // loopMBB:  move Scratch, Incr
+      //           beq Scratch2_32, 0, loop1MBB
+      //           j loop2MBB
+      // loop1MBB: move Scratch, OldVal
+      // loop2MBB: sc $2, 0($4)
+      //           beqz	$2, $BB0_1
+      //           nop
+      if (IsMin) {
+        BuildMI(loopMBB, DL, TII->get(OR), Scratch).addReg(OldVal).addReg(ZERO);
+        BuildMI(loop1MBB, DL, TII->get(OR), Scratch).addReg(Incr).addReg(ZERO);
+      } else {
+        BuildMI(loopMBB, DL, TII->get(OR), Scratch).addReg(Incr).addReg(ZERO);
+        BuildMI(loop1MBB, DL, TII->get(OR), Scratch)
+            .addReg(OldVal)
+            .addReg(ZERO);
+      }
+      BuildMI(loopMBB, DL, TII->get(BEQ))
+          .addReg(Scratch2_32)
+          .addReg(ZERO)
+          .addMBB(loop1MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
     }
 
   } else if (Opcode) {
@@ -830,20 +1005,36 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     BuildMI(loopMBB, DL, TII->get(OR), Scratch).addReg(Incr).addReg(ZERO);
   }
 
-  BuildMI(loopMBB, DL, TII->get(SC), Scratch)
-      .addReg(Scratch)
-      .addReg(Ptr)
-      .addImm(0);
-  BuildMI(loopMBB, DL, TII->get(BEQ))
-      .addReg(Scratch)
-      .addReg(ZERO)
-      .addMBB(loopMBB);
+  if (NoMovnInstr) {
+    BuildMI(loop2MBB, DL, TII->get(SC), Scratch)
+        .addReg(Scratch)
+        .addReg(Ptr)
+        .addImm(0);
+    BuildMI(loop2MBB, DL, TII->get(BEQ))
+        .addReg(Scratch)
+        .addReg(ZERO)
+        .addMBB(loopMBB);
+  } else {
+    BuildMI(loopMBB, DL, TII->get(SC), Scratch)
+        .addReg(Scratch)
+        .addReg(Ptr)
+        .addImm(0);
+    BuildMI(loopMBB, DL, TII->get(BEQ))
+        .addReg(Scratch)
+        .addReg(ZERO)
+        .addMBB(loopMBB);
+  }
 
   NMBBI = BB.end();
   I->eraseFromParent();
 
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *loopMBB);
+  if (loop1MBB) {
+    assert(loop2MBB && "should have 2 loop blocks");
+    computeAndAddLiveIns(LiveRegs, *loop1MBB);
+    computeAndAddLiveIns(LiveRegs, *loop2MBB);
+  }
   computeAndAddLiveIns(LiveRegs, *exitMBB);
 
   return true;

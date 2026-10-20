@@ -4,3 +4,4 @@ include_directories(${MLIR_INCLUDE_DIR})
 include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
 
 add_subdirectory(Dialect)
+add_subdirectory(Interfaces)

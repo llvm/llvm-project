@@ -1,0 +1,109 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# REQUIRES: asserts
+
+# Test that loop carried memory dependencies are correctly added when two
+# arrays may point to the same memory location.
+#
+# ```
+# void f(int *a, int *b, int n) {
+#   for (int i = 0; i < n; i++) {
+#     a[i] += b[i];
+#     b[i] += a[i];
+#   }
+# }
+# ```
+#
+# Here is what each instruction does.
+# SU(2): Load b[i]
+# SU(3): Load a[i]
+# SU(5): Store a[i]
+# SU(6): Load b[i]
+# SU(8): Store b[i]
+#
+# Note that if there is already a dependency between two instructions, we don't
+# add loop-carried on between them since non-loop-carried one imposes stronger
+# constraint than loop-carried one.
+
+# CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT:   Loop carried edges from SU(5)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(2)
+# CHECK-NEXT:   Loop carried edges from SU(6)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(5)
+# CHECK-NEXT:   Loop carried edges from SU(8)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(3)
+# CHECK-NEXT:       SU(5)
+# CHECK-NEXT: ===== Loop Carried Edges End =====
+
+--- |
+  define dso_local void @f(ptr nocapture noundef %a, ptr nocapture noundef %b, i32 noundef %n) local_unnamed_addr {
+  entry:
+    %cmp12 = icmp sgt i32 %n, 0
+    br i1 %cmp12, label %for.body, label %for.cond.cleanup
+
+  for.cond.cleanup:
+    ret void
+
+  for.body:
+    %lsr.iv15 = phi ptr [ %cgep17, %for.body ], [ %b, %entry ]
+    %lsr.iv14 = phi ptr [ %cgep, %for.body ], [ %a, %entry ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ %n, %entry ]
+    %0 = load i32, ptr %lsr.iv15, align 4, !tbaa !5
+    %1 = load i32, ptr %lsr.iv14, align 4, !tbaa !5
+    %add = add nsw i32 %1, %0
+    store i32 %add, ptr %lsr.iv14, align 4, !tbaa !5
+    %2 = load i32, ptr %lsr.iv15, align 4, !tbaa !5
+    %add4 = add nsw i32 %2, %add
+    store i32 %add4, ptr %lsr.iv15, align 4, !tbaa !5
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep = getelementptr i8, ptr %lsr.iv14, i32 4
+    %cgep17 = getelementptr i8, ptr %lsr.iv15, i32 4
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.3, %bb.1
+    liveins: $r0, $r1, $r2
+  
+    %8:intregs = COPY $r2
+    %7:intregs = COPY $r1
+    %6:intregs = COPY $r0
+    %9:predregs = C2_cmpgti %8, 0
+    J2_jumpf %9, %bb.1, implicit-def $pc
+  
+  bb.3:
+    %16:intregs = COPY %8
+    J2_loop0r %bb.2, %16, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.2, implicit-def $pc
+  
+  bb.1.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.2.for.body:
+    successors: %bb.1, %bb.2
+  
+    %0:intregs = PHI %7, %bb.3, %5, %bb.2
+    %1:intregs = PHI %6, %bb.3, %4, %bb.2
+    %10:intregs = L2_loadri_io %0, 0 :: (load (s32) from %ir.lsr.iv15, !tbaa !5)
+    %11:intregs = L2_loadri_io %1, 0 :: (load (s32) from %ir.lsr.iv14, !tbaa !5)
+    %12:intregs = nsw A2_add killed %11, killed %10
+    %4:intregs = S2_storeri_pi %1, 4, %12 :: (store (s32) into %ir.lsr.iv14, !tbaa !5)
+    %13:intregs = L2_loadri_io %0, 0 :: (load (s32) from %ir.lsr.iv15, !tbaa !5)
+    %14:intregs = nsw A2_add killed %13, %12
+    %5:intregs = S2_storeri_pi %0, 4, killed %14 :: (store (s32) into %ir.lsr.iv15, !tbaa !5)
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.1, implicit-def $pc
+...

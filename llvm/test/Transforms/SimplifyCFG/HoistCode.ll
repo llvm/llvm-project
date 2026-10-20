@@ -65,14 +65,12 @@ define float @PR39535min_switch(i64 %i, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i64 [[I:%.*]], label [[END:%.*]] [
 ; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ [[X:%.*]], [[BB1]] ], [ [[X]], [[BB2]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[X:%.*]], [[BB1]] ]
 ; CHECK-NEXT:    ret float [[COND]]
 ;
 entry:
@@ -216,6 +214,36 @@ F:
   ret i16 %z2
 }
 
+define ptr @hoist_addrspacecast_flags_preserve(i1 %C, ptr addrspace(1) %p) {
+; CHECK-LABEL: @hoist_addrspacecast_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = addrspacecast nonnull ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z1
+F:
+  %z2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z2
+}
+
+define ptr @hoist_addrspacecast_flags_drop(i1 %C, ptr addrspace(1) %p) {
+; CHECK-LABEL: @hoist_addrspacecast_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = addrspacecast ptr addrspace(1) %p to ptr
+  ret ptr %z1
+F:
+  %z2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z2
+}
+
 define ptr @hoist_gep_flags_both_nuw(i1 %C, ptr %p) {
 ; CHECK-LABEL: @hoist_gep_flags_both_nuw(
 ; CHECK-NEXT:  common.ret:
@@ -274,4 +302,34 @@ T:
 F:
   %gep2 = getelementptr nuw i8, ptr %p, i64 1
   ret ptr %gep2
+}
+
+define i1 @hoist_icmp_flags_preserve(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_icmp_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = icmp samesign ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = icmp samesign ult i32 %x, %y
+  ret i1 %z1
+F:
+  %z2 = icmp samesign ult i32 %x, %y
+  ret i1 %z2
+}
+
+define i1 @hoist_icmp_flags_drop(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_icmp_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = icmp ult i32 %x, %y
+  ret i1 %z1
+F:
+  %z2 = icmp samesign ult i32 %x, %y
+  ret i1 %z2
 }

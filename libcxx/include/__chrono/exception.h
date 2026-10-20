@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/local_info.h>
@@ -31,6 +31,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #  if _LIBCPP_STD_VER >= 20
 
@@ -39,7 +40,7 @@ namespace chrono {
 class nonexistent_local_time : public runtime_error {
 public:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time(const local_time<_Duration>& __time, const local_info& __info)
+  nonexistent_local_time(const local_time<_Duration>& __time, const local_info& __info)
       : runtime_error{__create_message(__time, __info)} {
     // [time.zone.exception.nonexist]/2
     //   Preconditions: i.result == local_info::nonexistent is true.
@@ -48,14 +49,14 @@ public:
                             "creating an nonexistent_local_time from a local_info that is not non-existent");
   }
 
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time(const nonexistent_local_time&)            = default;
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
+  nonexistent_local_time(const nonexistent_local_time&)            = default;
+  nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~nonexistent_local_time() override; // exported as key function
 
 private:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
+  string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
     return std::format(
         R"({} is in a gap between
 {} {} and
@@ -71,9 +72,9 @@ private:
 };
 
 template <class _Duration>
-_LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_nonexistent_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB void __throw_nonexistent_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   throw nonexistent_local_time(__time, __info);
 #    else
   _LIBCPP_VERBOSE_ABORT("nonexistent_local_time was thrown in -fno-exceptions mode");
@@ -83,7 +84,7 @@ _LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_no
 class ambiguous_local_time : public runtime_error {
 public:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time(const local_time<_Duration>& __time, const local_info& __info)
+  ambiguous_local_time(const local_time<_Duration>& __time, const local_info& __info)
       : runtime_error{__create_message(__time, __info)} {
     // [time.zone.exception.ambig]/2
     //   Preconditions: i.result == local_info::ambiguous is true.
@@ -92,14 +93,14 @@ public:
                             "creating an ambiguous_local_time from a local_info that is not ambiguous");
   }
 
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time(const ambiguous_local_time&)            = default;
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
+  ambiguous_local_time(const ambiguous_local_time&)            = default;
+  ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~ambiguous_local_time() override; // exported as key function
 
 private:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
+  string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
     return std::format(
         // There are two spaces after the full-stop; this has been verified
         // in the sources of the Standard.
@@ -115,9 +116,9 @@ private:
 };
 
 template <class _Duration>
-_LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_ambiguous_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB void __throw_ambiguous_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if _LIBCPP_HAS_EXCEPTIONS
   throw ambiguous_local_time(__time, __info);
 #    else
   _LIBCPP_VERBOSE_ABORT("ambiguous_local_time was thrown in -fno-exceptions mode");
@@ -128,8 +129,9 @@ _LIBCPP_NORETURN _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_am
 
 #  endif // _LIBCPP_STD_VER >= 20
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_EXCEPTION_H

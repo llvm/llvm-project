@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc <%s
+; RUN: llc -mtriple=sparc <%s
 
 define void @foo(i32 %a) nounwind {
 entry:

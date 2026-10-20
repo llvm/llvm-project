@@ -176,9 +176,7 @@ public:
 
   using promoted_iterator = SmallPtrSet<const GlobalVariable *, 1>::iterator;
 
-  iterator_range<promoted_iterator> promotedGlobals() {
-    return iterator_range<promoted_iterator>(GVars.begin(), GVars.end());
-  }
+  iterator_range<promoted_iterator> promotedGlobals() { return GVars; }
 
   const Constant *getPromotedGlobalInit() const {
     return CVal;
@@ -215,8 +213,10 @@ class ARMConstantPoolSymbol : public ARMConstantPoolValue {
                         bool AddCurrentAddress);
 
 public:
-  static ARMConstantPoolSymbol *Create(LLVMContext &C, StringRef s, unsigned ID,
-                                       unsigned char PCAdj);
+  static ARMConstantPoolSymbol *
+  Create(LLVMContext &C, StringRef s, unsigned ID, unsigned char PCAdj,
+         ARMCP::ARMCPModifier Modifier = ARMCP::no_modifier,
+         bool AddCurrentAddress = false);
 
   StringRef getSymbol() const { return S; }
 

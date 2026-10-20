@@ -16,6 +16,7 @@ static_library("AppleObjCRuntime") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
 
     #"//lldb/source/Plugins/TypeSystem/Clang", # 4-hop dependency cycle.
     "//llvm/lib/Support",
@@ -27,7 +28,6 @@ static_library("AppleObjCRuntime") {
     "AppleObjCClassDescriptorV2.cpp",
     "AppleObjCDeclVendor.cpp",
     "AppleObjCRuntime.cpp",
-    "AppleObjCRuntimeV1.cpp",
     "AppleObjCRuntimeV2.cpp",
     "AppleObjCTrampolineHandler.cpp",
     "AppleObjCTypeEncodingParser.cpp",

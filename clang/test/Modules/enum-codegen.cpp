@@ -1,5 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fmodules -fmodules-cache-path=%t %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fmodules -fmodules-cache-path=%t %s -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 // CHECK: @{{.*var.*}} = {{.*}} %union.union_type { i8 1 },
 

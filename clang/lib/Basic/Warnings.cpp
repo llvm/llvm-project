@@ -21,12 +21,18 @@
 //
 // Remark options are also handled here, analogously, except that they are much
 // simpler because a remark can't be promoted to an error.
+
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include <algorithm>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstring>
-#include <utility>
+
 using namespace clang;
 
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning
@@ -43,6 +49,7 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
 
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   const DiagnosticOptions &Opts,
+                                  llvm::vfs::FileSystem &VFS,
                                   bool ReportDiags) {
   Diags.setSuppressSystemWarnings(true);  // Default to -Wno-system-headers
   Diags.setIgnoreAllWarnings(Opts.IgnoreWarnings);
@@ -50,7 +57,8 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
 
   Diags.setElideType(Opts.ElideType);
   Diags.setPrintTemplateTree(Opts.ShowTemplateTree);
-  Diags.setShowColors(Opts.ShowColors);
+  Diags.setShowColors(
+      Opts.showColors(llvm::sys::Process::StandardErrHasColors()));
 
   // Handle -ferror-limit
   if (Opts.ErrorLimit)
@@ -222,6 +230,19 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   IsPositive ? diag::Severity::Remark
                                              : diag::Severity::Ignored);
       }
+    }
+  }
+
+  // Process suppression mappings file after processing other warning flags
+  // (like -Wno-unknown-warning-option) as we can emit extra warnings during
+  // processing.
+  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
+    if (auto FileContents =
+            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
+      Diags.setDiagSuppressionMapping(**FileContents);
+    } else if (ReportDiags) {
+      Diags.Report(diag::err_drv_no_such_file)
+          << Opts.DiagnosticSuppressionMappingsFile;
     }
   }
 }

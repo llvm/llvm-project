@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses virtual register definitions and
 # references correctly.
 
@@ -33,9 +33,9 @@
 name:            bar
 tracksRegLiveness: true
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -67,9 +67,9 @@ name:            foo
 tracksRegLiveness: true
 # CHECK: name: foo
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '', flags: [   ] }
 registers:
   - { id: 2, class: gr32 }
   - { id: 0, class: gr32 }

@@ -23,11 +23,11 @@ class B {
 // CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, B &(*)(B &&) noexcept)
-// CHECK-NEXT:    5: i
-// CHECK-NEXT:    6: {} (CXXConstructExpr, [B1.7], [B1.8], B)
-// CHECK-NEXT:    7: [B1.6] (BindTemporary)
-// CHECK-NEXT:    8: [B1.7]
-// CHECK-NEXT:    9: [B1.5] = [B1.8] (OperatorCall)
+// CHECK-NEXT:    5: {} (CXXConstructExpr, [B1.6], [B1.7], B)
+// CHECK-NEXT:    6: [B1.5] (BindTemporary)
+// CHECK-NEXT:    7: [B1.6]
+// CHECK-NEXT:    8: i
+// CHECK-NEXT:    9: [B1.8] = [B1.7] (OperatorCall)
 // CHECK-NEXT:   10: ~B() (Temporary object destructor)
 // CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
 void foo(int) {
@@ -60,13 +60,13 @@ class B {
 // CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, B &(*)(B &&) noexcept)
-// CHECK-NEXT:    5: i
-// CHECK-NEXT:    6: {} (CXXConstructExpr, [B1.7], [B1.8], B)
-// CHECK-NEXT:    7: [B1.6] (BindTemporary)
-// CHECK-NEXT:    8: [B1.7]
-// CHECK-NEXT:    9: [B1.5] = [B1.8] (OperatorCall)
-// CHECK-NEXT:    10: ~B() (Temporary object destructor)
-// CHECK-NEXT:    11: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:    5: {} (CXXConstructExpr, [B1.6], [B1.7], B)
+// CHECK-NEXT:    6: [B1.5] (BindTemporary)
+// CHECK-NEXT:    7: [B1.6]
+// CHECK-NEXT:    8: i
+// CHECK-NEXT:    9: [B1.8] = [B1.7] (OperatorCall)
+// CHECK-NEXT:   10: ~B() (Temporary object destructor)
+// CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
 template <typename T> void foo(T) {
   B i;
   i = {};
@@ -101,12 +101,12 @@ public:
 // CHECK-NEXT:    2: B i;
 // CHECK-NEXT:    3: operator=
 // CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, FunctionToPointerDecay, B &(*)(B &&) noexcept)
-// CHECK-NEXT:    5: i
+// CHECK-NEXT:    5: {}
 // CHECK-NEXT:    6: {}
-// CHECK-NEXT:    7: {}
-// CHECK-NEXT:    8: [B1.7] (BindTemporary)
-// CHECK-NEXT:    9: [B1.8]
-// CHECK-NEXT:   10: [B1.5] = [B1.9] (OperatorCall)
+// CHECK-NEXT:    7: [B1.6] (BindTemporary)
+// CHECK-NEXT:    8: [B1.7]
+// CHECK-NEXT:    9: i
+// CHECK-NEXT:   10: [B1.9] = [B1.8] (OperatorCall)
 // CHECK-NEXT:   11: ~B() (Temporary object destructor)
 // CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
 template <typename T> void foo(T) {

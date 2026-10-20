@@ -6,14 +6,12 @@ func.func @primitive() {
   "some.op"() : () -> !llvm.void
   // CHECK: !llvm.ppc_fp128
   "some.op"() : () -> !llvm.ppc_fp128
-  // CHECK: !llvm.x86_mmx
-  "some.op"() : () -> !llvm.x86_mmx
-  // CHECK: !llvm.token
-  "some.op"() : () -> !llvm.token
   // CHECK: !llvm.label
   "some.op"() : () -> !llvm.label
   // CHECK: !llvm.metadata
   "some.op"() : () -> !llvm.metadata
+  // CHECK: token
+  "some.op"() : () -> token
   return
 }
 
@@ -74,12 +72,14 @@ func.func @vec() {
   "some.op"() : () -> vector<4xi32>
   // CHECK: vector<4xf32>
   "some.op"() : () -> vector<4xf32>
-  // CHECK: !llvm.vec<? x 4 x i32>
-  "some.op"() : () -> !llvm.vec<? x 4 x i32>
-  // CHECK: !llvm.vec<? x 8 x f16>
-  "some.op"() : () -> !llvm.vec<? x 8 x f16>
-  // CHECK: !llvm.vec<4 x ptr>
-  "some.op"() : () -> !llvm.vec<4 x ptr>
+  // CHECK: vector<[4]xi32>
+  "some.op"() : () -> vector<[4] x i32>
+  // CHECK: vector<[8]xf16>
+  "some.op"() : () -> vector<[8] x f16>
+  // CHECK: vector<4x!llvm.ptr>
+  "some.op"() : () -> vector<4x!llvm.ptr>
+  // CHECK: vector<4x!llvm.ppc_fp128>
+  "some.op"() : () -> vector<4x!llvm.ppc_fp128>
   return
 }
 
@@ -93,6 +93,10 @@ func.func @array() {
   "some.op"() : () -> !llvm.array<10 x ptr<4>>
   // CHECK: !llvm.array<10 x array<4 x f32>>
   "some.op"() : () -> !llvm.array<10 x array<4 x f32>>
+  // CHECK: !llvm.array<10 x array<4 x vector<8xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<8xf32>>>
+  // CHECK: !llvm.array<10 x array<4 x vector<[8]xf32>>>
+  "some.op"() : () -> !llvm.array<10 x array<4 x vector<[8]xf32>>>
   return
 }
 
@@ -191,5 +195,16 @@ llvm.func @ext_target() {
     %3 = "some.op"() : () -> !llvm.target<"target4", 1, 0, 42>
     // CHECK: !llvm.target<"target5", i32, f64, 0, 5>
     %4 = "some.op"() : () -> !llvm.target<"target5", i32, f64, 0, 5>
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: byte
+llvm.func @byte() {
+    // CHECK: !llvm.byte<8>
+    %0 = "some.op"() : () -> !llvm.byte<8>
+    // CHECK: !llvm.byte<1>
+    %1 = "some.op"() : () -> !llvm.byte<1>
     llvm.return
 }

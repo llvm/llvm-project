@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p0' '-D$CONST_AS=' --check-prefixes=CHECK,X86
-// RUN: %clang_cc1 -triple amdgcn -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p4' '-D$CONST_AS= addrspace(4)' --check-prefixes=CHECK,AMDGPU
+// RUN: %clang_cc1 -triple amdgpu -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p4' '-D$CONST_AS= addrspace(4)' --check-prefixes=CHECK,AMDGPU
 // END.
 
 // CHECK: private unnamed_addr[[$CONST_AS]] constant [8 x i8] c"v_ann_{{.}}\00", section "llvm.metadata"
@@ -14,7 +14,7 @@ static struct foo gf;
 int main(int argc, char **argv) {
     struct foo f;
     f.v = argc;
-// CHECK: getelementptr inbounds %struct.foo, ptr %{{.*}}, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.foo, ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: call ptr @llvm.ptr.annotation.p0.[[$MANGLE_AS]]({{.*}}str{{.*}}str{{.*}}i32 9, ptr[[$CONST_AS]] null)
 // CHECK-NEXT: call ptr @llvm.ptr.annotation.p0.[[$MANGLE_AS]]({{.*}}str{{.*}}str{{.*}}i32 9, ptr[[$CONST_AS]] null)
     gf.v = argc;

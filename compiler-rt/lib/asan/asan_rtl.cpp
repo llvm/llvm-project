@@ -55,6 +55,15 @@ static void AsanDie() {
   WaitForDebugger(flags()->sleep_before_dying, "before dying");
 
   if (flags()->unmap_shadow_on_exit) {
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+    UnmapOrDie((void*)kHighShadowBeg, kHighShadowEnd - kHighShadowBeg);
+    UnmapOrDie((void*)kMidShadowBeg, kMidShadowEnd - kMidShadowBeg);
+
+    UnmapOrDie((void*)kMid2ShadowBeg, kMid2ShadowEnd - kMid2ShadowBeg);
+    UnmapOrDie((void*)kMid3ShadowBeg, kMid3ShadowEnd - kMid3ShadowBeg);
+
+    UnmapOrDie((void*)kLowShadowBeg, kLowShadowEnd - kLowShadowBeg);
+#else
     if (kMidMemBeg) {
       UnmapOrDie((void*)kLowShadowBeg, kMidMemBeg - kLowShadowBeg);
       UnmapOrDie((void*)kMidMemEnd, kHighShadowEnd - kMidMemEnd);
@@ -62,6 +71,7 @@ static void AsanDie() {
       if (kHighShadowEnd)
         UnmapOrDie((void*)kLowShadowBeg, kHighShadowEnd - kLowShadowBeg);
     }
+#endif
   }
 }
 
@@ -85,7 +95,11 @@ bool AsanInited() {
 bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
+#  if !(SANITIZER_AIX && SANITIZER_WORDSIZE == 64)
 uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;
+#  else
+uptr kHighMemEnd;
+#  endif
 #endif
 
 // -------------------------- Misc ---------------- {{{1
@@ -155,6 +169,22 @@ void __asan_report_ ## type ## _n_noabort(uptr addr, uptr size) {           \
 
 ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
+
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, true);
+  }
+}
+
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void
+__asan_report_assume_dereferenceable_noabort(uptr addr, uptr size) {
+  if (__asan_region_is_poisoned(addr, size)) {
+    GET_CALLER_PC_BP_SP;
+    ReportAssumeDereferenceableError(pc, bp, sp, addr, size, false);
+  }
+}
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
   uptr sp = MEM_TO_SHADOW(addr);                                               \
@@ -382,12 +412,49 @@ void PrintAddressSpaceLayout() {
 
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
-  Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)ASAN_SHADOW_OFFSET);
+  Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
+  Printf("kGaplessShadow: %d\n", kGaplessShadow);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
+// On AIX 64-bit, we have a highly customized memory layout.
+#if !SANITIZER_AIX || SANITIZER_WORDSIZE != 64
           kMidMemBeg > kMidShadowEnd &&
+#endif
           kHighShadowBeg > kMidMemEnd);
+}
+
+// Apply most options specified either through the ASAN_OPTIONS
+// environment variable, or through the `__asan_default_options` user function.
+//
+// This function may be called multiple times, once per weak reference callback
+// on Windows, so it needs to be idempotent.
+//
+// Context:
+// For maximum compatibility on Windows, it is necessary for ASan options to be
+// configured/registered/applied inside this method (instead of in
+// ASanInitInternal, for example). That's because, on Windows, the user-provided
+// definition for `__asan_default_opts` may not be bound when `ASanInitInternal`
+// is invoked (it is bound later).
+//
+// To work around the late binding on windows, `ApplyOptions` will be called,
+// again, after binding to the user-provided `__asan_default_opts` function.
+// Therefore, any flags not configured here are not guaranteed to be
+// configurable through `__asan_default_opts` on Windows.
+//
+//
+// For more details on this issue, see:
+// https://github.com/llvm/llvm-project/issues/117925
+void ApplyFlags() {
+  SetCanPoisonMemory(flags()->poison_heap);
+  SetMallocContextSize(common_flags()->malloc_context_size);
+
+  __asan_option_detect_stack_use_after_return =
+      flags()->detect_stack_use_after_return;
+
+  AllocatorOptions allocator_options;
+  allocator_options.SetFrom(flags(), common_flags());
+  ApplyAllocatorOptions(allocator_options);
 }
 
 static bool AsanInitInternal() {
@@ -397,8 +464,9 @@ static bool AsanInitInternal() {
 
   CacheBinaryName();
 
-  // Initialize flags. This must be done early, because most of the
-  // initialization steps look at flags().
+  // Initialize flags. On Windows it also also register weak function callbacks.
+  // This must be done early, because most of the initialization steps look at
+  // flags().
   InitializeFlags();
 
   WaitForDebugger(flags()->sleep_before_init, "before init");
@@ -416,9 +484,6 @@ static bool AsanInitInternal() {
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
 
-  SetCanPoisonMemory(flags()->poison_heap);
-  SetMallocContextSize(common_flags()->malloc_context_size);
-
   InitializePlatformExceptionHandlers();
 
   InitializeHighMemEnd();
@@ -429,10 +494,6 @@ static bool AsanInitInternal() {
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
 
   __sanitizer_set_report_path(common_flags()->log_path);
-
-  __asan_option_detect_stack_use_after_return =
-      flags()->detect_stack_use_after_return;
-
   __sanitizer::InitializePlatformEarly();
 
   // Setup internal allocator callback.
@@ -451,6 +512,18 @@ static bool AsanInitInternal() {
 
   DisableCoreDumperIfNecessary();
 
+#if SANITIZER_POSIX
+  if (StackSizeIsUnlimited()) {
+    VPrintf(1,
+            "WARNING: Unlimited stack size detected. This may affect "
+            "compatibility with the shadow mappings.\n");
+    // MSan and TSan re-exec with a fixed size stack. We don't do that because
+    // it may break the program. InitializeShadowMemory() will, if needed,
+    // re-exec without ASLR, which solves most shadow mapping compatibility
+    // issues.
+  }
+#endif  // SANITIZER_POSIX
+
   InitializeShadowMemory();
 
   AsanTSDInit(PlatformTSDDtor);
@@ -459,6 +532,13 @@ static bool AsanInitInternal() {
   AllocatorOptions allocator_options;
   allocator_options.SetFrom(flags(), common_flags());
   InitializeAllocator(allocator_options);
+
+  // Apply ASan flags.
+  // NOTE: In order for options specified through `__asan_default_options` to be
+  // honored on Windows, it is necessary for those options to be configured
+  // inside the `ApplyOptions` method. See the function-level comment for
+  // `ApplyFlags` for more details.
+  ApplyFlags();
 
   if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
     MaybeStartBackgroudThread();
@@ -478,14 +558,10 @@ static bool AsanInitInternal() {
   if (flags()->start_deactivated)
     AsanDeactivate();
 
-  // interceptors
-  InitTlsSize();
-
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
   force_interface_symbols();  // no-op.
-  SanitizerInitializeUnwinder();
 
   if (CAN_SANITIZE_LEAKS) {
     __lsan::InitCommonLsan();
@@ -576,14 +652,14 @@ static void UnpoisonDefaultStack() {
     int local_stack;
     const uptr page_size = GetPageSizeCached();
     top = curr_thread->stack_top();
-    bottom = ((uptr)&local_stack - page_size) & ~(page_size - 1);
+    bottom = (uptr)&local_stack & ~(page_size - 1);
+    if (AddrIsInMem(bottom - page_size))
+      bottom -= page_size;
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.
-    uptr tls_addr, tls_size, stack_size;
-    GetThreadStackAndTls(/*main=*/false, &bottom, &stack_size, &tls_addr,
-                         &tls_size);
-    top = bottom + stack_size;
+    uptr tls_begin, tls_end;
+    GetThreadStackAndTls(/*main=*/false, &bottom, &top, &tls_begin, &tls_end);
   }
 
   UnpoisonStack(bottom, top, "default");

@@ -41,15 +41,58 @@ add_integration_test(
   startup_rpc_interface_test
   SUITE libc-startup-tests
   SRCS
-   rpc_interface_test.cpp
+    rpc_interface_test.cpp
 )
 
 add_integration_test(
   startup_rpc_stream_test
   SUITE libc-startup-tests
   SRCS
-   rpc_stream_test.cpp
+    rpc_stream_test.cpp
   LOADER_ARGS
-   --threads 32
-   --blocks 8
+    --threads 32
+    --blocks 8
 )
+
+add_integration_test(
+  startup_rpc_divergence_test
+  SUITE libc-startup-tests
+  SRCS
+    rpc_divergence_test.cpp
+  LOADER_ARGS
+    --threads 256
+    --blocks 16
+)
+
+if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  add_integration_test(
+    startup_rpc_lane_test_w32
+    SUITE libc-startup-tests
+    SRCS
+      rpc_lane_test
+    LOADER_ARGS
+      --threads 32
+    COMPILE_OPTIONS
+      -mno-wavefrontsize64
+  )
+
+  add_integration_test(
+    startup_rpc_lane_test_w64
+    SUITE libc-startup-tests
+    SRCS
+      rpc_lane_test.cpp
+    LOADER_ARGS
+      --threads 64
+    COMPILE_OPTIONS
+      -mwavefrontsize64
+  )
+else()
+  add_integration_test(
+    startup_rpc_lane_test_w32
+    SUITE libc-startup-tests
+    SRCS
+      rpc_lane_test.cpp
+    LOADER_ARGS
+      --threads 32
+  )
+endif()

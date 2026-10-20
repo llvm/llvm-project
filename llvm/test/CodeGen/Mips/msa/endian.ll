@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=BIGENDIAN %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=LITENDIAN %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=BIGENDIAN %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=LITENDIAN %s
 
 @v16i8 = global <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 @v8i16 = global <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>

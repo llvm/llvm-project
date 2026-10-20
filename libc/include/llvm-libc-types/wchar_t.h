@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_TYPES_WCHAR_T_H
 #define LLVM_LIBC_TYPES_WCHAR_T_H
 
-// Since __need_wchar_t is defined, we get the definition of wchar_t from the
-// standalone C header stddef.h. Also, because __need_wchar_t is defined,
-// including stddef.h will pull only the type wchar_t and nothing else.
-#define __need_wchar_t
-#include <stddef.h>
-#undef __need_wchar_t
+// wchar_t is a fundamental type in C++.
+#ifndef __cplusplus
+
+typedef __WCHAR_TYPE__ wchar_t;
+
+#endif
 
 #endif // LLVM_LIBC_TYPES_WCHAR_T_H

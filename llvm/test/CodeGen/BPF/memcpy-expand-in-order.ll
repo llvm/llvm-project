@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -verify-machineinstrs -bpf-expand-memcpy-in-order | FileCheck %s
-; RUN: llc < %s -march=bpfeb -verify-machineinstrs -bpf-expand-memcpy-in-order | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -verify-machineinstrs -bpf-expand-memcpy-in-order | FileCheck %s
+; RUN: llc < %s -mtriple=bpfeb -verify-machineinstrs -bpf-expand-memcpy-in-order | FileCheck %s
 ;
 ; #define COPY_LEN	9
 ;

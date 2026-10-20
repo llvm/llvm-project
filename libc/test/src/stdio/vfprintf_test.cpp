@@ -19,9 +19,9 @@
 
 #include "src/stdio/vfprintf.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdio.h>
 
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
@@ -45,6 +45,8 @@ int call_vfprintf(::FILE *__restrict stream, const char *__restrict format,
   va_end(vlist);
   return ret;
 }
+
+using LlvmLibcVFPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcVFPrintfTest, WriteToFile) {
   const char *FILENAME = "vfprintf_output.test";
@@ -92,6 +94,7 @@ TEST(LlvmLibcVFPrintfTest, WriteToFile) {
 
   written = call_vfprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }

@@ -1,7 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown | FileCheck %s
 
-# CHECK: .text
-
 # CHECK: nop
 0x01
 
@@ -21,6 +19,11 @@
 # $0=, 128, 0
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
+
+# A non-zero table index (a multi-table module, or misaligned bytes fed to the
+# disassembler) must be printed rather than trigger an assertion.
+# CHECK: call_indirect 1, 0
+0x11 0x00 0x01
 
 # CHECK: call 0
 0x10 0x00
@@ -53,3 +56,10 @@
 # This can mean end_block/end_loop/end_if/end_function/end_try..
 # CHECK: end
 0x0B
+
+# CHECK:  try_table        (catch 0 0) (catch_ref 0 1) (catch_all 2) (catch_all_ref 3)
+0x1F 0x40 0x04 0x00 0x00 0x00 0x01 0x00 0x01 0x02 0x02 0x03 0x03
+# CHECK: throw 0
+0x08 0x00
+# CHECK: throw_ref
+0x0a

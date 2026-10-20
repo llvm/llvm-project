@@ -38,12 +38,12 @@
 // CK14-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 
-// CK14-DAG: [[SIZES:@.+]] = {{.+}}constant [4 x i64] [i64 0, i64 4, i64 8, i64 4]
+// CK14-DAG: [[SIZES:@.+]] = {{.+}}constant [5 x i64] [i64 0, i64 4, i64 8, i64 4, i64 0]
 // Map types:
 // - OMP_MAP_TARGET_PARAM = 32
 // - OMP_MAP_TO + OMP_MAP_FROM | OMP_MAP_IMPLICIT | OMP_MAP_MEMBER_OF = 281474976711171
 // - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK14-DAG: [[TYPES:@.+]] = {{.+}}constant [4 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800]
+// CK14-DAG: [[TYPES:@.+]] = {{.+}}constant [5 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800, i64 288]
 
 class SSS {
 public:
@@ -101,11 +101,11 @@ void implicit_maps_class (int a){
   // CK14-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
   // CK14-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-  // CK14: call void [[KERNEL:@.+]](ptr [[DECL]], i[[sz]] {{.+}})
+  // CK14: call void [[KERNEL:@.+]](ptr [[DECL]], i[[sz]] {{.+}}, ptr null)
   sss.foo(123);
 }
 
-// CK14: define internal void [[KERNEL]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
+// CK14: define internal void [[KERNEL]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK14: [[ADDR0:%.+]] = alloca ptr,
 // CK14: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK14: store ptr [[THIS]], ptr [[ADDR0]],
@@ -113,7 +113,7 @@ void implicit_maps_class (int a){
 // CK14: [[REF0:%.+]] = load ptr, ptr [[ADDR0]],
 // CK14-64: {{.+}} = load i32,  ptr [[ADDR1]],
 // CK14-32: {{.+}} = load i32, ptr [[ADDR1]],
-// CK14: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF0]], i32 0, i32 0
+// CK14: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF0]], i32 0, i32 0
 
 #endif // CK14
 #endif

@@ -44,30 +44,27 @@ struct LinalgCopyOpInterface
                                                        linalg::CopyOp> {
   OpOperand &getSourceOperand(Operation *op) const {
     auto copyOp = cast<CopyOp>(op);
-    assert(copyOp.getInputs().size() == 1 && "expected single input");
-    return copyOp.getInputsMutable()[0];
+    return llvm::getSingleElement(copyOp.getInputsMutable());
   }
 
   bool
   isEquivalentSubset(Operation *op, Value candidate,
                      function_ref<bool(Value, Value)> equivalenceFn) const {
     auto copyOp = cast<CopyOp>(op);
-    assert(copyOp.getOutputs().size() == 1 && "expected single output");
-    return equivalenceFn(candidate, copyOp.getOutputs()[0]);
+    return equivalenceFn(candidate,
+                         llvm::getSingleElement(copyOp.getOutputs()));
   }
 
   Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
                               Location loc) const {
     auto copyOp = cast<CopyOp>(op);
-    assert(copyOp.getOutputs().size() == 1 && "expected single output");
-    return copyOp.getOutputs()[0];
+    return llvm::getSingleElement(copyOp.getOutputs());
   }
 
   SmallVector<Value>
   getValuesNeededToBuildSubsetExtraction(Operation *op) const {
     auto copyOp = cast<CopyOp>(op);
-    assert(copyOp.getOutputs().size() == 1 && "expected single output");
-    return {copyOp.getOutputs()[0]};
+    return {llvm::getSingleElement(copyOp.getOutputs())};
   }
 };
 } // namespace

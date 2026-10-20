@@ -1,6 +1,6 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: MSAN_OPTIONS=intercept_memcmp=0 %run %t
+// RUN: env MSAN_OPTIONS=intercept_memcmp=0 %run %t
 
 #include <string.h>
 #include <stdio.h>

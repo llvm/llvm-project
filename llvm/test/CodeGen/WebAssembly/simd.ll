@@ -481,21 +481,6 @@ define <16 x i8> @shuffle_undef_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v16i8:
 ; NO-SIMD128:         .functype shuffle_undef_v16i8 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.store8 15($0), $2
-; NO-SIMD128-NEXT:    i32.store8 14($0), $2
-; NO-SIMD128-NEXT:    i32.store8 13($0), $2
-; NO-SIMD128-NEXT:    i32.store8 12($0), $2
-; NO-SIMD128-NEXT:    i32.store8 11($0), $2
-; NO-SIMD128-NEXT:    i32.store8 10($0), $2
-; NO-SIMD128-NEXT:    i32.store8 9($0), $2
-; NO-SIMD128-NEXT:    i32.store8 8($0), $2
-; NO-SIMD128-NEXT:    i32.store8 7($0), $2
-; NO-SIMD128-NEXT:    i32.store8 6($0), $2
-; NO-SIMD128-NEXT:    i32.store8 5($0), $2
-; NO-SIMD128-NEXT:    i32.store8 4($0), $2
-; NO-SIMD128-NEXT:    i32.store8 3($0), $2
-; NO-SIMD128-NEXT:    i32.store8 2($0), $2
-; NO-SIMD128-NEXT:    i32.store8 1($0), $2
 ; NO-SIMD128-NEXT:    i32.store8 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <16 x i8> %x, <16 x i8> %y,
@@ -994,13 +979,6 @@ define <8 x i16> @shuffle_undef_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v8i16:
 ; NO-SIMD128:         .functype shuffle_undef_v8i16 (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.store16 14($0), $2
-; NO-SIMD128-NEXT:    i32.store16 12($0), $2
-; NO-SIMD128-NEXT:    i32.store16 10($0), $2
-; NO-SIMD128-NEXT:    i32.store16 8($0), $2
-; NO-SIMD128-NEXT:    i32.store16 6($0), $2
-; NO-SIMD128-NEXT:    i32.store16 4($0), $2
-; NO-SIMD128-NEXT:    i32.store16 2($0), $2
 ; NO-SIMD128-NEXT:    i32.store16 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <8 x i16> %x, <8 x i16> %y,
@@ -1288,9 +1266,6 @@ define <4 x i32> @shuffle_undef_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v4i32:
 ; NO-SIMD128:         .functype shuffle_undef_v4i32 (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i32.store 12($0), $2
-; NO-SIMD128-NEXT:    i32.store 8($0), $2
-; NO-SIMD128-NEXT:    i32.store 4($0), $2
 ; NO-SIMD128-NEXT:    i32.store 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x i32> %x, <4 x i32> %y,
@@ -1550,7 +1525,6 @@ define <2 x i64> @shuffle_undef_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v2i64:
 ; NO-SIMD128:         .functype shuffle_undef_v2i64 (i32, i64, i64, i64, i64) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    i64.store 8($0), $2
 ; NO-SIMD128-NEXT:    i64.store 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <2 x i64> %x, <2 x i64> %y,
@@ -1819,9 +1793,6 @@ define <4 x float> @shuffle_undef_v4f32(<4 x float> %x, <4 x float> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v4f32:
 ; NO-SIMD128:         .functype shuffle_undef_v4f32 (i32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    f32.store 12($0), $2
-; NO-SIMD128-NEXT:    f32.store 8($0), $2
-; NO-SIMD128-NEXT:    f32.store 4($0), $2
 ; NO-SIMD128-NEXT:    f32.store 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <4 x float> %x, <4 x float> %y,
@@ -2082,7 +2053,6 @@ define <2 x double> @shuffle_undef_v2f64(<2 x double> %x, <2 x double> %y) {
 ; NO-SIMD128-LABEL: shuffle_undef_v2f64:
 ; NO-SIMD128:         .functype shuffle_undef_v2f64 (i32, f64, f64, f64, f64) -> ()
 ; NO-SIMD128-NEXT:  # %bb.0:
-; NO-SIMD128-NEXT:    f64.store 8($0), $2
 ; NO-SIMD128-NEXT:    f64.store 0($0), $2
 ; NO-SIMD128-NEXT:    return
   %res = shufflevector <2 x double> %x, <2 x double> %y,

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
-#include <vector>
 
 #include "gtest/gtest.h"
 

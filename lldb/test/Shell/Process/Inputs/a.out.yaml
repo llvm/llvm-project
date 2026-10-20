@@ -1,0 +1,62 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0xC
+  cpusubtype:      0x10
+  filetype:        0x2
+  ncmds:           3
+  sizeofcmds:      272
+  flags:           0x200085
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         192
+    segname:         __TEXT
+    vmaddr:          16384
+    vmsize:          32768
+    fileoff:         0
+    filesize:        32768
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0xBFB4
+        size:            4
+        offset:          0x7FB4
+        align:           1
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '00207047'
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0xBFB8
+        size:            72
+        offset:          0x7FB8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000B57F00003400000034000000BA7F00000000000034000000030000000C000100100001000000000000000000
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            C2065535-C63D-3C6A-BF79-19CF960DEF2E

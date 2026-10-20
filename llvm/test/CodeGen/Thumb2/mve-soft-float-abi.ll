@@ -348,38 +348,35 @@ entry:
 define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-LABEL: vector_add_f32:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-MVE-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-MVE-NEXT:    .pad #4
-; CHECK-MVE-NEXT:    sub sp, #4
+; CHECK-MVE-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-MVE-NEXT:    .vsave {d8, d9}
 ; CHECK-MVE-NEXT:    vpush {d8, d9}
-; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    mov r8, r0
 ; CHECK-MVE-NEXT:    add r0, sp, #40
 ; CHECK-MVE-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-MVE-NEXT:    mov r6, r1
+; CHECK-MVE-NEXT:    mov r7, r1
 ; CHECK-MVE-NEXT:    mov r0, r3
-; CHECK-MVE-NEXT:    mov r5, r2
-; CHECK-MVE-NEXT:    vmov r7, r1, d9
+; CHECK-MVE-NEXT:    mov r6, r2
+; CHECK-MVE-NEXT:    vmov r4, r1, d9
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov s19, r0
-; CHECK-MVE-NEXT:    mov r0, r5
-; CHECK-MVE-NEXT:    mov r1, r7
-; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov r5, r1, d8
-; CHECK-MVE-NEXT:    vmov s18, r0
+; CHECK-MVE-NEXT:    mov r5, r0
 ; CHECK-MVE-NEXT:    mov r0, r6
+; CHECK-MVE-NEXT:    mov r1, r4
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov s17, r0
-; CHECK-MVE-NEXT:    mov r0, r4
-; CHECK-MVE-NEXT:    mov r1, r5
+; CHECK-MVE-NEXT:    vmov r6, r1, d8
+; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    mov r0, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov s16, r0
-; CHECK-MVE-NEXT:    vmov r2, r3, d9
-; CHECK-MVE-NEXT:    vmov r0, r1, d8
+; CHECK-MVE-NEXT:    mov r7, r0
+; CHECK-MVE-NEXT:    mov r0, r8
+; CHECK-MVE-NEXT:    mov r1, r6
+; CHECK-MVE-NEXT:    bl __aeabi_fadd
+; CHECK-MVE-NEXT:    mov r1, r7
+; CHECK-MVE-NEXT:    mov r2, r4
+; CHECK-MVE-NEXT:    mov r3, r5
 ; CHECK-MVE-NEXT:    vpop {d8, d9}
-; CHECK-MVE-NEXT:    add sp, #4
-; CHECK-MVE-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 ;
 ; CHECK-BE-LABEL: vector_add_f32:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -542,4 +539,70 @@ define <4 x i32> @insertextract(i32 %x, i32 %y) {
   %3 = insertelement <4 x i32> %2, i32 %x, i32 2
   %4 = insertelement <4 x i32> %3, i32 %y, i32 3
   ret <4 x i32> %4
+}
+
+declare void @print_uint32x4_t(<4 x i32> %val)
+define i32 @main(i64 %x, i64 %y) {
+; CHECK-LE-LABEL: main:
+; CHECK-LE:       @ %bb.0: @ %entry
+; CHECK-LE-NEXT:    .save {r4, lr}
+; CHECK-LE-NEXT:    push {r4, lr}
+; CHECK-LE-NEXT:    .vsave {d8, d9}
+; CHECK-LE-NEXT:    vpush {d8, d9}
+; CHECK-LE-NEXT:    .pad #8
+; CHECK-LE-NEXT:    sub sp, #8
+; CHECK-LE-NEXT:    vmov.32 q4[2], r2
+; CHECK-LE-NEXT:    mov r4, r1
+; CHECK-LE-NEXT:    mov r1, r0
+; CHECK-LE-NEXT:    vmov.32 q4[3], r3
+; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    mov r2, r1
+; CHECK-LE-NEXT:    mov r3, r4
+; CHECK-LE-NEXT:    vstr d9, [sp]
+; CHECK-LE-NEXT:    bl print_uint32x4_t
+; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    movs r2, #1
+; CHECK-LE-NEXT:    mov r3, r4
+; CHECK-LE-NEXT:    vstr d9, [sp]
+; CHECK-LE-NEXT:    bl print_uint32x4_t
+; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    add sp, #8
+; CHECK-LE-NEXT:    vpop {d8, d9}
+; CHECK-LE-NEXT:    pop {r4, pc}
+;
+; CHECK-BE-LABEL: main:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .save {r4, lr}
+; CHECK-BE-NEXT:    push {r4, lr}
+; CHECK-BE-NEXT:    .vsave {d8, d9}
+; CHECK-BE-NEXT:    vpush {d8, d9}
+; CHECK-BE-NEXT:    .pad #8
+; CHECK-BE-NEXT:    sub sp, #8
+; CHECK-BE-NEXT:    vmov.32 q0[2], r2
+; CHECK-BE-NEXT:    mov r4, r1
+; CHECK-BE-NEXT:    mov r1, r0
+; CHECK-BE-NEXT:    vmov.32 q0[3], r3
+; CHECK-BE-NEXT:    vrev64.32 q4, q0
+; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    mov r2, r1
+; CHECK-BE-NEXT:    mov r3, r4
+; CHECK-BE-NEXT:    vstr d9, [sp]
+; CHECK-BE-NEXT:    bl print_uint32x4_t
+; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    movs r2, #1
+; CHECK-BE-NEXT:    mov r3, r4
+; CHECK-BE-NEXT:    vstr d9, [sp]
+; CHECK-BE-NEXT:    bl print_uint32x4_t
+; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    add sp, #8
+; CHECK-BE-NEXT:    vpop {d8, d9}
+; CHECK-BE-NEXT:    pop {r4, pc}
+entry:
+  %a = insertelement <2 x i64> poison, i64 %x, i64 0
+  %b = insertelement <2 x i64> %a, i64 %y, i64 1
+  %c = bitcast <2 x i64> %b to <4 x i32>
+  %i = insertelement <4 x i32> %c, i32 1, i64 0
+  tail call void @print_uint32x4_t(i32 0, <4 x i32> %c)
+  tail call void @print_uint32x4_t(i32 0, <4 x i32> %i)
+  ret i32 0
 }

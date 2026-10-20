@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s
+; RUN: llc -O2 -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; Function Attrs: nounwind

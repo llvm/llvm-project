@@ -17,33 +17,26 @@
 #ifndef LLVM_SUPPORT_DXILABI_H
 #define LLVM_SUPPORT_DXILABI_H
 
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 
 namespace llvm {
 namespace dxil {
-
-enum class ParameterKind : uint8_t {
-  Invalid = 0,
-  Void,
-  Half,
-  Float,
-  Double,
-  I1,
-  I8,
-  I16,
-  I32,
-  I64,
-  Overload,
-  CBufferRet,
-  ResourceRet,
-  DXILHandle,
-};
 
 enum class ResourceClass : uint8_t {
   SRV = 0,
   UAV,
   CBuffer,
   Sampler,
+  LastEntry = Sampler,
+};
+
+enum class ResourceDimension : uint8_t {
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
@@ -92,8 +85,63 @@ enum class ElementType : uint32_t {
   UNormF64,
   PackedS8x32,
   PackedU8x32,
+  LastEntry = PackedU8x32,
 };
 
+/// Metadata tags for extra resource properties.
+enum class ExtPropTags : uint32_t {
+  ElementType = 0,
+  StructuredBufferStride = 1,
+  SamplerFeedbackKind = 2,
+  Atomic64Use = 3,
+};
+
+enum class SamplerType : uint32_t {
+  Default = 0,
+  Comparison = 1,
+  Mono = 2, // Note: Seems to be unused.
+};
+
+enum class SamplerFeedbackType : uint32_t {
+  MinMip = 0,
+  MipRegionUsed = 1,
+};
+
+/// Opcodes for the DXIL `AtomicBinOp` op (78). Values must match the DXIL
+/// specification.
+enum class AtomicBinOpCode : uint32_t {
+  Add = 0,
+  And = 1,
+  Or = 2,
+  Xor = 3,
+  IMin = 4,
+  IMax = 5,
+  UMin = 6,
+  UMax = 7,
+  Exchange = 8,
+};
+
+enum class BarrierMemoryTypeFlag : uint32_t {
+  UAVMemory = 0x1,
+  GroupSharedMemory = 0x2,
+  NodeInputMemory = 0x4,
+  NodeOutputMemory = 0x8,
+  NodeMemory = 0xc,
+  ValidMask = 0xf,
+};
+
+enum class BarrierSemanticFlag : uint32_t {
+  GroupSync = 0x1,
+  GroupScope = 0x2,
+  DeviceScope = 0x4,
+  GroupFlags = 0x3,
+  ValidMask = 0x7,
+};
+
+const unsigned MinWaveSize = 4;
+const unsigned MaxWaveSize = 128;
+
+LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
 } // namespace dxil
 } // namespace llvm
 

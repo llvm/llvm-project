@@ -11,9 +11,11 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
 #include <cstdint>
+#include <limits>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -23,7 +25,7 @@ TEST(ShapedTypeTest, CloneMemref) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
   Attribute memSpace = IntegerAttr::get(IntegerType::get(&context, 64), 7);
   Type memrefOriginalType = i32;
   llvm::SmallVector<int64_t> memrefOriginalShape({10, 20});
@@ -70,7 +72,7 @@ TEST(ShapedTypeTest, CloneTensor) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   Type tensorOriginalType = i32;
   llvm::SmallVector<int64_t> tensorOriginalShape({10, 20});
@@ -110,7 +112,7 @@ TEST(ShapedTypeTest, CloneVector) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   Type vectorOriginalType = i32;
   llvm::SmallVector<int64_t> vectorOriginalShape({10, 20});
@@ -133,7 +135,7 @@ TEST(ShapedTypeTest, CloneVector) {
 
 TEST(ShapedTypeTest, VectorTypeBuilder) {
   MLIRContext context;
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   SmallVector<int64_t> shape{2, 4, 8, 9, 1};
   SmallVector<bool> scalableDims{true, false, true, false, false};
@@ -191,7 +193,7 @@ TEST(ShapedTypeTest, VectorTypeBuilder) {
 
 TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
   MLIRContext context;
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   SmallVector<int64_t> shape{2, 4, 8, 16, 32};
   RankedTensorType tensorType = RankedTensorType::get(shape, f32);
@@ -224,6 +226,99 @@ TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
     RankedTensorType newTensorType = RankedTensorType(builder);
     ASSERT_EQ(tensorType.getShape().drop_front(), newTensorType.getShape());
   }
+}
+
+/// Simple wrapper class to enable "isa querying" and simple accessing of
+/// encoding.
+class TensorWithString : public RankedTensorType {
+public:
+  using RankedTensorType::RankedTensorType;
+
+  static TensorWithString get(ArrayRef<int64_t> shape, Type elementType,
+                              StringRef name) {
+    return mlir::cast<TensorWithString>(RankedTensorType::get(
+        shape, elementType, StringAttr::get(elementType.getContext(), name)));
+  }
+
+  StringRef getName() const {
+    if (Attribute enc = getEncoding())
+      return mlir::cast<StringAttr>(enc).getValue();
+    return {};
+  }
+
+  static bool classof(Type type) {
+    if (auto rt = mlir::dyn_cast_or_null<RankedTensorType>(type))
+      return mlir::isa_and_present<StringAttr>(rt.getEncoding());
+    return false;
+  }
+};
+
+TEST(ShapedTypeTest, RankedTensorTypeView) {
+  MLIRContext context;
+  Type f32 = Float32Type::get(&context);
+
+  Type noEncodingRankedTensorType = RankedTensorType::get({10, 20}, f32);
+
+  UnitAttr unitAttr = UnitAttr::get(&context);
+  Type unitEncodingRankedTensorType =
+      RankedTensorType::get({10, 20}, f32, unitAttr);
+
+  StringAttr stringAttr = StringAttr::get(&context, "app");
+  Type stringEncodingRankedTensorType =
+      RankedTensorType::get({10, 20}, f32, stringAttr);
+
+  EXPECT_FALSE(mlir::isa<TensorWithString>(noEncodingRankedTensorType));
+  EXPECT_FALSE(mlir::isa<TensorWithString>(unitEncodingRankedTensorType));
+  ASSERT_TRUE(mlir::isa<TensorWithString>(stringEncodingRankedTensorType));
+
+  // Cast to TensorWithString view.
+  auto view = mlir::cast<TensorWithString>(stringEncodingRankedTensorType);
+  ASSERT_TRUE(mlir::isa<TensorWithString>(view));
+  EXPECT_EQ(view.getName(), "app");
+  // Verify one could cast view type back to base type.
+  ASSERT_TRUE(mlir::isa<RankedTensorType>(view));
+
+  Type viewCreated = TensorWithString::get({10, 20}, f32, "bob");
+  ASSERT_TRUE(mlir::isa<TensorWithString>(viewCreated));
+  ASSERT_TRUE(mlir::isa<RankedTensorType>(viewCreated));
+  view = mlir::cast<TensorWithString>(viewCreated);
+  EXPECT_EQ(view.getName(), "bob");
+
+  // Verify encoding clone methods.
+  EXPECT_EQ(unitEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(unitAttr));
+  EXPECT_EQ(stringEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(stringAttr));
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(unitEncodingRankedTensorType).dropEncoding());
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(stringEncodingRankedTensorType).dropEncoding());
+}
+
+TEST(ShapedTypeTest, GetNumElements) {
+  // Test normal case.
+  EXPECT_EQ(ShapedType::getNumElements({2, 3, 4}), 24);
+  EXPECT_EQ(ShapedType::getNumElements({1}), 1);
+  EXPECT_EQ(ShapedType::getNumElements({}), 1);
+
+  // Test tryGetNumElements returns value for normal shapes.
+  EXPECT_TRUE(ShapedType::tryGetNumElements({2, 3, 4}).has_value());
+  EXPECT_EQ(*ShapedType::tryGetNumElements({2, 3, 4}), 24);
+
+  // Test tryGetNumElements returns nullopt for overflow.
+  // INT64_MAX = 9223372036854775807, so multiplying large dimensions overflows.
+  SmallVector<int64_t> overflowShape;
+  for (int i = 0; i < 64; ++i)
+    overflowShape.push_back(2); // 2^64 would overflow int64_t
+  EXPECT_FALSE(ShapedType::tryGetNumElements(overflowShape).has_value());
+
+  // Another overflow case with fewer but larger dimensions.
+  int64_t maxVal = std::numeric_limits<int64_t>::max();
+  EXPECT_FALSE(ShapedType::tryGetNumElements({maxVal, 2}).has_value());
 }
 
 } // namespace

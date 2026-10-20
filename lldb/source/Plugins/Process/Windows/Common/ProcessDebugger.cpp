@@ -17,8 +17,10 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 
@@ -26,8 +28,74 @@
 #include "ExceptionRecord.h"
 #include "ProcessWindowsLog.h"
 
+#include <string>
+#include <string_view>
+
 using namespace lldb;
 using namespace lldb_private;
+
+static void NormalizeWindowsPathSeparators(std::string &s) {
+  for (char &c : s)
+    if (c == '/')
+      c = '\\';
+}
+
+bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
+  if (path.empty())
+    return false;
+
+  static const std::string windows_prefix = []() {
+    std::string prefix;
+    wchar_t buf[MAX_PATH];
+    UINT len = ::GetWindowsDirectoryW(buf, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH)
+      return prefix;
+    llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
+    NormalizeWindowsPathSeparators(prefix);
+    if (!prefix.empty() && prefix.back() != '\\')
+      prefix += '\\';
+    return prefix;
+  }();
+
+  if (windows_prefix.empty())
+    return false;
+
+  // A module loaded through an extended-length path has the "\\?\" prefix,
+  // which would not match the Windows directory.
+  std::string normalized = StripExtendedLengthPrefix(path);
+  NormalizeWindowsPathSeparators(normalized);
+  return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
+}
+
+bool ProcessDebugger::IsSystemModuleAddress(lldb::addr_t addr) {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return false;
+  lldb::process_t handle = m_session_data->m_debugger->GetProcess()
+                               .GetNativeProcess()
+                               .GetSystemHandle();
+  if (handle == nullptr || handle == LLDB_INVALID_PROCESS)
+    return false;
+
+  MEMORY_BASIC_INFORMATION mbi = {};
+  if (::VirtualQueryEx(handle, reinterpret_cast<LPCVOID>(addr), &mbi,
+                       sizeof(mbi)) != sizeof(mbi))
+    return false;
+  if (mbi.AllocationBase == nullptr)
+    return false;
+
+  // A truncated path still carries the leading directory, which is all
+  // IsSystemDLL() inspects. MAX_PATH is enough.
+  wchar_t module_path[MAX_PATH];
+  DWORD len = ::GetModuleFileNameExW(
+      handle, reinterpret_cast<HMODULE>(mbi.AllocationBase), module_path,
+      MAX_PATH);
+  if (len == 0)
+    return false;
+
+  std::string path_utf8;
+  llvm::convertWideToUTF8(std::wstring_view(module_path, len), path_utf8);
+  return IsSystemDLL(path_utf8);
+}
 
 static DWORD ConvertLldbToWinApiProtect(uint32_t protect) {
   // We also can process a read / write permissions here, but if the debugger
@@ -63,7 +131,7 @@ static bool IsPageExecutable(uint32_t protect) {
 
 namespace lldb_private {
 
-ProcessDebugger::~ProcessDebugger() {}
+ProcessDebugger::~ProcessDebugger() = default;
 
 lldb::pid_t ProcessDebugger::GetDebuggedProcessId() const {
   if (m_session_data)
@@ -116,8 +184,8 @@ Status ProcessDebugger::LaunchProcess(ProcessLaunchInfo &launch_info,
   if (working_dir) {
     FileSystem::Instance().Resolve(working_dir);
     if (!FileSystem::Instance().IsDirectory(working_dir)) {
-      result.SetErrorStringWithFormat("No such file or directory: %s",
-                                      working_dir.GetPath().c_str());
+      result = Status::FromErrorStringWithFormat(
+          "No such file or directory: %s", working_dir.GetPath().c_str());
       return result;
     }
   }
@@ -128,7 +196,7 @@ Status ProcessDebugger::LaunchProcess(ProcessLaunchInfo &launch_info,
                   "only be used for debug launches.",
                   launch_info.GetExecutableFile().GetPath().c_str());
     std::string message = stream.GetString().str();
-    result.SetErrorString(message.c_str());
+    result = Status::FromErrorString(message.c_str());
 
     LLDB_LOG(log, "error: {0}", message);
     return result;
@@ -244,15 +312,33 @@ Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
   return error;
 }
 
+void ProcessDebugger::EndDebugSession() {
+  DebuggerThreadSP debugger_thread;
+  {
+    llvm::sys::ScopedLock lock(m_mutex);
+    if (!m_session_data)
+      return;
+    debugger_thread = m_session_data->m_debugger;
+  }
+  debugger_thread->StopDebugging(/*terminate=*/true);
+  m_session_data.reset();
+}
+
 Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
   llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_session_data) {
+    caused_stop = false;
+    LLDB_LOG(log, "HaltProcess called with no active session.");
+    return Status::FromErrorString(
+        "HaltProcess called with no active debugger session.");
+  }
   caused_stop = ::DebugBreakProcess(m_session_data->m_debugger->GetProcess()
                                         .GetNativeProcess()
                                         .GetSystemHandle());
   if (!caused_stop) {
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    error = Status(::GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "DebugBreakProcess failed with error {0}", error);
   }
 
@@ -267,7 +353,7 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   llvm::sys::ScopedLock lock(m_mutex);
 
   if (!m_session_data) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "cannot read, there is no active debugger connection.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -276,16 +362,29 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   LLDB_LOG(log, "attempting to read {0} bytes from address {1:x}", size,
            vm_addr);
 
-  HostProcess process = m_session_data->m_debugger->GetProcess();
+  lldb::process_t handle = m_session_data->m_debugger->GetProcess()
+                               .GetNativeProcess()
+                               .GetSystemHandle();
   void *addr = reinterpret_cast<void *>(vm_addr);
   SIZE_T num_of_bytes_read = 0;
-  if (!::ReadProcessMemory(process.GetNativeProcess().GetSystemHandle(), addr,
-                           buf, size, &num_of_bytes_read)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "reading failed with error: {0}", error);
-  } else {
+  if (::ReadProcessMemory(handle, addr, buf, size, &num_of_bytes_read)) {
     bytes_read = num_of_bytes_read;
+    return Status();
   }
+  error = Status(GetLastError(), eErrorTypeWin32);
+  MemoryRegionInfo info;
+  if (GetMemoryRegionInfo(vm_addr, info).Fail() ||
+      info.GetMapped() != eLazyBoolYes)
+    return error;
+  size = info.GetRange().GetRangeEnd() - vm_addr;
+  LLDB_LOG(log, "retrying the read with size {0:x}", size);
+  if (::ReadProcessMemory(handle, addr, buf, size, &num_of_bytes_read)) {
+    LLDB_LOG(log, "success: read {0:x} bytes", num_of_bytes_read);
+    bytes_read = num_of_bytes_read;
+    return Status();
+  }
+  error = Status(GetLastError(), eErrorTypeWin32);
+  LLDB_LOG(log, "error: {0}", error);
   return error;
 }
 
@@ -299,7 +398,7 @@ Status ProcessDebugger::WriteMemory(lldb::addr_t vm_addr, const void *buf,
            vm_addr);
 
   if (!m_session_data) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "cannot write, there is no active debugger connection.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -313,7 +412,7 @@ Status ProcessDebugger::WriteMemory(lldb::addr_t vm_addr, const void *buf,
     FlushInstructionCache(handle, addr, num_of_bytes_written);
     bytes_written = num_of_bytes_written;
   } else {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "writing failed with error: {0}", error);
   }
   return error;
@@ -329,7 +428,7 @@ Status ProcessDebugger::AllocateMemory(size_t size, uint32_t permissions,
            permissions);
 
   if (!m_session_data) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "cannot allocate, there is no active debugger connection");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -340,7 +439,7 @@ Status ProcessDebugger::AllocateMemory(size_t size, uint32_t permissions,
   auto protect = ConvertLldbToWinApiProtect(permissions);
   auto result = ::VirtualAllocEx(handle, nullptr, size, MEM_COMMIT, protect);
   if (!result) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "allocating failed with error: {0}", error);
   } else {
     addr = reinterpret_cast<addr_t>(result);
@@ -353,10 +452,10 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
 
   Log *log = GetLog(WindowsLog::Memory);
   llvm::sys::ScopedLock lock(m_mutex);
-  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", vm_addr);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0:x}", vm_addr);
 
   if (!m_session_data) {
-    result.SetErrorString(
+    result = Status::FromErrorString(
         "cannot deallocate, there is no active debugger connection");
     LLDB_LOG(log, "error: {0}", result);
     return result;
@@ -366,7 +465,7 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
   lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
   if (!::VirtualFreeEx(handle, reinterpret_cast<LPVOID>(vm_addr), 0,
                        MEM_RELEASE)) {
-    result.SetError(GetLastError(), eErrorTypeWin32);
+    result = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "deallocating failed with error: {0}", result);
   }
 
@@ -381,7 +480,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   info.Clear();
 
   if (!m_session_data) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "GetMemoryRegionInfo called with no debugging session.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -389,7 +488,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   HostProcess process = m_session_data->m_debugger->GetProcess();
   lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
   if (handle == nullptr || handle == LLDB_INVALID_PROCESS) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "GetMemoryRegionInfo called with an invalid target process.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -408,13 +507,13 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       // range from the vm_addr to LLDB_INVALID_ADDRESS
       info.GetRange().SetRangeBase(vm_addr);
       info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-      info.SetReadable(MemoryRegionInfo::eNo);
-      info.SetExecutable(MemoryRegionInfo::eNo);
-      info.SetWritable(MemoryRegionInfo::eNo);
-      info.SetMapped(MemoryRegionInfo::eNo);
+      info.SetReadable(eLazyBoolNo);
+      info.SetExecutable(eLazyBoolNo);
+      info.SetWritable(eLazyBoolNo);
+      info.SetMapped(eLazyBoolNo);
       return error;
     } else {
-      error.SetError(last_error, eErrorTypeWin32);
+      error = Status(last_error, eErrorTypeWin32);
       LLDB_LOG(log,
                "VirtualQueryEx returned error {0} while getting memory "
                "region info for address {1:x}",
@@ -428,14 +527,13 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     const bool readable = IsPageReadable(mem_info.Protect);
     const bool executable = IsPageExecutable(mem_info.Protect);
     const bool writable = IsPageWritable(mem_info.Protect);
-    info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
-    info.SetExecutable(executable ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
-    info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+    info.SetReadable(readable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetExecutable(executable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetWritable(writable ? eLazyBoolYes : eLazyBoolNo);
   } else {
-    info.SetReadable(MemoryRegionInfo::eNo);
-    info.SetExecutable(MemoryRegionInfo::eNo);
-    info.SetWritable(MemoryRegionInfo::eNo);
+    info.SetReadable(eLazyBoolNo);
+    info.SetExecutable(eLazyBoolNo);
+    info.SetWritable(eLazyBoolNo);
   }
 
   // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
@@ -444,7 +542,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
         reinterpret_cast<addr_t>(mem_info.BaseAddress));
     info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) +
                                 mem_info.RegionSize);
-    info.SetMapped(MemoryRegionInfo::eYes);
+    info.SetMapped(eLazyBoolYes);
   } else {
     // In the unmapped case we need to return the distance to the next block of
     // memory. VirtualQueryEx nearly does that except that it gives the
@@ -454,14 +552,14 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     DWORD page_offset = vm_addr % data.dwPageSize;
     info.GetRange().SetRangeBase(vm_addr);
     info.GetRange().SetByteSize(mem_info.RegionSize - page_offset);
-    info.SetMapped(MemoryRegionInfo::eNo);
+    info.SetMapped(eLazyBoolNo);
   }
 
-  LLDB_LOGV(log,
-            "Memory region info for address {0}: readable={1}, "
-            "executable={2}, writable={3}",
-            vm_addr, info.GetReadable(), info.GetExecutable(),
-            info.GetWritable());
+  LLDB_LOG_VERBOSE(log,
+                   "Memory region info for address {0:x}: readable={1}, "
+                   "executable={2}, writable={3}",
+                   vm_addr, info.GetReadable(), info.GetExecutable(),
+                   info.GetWritable());
   return error;
 }
 
@@ -470,7 +568,8 @@ void ProcessDebugger::OnExitProcess(uint32_t exit_code) {
   // of the error otherwise WaitForDebuggerConnection() will be blocked.
   // An example of this issue is when a process fails to load a dependent DLL.
   if (m_session_data && !m_session_data->m_initial_stop_received) {
-    Status error(exit_code, eErrorTypeWin32);
+    Status error = Status::FromErrorStringWithFormatv(
+        "Process prematurely exited with {0:x}", exit_code);
     OnDebuggerError(error, 0);
   }
 }
@@ -492,13 +591,13 @@ ProcessDebugger::OnDebugException(bool first_chance,
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x}, but "
              "there is no session.",
-             record.GetExceptionCode(), record.GetExceptionAddress());
+             record.GetExceptionValue(), record.GetExceptionAddress());
     return ExceptionResult::SendToApplication;
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;
-  if ((record.GetExceptionCode() == EXCEPTION_BREAKPOINT ||
-       record.GetExceptionCode() ==
+  if ((record.GetExceptionValue() == EXCEPTION_BREAKPOINT ||
+       record.GetExceptionValue() ==
            0x4000001FL /*WOW64 STATUS_WX86_BREAKPOINT*/) &&
       !m_session_data->m_initial_stop_received) {
     // Handle breakpoints at the first chance.
@@ -521,20 +620,84 @@ void ProcessDebugger::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
-                                lldb::addr_t module_addr) {
+DllEventAction ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
+                                          lldb::addr_t module_addr,
+                                          lldb::tid_t thread_id) {
+  return DllEventAction::ContinueDebugLoop;
+}
+
+DllEventAction ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr,
+                                            lldb::tid_t thread_id) {
+  return DllEventAction::ContinueDebugLoop;
+}
+
+void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
+                                    bool is_unicode,
+                                    uint16_t length_lower_word) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
-  // Do nothing by default
-}
+llvm::Error
+ProcessDebugger::ReadDebugString(lldb::addr_t debug_string_addr,
+                                 bool is_unicode, uint16_t length_lower_word,
+                                 llvm::SmallVectorImpl<char> &output) {
+  if (is_unicode && length_lower_word % 2 != 0)
+    return llvm::createStringError(
+        "Utf16 string can't have uneven size in bytes");
 
-void ProcessDebugger::OnDebugString(const std::string &string) {}
+  const auto is_zero_terminated = [&] {
+    // The zero terminator is always at the end of the buffer.
+    if (is_unicode)
+      return output.size() >= 2 && output.back() == 0 &&
+             output[output.size() - 2] == 0;
+
+    return !output.empty() && output.back() == 0;
+  };
+
+  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
+  // size of the string. We know that `strlen(string) & 0xffff ==
+  // length_lower_word`, so we read in chunks until we reach the terminator:
+  // - 0: `length_lower_word` Bytes
+  // - 1..16: 64 KiB (= 2^16 Bytes)
+  size_t start = length_lower_word == 0 ? 1 : 0;
+  for (size_t i = start; i < 16; ++i) {
+    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
+    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
+    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
+
+    size_t bytes_read = 0;
+    Status error =
+        ReadMemory(addr, output.end() - chunk_size, chunk_size, bytes_read);
+    if (error.Fail())
+      return error.takeError();
+
+    if (bytes_read != chunk_size) {
+      return llvm::createStringErrorV(
+          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
+    }
+
+    if (is_zero_terminated())
+      break;
+  }
+
+  if (!is_zero_terminated())
+    return llvm::createStringError("String is 1 MiB or larger");
+
+  // Remove null terminator.
+  output.pop_back_n(is_unicode ? 2 : 1);
+  return llvm::Error::success();
+}
 
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);
+
+  if (!m_session_data) {
+    LLDB_LOG(log,
+             "OnDebuggerError called with no active session: error {0}: {1}",
+             error.GetError(), error);
+    return;
+  }
 
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,
@@ -547,7 +710,7 @@ void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
     // If we haven't actually launched the process yet, this was an error
     // launching the process.  Set the internal error and signal the initial
     // stop event so that the DoLaunch method wakes up and returns a failure.
-    m_session_data->m_launch_error = error;
+    m_session_data->m_launch_error = error.Clone();
     ::SetEvent(m_session_data->m_initial_stop_event);
     LLDB_LOG(log,
              "Error {0} occurred launching the process before the initial "
@@ -569,7 +732,7 @@ Status ProcessDebugger::WaitForDebuggerConnection(DebuggerThreadSP debugger,
     LLDB_LOG(log, "hit loader breakpoint, returning.");
 
     process = debugger->GetProcess();
-    return m_session_data->m_launch_error;
+    return m_session_data->m_launch_error.Clone();
   } else
     return Status(::GetLastError(), eErrorTypeWin32);
 }

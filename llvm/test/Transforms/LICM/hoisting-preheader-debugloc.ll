@@ -1,6 +1,8 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
 
-; CHECK: %arrayidx4.promoted = load i32, ptr %arrayidx4, align 4, !tbaa !{{[0-9]+$}}
+; CHECK: %arrayidx4.promoted = load i32, ptr %arrayidx4, align 4
+; CHECK-NOT: !dbg
+; CHECK: br label %for.body
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -15,7 +17,7 @@ declare i16 @e(i32)
 define i16 @g() !dbg !13 {
 entry:
   %l_284 = alloca [2 x [3 x [6 x i32]]], align 16
-  call void @llvm.lifetime.start.p0(i64 144, ptr nonnull %l_284), !dbg !24
+  call void @llvm.lifetime.start.p0(ptr nonnull %l_284), !dbg !24
   call void @llvm.dbg.declare(metadata ptr %l_284, metadata !17, metadata !DIExpression()), !dbg !25
   %0 = load i16, ptr @a, align 2, !dbg !26, !tbaa !29
   %cmp11 = icmp sgt i16 %0, -1, !dbg !33
@@ -49,15 +51,15 @@ for.body.cleanup_crit_edge:                       ; preds = %for.body
   br label %cleanup, !dbg !38
 
 cleanup:                                          ; preds = %for.body.cleanup_crit_edge, %for.cond.cleanup_crit_edge, %entry
-  call void @llvm.lifetime.end.p0(i64 144, ptr nonnull %l_284), !dbg !51
+  call void @llvm.lifetime.end.p0(ptr nonnull %l_284), !dbg !51
   ret i16 1, !dbg !51
 }
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0

@@ -9,5 +9,7 @@
 
 // Check that the headers don't conflict with each other
 
+#include "system_reserved_names.h"
+
 #include <arm_cde.h>
 #include <arm_mve.h>

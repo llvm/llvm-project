@@ -86,7 +86,7 @@ define void @float_to_bfloat(float %0) strictfp {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
-  %2 = tail call bfloat @llvm.experimental.constrained.fptrunc.bfloat.f32(float %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %2 = tail call bfloat @llvm.experimental.constrained.fptrunc.bf16.f32(float %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store bfloat %2, ptr @a, align 2
   ret void
 }
@@ -115,7 +115,7 @@ define void @double_to_bfloat(double %0) strictfp {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
-  %2 = tail call bfloat @llvm.experimental.constrained.fptrunc.bfloat.f64(double %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %2 = tail call bfloat @llvm.experimental.constrained.fptrunc.bf16.f64(double %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store bfloat %2, ptr @a, align 2
   ret void
 }
@@ -162,20 +162,20 @@ define void @add() strictfp {
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %1 = load bfloat, ptr @a, align 2
-  %2 = tail call float @llvm.experimental.constrained.fpext.f32.bfloat(bfloat %1, metadata !"fpexcept.strict") #0
+  %2 = tail call float @llvm.experimental.constrained.fpext.f32.bf16(bfloat %1, metadata !"fpexcept.strict") #0
   %3 = load bfloat, ptr @b, align 2
-  %4 = tail call float @llvm.experimental.constrained.fpext.f32.bfloat(bfloat %3, metadata !"fpexcept.strict") #0
+  %4 = tail call float @llvm.experimental.constrained.fpext.f32.bf16(bfloat %3, metadata !"fpexcept.strict") #0
   %5 = tail call float @llvm.experimental.constrained.fadd.f32(float %2, float %4, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  %6 = tail call bfloat @llvm.experimental.constrained.fptrunc.bfloat.f32(float %5, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %6 = tail call bfloat @llvm.experimental.constrained.fptrunc.bf16.f32(float %5, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store bfloat %6, ptr @c, align 2
   ret void
 }
 
-declare float @llvm.experimental.constrained.fpext.f32.bfloat(bfloat, metadata)
-declare double @llvm.experimental.constrained.fpext.f64.bfloat(bfloat, metadata)
+declare float @llvm.experimental.constrained.fpext.f32.bf16(bfloat, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.bf16(bfloat, metadata)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
-declare bfloat @llvm.experimental.constrained.fptrunc.bfloat.f32(float, metadata, metadata)
-declare bfloat @llvm.experimental.constrained.fptrunc.bfloat.f64(double, metadata, metadata)
+declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f32(float, metadata, metadata)
+declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f64(double, metadata, metadata)
 
 attributes #0 = { strictfp }
 

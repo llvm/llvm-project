@@ -35,10 +35,10 @@
 ///      executed and IRUnit it works on. There can be different schemes of
 ///      providing names in future, currently it is just a name() of the pass.
 ///
-///    - PassInstrumentation wraps address of IRUnit into llvm::Any and passes
-///      control to all the registered callbacks. Note that we specifically wrap
-///      'const IRUnitT*' so as to avoid any accidental changes to IR in
-///      instrumenting callbacks.
+///    - PassInstrumentation wraps address of IRUnit into an IRUnitRef and
+///      passes control to all the registered callbacks. Note that we
+///      specifically wrap 'const IRUnitT*' so as to avoid any accidental
+///      changes to IR in instrumenting callbacks.
 ///
 ///    - Some instrumentation points (BeforePass) allow to control execution
 ///      of a pass. For those callbacks returning false means pass will not be
@@ -49,12 +49,12 @@
 #ifndef LLVM_IR_PASSINSTRUMENTATION_H
 #define LLVM_IR_PASSINSTRUMENTATION_H
 
-#include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
-#include <type_traits>
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -67,7 +67,7 @@ class StringRef;
 class PassInstrumentationCallbacks {
 public:
   // Before/After callbacks accept IRUnits whenever appropriate, so they need
-  // to take them as constant pointers, wrapped with llvm::Any.
+  // to take them as constant pointers, wrapped with IRUnitRef.
   // For the case when IRUnit has been invalidated there is a different
   // callback to use - AfterPassInvalidated.
   // We call all BeforePassFuncs to determine if a pass should run or not.
@@ -76,14 +76,14 @@ public:
   // already invalidated IRUnit is unsafe. There are ways to handle invalidated
   // IRUnits in a safe way, and we might pursue that as soon as there is a
   // useful instrumentation that needs it.
-  using BeforePassFunc = bool(StringRef, Any);
-  using BeforeSkippedPassFunc = void(StringRef, Any);
-  using BeforeNonSkippedPassFunc = void(StringRef, Any);
-  using AfterPassFunc = void(StringRef, Any, const PreservedAnalyses &);
+  using BeforePassFunc = bool(StringRef, IRUnitRef);
+  using BeforeSkippedPassFunc = void(StringRef, IRUnitRef);
+  using BeforeNonSkippedPassFunc = void(StringRef, IRUnitRef);
+  using AfterPassFunc = void(StringRef, IRUnitRef, const PreservedAnalyses &);
   using AfterPassInvalidatedFunc = void(StringRef, const PreservedAnalyses &);
-  using BeforeAnalysisFunc = void(StringRef, Any);
-  using AfterAnalysisFunc = void(StringRef, Any);
-  using AnalysisInvalidatedFunc = void(StringRef, Any);
+  using BeforeAnalysisFunc = void(StringRef, IRUnitRef);
+  using AfterAnalysisFunc = void(StringRef, IRUnitRef);
+  using AnalysisInvalidatedFunc = void(StringRef, IRUnitRef);
   using AnalysesClearedFunc = void(StringRef);
 
 public:
@@ -155,9 +155,9 @@ public:
   }
 
   /// Add a class name to pass name mapping for use by pass instrumentation.
-  void addClassToPassName(StringRef ClassName, StringRef PassName);
-  /// Get the pass name for a given pass class name.
-  StringRef getPassNameForClassName(StringRef ClassName);
+  LLVM_ABI void addClassToPassName(StringRef ClassName, StringRef PassName);
+  /// Get the pass name for a given pass class name. Empty if no match found.
+  LLVM_ABI StringRef getPassNameForClassName(StringRef ClassName);
 
 private:
   friend class PassInstrumentation;
@@ -174,7 +174,7 @@ private:
       BeforeNonSkippedPassCallbacks;
   /// These are run on passes that have just run.
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
-  /// These are run passes that have just run on invalidated IR.
+  /// These are run on passes that have just run on invalidated IR.
   SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
       AfterPassInvalidatedCallbacks;
   /// These are run on analyses that are about to be run.
@@ -205,18 +205,8 @@ class PassInstrumentation {
   // created from (1). Here we want to make case (1) skippable unconditionally
   // since they are regular passes. We call PassConcept::isRequired to decide
   // for case (2).
-  template <typename PassT>
-  using has_required_t = decltype(std::declval<PassT &>().isRequired());
-
-  template <typename PassT>
-  static std::enable_if_t<is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
+  template <typename PassT> static bool isRequired(const PassT &Pass) {
     return Pass.isRequired();
-  }
-  template <typename PassT>
-  static std::enable_if_t<!is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
-    return false;
   }
 
 public:
@@ -240,15 +230,15 @@ public:
     bool ShouldRun = true;
     if (!isRequired(Pass)) {
       for (auto &C : Callbacks->ShouldRunOptionalPassCallbacks)
-        ShouldRun &= C(Pass.name(), llvm::Any(&IR));
+        ShouldRun &= C(Pass.name(), IR);
     }
 
     if (ShouldRun) {
       for (auto &C : Callbacks->BeforeNonSkippedPassCallbacks)
-        C(Pass.name(), llvm::Any(&IR));
+        C(Pass.name(), IR);
     } else {
       for (auto &C : Callbacks->BeforeSkippedPassCallbacks)
-        C(Pass.name(), llvm::Any(&IR));
+        C(Pass.name(), IR);
     }
 
     return ShouldRun;
@@ -262,7 +252,7 @@ public:
                     const PreservedAnalyses &PA) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassCallbacks)
-        C(Pass.name(), llvm::Any(&IR), PA);
+        C(Pass.name(), IR, PA);
   }
 
   /// AfterPassInvalidated instrumentation point - takes \p Pass instance
@@ -282,7 +272,7 @@ public:
   void runBeforeAnalysis(const PassT &Analysis, const IRUnitT &IR) const {
     if (Callbacks)
       for (auto &C : Callbacks->BeforeAnalysisCallbacks)
-        C(Analysis.name(), llvm::Any(&IR));
+        C(Analysis.name(), IR);
   }
 
   /// AfterAnalysis instrumentation point - takes \p Analysis instance
@@ -291,7 +281,7 @@ public:
   void runAfterAnalysis(const PassT &Analysis, const IRUnitT &IR) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterAnalysisCallbacks)
-        C(Analysis.name(), llvm::Any(&IR));
+        C(Analysis.name(), IR);
   }
 
   /// AnalysisInvalidated instrumentation point - takes \p Analysis instance
@@ -301,7 +291,7 @@ public:
   void runAnalysisInvalidated(const PassT &Analysis, const IRUnitT &IR) const {
     if (Callbacks)
       for (auto &C : Callbacks->AnalysisInvalidatedCallbacks)
-        C(Analysis.name(), llvm::Any(&IR));
+        C(Analysis.name(), IR);
   }
 
   /// AnalysesCleared instrumentation point - takes name of IR that analyses
@@ -341,14 +331,15 @@ public:
   }
 };
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+LLVM_ABI bool isSpecialPass(StringRef PassID,
+                            const std::vector<StringRef> &Specials);
 
 /// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
 /// managers.
 class PassInstrumentationAnalysis
     : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
   friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   PassInstrumentationCallbacks *Callbacks;
 

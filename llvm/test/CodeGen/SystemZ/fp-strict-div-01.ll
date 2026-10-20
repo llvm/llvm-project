@@ -5,7 +5,23 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 declare float @foo()
+declare half @llvm.experimental.constrained.fdiv.f16(half, half, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+
+; Check register division.
+define half @f0(half %f1, half %f2) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: debr %f0, %f9
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.fdiv.f16(
+                        half %f1, half %f2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
 
 ; Check register division.
 define float @f1(float %f1, float %f2) #0 {

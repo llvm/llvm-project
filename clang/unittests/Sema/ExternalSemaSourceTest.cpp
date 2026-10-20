@@ -89,6 +89,42 @@ public:
   int SeenCount;
 };
 
+/// Records the StartedQualifiedLookup/FinishedQualifiedLookup notifications.
+class QualifiedLookupRecorder : public clang::ExternalSemaSource {
+  static std::string getName(const DeclContext *DC) {
+    if (isa<TranslationUnitDecl>(DC))
+      return "<TU>";
+    if (const auto *ND = dyn_cast<NamedDecl>(DC))
+      return ND->getNameAsString();
+    return "<unnamed>";
+  }
+
+public:
+  void StartedQualifiedLookup(const DeclContext *DC) override {
+    Events.push_back("start " + getName(DC));
+    Active.push_back(DC);
+  }
+
+  void FinishedQualifiedLookup(const DeclContext *DC) override {
+    Events.push_back("finish " + getName(DC));
+    if (Active.empty() || Active.back() != DC) {
+      Unbalanced = true;
+      return;
+    }
+    Active.pop_back();
+  }
+
+  /// Returns true if a lookup into a DeclContext with the given name was
+  /// started.
+  bool sawLookupInto(StringRef Name) const {
+    return llvm::is_contained(Events, "start " + Name.str());
+  }
+
+  std::vector<std::string> Events;
+  std::vector<const DeclContext *> Active;
+  bool Unbalanced = false;
+};
+
 // \brief Always corrects a typo matching CorrectFrom with a new namespace
 // with the name CorrectTo.
 class NamespaceTypoProvider : public clang::ExternalSemaSource {
@@ -181,7 +217,7 @@ public:
 // performing semantic analysis.
 class ExternalSemaSourceInstaller : public clang::ASTFrontendAction {
   std::vector<DiagnosticWatcher *> Watchers;
-  std::vector<clang::ExternalSemaSource *> Sources;
+  std::vector<llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource>> Sources;
   std::unique_ptr<DiagnosticConsumer> OwnedClient;
 
 protected:
@@ -212,8 +248,8 @@ protected:
   }
 
 public:
-  void PushSource(clang::ExternalSemaSource *Source) {
-    Sources.push_back(Source);
+  void PushSource(llvm::IntrusiveRefCntPtr<clang::ExternalSemaSource> Source) {
+    Sources.push_back(std::move(Source));
   }
 
   void PushWatcher(DiagnosticWatcher *Watcher) { Watchers.push_back(Watcher); }
@@ -238,7 +274,7 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionPrioritized) {
   auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
   auto Provider = makeIntrusiveRefCnt<NamespaceTypoProvider>("AAB", "BBB");
   DiagnosticWatcher Watcher("AAB", "BBB");
-  Installer->PushSource(Provider.get());
+  Installer->PushSource(Provider);
   Installer->PushWatcher(&Watcher);
   std::vector<std::string> Args(1, "-std=c++11");
   ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
@@ -255,9 +291,9 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionOrdering) {
   auto Second = makeIntrusiveRefCnt<NamespaceTypoProvider>("AAB", "CCC");
   auto Third = makeIntrusiveRefCnt<NamespaceTypoProvider>("AAB", "DDD");
   DiagnosticWatcher Watcher("AAB", "CCC");
-  Installer->PushSource(First.get());
-  Installer->PushSource(Second.get());
-  Installer->PushSource(Third.get());
+  Installer->PushSource(First);
+  Installer->PushSource(Second);
+  Installer->PushSource(Third);
   Installer->PushWatcher(&Watcher);
   std::vector<std::string> Args(1, "-std=c++11");
   ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
@@ -268,26 +304,12 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionOrdering) {
   ASSERT_EQ(1, Watcher.SeenCount);
 }
 
-TEST(ExternalSemaSource, ExternalDelayedTypoCorrection) {
-  auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
-  auto Provider = makeIntrusiveRefCnt<FunctionTypoProvider>("aaa", "bbb");
-  DiagnosticWatcher Watcher("aaa", "bbb");
-  Installer->PushSource(Provider.get());
-  Installer->PushWatcher(&Watcher);
-  std::vector<std::string> Args(1, "-std=c++11");
-  ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
-      std::move(Installer), "namespace AAA { } void foo() { AAA::aaa(); }",
-      Args));
-  ASSERT_LE(0, Provider->CallCount);
-  ASSERT_EQ(1, Watcher.SeenCount);
-}
-
 // We should only try MaybeDiagnoseMissingCompleteType if we can't otherwise
 // solve the problem.
 TEST(ExternalSemaSource, TryOtherTacticsBeforeDiagnosing) {
   auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
   auto Diagnoser = makeIntrusiveRefCnt<CompleteTypeDiagnoser>(false);
-  Installer->PushSource(Diagnoser.get());
+  Installer->PushSource(Diagnoser);
   std::vector<std::string> Args(1, "-std=c++11");
   // This code hits the class template specialization/class member of a class
   // template specialization checks in Sema::RequireCompleteTypeImpl.
@@ -305,9 +327,9 @@ TEST(ExternalSemaSource, FirstDiagnoserTaken) {
   auto First = makeIntrusiveRefCnt<CompleteTypeDiagnoser>(false);
   auto Second = makeIntrusiveRefCnt<CompleteTypeDiagnoser>(true);
   auto Third = makeIntrusiveRefCnt<CompleteTypeDiagnoser>(true);
-  Installer->PushSource(First.get());
-  Installer->PushSource(Second.get());
-  Installer->PushSource(Third.get());
+  Installer->PushSource(First);
+  Installer->PushSource(Second);
+  Installer->PushSource(Third);
   std::vector<std::string> Args(1, "-std=c++11");
   ASSERT_FALSE(clang::tooling::runToolOnCodeWithArgs(
       std::move(Installer), "class Incomplete; Incomplete IncompleteInstance;",
@@ -315,6 +337,91 @@ TEST(ExternalSemaSource, FirstDiagnoserTaken) {
   ASSERT_EQ(1, First->CallCount);
   ASSERT_EQ(1, Second->CallCount);
   ASSERT_EQ(0, Third->CallCount);
+}
+
+static void runWithRecorders(
+    StringRef Code,
+    llvm::ArrayRef<llvm::IntrusiveRefCntPtr<QualifiedLookupRecorder>>
+        Recorders) {
+  auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
+  for (const auto &Recorder : Recorders)
+    Installer->PushSource(Recorder);
+  std::vector<std::string> Args(1, "-std=c++11");
+  ASSERT_TRUE(
+      clang::tooling::runToolOnCodeWithArgs(std::move(Installer), Code, Args));
+}
+
+// A lookup qualified with '::' is a qualified lookup into the translation
+// unit.
+TEST(ExternalSemaSource, QualifiedLookupGlobalScope) {
+  auto Recorder = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("int X; int Y = ::X;", {Recorder});
+  EXPECT_TRUE(Recorder->sawLookupInto("<TU>"));
+  EXPECT_FALSE(Recorder->Unbalanced);
+  EXPECT_TRUE(Recorder->Active.empty());
+}
+
+// Each component of a nested name specifier is looked up qualified in the
+// preceding component.
+TEST(ExternalSemaSource, QualifiedLookupNestedNameSpecifier) {
+  auto Recorder = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("namespace NS { namespace Inner { int X; } }"
+                   "int Y = ::NS::Inner::X;",
+                   {Recorder});
+  EXPECT_TRUE(Recorder->sawLookupInto("<TU>"));
+  EXPECT_TRUE(Recorder->sawLookupInto("NS"));
+  EXPECT_TRUE(Recorder->sawLookupInto("Inner"));
+  EXPECT_FALSE(Recorder->Unbalanced);
+  EXPECT_TRUE(Recorder->Active.empty());
+
+  // Every started lookup into 'Inner' must be finished right afterwards.
+  auto It = llvm::find(Recorder->Events, "start Inner");
+  ASSERT_NE(It, Recorder->Events.end());
+  ASSERT_NE(std::next(It), Recorder->Events.end());
+  EXPECT_EQ(*std::next(It), "finish Inner");
+}
+
+// Member access performs a qualified lookup into the record.
+TEST(ExternalSemaSource, QualifiedLookupMemberAccess) {
+  auto Recorder = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("struct Rec { int M; }; int f(Rec R) { return R.M; }",
+                   {Recorder});
+  EXPECT_TRUE(Recorder->sawLookupInto("Rec"));
+  EXPECT_FALSE(Recorder->Unbalanced);
+  EXPECT_TRUE(Recorder->Active.empty());
+}
+
+// Unqualified lookups shouldn't be reported as qualified lookups.
+TEST(ExternalSemaSource, NoQualifiedLookupForUnqualifiedName) {
+  auto Recorder = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("namespace NS { int X; } using namespace NS; int Y = X;",
+                   {Recorder});
+  EXPECT_FALSE(Recorder->sawLookupInto("NS"));
+  EXPECT_FALSE(Recorder->Unbalanced);
+  EXPECT_TRUE(Recorder->Active.empty());
+}
+
+// Looking up a member that is declared in a base class is still reported as a
+// single qualified lookup into the derived class.
+TEST(ExternalSemaSource, QualifiedLookupInBaseClass) {
+  auto Recorder = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("struct Base { int M; }; struct Derived : Base {};"
+                   "int f(Derived D) { return D.M; }",
+                   {Recorder});
+  EXPECT_TRUE(Recorder->sawLookupInto("Derived"));
+  EXPECT_FALSE(Recorder->Unbalanced);
+  EXPECT_TRUE(Recorder->Active.empty());
+}
+
+// With multiple sources installed, Sema multiplexes the notifications.
+TEST(ExternalSemaSource, QualifiedLookupMultiplexed) {
+  auto First = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  auto Second = makeIntrusiveRefCnt<QualifiedLookupRecorder>();
+  runWithRecorders("namespace NS { int X; } int Y = NS::X;", {First, Second});
+  EXPECT_TRUE(First->sawLookupInto("NS"));
+  EXPECT_FALSE(First->Unbalanced);
+  EXPECT_TRUE(First->Active.empty());
+  EXPECT_EQ(First->Events, Second->Events);
 }
 
 } // anonymous namespace

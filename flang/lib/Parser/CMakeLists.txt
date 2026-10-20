@@ -12,6 +12,7 @@ add_flang_library(FortranParser
   message.cpp
   openacc-parsers.cpp
   openmp-parsers.cpp
+  openmp-utils.cpp
   parse-tree.cpp
   parsing.cpp
   preprocessor.cpp
@@ -24,12 +25,21 @@ add_flang_library(FortranParser
   unparse.cpp
   user-state.cpp
 
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/provenance.h"]]
+  [["flang/Parser/message.h"]]
+  [["flang/Parser/parse-tree-visitor.h"]]
+
   LINK_LIBS
-  FortranCommon
+  FortranSupport
 
   LINK_COMPONENTS
   Support
   FrontendOpenACC
+  FrontendOpenMP
 
   DEPENDS
   omp_gen

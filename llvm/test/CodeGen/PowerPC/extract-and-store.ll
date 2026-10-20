@@ -574,13 +574,13 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, ptr nocapture %
 ; CHECK-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-NEXT:    li r3, 16
+; CHECK-NEXT:    stfiwx f1, r5, r3
+; CHECK-NEXT:    li r3, 20
+; CHECK-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-NEXT:    xxswapd vs35, vs0
 ; CHECK-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, vs35
 ; CHECK-NEXT:    stxvd2x vs0, 0, r5
-; CHECK-NEXT:    stfiwx f1, r5, r3
-; CHECK-NEXT:    li r3, 20
-; CHECK-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_stores_exceed_vec_size:

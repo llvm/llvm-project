@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -40,7 +40,7 @@ struct TestMathAlgebraicSimplificationPass
 void TestMathAlgebraicSimplificationPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

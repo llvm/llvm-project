@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -enable-pipeliner=false < %s | FileCheck %s
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner=false < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 ; CHECK-NOT: and(
 ; CHECK-NOT: or(

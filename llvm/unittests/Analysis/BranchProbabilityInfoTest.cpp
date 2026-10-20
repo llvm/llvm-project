@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -27,13 +27,14 @@ namespace {
 struct BranchProbabilityInfoTest : public testing::Test {
   std::unique_ptr<BranchProbabilityInfo> BPI;
   std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<CycleInfo> CI;
   LLVMContext C;
 
   BranchProbabilityInfo &buildBPI(Function &F) {
     DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
-    BPI.reset(new BranchProbabilityInfo(F, *LI));
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI));
     return *BPI;
   }
 
@@ -50,7 +51,7 @@ TEST_F(BranchProbabilityInfoTest, StressUnreachableHeuristic) {
 
   // define void @f() {
   // entry:
-  //   switch i32 undef, label %exit, [
+  //   switch i32 poison, label %exit, [
   //      i32 0, label %preexit
   //      ...                   ;;< Add lots of cases to stress the heuristic.
   //   ]
@@ -69,8 +70,8 @@ TEST_F(BranchProbabilityInfoTest, StressUnreachableHeuristic) {
 
   unsigned NumCases = 4096;
   auto *I32 = IntegerType::get(C, 32);
-  auto *Undef = UndefValue::get(I32);
-  auto *Switch = SwitchInst::Create(Undef, ExitBB, NumCases, EntryBB);
+  auto *Poison = PoisonValue::get(I32);
+  auto *Switch = SwitchInst::Create(Poison, ExitBB, NumCases, EntryBB);
   for (unsigned I = 0; I < NumCases; ++I)
     Switch->addCase(ConstantInt::get(I32, I), PreExitBB);
 
@@ -107,7 +108,7 @@ TEST_F(BranchProbabilityInfoTest, SwapProbabilities) {
   Function *F = M->getFunction("f");
   auto *LoopHeaderBB = F->front().getSingleSuccessor();
   ASSERT_TRUE(LoopHeaderBB != nullptr);
-  BranchInst *Branch = dyn_cast<BranchInst>(LoopHeaderBB->getTerminator());
+  CondBrInst *Branch = dyn_cast<CondBrInst>(LoopHeaderBB->getTerminator());
   ASSERT_TRUE(Branch != nullptr);
   // Save the probabilities before successors swapping
   BranchProbabilityInfo *BPI = &buildBPI(*F);

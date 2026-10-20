@@ -21,11 +21,15 @@
 #include "llvm/MCA/HardwareUnits/Scheduler.h"
 #include "llvm/MCA/Stages/Stage.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "llvm-mca"
 
 namespace llvm {
 namespace mca {
 
-class InstructionTables final : public Stage {
+class LLVM_ABI InstructionTables final : public Stage {
   const MCSchedModel &SM;
   SmallVector<ResourceUse, 4> UsedResources;
   SmallVector<uint64_t, 8> Masks;
@@ -34,6 +38,7 @@ public:
   InstructionTables(const MCSchedModel &Model)
       : SM(Model), Masks(Model.getNumProcResourceKinds()) {
     computeProcResourceMasks(Model, Masks);
+    LLVM_DEBUG(dumpProcResourceMasks(Model, Masks));
   }
 
   bool hasWorkToComplete() const override { return false; }

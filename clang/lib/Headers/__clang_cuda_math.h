@@ -12,6 +12,10 @@
 #error "This file is for CUDA compilation only."
 #endif
 
+// The __CLANG_GPU_DISABLE_MATH_WRAPPERS macro provides a way to let standard
+// libcalls reach the link step instead of being eagerly replaced.
+#ifndef __CLANG_GPU_DISABLE_MATH_WRAPPERS
+
 #ifndef __OPENMP_NVPTX__
 #if CUDA_VERSION < 9000
 #error This file is intended to be used with CUDA-9+ only.
@@ -311,7 +315,7 @@ __DEVICE__ float sinhf(float __a) { return __nv_sinhf(__a); }
 __DEVICE__ double sinpi(double __a) { return __nv_sinpi(__a); }
 __DEVICE__ float sinpif(float __a) { return __nv_sinpif(__a); }
 __DEVICE__ double sqrt(double __a) { return __nv_sqrt(__a); }
-__DEVICE__ float sqrtf(float __a) { return __nv_sqrtf(__a); }
+__DEVICE__ float sqrtf(float __a) { return __builtin_sqrtf(__a); }
 __DEVICE__ double tan(double __a) { return __nv_tan(__a); }
 __DEVICE__ float tanf(float __a) { return __nv_tanf(__a); }
 __DEVICE__ double tanh(double __a) { return __nv_tanh(__a); }
@@ -345,4 +349,5 @@ __DEVICE__ float ynf(int __a, float __b) { return __nv_ynf(__a, __b); }
 #pragma pop_macro("__DEVICE_VOID__")
 #pragma pop_macro("__FAST_OR_SLOW")
 
+#endif // __CLANG_GPU_DISABLE_MATH_WRAPPERS
 #endif // __CLANG_CUDA_MATH_H__

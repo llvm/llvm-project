@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -12,7 +13,7 @@ namespace std {
     const T *p; size_t n;
     initializer_list(const T *p, size_t n);
   };
-}
+} // namespace std
 
 namespace cwg1004 { // cwg1004: 5
   template<typename> struct A {};
@@ -40,10 +41,11 @@ namespace cwg1004 { // cwg1004: 5
   // This example (from the standard) is actually ill-formed, because
   // name lookup of "T::template A" names the constructor.
   template<class T, template<class> class U = T::template A> struct Third { };
-  // expected-error@-1 {{is a constructor name}}
-  //   expected-note@#cwg1004-t {{in instantiation of default argument}}
+  // expected-error@-1 {{ISO C++ specifies that qualified reference to 'A' is a constructor name rather than a template name in this context, despite preceding 'typename' keyword}}
+  //   cxx98-note@#cwg1004-t {{in instantiation of default argument for 'Third<A<int> >' required here}}
+  //   since-cxx11-note@#cwg1004-t {{in instantiation of default argument for 'Third<A<int>>' required here}}
   Third<A<int> > t; // #cwg1004-t
-}
+} // namespace cwg1004
 
 namespace cwg1042 { // cwg1042: 3.5
 #if __cplusplus >= 201402L
@@ -58,7 +60,7 @@ namespace cwg1042 { // cwg1042: 3.5
   // list in this mode.
   using foo [[]] = int;
 #endif
-}
+} // namespace cwg1042
 
 namespace cwg1048 { // cwg1048: 3.6
   struct A {};
@@ -76,7 +78,7 @@ namespace cwg1048 { // cwg1048: 3.6
     }
   } (0);
 #endif
-}
+} // namespace cwg1048
 
 namespace cwg1054 { // cwg1054: no
   // FIXME: Test is incomplete.
@@ -89,7 +91,7 @@ namespace cwg1054 { // cwg1054: no
     a;
     // expected-warning@-1 {{expression result unused; assign into a variable to force a volatile load}}
   }
-}
+} // namespace cwg1054
 
 namespace cwg1070 { // cwg1070: 3.5
 #if __cplusplus >= 201103L
@@ -108,4 +110,36 @@ namespace cwg1070 { // cwg1070: 3.5
   };
   C c = {};
 #endif
-}
+} // namespace cwg1070
+
+namespace cwg1094 { // cwg1094: 24
+#if __cplusplus >= 201103L
+enum class E : bool { Zero, One };
+constexpr E from_double(double d) { return static_cast<E>(d); }
+
+static_assert(static_cast<E>(0.0) == E::Zero, "");
+static_assert(static_cast<E>(-0.0) == E::Zero, "");
+static_assert(static_cast<E>(0.5) == E::One, "");
+static_assert(static_cast<E>(-0.5) == E::One, "");
+static_assert(static_cast<E>(2.5) == E::One, "");
+static_assert(static_cast<E>(__builtin_nan("")) == E::One, "");
+
+static_assert(from_double(0.0) == E::Zero, "");
+static_assert(from_double(-0.0) == E::Zero, "");
+static_assert(from_double(0.5) == E::One, "");
+static_assert(from_double(-0.5) == E::One, "");
+static_assert(from_double(2.5) == E::One, "");
+static_assert(from_double(__builtin_nan("")) == E::One, "");
+
+enum class G : unsigned char { Zero, One, Two };
+
+static_assert(static_cast<G>(0.0) == G::Zero, "");
+static_assert(static_cast<G>(-0.0) == G::Zero, "");
+static_assert(static_cast<G>(0.5) == G::Zero, "");
+static_assert(static_cast<G>(-0.5) == G::Zero, "");
+static_assert(static_cast<G>(2.5) == G::Two, "");
+static_assert(static_cast<G>(__builtin_nan("")) == G::Zero, "");
+// since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+//   since-cxx11-note@-2 {{value NaN is outside the range of representable values of type 'G'}}
+#endif
+} // namespace cwg1094

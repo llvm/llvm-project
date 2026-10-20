@@ -11,26 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
-#include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -43,15 +40,15 @@ using namespace llvm;
 // cross-basic-block intervals well.
 // See: http://lists.llvm.org/pipermail/llvm-dev/2016-February/095669.html
 //      http://reviews.llvm.org/D17087
-static cl::opt<bool> DisableVSXFMAMutate(
-    "disable-ppc-vsx-fma-mutation",
-    cl::desc("Disable VSX FMA instruction mutation"), cl::init(true),
-    cl::Hidden);
+static cl::opt<bool>
+    EnableVSXFMAMutate("ppc-vsx-fma-mutation",
+                       cl::desc("Enable VSX FMA instruction mutation"),
+                       cl::init(false), cl::Hidden);
 
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
 namespace llvm { namespace PPC {
-  int getAltVSXFMAOpcode(uint16_t Opcode);
+int32_t getAltVSXFMAOpcode(uint32_t Opcode);
 } }
 
 namespace {
@@ -60,9 +57,7 @@ namespace {
   // copies into subregister copies with other restrictions.
   struct PPCVSXFMAMutate : public MachineFunctionPass {
     static char ID;
-    PPCVSXFMAMutate() : MachineFunctionPass(ID) {
-      initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
-    }
+    PPCVSXFMAMutate() : MachineFunctionPass(ID) {}
 
     LiveIntervals *LIS;
     const PPCInstrInfo *TII;
@@ -293,22 +288,13 @@ protected:
           UseMO.substVirtReg(KilledProdReg, KilledProdSubReg, *TRI);
         }
 
-        // Extend the live intervals of the killed product operand to hold the
-        // fma result.
+        // Recalculate the live intervals of the killed product operand.
+        LIS->removeInterval(KilledProdReg);
+        LiveInterval &NewFMAInt =
+            LIS->createAndComputeVirtRegInterval(KilledProdReg);
 
-        LiveInterval &NewFMAInt = LIS->getInterval(KilledProdReg);
-        for (auto &AI : FMAInt) {
-          // Don't add the segment that corresponds to the original copy.
-          if (AI.valno == AddendValNo)
-            continue;
-
-          VNInfo *NewFMAValNo =
-              NewFMAInt.getNextValue(AI.start, LIS->getVNInfoAllocator());
-
-          NewFMAInt.addSegment(
-              LiveInterval::Segment(AI.start, AI.end, NewFMAValNo));
-        }
         LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
+        (void)NewFMAInt;
 
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
@@ -347,13 +333,13 @@ public:
       if (!STI.hasVSX())
         return false;
 
-      LIS = &getAnalysis<LiveIntervals>();
+      LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
       TII = STI.getInstrInfo();
 
       bool Changed = false;
 
-      if (DisableVSXFMAMutate)
+      if (!EnableVSXFMAMutate)
         return Changed;
 
       for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
@@ -364,12 +350,12 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addPreserved<LiveIntervals>();
-      AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -377,9 +363,8 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 

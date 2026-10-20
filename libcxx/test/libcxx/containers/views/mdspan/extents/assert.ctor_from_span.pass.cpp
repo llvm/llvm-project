@@ -4,10 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // Test construction from span:
 //
@@ -28,8 +26,9 @@
 //       for every rank index r.
 //
 
-#include <mdspan>
 #include <cassert>
+#include <mdspan>
+#include <span>
 
 #include "check_assertion.h"
 
@@ -49,13 +48,13 @@ int main(int, char**) {
   // value out of range
   {
     std::array args{1000, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<signed char, D, 5> e1(std::span{args}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // negative value
   {
     std::array args{-1, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<signed char, D, 5> e1(std::span{args}); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   return 0;

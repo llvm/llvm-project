@@ -1,10 +1,18 @@
+//===-- unittests/Evaluate/intrinsics.cpp ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "flang/Evaluate/intrinsics.h"
-#include "testing.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <initializer_list>
 #include <map>

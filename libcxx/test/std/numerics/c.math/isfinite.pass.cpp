@@ -62,9 +62,21 @@ struct TestInt {
   }
 };
 
+template <typename T>
+struct ConvertibleTo {
+  operator T() const { return T(); }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
+
+  // Make sure we can call `std::isfinite` with convertible types
+  {
+    assert(std::isfinite(ConvertibleTo<float>()));
+    assert(std::isfinite(ConvertibleTo<double>()));
+    assert(std::isfinite(ConvertibleTo<long double>()));
+  }
 
   return 0;
 }

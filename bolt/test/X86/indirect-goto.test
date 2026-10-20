@@ -1,6 +1,19 @@
 ## Check llvm-bolt processes binaries compiled from sources that use indirect goto.
-RUN: %clang %cflags -no-pie %S/Inputs/indirect_goto.c -Wl,-q -o %t
+RUN: %clang %cflags -no-pie %S/../Inputs/indirect_goto.c -Wl,-q -o %t
 RUN: llvm-bolt %t -o %t.null --relocs=1 --print-cfg --print-only=main \
+RUN:   --strict \
+RUN:   2>&1 | FileCheck %s
+
+## Check indirect goto works in pie
+RUN: %clang %cflags -fPIE -pie %S/../Inputs/indirect_goto.c -o %t.pie -Wl,-q
+RUN: llvm-bolt %t.pie -o %t.pie.null --relocs=1 --print-cfg --print-only=main \
+RUN:   --strict \
+RUN:   2>&1 | FileCheck %s
+
+## Check indirect goto works in binaries linked with relr
+RUN: %clang %cflags -fPIE -pie %S/../Inputs/indirect_goto.c -o %t.relr \
+RUN:   -Wl,-z,pack-relative-relocs -Wl,-q
+RUN: llvm-bolt %t.relr -o %t.relr.null --relocs=1 --print-cfg --print-only=main \
 RUN:   --strict \
 RUN:   2>&1 | FileCheck %s
 

@@ -3,6 +3,9 @@
 // RUN: %clang_asan -O0 -fsanitize-recover=address %s -o %t
 // RUN: %env_asan_opts=halt_on_error=false not %run %t 2>&1 | FileCheck %s
 
+// Issue #109771
+// XFAIL: target={{sparc.*-.*-linux.*}}
+
 #include <assert.h>
 #include <unistd.h>
 #include <sys/mman.h>

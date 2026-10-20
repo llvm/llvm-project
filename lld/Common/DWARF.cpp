@@ -93,7 +93,7 @@ std::optional<DILineInfo> DWARFCache::getDILineInfo(uint64_t offset,
   DILineInfo info;
   for (const llvm::DWARFDebugLine::LineTable *lt : lineTables) {
     if (lt->getFileLineInfoForAddress(
-            {offset, sectionIndex}, nullptr,
+            {offset, sectionIndex}, false, nullptr,
             DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, info))
       return info;
   }

@@ -44,18 +44,12 @@ class BufferizeToAllocationOp(BufferizeToAllocationOp):
         loc=None,
         ip=None,
     ):
-        # No other types are allowed, so hard-code those here.
-        allocated_buffer_type = transform.AnyValueType.get()
-        new_ops_type = transform.AnyOpType.get()
-
         if isinstance(memory_space, int):
             memory_space = str(memory_space)
         if isinstance(memory_space, str):
             memory_space = Attribute.parse(memory_space)
 
         super().__init__(
-            allocated_buffer_type,
-            new_ops_type,
             target,
             memory_space=memory_space,
             memcpy_op=memcpy_op,
@@ -135,6 +129,96 @@ class FuseIntoContainingOp(FuseIntoContainingOp):
             new_containing_op_type,
             producer_op,
             containing_op,
+            loc=loc,
+            ip=ip,
+        )
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class FuseOp(FuseOp):
+    """Specialization for FuseOp class."""
+
+    @overload
+    def __init__(
+        self,
+        loop_types: Union[Type, Sequence[Type]],
+        target: Union[Operation, Value, OpView],
+        *,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
+        apply_cleanup: bool = False,
+        use_forall: bool = False,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        target: Union[Operation, Value, OpView],
+        *,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
+        apply_cleanup: bool = False,
+        use_forall: bool = False,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView, Value],
+        target_or_none: Optional[Union[Operation, Value, OpView]] = None,
+        *,
+        tile_sizes: Optional[MixedValues] = None,
+        tile_interchange: Optional[MixedValues] = None,
+        apply_cleanup: bool = False,
+        use_forall: bool = False,
+        loc=None,
+        ip=None,
+    ):
+        tile_sizes = tile_sizes if tile_sizes else []
+        tile_interchange = tile_interchange if tile_interchange else []
+        (
+            dynamic_tile_sizes,
+            packed_tile_sizes,
+            static_tile_sizes,
+        ) = _dispatch_mixed_values(tile_sizes)
+        (
+            dynamic_tile_interchange,
+            static_tile_interchange,
+            _,
+        ) = _dispatch_dynamic_index_list(tile_interchange)
+        num_loops = (
+            1
+            if use_forall or packed_tile_sizes is not None
+            else sum(1 for v in static_tile_sizes if v != 0)
+        )
+
+        if isinstance(loop_types_or_target, (Operation, Value, OpView)):
+            loop_types = [transform.AnyOpType.get()] * num_loops
+            target = loop_types_or_target
+            assert target_or_none is None, "Cannot construct FuseOp with two targets."
+        else:
+            loop_types = (
+                ([loop_types_or_target] * num_loops)
+                if isinstance(loop_types_or_target, Type)
+                else loop_types_or_target
+            )
+            target = target_or_none
+        super().__init__(
+            target.type,
+            loop_types,
+            target,
+            tile_sizes=dynamic_tile_sizes,
+            tile_interchange=dynamic_tile_interchange,
+            packed_tile_sizes=packed_tile_sizes,
+            static_tile_sizes=static_tile_sizes,
+            static_tile_interchange=static_tile_interchange,
+            apply_cleanup=apply_cleanup,
+            use_forall=use_forall,
             loc=loc,
             ip=ip,
         )
@@ -377,7 +461,7 @@ class PadOp(PadOp):
         pad_to_multiple_of: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
-        pack_paddings: OptionalIntList = None,
+        nofold_flags: OptionalIntList = None,
         transpose_paddings: Optional[
             Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
         ] = None,
@@ -407,7 +491,7 @@ class PadOp(PadOp):
             padding_values=padding_values,
             padding_dimensions=padding_dimensions,
             static_pad_to_multiple_of=static_pad_to_multiple_of,
-            pack_paddings=pack_paddings,
+            nofold_flags=nofold_flags,
             transpose_paddings=transpose_paddings,
             copy_back_op=copy_back_op,
             loc=loc,
@@ -446,7 +530,6 @@ class SplitOp(SplitOp):
 
         super().__init__(
             target.type,
-            target.type,
             target,
             dimension=dimension,
             static_chunk_sizes=static_chunk_sizes,
@@ -466,8 +549,8 @@ class TileUsingForOp(TileUsingForOp):
         loop_types: Union[Type, List[Type]],
         target: Union[Operation, Value],
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -478,8 +561,8 @@ class TileUsingForOp(TileUsingForOp):
         self,
         target: Union[Operation, Value, OpView],
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -490,18 +573,65 @@ class TileUsingForOp(TileUsingForOp):
         loop_types_or_target: Union[Type, List[Type], Operation, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
-        interchange: OptionalIntList = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
-        (
-            dynamic_sizes,
-            static_sizes,
-            scalable_sizes,
-        ) = _dispatch_dynamic_index_list(sizes)
-
-        num_loops = sum(v if v == 0 else 1 for v in static_sizes)
+        packed_tile_sizes = None
+        if isinstance(sizes, (Operation, Value, OpView)):
+            dynamic_sizes, packed_tile_sizes, static_sizes = _dispatch_mixed_values(
+                sizes
+            )
+            scalable_sizes = []
+        else:
+            has_scalable_sizes = any(
+                isinstance(v, Sequence) and not isinstance(v, (str, bytes, ArrayAttr))
+                for v in (sizes or [])
+            )
+            if has_scalable_sizes:
+                (
+                    dynamic_sizes,
+                    static_sizes,
+                    scalable_sizes,
+                ) = _dispatch_dynamic_index_list(sizes)
+            else:
+                (
+                    dynamic_sizes,
+                    packed_tile_sizes,
+                    static_sizes,
+                ) = _dispatch_mixed_values(sizes)
+                if packed_tile_sizes is None:
+                    _, _, scalable_sizes = _dispatch_dynamic_index_list(sizes)
+                else:
+                    scalable_sizes = []
+        num_loops = (
+            1
+            if packed_tile_sizes is not None
+            else sum(v if v == 0 else 1 for v in static_sizes)
+        )
+        dynamic_interchange = []
+        packed_interchange = None
+        static_interchange = []
+        if isinstance(interchange, (Operation, Value, OpView)):
+            (
+                dynamic_interchange,
+                packed_interchange,
+                static_interchange,
+            ) = _dispatch_mixed_values(interchange)
+        elif (
+            isinstance(interchange, Sequence)
+            and not isinstance(interchange, (str, bytes))
+        ) or isinstance(interchange, (ArrayAttr, DenseI64ArrayAttr)):
+            (
+                dynamic_interchange,
+                static_interchange,
+                _,
+            ) = _dispatch_dynamic_index_list(interchange)
+        elif interchange is not None:
+            raise ValueError(
+                f"expected {interchange=} to be an MLIR object or sequence of mixed values"
+            )
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
@@ -522,8 +652,11 @@ class TileUsingForOp(TileUsingForOp):
             loop_types,
             target,
             dynamic_sizes=dynamic_sizes,
+            packed_tile_sizes=packed_tile_sizes,
             static_sizes=static_sizes,
-            interchange=interchange,
+            interchange=dynamic_interchange,
+            packed_interchange=packed_interchange,
+            static_interchange=static_interchange,
             scalable_sizes=scalable_sizes,
             loc=loc,
             ip=ip,
@@ -635,6 +768,8 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
         disable_transfer_permutation_map_lowering_patterns: bool = False,
         vectorize_nd_extract: bool = False,
         vectorize_padding: bool = False,
+        flatten_1d_depthwise_conv: bool = False,
+        fold_type_extensions_into_contract: bool = False,
         loc=None,
         ip=None,
     ):
@@ -644,8 +779,10 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
             target,
             disable_multi_reduction_to_contract_patterns=disable_multi_reduction_to_contract_patterns,
             disable_transfer_permutation_map_lowering_patterns=disable_transfer_permutation_map_lowering_patterns,
+            flatten_1d_depthwise_conv=flatten_1d_depthwise_conv,
             vectorize_nd_extract=vectorize_nd_extract,
             vectorize_padding=vectorize_padding,
+            fold_type_extensions_into_contract=fold_type_extensions_into_contract,
             loc=loc,
             ip=ip,
         )

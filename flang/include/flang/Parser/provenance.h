@@ -156,6 +156,11 @@ public:
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
 
+  // Returns the paths of every source file opened so far: the main file and any
+  // files pulled in by INCLUDE lines or #include directives. Paths are returned
+  // without duplicates, in the order they were first opened.
+  std::vector<std::string> GetIncludedFilePaths() const;
+
   ProvenanceRange AddIncludedFile(
       const SourceFile &, ProvenanceRange, bool isModule = false);
   ProvenanceRange AddMacroCall(
@@ -172,15 +177,17 @@ public:
   }
   void setShowColors(bool showColors) { showColors_ = showColors; }
   bool getShowColors() const { return showColors_; }
+  std::optional<ProvenanceRange> GetInclusionInfo(
+      const std::optional<ProvenanceRange> &) const;
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
       const std::string &message, const std::string &prefix,
       llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
-      Provenance, std::size_t *offset = nullptr) const;
+      Provenance, std::size_t *offset = nullptr, bool topLevel = false) const;
   const char *GetSource(ProvenanceRange) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
-  std::string GetPath(Provenance) const; // __FILE__
+  std::string GetPath(Provenance, bool topLevel = false) const; // __FILE__
   int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;

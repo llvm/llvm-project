@@ -149,7 +149,7 @@ define <2 x i1> @icmp_sgt_x_negy_fail_partial(<2 x i8> %x, <2 x i8> %yy) {
 
 define <2 x i1> @icmp_sle_x_posy(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-LABEL: @icmp_sle_x_posy(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = and <2 x i8> %yy, <i8 127, i8 127>
@@ -187,7 +187,7 @@ define i1 @icmp_sgt_x_posy(i8 %x, i8 %y) {
 
 define <2 x i1> @icmp_sgt_negx_y(<2 x i8> %xx, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_sgt_negx_y(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x = or <2 x i8> %xx, <i8 128, i8 128>
@@ -228,7 +228,7 @@ define i1 @icmp_sle_negx_y_fail_maybe_zero(i8 %x, i8 %y) {
 define i1 @icmp_eq_x_invertable_y_todo(i8 %x, i1 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y_todo(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 -25
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -253,9 +253,9 @@ define i1 @icmp_eq_x_invertable_y(i8 %x, i8 %y) {
 define i1 @icmp_eq_x_invertable_y_fail_multiuse(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y_fail_multiuse(
 ; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[YY]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[AND]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = xor i8 %y, -1
@@ -268,7 +268,7 @@ define i1 @icmp_eq_x_invertable_y_fail_multiuse(i8 %x, i8 %y) {
 define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 -25
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

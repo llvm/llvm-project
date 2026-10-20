@@ -1,5 +1,5 @@
-# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=0 | FileCheck --check-prefix CHECK64 %s
-# RUN: llc -march=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=1 | FileCheck --check-prefix CHECKNO64 %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=0 | FileCheck --check-prefix CHECK64 %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-copy-combine -o - %s -disable-const64=1 | FileCheck --check-prefix CHECKNO64 %s
 
 # CHECK64: CONST64
 # CHECKNO64-NOT: CONST64
@@ -25,5 +25,5 @@ body: |
     $r1 = A2_tfrsi 32768
     $r2 = A2_tfrsi 1
     J2_call @f1, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit-def $r29
-    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey, implicit-def dead $pc
+    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey
 ...

@@ -204,7 +204,7 @@ define i32 @select_icmp_and_eq_commuted(i32 %a, i32 %b) {
 ; https://alive2.llvm.org/ce/z/HfYXvx
 define <2 x i16> @select_icmp_and_eq_vec(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: @select_icmp_and_eq_vec(
-; CHECK-NEXT:    ret <2 x i16> <i16 -1, i16 -1>
+; CHECK-NEXT:    ret <2 x i16> splat (i16 -1)
 ;
   %and = and <2 x i16> %a, %b
   %tobool = icmp eq <2 x i16> %and, <i16 -1, i16 -1>

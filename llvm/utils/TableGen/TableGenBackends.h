@@ -15,8 +15,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 #define LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 
-#include <string>
-
 // A TableGen backend is a function that looks like
 //
 //    EmitFoo(RecordKeeper &RK, raw_ostream &OS /*, anything else you need */ )
@@ -61,11 +59,10 @@ namespace llvm {
 class raw_ostream;
 class RecordKeeper;
 
-void EmitMapTable(RecordKeeper &RK, raw_ostream &OS);
+void EmitMapTable(const RecordKeeper &RK, raw_ostream &OS);
 
 // Defined in DecoderEmitter.cpp
-void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                 const std::string &PredicateNamespace);
+void EmitDecoder(const RecordKeeper &RK, raw_ostream &OS);
 
 } // namespace llvm
 

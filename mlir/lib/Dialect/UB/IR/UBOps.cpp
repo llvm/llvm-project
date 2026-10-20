@@ -52,7 +52,7 @@ void UBDialect::initialize() {
 Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                           Type type, Location loc) {
   if (auto attr = dyn_cast<PoisonAttr>(value))
-    return builder.create<PoisonOp>(loc, type, attr);
+    return PoisonOp::create(builder, loc, type, attr);
 
   return nullptr;
 }

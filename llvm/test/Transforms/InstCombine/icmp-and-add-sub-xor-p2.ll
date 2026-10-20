@@ -6,10 +6,10 @@ declare void @use.v2i8(<2 x i8>)
 define i1 @src_add_eq_p2(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_add_eq_p2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[YY:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY]], [[NY]]
 ; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -25,8 +25,8 @@ define i1 @src_add_eq_p2(i8 %x, i8 %yy) {
 define i1 @src_add_eq_p2_fail_multiuse(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_add_eq_p2_fail_multiuse(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[YY:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
-; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY]], [[NY]]
+; CHECK-NEXT:    [[X1:%.*]] = add i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
 ; CHECK-NEXT:    [[V:%.*]] = and i8 [[X1]], [[Y]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
@@ -46,10 +46,10 @@ define i1 @src_add_eq_p2_fail_multiuse(i8 %x, i8 %yy) {
 define i1 @src_xor_ne_zero(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_xor_ne_zero(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[YY:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY]], [[NY]]
+; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -65,9 +65,9 @@ define i1 @src_xor_ne_zero(i8 %x, i8 %yy) {
 define i1 @src_xor_ne_zero_fail_different_p2(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @src_xor_ne_zero_fail_different_p2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[YY:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[NY]], [[YY]]
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY]], [[NY]]
 ; CHECK-NEXT:    [[Y2:%.*]] = shl i8 [[Y]], 1
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X1]])
 ; CHECK-NEXT:    [[V:%.*]] = and i8 [[X1]], [[Y2]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[V]], 0
@@ -86,10 +86,10 @@ define i1 @src_xor_ne_zero_fail_different_p2(i8 %x, i8 %yy) {
 define <2 x i1> @src_sub_ne_p2(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-LABEL: @src_sub_ne_p2(
 ; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[YY:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[NY]], [[YY]]
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[YY]], [[NY]]
 ; CHECK-NEXT:    [[X1:%.*]] = sub <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -107,7 +107,7 @@ define <2 x i1> @src_sub_eq_zero(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-NEXT:    [[Y:%.*]] = shl <2 x i8> <i8 1, i8 2>, [[YY:%.*]]
 ; CHECK-NEXT:    [[X1:%.*]] = sub <2 x i8> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[X1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

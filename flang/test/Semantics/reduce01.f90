@@ -71,6 +71,8 @@ module m
     type(pdt(max(x%len, y%len))) :: res
     res%ch = x%ch // y%ch
   end function
+  subroutine bad_reduce
+  end subroutine
 
   subroutine errors
     real :: a(10,10), b, c(10)
@@ -115,6 +117,8 @@ module m
     !ERROR: MASK= has no .TRUE. element, so IDENTITY= must be present
     b = reduce(a, f, reshape([(j > 100, j=1, 100)], shape(a)))
     b = reduce(a, f, reshape([(j == 50, j=1, 100)], shape(a))) ! ok
+    !ERROR: OPERATION= argument of REDUCE() must be a pure function of two data arguments
+    b = reduce(a, bad_reduce)
   end subroutine
   subroutine not_errors
     type(pdt(10)) :: a(10), b

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -tail-dup-size=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -tail-dup-size=1 < %s | FileCheck %s
 
 target triple = "hexagon-unknown--elf"
 

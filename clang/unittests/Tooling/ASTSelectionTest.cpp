@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestVisitor.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
+
+#include "TestVisitor.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/Basic/SourceManager.h"
 #include <optional>
 
 using namespace clang;
@@ -26,7 +28,7 @@ struct FileLocation {
 
 using FileRange = std::pair<FileLocation, FileLocation>;
 
-class SelectionFinderVisitor : public TestVisitor<SelectionFinderVisitor> {
+class SelectionFinderVisitor : public TestVisitor {
   FileLocation Location;
   std::optional<FileRange> SelectionRange;
   llvm::function_ref<void(SourceRange SelectionRange,
@@ -42,7 +44,7 @@ public:
       : Location(Location), SelectionRange(SelectionRange), Consumer(Consumer) {
   }
 
-  bool VisitTranslationUnitDecl(const TranslationUnitDecl *TU) {
+  bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) override {
     const ASTContext &Context = TU->getASTContext();
     const SourceManager &SM = Context.getSourceManager();
 
@@ -171,7 +173,7 @@ TEST(ASTSelectionFinder, CursorAtStartOfFunction) {
         std::string DumpValue;
         llvm::raw_string_ostream OS(DumpValue);
         Node->Children[0].dump(OS);
-        ASSERT_EQ(OS.str(), "FunctionDecl \"f\" contains-selection\n");
+        ASSERT_EQ(DumpValue, "FunctionDecl \"f\" contains-selection\n");
       });
 }
 
@@ -384,7 +386,7 @@ TEST(ASTSelectionFinder, SelectionInFunctionInObjCImplementation) {
 @end
 @implementation I
 
-int notSelected() { }
+int notSelected() { return 0; }
 
 int selected(int x) {
   return x;

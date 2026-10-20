@@ -67,7 +67,7 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
 
 define <2 x i32> @equal_arms_vec_poison(<2 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_poison(
-; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 42)
 ;
   %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 poison>, <2 x i32> <i32 poison, i32 42>
   ret <2 x i32> %V
@@ -319,7 +319,7 @@ define i32 @test11(i32 %X) {
 
 define <2 x i8> @test11vec(<2 x i8> %X) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 127)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %cmp = icmp sgt <2 x i8> %X, <i8 -1, i8 -1>
@@ -712,8 +712,8 @@ define i1 @and_cmps(i32 %x) {
 
 define <2 x i1> @and_cmps_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @and_cmps_vector(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 92, i32 92>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 92)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], splat (i32 11)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -1087,13 +1087,10 @@ define i32 @select_ctpop_zero(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME: This is safe to fold.
 define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_ctpop_zero_vec(
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[T0]], <2 x i32> zeroinitializer, <2 x i32> [[T1]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
   %t0 = icmp eq <2 x i32> %x, zeroinitializer
   %t1 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
@@ -1751,4 +1748,26 @@ define <4 x i32> @select_vector_cmp_with_bitcasts(<2 x i64> %x, <4 x i32> %y) {
   %cmp = icmp eq <4 x i32> %y, %x.bc
   %sel = select <4 x i1> %cmp, <4 x i32> %sub.bc, <4 x i32> zeroinitializer
   ret <4 x i32> %sel
+}
+
+define i8 @bittest_trunc_or(i8 %x) {
+; CHECK-LABEL: @bittest_trunc_or(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %trunc = trunc i8 %x to i1
+  %or = or i8 %x, 1
+  %cond = select i1 %trunc, i8 %or, i8 %x
+  ret i8 %cond
+}
+
+define i8 @bittest_trunc_not_or(i8 %x) {
+; CHECK-LABEL: @bittest_trunc_not_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  %or = or i8 %x, 1
+  %cond = select i1 %not, i8 %or, i8 %x
+  ret i8 %cond
 }

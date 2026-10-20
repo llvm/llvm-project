@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeTypeUDT.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
@@ -113,12 +112,16 @@ PDB_UdtType NativeTypeUDT::getUdtKind() const {
 
   switch (Tag->Kind) {
   case TypeRecordKind::Class:
+  case TypeRecordKind::Class2:
     return PDB_UdtType::Class;
   case TypeRecordKind::Union:
+  case TypeRecordKind::Union2:
     return PDB_UdtType::Union;
   case TypeRecordKind::Struct:
+  case TypeRecordKind::Struct2:
     return PDB_UdtType::Struct;
   case TypeRecordKind::Interface:
+  case TypeRecordKind::Interface2:
     return PDB_UdtType::Interface;
   default:
     llvm_unreachable("Unexpected udt kind");

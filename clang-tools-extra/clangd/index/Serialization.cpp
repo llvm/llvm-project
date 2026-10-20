@@ -328,6 +328,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeVar(Strings.index(Sym.Documentation), OS);
   writeVar(Strings.index(Sym.ReturnType), OS);
   writeVar(Strings.index(Sym.Type), OS);
+  writeVar(Sym.Tags, OS);
 
   auto WriteInclude = [&](const Symbol::IncludeHeaderWithReferences &Include) {
     writeVar(Strings.index(Include.IncludeHeader), OS);
@@ -357,6 +358,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
   Sym.Documentation = Data.consumeString(Strings);
   Sym.ReturnType = Data.consumeString(Strings);
   Sym.Type = Data.consumeString(Strings);
+  Sym.Tags = Data.consumeVar();
   if (!Data.consumeSize(Sym.IncludeHeaders))
     return Sym;
   for (auto &I : Sym.IncludeHeaders) {
@@ -457,7 +459,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 19;
+constexpr static uint32_t Version = 21;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
                                      SymbolOrigin Origin) {
@@ -704,7 +706,8 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
 }
 
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
-                                       SymbolOrigin Origin, bool UseDex) {
+                                       SymbolOrigin Origin, bool UseDex,
+                                       bool SupportContainedRefs) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
@@ -735,10 +738,11 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   size_t NumRelations = Relations.size();
 
   trace::Span Tracer("BuildIndex");
-  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs),
-                                        std::move(Relations))
-                      : MemIndex::build(std::move(Symbols), std::move(Refs),
-                                        std::move(Relations));
+  auto Index = UseDex
+                   ? dex::Dex::build(std::move(Symbols), std::move(Refs),
+                                     std::move(Relations), SupportContainedRefs)
+                   : MemIndex::build(std::move(Symbols), std::move(Refs),
+                                     std::move(Relations));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n"

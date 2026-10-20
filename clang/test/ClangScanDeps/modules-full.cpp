@@ -12,11 +12,15 @@
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
 // RUN:   -mode preprocess-dependency-directives > %t.result
-// RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir %s
+// RUN: cat %t.result | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck -DPREFIX=%/t.dir %s
 //
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
 // RUN:   -mode preprocess-dependency-directives > %t_clangcl.result
-// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir %s
+// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,executable,input-file \
+// RUN:   | FileCheck -DPREFIX=%/t.dir %s
 
 #include "header.h"
 
@@ -41,8 +45,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1_DINCLUDE:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -60,8 +64,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H1:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header1"
@@ -79,8 +83,8 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2_DINCLUDE]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header2"

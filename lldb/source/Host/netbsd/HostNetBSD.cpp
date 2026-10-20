@@ -35,18 +35,12 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/TargetParser/Host.h"
 
-extern "C" {
-extern char **environ;
-}
-
 using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
 class ProcessLaunchInfo;
 }
-
-Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                                  ProcessInstanceInfo &process_info) {
@@ -268,6 +262,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
+  return Status::FromErrorString("unimplemented");
 }

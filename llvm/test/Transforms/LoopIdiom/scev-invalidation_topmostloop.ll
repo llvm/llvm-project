@@ -2,9 +2,9 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK-LABEL: @f1()
+; CHECK-LABEL: @f1(i1 %arg)
 ; CHECK-NEXT: entry:
-define void @f1() {
+define void @f1(i1 %arg) {
 entry:
   br label %lbl1
 
@@ -15,10 +15,10 @@ for:                                              ; preds = %if.end, %lbl1
   br label %lor.end
 
 lor.end:                                          ; preds = %for
-  br i1 undef, label %for.end, label %if.end
+  br i1 %arg, label %for.end, label %if.end
 
 if.end:                                           ; preds = %lor.end
-  br i1 undef, label %lbl1, label %for
+  br i1 %arg, label %lbl1, label %for
 
 for.end:                                          ; preds = %lor.end
   ret void

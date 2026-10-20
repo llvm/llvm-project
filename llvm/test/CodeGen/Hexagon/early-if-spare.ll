@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; Check if the three stores in the loop were predicated.
 ; CHECK: if{{.*}}memw
 ; CHECK: if{{.*}}memw
@@ -53,6 +53,7 @@ declare i32 @bar(ptr) nounwind
 
 attributes #0 = { nounwind "target-cpu"="hexagonv5" }
 
-!0 = !{!"int", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"int", !1}

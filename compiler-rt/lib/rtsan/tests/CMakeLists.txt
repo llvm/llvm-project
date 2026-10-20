@@ -16,11 +16,12 @@ set(RTSAN_UNITTEST_CFLAGS
 
 set(RTSAN_INST_TEST_SOURCES
     rtsan_test_functional.cpp
-    rtsan_test_interceptors.cpp
+    rtsan_test_interceptors_posix.cpp
     rtsan_test_main.cpp)
 
 set(RTSAN_NOINST_TEST_SOURCES
     ../rtsan_preinit.cpp
+    rtsan_test_assertions.cpp
     rtsan_test_context.cpp
     rtsan_test_main.cpp)
 
@@ -28,7 +29,7 @@ set(RTSAN_UNITTEST_HEADERS
     rtsan_test_utilities.h)
 
 add_custom_target(RtsanUnitTests)
-set_target_properties(RtsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(RtsanUnitTests PROPERTIES FOLDER "compiler-rt Tests")
 
 set(RTSAN_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
@@ -36,6 +37,15 @@ set(RTSAN_UNITTEST_LINK_FLAGS
   ${SANITIZER_TEST_CXX_LIBRARIES}
   -no-pie)
 
+if (COMPILER_RT_USE_ATOMIC_LIBRARY)
+  list(APPEND RTSAN_UNITTEST_LINK_FLAGS ${COMPILER_RT_ATOMIC_LIBRARY})
+  if (NOT WIN32)
+    get_filename_component(atomic_dir ${COMPILER_RT_ATOMIC_LIBRARY} DIRECTORY)
+    list(APPEND RTSAN_UNITTEST_LINK_FLAGS "-Wl,-rpath,${atomic_dir}")
+  endif()
+else()
+  append_list_if(COMPILER_RT_HAS_LIBATOMIC -latomic RTSAN_UNITTEST_LINK_FLAGS)
+endif()
 append_list_if(COMPILER_RT_HAS_LIBDL -ldl RTSAN_UNITTEST_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_LIBRT -lrt RTSAN_UNITTEST_LINK_FLAGS)
 append_list_if(COMPILER_RT_HAS_LIBM -lm RTSAN_UNITTEST_LINK_FLAGS)
@@ -59,14 +69,25 @@ endif()
 foreach(arch ${RTSAN_TEST_ARCH})
   set(RtsanTestObjects)
 
-  # TODO: Re-enable once -fsanitize=realtime exists in clang driver
-  #generate_compiler_rt_tests(RtsanTestObjects
-  #  RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
-  #  COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
-  #  SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
-  #  DEPS rtsan
-  #  CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
-  #  LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+  generate_compiler_rt_tests(RtsanTestObjects
+    RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
+    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+    SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
+    DEPS rtsan
+    CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
+    LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+
+  check_symbol_exists(__GLIBC__ stdio.h RTSAN_USING_GLIBC)
+  if (RTSAN_USING_GLIBC)
+    set(RtsanTestObjects_FileOffset64)
+    generate_compiler_rt_tests(RtsanTestObjects_FileOffset64
+      RtsanUnitTests "Rtsan-${arch}-FileOffset64-Test" ${arch}
+      COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+      SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
+      DEPS rtsan
+      CFLAGS ${RTSAN_UNITTEST_CFLAGS} -D_FILE_OFFSET_BITS=64 -fsanitize=realtime
+      LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+  endif()
 
   set(RTSAN_TEST_RUNTIME RTRtsanTest.${arch})
   if(APPLE)
@@ -90,7 +111,7 @@ foreach(arch ${RTSAN_TEST_ARCH})
   add_library(${RTSAN_TEST_RUNTIME} STATIC ${RTSAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${RTSAN_TEST_RUNTIME} PROPERTIES
       ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      FOLDER "Compiler-RT Runtime tests")
+      FOLDER "compiler-rt Runtime tests")
 
   set(RtsanNoInstTestObjects)
   generate_compiler_rt_tests(RtsanNoInstTestObjects

@@ -14,15 +14,16 @@
 #include <__concepts/totally_ordered.h>
 #include <__config>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_generic_transparent_comparator.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -100,10 +101,22 @@ template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__equal_tag, ranges::equal_to, _Tp, _Up> = true;
 
 template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__totally_ordered_less_tag, ranges::less, _Tp, _Up> = true;
+
+template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__less_tag, ranges::less, _Tp, _Up> = true;
 
-#endif // _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Up>
+inline const bool __desugars_to_v<__greater_tag, ranges::greater, _Tp, _Up> = true;
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<ranges::less> = true;
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<ranges::greater> = true;
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H

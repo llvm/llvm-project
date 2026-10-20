@@ -9,7 +9,7 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux -split-dwarf-file=helper1.dwo %p/Inputs/dwarf5-split-dwarf4-monolithic-helper1.s -o helper1.o
 # RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper2.s -o helper2.o
 # RUN: %clang %cflags -dwarf-5 main.o helper0.o helper1.o helper2.o -o main.exe -Wl,-q
-# RUN: llvm-bolt --always-convert-to-ranges main.exe -o main.bolt --update-debug-sections
+# RUN: llvm-bolt --always-convert-to-ranges main.exe -o main.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line main.exe | FileCheck --check-prefix=PRECHECK-LINE %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr main.bolt >  boltout.txt

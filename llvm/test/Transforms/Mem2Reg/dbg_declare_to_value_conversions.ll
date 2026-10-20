@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes='mem2reg' -S | FileCheck %s
-; RUN: opt < %s -passes='mem2reg' -S --try-experimental-debuginfo-iterators | FileCheck %s
 target datalayout = "e-p:64:64"
 
 ; An intrinsic without any expressions should always be converted.
@@ -33,13 +32,15 @@ define i32 @foo2(ptr %arg) {
   store ptr %arg, ptr %arg.indirect_addr
   call void @llvm.dbg.declare(metadata ptr %arg.indirect_addr, metadata !25, metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2)), !dbg !40
   ; CHECK-LABEL: @foo2
-  ; CHECK-NEXT:     #dbg_value(ptr undef, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2),
+  ; CHECK-NEXT:     #dbg_value(ptr poison, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 2),
   %val = load i32, ptr %arg
   ret i32 %val
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
+!41 = !{null}
+!42 = !DISubroutineType(types: !41)
 !llvm.module.flags = !{!1, !2}
 !llvm.dbg.cu = !{!7}
 
@@ -49,7 +50,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !4 = !DIBasicType(name: "ptr sized type", size: 64)
 !7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, producer: "clang", emissionKind: FullDebug)
 !8 = !DIFile(filename: "test.ll", directory: "")
-!10 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !8, file: !8, line: 7, unit: !7)
+!10 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !8, file: !8, line: 7, type: !42, unit: !7)
 !25 = !DILocalVariable(name: "blah", arg: 1, scope: !10, file: !8, line: 7, type:!3)
 !26 = !DILocalVariable(name: "ptr sized var", arg: 1, scope: !10, file: !8, line: 7, type:!4)
 !40 = !DILocation(line: 7, column: 35, scope: !10)

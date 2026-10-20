@@ -38,12 +38,14 @@ public:
 
     std::unique_ptr<char[]> ptr;
     char quote = '\0';
+    /// The position of the argument in the original argument string.
+    std::optional<uint16_t> column;
 
     char *data() { return ptr.get(); }
 
   public:
     ArgEntry() = default;
-    ArgEntry(llvm::StringRef str, char quote);
+    ArgEntry(llvm::StringRef str, char quote, std::optional<uint16_t> column);
 
     llvm::StringRef ref() const { return c_str(); }
     const char *c_str() const { return ptr.get(); }
@@ -51,12 +53,14 @@ public:
     /// Returns true if this argument was quoted in any way.
     bool IsQuoted() const { return quote != '\0'; }
     char GetQuoteChar() const { return quote; }
+    std::optional<uint16_t> GetPos() const { return column; }
+    size_t GetLength() const { return ref().size(); }
   };
 
   /// Construct with an option command string.
   ///
   /// \param[in] command
-  ///     A NULL terminated command that will be copied and split up
+  ///     A null-terminated command that will be copied and split up
   ///     into arguments.
   ///
   /// \see Args::SetCommandString(llvm::StringRef)
@@ -117,11 +121,11 @@ public:
 
   bool empty() const { return GetArgumentCount() == 0; }
 
-  /// Gets the NULL terminated C string argument pointer for the argument at
+  /// Gets the null-terminated C string argument pointer for the argument at
   /// index \a idx.
   ///
   /// \return
-  ///     The NULL terminated C string argument pointer if \a idx is a
+  ///     The null-terminated C string argument pointer if \a idx is a
   ///     valid argument index, NULL otherwise.
   const char *GetArgumentAtIndex(size_t idx) const;
 
@@ -145,7 +149,7 @@ public:
   ///     \endcode
   ///
   /// \return
-  ///     An array of NULL terminated C string argument pointers that
+  ///     An array of null-terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
   char **GetArgumentVector();
 
@@ -159,7 +163,7 @@ public:
   ///     \endcode
   ///
   /// \return
-  ///     An array of NULL terminate C string argument pointers that
+  ///     An array of null-terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
   const char **GetConstArgumentVector() const;
 

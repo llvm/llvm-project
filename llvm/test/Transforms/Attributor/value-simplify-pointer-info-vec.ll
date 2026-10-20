@@ -60,9 +60,9 @@ define i32 @vec_write_3() {
 ; CHECK-LABEL: define {{[^@]+}}@vec_write_3
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <2 x i32> <i32 3, i32 3>, ptr [[A]], align 16
+; CHECK-NEXT:    store <2 x i32> splat (i32 3), ptr [[A]], align 16
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[A]], i64 1
-; CHECK-NEXT:    store <2 x i32> <i32 5, i32 5>, ptr [[G]], align 8
+; CHECK-NEXT:    store <2 x i32> splat (i32 5), ptr [[G]], align 8
 ; CHECK-NEXT:    [[J:%.*]] = getelementptr i32, ptr [[G]], i64 1
 ; CHECK-NEXT:    [[L2B:%.*]] = load i32, ptr [[G]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 3, [[L2B]]

@@ -7,14 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopencookie.h"
+#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
+#include "hdr/types/cookie_io_functions_t.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
+#include "src/__support/alloc-checker.h"
 
-#include "src/errno/libc_errno.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -29,7 +34,7 @@ class CookieFile : public LIBC_NAMESPACE::File {
 
 public:
   CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
-             size_t bufsize, File::ModeFlags mode)
+             size_t bufsize, FileMode mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
              &cookie_close, buffer, bufsize, 0 /* default buffering mode */,
              true /* File owns buffer */, mode),
@@ -40,16 +45,16 @@ FileIOResult CookieFile::cookie_write(File *f, const void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.write == nullptr)
     return 0;
-  return cookie_file->ops.write(cookie_file->cookie,
-                                reinterpret_cast<const char *>(data), size);
+  return static_cast<size_t>(cookie_file->ops.write(
+      cookie_file->cookie, reinterpret_cast<const char *>(data), size));
 }
 
 FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.read == nullptr)
     return 0;
-  return cookie_file->ops.read(cookie_file->cookie,
-                               reinterpret_cast<char *>(data), size);
+  return static_cast<size_t>(cookie_file->ops.read(
+      cookie_file->cookie, reinterpret_cast<char *>(data), size));
 }
 
 ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
@@ -57,10 +62,9 @@ ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
   if (cookie_file->ops.seek == nullptr) {
     return Error(EINVAL);
   }
-  off64_t offset64 = offset;
-  int result = cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
+  int result = cookie_file->ops.seek(cookie_file->cookie, &offset, whence);
   if (result == 0)
-    return offset64;
+    return offset;
   return -1;
 }
 
@@ -88,11 +92,11 @@ LLVM_LIBC_FUNCTION(::FILE *, fopencookie,
       return nullptr;
   }
   AllocChecker ac;
-  auto *file = new (ac) CookieFile(
-      cookie, ops, buffer, File::DEFAULT_BUFFER_SIZE, File::mode_flags(mode));
+  auto *file = new (ac) CookieFile(cookie, ops, buffer,
+                                   File::DEFAULT_BUFFER_SIZE, FileMode(mode));
   if (!ac)
     return nullptr;
   return reinterpret_cast<::FILE *>(file);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

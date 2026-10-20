@@ -1,8 +1,6 @@
-; RUN: opt -mtriple=amdgcn--amdhsa -S -passes=inline -inline-threshold=0 -debug-only=inline-cost %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu--amdhsa -S -passes=inline -inline-threshold=0 -debug-only=inline-cost %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
-
-target datalayout = "A5"
 
 ; Verify we are properly adding cost of the -amdgpu-inline-arg-alloca-cost to the threshold.
 

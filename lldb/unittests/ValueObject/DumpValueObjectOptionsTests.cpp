@@ -12,9 +12,9 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "gtest/gtest.h"
 
@@ -42,8 +42,8 @@ struct MockProcess : Process {
     return false;
   };
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     // No need to read memory in these tests.
     return size;
   }

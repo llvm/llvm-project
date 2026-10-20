@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; The result of max(half-word, half-word) is also half-word.
 ; Check that we are not producing a sign extend after the max.
 ; CHECK-NOT: sxth

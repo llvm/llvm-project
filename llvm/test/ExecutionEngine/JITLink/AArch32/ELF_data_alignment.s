@@ -1,16 +1,18 @@
 # REQUIRES: asserts
 # RUN: llvm-mc -triple=armv7-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t_armv7.o %s
 # RUN: llvm-objdump -s --section=.rodata %t_armv7.o | FileCheck --check-prefix=CHECK-OBJ %s
-# RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
-# RUN:              -slab-page-size 4096 %t_armv7.o -debug-only=jitlink 2>&1 \
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -slab-address 0x76ff0000 -slab-allocate 10Kb \
+# RUN:              -slab-page-size 4096 %t_armv7.o 2>&1 \
 # RUN:              | FileCheck --check-prefix=CHECK-LG %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
 # RUN:              -slab-page-size 4096 %t_armv7.o -check %s
 
 # RUN: llvm-mc -triple=thumbv7-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t_thumbv7.o %s
 # RUN: llvm-objdump -s --section=.rodata %t_thumbv7.o | FileCheck --check-prefix=CHECK-OBJ %s
-# RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
-# RUN:              -slab-page-size 4096 %t_thumbv7.o -debug-only=jitlink 2>&1 \
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -slab-address 0x76ff0000 -slab-allocate 10Kb \
+# RUN:              -slab-page-size 4096 %t_thumbv7.o 2>&1 \
 # RUN:              | FileCheck --check-prefix=CHECK-LG %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
 # RUN:              -slab-page-size 4096 %t_thumbv7.o -check %s
@@ -20,7 +22,7 @@
 # CHECK-OBJ: Contents of section .rodata:
 # CHECK-OBJ: 0000 48310048 32004833 00                 H1.H2.H3.
 
-# CHECK-LG: Starting link phase 1 for graph
+# CHECK-LG: Starting link phase 1
 # CHECK-LG: section .rodata:
 
 # CHECK-LG:       block 0x0 size = 0x00000009, align = 1, alignment-offset = 0

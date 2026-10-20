@@ -5,8 +5,8 @@ writing pattern rewrites targeting MLIR.
 
 Note: This document assumes a familiarity with MLIR concepts; more specifically
 the concepts detailed within the
-[MLIR Pattern Rewriting](https://mlir.llvm.org/docs/PatternRewriter/) and
-[Operation Definition Specification (ODS)](https://mlir.llvm.org/docs/OpDefinitions/)
+[MLIR Pattern Rewriting](PatternRewriter.md) and
+[Operation Definition Specification (ODS)](DefiningDialects/Operations.md)
 documentation.
 
 [TOC]
@@ -34,11 +34,11 @@ that no longer exist.
 ### Why build a new language instead of improving TableGen DRR?
 
 Note: This section assumes familiarity with
-[TDRR](https://mlir.llvm.org/docs/DeclarativeRewrites/), please refer the
+[TDRR](DeclarativeRewrites.md), please refer the
 relevant documentation before continuing.
 
 Tablegen DRR (TDRR), i.e.
-[Table-driven Declarative Rewrite Rules](https://mlir.llvm.org/docs/DeclarativeRewrites/),
+[Table-driven Declarative Rewrite Rules](DeclarativeRewrites.md),
 is a declarative DSL for defining MLIR pattern rewrites within the
 [TableGen](https://llvm.org/docs/TableGen/index.html) language. This
 infrastructure is currently the main way in which patterns may be defined
@@ -139,8 +139,8 @@ def HasNoUseOf: Constraint<CPred<"$_self.use_empty()">, "has no use">;
 
 // Check if two values have a ShapedType with the same element type.
 def HasSameElementType : Constraint<
-    CPred<"$0.getType().cast<ShapedType>().getElementType() == "
-          "$1.getType().cast<ShapedType>().getElementType()">,
+    CPred<"cast<ShapedType>($0.getType()).getElementType() == "
+          "cast<ShapedType>($1.getType()).getElementType()">,
     "values have same element type">;
 
 def : Pattern<(TwoResultOp:$results $input),
@@ -161,8 +161,8 @@ Constraint HasNoUseOf(value: Value) [{
   return success(value.use_empty());
 }];
 Constraint HasSameElementType(value1: Value, value2: Value) [{
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }];
 
 Pattern {
@@ -257,7 +257,7 @@ the current file.
 #### `.td` includes
 
 When including a `.td` file, PDLL will automatically import any pertinent
-[ODS](https://mlir.llvm.org/docs/OpDefinitions/) information within that file.
+[ODS](DefiningDialects/Operations.md) information within that file.
 This includes any defined operations, constraints, interfaces, and more, making
 them implicitly accessible within PDLL. This is important, as ODS information
 allows for certain PDLL constructs, such as the
@@ -1105,8 +1105,8 @@ static LogicalResult hasOneUseImpl(PatternRewriter &rewriter, Value value) {
 }
 static LogicalResult hasSameElementTypeImpl(PatternRewriter &rewriter,
                                             Value value1, Value Value2) {
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }
 
 void registerNativeConstraints(RewritePatternSet &patterns) {
@@ -1129,8 +1129,8 @@ Constraint HasOneUse(value: Value) [{
   return success(value.hasOneUse());
 }];
 Constraint HasSameElementType(value1: Value, value2: Value) [{
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }];
 
 Pattern {
@@ -1160,8 +1160,8 @@ LogicalResult HasOneUse(PatternRewriter &rewriter, Value value) {
   return success(value.hasOneUse());
 }
 LogicalResult HasSameElementType(Value value1, Value value2) {
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }
 ```
 
@@ -1483,7 +1483,7 @@ be defined by specifying a string code block after the rewrite declaration:
 
 ```pdll
 Rewrite BuildOp(value: Value) -> (foo: Op<my_dialect.foo>, bar: Op<my_dialect.bar>) [{
-  return {rewriter.create<my_dialect::FooOp>(value), rewriter.create<my_dialect::BarOp>()};
+  return {my_dialect::FooOp::create(rewriter, value), my_dialect::BarOp::create(rewriter)};
 }];
 
 Pattern {
@@ -1508,7 +1508,7 @@ translated into:
 
 ```c++
 std::tuple<my_dialect::FooOp, my_dialect::BarOp> BuildOp(Value value) {
-  return {rewriter.create<my_dialect::FooOp>(value), rewriter.create<my_dialect::BarOp>()};
+  return {my_dialect::FooOp::create(rewriter, value), my_dialect::BarOp::create(rewriter)};
 }
 ```
 
@@ -1530,7 +1530,7 @@ below describes the various result translation scenarios:
 
 ```pdll
 Rewrite createOp() [{
-  rewriter.create<my_dialect::FooOp>();
+  my_dialect::FooOp::create(rewriter);
 }];
 ```
 
@@ -1538,7 +1538,7 @@ In the case where a native `Rewrite` has no results, the native function returns
 
 ```c++
 void createOp(PatternRewriter &rewriter) {
-  rewriter.create<my_dialect::FooOp>();
+  my_dialect::FooOp::create(rewriter);
 }
 ```
 
@@ -1546,7 +1546,7 @@ void createOp(PatternRewriter &rewriter) {
 
 ```pdll
 Rewrite createOp() -> Op<my_dialect.foo> [{
-  return rewriter.create<my_dialect::FooOp>();
+  return my_dialect::FooOp::create(rewriter);
 }];
 ```
 
@@ -1555,7 +1555,7 @@ native type for that single result:
 
 ```c++
 my_dialect::FooOp createOp(PatternRewriter &rewriter) {
-  return rewriter.create<my_dialect::FooOp>();
+  return my_dialect::FooOp::create(rewriter);
 }
 ```
 

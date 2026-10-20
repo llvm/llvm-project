@@ -372,7 +372,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 131.25 62.75  49.67  49.67  46.00  159.25 74.75  28.00  19.00  19.00  1.00   0.67   7.00
+# CHECK-NEXT: 131.25 62.75  49.67  49.67  46.00  159.25 74.75  28.00  19.00  19.00  0.67   1.00   7.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -520,7 +520,7 @@ fyl2xp1
 # CHECK-NEXT: 4.00   2.00    -      -      -     4.00   5.00    -      -      -      -      -      -     fxch	%st(1)
 # CHECK-NEXT: 4.00   2.00    -      -      -     4.00   5.00    -      -      -      -      -      -     fxch	%st(3)
 # CHECK-NEXT: 17.25  12.25  16.50  16.50   -     12.75  14.75   -      -      -      -      -      -     fxrstor	(%eax)
-# CHECK-NEXT: 8.00   11.00  0.67   0.67   19.00  6.00   6.00   19.00  19.00  19.00  1.00   0.67    -     fxsave	(%eax)
+# CHECK-NEXT: 8.00   11.00  0.67   0.67   19.00  6.00   6.00   19.00  19.00  19.00  0.67   1.00    -     fxsave	(%eax)
 # CHECK-NEXT: 0.25   0.25    -      -      -     0.25   0.25    -      -      -      -      -      -     fxtract
 # CHECK-NEXT: 0.25   0.25    -      -      -     0.25   0.25    -      -      -      -      -      -     fyl2x
 # CHECK-NEXT: 0.25   0.25    -      -      -     0.25   0.25    -      -      -      -      -      -     fyl2xp1

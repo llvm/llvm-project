@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
   // [locale], locale
   using std::has_facet;
   using std::locale;
+  using std::swap;
   using std::use_facet;
 
   // [locale.convenience], convenience interfaces
@@ -77,5 +78,5 @@ export namespace std {
 
 #  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
 
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 } // namespace std

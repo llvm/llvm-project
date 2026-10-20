@@ -13,6 +13,7 @@
 // T is an array type of known bound ([dcl.array])
 
 #include <type_traits>
+#include <cstddef>
 
 #include "test_macros.h"
 

@@ -1,0 +1,64 @@
+# This file defines an action that builds the various Docker images used to run
+# libc++ CI whenever modifications to those Docker files are pushed to `main`.
+#
+# The images are pushed to the LLVM package registry at https://github.com/orgs/llvm/packages
+# and tagged appropriately. The selection of which Docker image version is used by the libc++
+# CI nodes at any given point is controlled from the workflow files themselves.
+
+name: "[libc++] Build CI Docker images"
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'libcxx/utils/ci/docker/**'
+      - '.github/workflows/libcxx-build-containers.yml'
+  pull_request:
+    paths:
+      - 'libcxx/utils/ci/docker/**'
+      - '.github/workflows/libcxx-build-containers.yml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-26.04
+    if: github.repository_owner == 'llvm'
+    strategy:
+      matrix:
+        image_name: ['libcxx-linux-builder', 'libcxx-android-builder']
+    permissions:
+      packages: write
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    # The default Docker storage location for GitHub Actions doesn't have
+    # enough disk space, so change it to /mnt, which has more disk space.
+    - name: Change Docker storage location
+      run: |
+        sudo mkdir /mnt/docker
+        echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker
+
+    - name: Build the image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build "${{ matrix.image_name }}"
+      env:
+        TAG: ${{ github.sha }}
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push the image
+      if: github.event_name == 'push'
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push "${{ matrix.image_name }}"
+      env:
+        TAG: ${{ github.sha }}

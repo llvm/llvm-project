@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -48,13 +47,14 @@ using namespace llvm;
 
 /// Increase pressure for each pressure set provided by TargetRegisterInfo.
 static void increaseSetPressure(std::vector<unsigned> &CurrSetPressure,
-                                const MachineRegisterInfo &MRI, unsigned Reg,
-                                LaneBitmask PrevMask, LaneBitmask NewMask) {
+                                const MachineRegisterInfo &MRI,
+                                VirtRegOrUnit VRegOrUnit, LaneBitmask PrevMask,
+                                LaneBitmask NewMask) {
   assert((PrevMask & ~NewMask).none() && "Must not remove bits");
   if (PrevMask.any() || NewMask.none())
     return;
 
-  PSetIterator PSetI = MRI.getPressureSets(Reg);
+  PSetIterator PSetI = MRI.getPressureSets(VRegOrUnit);
   unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI)
     CurrSetPressure[*PSetI] += Weight;
@@ -62,13 +62,14 @@ static void increaseSetPressure(std::vector<unsigned> &CurrSetPressure,
 
 /// Decrease pressure for each pressure set provided by TargetRegisterInfo.
 static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
-                                const MachineRegisterInfo &MRI, Register Reg,
-                                LaneBitmask PrevMask, LaneBitmask NewMask) {
+                                const MachineRegisterInfo &MRI,
+                                VirtRegOrUnit VRegOrUnit, LaneBitmask PrevMask,
+                                LaneBitmask NewMask) {
   assert((NewMask & ~PrevMask).none() && "Must not add bits");
   if (NewMask.any() || PrevMask.none())
     return;
 
-  PSetIterator PSetI = MRI.getPressureSets(Reg);
+  PSetIterator PSetI = MRI.getPressureSets(VRegOrUnit);
   unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI) {
     assert(CurrSetPressure[*PSetI] >= Weight && "register pressure underflow");
@@ -80,15 +81,12 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
 LLVM_DUMP_METHOD
 void llvm::dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                               const TargetRegisterInfo *TRI) {
-  bool Empty = true;
   for (unsigned i = 0, e = SetPressure.size(); i < e; ++i) {
     if (SetPressure[i] != 0) {
-      dbgs() << TRI->getRegPressureSetName(i) << "=" << SetPressure[i] << '\n';
-      Empty = false;
+      dbgs() << TRI->getRegPressureSetName(i) << "=" << SetPressure[i] << ' ';
     }
   }
-  if (Empty)
-    dbgs() << "\n";
+  dbgs() << "\n";
 }
 
 LLVM_DUMP_METHOD
@@ -96,16 +94,16 @@ void RegisterPressure::dump(const TargetRegisterInfo *TRI) const {
   dbgs() << "Max Pressure: ";
   dumpRegSetPressure(MaxSetPressure, TRI);
   dbgs() << "Live In: ";
-  for (const RegisterMaskPair &P : LiveInRegs) {
-    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
+  for (const VRegMaskOrUnit &P : LiveInRegs) {
+    dbgs() << printVRegOrUnit(P.VRegOrUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';
   }
   dbgs() << '\n';
   dbgs() << "Live Out: ";
-  for (const RegisterMaskPair &P : LiveOutRegs) {
-    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
+  for (const VRegMaskOrUnit &P : LiveOutRegs) {
+    dbgs() << printVRegOrUnit(P.VRegOrUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';
@@ -152,13 +150,13 @@ void RegPressureDelta::dump() const {
 
 #endif
 
-void RegPressureTracker::increaseRegPressure(Register RegUnit,
+void RegPressureTracker::increaseRegPressure(VirtRegOrUnit VRegOrUnit,
                                              LaneBitmask PreviousMask,
                                              LaneBitmask NewMask) {
   if (PreviousMask.any() || NewMask.none())
     return;
 
-  PSetIterator PSetI = MRI->getPressureSets(RegUnit);
+  PSetIterator PSetI = MRI->getPressureSets(VRegOrUnit);
   unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI) {
     CurrSetPressure[*PSetI] += Weight;
@@ -167,10 +165,10 @@ void RegPressureTracker::increaseRegPressure(Register RegUnit,
   }
 }
 
-void RegPressureTracker::decreaseRegPressure(Register RegUnit,
+void RegPressureTracker::decreaseRegPressure(VirtRegOrUnit VRegOrUnit,
                                              LaneBitmask PreviousMask,
                                              LaneBitmask NewMask) {
-  decreaseSetPressure(CurrSetPressure, *MRI, RegUnit, PreviousMask, NewMask);
+  decreaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit, PreviousMask, NewMask);
 }
 
 /// Clear the result so it can be used for another round of pressure tracking.
@@ -234,12 +232,6 @@ void LiveRegSet::clear() {
   Regs.clear();
 }
 
-static const LiveRange *getLiveRange(const LiveIntervals &LIS, unsigned Reg) {
-  if (Register::isVirtualRegister(Reg))
-    return &LIS.getInterval(Reg);
-  return LIS.getCachedRegUnit(Reg);
-}
-
 void RegPressureTracker::reset() {
   MBB = nullptr;
   LIS = nullptr;
@@ -261,8 +253,7 @@ void RegPressureTracker::reset() {
 ///
 /// TODO: Add support for pressure without LiveIntervals.
 void RegPressureTracker::init(const MachineFunction *mf,
-                              const RegisterClassInfo *rci,
-                              const LiveIntervals *lis,
+                              const RegisterClassInfo *rci, LiveIntervals *lis,
                               const MachineBasicBlock *mbb,
                               MachineBasicBlock::const_iterator pos,
                               bool TrackLaneMasks, bool TrackUntiedDefs) {
@@ -358,31 +349,32 @@ void RegPressureTracker::closeRegion() {
 /// can never drop below this pressure.
 void RegPressureTracker::initLiveThru(const RegPressureTracker &RPTracker) {
   LiveThruPressure.assign(TRI->getNumRegPressureSets(), 0);
-  assert(isBottomClosed() && "need bottom-up tracking to intialize.");
-  for (const RegisterMaskPair &Pair : P.LiveOutRegs) {
-    Register RegUnit = Pair.RegUnit;
-    if (RegUnit.isVirtual() && !RPTracker.hasUntiedDef(RegUnit))
-      increaseSetPressure(LiveThruPressure, *MRI, RegUnit,
+  assert(isBottomClosed() && "need bottom-up tracking to initialize.");
+  for (const VRegMaskOrUnit &Pair : P.LiveOutRegs) {
+    VirtRegOrUnit VRegOrUnit = Pair.VRegOrUnit;
+    if (VRegOrUnit.isVirtualReg() &&
+        !RPTracker.hasUntiedDef(VRegOrUnit.asVirtualReg()))
+      increaseSetPressure(LiveThruPressure, *MRI, VRegOrUnit,
                           LaneBitmask::getNone(), Pair.LaneMask);
   }
 }
 
-static LaneBitmask getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
-                               Register RegUnit) {
-  auto I = llvm::find_if(RegUnits, [RegUnit](const RegisterMaskPair Other) {
-    return Other.RegUnit == RegUnit;
+static LaneBitmask getRegLanes(ArrayRef<VRegMaskOrUnit> RegUnits,
+                               VirtRegOrUnit VRegOrUnit) {
+  auto I = llvm::find_if(RegUnits, [VRegOrUnit](const VRegMaskOrUnit Other) {
+    return Other.VRegOrUnit == VRegOrUnit;
   });
   if (I == RegUnits.end())
     return LaneBitmask::getNone();
   return I->LaneMask;
 }
 
-static void addRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
-                        RegisterMaskPair Pair) {
-  Register RegUnit = Pair.RegUnit;
+static void addRegLanes(SmallVectorImpl<VRegMaskOrUnit> &RegUnits,
+                        VRegMaskOrUnit Pair) {
+  VirtRegOrUnit VRegOrUnit = Pair.VRegOrUnit;
   assert(Pair.LaneMask.any());
-  auto I = llvm::find_if(RegUnits, [RegUnit](const RegisterMaskPair Other) {
-    return Other.RegUnit == RegUnit;
+  auto I = llvm::find_if(RegUnits, [VRegOrUnit](const VRegMaskOrUnit Other) {
+    return Other.VRegOrUnit == VRegOrUnit;
   });
   if (I == RegUnits.end()) {
     RegUnits.push_back(Pair);
@@ -391,24 +383,24 @@ static void addRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
   }
 }
 
-static void setRegZero(SmallVectorImpl<RegisterMaskPair> &RegUnits,
-                       Register RegUnit) {
-  auto I = llvm::find_if(RegUnits, [RegUnit](const RegisterMaskPair Other) {
-    return Other.RegUnit == RegUnit;
+static void setRegZero(SmallVectorImpl<VRegMaskOrUnit> &RegUnits,
+                       VirtRegOrUnit VRegOrUnit) {
+  auto I = llvm::find_if(RegUnits, [VRegOrUnit](const VRegMaskOrUnit Other) {
+    return Other.VRegOrUnit == VRegOrUnit;
   });
   if (I == RegUnits.end()) {
-    RegUnits.push_back(RegisterMaskPair(RegUnit, LaneBitmask::getNone()));
+    RegUnits.emplace_back(VRegOrUnit, LaneBitmask::getNone());
   } else {
     I->LaneMask = LaneBitmask::getNone();
   }
 }
 
-static void removeRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
-                           RegisterMaskPair Pair) {
-  Register RegUnit = Pair.RegUnit;
+static void removeRegLanes(SmallVectorImpl<VRegMaskOrUnit> &RegUnits,
+                           VRegMaskOrUnit Pair) {
+  VirtRegOrUnit VRegOrUnit = Pair.VRegOrUnit;
   assert(Pair.LaneMask.any());
-  auto I = llvm::find_if(RegUnits, [RegUnit](const RegisterMaskPair Other) {
-    return Other.RegUnit == RegUnit;
+  auto I = llvm::find_if(RegUnits, [VRegOrUnit](const VRegMaskOrUnit Other) {
+    return Other.VRegOrUnit == VRegOrUnit;
   });
   if (I != RegUnits.end()) {
     I->LaneMask &= ~Pair.LaneMask;
@@ -418,12 +410,13 @@ static void removeRegLanes(SmallVectorImpl<RegisterMaskPair> &RegUnits,
 }
 
 static LaneBitmask
-getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
-                     bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
-                     LaneBitmask SafeDefault,
-                     bool (*Property)(const LiveRange &LR, SlotIndex Pos)) {
-  if (RegUnit.isVirtual()) {
-    const LiveInterval &LI = LIS.getInterval(RegUnit);
+getLanesWithProperty(LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+                     bool TrackLaneMasks, VirtRegOrUnit VRegOrUnit,
+                     SlotIndex Pos, LaneBitmask SafeDefault,
+                     bool (*Property)(const LiveRange &LR, SlotIndex Pos),
+                     bool ComputePhysRegs = false) {
+  if (VRegOrUnit.isVirtualReg()) {
+    const LiveInterval &LI = LIS.getInterval(VRegOrUnit.asVirtualReg());
     LaneBitmask Result;
     if (TrackLaneMasks && LI.hasSubRanges()) {
         for (const LiveInterval::SubRange &SR : LI.subranges()) {
@@ -431,30 +424,34 @@ getLanesWithProperty(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
             Result |= SR.LaneMask;
         }
     } else if (Property(LI, Pos)) {
-      Result = TrackLaneMasks ? MRI.getMaxLaneMaskForVReg(RegUnit)
-                              : LaneBitmask::getAll();
+      Result = TrackLaneMasks
+                   ? MRI.getMaxLaneMaskForVReg(VRegOrUnit.asVirtualReg())
+                   : LaneBitmask::getAll();
     }
 
     return Result;
   } else {
-    const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
-    // Be prepared for missing liveranges: We usually do not compute liveranges
-    // for physical registers on targets with many registers (GPUs).
+    MCRegUnit Unit = VRegOrUnit.asMCRegUnit();
+    // We usually do not compute liveranges for physical registers on targets
+    // with many registers (GPUs), so the cached range may be absent. Callers
+    // that require an authoritative answer pass ComputePhysRegs to force the
+    // range to be computed on demand.
+    const LiveRange *LR =
+        ComputePhysRegs ? &LIS.getRegUnit(Unit) : LIS.getCachedRegUnit(Unit);
     if (LR == nullptr)
       return SafeDefault;
     return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
   }
 }
 
-static LaneBitmask getLiveLanesAt(const LiveIntervals &LIS,
+static LaneBitmask getLiveLanesAt(LiveIntervals &LIS,
                                   const MachineRegisterInfo &MRI,
-                                  bool TrackLaneMasks, Register RegUnit,
-                                  SlotIndex Pos) {
-  return getLanesWithProperty(LIS, MRI, TrackLaneMasks, RegUnit, Pos,
-                              LaneBitmask::getAll(),
-                              [](const LiveRange &LR, SlotIndex Pos) {
-                                return LR.liveAt(Pos);
-                              });
+                                  bool TrackLaneMasks, VirtRegOrUnit VRegOrUnit,
+                                  SlotIndex Pos, bool ComputePhysRegs = false) {
+  return getLanesWithProperty(
+      LIS, MRI, TrackLaneMasks, VRegOrUnit, Pos, LaneBitmask::getAll(),
+      [](const LiveRange &LR, SlotIndex Pos) { return LR.liveAt(Pos); },
+      ComputePhysRegs);
 }
 
 namespace {
@@ -480,8 +477,9 @@ class RegisterOperandsCollector {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperand(*OperI);
 
-    // Remove redundant physreg dead defs.
-    for (const RegisterMaskPair &P : RegOpers.Defs)
+    // Remove redundant physreg dead defs. A regunit unit is dead iff every def
+    // covering it is dead
+    for (const VRegMaskOrUnit &P : RegOpers.Defs)
       removeRegLanes(RegOpers.DeadDefs, P);
   }
 
@@ -490,7 +488,7 @@ class RegisterOperandsCollector {
       collectOperandLanes(*OperI);
 
     // Remove redundant physreg dead defs.
-    for (const RegisterMaskPair &P : RegOpers.Defs)
+    for (const VRegMaskOrUnit &P : RegOpers.Defs)
       removeRegLanes(RegOpers.DeadDefs, P);
   }
 
@@ -516,13 +514,14 @@ class RegisterOperandsCollector {
     }
   }
 
-  void pushReg(Register Reg,
-               SmallVectorImpl<RegisterMaskPair> &RegUnits) const {
+  void pushReg(Register Reg, SmallVectorImpl<VRegMaskOrUnit> &RegUnits) const {
     if (Reg.isVirtual()) {
-      addRegLanes(RegUnits, RegisterMaskPair(Reg, LaneBitmask::getAll()));
+      addRegLanes(RegUnits,
+                  VRegMaskOrUnit(VirtRegOrUnit(Reg), LaneBitmask::getAll()));
     } else if (MRI.isAllocatable(Reg)) {
       for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
-        addRegLanes(RegUnits, RegisterMaskPair(Unit, LaneBitmask::getAll()));
+        addRegLanes(RegUnits,
+                    VRegMaskOrUnit(VirtRegOrUnit(Unit), LaneBitmask::getAll()));
     }
   }
 
@@ -549,15 +548,16 @@ class RegisterOperandsCollector {
   }
 
   void pushRegLanes(Register Reg, unsigned SubRegIdx,
-                    SmallVectorImpl<RegisterMaskPair> &RegUnits) const {
+                    SmallVectorImpl<VRegMaskOrUnit> &RegUnits) const {
     if (Reg.isVirtual()) {
       LaneBitmask LaneMask = SubRegIdx != 0
                              ? TRI.getSubRegIndexLaneMask(SubRegIdx)
                              : MRI.getMaxLaneMaskForVReg(Reg);
-      addRegLanes(RegUnits, RegisterMaskPair(Reg, LaneMask));
+      addRegLanes(RegUnits, VRegMaskOrUnit(VirtRegOrUnit(Reg), LaneMask));
     } else if (MRI.isAllocatable(Reg)) {
       for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
-        addRegLanes(RegUnits, RegisterMaskPair(Unit, LaneBitmask::getAll()));
+        addRegLanes(RegUnits,
+                    VRegMaskOrUnit(VirtRegOrUnit(Unit), LaneBitmask::getAll()));
     }
   }
 };
@@ -576,62 +576,118 @@ void RegisterOperands::collect(const MachineInstr &MI,
 }
 
 void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
-                                      const LiveIntervals &LIS) {
-  SlotIndex SlotIdx = LIS.getInstructionIndex(MI);
-  for (auto *RI = Defs.begin(); RI != Defs.end(); /*empty*/) {
-    Register Reg = RI->RegUnit;
-    const LiveRange *LR = getLiveRange(LIS, Reg);
-    if (LR != nullptr) {
-      LiveQueryResult LRQ = LR->Query(SlotIdx);
-      if (LRQ.isDeadDef()) {
-        // LiveIntervals knows this is a dead even though it's MachineOperand is
-        // not flagged as such.
-        DeadDefs.push_back(*RI);
-        RI = Defs.erase(RI);
-        continue;
-      }
-    }
-    ++RI;
+                                      LiveIntervals &LIS,
+                                      const MachineRegisterInfo &MRI) {
+  SlotIndex DeadSlotIdx = LIS.getInstructionIndex(MI).getDeadSlot();
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    // Force physreg unit ranges to be computed, we need to accurately know if a
+    // physreg is dead.
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/false, I->VRegOrUnit,
+                       DeadSlotIdx, /*ComputePhysRegs=*/true);
+    I = adjustDef(*I, LiveAfter);
   }
 }
 
-void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
+void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
-                                          SlotIndex Pos,
-                                          MachineInstr *AddFlagsMI) {
-  for (auto *I = Defs.begin(); I != Defs.end();) {
-    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
-                                           Pos.getDeadSlot());
+                                          SlotIndex Pos) {
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
+    I = adjustDef(*I, LiveAfter);
+  }
+  adjustUses(LIS, MRI, Pos.getBaseIndex());
+}
+
+void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
+                                          const MachineRegisterInfo &MRI,
+                                          MachineInstr &MI) {
+  SlotIndex Pos = LIS.getInstructionIndex(MI);
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
-    Register RegUnit = I->RegUnit;
-    if (RegUnit.isVirtual() && AddFlagsMI != nullptr &&
-        (LiveAfter & ~I->LaneMask).none())
-      AddFlagsMI->setRegisterDefReadUndef(RegUnit);
-
-    LaneBitmask ActualDef = I->LaneMask & LiveAfter;
-    if (ActualDef.none()) {
-      I = Defs.erase(I);
-    } else {
-      I->LaneMask = ActualDef;
-      ++I;
-    }
+    VirtRegOrUnit VRegOrUnit = I->VRegOrUnit;
+    if (VRegOrUnit.isVirtualReg() && (LiveAfter & ~I->LaneMask).none())
+      MI.setRegisterDefReadUndef(VRegOrUnit.asVirtualReg());
+    I = adjustDef(*I, LiveAfter);
   }
 
-  // For uses just copy the information from LIS.
-  for (auto &[RegUnit, LaneMask] : Uses)
-    LaneMask = getLiveLanesAt(LIS, MRI, true, RegUnit, Pos.getBaseIndex());
+  adjustUses(LIS, MRI, Pos);
 
-  if (AddFlagsMI != nullptr) {
-    for (const RegisterMaskPair &P : DeadDefs) {
-      Register RegUnit = P.RegUnit;
-      if (!RegUnit.isVirtual())
-        continue;
-      LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, RegUnit,
-                                             Pos.getDeadSlot());
-      if (LiveAfter.none())
-        AddFlagsMI->setRegisterDefReadUndef(RegUnit);
-    }
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  for (const VRegMaskOrUnit &P : DeadDefs) {
+    VirtRegOrUnit VRegOrUnit = P.VRegOrUnit;
+    if (!VRegOrUnit.isVirtualReg())
+      continue;
+    Register VReg = VRegOrUnit.asVirtualReg();
+    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
+                                           VRegOrUnit, Pos.getDeadSlot());
+    if (!LiveAfter.none())
+      continue;
+    // The register's read value doesn't matter if none of its lanes are live
+    // after the def.
+    MI.setRegisterDefReadUndef(VReg);
+
+    // The register's last definition should be marked dead.
+    const LiveInterval &LI = LIS.getInterval(VReg);
+    if (LI.segments.back().end == Pos.getDeadSlot())
+      MI.addRegisterDead(VReg, TRI, /*AddIfNotFound=*/false);
+  }
+}
+
+void RegisterOperands::restoreLivenessFlags(MachineInstr &MI,
+                                            const TargetRegisterInfo &TRI,
+                                            const MachineRegisterInfo &MRI,
+                                            LiveIntervals &LIS,
+                                            bool TrackLaneMasks,
+                                            ArrayRef<Register> OnlyRegs) {
+  assert(!MI.isDebugInstr() && "No flags to restore on debug instructions");
+  // Clear potentially-stale read-undef flags. They are re-added below for the
+  // lanes that are still dead.
+  bool HasClearedDef = false;
+  for (MachineOperand &MO : MI.all_defs()) {
+    if (!OnlyRegs.empty() && (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
+                              !llvm::is_contained(OnlyRegs, MO.getReg())))
+      continue;
+    MO.setIsUndef(false);
+    HasClearedDef = true;
+  }
+  if (!HasClearedDef)
+    return;
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, TRI, MRI, TrackLaneMasks, /*IgnoreDead=*/false);
+  if (TrackLaneMasks) {
+    // Adjust liveness and add missing dead+read-undef flags.
+    RegOpers.adjustLaneLiveness(LIS, MRI, MI);
+  } else {
+    // Adjust for missing dead-def flags.
+    RegOpers.detectDeadDefs(MI, LIS, MRI);
+  }
+}
+
+VRegMaskOrUnit *RegisterOperands::adjustDef(VRegMaskOrUnit &Def,
+                                            LaneBitmask LiveAfterDef) {
+  LaneBitmask ActualDef = Def.LaneMask & LiveAfterDef;
+  if (ActualDef.none()) {
+    DeadDefs.push_back(Def);
+    return Defs.erase(&Def);
+  }
+
+  Def.LaneMask = ActualDef;
+  return &Def + 1;
+}
+
+void RegisterOperands::adjustUses(LiveIntervals &LIS,
+                                  const MachineRegisterInfo &MRI,
+                                  SlotIndex Pos) {
+  for (auto &[VRegOrUnit, LaneMask] : Uses) {
+    LaneMask =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, VRegOrUnit, Pos);
   }
 }
 
@@ -652,17 +708,17 @@ void PressureDiffs::addInstruction(unsigned Idx,
                                    const MachineRegisterInfo &MRI) {
   PressureDiff &PDiff = (*this)[Idx];
   assert(!PDiff.begin()->isValid() && "stale PDiff");
-  for (const RegisterMaskPair &P : RegOpers.Defs)
-    PDiff.addPressureChange(P.RegUnit, true, &MRI);
+  for (const VRegMaskOrUnit &P : RegOpers.Defs)
+    PDiff.addPressureChange(P.VRegOrUnit, true, &MRI);
 
-  for (const RegisterMaskPair &P : RegOpers.Uses)
-    PDiff.addPressureChange(P.RegUnit, false, &MRI);
+  for (const VRegMaskOrUnit &P : RegOpers.Uses)
+    PDiff.addPressureChange(P.VRegOrUnit, false, &MRI);
 }
 
 /// Add a change in pressure to the pressure diff of a given instruction.
-void PressureDiff::addPressureChange(Register RegUnit, bool IsDec,
+void PressureDiff::addPressureChange(VirtRegOrUnit VRegOrUnit, bool IsDec,
                                      const MachineRegisterInfo *MRI) {
-  PSetIterator PSetI = MRI->getPressureSets(RegUnit);
+  PSetIterator PSetI = MRI->getPressureSets(VRegOrUnit);
   int Weight = IsDec ? -PSetI.getWeight() : PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI) {
     // Find an existing entry in the pressure diff for this PSet.
@@ -695,21 +751,21 @@ void PressureDiff::addPressureChange(Register RegUnit, bool IsDec,
 }
 
 /// Force liveness of registers.
-void RegPressureTracker::addLiveRegs(ArrayRef<RegisterMaskPair> Regs) {
-  for (const RegisterMaskPair &P : Regs) {
+void RegPressureTracker::addLiveRegs(ArrayRef<VRegMaskOrUnit> Regs) {
+  for (const VRegMaskOrUnit &P : Regs) {
     LaneBitmask PrevMask = LiveRegs.insert(P);
     LaneBitmask NewMask = PrevMask | P.LaneMask;
-    increaseRegPressure(P.RegUnit, PrevMask, NewMask);
+    increaseRegPressure(P.VRegOrUnit, PrevMask, NewMask);
   }
 }
 
-void RegPressureTracker::discoverLiveInOrOut(RegisterMaskPair Pair,
-    SmallVectorImpl<RegisterMaskPair> &LiveInOrOut) {
+void RegPressureTracker::discoverLiveInOrOut(
+    VRegMaskOrUnit Pair, SmallVectorImpl<VRegMaskOrUnit> &LiveInOrOut) {
   assert(Pair.LaneMask.any());
 
-  Register RegUnit = Pair.RegUnit;
-  auto I = llvm::find_if(LiveInOrOut, [RegUnit](const RegisterMaskPair &Other) {
-    return Other.RegUnit == RegUnit;
+  VirtRegOrUnit VRegOrUnit = Pair.VRegOrUnit;
+  auto I = find_if(LiveInOrOut, [VRegOrUnit](const VRegMaskOrUnit &Other) {
+    return Other.VRegOrUnit == VRegOrUnit;
   });
   LaneBitmask PrevMask;
   LaneBitmask NewMask;
@@ -722,29 +778,27 @@ void RegPressureTracker::discoverLiveInOrOut(RegisterMaskPair Pair,
     NewMask = PrevMask | Pair.LaneMask;
     I->LaneMask = NewMask;
   }
-  increaseSetPressure(P.MaxSetPressure, *MRI, RegUnit, PrevMask, NewMask);
+  increaseSetPressure(P.MaxSetPressure, *MRI, VRegOrUnit, PrevMask, NewMask);
 }
 
-void RegPressureTracker::discoverLiveIn(RegisterMaskPair Pair) {
+void RegPressureTracker::discoverLiveIn(VRegMaskOrUnit Pair) {
   discoverLiveInOrOut(Pair, P.LiveInRegs);
 }
 
-void RegPressureTracker::discoverLiveOut(RegisterMaskPair Pair) {
+void RegPressureTracker::discoverLiveOut(VRegMaskOrUnit Pair) {
   discoverLiveInOrOut(Pair, P.LiveOutRegs);
 }
 
-void RegPressureTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
-  for (const RegisterMaskPair &P : DeadDefs) {
-    Register Reg = P.RegUnit;
-    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+void RegPressureTracker::bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs) {
+  for (const VRegMaskOrUnit &P : DeadDefs) {
+    LaneBitmask LiveMask = LiveRegs.contains(P.VRegOrUnit);
     LaneBitmask BumpedMask = LiveMask | P.LaneMask;
-    increaseRegPressure(Reg, LiveMask, BumpedMask);
+    increaseRegPressure(P.VRegOrUnit, LiveMask, BumpedMask);
   }
-  for (const RegisterMaskPair &P : DeadDefs) {
-    Register Reg = P.RegUnit;
-    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+  for (const VRegMaskOrUnit &P : DeadDefs) {
+    LaneBitmask LiveMask = LiveRegs.contains(P.VRegOrUnit);
     LaneBitmask BumpedMask = LiveMask | P.LaneMask;
-    decreaseRegPressure(Reg, BumpedMask, LiveMask);
+    decreaseRegPressure(P.VRegOrUnit, BumpedMask, LiveMask);
   }
 }
 
@@ -754,7 +808,7 @@ void RegPressureTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
 /// difference pointer is provided record the changes is pressure caused by this
 /// instruction independent of liveness.
 void RegPressureTracker::recede(const RegisterOperands &RegOpers,
-                                SmallVectorImpl<RegisterMaskPair> *LiveUses) {
+                                SmallVectorImpl<VRegMaskOrUnit> *LiveUses) {
   assert(!CurrPos->isDebugOrPseudoInstr());
 
   // Boost pressure for all dead defs together.
@@ -762,18 +816,18 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
 
   // Kill liveness at live defs.
   // TODO: consider earlyclobbers?
-  for (const RegisterMaskPair &Def : RegOpers.Defs) {
-    Register Reg = Def.RegUnit;
+  for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
+    VirtRegOrUnit VRegOrUnit = Def.VRegOrUnit;
 
     LaneBitmask PreviousMask = LiveRegs.erase(Def);
     LaneBitmask NewMask = PreviousMask & ~Def.LaneMask;
 
     LaneBitmask LiveOut = Def.LaneMask & ~PreviousMask;
     if (LiveOut.any()) {
-      discoverLiveOut(RegisterMaskPair(Reg, LiveOut));
+      discoverLiveOut(VRegMaskOrUnit(VRegOrUnit, LiveOut));
       // Retroactively model effects on pressure of the live out lanes.
-      increaseSetPressure(CurrSetPressure, *MRI, Reg, LaneBitmask::getNone(),
-                          LiveOut);
+      increaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit,
+                          LaneBitmask::getNone(), LiveOut);
       PreviousMask = LiveOut;
     }
 
@@ -781,10 +835,10 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
       // Add a 0 entry to LiveUses as a marker that the complete vreg has become
       // dead.
       if (TrackLaneMasks && LiveUses != nullptr)
-        setRegZero(*LiveUses, Reg);
+        setRegZero(*LiveUses, VRegOrUnit);
     }
 
-    decreaseRegPressure(Reg, PreviousMask, NewMask);
+    decreaseRegPressure(VRegOrUnit, PreviousMask, NewMask);
   }
 
   SlotIndex SlotIdx;
@@ -792,8 +846,8 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
     SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
 
   // Generate liveness for uses.
-  for (const RegisterMaskPair &Use : RegOpers.Uses) {
-    Register Reg = Use.RegUnit;
+  for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
+    VirtRegOrUnit VRegOrUnit = Use.VRegOrUnit;
     assert(Use.LaneMask.any());
     LaneBitmask PreviousMask = LiveRegs.insert(Use);
     LaneBitmask NewMask = PreviousMask | Use.LaneMask;
@@ -804,39 +858,38 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
     if (PreviousMask.none()) {
       if (LiveUses != nullptr) {
         if (!TrackLaneMasks) {
-          addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+          addRegLanes(*LiveUses, VRegMaskOrUnit(VRegOrUnit, NewMask));
         } else {
-          auto I =
-              llvm::find_if(*LiveUses, [Reg](const RegisterMaskPair Other) {
-                return Other.RegUnit == Reg;
-              });
+          auto I = find_if(*LiveUses, [VRegOrUnit](const VRegMaskOrUnit Other) {
+            return Other.VRegOrUnit == VRegOrUnit;
+          });
           bool IsRedef = I != LiveUses->end();
           if (IsRedef) {
             // ignore re-defs here...
             assert(I->LaneMask.none());
-            removeRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+            removeRegLanes(*LiveUses, VRegMaskOrUnit(VRegOrUnit, NewMask));
           } else {
-            addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
+            addRegLanes(*LiveUses, VRegMaskOrUnit(VRegOrUnit, NewMask));
           }
         }
       }
 
       // Discover live outs if this may be the first occurance of this register.
       if (RequireIntervals) {
-        LaneBitmask LiveOut = getLiveThroughAt(Reg, SlotIdx);
+        LaneBitmask LiveOut = getLiveThroughAt(VRegOrUnit, SlotIdx);
         if (LiveOut.any())
-          discoverLiveOut(RegisterMaskPair(Reg, LiveOut));
+          discoverLiveOut(VRegMaskOrUnit(VRegOrUnit, LiveOut));
       }
     }
 
-    increaseRegPressure(Reg, PreviousMask, NewMask);
+    increaseRegPressure(VRegOrUnit, PreviousMask, NewMask);
   }
   if (TrackUntiedDefs) {
-    for (const RegisterMaskPair &Def : RegOpers.Defs) {
-      Register RegUnit = Def.RegUnit;
-      if (RegUnit.isVirtual() &&
-          (LiveRegs.contains(RegUnit) & Def.LaneMask).none())
-        UntiedDefs.insert(RegUnit);
+    for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
+      VirtRegOrUnit VRegOrUnit = Def.VRegOrUnit;
+      if (VRegOrUnit.isVirtualReg() &&
+          (LiveRegs.contains(VRegOrUnit) & Def.LaneMask).none())
+        UntiedDefs.insert(VRegOrUnit.asVirtualReg());
     }
   }
 }
@@ -862,9 +915,9 @@ void RegPressureTracker::recedeSkipDebugValues() {
     static_cast<IntervalPressure&>(P).openTop(SlotIdx);
 }
 
-void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
+void RegPressureTracker::recede(SmallVectorImpl<VRegMaskOrUnit> *LiveUses) {
   recedeSkipDebugValues();
-  if (CurrPos->isDebugInstr() || CurrPos->isPseudoProbe()) {
+  if (CurrPos->isDebugOrPseudoInstr()) {
     // It's possible to only have debug_value and pseudo probe instructions and
     // hit the start of the block.
     assert(CurrPos == MBB->begin());
@@ -878,7 +931,7 @@ void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
     SlotIndex SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   } else if (RequireIntervals) {
-    RegOpers.detectDeadDefs(MI, *LIS);
+    RegOpers.detectDeadDefs(MI, *LIS, *MRI);
   }
 
   recede(RegOpers, LiveUses);
@@ -903,30 +956,30 @@ void RegPressureTracker::advance(const RegisterOperands &RegOpers) {
       static_cast<RegionPressure&>(P).openBottom(CurrPos);
   }
 
-  for (const RegisterMaskPair &Use : RegOpers.Uses) {
-    Register Reg = Use.RegUnit;
-    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+  for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
+    VirtRegOrUnit VRegOrUnit = Use.VRegOrUnit;
+    LaneBitmask LiveMask = LiveRegs.contains(VRegOrUnit);
     LaneBitmask LiveIn = Use.LaneMask & ~LiveMask;
     if (LiveIn.any()) {
-      discoverLiveIn(RegisterMaskPair(Reg, LiveIn));
-      increaseRegPressure(Reg, LiveMask, LiveMask | LiveIn);
-      LiveRegs.insert(RegisterMaskPair(Reg, LiveIn));
+      discoverLiveIn(VRegMaskOrUnit(VRegOrUnit, LiveIn));
+      increaseRegPressure(VRegOrUnit, LiveMask, LiveMask | LiveIn);
+      LiveRegs.insert(VRegMaskOrUnit(VRegOrUnit, LiveIn));
     }
     // Kill liveness at last uses.
     if (RequireIntervals) {
-      LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
+      LaneBitmask LastUseMask = getLastUsedLanes(VRegOrUnit, SlotIdx);
       if (LastUseMask.any()) {
-        LiveRegs.erase(RegisterMaskPair(Reg, LastUseMask));
-        decreaseRegPressure(Reg, LiveMask, LiveMask & ~LastUseMask);
+        LiveRegs.erase(VRegMaskOrUnit(VRegOrUnit, LastUseMask));
+        decreaseRegPressure(VRegOrUnit, LiveMask, LiveMask & ~LastUseMask);
       }
     }
   }
 
   // Generate liveness for defs.
-  for (const RegisterMaskPair &Def : RegOpers.Defs) {
+  for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
     LaneBitmask PreviousMask = LiveRegs.insert(Def);
     LaneBitmask NewMask = PreviousMask | Def.LaneMask;
-    increaseRegPressure(Def.RegUnit, PreviousMask, NewMask);
+    increaseRegPressure(Def.VRegOrUnit, PreviousMask, NewMask);
   }
 
   // Boost pressure for all dead defs together.
@@ -1007,7 +1060,7 @@ static void computeMaxPressureDelta(ArrayRef<unsigned> OldMaxPressureVec,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == i) {
-        int PDiff = (int)PNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int PDiff = (int)PNew - CriticalPSets[CritIdx].getUnitInc();
         if (PDiff > 0) {
           Delta.CriticalMax = PressureChange(i);
           Delta.CriticalMax.setUnitInc(PDiff);
@@ -1045,36 +1098,28 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
   if (TrackLaneMasks)
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   else if (RequireIntervals)
-    RegOpers.detectDeadDefs(*MI, *LIS);
+    RegOpers.detectDeadDefs(*MI, *LIS, *MRI);
 
   // Boost max pressure for all dead defs together.
   // Since CurrSetPressure and MaxSetPressure
   bumpDeadDefs(RegOpers.DeadDefs);
 
   // Kill liveness at live defs.
-  for (const RegisterMaskPair &P : RegOpers.Defs) {
-    Register Reg = P.RegUnit;
-    LaneBitmask LiveAfter = LiveRegs.contains(Reg);
-    LaneBitmask UseLanes = getRegLanes(RegOpers.Uses, Reg);
+  for (const VRegMaskOrUnit &P : RegOpers.Defs) {
+    LaneBitmask LiveAfter = LiveRegs.contains(P.VRegOrUnit);
+    LaneBitmask UseLanes = getRegLanes(RegOpers.Uses, P.VRegOrUnit);
     LaneBitmask DefLanes = P.LaneMask;
     LaneBitmask LiveBefore = (LiveAfter & ~DefLanes) | UseLanes;
 
     // There may be parts of the register that were dead before the
-    // instruction, but became live afterwards. Similarly, some parts
-    // may have been killed in this instruction.
-    decreaseRegPressure(Reg, LiveAfter, LiveAfter & LiveBefore);
-    increaseRegPressure(Reg, LiveAfter, ~LiveAfter & LiveBefore);
+    // instruction, but became live afterwards.
+    decreaseRegPressure(P.VRegOrUnit, LiveAfter, LiveAfter & LiveBefore);
   }
-  // Generate liveness for uses.
-  for (const RegisterMaskPair &P : RegOpers.Uses) {
-    Register Reg = P.RegUnit;
-    // If this register was also in a def operand, we've handled it
-    // with defs.
-    if (getRegLanes(RegOpers.Defs, Reg).any())
-      continue;
-    LaneBitmask LiveAfter = LiveRegs.contains(Reg);
+  // Generate liveness for uses. Also handle any uses which overlap with defs.
+  for (const VRegMaskOrUnit &P : RegOpers.Uses) {
+    LaneBitmask LiveAfter = LiveRegs.contains(P.VRegOrUnit);
     LaneBitmask LiveBefore = LiveAfter | P.LaneMask;
-    increaseRegPressure(Reg, LiveAfter, LiveBefore);
+    increaseRegPressure(P.VRegOrUnit, LiveAfter, LiveBefore);
   }
 }
 
@@ -1203,7 +1248,7 @@ getUpwardPressureDelta(const MachineInstr *MI, /*const*/ PressureDiff &PDiff,
         ++CritIdx;
 
       if (CritIdx != CritEnd && CriticalPSets[CritIdx].getPSet() == PSetID) {
-        int CritInc = (int)MNew - (int)CriticalPSets[CritIdx].getUnitInc();
+        int CritInc = (int)MNew - CriticalPSets[CritIdx].getUnitInc();
         if (CritInc > 0 && CritInc <= std::numeric_limits<int16_t>::max()) {
           Delta.CriticalMax = PressureChange(PSetID);
           Delta.CriticalMax.setUnitInc(CritInc);
@@ -1221,11 +1266,17 @@ getUpwardPressureDelta(const MachineInstr *MI, /*const*/ PressureDiff &PDiff,
 /// Helper to find a vreg use between two indices [PriorUseIdx, NextUseIdx).
 /// The query starts with a lane bitmask which gets lanes/bits removed for every
 /// use we find.
-static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
+static LaneBitmask findUseBetween(VirtRegOrUnit VRegOrUnit,
+                                  LaneBitmask LastUseMask,
                                   SlotIndex PriorUseIdx, SlotIndex NextUseIdx,
                                   const MachineRegisterInfo &MRI,
                                   const LiveIntervals *LIS) {
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  // FIXME: The static_cast is a bug.
+  Register Reg =
+      VRegOrUnit.isVirtualReg()
+          ? VRegOrUnit.asVirtualReg()
+          : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
   for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
     if (MO.isUndef())
       continue;
@@ -1242,32 +1293,30 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
   return LastUseMask;
 }
 
-LaneBitmask RegPressureTracker::getLiveLanesAt(Register RegUnit,
+LaneBitmask RegPressureTracker::getLiveLanesAt(VirtRegOrUnit VRegOrUnit,
                                                SlotIndex Pos) const {
   assert(RequireIntervals);
-  return getLanesWithProperty(*LIS, *MRI, TrackLaneMasks, RegUnit, Pos,
-                              LaneBitmask::getAll(),
-      [](const LiveRange &LR, SlotIndex Pos) {
-        return LR.liveAt(Pos);
-      });
+  return getLanesWithProperty(
+      *LIS, *MRI, TrackLaneMasks, VRegOrUnit, Pos, LaneBitmask::getAll(),
+      [](const LiveRange &LR, SlotIndex Pos) { return LR.liveAt(Pos); });
 }
 
-LaneBitmask RegPressureTracker::getLastUsedLanes(Register RegUnit,
+LaneBitmask RegPressureTracker::getLastUsedLanes(VirtRegOrUnit VRegOrUnit,
                                                  SlotIndex Pos) const {
   assert(RequireIntervals);
-  return getLanesWithProperty(*LIS, *MRI, TrackLaneMasks, RegUnit,
-                              Pos.getBaseIndex(), LaneBitmask::getNone(),
-      [](const LiveRange &LR, SlotIndex Pos) {
+  return getLanesWithProperty(
+      *LIS, *MRI, TrackLaneMasks, VRegOrUnit, Pos.getBaseIndex(),
+      LaneBitmask::getNone(), [](const LiveRange &LR, SlotIndex Pos) {
         const LiveRange::Segment *S = LR.getSegmentContaining(Pos);
         return S != nullptr && S->end == Pos.getRegSlot();
       });
 }
 
-LaneBitmask RegPressureTracker::getLiveThroughAt(Register RegUnit,
+LaneBitmask RegPressureTracker::getLiveThroughAt(VirtRegOrUnit VRegOrUnit,
                                                  SlotIndex Pos) const {
   assert(RequireIntervals);
-  return getLanesWithProperty(*LIS, *MRI, TrackLaneMasks, RegUnit, Pos,
-                              LaneBitmask::getNone(),
+  return getLanesWithProperty(
+      *LIS, *MRI, TrackLaneMasks, VRegOrUnit, Pos, LaneBitmask::getNone(),
       [](const LiveRange &LR, SlotIndex Pos) {
         const LiveRange::Segment *S = LR.getSegmentContaining(Pos);
         return S != nullptr && S->start < Pos.getRegSlot(true) &&
@@ -1295,9 +1344,9 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
 
   if (RequireIntervals) {
-    for (const RegisterMaskPair &Use : RegOpers.Uses) {
-      Register Reg = Use.RegUnit;
-      LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
+    for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
+      VirtRegOrUnit VRegOrUnit = Use.VRegOrUnit;
+      LaneBitmask LastUseMask = getLastUsedLanes(VRegOrUnit, SlotIdx);
       if (LastUseMask.none())
         continue;
       // The LastUseMask is queried from the liveness information of instruction
@@ -1306,23 +1355,22 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
       // FIXME: allow the caller to pass in the list of vreg uses that remain
       // to be bottom-scheduled to avoid searching uses at each query.
       SlotIndex CurrIdx = getCurrSlot();
-      LastUseMask
-        = findUseBetween(Reg, LastUseMask, CurrIdx, SlotIdx, *MRI, LIS);
+      LastUseMask =
+          findUseBetween(VRegOrUnit, LastUseMask, CurrIdx, SlotIdx, *MRI, LIS);
       if (LastUseMask.none())
         continue;
 
-      LaneBitmask LiveMask = LiveRegs.contains(Reg);
+      LaneBitmask LiveMask = LiveRegs.contains(VRegOrUnit);
       LaneBitmask NewMask = LiveMask & ~LastUseMask;
-      decreaseRegPressure(Reg, LiveMask, NewMask);
+      decreaseRegPressure(VRegOrUnit, LiveMask, NewMask);
     }
   }
 
   // Generate liveness for defs.
-  for (const RegisterMaskPair &Def : RegOpers.Defs) {
-    Register Reg = Def.RegUnit;
-    LaneBitmask LiveMask = LiveRegs.contains(Reg);
+  for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
+    LaneBitmask LiveMask = LiveRegs.contains(Def.VRegOrUnit);
     LaneBitmask NewMask = LiveMask | Def.LaneMask;
-    increaseRegPressure(Reg, LiveMask, NewMask);
+    increaseRegPressure(Def.VRegOrUnit, LiveMask, NewMask);
   }
 
   // Boost pressure for all dead defs together.

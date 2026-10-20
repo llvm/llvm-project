@@ -21,12 +21,10 @@ define void @foo(ptr %arg) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr [0 x %0], ptr [[ARG]], i64 0, i64 -1
-; CHECK-NEXT:    [[I2:%.*]] = getelementptr i8, ptr [[I]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ARG]], i64 396
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], [[BB18:%.*]] ], [ [[I2]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi ptr [ [[SCEVGEP8:%.*]], [[BB18:%.*]] ], [ [[ARG]], [[BB:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i64 [ [[LSR_IV_NEXT6:%.*]], [[BB18]] ], [ 4, [[BB]] ]
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[BB18]] ], [ [[SCEVGEP]], [[BB]] ]
 ; CHECK-NEXT:    br i1 true, label [[BB22_PREHEADER:%.*]], label [[BB9_PREHEADER:%.*]]
@@ -60,7 +58,7 @@ bb:
 bb3:                                              ; preds = %bb18, %bb
   %i4 = phi i64 [ %i20, %bb18 ], [ 0, %bb ]
   %i5 = phi i64 [ %i21, %bb18 ], [ 1, %bb ]
-  br i1 undef, label %bb22, label %bb9
+  br i1 true, label %bb22, label %bb9
 
 bb9:                                              ; preds = %bb9, %bb3
   %i10 = phi i64 [ 0, %bb3 ], [ %i16, %bb9 ]
@@ -72,7 +70,7 @@ bb9:                                              ; preds = %bb9, %bb3
   br i1 true, label %bb17, label %bb9
 
 bb17:                                             ; preds = %bb9
-  br i1 undef, label %bb18, label %bb22
+  br i1 false, label %bb18, label %bb22
 
 bb18:                                             ; preds = %bb17
   %i19 = add i64 undef, %i4

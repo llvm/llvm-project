@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -48,6 +48,28 @@ namespace {
 // Passes implementation.
 //===----------------------------------------------------------------------===//
 
+static bool supportsCollapsedRangeBetween(LevelType lt) {
+  return isSingletonLT(lt);
+}
+
+static LogicalResult verifyLowerableCollapsedIterSpaces(Operation *op) {
+  WalkResult result = op->walk([&](ExtractIterSpaceOp op) {
+    auto [lvlLo, lvlHi] = op.getLvlRange();
+    SparseTensorEncodingAttr enc = cast<SparseTensorEncodingAttr>(
+        getRankedTensorType(op.getTensor()).getEncoding());
+    for (Level lvl = lvlLo + 1; lvl < lvlHi; ++lvl) {
+      LevelType lt = enc.getLvlType(lvl);
+      if (!supportsCollapsedRangeBetween(lt)) {
+        op.emitOpError() << "cannot lower collapsed iteration space with "
+                         << toMLIRString(lt) << " level after the first level";
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  return failure(result.wasInterrupted());
+}
+
 struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
   SparseAssembler() = default;
   SparseAssembler(const SparseAssembler &pass) = default;
@@ -57,7 +79,7 @@ struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseAssembler(patterns, directOut);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -67,13 +89,14 @@ struct SparseReinterpretMap
   SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
   SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
     scope = options.scope;
+    loopOrderingStrategy = options.loopOrderingStrategy;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseReinterpretMap(patterns, scope);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    populateSparseReinterpretMap(patterns, scope, loopOrderingStrategy);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -87,7 +110,7 @@ struct PreSparsificationRewritePass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populatePreSparsificationRewriting(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -110,7 +133,7 @@ struct SparsificationPass
     RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -122,7 +145,7 @@ struct StageSparseOperationsPass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateStageSparseOperationsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -141,7 +164,7 @@ struct LowerSparseOpsToForeachPass
     RewritePatternSet patterns(ctx);
     populateLowerSparseOpsToForeachPatterns(patterns, enableRuntimeLibrary,
                                             enableConvert);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -154,7 +177,7 @@ struct LowerForeachToSCFPass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateLowerForeachToSCFPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -166,17 +189,27 @@ struct LowerSparseIterationToSCFPass
       default;
 
   void runOnOperation() override {
+    if (failed(verifyLowerableCollapsedIterSpaces(getOperation()))) {
+      signalPassFailure();
+      return;
+    }
+
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     SparseIterationTypeConverter converter;
     ConversionTarget target(*ctx);
 
     // The actual conversion.
-    target.addIllegalOp<ExtractIterSpaceOp, IterateOp>();
+    target.addLegalDialect<arith::ArithDialect, linalg::LinalgDialect,
+                           memref::MemRefDialect, scf::SCFDialect,
+                           sparse_tensor::SparseTensorDialect>();
+    target.addIllegalOp<CoIterateOp, ExtractIterSpaceOp, ExtractValOp,
+                        IterateOp>();
+    target.addLegalOp<UnrealizedConversionCastOp>();
     populateLowerSparseIterationToSCFPatterns(converter, patterns);
 
-    if (failed(applyPartialOneToNConversion(getOperation(), converter,
-                                            std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -329,7 +362,7 @@ struct SparseBufferRewritePass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateSparseBufferRewriting(patterns, enableBufferInitialization);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -351,7 +384,7 @@ struct SparseVectorizationPass
     populateSparseVectorizationPatterns(
         patterns, vectorLength, enableVLAVectorization, enableSIMDIndex32);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -371,7 +404,7 @@ struct SparseGPUCodegenPass
       populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
     else
       populateSparseGPUCodegenPatterns(patterns, numThreads);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -430,6 +463,14 @@ std::unique_ptr<Pass>
 mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
   SparseReinterpretMapOptions options;
   options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
+}
+
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass(
+    ReinterpretMapScope scope, sparse_tensor::LoopOrderingStrategy strategy) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  options.loopOrderingStrategy = strategy;
   return std::make_unique<SparseReinterpretMap>(options);
 }
 

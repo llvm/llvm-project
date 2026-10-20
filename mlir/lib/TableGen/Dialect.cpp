@@ -62,6 +62,10 @@ std::optional<StringRef> Dialect::getExtraClassDeclaration() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+bool Dialect::useStrictPropertiesInAssemblyFormat() const {
+  return def->getValueAsBit("useStrictPropertiesInAssemblyFormat");
+}
+
 bool Dialect::hasCanonicalizer() const {
   return def->getValueAsBit("hasCanonicalizer");
 }
@@ -102,11 +106,7 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
-bool Dialect::usePropertiesForAttributes() const {
-  return def->getValueAsBit("usePropertiesForAttributes");
-}
-
-llvm::DagInit *Dialect::getDiscardableAttributes() const {
+const llvm::DagInit *Dialect::getDiscardableAttributes() const {
   return def->getValueAsDag("discardableAttrs");
 }
 

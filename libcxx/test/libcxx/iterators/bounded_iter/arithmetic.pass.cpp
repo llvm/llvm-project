@@ -11,8 +11,9 @@
 //
 // Arithmetic operators
 
+#include <__iterator/bounded_iter.h>
+#include <cassert>
 #include <cstddef>
-#include <iterator>
 
 #include "test_iterators.h"
 #include "test_macros.h"

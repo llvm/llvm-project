@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
@@ -29,11 +28,13 @@ static bool LowerFenceInst(FenceInst *FI) {
 
 static bool LowerLoadInst(LoadInst *LI) {
   LI->setAtomic(AtomicOrdering::NotAtomic);
+  LI->setElementwise(false);
   return true;
 }
 
 static bool LowerStoreInst(StoreInst *SI) {
   SI->setAtomic(AtomicOrdering::NotAtomic);
+  SI->setElementwise(false);
   return true;
 }
 

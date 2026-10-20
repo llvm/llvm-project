@@ -22,6 +22,26 @@ namespace detail {
 class DataLayoutEntryAttrStorage;
 } // namespace detail
 } // namespace mlir
+namespace mlir {
+namespace dlti {
+namespace detail {
+FailureOr<Attribute> queryDlti(Operation *op, DataLayoutEntryKey key);
+LogicalResult setDlti(Operation *op, DataLayoutEntryKey key, Attribute value);
+} // namespace detail
+
+/// Query the first key at `op` or the nearest ancestor that can answer it.
+/// Query later keys recursively on the returned attributes, without searching
+/// operation ancestors again.
+FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
+                           bool emitError = false);
+
+/// As above, using each string in `keys` as a DLTI entry key.
+FailureOr<Attribute> query(Operation *op, ArrayRef<StringRef> keys,
+                           bool emitError = false);
+} // namespace dlti
+} // namespace mlir
+
+#include "mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/DLTI/DLTIAttrs.h.inc"

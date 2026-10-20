@@ -59,7 +59,8 @@ using namespace mlir;
   MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
   MAP_FN(spirv::StorageClass::Input, 9)                                        \
   MAP_FN(spirv::StorageClass::Output, 10)                                      \
-  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 11)                       \
+  MAP_FN(spirv::StorageClass::Image, 12)
 
 std::optional<spirv::StorageClass>
 spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
@@ -229,9 +230,9 @@ static bool isLegalOp(Operation *op) {
                         isLegalType);
   }
 
-  auto attrs = llvm::map_range(op->getAttrs(), [](const NamedAttribute &attr) {
-    return attr.getValue();
-  });
+  auto attrs = llvm::map_range(
+      op->getDiscardableAttrDictionary().getValue(),
+      [](const NamedAttribute &attr) { return attr.getValue(); });
 
   return llvm::all_of(op->getOperandTypes(), isLegalType) &&
          llvm::all_of(op->getResultTypes(), isLegalType) &&

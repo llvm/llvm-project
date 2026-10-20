@@ -26,7 +26,7 @@ class TextDiagnostic;
 
 class TextDiagnosticPrinter : public DiagnosticConsumer {
   raw_ostream &OS;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
 
   /// Handle to the currently active text diagnostic emitter.
   std::unique_ptr<TextDiagnostic> TextDiag;
@@ -38,7 +38,7 @@ class TextDiagnosticPrinter : public DiagnosticConsumer {
   unsigned OwnsOutputStream : 1;
 
 public:
-  TextDiagnosticPrinter(raw_ostream &os, DiagnosticOptions *diags,
+  TextDiagnosticPrinter(raw_ostream &os, DiagnosticOptions &DiagOpts,
                         bool OwnsOutputStream = false);
   ~TextDiagnosticPrinter() override;
 

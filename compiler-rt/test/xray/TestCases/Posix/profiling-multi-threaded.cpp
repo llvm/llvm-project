@@ -4,11 +4,11 @@
 // FIXME: Make -fxray-modes=xray-profiling part of the default?
 // RUN: %clangxx_xray -std=c++11 %s -o %t -fxray-modes=xray-profiling
 // RUN: rm -f xray-log.profiling-multi-*
-// RUN: XRAY_OPTIONS=verbosity=1 \
+// RUN: env XRAY_OPTIONS=verbosity=1 \
 // RUN:     XRAY_PROFILING_OPTIONS=no_flush=1 %run %t
-// RUN: XRAY_OPTIONS=verbosity=1 %run %t
-// RUN: PROFILES=`ls xray-log.profiling-multi-* | wc -l`
-// RUN: [ $PROFILES -eq 1 ]
+// RUN: env XRAY_OPTIONS=verbosity=1 %run %t
+// RUN: ls xray-log.profiling-multi-* | wc -l | tr -d '\n' > %t.profiles
+// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]) - 1)" %{readfile:%t.profiles} 
 // RUN: rm -f xray-log.profiling-multi-*
 //
 // REQUIRES: built-in-llvm-tree

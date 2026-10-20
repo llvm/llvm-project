@@ -31,6 +31,9 @@
 
 namespace llvm {
 class raw_ostream;
+namespace json {
+class Object;
+}
 }
 // Logging Options
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
@@ -41,6 +44,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_BACKTRACE (1U << 7)
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
+#define LLDB_LOG_OPTION_JSON (1U << 10)
 
 // Logging Functions
 namespace lldb_private {
@@ -194,22 +198,20 @@ public:
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
-  static bool
+  static llvm::Error
   EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
                    uint32_t log_options, llvm::StringRef channel,
-                   llvm::ArrayRef<const char *> categories,
-                   llvm::raw_ostream &error_stream);
+                   llvm::ArrayRef<const char *> categories);
 
-  static bool DisableLogChannel(llvm::StringRef channel,
-                                llvm::ArrayRef<const char *> categories,
-                                llvm::raw_ostream &error_stream);
+  static llvm::Error DisableLogChannel(llvm::StringRef channel,
+                                       llvm::ArrayRef<const char *> categories);
 
   static bool DumpLogChannel(llvm::StringRef channel,
                              llvm::raw_ostream &output_stream,
                              llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel,
-                                    llvm::raw_ostream &stream);
+  static llvm::Expected<std::string>
+  ListChannelCategories(llvm::StringRef channel);
 
   /// Returns the list of log channels.
   static std::vector<llvm::StringRef> ListChannels();
@@ -255,11 +257,7 @@ public:
   /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   const Flags GetOptions() const;
 
@@ -268,9 +266,14 @@ public:
   bool GetVerbose() const;
 
   void VAPrintf(const char *format, va_list args);
-  void VAError(const char *format, va_list args);
   void VAFormatf(llvm::StringRef file, llvm::StringRef function,
                  const char *format, va_list args);
+
+  void Enable(const std::shared_ptr<LogHandler> &handler_sp,
+              std::optional<MaskType> flags = std::nullopt,
+              uint32_t options = 0);
+
+  void Disable(std::optional<MaskType> flags = std::nullopt);
 
 private:
   Channel &m_channel;
@@ -287,7 +290,11 @@ private:
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
+  void WriteJSONHeader(llvm::json::Object &obj, llvm::StringRef file,
+                       llvm::StringRef function);
   void WriteMessage(llvm::StringRef message);
+  void EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
+                       llvm::StringRef message);
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
@@ -296,11 +303,6 @@ private:
     llvm::sys::ScopedReader lock(m_mutex);
     return m_handler;
   }
-
-  void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              MaskType flags);
-
-  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 
@@ -313,9 +315,14 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
-                                const ChannelMap::value_type &entry,
-                                llvm::ArrayRef<const char *> categories);
+
+  /// Convert an array of category names into a set of category flags.
+  /// Returns a bitmask of categories, or an error message in the case that
+  /// at least one category name was not recognised. All unknown category names
+  /// are included in the error.
+  static llvm::Expected<Log::MaskType>
+  GetFlags(const ChannelMap::value_type &entry,
+           llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;
@@ -333,6 +340,15 @@ template <typename Cat> Log *GetLog(Cat mask) {
       std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
   return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
+
+/// Getter and setter for the error log (see g_error_log).
+/// The error log is set to the system log in SystemInitializerFull. We can't
+/// use the system log directly because that would violate the layering between
+/// Utility and Host.
+/// @{
+void SetLLDBErrorLog(Log *log);
+Log *GetLLDBErrorLog();
+/// @}
 
 } // namespace lldb_private
 
@@ -363,6 +379,13 @@ template <typename Cat> Log *GetLog(Cat mask) {
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
   } while (0)
 
+#define LLDB_LOG_VERBOSE(log, ...)                                             \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private && log_private->GetVerbose())                              \
+      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
 #define LLDB_LOGF(log, ...)                                                    \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
@@ -370,11 +393,11 @@ template <typename Cat> Log *GetLog(Cat mask) {
       log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
-#define LLDB_LOGV(log, ...)                                                    \
+#define LLDB_LOGF_VERBOSE(log, ...)                                            \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private && log_private->GetVerbose())                              \
-      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+      log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
 // Write message to log, if error is set. In the log message refer to the error
@@ -383,6 +406,8 @@ template <typename Cat> Log *GetLog(Cat mask) {
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     ::llvm::Error error_private = (error);                                     \
+    if (!log_private)                                                          \
+      log_private = lldb_private::GetLLDBErrorLog();                           \
     if (log_private && error_private) {                                        \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \

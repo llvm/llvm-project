@@ -12,7 +12,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -32,7 +32,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefAlloc final : OpConversionPattern<memref::AllocOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AllocOp op, OpAdaptor adaptor,
@@ -55,7 +55,7 @@ struct ConvertMemRefAlloc final : OpConversionPattern<memref::AllocOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
@@ -78,7 +78,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMemRefStore final : OpConversionPattern<memref::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
@@ -121,7 +121,7 @@ struct EmulateWideIntPass final
         [&typeConverter](Operation *op) { return typeConverter.isLegal(op); });
 
     RewritePatternSet patterns(ctx);
-    // Add common pattenrs to support contants, functions, etc.
+    // Add common patterns to support contants, functions, etc.
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
 
     memref::populateMemRefWideIntEmulationPatterns(typeConverter, patterns);
@@ -138,7 +138,7 @@ struct EmulateWideIntPass final
 //===----------------------------------------------------------------------===//
 
 void memref::populateMemRefWideIntEmulationPatterns(
-    arith::WideIntEmulationConverter &typeConverter,
+    const arith::WideIntEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
   // Populate `memref.*` conversion patterns.
   patterns.add<ConvertMemRefAlloc, ConvertMemRefLoad, ConvertMemRefStore>(
@@ -159,7 +159,7 @@ void memref::populateMemRefWideIntEmulationConversions(
 
         Type newElemTy = typeConverter.convertType(intTy);
         if (!newElemTy)
-          return std::nullopt;
+          return nullptr;
 
         return ty.cloneWith(std::nullopt, newElemTy);
       });

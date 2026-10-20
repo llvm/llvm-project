@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -relocation-model=pic -mattr=+long-calls < %s | FileCheck --check-prefix=CHECK-LONG %s
-; RUN: llc -march=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic -mattr=+long-calls < %s | FileCheck --check-prefix=CHECK-LONG %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK-LONG: call ##_ZL13g_usr1_called@GDPLT
 ; CHECK-LONG-NOT: call _ZL13g_usr1_called@GDPLT

@@ -18,7 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
-#include "lldb/Core/ValueObject.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 class TypeFormatImpl {
@@ -133,6 +133,10 @@ public:
 
   void SetOptions(uint32_t value) { m_flags.SetValue(value); }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
   uint32_t &GetRevision() { return m_my_revision; }
 
   enum class Type { eTypeUnknown, eTypeFormat, eTypeEnum };
@@ -150,6 +154,7 @@ public:
 protected:
   Flags m_flags;
   uint32_t m_my_revision = 0;
+  uint32_t m_ptr_match_depth = 1;
 
 private:
   TypeFormatImpl(const TypeFormatImpl &) = delete;
@@ -188,16 +193,18 @@ private:
 
 class TypeFormatImpl_EnumType : public TypeFormatImpl {
 public:
-  TypeFormatImpl_EnumType(ConstString type_name = ConstString(""),
+  TypeFormatImpl_EnumType(std::string type_name = "",
                           const TypeFormatImpl::Flags &flags = Flags());
 
   typedef std::shared_ptr<TypeFormatImpl_EnumType> SharedPointer;
 
   ~TypeFormatImpl_EnumType() override;
 
-  ConstString GetTypeName() { return m_enum_type; }
+  const std::string &GetTypeName() { return m_enum_type; }
 
-  void SetTypeName(ConstString enum_type) { m_enum_type = enum_type; }
+  void SetTypeName(std::string enum_type) {
+    m_enum_type = std::move(enum_type);
+  }
 
   TypeFormatImpl::Type GetType() override {
     return TypeFormatImpl::Type::eTypeEnum;
@@ -208,7 +215,7 @@ public:
   std::string GetDescription() override;
 
 protected:
-  ConstString m_enum_type;
+  std::string m_enum_type;
   mutable std::unordered_map<void *, CompilerType> m_types;
 
 private:

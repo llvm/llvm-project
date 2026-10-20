@@ -1,3 +1,5 @@
+!Windows uses 0d+0a as line-endings, and the check fails.
+!UNSUPPORTED: system-windows
 
 !----------
 ! RUN lines

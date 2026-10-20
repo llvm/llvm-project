@@ -1,9 +1,9 @@
-! Offloading test checking interaction of an
-! derived type mapping of two explicit
-! members to target
+! Offloading test checking interaction of an derived type mapping of two 
+! explicit members to target
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
     type :: scalar
       integer(4) :: ix = 0

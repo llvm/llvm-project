@@ -23,7 +23,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY-NEXT:           12,24:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
-; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Byte:            4294967295
 ; SUMMARY-X86-NEXT:         Bit:             0
 ; SUMMARY-ARM-NEXT:         Byte:            4294967295
 ; SUMMARY-ARM-NEXT:         Bit:             1
@@ -43,7 +43,7 @@ target datalayout = "e-p:64:64"
 ; SUMMARY-NEXT:           24,12:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
-; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Byte:            4294967292
 ; SUMMARY-X86-NEXT:         Bit:             0
 ; SUMMARY-ARM-NEXT:         Byte:            4294967292
 ; SUMMARY-ARM-NEXT:         Bit:             1
@@ -60,24 +60,22 @@ target datalayout = "e-p:64:64"
 ; CHECK: [[CVT3D:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\01", ptr @vf1i1, [0 x i8] zeroinitializer }, !type !0
 @vt3d = constant ptr @vf1i1, !type !0
 
-; CHECK: [[CVT4A:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\01\00\00\00", ptr @vf1i32, [0 x i8] zeroinitializer }, !type !1
+; CHECK: [[CVT4A:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\01\00\00\00", ptr @vf1i32, [0 x i8] zeroinitializer }, !type !5
 @vt4a = constant ptr @vf1i32, !type !1
 
-; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", ptr @vf2i32, [0 x i8] zeroinitializer }, !type !1
+; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", ptr @vf2i32, [0 x i8] zeroinitializer }, !type !5
 @vt4b = constant ptr @vf2i32, !type !1
 
-; X86: @__typeid_typeid3_0_12_24_byte = hidden alias i8, inttoptr (i32 -1 to ptr)
 ; X86: @__typeid_typeid3_0_12_24_bit = hidden alias i8, inttoptr (i32 1 to ptr)
-; X86: @__typeid_typeid4_0_24_12_byte = hidden alias i8, inttoptr (i32 -4 to ptr)
 ; X86: @__typeid_typeid4_0_24_12_bit = hidden alias i8, inttoptr (i32 1 to ptr)
 ; ARM-NOT: alias {{.*}} inttoptr
 
-; CHECK: @vt3a = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3A]], i32 0, i32 1)
-; CHECK: @vt3b = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3B]], i32 0, i32 1)
-; CHECK: @vt3c = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3C]], i32 0, i32 1)
-; CHECK: @vt3d = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3D]], i32 0, i32 1)
-; CHECK: @vt4a = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT4A]], i32 0, i32 1)
-; CHECK: @vt4b = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT4B]], i32 0, i32 1)
+; CHECK: @vt3a = alias ptr, getelementptr inbounds (i8, ptr [[CVT3A]], i64 8)
+; CHECK: @vt3b = alias ptr, getelementptr inbounds (i8, ptr [[CVT3B]], i64 8)
+; CHECK: @vt3c = alias ptr, getelementptr inbounds (i8, ptr [[CVT3C]], i64 8)
+; CHECK: @vt3d = alias ptr, getelementptr inbounds (i8, ptr [[CVT3D]], i64 8)
+; CHECK: @vt4a = alias ptr, getelementptr inbounds (i8, ptr [[CVT4A]], i64 8)
+; CHECK: @vt4b = alias ptr, getelementptr inbounds (i8, ptr [[CVT4B]], i64 8)
 
 define i1 @vf0i1(ptr %this, i32, i32) readnone {
   ret i1 0
@@ -96,7 +94,7 @@ define i32 @vf2i32(ptr %this, i32, i32) readnone {
 }
 
 ; CHECK: !0 = !{i32 8, !"typeid3"}
-; CHECK: !1 = !{i32 8, !"typeid4"}
+; CHECK: !5 = !{i32 8, !"typeid4"}
 
 !0 = !{i32 0, !"typeid3"}
 !1 = !{i32 0, !"typeid4"}

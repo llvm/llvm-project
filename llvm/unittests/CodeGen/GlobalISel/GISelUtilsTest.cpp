@@ -77,6 +77,15 @@ static const LLT NXV3P0 = LLT::scalable_vector(3, P0);
 static const LLT NXV4P0 = LLT::scalable_vector(4, P0);
 static const LLT NXV12P0 = LLT::scalable_vector(12, P0);
 
+static void collectNonCopyMI(SmallVectorImpl<MachineInstr *> &MIList,
+                             MachineFunction *MF) {
+  for (auto &MBB : *MF)
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() != TargetOpcode::COPY)
+        MIList.push_back(&MI);
+    }
+}
+
 TEST(GISelUtilsTest, getGCDType) {
   EXPECT_EQ(S1, getGCDType(S1, S1));
   EXPECT_EQ(S32, getGCDType(S32, S32));
@@ -407,5 +416,87 @@ TEST_F(AArch64GISelMITest, ConstFalseTest) {
       EXPECT_FALSE(isConstFalseVal(TLI, 2, IsVec, IsFP));
     }
   }
+}
+
+TEST_F(AMDGPUGISelMITest, isConstantOrConstantSplatVectorFP) {
+  StringRef MIRString =
+      "  %cst0:_(s32) = G_FCONSTANT float 2.000000e+00\n"
+      "  %cst1:_(s32) = G_FCONSTANT float 0.0\n"
+      "  %cst2:_(s64) = G_FCONSTANT double 3.000000e-02\n"
+      "  %cst3:_(s32) = G_CONSTANT i32 2\n"
+      "  %cst4:_(<2 x s32>) = G_BUILD_VECTOR %cst0(s32), %cst0(s32)\n"
+      "  %cst5:_(<2 x s32>) = G_BUILD_VECTOR %cst1(s32), %cst0(s32)\n"
+      "  %cst6:_(<2 x s64>) = G_BUILD_VECTOR %cst2(s64), %cst2(s64)\n"
+      "  %cst7:_(<2 x s32>) = G_BUILD_VECTOR %cst3(s32), %cst3:_(s32)\n"
+      "  %cst8:_(<4 x s32>) = G_CONCAT_VECTORS %cst4:_(<2 x s32>), %cst4:_(<2 "
+      "x s32>)\n"
+      "  %cst9:_(<4 x s64>) = G_CONCAT_VECTORS %cst6:_(<2 x s64>), %cst6:_(<2 "
+      "x s64>)\n"
+      "  %cst10:_(<4 x s32>) = G_CONCAT_VECTORS %cst4:_(<2 x s32>), %cst5:_(<2 "
+      "x s32>)\n"
+      "  %cst11:_(<4 x s32>) = G_CONCAT_VECTORS %cst7:_(<2 x s32>), %cst7:_(<2 "
+      "x s32>)\n"
+      "  %cst12:_(s32) = G_IMPLICIT_DEF \n"
+      "  %cst13:_(<2 x s32>) = G_BUILD_VECTOR %cst12(s32), %cst12(s32)\n"
+      "  %cst14:_(<2 x s32>) = G_BUILD_VECTOR %cst0(s32), %cst12(s32)\n"
+      "  %cst15:_(<4 x s32>) = G_CONCAT_VECTORS %cst4:_(<2 x s32>), "
+      "%cst14:_(<2 "
+      "x s32>)\n";
+
+  SmallVector<MachineInstr *, 16> MIList;
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  collectNonCopyMI(MIList, MF);
+
+  auto GetReg = [&](int I) { return MIList[I]->getOperand(0).getReg(); };
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(0), *MRI).has_value());
+  auto val = isConstantOrConstantSplatVectorFP(GetReg(0), *MRI).value();
+  EXPECT_EQ(2.0, val.convertToFloat());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(1), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(1), *MRI).value();
+  EXPECT_EQ(0.0, val.convertToFloat());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(2), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(2), *MRI).value();
+  EXPECT_EQ(0.03, val.convertToDouble());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(3), *MRI).has_value());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(4), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(4), *MRI).value();
+  EXPECT_EQ(2.0, val.convertToFloat());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(5), *MRI).has_value());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(6), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(6), *MRI).value();
+  EXPECT_EQ(0.03, val.convertToDouble());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(7), *MRI).has_value());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(8), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(8), *MRI).value();
+  EXPECT_EQ(2.0, val.convertToFloat());
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(9), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(9), *MRI).value();
+  EXPECT_EQ(0.03, val.convertToDouble());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(10), *MRI).has_value());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(11), *MRI).has_value());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(12), *MRI).has_value());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(13), *MRI).has_value());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(14), *MRI).has_value());
+
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(15), *MRI).has_value());
 }
 }

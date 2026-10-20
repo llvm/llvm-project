@@ -116,7 +116,7 @@ define i1 @scalar_i8_shl_ugt_const(i8 %x) {
 
 define <4 x i1> @vector_4xi32_shl_ult_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ult_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 2097088)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -128,7 +128,7 @@ define <4 x i1> @vector_4xi32_shl_ult_const(<4 x i32> %x) {
 define <4 x i1> @vector_4xi32_shl_ult_const_undef1(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ult_const_undef1(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 11, i32 11, i32 undef, i32 11>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 131072, i32 131072, i32 131072, i32 131072>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[SHL]], splat (i32 131072)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %shl = shl <4 x i32> %x, <i32 11, i32 11, i32 undef, i32 11>
@@ -138,7 +138,7 @@ define <4 x i1> @vector_4xi32_shl_ult_const_undef1(<4 x i32> %x) {
 
 define <4 x i1> @vector_4xi32_shl_ult_const_undef2(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ult_const_undef2(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 11, i32 11, i32 11, i32 11>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], splat (i32 11)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 131072, i32 131072, i32 131072, i32 undef>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -161,7 +161,7 @@ define <4 x i1> @vector_4xi32_shl_ult_const_undef3(<4 x i32> %x) {
 ; Check 'uge' predicate
 define <4 x i1> @vector_4xi32_shl_uge_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_uge_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 2097088)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -173,7 +173,7 @@ define <4 x i1> @vector_4xi32_shl_uge_const(<4 x i32> %x) {
 ; Check 'ule' predicate
 define <4 x i1> @vector_4xi32_shl_ule_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ule_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 2097088)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -185,7 +185,7 @@ define <4 x i1> @vector_4xi32_shl_ule_const(<4 x i32> %x) {
 ; Check 'ugt' predicate
 define <4 x i1> @vector_4xi32_shl_ugt_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ugt_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 2097088)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;

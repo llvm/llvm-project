@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Testing for these 6 variants of circular load:
 ;   Q6_circ_load_update_B(inputLR, pDelay, -1, nConvLength, 4);
 ;   Q6_circ_load_update_D(inputLR, pDelay, -1, nConvLength, 4);
@@ -115,7 +115,10 @@ entry:
 
 declare ptr @llvm.hexagon.circ.ldw(ptr, ptr, i32, i32) nounwind
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!4, !4, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
-!2 = !{!"short", !0}
-!3 = !{!"int", !0}
+!2 = !{!5, !5, i64 0}
+!3 = !{!6, !6, i64 0}
+!4 = !{!"omnipotent char", !1}
+!5 = !{!"short", !4}
+!6 = !{!"int", !4}

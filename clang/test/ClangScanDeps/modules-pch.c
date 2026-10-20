@@ -11,7 +11,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_pch.json
-// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
+// RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
 // RUN: not cat %/t/pch.h.pch
@@ -25,8 +27,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_1:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_1.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_1.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon1"
@@ -38,8 +40,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_2:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_2.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_common_2.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModCommon2"
@@ -56,8 +58,8 @@
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_PCH:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
-// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_pch.h",
-// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-PCH-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-PCH-NEXT:         "[[PREFIX]]/mod_pch.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "link-libraries": [],
 // CHECK-PCH-NEXT:       "name": "ModPCH"
@@ -102,7 +104,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb_tu.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu.json
-// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
+// RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
 // CHECK-TU:      {
 // CHECK-TU-NEXT:   "modules": [
@@ -113,8 +117,8 @@
 // CHECK-TU:            ],
 // CHECK-TU-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-TU-NEXT:       "file-deps": [
-// CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h",
-// CHECK-TU-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-TU-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-TU-NEXT:         "[[PREFIX]]/mod_tu.h"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "link-libraries": [],
 // CHECK-TU-NEXT:       "name": "ModTU"
@@ -152,7 +156,9 @@
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu_with_common.json > %t/cdb_tu_with_common.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu_with_common.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu_with_common.json
-// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
+// RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=name,clang-module-deps,clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,clang-context-hash,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
 //
 // CHECK-TU-WITH-COMMON:      {
 // CHECK-TU-WITH-COMMON-NEXT:   "modules": [
@@ -163,8 +169,8 @@
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON-NEXT:       "context-hash": "[[HASH_MOD_TU_WITH_COMMON:.*]]",
 // CHECK-TU-WITH-COMMON-NEXT:       "file-deps": [
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/mod_tu_with_common.h",
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/mod_tu_with_common.h"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "link-libraries": [],
 // CHECK-TU-WITH-COMMON-NEXT:       "name": "ModTUWithCommon"

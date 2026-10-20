@@ -38,6 +38,9 @@
 ;; }
 
 ; RUN: opt -passes=inline %s -S | FileCheck %s
+;; We should not perform additional discarding of non-cold contexts when
+;; rebuilding the tries after inlining, even with a very low threshold.
+; RUN: opt -passes=inline -memprof-callsite-cold-threshold=1 %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline2.cc'
 source_filename = "memprof_inline2.cc"
@@ -90,10 +93,18 @@ entry:
 ; CHECK-LABEL: define dso_local noundef ptr @notprofiled
 define dso_local noundef ptr @notprofiled() #0 !dbg !66 {
 entry:
+  ;; When foo is inlined, both the memprof and callsite metadata should be
+  ;; stripped from the inlined call to new, as there is no callsite metadata on
+  ;; the call.
   ; CHECK: call {{.*}} @_Znam
   ; CHECK-NOT: !memprof
   ; CHECK-NOT: !callsite
   %call = call noundef ptr @_Z3foov(), !dbg !67
+  ;; When baz is inlined, the callsite metadata should be stripped from the
+  ;; inlined call to foo2, as there is no callsite metadata on the call.
+  ; CHECK: call {{.*}} @_Z4foo2v
+  ; CHECK-NOT: !callsite
+  %call2 = call noundef ptr @_Z3bazv()
   ; CHECK-NEXT: ret
   ret ptr %call, !dbg !68
 }

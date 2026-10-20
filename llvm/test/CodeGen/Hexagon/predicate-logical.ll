@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: p{{[0-9]}} = or(p{{[0-9]}},and(p{{[0-9]}},p{{[0-9]}}))
 
 target triple = "hexagon"
@@ -25,6 +25,7 @@ entry:
 
 declare i32 @llvm.hexagon.A2.vcmpwgtu(i64, i64) nounwind readnone
 
-!0 = !{!"long long", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"long long", !1}

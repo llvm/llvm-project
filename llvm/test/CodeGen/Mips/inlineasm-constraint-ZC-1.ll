@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,09BIT
-; RUN: llc -march=mipsel -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,12BIT
-; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,16BIT
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,09BIT
+; RUN: llc -mtriple=mipsel -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,12BIT
+; RUN: llc -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,16BIT
 
 @data = global [8193 x i32] zeroinitializer
 

@@ -9,17 +9,15 @@
 #ifndef LLVM_ANALYSIS_VALUELATTICE_H
 #define LLVM_ANALYSIS_VALUELATTICE_H
 
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
 //                               ValueLatticeElement
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-
-class Constant;
 
 /// This class represents lattice values for constants.
 ///
@@ -81,6 +79,11 @@ class ValueLatticeElement {
   ValueLatticeElementTy Tag : 8;
   /// Number of times a constant range has been extended with widening enabled.
   unsigned NumRangeExtensions : 8;
+
+  // Pointer constants derived from equality predicates may have different
+  // provenance than the original value. Limit constant propagation if this
+  // happens to be the case.
+  bool MayHaveDifferentProvenance = false;
 
   /// The union either stores a pointer to a constant or a constant range,
   /// associated to the lattice element. We have to ensure that Range is
@@ -150,7 +153,8 @@ public:
   ~ValueLatticeElement() { destroy(); }
 
   ValueLatticeElement(const ValueLatticeElement &Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -169,7 +173,8 @@ public:
   }
 
   ValueLatticeElement(ValueLatticeElement &&Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -281,16 +286,19 @@ public:
     return std::nullopt;
   }
 
-  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
-    assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
+  ConstantRange asConstantRange(unsigned BW, bool UndefAllowed = false) const {
     if (isConstantRange(UndefAllowed))
       return getConstantRange();
     if (isConstant())
       return getConstant()->toConstantRange();
-    unsigned BW = Ty->getScalarSizeInBits();
     if (isUnknown())
       return ConstantRange::getEmpty(BW);
     return ConstantRange::getFull(BW);
+  }
+
+  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
+    assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
+    return asConstantRange(Ty->getScalarSizeInBits(), UndefAllowed);
   }
 
   bool markOverdefined() {
@@ -384,7 +392,9 @@ public:
       return true;
     }
 
-    assert(isUnknown() || isUndef());
+    assert(isUnknown() || isUndef() || isConstant());
+    assert((!isConstant() || NewR.contains(getConstant()->toConstantRange())) &&
+           "Constant must be subset of new range");
 
     NumRangeExtensions = 0;
     Tag = NewTag;
@@ -422,10 +432,25 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && getConstant() == RHS.getConstant())
-        return false;
+      if (RHS.isConstant() && getConstant() == RHS.getConstant()) {
+        // Equal constants may still differ in provenance, propagate it when
+        // merging values.
+        bool Current = MayHaveDifferentProvenance;
+        MayHaveDifferentProvenance |= RHS.mayHaveDifferentProvenance();
+        return MayHaveDifferentProvenance != Current;
+      }
       if (RHS.isUndef())
         return false;
+      // If the constant is a vector of integers, try to treat it as a range.
+      if (getConstant()->getType()->isVectorTy() &&
+          getConstant()->getType()->getScalarType()->isIntegerTy()) {
+        ConstantRange L = getConstant()->toConstantRange();
+        ConstantRange NewR = L.unionWith(
+            RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
+        return markConstantRange(
+            std::move(NewR),
+            Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+      }
       markOverdefined();
       return true;
     }
@@ -444,14 +469,9 @@ public:
       return OldTag != Tag;
     }
 
-    if (!RHS.isConstantRange()) {
-      // We can get here if we've encountered a constantexpr of integer type
-      // and merge it with a constantrange.
-      markOverdefined();
-      return true;
-    }
-
-    ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
+    const ConstantRange &L = getConstantRange();
+    ConstantRange NewR = L.unionWith(
+        RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
     return markConstantRange(
         std::move(NewR),
         Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
@@ -460,17 +480,39 @@ public:
   // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
-  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
-                       const ValueLatticeElement &Other,
-                       const DataLayout &DL) const;
+  LLVM_ABI Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+                                const ValueLatticeElement &Other,
+                                const DataLayout &DL) const;
+
+  /// Combine two sets of facts about the same value into a single set of
+  /// facts.  Note that this method is not suitable for merging facts along
+  /// different paths in a CFG; that's what the mergeIn function is for.  This
+  /// is for merging facts gathered about the same value at the same location
+  /// through two independent means.
+  /// Notes:
+  /// * This method does not promise to return the most precise possible lattice
+  ///   value implied by A and B.  It is allowed to return any lattice element
+  ///   which is at least as strong as *either* A or B (unless our facts
+  ///   conflict, see below).
+  /// * Due to unreachable code, the intersection of two lattice values could be
+  ///   contradictory.  If this happens, we return some valid lattice value so
+  ///   as not confuse the rest of LVI.  Ideally, we'd always return Undefined,
+  ///   but we do not make this guarantee.  TODO: This would be a useful
+  ///   enhancement.
+  LLVM_ABI ValueLatticeElement
+  intersect(const ValueLatticeElement &Other) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
+
+  bool mayHaveDifferentProvenance() const { return MayHaveDifferentProvenance; }
+  void setMayHaveDifferentProvenance(bool V) { MayHaveDifferentProvenance = V; }
 };
 
 static_assert(sizeof(ValueLatticeElement) <= 40,
               "size of ValueLatticeElement changed unexpectedly");
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif

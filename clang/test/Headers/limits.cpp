@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -std=c17 -ffreestanding -fsyntax-only -verify -x c %s
 // RUN: %clang_cc1 -std=c2x -ffreestanding -fsyntax-only -verify -x c %s
 
+// Specifically test arm64 linux platforms.
+// RUN: %clang_cc1 -triple arm64-linux -ffreestanding -fsyntax-only -verify -x c %s
+
 // Specifically test 16-bit int platforms.
 // RUN: %clang_cc1 -triple=avr -ffreestanding -fsyntax-only -verify -x c %s
 // RUN: %clang_cc1 -triple=avr -std=c++11 -ffreestanding -fsyntax-only -verify %s

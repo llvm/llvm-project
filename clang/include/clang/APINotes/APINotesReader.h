@@ -16,9 +16,14 @@
 #define LLVM_CLANG_APINOTES_READER_H
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace clang {
 namespace api_notes {
@@ -30,14 +35,14 @@ class APINotesReader {
   std::unique_ptr<Implementation> Implementation;
 
   APINotesReader(llvm::MemoryBuffer *InputBuffer,
-                 llvm::VersionTuple SwiftVersion, bool &Failed);
+                 llvm::VersionTuple SwiftVersion, llvm::Error &Err);
 
 public:
-  /// Create a new API notes reader from the given member buffer, which
+  /// Create a new API notes reader from the given memory buffer, which
   /// contains the contents of a binary API notes file.
   ///
-  /// \returns the new API notes reader, or null if an error occurred.
-  static std::unique_ptr<APINotesReader>
+  /// \returns the new API notes reader, or an error if one occurred.
+  static llvm::Expected<std::unique_ptr<APINotesReader>>
   Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
          llvm::VersionTuple SwiftVersion);
 
@@ -101,7 +106,7 @@ public:
   /// \param Name The name of the class we're looking for.
   ///
   /// \returns The information about the class, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCClassInfo(llvm::StringRef Name);
+  VersionedInfo<ContextInfo> lookupObjCClassInfo(llvm::StringRef Name);
 
   /// Look for the context ID of the given Objective-C protocol.
   ///
@@ -115,7 +120,7 @@ public:
   /// \param Name The name of the protocol we're looking for.
   ///
   /// \returns The information about the protocol, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCProtocolInfo(llvm::StringRef Name);
+  VersionedInfo<ContextInfo> lookupObjCProtocolInfo(llvm::StringRef Name);
 
   /// Look for information regarding the given Objective-C property in
   /// the given context.
@@ -141,6 +146,40 @@ public:
                                                  ObjCSelectorRef Selector,
                                                  bool IsInstanceMethod);
 
+  /// Look for information regarding the given field of a C struct.
+  ///
+  /// \param Name The name of the field.
+  ///
+  /// \returns information about the field, if known.
+  VersionedInfo<FieldInfo> lookupField(ContextID CtxID, llvm::StringRef Name);
+
+  /// Look for information regarding the given C++ method in the given C++ tag
+  /// context.
+  ///
+  /// \param CtxID The ID that references the parent context, i.e. a C++ tag.
+  /// \param Name The name of the C++ method we're looking for.
+  ///
+  /// \returns Information about the method, if known.
+  VersionedInfo<CXXMethodInfo> lookupCXXMethod(ContextID CtxID,
+                                               llvm::StringRef Name);
+
+  /// Look for information regarding the given C++ method with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                  llvm::ArrayRef<std::string> Parameters);
+
+  /// Build the selector key for the given C++ method.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name);
+
+  /// Build the selector key for the given C++ method with an exact parameter
+  /// selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
+                          llvm::ArrayRef<std::string> Parameters);
+
   /// Look for information regarding the given global variable.
   ///
   /// \param Name The name of the global variable.
@@ -159,12 +198,52 @@ public:
   lookupGlobalFunction(llvm::StringRef Name,
                        std::optional<Context> Ctx = std::nullopt);
 
+  /// Look for information regarding the given global function with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunction(llvm::StringRef Name,
+                       llvm::ArrayRef<std::string> Parameters,
+                       std::optional<Context> Ctx = std::nullopt);
+
+  /// Build the selector key for the given global function.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Build the selector key for the given global function with an exact
+  /// parameter selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               llvm::ArrayRef<std::string> Parameters,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Collect exact parameter selector keys stored by this reader.
+  void collectExactFunctionParameterSelectors(
+      llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
+
+  /// Reconstruct parameter selector strings for a stored exact selector key.
+  std::optional<llvm::SmallVector<std::string, 4>>
+  getParameterSelectorSpellingsForDiagnostics(
+      const APINotesFunctionSelectorKey &Key);
+
   /// Look for information regarding the given enumerator.
   ///
   /// \param Name The name of the enumerator.
   ///
   /// \returns information about the enumerator, if known.
   VersionedInfo<EnumConstantInfo> lookupEnumConstant(llvm::StringRef Name);
+
+  /// Look for the context ID of the given C++ tag.
+  ///
+  /// \param Name The name of the tag we're looking for.
+  /// \param ParentCtx The context in which this tag is declared, e.g. a C++
+  /// namespace.
+  ///
+  /// \returns The ID, if known.
+  std::optional<ContextID>
+  lookupTagID(llvm::StringRef Name,
+              std::optional<Context> ParentCtx = std::nullopt);
 
   /// Look for information regarding the given tag
   /// (struct/union/enum/C++ class).
@@ -192,6 +271,22 @@ public:
   std::optional<ContextID>
   lookupNamespaceID(llvm::StringRef Name,
                     std::optional<ContextID> ParentNamespaceID = std::nullopt);
+
+private:
+  VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
+                                                   llvm::StringRef Name);
+  template <typename ParameterT>
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
+                      llvm::ArrayRef<ParameterT> Parameters);
+
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
+  template <typename ParameterT>
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name,
+                           llvm::ArrayRef<ParameterT> Parameters,
+                           std::optional<Context> Ctx);
 };
 
 } // end namespace api_notes

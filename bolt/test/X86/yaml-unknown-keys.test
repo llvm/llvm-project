@@ -1,0 +1,50 @@
+## Test that BOLT gracefully handles a YAML profile with unknown keys.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.null --data %t/profile.yaml \
+# RUN:   --profile-ignore-hash -v=1 2>&1 | FileCheck %s
+# CHECK: warning: unknown key 'unknown-header-key'
+# CHECK: warning: unknown key 'unknown_succ_key'
+# CHECK: warning: unknown key 'unknown_block_key'
+# CHECK: warning: unknown key 'unknown_function_key'
+# CHECK: warning: unknown key 'unknown_toplev_key'
+#--- main.s
+  .globl main
+  .type main, %function
+main:
+  .cfi_startproc
+  cmpl	$0x0, %eax
+  jne .LBB0
+.LBB0:
+  retq
+  .cfi_endproc
+.size main, .-main
+#--- profile.yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'yaml-multiple-profiles.test.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  unknown-header-key: true
+functions:
+  - name:            'main'
+    fid:             1
+    hash:            0x50BBA3441D436491
+    exec:            1
+    nblocks:         1
+    blocks:
+      - bid:             0
+        insns:           2
+        hash:            0x4D4D8FAF7D4C0000
+        succ:            [ { bid: 1, cnt: 0, unknown_succ_key: 0x10 } ]
+        unknown_block_key: [ ]
+    unknown_function_key: 1
+unknown_toplev_key: ''
+...

@@ -12,6 +12,9 @@ declare <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float>, <4 
 declare float @llvm.experimental.constrained.maximum.f32(float, float, metadata)
 declare <4 x float> @llvm.experimental.constrained.maximum.v4f32(<4 x float>, <4 x float>, metadata)
 
+declare half @llvm.experimental.constrained.maxnum.f16(half, half, metadata)
+declare half @llvm.experimental.constrained.maximum.f16(half, half, metadata)
+
 declare fp128 @llvm.experimental.constrained.maxnum.f128(fp128, fp128, metadata)
 declare fp128 @llvm.experimental.constrained.maximum.f128(fp128, fp128, metadata)
 
@@ -36,6 +39,20 @@ define <2 x double> @f2(<2 x double> %dummy, <2 x double> %val1,
                         <2 x double> %val1, <2 x double> %val2,
                         metadata !"fpexcept.strict") #0
   ret <2 x double> %ret
+}
+
+; Test the f16 maxnum intrinsic.
+define half @f3_half(half %dummy, half %val1, half %val2) #0 {
+; CHECK-LABEL: f3_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: wfmaxsb %f0, %f0, %f9, 4
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %ret = call half @llvm.experimental.constrained.maxnum.f16(
+                        half %val1, half %val2,
+                        metadata !"fpexcept.strict") #0
+  ret half %ret
 }
 
 ; Test the f32 maxnum intrinsic.
@@ -99,6 +116,20 @@ define <2 x double> @f12(<2 x double> %dummy, <2 x double> %val1,
                         <2 x double> %val1, <2 x double> %val2,
                         metadata !"fpexcept.strict") #0
   ret <2 x double> %ret
+}
+
+; Test the f16 maximum intrinsic.
+define half @f13_half(half %dummy, half %val1, half %val2) #0 {
+; CHECK-LABEL: f13_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: wfmaxsb %f0, %f0, %f9, 1
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %ret = call half @llvm.experimental.constrained.maximum.f16(
+                        half %val1, half %val2,
+                        metadata !"fpexcept.strict") #0
+  ret half %ret
 }
 
 ; Test the f32 maximum intrinsic.

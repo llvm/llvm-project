@@ -3,7 +3,7 @@
 ; This test formerly failed because of wrong custom lowering for
 ; fptosi of ppc_fp128.
 
-target datalayout = "E-p:32:32:32-S0-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:64:128-v64:64:64-v128:128:128-a0:0:64-n32"
+target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:64:128-v64:64:64-v128:128:128-a0:0:64-n32"
 target triple = "powerpc-unknown-linux-gnu"
 
 %core.time.TickDuration = type { i64 }

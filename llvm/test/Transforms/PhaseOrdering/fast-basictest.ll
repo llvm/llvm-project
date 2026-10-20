@@ -45,11 +45,16 @@ define float @test2_no_FMF(float %reg109, float %reg1111) {
 }
 
 define float @test2_reassoc(float %reg109, float %reg1111) {
-; CHECK-LABEL: @test2_reassoc(
-; CHECK-NEXT:    [[REG115:%.*]] = fadd reassoc float [[REG109:%.*]], -3.000000e+01
-; CHECK-NEXT:    [[REG116:%.*]] = fadd reassoc float [[REG115]], [[REG1111:%.*]]
-; CHECK-NEXT:    [[REG117:%.*]] = fadd reassoc float [[REG116]], 3.000000e+01
-; CHECK-NEXT:    ret float [[REG117]]
+; REASSOC_AND_IC-LABEL: @test2_reassoc(
+; REASSOC_AND_IC-NEXT:    [[REG115:%.*]] = fadd reassoc float [[REG109:%.*]], -3.000000e+01
+; REASSOC_AND_IC-NEXT:    [[REG116:%.*]] = fadd reassoc float [[REG115]], [[REG1111:%.*]]
+; REASSOC_AND_IC-NEXT:    [[REG117:%.*]] = fadd reassoc float [[REG116]], 3.000000e+01
+; REASSOC_AND_IC-NEXT:    ret float [[REG117]]
+;
+; O2-LABEL: @test2_reassoc(
+; O2-NEXT:    [[OP_RDX:%.*]] = fadd reassoc float [[REG109:%.*]], 0.000000e+00
+; O2-NEXT:    [[OP_RDX1:%.*]] = fadd reassoc float [[OP_RDX]], [[REG1111:%.*]]
+; O2-NEXT:    ret float [[OP_RDX1]]
 ;
   %reg115 = fadd reassoc float %reg109, -3.000000e+01
   %reg116 = fadd reassoc float %reg115, %reg1111
@@ -139,7 +144,7 @@ define float @test15_reassoc_nsz(float %b, float %a) {
 define float @test15_reassoc(float %b, float %a) {
 ; CHECK-LABEL: @test15_reassoc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc float [[A:%.*]], 1.234000e+03
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc float [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc float 0.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc float [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[TMP4]]

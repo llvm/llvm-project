@@ -2,14 +2,12 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
-define float @call_exp10f(float %a) {
+define float @call_exp10f(float %a) nounwind {
 ; CHECK-LABEL: call_exp10f:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -20,14 +18,12 @@ define float @call_exp10f(float %a) {
   ret float %result
 }
 
-define double @call_exp10(double %a) {
+define double @call_exp10(double %a) nounwind {
 ; CHECK-LABEL: call_exp10:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl exp10
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -38,14 +34,12 @@ define double @call_exp10(double %a) {
   ret double %result
 }
 
-define ppc_fp128 @call_exp10l(ppc_fp128 %a) {
+define ppc_fp128 @call_exp10l(ppc_fp128 %a) nounwind {
 ; CHECK-LABEL: call_exp10l:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl exp10l
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

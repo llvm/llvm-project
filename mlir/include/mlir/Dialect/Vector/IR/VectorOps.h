@@ -14,23 +14,28 @@
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/AlignmentAttrInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/MemOpInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Alignment.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Vector/IR/VectorEnums.h.inc"
@@ -50,17 +55,19 @@ namespace vector {
 class ContractionOp;
 class TransferReadOp;
 class TransferWriteOp;
-class VectorDialect;
 
 namespace detail {
 struct BitmaskEnumStorage;
 } // namespace detail
 
+/// Predefined constant_mask kinds.
+enum class ConstantMaskKind { AllFalse = 0, AllTrue };
+
 /// Default callback to build a region with a 'vector.yield' terminator with no
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 
-/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// Models whether `srcType` can be broadcast to `dstVectorType` under the
 /// semantics of the `vector.broadcast` op.
 enum class BroadcastableToResult {
   Success = 0,
@@ -68,9 +75,14 @@ enum class BroadcastableToResult {
   DimensionMismatch = 2,
   SourceTypeNotAVector = 3
 };
+
+struct VectorDim {
+  int64_t dim;
+  bool isScalable;
+};
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
-                  std::pair<int, int> *mismatchingDims = nullptr);
+                  std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -158,10 +170,10 @@ SmallVector<int64_t> getAsIntegers(ArrayRef<OpFoldResult> foldResults);
 SmallVector<Value> getAsValues(OpBuilder &builder, Location loc,
                                ArrayRef<OpFoldResult> foldResults);
 
-/// Returns the constant index ops in `values`. `values` are expected to be
-/// constant operations.
-SmallVector<arith::ConstantIndexOp>
-getAsConstantIndexOps(ArrayRef<Value> values);
+/// If `value` is a constant multiple of `vector.vscale` (e.g. `%cst *
+/// vector.vscale`), return the multiplier (`%cst`). Otherwise, return
+/// `std::nullopt`.
+std::optional<int64_t> getConstantVscaleMultiplier(Value value);
 
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities
@@ -202,7 +214,6 @@ Value selectPassthru(OpBuilder &builder, Value mask, Value newValue,
 } // namespace mlir
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Vector/IR/VectorDialect.h.inc"
 #include "mlir/Dialect/Vector/IR/VectorOps.h.inc"
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOROPS_H

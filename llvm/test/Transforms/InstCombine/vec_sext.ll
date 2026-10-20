@@ -4,11 +4,8 @@
 define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[T2:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> zeroinitializer, <4 x i32> [[A]]
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i32> [[B]], zeroinitializer
-; CHECK-NEXT:    [[T3:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i32> [[SUB]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i32> [[SUB]], <4 x i32> [[A]]
 ; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp slt <4 x i32> %b, zeroinitializer
@@ -44,7 +41,7 @@ define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b)
 
 define <2 x i32> @is_negative_poison_elt(<2 x i32> %a) {
 ; CHECK-LABEL: @is_negative_poison_elt(
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr <2 x i32> [[A:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr <2 x i32> [[A:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[A_LOBIT]]
 ;
   %cmp = icmp slt <2 x i32> %a, <i32 0, i32 poison>

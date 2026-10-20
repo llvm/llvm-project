@@ -17,43 +17,41 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        std::vector<int> v;
-        assert(v.capacity() == 0);
-        assert(is_contiguous_container_asan_correct(v));
-    }
-    {
-        std::vector<int> v(100);
-        assert(v.capacity() == 100);
-        v.push_back(0);
-        assert(v.capacity() > 101);
-        assert(is_contiguous_container_asan_correct(v));
-    }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
+    std::vector<int> v;
+    assert(v.capacity() == 0);
+    assert(is_contiguous_container_asan_correct(v));
+  }
+  {
+    std::vector<int> v(100);
+    assert(v.capacity() == 100);
+    v.push_back(0);
+    assert(v.capacity() > 101);
+    assert(is_contiguous_container_asan_correct(v));
+  }
 #if TEST_STD_VER >= 11
-    {
-        std::vector<int, min_allocator<int>> v;
-        assert(v.capacity() == 0);
-        assert(is_contiguous_container_asan_correct(v));
-    }
-    {
-        std::vector<int, min_allocator<int>> v(100);
-        assert(v.capacity() == 100);
-        v.push_back(0);
-        assert(v.capacity() > 101);
-        assert(is_contiguous_container_asan_correct(v));
-    }
+  {
+    std::vector<int, min_allocator<int>> v;
+    assert(v.capacity() == 0);
+    assert(is_contiguous_container_asan_correct(v));
+  }
+  {
+    std::vector<int, min_allocator<int>> v(100);
+    assert(v.capacity() == 100);
+    v.push_back(0);
+    assert(v.capacity() > 101);
+    assert(is_contiguous_container_asan_correct(v));
+  }
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

@@ -14,7 +14,7 @@ define void @test_loop(ptr align 1 %src, ptr align 1 %dest, i32 %len) {
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %memcmp.loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups (%rsi,%rcx), %ymm0
@@ -47,7 +47,8 @@ memcmp.loop:                                      ; preds = %memcmp.loop.latch, 
   %left.vector = load <32 x i8>, ptr %left.vector_start_ptr, align 1
   %right.vector = load <32 x i8>, ptr %right.vector_start_ptr, align 1
   %vec.cmp = icmp eq <32 x i8> %left.vector, %right.vector
-  %vec.cmp.reduced = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %vec.cmp)
+  %vec.cmp.bitcast = bitcast <32 x i1> %vec.cmp to i32
+  %vec.cmp.reduced = icmp eq i32 %vec.cmp.bitcast, -1
   br i1 %vec.cmp.reduced, label %memcmp.loop.latch, label %done
 
 memcmp.loop.latch:                                ; preds = %memcmp.loop

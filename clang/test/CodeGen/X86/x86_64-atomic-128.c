@@ -26,4 +26,5 @@ __int128 test_expression(_Atomic __int128 *addr) {
   // CHECK-LABEL: @test_expression
   // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 16
   *addr &= 1;
+  return 0;
 }

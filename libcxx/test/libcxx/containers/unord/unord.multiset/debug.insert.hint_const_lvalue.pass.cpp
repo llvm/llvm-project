@@ -18,15 +18,16 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    typedef std::unordered_multiset<double> C;
-    typedef C::value_type P;
-    C c;
-    C c2;
-    C::const_iterator e = c2.end();
-    P v(3.5);
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.insert(e, v),
-        "unordered container::emplace_hint(const_iterator, args...) called with an iterator not referring to this unordered container");
+  typedef std::unordered_multiset<double> C;
+  typedef C::value_type P;
+  C c;
+  C c2;
+  C::const_iterator e = c2.end();
+  P v(3.5);
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, v),
+      "unordered container::emplace_hint(const_iterator, args...) called with an iterator not "
+      "referring to this unordered container");
 
-    return 0;
+  return 0;
 }

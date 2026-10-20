@@ -125,7 +125,7 @@ define i1 @global_gep_ugt_null() {
 
 define i1 @global_gep_sgt_null() {
 ; CHECK-LABEL: @global_gep_sgt_null(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 8), null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds nuw (i8, ptr @g, i64 8), null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds [2 x i32], ptr @g, i64 1
@@ -205,7 +205,8 @@ define i1 @null_gep_ult_global() {
 
 define i1 @null_gep_slt_global() {
 ; CHECK-LABEL: @null_gep_slt_global(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr getelementptr ([2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)), @g
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[GEP]], @g
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr [2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)
@@ -233,7 +234,7 @@ define i1 @global_gep_ugt_global() {
 
 define i1 @global_gep_sgt_global() {
 ; CHECK-LABEL: @global_gep_sgt_global(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 8), @g
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds nuw (i8, ptr @g, i64 8), @g
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds [2 x i32], ptr @g, i64 1
@@ -274,7 +275,7 @@ define i1 @global_gep_ugt_global_gep() {
 ; Should not fold due to signed comparison.
 define i1 @global_gep_sgt_global_gep() {
 ; CHECK-LABEL: @global_gep_sgt_global_gep(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 4), @g
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds nuw (i8, ptr @g, i64 4), @g
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep2 = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 1

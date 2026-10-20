@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mipsel -mcpu=mips32r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mipsel -mcpu=mips32r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
 declare void @llvm.eh.return.i32(i32, ptr)
 declare void @foo(...)
@@ -69,8 +69,8 @@ entry:
 ; CHECK:        .cfi_offset 7,
 
 ; check that stack adjustment and handler are put in $v1 and $v0.
-; CHECK:        move    $3, $4
 ; CHECK:        move    $2, $5
+; CHECK:        move    $3, $4
 
 ; check that $a0-$a3 are restored from stack.
 ; CHECK:        lw      $4, [[offset0]]($sp)

@@ -25,11 +25,12 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -164,7 +165,7 @@ private:
                                SmallVectorImpl<ast::Decl *> &decls);
 
   /// Process the records of a parsed tablegen include file.
-  void processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
+  void processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
                                SmallVectorImpl<ast::Decl *> &decls);
 
   /// Create a user defined native constraint for a constraint imported from
@@ -763,6 +764,7 @@ LogicalResult Parser::convertTupleExpressionTo(
 
 //===----------------------------------------------------------------------===//
 // Directives
+//===----------------------------------------------------------------------===//
 
 LogicalResult Parser::parseDirective(SmallVectorImpl<ast::Decl *> &decls) {
   StringRef directive = curToken.getSpelling();
@@ -828,6 +830,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   llvm::SourceMgr tdSrcMgr;
   tdSrcMgr.AddNewSourceBuffer(std::move(*includeBuffer), SMLoc());
   tdSrcMgr.setIncludeDirs(parserSrcMgr.getIncludeDirs());
+  tdSrcMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
 
   // This class provides a context argument for the llvm::SourceMgr diagnostic
   // handler.
@@ -863,7 +866,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   return success();
 }
 
-void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
+void Parser::processTdIncludeRecords(const llvm::RecordKeeper &tdRecords,
                                      SmallVectorImpl<ast::Decl *> &decls) {
   // Return the length kind of the given value.
   auto getLengthKind = [](const auto &value) {
@@ -879,8 +882,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
       -> const ods::TypeConstraint & {
     return odsContext.insertTypeConstraint(
         cst.constraint.getUniqueDefName(),
-        processDoc(cst.constraint.getSummary()),
-        cst.constraint.getCPPClassName());
+        processDoc(cst.constraint.getSummary()), cst.constraint.getCppType());
   };
   auto convertLocToRange = [&](llvm::SMLoc loc) -> llvm::SMRange {
     return {loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)};
@@ -888,7 +890,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
 
   // Process the parsed tablegen records to build ODS information.
   /// Operations.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Op")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Op")) {
     tblgen::Operator op(def);
 
     // Check to see if this operation is known to support type inferrence.
@@ -921,13 +923,13 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     }
   }
 
-  auto shouldBeSkipped = [this](llvm::Record *def) {
+  auto shouldBeSkipped = [this](const llvm::Record *def) {
     return def->isAnonymous() || curDeclScope->lookup(def->getName()) ||
            def->isSubClassOf("DeclareInterfaceMethods");
   };
 
   /// Attr constraints.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
     if (shouldBeSkipped(def))
       continue;
 
@@ -937,18 +939,19 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
         constraint.getStorageType()));
   }
   /// Type constraints.
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
+  for (const llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
     if (shouldBeSkipped(def))
       continue;
 
     tblgen::TypeConstraint constraint(def);
     decls.push_back(createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
         constraint, convertLocToRange(def->getLoc().front()), typeTy,
-        constraint.getCPPClassName()));
+        constraint.getCppType()));
   }
   /// OpInterfaces.
   ast::Type opTy = ast::OperationType::get(ctx);
-  for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("OpInterface")) {
+  for (const llvm::Record *def :
+       tdRecords.getAllDerivedDefinitions("OpInterface")) {
     if (shouldBeSkipped(def))
       continue;
 
@@ -985,8 +988,7 @@ ast::Decl *Parser::createODSNativePDLLConstraintDecl(
   // Build the native constraint.
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
-      /*results=*/std::nullopt, codeBlock, ast::TupleType::get(ctx),
-      nativeType);
+      /*results=*/{}, codeBlock, ast::TupleType::get(ctx), nativeType);
   constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
@@ -1022,6 +1024,7 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
 
 //===----------------------------------------------------------------------===//
 // Decls
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Decl *> Parser::parseTopLevelDecl() {
   FailureOr<ast::Decl *> decl;
@@ -1781,12 +1784,13 @@ Parser::parseConstraint(std::optional<SMRange> &typeConstraint,
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
   std::optional<SMRange> typeConstraint;
-  return parseConstraint(typeConstraint, /*existingConstraints=*/std::nullopt,
+  return parseConstraint(typeConstraint, /*existingConstraints=*/{},
                          /*allowInlineTypeConstraints=*/false);
 }
 
 //===----------------------------------------------------------------------===//
 // Exprs
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Expr *> Parser::parseExpr() {
   if (curToken.is(Token::underscore))
@@ -2250,6 +2254,7 @@ FailureOr<ast::Expr *> Parser::parseUnderscoreExpr() {
 
 //===----------------------------------------------------------------------===//
 // Stmts
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
   FailureOr<ast::Stmt *> stmt;
@@ -2483,6 +2488,7 @@ FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
 
 //===----------------------------------------------------------------------===//
 // Decls
+//===----------------------------------------------------------------------===//
 
 ast::CallableDecl *Parser::tryExtractCallableDecl(ast::Node *node) {
   // Unwrap reference expressions.
@@ -2682,6 +2688,7 @@ Parser::validateTypeRangeConstraintExpr(const ast::Expr *typeExpr) {
 
 //===----------------------------------------------------------------------===//
 // Exprs
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::CallExpr *>
 Parser::createCallExpr(SMRange loc, ast::Expr *parentExpr,
@@ -2803,8 +2810,12 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       if (it != results.end())
         return it->isVariadic() ? valueRangeTy : valueTy;
     } else if (llvm::isDigit(name[0])) {
-      // Allow unchecked numeric indexing of the results of unregistered
-      // operations. It returns a single value.
+      int32_t index;
+      if (name.getAsInteger(/*Radix=*/10, index))
+        return emitError(loc, "result index is too large");
+
+      // Allow numeric indexing of the results of unregistered operations. It
+      // returns a single value because the result signature is unknown.
       return valueTy;
     }
   } else if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {
@@ -2878,8 +2889,9 @@ Parser::validateOperationOperands(SMRange loc, std::optional<StringRef> name,
                                   SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      operands, odsOp ? odsOp->getOperands() : std::nullopt, valueTy,
-      valueRangeTy);
+      operands,
+      odsOp ? odsOp->getOperands() : ArrayRef<pdll::ods::OperandOrResult>(),
+      valueTy, valueRangeTy);
 }
 
 LogicalResult
@@ -2888,7 +2900,9 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
                                  SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
+      results,
+      odsOp ? odsOp->getResults() : ArrayRef<pdll::ods::OperandOrResult>(),
+      typeTy, typeRangeTy);
 }
 
 void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
@@ -2987,8 +3001,8 @@ LogicalResult Parser::validateOperationOperandsOrResults(
       // Otherwise, create dummy values for each of the entries so that we
       // adhere to the ODS signature.
       for (unsigned i = 0, e = odsValues.size(); i < e; ++i) {
-        values.push_back(ast::RangeExpr::create(
-            ctx, loc, /*elements=*/std::nullopt, rangeTy));
+        values.push_back(
+            ast::RangeExpr::create(ctx, loc, /*elements=*/{}, rangeTy));
       }
       return success();
     }
@@ -3058,6 +3072,7 @@ Parser::createTupleExpr(SMRange loc, ArrayRef<ast::Expr *> elements,
 
 //===----------------------------------------------------------------------===//
 // Stmts
+//===----------------------------------------------------------------------===//
 
 FailureOr<ast::EraseStmt *> Parser::createEraseStmt(SMRange loc,
                                                     ast::Expr *rootOp) {

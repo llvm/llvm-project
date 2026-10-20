@@ -1,5 +1,5 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=MIPS32
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=MIPS64
+; RUN: llc  < %s -mtriple=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=MIPS32
+; RUN: llc  < %s -mtriple=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=MIPS64
 
 declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1)
 

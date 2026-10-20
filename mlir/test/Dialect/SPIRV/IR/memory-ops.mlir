@@ -8,21 +8,21 @@ func.func @access_chain_struct() -> () {
   %0 = spirv.Constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4 x f32>)>, Function>
-  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
 func.func @access_chain_1D_array(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
 func.func @access_chain_2D_array_1(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spirv.ptr<!spirv.array<4 x !spirv.array<4 x f32>>, Function>
-  %1 = spirv.AccessChain %0[%arg0, %arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%arg0, %arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : f32
   return
 }
@@ -30,15 +30,26 @@ func.func @access_chain_2D_array_1(%arg0 : i32) -> () {
 func.func @access_chain_2D_array_2(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x !spirv.array<4 x f32>>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : !spirv.array<4xf32>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChain
+//===----------------------------------------------------------------------===//
+
+func.func @inbounds_access_chain(%arg0 : i32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  %1 = spirv.InBoundsAccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
 func.func @access_chain_rtarray(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.rtarray<f32>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.rtarray<f32>, Function>
-  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.rtarray<f32>, Function>, i32
+  %1 = spirv.AccessChain %0[%arg0] : !spirv.ptr<!spirv.rtarray<f32>, Function>, i32 -> !spirv.ptr<f32, Function>
   %2 = spirv.Load "Function" %1 ["Volatile"] : f32
   return
 }
@@ -49,7 +60,7 @@ func.func @access_chain_non_composite() -> () {
   %0 = spirv.Constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
-  %2 = spirv.AccessChain %1[%0] : !spirv.ptr<f32, Function>, i32
+  %2 = spirv.AccessChain %1[%0] : !spirv.ptr<f32, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -57,8 +68,8 @@ func.func @access_chain_non_composite() -> () {
 
 func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{expected at least one index}}
-  %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 0 operands and 1 types}}
+  %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -75,8 +86,8 @@ func.func @access_chain_missing_comma(%index0 : i32) -> () {
 
 func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{'spirv.AccessChain' op indices types' count must be equal to indices info count}}
-  %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 1 operands and 2 types}}
+  %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   return
 }
 
@@ -84,8 +95,8 @@ func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{'spirv.AccessChain' op indices types' count must be equal to indices info count}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 2 operands and 1 types}}
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -94,8 +105,8 @@ func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
 func.func @access_chain_invalid_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   %1 = spirv.Load "Function" %0 ["Volatile"] : !spirv.array<4x!spirv.array<4xf32>>
-  // expected-error @+1 {{expected a pointer to composite type, but provided '!spirv.array<4 x !spirv.array<4 x f32>>'}}
-  %2 = spirv.AccessChain %1[%index0] : !spirv.array<4x!spirv.array<4xf32>>, i32
+  // expected-error @+1 {{'spirv.AccessChain' op operand #0 must be any SPIR-V pointer type, but got '!spirv.array<4 x !spirv.array<4 x f32>>'}}
+  %2 = spirv.AccessChain %1[%index0] : !spirv.array<4x!spirv.array<4xf32>>, i32 -> f32
   return
 }
 
@@ -113,7 +124,7 @@ func.func @access_chain_invalid_index_1(%index0 : i32) -> () {
 func.func @access_chain_invalid_index_2(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spirv.Constant to access element of spirv.struct}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -123,7 +134,7 @@ func.func @access_chain_invalid_constant_type_1() -> () {
   %0 = arith.constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spirv.Constant to access element of spirv.struct, but provided arith.constant}}
-  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -133,7 +144,7 @@ func.func @access_chain_out_of_bounds() -> () {
   %index0 = "spirv.Constant"() { value = 12: i32} : () -> i32
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // expected-error @+1 {{'spirv.AccessChain' op index 12 out of bounds for '!spirv.struct<(f32, !spirv.array<4 x f32>)>'}}
-  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   return
 }
 
@@ -142,9 +153,9 @@ func.func @access_chain_out_of_bounds() -> () {
 func.func @access_chain_invalid_accessing_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
-  %1 = spirv.AccessChain %0[%index, %index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32, i32
+  %1 = spirv.AccessChain %0[%index0, %index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32, i32 -> !spirv.ptr<f32, Function>
   return
-
+}
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -188,6 +199,32 @@ func.func @volatile_aligned_load() -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: spirv.Load "Function" %{{.*}} ["Volatile|Aligned", 4] : f32
   %1 = spirv.Load "Function" %0 ["Volatile|Aligned", 4] : f32
+  return
+}
+
+// CHECK-LABEL: @make_pointer_visible_load
+func.func @make_pointer_visible_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_bad_operand() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  %1 = spirv.Load "Function" %0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @load_make_pointer_visible_missing_non_private() -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  %1 = spirv.Load "Function" %0 ["MakePointerVisible"] : f32
   return
 }
 
@@ -356,6 +393,16 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+// CHECK-LABEL: @image_load
+func.func @image_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  %1 = spirv.Load "Function" %0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.StoreOp
 //===----------------------------------------------------------------------===//
@@ -380,6 +427,32 @@ func.func @aligned_store(%arg0 : f32) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   // CHECK: spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
+  return
+}
+
+// CHECK-LABEL: @make_pointer_available_store
+func.func @make_pointer_available_store(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_bad_operand(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerVisible|NonPrivatePointer"] : f32
+  return
+}
+
+// -----
+
+func.func @store_make_pointer_available_missing_non_private(%arg0 : f32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  spirv.Store  "Function" %0, %arg0 ["MakePointerAvailable"] : f32
   return
 }
 
@@ -669,6 +742,46 @@ func.func @copy_memory_invalid_source_maa2() {
 
 // -----
 
+func.func @copy_memory_target_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_target_make_pointer_available_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_bad_operand() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op not compatible with memory operand 'MakePointerAvailable'}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_source_make_pointer_visible_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<MakePointerVisible>, memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
 func.func @copy_memory_print_maa() {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
@@ -685,6 +798,17 @@ func.func @copy_memory_print_maa() {
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Aligned", 8] : f32
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
+  // A lone mask applies to both operands, so it may carry MakePointerVisible,
+  // MakePointerAvailable, or both. It must stay a lone mask when printed.
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, source_memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
   spirv.Return
 }
 
@@ -699,7 +823,7 @@ func.func @copy_memory_print_maa() {
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.PtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }
 
@@ -714,6 +838,6 @@ func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.InBoundsPtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @inbounds_ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }

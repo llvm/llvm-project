@@ -9,7 +9,7 @@
   define void @read_flags() { ret void }
   ; CHECK-LABEL: name: read_flags
   ; CHECK: bb.0:
-  ; CHECK:   [[RDFLAGS32_:%[0-9]+]]:gr32 = RDFLAGS32 implicit-def $esp, implicit $esp
+  ; CHECK:   [[RDFLAGS32_:%[0-9]+]]:gr32 = RDFLAGS32 implicit-def dead $esp, implicit $esp
   ; CHECK:   $eax = COPY [[RDFLAGS32_]]
 ...
 

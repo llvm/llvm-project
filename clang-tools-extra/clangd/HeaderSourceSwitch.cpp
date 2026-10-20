@@ -20,20 +20,24 @@ namespace clangd {
 
 std::optional<Path> getCorrespondingHeaderOrSource(
     PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
-                                        ".c++", ".m", ".mm"};
-  llvm::StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
+  static constexpr llvm::StringRef SourceExtensions[] = {
+      ".cpp", ".cc", ".cxx", ".c++", ".c", ".m", ".mm"};
+  static constexpr llvm::StringRef HeaderExtensions[] = {
+      ".hpp",  ".hh",  ".hxx",  ".h++",  ".h",  ".inc",
+      ".cppm", ".ccm", ".cxxm", ".c++m", ".ixx"};
 
   llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
 
   // Lookup in a list of known extensions.
-  bool IsSource = llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
-    return SourceExt.equals_insensitive(PathExt);
-  });
+  const bool IsSource =
+      llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
+        return SourceExt.equals_insensitive(PathExt);
+      });
 
-  bool IsHeader = llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
-    return HeaderExt.equals_insensitive(PathExt);
-  });
+  const bool IsHeader =
+      llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+        return HeaderExt.equals_insensitive(PathExt);
+      });
 
   // We can only switch between the known extensions.
   if (!IsSource && !IsHeader)
@@ -92,7 +96,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   //
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
-  bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
+  const bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
   Index->lookup(Request, [&](const Symbol &Sym) {
     if (IsHeader)
       AwardTarget(Sym.Definition.FileURI);
@@ -121,29 +125,34 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
 
 std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {
   std::vector<const Decl *> Results;
-  std::function<void(Decl *)> TraverseDecl = [&](Decl *D) {
-    auto *ND = llvm::dyn_cast<NamedDecl>(D);
-    if (!ND || ND->isImplicit())
-      return;
-    if (!SymbolCollector::shouldCollectSymbol(*ND, D->getASTContext(), {},
-                                              /*IsMainFileSymbol=*/false))
-      return;
-    if (!llvm::isa<FunctionDecl>(ND)) {
-      // Visit the children, but we skip function decls as we are not interested
-      // in the function body.
-      if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
-        for (auto *D : Scope->decls())
-          TraverseDecl(D);
+  struct IndexableLocalDeclCollector {
+    std::vector<const Decl *> &Results;
+
+    void traverse(Decl *D) {
+      auto *ND = llvm::dyn_cast<NamedDecl>(D);
+      if (!ND || ND->isImplicit())
+        return;
+      if (!SymbolCollector::shouldCollectSymbol(*ND, D->getASTContext(), {},
+                                                /*IsMainFileSymbol=*/false))
+        return;
+      if (!llvm::isa<FunctionDecl>(ND)) {
+        // Visit the children, but we skip function decls as we are not
+        // interested in the function body.
+        if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
+          for (Decl *Child : Scope->decls())
+            traverse(Child);
+        }
       }
+      if (llvm::isa<NamespaceDecl>(D))
+        return; // namespace is indexable, but we're not interested.
+      Results.push_back(D);
     }
-    if (llvm::isa<NamespaceDecl>(D))
-      return; // namespace is indexable, but we're not interested.
-    Results.push_back(D);
   };
+  IndexableLocalDeclCollector Collector{Results};
   // Traverses the ParsedAST directly to collect all decls present in the main
   // file.
   for (auto *TopLevel : AST.getLocalTopLevelDecls())
-    TraverseDecl(TopLevel);
+    Collector.traverse(TopLevel);
   return Results;
 }
 

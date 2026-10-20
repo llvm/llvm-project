@@ -20,6 +20,15 @@ struct __declspec(dllexport) Foo {
 // CHECK: define weak_odr dso_local dllexport void @"??_FFoo@@QEAAXXZ"(ptr{{.*}})
 // CHECK:   call noundef ptr @"??0Foo@@QEAA@W4E@0@@Z"(ptr {{.*}}, i32 noundef 0)
 
+struct PCHMemberExportOuter {
+  struct Inner {
+    enum E { E0 } e;
+    __declspec(dllexport) Inner(E e = E0) : e(e) {}
+  };
+};
+
+// CHECK: define weak_odr dso_local dllexport void @"??_FInner@PCHMemberExportOuter@@QEAAXXZ"(ptr{{.*}})
+
 #else
 
 

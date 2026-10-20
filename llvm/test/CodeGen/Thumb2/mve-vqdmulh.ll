@@ -502,8 +502,8 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r0, r0, r7, ne
 ; CHECK-NEXT:    csel r3, r3, r7, ne
-; CHECK-NEXT:    csel r2, r2, r9, ne
 ; CHECK-NEXT:    csel r1, r1, r7, ne
+; CHECK-NEXT:    csel r2, r2, r9, ne
 ; CHECK-NEXT:    rsbs r7, r0, #0
 ; CHECK-NEXT:    sbcs.w r7, r4, r1
 ; CHECK-NEXT:    sbcs.w r2, r4, r2
@@ -521,8 +521,8 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    cmp r5, #0
 ; CHECK-NEXT:    csel r0, r0, r5, ne
 ; CHECK-NEXT:    csel r3, r3, r5, ne
-; CHECK-NEXT:    csel r2, r2, r9, ne
 ; CHECK-NEXT:    csel r1, r1, r5, ne
+; CHECK-NEXT:    csel r2, r2, r9, ne
 ; CHECK-NEXT:    rsbs r5, r0, #0
 ; CHECK-NEXT:    sbcs.w r5, r4, r1
 ; CHECK-NEXT:    sbcs.w r2, r4, r2

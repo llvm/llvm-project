@@ -20,7 +20,7 @@ class SPIRVTypeConverter;
 
 /// Appends to a pattern list additional patterns for translating Complex ops
 /// to SPIR-V ops.
-void populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateComplexToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                     RewritePatternSet &patterns);
 
 } // namespace mlir

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/uint128.h"
 #include "src/math/nanf128.h"
@@ -26,7 +27,7 @@ public:
     auto actual_fp = FPBits128(result);
     auto expected_fp = FPBits128(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanf128Test, NCharSeq) {
@@ -53,9 +54,8 @@ TEST_F(LlvmLibcNanf128Test, RandomString) {
            QUIET_NAN);
 }
 
-#ifndef LIBC_HAVE_ADDRESS_SANITIZER
-#include <signal.h>
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST_F(LlvmLibcNanf128Test, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf128(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf128(nullptr); }, WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAVE_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

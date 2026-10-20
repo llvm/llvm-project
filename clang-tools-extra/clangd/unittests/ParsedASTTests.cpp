@@ -251,7 +251,7 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
   // this check runs the preprocessor, we need to make sure it does not break
   // our recording logic.
   TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
-  TU.Code = "inline int foo() {}";
+  TU.Code = "inline int foo() { return 0; }";
 
   auto AST = TU.build();
   const syntax::TokenBuffer &T = AST.getTokens();
@@ -348,8 +348,6 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
               testing::UnorderedElementsAreArray(TestCase.points()));
 }
 
-MATCHER_P(withFileName, Inc, "") { return arg.FileName == Inc; }
-
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   llvm::StringLiteral ModifiedContents = R"cpp(
     #include "baz.h"
@@ -397,10 +395,10 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   auto &FM = SM.getFileManager();
   // Copy so that we can use operator[] to get the children.
   IncludeStructure Includes = PatchedAST->getIncludeStructure();
-  auto MainFE = FM.getFile(testPath("foo.cpp"));
+  auto MainFE = FM.getOptionalFileRef(testPath("foo.cpp"));
   ASSERT_TRUE(MainFE);
   auto MainID = Includes.getID(*MainFE);
-  auto AuxFE = FM.getFile(testPath("sub/aux.h"));
+  auto AuxFE = FM.getOptionalFileRef(testPath("sub/aux.h"));
   ASSERT_TRUE(AuxFE);
   auto AuxID = Includes.getID(*AuxFE);
   EXPECT_THAT(Includes.IncludeChildren[*MainID], Contains(*AuxID));

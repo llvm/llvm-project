@@ -25,7 +25,9 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 ; CHECK-T1: cmp
 
 ; CHECK: S_trimzeros
-; CHECK: cmp
+; CHECK-T1: S_trimzeros
+; CHECK-NOT: moveq
+; CHECK-T1-NOT: beq
 ; CHECK: strlen
 
 @F_floatmul.man1 = external global [200 x i8], align 1

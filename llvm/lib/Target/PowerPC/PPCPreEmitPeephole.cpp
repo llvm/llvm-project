@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -96,17 +95,14 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
   class PPCPreEmitPeephole : public MachineFunctionPass {
   public:
     static char ID;
-    PPCPreEmitPeephole() : MachineFunctionPass(ID) {
-      initializePPCPreEmitPeepholePass(*PassRegistry::getPassRegistry());
-    }
+    PPCPreEmitPeephole() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     // This function removes any redundant load immediates. It has two level

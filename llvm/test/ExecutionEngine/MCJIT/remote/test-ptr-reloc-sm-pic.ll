@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
+; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target \
 ; RUN:   -O0 -relocation-model=pic -code-model=small %s
 ; XFAIL: target={{(mips|mipsel)-.*}}, target={{(aarch64|arm).*}}, target={{(i686|i386).*}}
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}

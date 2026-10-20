@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-vecdbl-nv-stores=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -disable-vecdbl-nv-stores=0 < %s | FileCheck %s
 
 ; CHECK-NOT: v{{[0-9]*}}.new
 

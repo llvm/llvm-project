@@ -1,12 +1,15 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" %s | FileCheck %s
 
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},convert-cf-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK32 %s
+
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s | FileCheck --check-prefix=CHECK-NO-CF %s
 
 // RUN: mlir-opt -transform-interpreter %s | FileCheck --check-prefix=CHECK32 %s
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=arith,cf,func,math" %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith,cf,func,math allow-pattern-rollback=0" %s | FileCheck %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
@@ -28,12 +31,12 @@ func.func @simple_loop() {
   cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK32-NEXT: ^bb1:	// pred: ^bb0
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i32
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : i32) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : i32) : i32
 // CHECK32-NEXT:  llvm.br ^bb2({{.*}} : i32)
 ^bb1:	// pred: ^bb0
   %c1 = arith.constant 1 : index
@@ -52,12 +55,12 @@ func.func @simple_loop() {
 
 // CHECK:      ^bb3:	// pred: ^bb2
 // CHECK-NEXT:  llvm.call @body({{.*}}) : (i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK32:      ^bb3:	// pred: ^bb2
 // CHECK32-NEXT:  llvm.call @body({{.*}}) : (i32) -> ()
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : i32) : i32
 // CHECK32-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i32
 // CHECK32-NEXT:  llvm.br ^bb2({{.*}} : i32)
 ^bb3:	// pred: ^bb2
@@ -104,6 +107,7 @@ func.func @ml_caller() {
 
 // CHECK-LABEL: llvm.func @body_args(i64) -> i64
 // CHECK32-LABEL: llvm.func @body_args(i32) -> i32
+// CHECK-NO-CF-LABEL: llvm.func @body_args(i64) -> i64
 func.func private @body_args(index) -> index
 // CHECK-LABEL: llvm.func @other(i64, i32) -> i32
 // CHECK32-LABEL: llvm.func @other(i32, i32) -> i32
@@ -121,12 +125,12 @@ func.func @func_args(i32, i32) -> i32 {
   cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK32-NEXT: ^bb1:	// pred: ^bb0
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i32
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : i32) : i32
 // CHECK32-NEXT:  llvm.br ^bb2({{.*}} : i32)
 ^bb1:	// pred: ^bb0
   %c0 = arith.constant 0 : index
@@ -148,7 +152,7 @@ func.func @func_args(i32, i32) -> i32 {
 // CHECK-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg0) : (i64, i32) -> i32
 // CHECK-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (i64, i32) -> i32
 // CHECK-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg1) : (i64, i32) -> i32
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK32-NEXT: ^bb3:	// pred: ^bb2
@@ -156,7 +160,7 @@ func.func @func_args(i32, i32) -> i32 {
 // CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg0) : (i32, i32) -> i32
 // CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (i32, i32) -> i32
 // CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg1) : (i32, i32) -> i32
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : i32) : i32
 // CHECK32-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i32
 // CHECK32-NEXT:  llvm.br ^bb2({{.*}} : i32)
 ^bb3:	// pred: ^bb2
@@ -169,11 +173,11 @@ func.func @func_args(i32, i32) -> i32 {
   cf.br ^bb2(%6 : index)
 
 // CHECK-NEXT: ^bb4:	// pred: ^bb2
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (i64, i32) -> i32
 // CHECK-NEXT:  llvm.return {{.*}} : i32
 // CHECK32-NEXT: ^bb4:	// pred: ^bb2
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : i32
 // CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (i32, i32) -> i32
 // CHECK32-NEXT:  llvm.return {{.*}} : i32
 ^bb4:	// pred: ^bb2
@@ -201,8 +205,8 @@ func.func @imperfectly_nested_loops() {
   cf.br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 ^bb1:	// pred: ^bb0
   %c0 = arith.constant 0 : index
@@ -224,8 +228,8 @@ func.func @imperfectly_nested_loops() {
   cf.br ^bb4
 
 // CHECK-NEXT: ^bb4:	// pred: ^bb3
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(7 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(56 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(7 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(56 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb5({{.*}} : i64)
 ^bb4:	// pred: ^bb3
   %c7 = arith.constant 7 : index
@@ -241,7 +245,7 @@ func.func @imperfectly_nested_loops() {
 
 // CHECK-NEXT: ^bb6:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @body2({{.*}}, {{.*}}) : (i64, i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(2 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(2 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb5({{.*}} : i64)
 ^bb6:	// pred: ^bb5
@@ -252,7 +256,7 @@ func.func @imperfectly_nested_loops() {
 
 // CHECK-NEXT: ^bb7:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @post({{.*}}) : (i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 ^bb7:	// pred: ^bb5
@@ -277,8 +281,8 @@ func.func private @body3(index, index)
 // CHECK-LABEL: func @more_imperfectly_nested_loops() {
 // CHECK-NEXT:  llvm.br ^bb1
 // CHECK-NEXT:^bb1:	// pred: ^bb0
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK-NEXT:^bb2({{.*}}: i64):	// 2 preds: ^bb1, ^bb11
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
@@ -287,35 +291,35 @@ func.func private @body3(index, index)
 // CHECK-NEXT:  llvm.call @pre({{.*}}) : (i64) -> ()
 // CHECK-NEXT:  llvm.br ^bb4
 // CHECK-NEXT:^bb4:	// pred: ^bb3
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(7 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(56 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(7 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(56 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb5({{.*}} : i64)
 // CHECK-NEXT:^bb5({{.*}}: i64):	// 2 preds: ^bb4, ^bb6
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb6, ^bb7
 // CHECK-NEXT:^bb6:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @body2({{.*}}, {{.*}}) : (i64, i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(2 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(2 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb5({{.*}} : i64)
 // CHECK-NEXT:^bb7:	// pred: ^bb5
 // CHECK-NEXT:  llvm.call @mid({{.*}}) : (i64) -> ()
 // CHECK-NEXT:  llvm.br ^bb8
 // CHECK-NEXT:^bb8:	// pred: ^bb7
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(18 : index) : i64
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(37 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(18 : i64) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(37 : i64) : i64
 // CHECK-NEXT:  llvm.br ^bb9({{.*}} : i64)
 // CHECK-NEXT:^bb9({{.*}}: i64):	// 2 preds: ^bb8, ^bb10
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb10, ^bb11
 // CHECK-NEXT:^bb10:	// pred: ^bb9
 // CHECK-NEXT:  llvm.call @body3({{.*}}, {{.*}}) : (i64, i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(3 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(3 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb9({{.*}} : i64)
 // CHECK-NEXT:^bb11:	// pred: ^bb9
 // CHECK-NEXT:  llvm.call @post({{.*}}) : (i64) -> ()
-// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : i64
+// CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : i64)
 // CHECK-NEXT:^bb12:	// pred: ^bb2
@@ -397,12 +401,12 @@ func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
   %0 = call @get_i64() : () -> (i64)
   %1 = call @get_f32() : () -> (f32)
   %2 = call @get_memref() : () -> (memref<42x?x10x?xf32>)
-// CHECK-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
@@ -470,7 +474,7 @@ func.func @floorf(%arg0 : f32) {
   func.return
 }
 
-// Wrap the following tests in a module to control the place where 
+// Wrap the following tests in a module to control the place where
 // `llvm.func @abort()` is produced.
 module {
 // Lowers `cf.assert` to a function call to `abort` if the assertion is violated.
@@ -537,6 +541,29 @@ func.func @switchi8(%arg0 : i8) -> i32 {
 // CHECK-NEXT:     llvm.return %[[E1]] : i32
 // CHECK-NEXT:   }
 
+// Convert the entry block but not the unstructured control flow.
+
+// CHECK-NO-CF-LABEL: llvm.func @index_arg(
+//  CHECK-NO-CF-SAME:     %[[arg0:.*]]: i64) -> i64 {
+//       CHECK-NO-CF:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : i64 to index
+//       CHECK-NO-CF:   cf.br ^[[bb1:.*]](%[[cast]] : index)
+//       CHECK-NO-CF: ^[[bb1]](%[[arg1:.*]]: index):
+//       CHECK-NO-CF:   %[[cast2:.*]] = builtin.unrealized_conversion_cast %[[arg1]] : index to i64
+//       CHECK-NO-CF:   llvm.return %[[cast2]] : i64
+func.func @index_arg(%arg0: index) -> index {
+  cf.br ^bb1(%arg0 : index)
+^bb1(%arg1: index):
+  return %arg1 : index
+}
+
+// There is no type conversion rule for tf32, so vector<1xtf32> and, therefore,
+// the func op cannot be converted.
+// CHECK: func.func @non_convertible_arg_type({{.*}}: vector<1xtf32>)
+// CHECK:   llvm.return
+func.func @non_convertible_arg_type(%arg: vector<1xtf32>) {
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %toplevel_module
@@ -548,11 +575,22 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.func.func_to_llvm
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-        {index_bitwidth = 32, use_opaque_pointers = true}
-    } {
-      legal_dialects = ["llvm"], 
-      partial_conversion
-    } : !transform.any_op
+        index_bitwidth = 32 {use_opaque_pointers = true}
+    } <legal_dialects = ["llvm"], partial_conversion> : !transform.any_op
     transform.yield
   }
+}
+
+// During signature conversion with index-bitwidth=32, pattern rollback can
+// unlink blocks/ops from their regions. If loop-like operations are folded
+// in this state, querying `isDefinedOutsideOfLoop` on block arguments
+// of unlinked blocks would previously dereference a null parent region pointer
+// and crash.
+// See: https://github.com/llvm/llvm-project/issues/203860
+// CHECK32-LABEL: llvm.func @affine_for_index_bitwidth_32
+func.func @affine_for_index_bitwidth_32(%arg0: index, %arg1: index, %arg2: index, %arg3: index) {
+  %0 = affine.for %arg4 = 0 to 101 iter_args(%arg5 = %arg1) -> (index) {
+    affine.yield %arg3 : index
+  }
+  return
 }

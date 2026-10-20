@@ -19,6 +19,7 @@
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorOr.h"
@@ -51,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 
@@ -818,6 +818,9 @@ public:
     return OutputAddressRange;
   }
 
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
+
   bool hasLocSyms() const { return LocSyms != nullptr; }
 
   /// Return mapping of input offsets to symbols in the output.
@@ -886,6 +889,8 @@ public:
 
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
+
+  bool hasParent() const { return getParent() != nullptr; }
 
   /// Return true if the containing function is in CFG state.
   bool hasCFG() const;
@@ -975,7 +980,13 @@ template <> struct GraphTraits<bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -986,7 +997,13 @@ template <> struct GraphTraits<const bolt::BinaryBasicBlock *> {
     return N->succ_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<const bolt::BinaryBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
   using NodeRef = bolt::BinaryBasicBlock *;
@@ -998,7 +1015,13 @@ template <> struct GraphTraits<Inverse<bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   using NodeRef = const bolt::BinaryBasicBlock *;
@@ -1010,7 +1033,13 @@ template <> struct GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
     return N->pred_begin();
   }
   static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const bolt::BinaryBasicBlock *BB) {
+    return BB->getIndex();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const bolt::BinaryBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 } // namespace llvm
 

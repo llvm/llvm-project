@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OperatingSystemPython_h_
-#define liblldb_OperatingSystemPython_h_
+#ifndef LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H
+#define LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H
 
 #include "lldb/Host/Config.h"
 
@@ -60,6 +60,8 @@ public:
   // Method for lazy creation of threads on demand
   lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) override;
 
+  bool DoesPluginReportAllThreads() override;
+
 protected:
   bool IsValid() const {
     return m_script_object_sp && m_script_object_sp->IsValid();
@@ -71,10 +73,9 @@ protected:
       lldb_private::ThreadList &old_thread_list,
       std::vector<bool> &core_used_map, bool *did_create_ptr);
 
-  lldb_private::DynamicRegisterInfo *GetDynamicRegisterInfo();
+  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
-  std::unique_ptr<lldb_private::DynamicRegisterInfo> m_register_info_up;
   lldb_private::ScriptInterpreter *m_interpreter = nullptr;
   lldb::OperatingSystemInterfaceSP m_operating_system_interface_sp = nullptr;
   lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
@@ -82,4 +83,4 @@ protected:
 
 #endif // LLDB_ENABLE_PYTHON
 
-#endif // liblldb_OperatingSystemPython_h_
+#endif // LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H

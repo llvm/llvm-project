@@ -15,13 +15,11 @@ class GCoreTestCase(TestBase):
     _i386_pid = 5586
     _x86_64_pid = 5669
 
-    @skipIf(oslist=["windows"])
     @skipIf(triple="^mips")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid)
 
-    @skipIf(oslist=["windows"])
     @skipIf(triple="^mips")
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
@@ -37,7 +35,7 @@ class GCoreTestCase(TestBase):
         for thread in process:
             reason = thread.GetStopReason()
             self.assertStopReason(reason, lldb.eStopReasonSignal)
-            signal = thread.GetStopReasonDataAtIndex(1)
+            signal = thread.GetStopReasonDataAtIndex(0)
             # Check we got signal 19 (SIGSTOP)
             self.assertEqual(signal, 19)
 

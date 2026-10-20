@@ -120,11 +120,17 @@ void aggregateWithReferences() {
   clang_analyzer_dump(viaReference);    // expected-warning-re {{&lifetime_extended_object{RefAggregate, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.rx); // expected-warning-re {{&lifetime_extended_object{int, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.ry); // expected-warning-re {{&lifetime_extended_object{Composite, viaReference, S{{[0-9]+}}} }}
-
-  // clang does not currently implement extending lifetime of object bound to reference members of aggregates,
-  // that are created from default member initializer (see `warn_unsupported_lifetime_extension` from `-Wdangling`)
-  RefAggregate defaultInitExtended{i}; // clang-bug does not extend `Composite`
-  clang_analyzer_dump(defaultInitExtended.ry); // expected-warning {{Unknown }}
+  
+  // A temporary created by a default member initializer of an aggregate is now part of the full-expression containing the aggregate initialization,
+  // so its lifetime is extended along with the aggregate (CWG1815).
+  //
+  // FIXME: The analyzer does not model that extension yet and still reports a plain temp_object here; it should report
+  // &lifetime_extended_object{Composite, defaultInitExtended, S...}. Teaching it requires CFG and ExprEngine to handle
+  // the rebuilt default member initializer.
+  //
+  // Once https://github.com/llvm/llvm-project/pull/146281 landed, this issue will be fixed.
+  RefAggregate defaultInitExtended{i};
+  clang_analyzer_dump(defaultInitExtended.ry); // expected-warning-re {{&temp_object{Composite, S{{[0-9]+}}} }}
 }
 
 void lambda() {

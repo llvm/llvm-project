@@ -15,6 +15,7 @@
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-private-enumerations.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -35,15 +36,15 @@ public:
   void Finalize();
 
   bool Find(ConstString name,
-            llvm::function_ref<bool(DIERef ref)> callback) const;
+            llvm::function_ref<IterationAction(DIERef ref)> callback) const;
 
   bool Find(const RegularExpression &regex,
-            llvm::function_ref<bool(DIERef ref)> callback) const;
+            llvm::function_ref<IterationAction(DIERef ref)> callback) const;
 
   /// \a unit must be the skeleton unit if possible, not GetNonSkeletonUnit().
-  void
-  FindAllEntriesForUnit(DWARFUnit &unit,
-                        llvm::function_ref<bool(DIERef ref)> callback) const;
+  void FindAllEntriesForUnit(
+      DWARFUnit &unit,
+      llvm::function_ref<IterationAction(DIERef ref)> callback) const;
 
   void
   ForEach(std::function<bool(ConstString name, const DIERef &die_ref)> const

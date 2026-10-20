@@ -11,7 +11,7 @@
 ;         if (i < 10) x = i;
 ;       }
 
-define void @foo(i32 %i) #0 !dbg !4 {
+define void @foo(i32 %i) !dbg !4 {
 entry:
   %i.addr = alloca i32, align 4
   %x = alloca i32, align 4
@@ -34,8 +34,6 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !12
 ; CHECK:   ret void, !dbg ![[END:[0-9]+]]
 }
-
-attributes #0 = { nounwind uwtable noinline optnone "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

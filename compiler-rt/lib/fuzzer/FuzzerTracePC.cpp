@@ -69,6 +69,9 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
 }
 
 void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
+  if (Start == Stop) {
+    return;
+  }
   const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
   const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
   if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;
@@ -123,25 +126,6 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   const uintptr_t kMask = (1 << kBits) - 1;
   uintptr_t Idx = (Caller & kMask) | ((Callee & kMask) << kBits);
   ValueProfileMap.AddValueModPrime(Idx);
-}
-
-/// \return the address of the previous instruction.
-/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.h`
-inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
-#if defined(__arm__)
-  // T32 (Thumb) branch instructions might be 16 or 32 bit long,
-  // so we return (pc-2) in that case in order to be safe.
-  // For A32 mode we return (pc-4) because all instructions are 32 bit long.
-  return (PC - 3) & (~1);
-#elif defined(__sparc__) || defined(__mips__)
-  return PC - 8;
-#elif defined(__riscv__)
-  return PC - 2;
-#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
-  return PC - 1;
-#else
-  return PC - 4;
-#endif
 }
 
 /// \return the address of the next instruction.
@@ -221,22 +205,11 @@ const TracePC::PCTableEntry *TracePC::PCTableEntryByIdx(uintptr_t Idx) {
   return nullptr;
 }
 
-static std::string GetModuleName(uintptr_t PC) {
-  char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
-  void *OffsetRaw = nullptr;
-  if (!EF->__sanitizer_get_module_and_offset_for_pc(
-      reinterpret_cast<void *>(PC), ModulePathRaw,
-      sizeof(ModulePathRaw), &OffsetRaw))
-    return "";
-  return ModulePathRaw;
-}
-
 template<class CallBack>
 void TracePC::IterateCoveredFunctions(CallBack CB) {
   for (size_t i = 0; i < NumPCTables; i++) {
     auto &M = ModulePCTable[i];
     assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(M.Start->PC);
     for (auto NextFE = M.Start; NextFE < M.Stop; ) {
       auto FE = NextFE;
       assert(PcIsFuncEntry(FE) && "Not a function entry point");

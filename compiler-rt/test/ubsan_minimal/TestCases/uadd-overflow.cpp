@@ -1,5 +1,5 @@
-// RUN: %clangxx -fsanitize=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=all %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_min_runtime -fsanitize=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_min_runtime -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=all %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
 
 #include <stdint.h>
 

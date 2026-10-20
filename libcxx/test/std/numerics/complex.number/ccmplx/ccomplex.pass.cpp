@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex>
+// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <ccomplex>
 

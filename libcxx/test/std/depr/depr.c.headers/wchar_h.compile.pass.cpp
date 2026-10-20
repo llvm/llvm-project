@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
+
+// Missing wchar string formatting functions.
+// XFAIL: LLVM-LIBC-FIXME
 
 // <wchar.h>
 

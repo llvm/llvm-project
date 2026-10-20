@@ -117,7 +117,7 @@ public:
 
   bool forAllRanges(const SourceManager &SM,
                     llvm::function_ref<void(SourceRange R)> Callback) override {
-    auto FE = SM.getFileManager().getFile(Range.FileName);
+    auto FE = SM.getFileManager().getOptionalFileRef(Range.FileName);
     FileID FID = FE ? SM.translateFile(*FE) : FileID();
     if (!FE || FID.isInvalid()) {
       llvm::errs() << "error: -selection=" << Range.FileName
@@ -160,7 +160,8 @@ SourceSelectionArgument::fromString(StringRef Value) {
     return std::make_unique<SourceRangeSelectionArgument>(std::move(*Range));
   llvm::errs() << "error: '-selection' option must be specified using "
                   "<file>:<line>:<column> or "
-                  "<file>:<line>:<column>-<line>:<column> format\n";
+                  "<file>:<line>:<column>-<line>:<column> format, "
+                  "where <line> and <column> are integers greater than zero.\n";
   return nullptr;
 }
 
@@ -239,9 +240,9 @@ private:
                                "specified for one refactoring action");
     // FIXME: cl::Required can be specified when this option is present
     // in all rules in an action.
-    return std::make_unique<cl::opt<T>>(
-        Opt.getName(), cl::desc(Opt.getDescription()), cl::Optional,
-        cl::cat(Category), cl::sub(Subcommand));
+    return std::make_unique<cl::opt<T>>(Opt.getName(),
+                                        cl::desc(Opt.getDescription()),
+                                        cl::cat(Category), cl::sub(Subcommand));
   }
 
   llvm::SmallPtrSet<const RefactoringOption *, 8> Visited;
@@ -560,7 +561,6 @@ private:
          << "' can't be invoked with the given arguments:\n";
       for (const auto &Opt : MissingOptions)
         OS << "  missing '-" << Opt.getKey() << "' option\n";
-      OS.flush();
       return llvm::make_error<llvm::StringError>(
           Error, llvm::inconvertibleErrorCode());
     }
@@ -591,7 +591,6 @@ private:
       OS << "note: the following actions are supported:\n";
       for (const auto &Subcommand : SubCommands)
         OS.indent(2) << Subcommand->getName() << "\n";
-      OS.flush();
       return llvm::make_error<llvm::StringError>(
           Error, llvm::inconvertibleErrorCode());
     }
@@ -618,7 +617,7 @@ int main(int argc, const char **argv) {
       argc, argv, cl::getGeneralCategory(), cl::ZeroOrMore,
       "Clang-based refactoring tool for C, C++ and Objective-C");
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   CommonOptionsParser &Options = ExpectedParser.get();

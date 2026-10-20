@@ -20,10 +20,10 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "xcore-lower-thread-local"
@@ -31,9 +31,9 @@
 using namespace llvm;
 
 static cl::opt<unsigned> MaxThreads(
-  "xcore-max-threads", cl::Optional,
-  cl::desc("Maximum number of threads (for emulation thread-local storage)"),
-  cl::Hidden, cl::value_desc("number"), cl::init(8));
+    "xcore-max-threads",
+    cl::desc("Maximum number of threads (for emulation thread-local storage)"),
+    cl::Hidden, cl::value_desc("number"), cl::init(8));
 
 namespace {
   /// Lowers thread local variables on the XCore. Each thread local variable is
@@ -42,9 +42,7 @@ namespace {
   struct XCoreLowerThreadLocal : public ModulePass {
     static char ID;
 
-    XCoreLowerThreadLocal() : ModulePass(ID) {
-      initializeXCoreLowerThreadLocalPass(*PassRegistry::getPassRegistry());
-    }
+    XCoreLowerThreadLocal() : ModulePass(ID) {}
 
     bool lowerGlobal(GlobalVariable *GV);
 
@@ -124,20 +122,23 @@ static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
   return true;
 }
 
-static bool isZeroLengthArray(Type *Ty) {
-  ArrayType *AT = dyn_cast<ArrayType>(Ty);
-  return AT && (AT->getNumElements() == 0);
-}
-
 bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   Module *M = GV->getParent();
   if (!GV->isThreadLocal())
     return false;
 
-  // Skip globals that we can't lower and leave it for the backend to error.
-  if (!rewriteNonInstructionUses(GV, this) ||
-      !GV->getType()->isSized() || isZeroLengthArray(GV->getType()))
+  if (!rewriteNonInstructionUses(GV, this))
     return false;
+
+  // The lowered representation needs an ArrayType of the value type, which
+  // requires a known per-element stride: reject anything that can't provide
+  // one now, with a clear diagnostic, rather than emitting a malformed GEP
+  // that only fails much later (and much less clearly) in instruction
+  // selection.
+  if (!GV->getValueType()->isSized() ||
+      GV->getGlobalSize(M->getDataLayout()) == 0)
+    reportFatalUsageError("Size of thread local object '" + GV->getName() +
+                          "' is unknown");
 
   // Create replacement global.
   ArrayType *NewType = createLoweredType(GV->getValueType());
@@ -154,13 +155,10 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
 
   // Update uses.
   SmallVector<User *, 16> Users(GV->users());
-  for (unsigned I = 0, E = Users.size(); I != E; ++I) {
-    User *U = Users[I];
+  for (User *U : Users) {
     Instruction *Inst = cast<Instruction>(U);
     IRBuilder<> Builder(Inst);
-    Function *GetID = Intrinsic::getDeclaration(GV->getParent(),
-                                                Intrinsic::xcore_getid);
-    Value *ThreadID = Builder.CreateCall(GetID, {});
+    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {});
     Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
                                             {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);
@@ -179,8 +177,7 @@ bool XCoreLowerThreadLocal::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals())
     if (GV.isThreadLocal())
       ThreadLocalGlobals.push_back(&GV);
-  for (unsigned I = 0, E = ThreadLocalGlobals.size(); I != E; ++I) {
-    MadeChange |= lowerGlobal(ThreadLocalGlobals[I]);
-  }
+  for (GlobalVariable *GV : ThreadLocalGlobals)
+    MadeChange |= lowerGlobal(GV);
   return MadeChange;
 }

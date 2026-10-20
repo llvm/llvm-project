@@ -9,15 +9,16 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_REP_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
-
-#include <stdint.h>
+#include "src/__support/macros/config.h"
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
-namespace LIBC_NAMESPACE::fixed_point {
+namespace LIBC_NAMESPACE_DECL {
+namespace fixed_point {
 
 namespace internal {
 
@@ -41,8 +42,8 @@ template <> struct FXRep<short fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SFRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return SFRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return SFRACT_MAX; }
@@ -50,6 +51,7 @@ template <> struct FXRep<short fract> {
   LIBC_INLINE static constexpr Type EPS() { return SFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25HR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125HR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -61,8 +63,8 @@ template <> struct FXRep<unsigned short fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = USFRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return USFRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return USFRACT_MAX; }
@@ -70,6 +72,7 @@ template <> struct FXRep<unsigned short fract> {
   LIBC_INLINE static constexpr Type EPS() { return USFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UHR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UHR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -81,8 +84,8 @@ template <> struct FXRep<fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = FRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return FRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return FRACT_MAX; }
@@ -90,6 +93,7 @@ template <> struct FXRep<fract> {
   LIBC_INLINE static constexpr Type EPS() { return FRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5R; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25R; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125R; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -101,8 +105,8 @@ template <> struct FXRep<unsigned fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = UFRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return UFRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return UFRACT_MAX; }
@@ -110,6 +114,7 @@ template <> struct FXRep<unsigned fract> {
   LIBC_INLINE static constexpr Type EPS() { return UFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -121,8 +126,8 @@ template <> struct FXRep<long fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = LFRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return LFRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return LFRACT_MAX; }
@@ -130,6 +135,7 @@ template <> struct FXRep<long fract> {
   LIBC_INLINE static constexpr Type EPS() { return LFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25LR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125LR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -141,8 +147,8 @@ template <> struct FXRep<unsigned long fract> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = 0;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = ULFRACT_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ULFRACT_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return ULFRACT_MAX; }
@@ -150,6 +156,7 @@ template <> struct FXRep<unsigned long fract> {
   LIBC_INLINE static constexpr Type EPS() { return ULFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25ULR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125ULR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -161,8 +168,8 @@ template <> struct FXRep<short accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = SACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return SACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return SACCUM_MAX; }
@@ -170,6 +177,7 @@ template <> struct FXRep<short accum> {
   LIBC_INLINE static constexpr Type EPS() { return SACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25HK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125HK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -181,8 +189,8 @@ template <> struct FXRep<unsigned short accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = USACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = USACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return USACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return USACCUM_MAX; }
@@ -190,6 +198,7 @@ template <> struct FXRep<unsigned short accum> {
   LIBC_INLINE static constexpr Type EPS() { return USACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UHK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UHK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -201,8 +210,8 @@ template <> struct FXRep<accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = ACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = ACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return ACCUM_MAX; }
@@ -210,6 +219,7 @@ template <> struct FXRep<accum> {
   LIBC_INLINE static constexpr Type EPS() { return ACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5K; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25K; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125K; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -221,8 +231,8 @@ template <> struct FXRep<unsigned accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = UACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = UACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return UACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return UACCUM_MAX; }
@@ -230,6 +240,7 @@ template <> struct FXRep<unsigned accum> {
   LIBC_INLINE static constexpr Type EPS() { return UACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -241,8 +252,8 @@ template <> struct FXRep<long accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = LACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = LACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return LACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return LACCUM_MAX; }
@@ -250,6 +261,7 @@ template <> struct FXRep<long accum> {
   LIBC_INLINE static constexpr Type EPS() { return LACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25LK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125LK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -261,8 +273,8 @@ template <> struct FXRep<unsigned long accum> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 0;
   LIBC_INLINE_VAR static constexpr int INTEGRAL_LEN = ULACCUM_IBIT;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = ULACCUM_FBIT;
-  LIBC_INLINE_VAR static constexpr int TOTAL_LEN =
-      SIGN_LEN + INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int VALUE_LEN = INTEGRAL_LEN + FRACTION_LEN;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + VALUE_LEN;
 
   LIBC_INLINE static constexpr Type MIN() { return ULACCUM_MIN; }
   LIBC_INLINE static constexpr Type MAX() { return ULACCUM_MAX; }
@@ -270,6 +282,7 @@ template <> struct FXRep<unsigned long accum> {
   LIBC_INLINE static constexpr Type EPS() { return ULACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25ULK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125ULK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -293,7 +306,8 @@ template <> struct FXRep<unsigned sat accum> : FXRep<unsigned accum> {};
 template <>
 struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
 
-} // namespace LIBC_NAMESPACE::fixed_point
+} // namespace fixed_point
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 

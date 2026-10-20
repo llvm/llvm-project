@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdio_macros.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
@@ -13,8 +14,6 @@
 #include "src/stdio/setbuf.h"
 #include "src/stdio/ungetc.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdio.h>
 
 TEST(LlvmLibcSetbufTest, DefaultBufsize) {
   // The idea in this test is to change the buffer after opening a file and

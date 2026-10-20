@@ -17,7 +17,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -38,7 +37,7 @@ class DiagnosticInfoKCFI : public DiagnosticInfo {
   const Twine &Msg;
 
 public:
-  DiagnosticInfoKCFI(const Twine &DiagMsg,
+  DiagnosticInfoKCFI(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                      DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
@@ -101,7 +100,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
     if (T.isARM() || T.isThumb()) {
       FuncPtr = Builder.CreateIntToPtr(
           Builder.CreateAnd(Builder.CreatePtrToInt(FuncPtr, Int32Ty),
-                            ConstantInt::get(Int32Ty, -2)),
+                            ConstantInt::getSigned(Int32Ty, -2)),
           FuncPtr->getType());
     }
     Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(Int32Ty, FuncPtr, -1);
@@ -110,7 +109,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Test, Call, false, VeryUnlikelyWeights);
     Builder.SetInsertPoint(ThenTerm);
-    Builder.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::debugtrap));
+    Builder.CreateIntrinsic(Intrinsic::debugtrap, {});
     ++NumKCFIChecks;
   }
 

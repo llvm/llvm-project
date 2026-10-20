@@ -47,3 +47,74 @@ subroutine sb4
     end do loop
   !$omp end parallel
 end subroutine
+
+! Test that default(none) does not error for assumed-size array
+subroutine sub( aaa)
+  real,dimension(*),intent(in)::aaa
+  integer::ip
+  real::ccc
+!$omp parallel do private(ip,ccc) default(none)
+  do ip = 1, 10
+     ccc= aaa(ip)
+  end do
+end subroutine sub
+
+! Test that threadprivate variables with host association
+! have a predetermined DSA
+subroutine host_assoc()
+  integer, save :: i
+  !$omp threadprivate(i)
+  real, save :: r
+  !$omp threadprivate(r)
+contains
+  subroutine internal()
+!$omp parallel default(none)
+    print *, i, r
+!$omp end parallel
+  end subroutine internal
+end subroutine host_assoc
+
+subroutine parallel_critical()
+  integer :: i
+  !$omp parallel default(none)
+  !$omp critical
+  !$omp parallel
+    do i = 1, 10
+    end do
+  !$omp end parallel
+  !$omp end critical
+  !$omp end parallel
+end subroutine
+
+subroutine implicit_predetermined()
+  !$omp parallel default(none)
+  !$omp parallel
+  !$omp do
+    do i = 0, 10
+    end do
+  !$omp end parallel
+  !$omp end parallel
+end subroutine
+
+subroutine implicit_explicit()
+  !$omp task default(none)
+  !$omp task
+  !$omp parallel private(i)
+  i = 1
+  !$omp end parallel
+  !$omp end task
+  !$omp end task
+end subroutine
+
+! Implied-DO variables in I/O lists are private.
+subroutine implied_do_in_io_list()
+  integer :: a(10)
+
+  !$omp parallel default(none)
+    write(6,*) (i,i=1,10)
+  !$omp end parallel
+
+  !$omp parallel default(none) shared(a)
+    read(5,*) (a(i),i=1,10)
+  !$omp end parallel
+end subroutine

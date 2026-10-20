@@ -41,10 +41,10 @@ struct ST {
 
 // CK31A-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 //
-// CK31A: [[SIZE00:@.+]] = private {{.*}}constant [7 x i64] [i64 0, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4]
+// CK31A: [[SIZE00:@.+]] = private {{.*}}constant [8 x i64] [i64 0, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4, i64 0]
 // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
-// CK31A-USE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1020]],
-// CK31A-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1000]],
+// CK31A-USE: [[MTYPE00:@.+]] = private {{.*}}constant [8 x i64] [i64 [[#0x1020]],
+// CK31A-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [8 x i64] [i64 [[#0x1000]],
 //
 // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1000000001003
 // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
@@ -55,15 +55,15 @@ struct ST {
 // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
 // MEMBER_OF_5=0x5000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x5000000001003
 // MEMBER_OF_5=0x5000000000000 | FROM=0x2 | TO=0x1 = 0x5000000000003
-// CK31A-USE-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]]]
-// CK31A-NOUSE-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]]]
+// CK31A-USE-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]], i64 288]
+// CK31A-NOUSE-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]], i64 288]
 
 // CK31A-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK31A: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
+// CK31A: [[SIZE01:@.+]] = private {{.*}}constant [2 x i[[Z:64|32]]] [i[[Z:64|32]] 4, i[[Z]] 0]
 //
 // PRESENT=0x1000 | CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | FROM=0x2 | TO=0x1 = 0x1427
-// CK31A-USE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 [[#0x1427]]]
-// CK31A-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 [[#0x1407]]]
+// CK31A-USE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 [[#0x1427]], i64 288]
+// CK31A-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 [[#0x1407]], i64 288]
 
 // CK31A-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (int ii){
@@ -81,10 +81,10 @@ void explicit_maps_single (int ii){
 // Make sure the struct picks up present even if another element of the struct
 // doesn't have present.
 // Region 00
-// CK31A: [[ST1_J:%.+]] = getelementptr inbounds [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 1
-// CK31A: [[ST1_I:%.+]] = getelementptr inbounds [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 0
-// CK31A: [[ST2_I:%.+]] = getelementptr inbounds [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 0
-// CK31A: [[ST2_J:%.+]] = getelementptr inbounds [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 1
+// CK31A: [[ST1_J:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 1
+// CK31A: [[ST1_I:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 0
+// CK31A: [[ST2_I:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 0
+// CK31A: [[ST2_J:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 1
 // CK31A-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK31A-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK31A-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -92,7 +92,7 @@ void explicit_maps_single (int ii){
 // CK31A-DAG: store ptr [[PGEP:%.+]], ptr [[PARG]]
 // CK31A-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
 // CK31A-DAG: store ptr [[SIZES:%.+]], ptr [[SARG]]
-// CK31A-DAG: [[SIZES]] = getelementptr inbounds [7 x i64], ptr [[S:%.+]], i{{.+}} 0, i{{.+}} 0
+// CK31A-DAG: [[SIZES]] = getelementptr inbounds [8 x i64], ptr [[S:%.+]], i{{.+}} 0, i{{.+}} 0
 // CK31A-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK31A-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -142,8 +142,8 @@ void explicit_maps_single (int ii){
 // CK31A-DAG: store ptr [[ST2]], ptr [[BP6]]
 // CK31A-DAG: store ptr [[ST2_J]], ptr [[P6]]
 
-// CK31A-USE: call void [[CALL00:@.+]](ptr [[ST1]], ptr [[A]], ptr [[ST2]])
-// CK31A-NOUSE: call void [[CALL00:@.+]]()
+// CK31A-USE: call void [[CALL00:@.+]](ptr [[ST1]], ptr [[A]], ptr [[ST2]], ptr null)
+// CK31A-NOUSE: call void [[CALL00:@.+]](ptr null)
 #pragma omp target map(tofrom                                     \
                        : st1.i) map(present, tofrom               \
                                     : a, st1.j, st2.i) map(tofrom \
@@ -173,8 +173,8 @@ void explicit_maps_single (int ii){
 // CK31A-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK31A-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK31A-USE: call void [[CALL01:@.+]](ptr {{[^,]+}})
-// CK31A-NOUSE: call void [[CALL01:@.+]]()
+// CK31A-USE: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
+// CK31A-NOUSE: call void [[CALL01:@.+]](ptr null)
 #pragma omp target map(always close present tofrom \
                        : a)
   {

@@ -8,8 +8,6 @@
 
 #include "check-select-type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
@@ -252,7 +250,7 @@ void SelectTypeChecker::Enter(const parser::SelectTypeConstruct &construct) {
     if (IsProcedure(*selector)) {
       context_.Say(
           selectTypeStmt.source, "Selector may not be a procedure"_err_en_US);
-    } else if (evaluate::IsAssumedRank(*selector)) {
+    } else if (IsAssumedRank(*selector)) {
       context_.Say(selectTypeStmt.source,
           "Assumed-rank variable may only be used as actual argument"_err_en_US);
     } else if (auto exprType{selector->GetType()}) {

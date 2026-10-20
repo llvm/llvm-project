@@ -45,6 +45,8 @@ static LLVMValueRef build_from_tokens(char **tokens, int ntokens,
   int depth = 0;
   int i;
 
+  LLVMContextRef C = LLVMGetBuilderContext(builder);
+
   for (i = 0; i < ntokens; i++) {
     char tok = tokens[i][0];
     switch (tok) {
@@ -74,7 +76,7 @@ static LLVMValueRef build_from_tokens(char **tokens, int ntokens,
         return NULL;
       }
 
-      LLVMTypeRef ty = LLVMInt64Type();
+      LLVMTypeRef ty = LLVMInt64TypeInContext(C);
       off = LLVMBuildGEP2(builder, ty, param, &stack[depth - 1], 1, "");
       stack[depth - 1] = LLVMBuildLoad2(builder, ty, off, "");
 
@@ -94,7 +96,7 @@ static LLVMValueRef build_from_tokens(char **tokens, int ntokens,
         return NULL;
       }
 
-      stack[depth++] = LLVMConstInt(LLVMInt64Type(), val, 1);
+      stack[depth++] = LLVMConstInt(LLVMInt64TypeInContext(C), val, 1);
       break;
     }
     }
@@ -115,15 +117,17 @@ static void handle_line(char **tokens, int ntokens) {
   LLVMValueRef param;
   LLVMValueRef res;
 
-  LLVMModuleRef M = LLVMModuleCreateWithName(name);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext(name, C);
 
-  LLVMTypeRef I64ty = LLVMInt64Type();
+  LLVMTypeRef I64ty = LLVMInt64TypeInContext(C);
   LLVMTypeRef I64Ptrty = LLVMPointerType(I64ty, 0);
   LLVMTypeRef Fty = LLVMFunctionType(I64ty, &I64Ptrty, 1, 0);
 
   LLVMValueRef F = LLVMAddFunction(M, name, Fty);
-  LLVMBuilderRef builder = LLVMCreateBuilder();
-  LLVMPositionBuilderAtEnd(builder, LLVMAppendBasicBlock(F, "entry"));
+  LLVMBuilderRef builder = LLVMCreateBuilderInContext(C);
+  LLVMPositionBuilderAtEnd(builder,
+                           LLVMAppendBasicBlockInContext(C, F, "entry"));
 
   LLVMGetParams(F, &param);
   LLVMSetValueName(param, "in");
@@ -138,6 +142,7 @@ static void handle_line(char **tokens, int ntokens) {
   LLVMDisposeBuilder(builder);
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 }
 
 int llvm_calc(void) {

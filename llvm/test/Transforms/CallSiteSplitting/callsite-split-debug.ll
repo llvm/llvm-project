@@ -42,6 +42,8 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 attributes #0 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}
+!14 = !{null}
+!15 = !DISubroutineType(types: !14)
 !llvm.module.flags = !{!2, !3}
 !llvm.ident = !{!4}
 
@@ -51,7 +53,7 @@ attributes #0 = { nounwind readnone speculatable }
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{!"My Compiler"}
 !5 = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, unit: !0)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !15, unit: !0)
 !7 = !DILocalVariable(name: "c", scope: !6, line: 5, type: !5)
 !8 = !DILocation(line: 5, column: 7, scope: !6)
 !11 = !DILocalVariable(name: "a", scope: !6, line: 6, type: !5)
