@@ -36,9 +36,11 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
 using namespace llvm::omp::target::helpers;
 
+using llvm::omp::target::plugin::GenericKernelTy;
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
+GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol);
 } // namespace llvm::offload::tmp
 
 void PluginManager::init() {
@@ -435,8 +437,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
       }
 
       // 2) Load the image onto the given device.
-      auto BinaryOrErr = Device.loadBinary(Img);
-      if (llvm::Error Err = BinaryOrErr.takeError()) {
+      auto LoadedOrErr = Device.loadBinary(Img);
+      if (llvm::Error Err = LoadedOrErr.takeError()) {
         REPORT() << "Failed to load image " << llvm::toString(std::move(Err));
         Rc = OFFLOAD_FAIL;
         break;
@@ -450,14 +452,20 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
         if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
           continue;
 
-        __tgt_device_binary &Binary = *BinaryOrErr;
+        ProgramTy &Program = *LoadedOrErr;
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
-          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE))
-            if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
-                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-              REPORT() << "Failed to load symbol " << Entry.SymbolName;
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)) {
+            auto AddrOrErr = Device.getAndRecordGlobalAddress(
+                Program, Entry.SymbolName, Entry.Size);
+            if (!AddrOrErr) {
+              REPORT() << "Failed to load symbol " << Entry.SymbolName << ": "
+                       << llvm::toString(AddrOrErr.takeError());
+            } else {
+              DeviceEntry.Address = *AddrOrErr;
+            }
+          }
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
@@ -471,11 +479,15 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                                         Entry.Size) != OFFLOAD_SUCCESS)
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
         } else if (Entry.Address) {
-          if (Device.RTL->get_function(Binary, Entry.SymbolName,
-                                       &DeviceEntry.Address) !=
-              OFFLOAD_SUCCESS) {
-            REPORT() << "Failed to load kernel " << Entry.SymbolName;
+          auto AddrOrErr = Program.getKernelAddress(Entry.SymbolName);
+          if (!AddrOrErr) {
+            REPORT() << "Failed to load kernel " << Entry.SymbolName << ": "
+                     << llvm::toString(AddrOrErr.takeError());
           } else {
+            GenericKernelTy *Kernel =
+                llvm::offload::tmp::__ol_tgt_GetKernelFromSymbol(*AddrOrErr);
+            DeviceEntry.Address = Kernel;
+
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on the device
             // for use at launch time.
@@ -486,9 +498,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             KernelEnvironmentTy KernelEnv{};
             llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
                 EnvName, sizeof(KernelEnv), &KernelEnv);
-            auto &Image =
-                *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
-                    Binary.handle);
+            auto &Image = Kernel->getImage();
             if (auto Err =
                     GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
                         GenericDevice, Image, KernelEnvGlobal)) {
@@ -505,9 +515,6 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                   << " execution mode";
             }
 
-            auto *Kernel =
-                reinterpret_cast<llvm::omp::target::plugin::GenericKernelTy *>(
-                    DeviceEntry.Address);
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
             LaunchInfo.Mode =
