@@ -161,7 +161,7 @@ define <24 x i32> @gather_v24i32_dword_index(ptr %base, <24 x i32> %idx, <24 x i
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index'
 ; SKX-COST: cost of 3 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v24i32_qword_index'
-; SKX-TPUT: cost of 30 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 34 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index:
 ; SKX-ASM-COUNT-3: vpgatherqd
 ; SKX-ASM-NOT: vpgather

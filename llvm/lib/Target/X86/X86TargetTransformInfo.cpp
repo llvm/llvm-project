@@ -7499,8 +7499,12 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
       getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace,
                       Mask, MICA.getUniformBase());
 
-  // Predicate fanout (see getPredicateFanoutCost); variable mask only.
-  if (MICA.getVariableMask()) {
+  // Predicate fanout (see getPredicateFanoutCost); variable mask only, and not
+  // at code size. There the cost is the instruction count getGSVectorCost
+  // derives, while FanoutCostPerPart is a tie-break against the vectorizer's
+  // widest-VF bias. Charging it anyway prices shapes above every instruction
+  // CodeGen emits for them, including ones that build no sub-mask at all.
+  if (MICA.getVariableMask() && CostKind != TTI::TCK_CodeSize) {
     auto *MaskVecTy =
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()),
                              cast<FixedVectorType>(SrcVTy)->getNumElements());

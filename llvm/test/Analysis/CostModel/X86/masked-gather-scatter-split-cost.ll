@@ -39,7 +39,7 @@ define <9 x i32> @gather_v9i32(<9 x ptr> %ptrs, <9 x i1> %mask) {
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <9 x i32> %v
 ;
 ; AVX2-LABEL: 'gather_v9i32'
-; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:3 Lat:42 SizeLat:15 for: %v = call <9 x i32> @llvm.masked.gather.v9i32.v9p0(<9 x ptr> align 4 %ptrs, <9 x i1> %mask, <9 x i32> poison)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:3 Lat:46 SizeLat:19 for: %v = call <9 x i32> @llvm.masked.gather.v9i32.v9p0(<9 x ptr> align 4 %ptrs, <9 x i1> %mask, <9 x i32> poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <9 x i32> %v
 ;
   %v = call <9 x i32> @llvm.masked.gather.v9i32.v9p0(<9 x ptr> %ptrs, i32 4, <9 x i1> %mask, <9 x i32> poison)
@@ -65,12 +65,12 @@ define void @scatter_v9i32(<9 x i32> %val, <9 x ptr> %ptrs, <9 x i1> %mask) {
 define <24 x i32> @gather_v24i32_dword_index(ptr %base, <24 x i32> %idx, <24 x i1> %mask) {
 ; SKX-LABEL: 'gather_v24i32_dword_index'
 ; SKX-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i32> %idx
-; SKX-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:100 SizeLat:28 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; SKX-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:2 Lat:104 SizeLat:32 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
 ; AVX2-LABEL: 'gather_v24i32_dword_index'
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i32> %idx
-; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:3 Lat:102 SizeLat:30 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:3 Lat:110 SizeLat:38 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i32> %idx
@@ -85,12 +85,12 @@ define <24 x i32> @gather_v24i32_dword_index(ptr %base, <24 x i32> %idx, <24 x i
 define <24 x i32> @gather_v24i32_qword_index(ptr %base, <24 x i64> %idx, <24 x i1> %mask) {
 ; SKX-LABEL: 'gather_v24i32_qword_index'
 ; SKX-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; SKX-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:3 Lat:102 SizeLat:30 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; SKX-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:3 Lat:106 SizeLat:34 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
 ; AVX2-LABEL: 'gather_v24i32_qword_index'
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; AVX2-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:6 Lat:108 SizeLat:36 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:6 Lat:116 SizeLat:44 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
