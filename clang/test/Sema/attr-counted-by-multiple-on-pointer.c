@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify %s
 
 // A pointer can have only one counted_by-family attribute. A second one used
-// to stack another CountAttributedType on the first.
+// to stack another CountAttributedType on the first, with or without late
+// parsing.
 
 #define __counted_by(f) __attribute__((counted_by(f)))
 #define __counted_by_or_null(f) __attribute__((counted_by_or_null(f)))
