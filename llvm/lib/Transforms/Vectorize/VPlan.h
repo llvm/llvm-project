@@ -1477,7 +1477,9 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
-    if (Opcode == VPInstruction::MaskedCond)
+    if (Opcode == VPInstruction::MaskedCond ||
+        Opcode == VPInstruction::WideVectorLoad ||
+        Opcode == VPInstruction::WideVectorStore)
       return false;
 
     // For now only VPInstructions with underlying values use masks.
@@ -1488,6 +1490,12 @@ private:
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
            Opcode == Instruction::GetElementPtr ||
            Opcode == Instruction::ExtractValue;
+  }
+
+  /// Returns true if it is possible to execute this VPInstruction.
+  bool canExecute() const {
+    return !isMasked() || Opcode == VPInstruction::WideVectorLoad ||
+           Opcode == VPInstruction::WideVectorStore;
   }
 
 public:
