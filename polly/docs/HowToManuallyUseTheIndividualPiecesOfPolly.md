@@ -2,9 +2,8 @@
 
 ## Execute the individual Polly passes manually
 
-```{eval-rst}
-.. sectionauthor:: Singapuram Sanjay Srivallabh
-```
+:::{sectionauthor} Singapuram Sanjay Srivallabh
+:::
 
 This example presents the individual passes that are involved when optimizing
 code with Polly. We show how to execute them individually and explain for

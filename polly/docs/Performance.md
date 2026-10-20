@@ -1,13 +1,9 @@
-```{eval-rst}
-.. include:: <isonum.txt>
-```
-
 # Performance
 
 ## High-Performance Generalized Matrix Multiplication
 
 Polly automatically detects and optimizes generalized matrix multiplication,
-the computation C {{ larr }} α ⊗ C ⊕ β ⊗ A ⊗ B, where A, B, and C are three appropriately sized matrices,
+the computation C ← α ⊗ C ⊕ β ⊗ A ⊗ B, where A, B, and C are three appropriately sized matrices,
 ⊕ and ⊗ operations are originating from the corresponding matrix semiring, and α and β are
 constants, and beta is not equal to zero. It allows to obtain the highly optimized form structured
 similar to the expert implementation of GEMM that can be found in GotoBLAS and its successors. The

@@ -36,23 +36,19 @@ clang -O3 -mllvm -polly -mllvm -polly-parallel -lgomp file.c
 
 The following CL switch allows to choose Polly's OpenMP-backend:
 
-> -polly-omp-backend[=BACKEND]
->
-> : choose the OpenMP backend; BACKEND can be 'GNU' (the default) or 'LLVM';
+-polly-omp-backend[=BACKEND]
+: choose the OpenMP backend; BACKEND can be 'GNU' (the default) or 'LLVM';
 
 The OpenMP backends can be further influenced using the following CL switches:
 
-> -polly-num-threads[=NUM]
->
-> : set the number of threads to use; NUM may be any positive integer (default: 0, which equals automatic/OMP runtime);
->
-> -polly-scheduling[=SCHED]
->
-> : set the OpenMP scheduling type; SCHED can be 'static', 'dynamic', 'guided' or 'runtime' (the default);
->
-> -polly-scheduling-chunksize[=CHUNK]
->
-> : set the chunksize (for the selected scheduling type); CHUNK may be any strictly positive integer (otherwise it will default to 1);
+-polly-num-threads[=NUM]
+: set the number of threads to use; NUM may be any positive integer (default: 0, which equals automatic/OMP runtime);
+
+-polly-scheduling[=SCHED]
+: set the OpenMP scheduling type; SCHED can be 'static', 'dynamic', 'guided' or 'runtime' (the default);
+
+-polly-scheduling-chunksize[=CHUNK]
+: set the chunksize (for the selected scheduling type); CHUNK may be any strictly positive integer (otherwise it will default to 1);
 
 Note that at the time of writing, the GNU backend may only use the
 `polly-num-threads` and `polly-scheduling` switches, where the latter also has
