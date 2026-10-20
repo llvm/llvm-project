@@ -3,7 +3,6 @@
 
 ---
 name:            func_no_pic
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:
@@ -77,7 +76,6 @@ body:             |
 ...
 ---
 name:            func_pic
-tracksRegLiveness: true
 jumpTable:
   kind:            label-difference32
   entries:
@@ -157,7 +155,6 @@ body:             |
 ...
 ---
 name:            multiple_jump_table_users
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

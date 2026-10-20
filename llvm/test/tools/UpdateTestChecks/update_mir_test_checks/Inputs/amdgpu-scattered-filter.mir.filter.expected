@@ -4,7 +4,6 @@
 ---
 name:            _amdgpu_hs_main
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

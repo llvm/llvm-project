@@ -628,7 +628,6 @@ body:             |
 
 ---
 name:            unmerge_v2s16_from_v4s16_sext_v4s8_concat_vectors_v2s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -675,7 +674,6 @@ body:             |
 
 ---
 name:            unmerge_v2s16_from_v8s16_sext_v8s8_concat_vectors_v4s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -748,7 +746,6 @@ body:             |
 
 ---
 name:            unmerge_v2s16_from_v16s16_sext_v16s8_concat_vectors_v8s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15

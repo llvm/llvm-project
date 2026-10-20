@@ -4,7 +4,6 @@
 ---
 name:            t1
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            t2
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -54,7 +52,6 @@ body:             |
 ---
 name:            t3
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -76,7 +73,6 @@ body:             |
 ---
 name:            t4
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -101,7 +97,6 @@ body:             |
 ---
 name:            t5
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -125,7 +120,6 @@ body:             |
 ---
 name:            t6
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -154,7 +148,6 @@ body:             |
 ---
 name:            t7
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -175,7 +168,6 @@ body:             |
 ---
 name:            t8
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -195,7 +187,6 @@ body:             |
 ---
 name:            t9
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: t9
@@ -240,7 +231,6 @@ body:             |
 ---
 name:            t10
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -263,7 +253,6 @@ body:             |
 ---
 name:            LIS8
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -285,7 +274,6 @@ body:             |
 ---
 name:            LIS
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -307,7 +295,6 @@ body:             |
 ---
 name:            modify_and_kill_the_reg_in_the_same_inst
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -324,7 +311,6 @@ body:             |
 ---
 name:            dead_load_immediate_followed_by_a_redundancy
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -349,7 +335,6 @@ body:             |
 ---
 name:            overwrite_reg_before_killed
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:

@@ -12,7 +12,6 @@ name:            lr_other_block
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lr_other_block
   ; CHECK: bb.0:
@@ -44,7 +43,6 @@ name:            already_live_in
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: already_live_in
   ; CHECK: bb.0:
@@ -78,7 +76,6 @@ name:            multi_use
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: multi_use
   ; CHECK: bb.0:

@@ -500,7 +500,6 @@
 
 ---
 name:            smallInterleave
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |

@@ -23,7 +23,6 @@
 ---
 name:            inlineasm_br_different_indirect_target
 alignment:       16
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 body:             |

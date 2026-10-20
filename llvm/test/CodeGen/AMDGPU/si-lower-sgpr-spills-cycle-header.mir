@@ -11,7 +11,6 @@
 
 ---
 name:            sgpr_spill_loop_header_and_latch_implicit_def_in_preheader
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

@@ -8,7 +8,6 @@
 # wwm-operands.
 ---
 name:            test_single_block
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -45,7 +44,6 @@ body:             |
 
 ---
 name:            test_if_else
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -116,7 +114,6 @@ body:             |
 
 ---
 name:            test_loop
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -218,7 +215,6 @@ body:             |
 
 ---
 name:            test_multiple_return_blocks
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

@@ -55,7 +55,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 frameInfo:

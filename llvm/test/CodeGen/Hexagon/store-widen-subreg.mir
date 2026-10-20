@@ -12,7 +12,6 @@
 ...
 ---
 name:            test_store_widen_subreg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_store_widen_subreg
   ; CHECK: S2_addasl_rrri %{{[0-9]+}}, %{{[0-9]+}}.isub_lo, 2

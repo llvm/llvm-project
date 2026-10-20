@@ -16,7 +16,6 @@
 ...
 ---
 name:            stack_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x4, $x0, $x1, $x2, $x3
@@ -38,7 +37,6 @@ body:             |
 ...
 ---
 name:            stack_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x4, $x0, $x1, $x2, $x3
@@ -60,7 +58,6 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8

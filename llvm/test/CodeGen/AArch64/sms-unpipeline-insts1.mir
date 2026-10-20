@@ -40,7 +40,6 @@
 ...
 ---
 name:            KERNEL
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '%7' }
   - { reg: '$x1', virtual-reg: '%8' }

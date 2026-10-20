@@ -3,7 +3,6 @@
 
 ---
 name: test_freeze_freeze_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -24,7 +23,6 @@ body: |
 
 ---
 name: test_freeze_freeze_freeze_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -46,7 +44,6 @@ body: |
 
 ---
 name: test_freeze_freeze_s32_multi_use
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -75,7 +72,6 @@ body: |
 
 ---
 name: test_freeze_copy_freeze_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

@@ -15,7 +15,6 @@
 
 ---
 name: func
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
   - { id: 1, class: vgpr_32, preferred-register: '' }

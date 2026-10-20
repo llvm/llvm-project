@@ -6,7 +6,6 @@
 
 ---
 name:            shift_back_exec_copy_reserved_reg
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 machineFunctionInfo:
@@ -49,7 +48,6 @@ body:             |
 
 ---
 name:            spill_exec_copy_reserved_reg
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 machineFunctionInfo:

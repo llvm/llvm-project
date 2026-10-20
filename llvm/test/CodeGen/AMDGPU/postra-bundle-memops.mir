@@ -4,7 +4,6 @@
 
 ---
 name:            bundle_memops
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: bundle_memops
@@ -117,7 +116,6 @@ body:             |
 # Middle dbg_value should be bundled
 ---
 name: bundle_dbg_value_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
@@ -138,7 +136,6 @@ body:             |
 # Middle dbg_value should be bundled
 ---
 name: bundle_dbg_value_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
@@ -162,7 +159,6 @@ body:             |
 # Starting and ending dbg_values should not be in the bundle
 ---
 name: bundle_dbg_value_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
@@ -185,7 +181,6 @@ body:             |
 
 ---
 name: bundle_kill
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
@@ -207,7 +202,6 @@ body:             |
 
 ---
 name: bundle_kill_def_in_bundle
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
@@ -355,7 +349,6 @@ body:             |
 # Avoid bundling if a MBB has SCHED_BARRIER
 ---
 name: no_sched_barrier_within_bundle
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: no_sched_barrier_within_bundle

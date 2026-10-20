@@ -6,7 +6,6 @@
 
 ---
 name: scavenge_sgpr_pei
-tracksRegLiveness: true
 
 stack:
   - { id: 0, type: default, size: 4, alignment: 4096 }

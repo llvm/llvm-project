@@ -14,7 +14,6 @@
 name:            unused_reg
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body:             |

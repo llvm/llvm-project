@@ -12,7 +12,6 @@
 # S_BRANCH.
 ---
 name: other_terminator_sbranch_after_si_if
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: other_terminator_sbranch_after_si_if
   ; CHECK: bb.0:
@@ -59,7 +58,6 @@ body:             |
 # S_CBRANCH_EXECZ should be inserted after the other terminator
 ---
 name: other_terminator_fallthrough_after_si_if
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: other_terminator_fallthrough_after_si_if
   ; CHECK: bb.0:
@@ -103,7 +101,6 @@ body:             |
 
 ---
 name: other_terminator_sbranch_after_si_else
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: other_terminator_sbranch_after_si_else
   ; CHECK: bb.0:
@@ -148,7 +145,6 @@ body:             |
 
 ---
 name: other_terminator_sbranch_after_si_loop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: other_terminator_sbranch_after_si_loop
   ; CHECK: bb.0:
@@ -200,7 +196,6 @@ alignment:       1
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: si_if_use
   ; CHECK: bb.0:
@@ -277,7 +272,6 @@ body:             |
 
 ---
 name: combine_masks_nested_first_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: combine_masks_nested_first_operand
   ; CHECK: bb.0:
@@ -313,7 +307,6 @@ body:             |
 
 ---
 name: combine_masks_nested_second_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: combine_masks_nested_second_operand
   ; CHECK: bb.0:

@@ -5,7 +5,6 @@
 # RUN: llc -mtriple=amdgpu9.00 -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=SDWA %s
 ---
 name:            add_f16_u32_preserve
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -66,7 +65,6 @@ body:             |
 ...
 ---
 name:            sdwa_preserve_keep
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -115,7 +113,6 @@ body:             |
 ...
 ---
 name:            sdwa_preserve_remove
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -164,7 +161,6 @@ body:             |
 ...
 ---
 name:            add_f16_u32_preserve_different_bb
-tracksRegLiveness: true
 body:             |
   ; SDWA-LABEL: name: add_f16_u32_preserve_different_bb
   ; SDWA: bb.0:
@@ -224,7 +220,6 @@ body:             |
 
 ---
 name: multiuse_kill
-tracksRegLiveness: true
 
 body:             |
   bb.0:

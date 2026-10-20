@@ -97,7 +97,6 @@
 ---
 name:            _Z6kernelv
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         false

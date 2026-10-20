@@ -6,7 +6,6 @@
 ---
 name:            fptosi_s32_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            fptoui_s32_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -48,7 +46,6 @@ body:             |
 ---
 name:            fptosi_s64_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -69,7 +66,6 @@ body:             |
 ---
 name:            fptoui_s64_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -90,7 +86,6 @@ body:             |
 ---
 name:            fptosi_s32_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d
@@ -111,7 +106,6 @@ body:             |
 ---
 name:            fptoui_s32_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d
@@ -132,7 +126,6 @@ body:             |
 ---
 name:            fptosi_s64_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d
@@ -153,7 +146,6 @@ body:             |
 ---
 name:            fptoui_s64_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d

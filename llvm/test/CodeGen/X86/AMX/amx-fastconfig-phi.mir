@@ -42,7 +42,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: tile }

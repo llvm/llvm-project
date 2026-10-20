@@ -13,7 +13,6 @@
 
 ---
 name:            test_av_spill_cross_bb_usage
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

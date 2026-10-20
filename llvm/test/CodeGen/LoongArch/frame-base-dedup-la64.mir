@@ -27,7 +27,6 @@
 #   %stack.1 -> 16416 - 16 = 16400 = (4 << 12) + 16
 name: test_same_region
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -91,7 +90,6 @@ body: |
 #   %stack.2 -> 20512 - 4112 = 16400 = (4 << 12) + 16
 name: test_different_regions
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -152,7 +150,6 @@ body: |
 #   %stack.1 -> 18464 - 16 = 18448 = (5 << 12) - 2032
 name: test_negative_lo12
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false
@@ -212,7 +209,6 @@ body: |
 # No PseudoAddUpperImm generated (and no emergency spill slot either).
 name: test_small_offset_no_pseudo
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 8
   hasCalls: false

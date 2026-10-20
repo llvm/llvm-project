@@ -12,7 +12,6 @@
 # Negative test: cross-block compares with different source registers should
 # NOT be optimised. %0 traces to $w0, %1 traces to $w1.
 name:            cross_block_different_regs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32sp }
   - { id: 1, class: gpr32sp }
@@ -72,7 +71,6 @@ body:             |
 # Positive test: cross-block compares with the SAME source register SHOULD be
 # optimised. Both %0 and %1 trace back to $w0.
 name:            cross_block_same_reg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32sp }
   - { id: 1, class: gpr32sp }

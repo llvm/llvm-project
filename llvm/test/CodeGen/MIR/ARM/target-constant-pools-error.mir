@@ -7,7 +7,6 @@
 ...
 ---
 name:            target_constant_pool
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }

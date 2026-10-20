@@ -6,7 +6,6 @@
 
 ---
 name: coalesce_undef_copy
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: coalesce_undef_copy
   ; CHECK: bb.0:
@@ -42,7 +41,6 @@ body: |
 # with no def must not crash isWorthBreakingCriticalEdge.
 ---
 name: crit_edge_undef_copy
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: crit_edge_undef_copy
   ; CHECK: bb.0:

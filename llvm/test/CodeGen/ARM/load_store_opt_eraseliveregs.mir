@@ -3,7 +3,6 @@
 
 ---
 name:            _Z9broadcastIJLi0ELi1ELi2ELi3ELi4ELi5EEEvP1QPKS0_S3_St16integer_sequenceIiJXspT_EEE
-tracksRegLiveness: true
 noPhis:          true
 noVRegs:         true
 body:             |

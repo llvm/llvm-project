@@ -78,7 +78,6 @@
 ...
 ---
 name:            kernel
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '%10' }
   - { reg: '$x1', virtual-reg: '%11' }

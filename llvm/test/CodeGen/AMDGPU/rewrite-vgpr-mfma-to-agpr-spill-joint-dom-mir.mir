@@ -20,7 +20,6 @@
 ...
 ---
 name:            rewrite_vgpr_mfma_to_agpr_spill_joint_dom
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 liveins:

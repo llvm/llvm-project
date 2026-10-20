@@ -7,7 +7,6 @@
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__literal_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -77,7 +76,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__literal_offsets_live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -130,7 +128,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__inline_imm_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -200,7 +197,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e64__inline_imm_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -268,7 +264,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e64__inline_imm_offsets_live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -321,7 +316,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__s_add_i32__literal_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -374,7 +368,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__s_add_i32__inline_imm_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -427,7 +420,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__s_add_i32__reg_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -504,7 +496,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__s_add_i32__reg_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -581,7 +572,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__s_add_i32__literal_offsets_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -640,7 +630,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__vgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -715,7 +704,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__vgpr_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -790,7 +778,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e32__sgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -864,7 +851,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e64__sgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -941,7 +927,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_co_u32_e64__sgpr_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:

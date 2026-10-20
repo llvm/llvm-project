@@ -17,7 +17,6 @@
 # CHECK:      assigned-phys: '$vgpr7'
 ---
 name: test_vrm_roundtrip
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, assigned-phys: '$vgpr5' }
   - { id: 1, class: vgpr_32, assigned-phys: '$vgpr6', split-from: '%0' }

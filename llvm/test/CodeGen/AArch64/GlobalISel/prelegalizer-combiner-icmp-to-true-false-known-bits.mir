@@ -37,7 +37,6 @@
 ...
 ---
 name:            eq_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -59,7 +58,6 @@ body:             |
 ...
 ---
 name:            ne_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -82,7 +80,6 @@ body:             |
 ...
 ---
 name:            sge_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -105,7 +102,6 @@ body:             |
 ...
 ---
 name:            sgt_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -128,7 +124,6 @@ body:             |
 ...
 ---
 name:            sle_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -152,7 +147,6 @@ body:             |
 ...
 ---
 name:            slt_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -175,7 +169,6 @@ body:             |
 ...
 ---
 name:            uge_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -198,7 +191,6 @@ body:             |
 ...
 ---
 name:            ugt_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -221,7 +213,6 @@ body:             |
 ...
 ---
 name:            ule_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -244,7 +235,6 @@ body:             |
 ...
 ---
 name:            ult_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -267,7 +257,6 @@ body:             |
 ...
 ---
 name:            eq_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -290,7 +279,6 @@ body:             |
 ...
 ---
 name:            ne_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -313,7 +301,6 @@ body:             |
 ...
 ---
 name:            sge_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -336,7 +323,6 @@ body:             |
 ...
 ---
 name:            sgt_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -359,7 +345,6 @@ body:             |
 ...
 ---
 name:            sle_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -383,7 +368,6 @@ body:             |
 ...
 ---
 name:            slt_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -406,7 +390,6 @@ body:             |
 ...
 ---
 name:            uge_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -429,7 +412,6 @@ body:             |
 ...
 ---
 name:            ugt_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -452,7 +434,6 @@ body:             |
 ...
 ---
 name:            ule_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -475,7 +456,6 @@ body:             |
 ...
 ---
 name:            ult_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -498,7 +478,6 @@ body:             |
 ...
 ---
 name:            eq_unknown
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -524,7 +503,6 @@ body:             |
 ...
 ---
 name:            ne_unknown
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -550,7 +528,6 @@ body:             |
 ...
 ---
 name:            vector_true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -577,7 +554,6 @@ body:             |
 ...
 ---
 name:            vector_false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

@@ -94,7 +94,6 @@
 ---
 name:            xsfmm_same_state
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: vrm8 }
@@ -141,7 +140,6 @@ body:             |
 ---
 name:            xsfmm_different_state
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: vrm8 }
@@ -189,7 +187,6 @@ body:             |
 ---
 name:            xsfmm_different_state_bf
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: vrm8 }
@@ -242,7 +239,6 @@ body:             |
 ---
 name:            interleave_rvv_and_xsfmm
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: gprnox0 }
@@ -288,7 +284,6 @@ body:             |
 ---
 name:            interleave_rvv_and_xsfmm2
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: gprnox0 }
@@ -337,7 +332,6 @@ body:             |
 ---
 name:            consecutive_xsfmm
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrm8 }
   - { id: 1, class: gprnox0 }
@@ -383,7 +377,6 @@ body:             |
 ---
 name:            vsettnt_max
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
 liveins:
@@ -414,7 +407,6 @@ body:             |
 ---
 name:            single_vsettm
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
 liveins:
@@ -441,7 +433,6 @@ body:             |
 ---
 name:            single_vsettn
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
 liveins:
@@ -467,7 +458,6 @@ body:             |
 ---
 name:            single_vsettk
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
 liveins:
@@ -494,7 +484,6 @@ body:             |
 ---
 name:            sf_vtzero
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
   - { id: 1, class: gprnox0 }

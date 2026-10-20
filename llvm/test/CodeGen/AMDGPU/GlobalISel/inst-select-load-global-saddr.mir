@@ -8,7 +8,6 @@
 name: load_global_s32_from_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -58,7 +57,6 @@ body: |
 name: load_global_s32_from_sgpr_zext_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -111,7 +109,6 @@ body: |
 name: load_global_s32_from_sgpr_merge_zext_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -164,7 +161,6 @@ body: |
 name: load_global_s32_from_sgpr_merge_not_0_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -257,7 +253,6 @@ body: |
 name: load_global_s32_from_sgpr_zext_vgpr_offset4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -330,7 +325,6 @@ body: |
 name: load_global_s32_from_sgpr_zext_vgpr_offset_neg4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -401,7 +395,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -451,7 +444,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_4097
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -501,7 +493,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_neg4097
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -575,7 +566,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_2049
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -625,7 +615,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_neg2049
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -682,7 +671,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_4294967295
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -731,7 +719,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_4294967296
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -813,7 +800,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_4294971390
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -895,7 +881,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_neg4294967295
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -976,7 +961,6 @@ body: |
 name: load_global_s32_from_sgpr_base_offset_neg4294967296
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1058,7 +1042,6 @@ body: |
 name: load_global_s32_from_copy_undef_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1096,7 +1079,6 @@ body: |
 name: load_global_s32_from_undef_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

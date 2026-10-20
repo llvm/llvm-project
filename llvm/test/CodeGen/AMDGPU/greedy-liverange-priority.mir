@@ -10,7 +10,6 @@
 # NEW: NumVgprs: 7{{$}}
 ---
 name: test1
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1, %bb.2
@@ -52,7 +51,6 @@ body: |
 # NEW: NumVgprs: 11{{$}}
 ---
 name: test2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2

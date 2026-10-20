@@ -22,7 +22,6 @@ body:             |
 
 ---
 name:            test_b64_imm_phi
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_b64_imm_phi
   ; GCN: bb.0:

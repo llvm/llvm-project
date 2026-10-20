@@ -1,7 +1,6 @@
 # RUN: llc -mtriple=arm64-apple-ios -run-pass=prolog-epilog %s -o - | FileCheck %s
 ---
 name: large_stack_offset_calc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32768, alignment: 8 }
 body: |

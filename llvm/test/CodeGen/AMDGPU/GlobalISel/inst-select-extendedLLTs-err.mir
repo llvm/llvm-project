@@ -6,7 +6,6 @@
 name: g_fcmp_op2_fconstant_s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -22,7 +21,6 @@ body: |
 name: g_fcmp_op3_fconstant_s32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -38,7 +36,6 @@ body: |
 name: g_shl_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -54,7 +51,6 @@ body: |
 name: g_fpext_op0_f64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -69,7 +65,6 @@ body: |
 name: g_lshr_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -85,7 +80,6 @@ body: |
 name: g_ashr_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -101,7 +95,6 @@ body: |
 name: g_fptrunc_op0_f16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -116,7 +109,6 @@ body: |
 name: g_zextload_op0_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -131,7 +123,6 @@ body: |
 name: g_sextload_op0_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -146,7 +137,6 @@ body: |
 name: g_umin_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -162,7 +152,6 @@ body: |
 name: g_umin_op0_i64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -178,7 +167,6 @@ body: |
 name: g_umax_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -194,7 +182,6 @@ body: |
 name: g_uitofp_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -209,7 +196,6 @@ body: |
 name: g_umax_op0_i64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -225,7 +211,6 @@ body: |
 name: g_smin_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -241,7 +226,6 @@ body: |
 name: g_smax_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -257,7 +241,6 @@ body: |
 name: g_fma_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -274,7 +257,6 @@ body: |
 name: g_uitofp_op1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -289,7 +271,6 @@ body: |
 name: g_fmaxnum_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -305,7 +286,6 @@ body: |
 name: g_fminnum_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -321,7 +301,6 @@ body: |
 name: g_fmaxnum_ieee_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -337,7 +316,6 @@ body: |
 name: g_fminnum_ieee_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -353,7 +331,6 @@ body: |
 name: g_intrinsic_amdgcn_class_op2_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -369,7 +346,6 @@ body: |
 name: g_intrinsic_convergent_amdgcn_readfirstlane_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -384,7 +360,6 @@ body: |
 name: g_amdgpu_atomic_cmpxchg_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -400,7 +375,6 @@ body: |
 name: g_amdgpu_ffbh_u32_op1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -415,7 +389,6 @@ body: |
 name: g_amdgpu_ffbl_b32_op1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -430,7 +403,6 @@ body: |
 name: g_bitreverse_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -445,7 +417,6 @@ body: |
 name: g_fcmp_op2_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -461,7 +432,6 @@ body: |
 name: g_ctlz_zero_poison_op1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -476,7 +446,6 @@ body: |
 name: g_ctpop_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -491,7 +460,6 @@ body: |
 name: g_cttz_zero_poison_op1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -506,7 +474,6 @@ body: |
 name: g_fadd_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -522,7 +489,6 @@ body: |
 name: g_fcanonicalize_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -537,7 +503,6 @@ body: |
 name: g_fneg_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -552,7 +517,6 @@ body: |
 name: g_ffloor_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -567,7 +531,6 @@ body: |
 name: g_fexp2_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -582,7 +545,6 @@ body: |
 name: g_fmul_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -598,7 +560,6 @@ body: |
 name: g_fabs_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -613,7 +574,6 @@ body: |
 name: g_fptosi_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -628,7 +588,6 @@ body: |
 name: g_fptoui_op0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -643,7 +602,6 @@ body: |
 name: g_fshr_op3_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -660,7 +618,6 @@ body: |
 name: g_intrinsic_trunc_op0_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0

@@ -5,7 +5,6 @@
 ---
 name: temporal_divergent_i1_phi
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: temporal_divergent_i1_phi
   ; GFX10: bb.0:
@@ -88,7 +87,6 @@ body: |
 ---
 name: temporal_divergent_i1_non_phi
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: temporal_divergent_i1_non_phi
   ; GFX10: bb.0:
@@ -171,7 +169,6 @@ body: |
 ---
 name: loop_with_1break
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_1break
   ; GFX10: bb.0:
@@ -349,7 +346,6 @@ body: |
 ---
 name: nested_loops_temporal_divergence_inner
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: nested_loops_temporal_divergence_inner
   ; GFX10: bb.0:
@@ -486,7 +482,6 @@ body: |
 ---
 name: nested_loops_temporal_divergence_outer
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: nested_loops_temporal_divergence_outer
   ; GFX10: bb.0:
@@ -623,7 +618,6 @@ body: |
 ---
 name: nested_loops_temporal_divergence_both
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: nested_loops_temporal_divergence_both
   ; GFX10: bb.0:

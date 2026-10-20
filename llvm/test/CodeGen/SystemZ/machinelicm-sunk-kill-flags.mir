@@ -18,7 +18,6 @@
 ...
 ---
 name:            c
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: c
   ; CHECK: bb.0:

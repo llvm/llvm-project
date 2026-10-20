@@ -8,7 +8,6 @@
 ---
 name:            test_peephole_subreg_def
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

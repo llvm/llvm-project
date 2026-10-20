@@ -14,7 +14,6 @@
 ---
 name:            test_v8f16.ceil
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -44,7 +43,6 @@ body:             |
 ---
 name:            test_v4f16.ceil
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

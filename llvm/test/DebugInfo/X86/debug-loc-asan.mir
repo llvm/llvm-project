@@ -186,7 +186,6 @@
 ---
 name:            _Z3bari
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi' }
 frameInfo:       

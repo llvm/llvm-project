@@ -5,7 +5,6 @@
 name:            const_i64_INT_MIN
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -26,7 +25,6 @@ body:            |
 name:            const_i64_neg_9223372036854775000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -48,7 +46,6 @@ body:            |
 name:            const_i64_INT_MAX
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -69,7 +66,6 @@ body:            |
 name:            const_i64_9223372036854775000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -90,7 +86,6 @@ body:            |
 name:            const_i64_256
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -110,7 +105,6 @@ body:            |
 name:            const_i64_0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -130,7 +124,6 @@ body:            |
 name:            const_i32_INT_MIN
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -150,7 +143,6 @@ body:            |
 name:            const_i32_neg_2147483000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -171,7 +163,6 @@ body:            |
 name:            const_i32_INT_MAX
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -192,7 +183,6 @@ body:            |
 name:            const_i32_2147483000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10

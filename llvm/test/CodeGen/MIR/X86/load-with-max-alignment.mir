@@ -9,7 +9,6 @@
 ---
 name:            truly_aligned_load
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 frameInfo:
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            basealigned_load
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 frameInfo:

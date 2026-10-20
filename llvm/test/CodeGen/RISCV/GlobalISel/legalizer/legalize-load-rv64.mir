@@ -7,7 +7,6 @@
 ---
 name:            load_i8
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -48,7 +47,6 @@ body:             |
 ---
 name:            load_i16
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -89,7 +87,6 @@ body:             |
 ---
 name:            load_i32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -130,7 +127,6 @@ body:             |
 ---
 name:            load_i64
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -167,7 +163,6 @@ body:             |
 ---
 name:            load_i128
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -216,7 +211,6 @@ body:             |
 ---
 name:            load_ptr
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -253,7 +247,6 @@ body:             |
 ---
 name:            load_i16_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -300,7 +293,6 @@ body:             |
 ---
 name:            load_i32_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -357,7 +349,6 @@ body:             |
 ---
 name:            load_i32_align2
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -404,7 +395,6 @@ body:             |
 ---
 name:            load_i64_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -475,7 +465,6 @@ body:             |
 ---
 name:            load_i64_align2
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -528,7 +517,6 @@ body:             |
 ---
 name:            load_i128_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

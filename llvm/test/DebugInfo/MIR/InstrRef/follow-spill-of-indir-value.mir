@@ -98,7 +98,6 @@
 ---
 name:            _Z3foo10NonTrivial
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 tracksDebugUserValues: true
 liveins:

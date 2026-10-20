@@ -5,7 +5,6 @@
 name:            splat_4xi32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -30,7 +29,6 @@ body:             |
 name:            splat_2xi64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -55,7 +53,6 @@ body:             |
 name:            splat_2xi32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -80,7 +77,6 @@ body:             |
 name:            splat_4xf32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $s0
@@ -105,7 +101,6 @@ body:             |
 name:            splat_2xf64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0
@@ -130,7 +125,6 @@ body:             |
 name:            splat_2xf32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $s0
@@ -155,7 +149,6 @@ body:             |
 name:            splat_2xf64_copies
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0
@@ -184,7 +177,6 @@ body:             |
 name:            not_all_zeros
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -212,7 +204,6 @@ body:             |
 name:            all_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -239,7 +230,6 @@ body:             |
 name:            one_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $s0
@@ -265,7 +255,6 @@ body:             |
 name:            not_all_zeros_with_undefs
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $s0
@@ -299,7 +288,6 @@ body:             |
 name:            splat_4xi16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $h0
@@ -323,7 +311,6 @@ body:             |
 name:            splat_8xi8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -347,7 +334,6 @@ body:             |
 name:            build_vector
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $w2, $w3
@@ -389,7 +375,6 @@ body:             |
 name:            build_vector_rhs
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $w2, $w3, $w4

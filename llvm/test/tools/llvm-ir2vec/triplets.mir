@@ -56,7 +56,6 @@
 ---
 name:            add_function
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -77,7 +76,6 @@ body:             |
 ---
 name:            mul_function
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }

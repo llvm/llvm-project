@@ -17,7 +17,6 @@
 ---
 name:            test_memmove1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1, $x2
@@ -40,7 +39,6 @@ body:             |
 ---
 name:            test_memmove2_const
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1
@@ -75,7 +73,6 @@ body:             |
 ---
 name:            test_memmove3_const_toolarge
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1
@@ -128,7 +125,6 @@ body:             |
 ---
 name:            test_memmove4_const_unaligned
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1
@@ -169,7 +165,6 @@ body:             |
 ---
 name:            test_memmove_addrspace
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1
@@ -204,7 +199,6 @@ body:             |
 ---
 name:            test_memmove_load_store_offsets_1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -233,7 +227,6 @@ body:             |
 ---
 name:            test_memmove_load_store_offsets_2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -262,7 +255,6 @@ body:             |
 ---
 name:            test_memmove_load_store_offsets_volatile_1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -291,7 +283,6 @@ body:             |
 ---
 name:            test_memmove_load_store_offsets_volatile_2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1

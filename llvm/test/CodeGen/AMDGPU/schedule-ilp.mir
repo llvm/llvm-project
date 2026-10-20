@@ -15,7 +15,6 @@
 
 ---
 name: schedule_ilp
-tracksRegLiveness: true
 machineFunctionInfo:
 	stackPtrOffsetReg: $sgpr32
 stack:

@@ -6,7 +6,6 @@
 
 ---
 name:            issue197467
-tracksRegLiveness: true
 registers:
   - { id: 5, class: sreg_32, preferred-register: '%3' }
 machineFunctionInfo:

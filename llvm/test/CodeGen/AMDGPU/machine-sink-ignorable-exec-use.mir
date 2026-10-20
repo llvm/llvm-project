@@ -6,7 +6,6 @@
 ---
 name:            test_sink_fmac_to_only_use
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -88,7 +87,6 @@ body:             |
 ---
 name:            test_no_sink_into_if_cond_multiple_uses
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -172,7 +170,6 @@ body:             |
 ---
 name:            no_sink_fmac_not_constant_mode
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -256,7 +253,6 @@ body:             |
 ---
 name:            test_no_sink_fmac_wwm
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -318,7 +314,6 @@ body:             |
 ...
 ---
 name:            test_def_and_use_in_loop_sink_fmac
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -448,7 +443,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_def_into_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -578,7 +572,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_def_into_loop2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -735,7 +728,6 @@ body:             |
 ...
 ---
 name: test_no_sink_permlane_swap
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -802,7 +794,6 @@ body: |
 ...
 ---
 name: test_sink_add_co_dead_carry_out
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -850,7 +841,6 @@ body: |
 ...
 ---
 name: test_no_sink_add_co_live_carry_out
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

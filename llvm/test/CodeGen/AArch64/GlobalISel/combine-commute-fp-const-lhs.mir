@@ -2,7 +2,6 @@
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            fadd
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -24,7 +23,6 @@ body:             |
 ...
 ---
 name:            fmul
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            fmul_vector
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -68,7 +65,6 @@ body:             |
 ...
 ---
 name:            fmul_splat_with_undef
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0
@@ -93,7 +89,6 @@ body:             |
 ...
 ---
 name:            fmul_vector_nonsplat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -118,7 +113,6 @@ body:             |
 ...
 ---
 name:            fminnum
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -139,7 +133,6 @@ body:             |
 ...
 ---
 name:            fmaxnum
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -160,7 +153,6 @@ body:             |
 ...
 ---
 name:            fminnum_ieee
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -181,7 +173,6 @@ body:             |
 ...
 ---
 name:            fmaxnum_ieee
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -202,7 +193,6 @@ body:             |
 ...
 ---
 name:            fminimum
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -223,7 +213,6 @@ body:             |
 ...
 ---
 name:            fmaximum
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0

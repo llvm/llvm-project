@@ -7,7 +7,6 @@
 
 ---
 name:            v_and_imm_zero_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -26,7 +25,6 @@ body:             |
 
 ---
 name:            v_and_imm_neg1_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name:            v_or_imm_neg1_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -64,7 +61,6 @@ body:             |
 
 ---
 name:            v_xor_imm_zero_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -83,7 +79,6 @@ body:             |
 
 ---
 name:            s_add_imm_zero_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -102,7 +97,6 @@ body:             |
 
 ---
 name:            s_not_imm_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
 

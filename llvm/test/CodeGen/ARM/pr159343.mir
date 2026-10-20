@@ -2,7 +2,6 @@
 # RUN: llc -run-pass=peephole-opt -verify-machineinstrs -mtriple=thumbv7-unknown-linux-android29 %s -o - | FileCheck %s
 ---
 name: Test_shouldRewriteCopySrc_Invalid_SubReg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $r0, $r1

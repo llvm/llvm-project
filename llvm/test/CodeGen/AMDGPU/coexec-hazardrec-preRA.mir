@@ -38,7 +38,6 @@
 # DBG-NEXT:   Scheduled: 0 E E I E E I - V -
 ---
 name: wmma_ds_salu_only
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_ds_salu_only
   ; CHECK: bb.0:
@@ -99,7 +98,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 - - I - - I S . .
 ---
 name: wmma_valu_trans_only
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_valu_trans_only
   ; CHECK: bb.0:
@@ -146,7 +144,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 E E I E E I S V .
 ---
 name: wmma_valu_in_I_slots
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_valu_in_I_slots
   ; CHECK: bb.0:
@@ -205,7 +202,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 - - I - - I S . .
 ---
 name: wmma_trans_in_I_slots
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_trans_in_I_slots
   ; CHECK: bb.0:
@@ -254,7 +250,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 - - - - - - - V .
 ---
 name: wmma_chain_back_to_back
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_chain_back_to_back
   ; CHECK: bb.0:
@@ -315,7 +310,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 E E I E E I S - -
 ---
 name: wmma_mixed_ds_valu_trans
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_mixed_ds_valu_trans
   ; CHECK: bb.0:
@@ -386,7 +380,6 @@ body: |
 # DBG: TRANS hazard set: CyclesUntilTRANS=2
 ---
 name: trans_valu_interleave
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: trans_valu_interleave
   ; CHECK: bb.0:
@@ -446,7 +439,6 @@ body: |
 # DBG-NEXT:   Scheduled: 0 E E I E - I S - -
 ---
 name: wmma_valu_blocked_in_V_slot
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_valu_blocked_in_V_slot
   ; CHECK: bb.0:

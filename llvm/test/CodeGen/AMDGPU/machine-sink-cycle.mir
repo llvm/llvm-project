@@ -5,7 +5,6 @@
 ---
 name:            test_sink_copy
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -154,7 +153,6 @@ body:             |
 ---
 name:            test_sink_multi_stage
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -325,7 +323,6 @@ body:             |
 ---
 name:            test_sink_low_rp
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -530,7 +527,6 @@ body:             |
 ---
 name:            test_sink_high_rp
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -788,7 +784,6 @@ body:             |
 ---
 name:            test_sink_convergent
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1065,7 +1060,6 @@ body:             |
 ---
 name:            test_sink_multi_def
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

@@ -11,7 +11,6 @@
 
 ---
 name: s_or_b32__inline_imm__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -56,7 +55,6 @@ body:             |
 
 ---
 name: s_or_b32__literal__fi_offset96
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 24, alignment: 4 }
@@ -106,7 +104,6 @@ body:             |
 
 ---
 name: s_or_b32__sgpr__fi_literal_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 80, alignment: 16 }
   - { id: 1, size: 48, alignment: 4 }
@@ -165,7 +162,6 @@ body:             |
 
 ---
 name: s_or_b32__sgpr__fi_inlineimm_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 48, alignment: 4 }
@@ -224,7 +220,6 @@ body:             |
 
 ---
 name: s_and_b32__sgpr__fi_literal_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 80, alignment: 16 }
   - { id: 1, size: 48, alignment: 4 }

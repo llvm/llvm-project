@@ -6,7 +6,6 @@
 ---
 
 name:            shrink_fadd_f32_flags
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

@@ -5,7 +5,6 @@
 ---
 name: temporal_divergent_i32
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: temporal_divergent_i32
   ; GFX10: bb.0:
@@ -70,7 +69,6 @@ body: |
 ---
 name: temporal_divergent_i32_multiple_use
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: temporal_divergent_i32_multiple_use
   ; GFX10: bb.0:

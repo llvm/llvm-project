@@ -10,7 +10,6 @@
 
 ---
 name:            test_spill_v1
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -111,7 +110,6 @@ body:             |
 
 ---
 name:            test_spill_v2
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -236,7 +234,6 @@ body:             |
 
 ---
 name:            test_spill_v3
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 12, alignment: 4 }
 machineFunctionInfo:
@@ -385,7 +382,6 @@ body:             |
 
 ---
 name:            test_spill_v4
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -558,7 +554,6 @@ body:             |
 
 ---
 name:            test_spill_v5
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 20, alignment: 4 }
 machineFunctionInfo:
@@ -759,7 +754,6 @@ body:             |
 
 ---
 name:            test_spill_v6
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 24, alignment: 4 }
 machineFunctionInfo:
@@ -984,7 +978,6 @@ body:             |
 
 ---
 name:            test_spill_v8
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 4 }
 machineFunctionInfo:
@@ -1257,7 +1250,6 @@ body:             |
 
 ---
 name:            test_spill_v16
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -1730,7 +1722,6 @@ body:             |
 
 ---
 name:            test_spill_v32
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 128, alignment: 4 }
 machineFunctionInfo:
@@ -2603,7 +2594,6 @@ body:             |
 
 ---
 name:            test_spill_a1
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -2708,7 +2698,6 @@ body:             |
 
 ---
 name:            test_spill_a2
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -2843,7 +2832,6 @@ body:             |
 
 ---
 name:            test_spill_a3
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 12, alignment: 4 }
 machineFunctionInfo:
@@ -3008,7 +2996,6 @@ body:             |
 
 ---
 name:            test_spill_a4
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -3203,7 +3190,6 @@ body:             |
 
 ---
 name:            test_spill_a5
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 20, alignment: 4 }
 machineFunctionInfo:
@@ -3430,7 +3416,6 @@ body:             |
 
 ---
 name:            test_spill_a6
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 24, alignment: 4 }
 machineFunctionInfo:
@@ -3687,7 +3672,6 @@ body:             |
 
 ---
 name:            test_spill_a8
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 4 }
 machineFunctionInfo:
@@ -4004,7 +3988,6 @@ body:             |
 
 ---
 name:            test_spill_a16
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -4565,7 +4548,6 @@ body:             |
 
 ---
 name:            test_spill_a32
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 128, alignment: 4 }
 machineFunctionInfo:

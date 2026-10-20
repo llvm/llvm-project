@@ -10,7 +10,6 @@
 ...
 ---
 name:            all_sgpr_used
-tracksRegLiveness: true
 liveins:         
   - { reg: '$vgpr0' }
   - { reg: '$vgpr1' }

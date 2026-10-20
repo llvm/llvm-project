@@ -3,7 +3,6 @@
 
 ---
 name: test_jump_table
-tracksRegLiveness: true
 jumpTable:
   kind: block-address
   entries:

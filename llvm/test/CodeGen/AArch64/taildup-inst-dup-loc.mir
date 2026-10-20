@@ -1,7 +1,6 @@
 # RUN: llc -mtriple aarch64 -run-pass=early-tailduplication -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 ---
 name:            pluto
-tracksRegLiveness: true
 body:             |
   ; This test checks that the COPY3 and COPY4 copies are correctly placed in the bb.5 block,
   ; instead of crashing.

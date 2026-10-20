@@ -8,7 +8,6 @@
 # GCN-NEXT: %1:vgpr_32 = nofpexcept V_MUL_F32_e64 0, %0, 0, 1073741824, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %1
 name: omod_inst_flag_nsz_src
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -30,7 +29,6 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0, implicit %0
 
 name: omod_inst_flag_nsz_result
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -52,7 +50,6 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0, implicit %0
 
 name: omod_inst_flag_nsz_both
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false

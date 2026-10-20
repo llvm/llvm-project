@@ -6,7 +6,6 @@
 
 ---
 name:            i1_copy_assert
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: i1_copy_assert
   ; CHECK: bb.0:

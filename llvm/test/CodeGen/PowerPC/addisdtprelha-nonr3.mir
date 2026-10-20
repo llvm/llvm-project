@@ -26,7 +26,6 @@
 name:            test1
 alignment:       16
 exposesReturnsTwice: false
-tracksRegLiveness: true
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false

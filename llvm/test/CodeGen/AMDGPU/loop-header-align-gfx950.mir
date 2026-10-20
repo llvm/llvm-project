@@ -14,7 +14,6 @@
 
 ---
 name:            loop_with_8byte_first_inst
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_with_8byte_first_inst
   ; CHECK: bb.0:
@@ -63,7 +62,6 @@ body:             |
 
 ---
 name:            loop_with_4byte_first_inst
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_with_4byte_first_inst
   ; CHECK: bb.0:
@@ -112,7 +110,6 @@ body:             |
 
 ---
 name:            rotated_loop_with_4byte_landing_pad
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rotated_loop_with_4byte_landing_pad
   ; CHECK: bb.0:
@@ -223,7 +220,6 @@ body:             |
 
 ---
 name:            rotated_loop_with_8byte_landing_pad
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rotated_loop_with_8byte_landing_pad
   ; CHECK: bb.0:

@@ -6,7 +6,6 @@
 
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4, alignment: 16 }
 machineFunctionInfo:
@@ -35,7 +34,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset0__live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4, alignment: 16 }
 machineFunctionInfo:
@@ -64,7 +62,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset0__clamp
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4, alignment: 16 }
 machineFunctionInfo:
@@ -93,7 +90,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset0__live_vcc_clamp
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4, alignment: 16 }
 machineFunctionInfo:
@@ -122,7 +118,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -159,7 +154,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__sgpr_clamp
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -196,7 +190,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -234,7 +227,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__vgpr__clamp
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -272,7 +264,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__vgpr__live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -310,7 +301,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__inline_imm__fi_offset_literal__kernel__clamp
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 72, alignment: 16 }
   - { id: 1, size: 40, alignment: 4 }
@@ -339,7 +329,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_literal_offset__sgpr__scavenge_spill_required
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
   - { id: 1, size: 4, alignment: 4 }
@@ -381,7 +370,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__kernel_fi_offset0__other_vgpr_live_after
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 machineFunctionInfo:
@@ -414,7 +402,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__kernel__other_vgpr_live_after__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 machineFunctionInfo:
@@ -447,7 +434,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__identity_vgpr__fi_offset0__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -479,7 +465,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__fi_offset0__identity_vgpr__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -511,7 +496,6 @@ body:             |
 
 ---
 name: v_add_co_u32_e64__identity_vgpr__fi_offset32__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }

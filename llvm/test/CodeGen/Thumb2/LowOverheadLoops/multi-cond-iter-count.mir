@@ -53,7 +53,6 @@
 ---
 name:            multi_cond_iter_count
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

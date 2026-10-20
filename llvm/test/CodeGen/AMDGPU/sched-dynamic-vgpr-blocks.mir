@@ -30,7 +30,6 @@
 # CHECK-NEXT: %l2:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 8,
 # CHECK-NEXT: %acc3:vgpr_32 = V_ADD_U32_e32 %acc2, %l2,
 name: dvgpr_blocks
-tracksRegLiveness: true
 machineFunctionInfo:
   dynamicVGPRBlockSize: 16
 body: |

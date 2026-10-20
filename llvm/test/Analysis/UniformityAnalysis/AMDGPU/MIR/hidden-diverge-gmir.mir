@@ -23,7 +23,6 @@
 
 ---
 name:            hidden_diverge
-tracksRegLiveness: true
 body:             |
   bb.1:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)

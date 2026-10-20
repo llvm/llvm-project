@@ -4,7 +4,6 @@
 # FIXME: Running RA is needed otherwise it runs pre-RA LICM.
 ---
 name: test
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:

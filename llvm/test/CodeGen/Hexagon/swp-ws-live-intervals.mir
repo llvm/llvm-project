@@ -117,7 +117,6 @@
 ...
 ---
 name:            dp_ctrl_calc_tu_parameters
-tracksRegLiveness: true
 stack:
   - { id: 0, name: rem.i11.i, type: default, offset: 0, size: 8, alignment: 8}
 body:             |

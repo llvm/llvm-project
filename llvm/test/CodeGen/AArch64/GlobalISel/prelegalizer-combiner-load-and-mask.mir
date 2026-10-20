@@ -7,7 +7,6 @@
 
 ---
 name:            test_anyext_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name:            test_anyext_s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -51,7 +49,6 @@ body:             |
 
 ---
 name:            test_anyext_s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -70,7 +67,6 @@ body:             |
 
 ---
 name:            test_load_s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -89,7 +85,6 @@ body:             |
 
 ---
 name:            test_load_mask_s8_s32_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -111,7 +106,6 @@ body:             |
 # The mask is equal to the memory size.
 ---
 name:            test_load_mask_s16_s16_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -132,7 +126,6 @@ body:             |
 # there's little point to folding.
 ---
 name:            test_load_mask_s8_s16_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -153,7 +146,6 @@ body:             |
 
 ---
 name:            test_load_mask_size_equals_dst_size
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -178,7 +170,6 @@ body:             |
 
 ---
 name:            test_zext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -197,7 +188,6 @@ body:             |
 
 ---
 name:            test_zext_mask_larger_memsize
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -222,7 +212,6 @@ body:             |
 
 ---
 name:            test_sext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -241,7 +230,6 @@ body:             |
 
 ---
 name:            test_sext_mask_larger_memsize
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -262,7 +250,6 @@ body:             |
 
 ---
 name:            test_non_pow2_memtype
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -286,7 +273,6 @@ body:             |
 
 ---
 name:            test_no_mask
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -307,7 +293,6 @@ body:             |
 
 ---
 name:            test_volatile
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -326,7 +311,6 @@ body:             |
 
 ---
 name:            test_volatile_mask_smaller_mem
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -346,7 +330,6 @@ body:             |
 ...
 ---
 name:            test_no_lookthrough_copies_multi_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

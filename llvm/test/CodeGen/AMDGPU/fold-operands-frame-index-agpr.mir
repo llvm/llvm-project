@@ -3,7 +3,6 @@
 
 ---
 name:  fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_fi_to_av
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -23,7 +22,6 @@ body:             |
 
 ---
 name:  fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_fi_to_v
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -47,7 +45,6 @@ body:             |
 
 ---
 name:  fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_lit_to_v
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_lit_to_v
@@ -66,7 +63,6 @@ body:             |
 
 ---
 name:  fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_imm_to_v
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index_av_mov_b32_imm_pseudo_from_s_mov_b32_imm_to_v
@@ -83,7 +79,6 @@ body:             |
 
 ---
 name:  fold_frame_index_av_regression_0
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -106,7 +101,6 @@ body:             |
 
 ---
 name:  fold_frame_index_av_regression_1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384

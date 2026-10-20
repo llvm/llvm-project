@@ -36,7 +36,6 @@ body: |
 # SIMPLE-NOT: hasEHFunclets
 ---
 name: func1
-tracksRegLiveness: true
 callsEHReturn: false
 callsUnwindInit: true
 hasEHContTarget: false
@@ -60,7 +59,6 @@ body: |
 # SIMPLE-NOT: hasEHFunclets
 ---
 name: func2
-tracksRegLiveness: true
 callsEHReturn: true
 callsUnwindInit: false
 hasEHContTarget: true

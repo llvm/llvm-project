@@ -4,7 +4,6 @@
 
 ---
 name: s_mov_b32_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr
@@ -28,7 +27,6 @@ body:             |
 
 ---
 name: v_mov_b32_0_vgpr_reg_sequence_128_splat_copy_to_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b32_0_vgpr_reg_sequence_128_splat_copy_to_agpr
@@ -51,7 +49,6 @@ body:             |
 
 ---
 name: v_mov_b32_0_vgpr_reg_sequence_128_splat_copy_to_agpr_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b32_0_vgpr_reg_sequence_128_splat_copy_to_agpr_multi_use
@@ -76,7 +73,6 @@ body:             |
 
 ---
 name: s_mov_b32_literal_copy_vgpr_reg_sequence_128_splat_copy_to_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_literal_copy_vgpr_reg_sequence_128_splat_copy_to_agpr
@@ -96,7 +92,6 @@ body:             |
 
 ---
 name: v_mov_b32_literal_vgpr_reg_sequence_128_splat_copy_to_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b32_literal_vgpr_reg_sequence_128_splat_copy_to_agpr
@@ -115,7 +110,6 @@ body:             |
 
 ---
 name: v_mov_b32_literal_vgpr_reg_sequence_128_splat_copy_to_agpr_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b32_literal_vgpr_reg_sequence_128_splat_copy_to_agpr_multi_use
@@ -136,7 +130,6 @@ body:             |
 
 ---
 name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr_multi_use_reg_sequence_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr_multi_use_reg_sequence_copy
@@ -163,7 +156,6 @@ body:             |
 
 ---
 name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr_multi_use_reg_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr_multi_use_reg_sequence
@@ -189,7 +181,6 @@ body:             |
 
 ---
 name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_0_splat_sgpr_128_copy_vgpr_copy_agpr
@@ -212,7 +203,6 @@ body:             |
 
 ---
 name: s_mov_b32_999_splat_sgpr_128_copy_vgpr_copy_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_999_splat_sgpr_128_copy_vgpr_copy_agpr
@@ -231,7 +221,6 @@ body:             |
 
 ---
 name: s_mov_b32_mixed_imm_literal_inputs_splat_sgpr_128_copy_vgpr_copy_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_mixed_imm_literal_inputs_splat_sgpr_128_copy_vgpr_copy_agpr
@@ -254,7 +243,6 @@ body:             |
 
 ---
 name: s_mov_b32_0_splat_sgpr_128_copy_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b32_0_splat_sgpr_128_copy_agpr
@@ -277,7 +265,6 @@ body:             |
 
 ---
 name: v_mov_b32_mixed_literal_imm_inputs_vgpr_reg_sequence_128_splat_copy_to_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b32_mixed_literal_imm_inputs_vgpr_reg_sequence_128_splat_copy_to_agpr
@@ -302,7 +289,6 @@ body:             |
 
 ---
 name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
@@ -322,7 +308,6 @@ body:             |
 
 ---
 name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_subreg_elt32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_subreg_elt32
@@ -342,7 +327,6 @@ body:             |
 
 ---
 name: s_mov_b64_plus_unfoldable_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -367,7 +351,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -391,7 +374,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_192_repeated_uses_elt64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -418,7 +400,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_192_mixed_subreg_size_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -447,7 +428,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_128_subreg_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10_sgpr11
@@ -472,7 +452,6 @@ body:             |
 
 ---
 name: s_mov_b64_copy_vgpr_reg_sequence_128_subreg_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: s_mov_b64_copy_vgpr_reg_sequence_128_subreg_uses
@@ -493,7 +472,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_128_elt_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9, $sgpr10, $sgpr11
@@ -525,7 +503,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_128_elt_32_repeated_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -552,7 +529,6 @@ body:             |
 
 ---
 name: sgpr_source_copy_vgpr_reg_sequence_128_elt_32_other_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
@@ -581,7 +557,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_copy_sources_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr8, $sgpr9
@@ -612,7 +587,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_copy_sources_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr8, $sgpr9, $sgpr10
@@ -644,7 +618,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_copy_sources_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr8
@@ -674,7 +647,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_imm_sources_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vreg_128_mixed_sgpr_vgpr_imm_sources_0
@@ -699,7 +671,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_imm_sources_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vreg_128_mixed_sgpr_vgpr_imm_sources_1
@@ -723,7 +694,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_imm_sources_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vreg_128_mixed_sgpr_vgpr_imm_sources_2
@@ -746,7 +716,6 @@ body:             |
 
 ---
 name: vreg_128_mixed_sgpr_vgpr_imm_sources_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vreg_128_mixed_sgpr_vgpr_imm_sources_3

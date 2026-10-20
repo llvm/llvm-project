@@ -3,7 +3,6 @@
 # RUN: llc -mtriple=aarch64 -passes=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            remove_subswr_after_csincwr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remove_subswr_after_csincwr
   ; CHECK: bb.0:
@@ -41,7 +40,6 @@ body:             |
 ...
 ---
 name:            remove_subsxr_after_csincxr_invertcc
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remove_subsxr_after_csincxr_invertcc
   ; CHECK: bb.0:
@@ -79,7 +77,6 @@ body:             |
 ...
 ---
 name:            cflags_alive_in_succs
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cflags_alive_in_succs
   ; CHECK: bb.0:
@@ -114,7 +111,6 @@ body:             |
 ...
 ---
 name:            nz_used_after_cmp
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: nz_used_after_cmp
   ; CHECK: bb.0:
@@ -147,7 +143,6 @@ body:             |
 ...
 ---
 name:            remove_addswr_after_csincwr_invertcc
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remove_addswr_after_csincwr_invertcc
   ; CHECK: bb.0:
@@ -179,7 +174,6 @@ body:             |
 ...
 ---
 name:            cv_used_after_cmp
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cv_used_after_cmp
   ; CHECK: bb.0:
@@ -212,7 +206,6 @@ body:             |
 ...
 ---
 name:            csinc_add0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: csinc_add0
   ; CHECK: bb.0:
@@ -245,7 +238,6 @@ body:             |
 ...
 ---
 name:            remove_subs1_after_csincN_invertcc
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remove_subs1_after_csincN_invertcc
   ; CHECK: bb.0:
@@ -277,7 +269,6 @@ body:             |
 ...
 ---
 name:            csinc_wrong_cc
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: csinc_wrong_cc
   ; CHECK: bb.0:
@@ -310,7 +301,6 @@ body:             |
 ...
 ---
 name:            subswr_wrong_cmp_value
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: subswr_wrong_cmp_value
   ; CHECK: bb.0:

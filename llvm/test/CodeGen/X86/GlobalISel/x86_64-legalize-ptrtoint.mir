@@ -37,7 +37,6 @@
 ---
 name:            ptrtoint_s1_p0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -63,7 +62,6 @@ body:             |
 ---
 name:            ptrtoint_s8_p0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -86,7 +84,6 @@ body:             |
 ---
 name:            ptrtoint_s16_p0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -109,7 +106,6 @@ body:             |
 ---
 name:            ptrtoint_s32_p0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -132,7 +128,6 @@ body:             |
 ---
 name:            ptrtoint_s64_p0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

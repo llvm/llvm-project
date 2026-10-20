@@ -4,7 +4,6 @@
 
 ---
 name:            widget
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 jumpTable:

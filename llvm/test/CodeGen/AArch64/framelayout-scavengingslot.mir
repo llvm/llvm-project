@@ -10,7 +10,6 @@ name: LateScavengingSlotRealignment
 # CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 4
 # CHECK-NEXT: $[[SCRATCH]] = LDRXui $sp, 0
 # CHECK: bb.1:
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:

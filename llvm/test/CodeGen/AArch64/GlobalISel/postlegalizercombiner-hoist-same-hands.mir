@@ -4,7 +4,6 @@
 ...
 ---
 name:            or_combine_sext
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name:            illegal_ty
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -62,7 +60,6 @@ body:             |
 ...
 ---
 name:            dont_combine_physreg
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:

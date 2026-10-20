@@ -65,7 +65,6 @@
 ---
 name:            soup
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 registers:
   - { id: 0, class: gr64 }

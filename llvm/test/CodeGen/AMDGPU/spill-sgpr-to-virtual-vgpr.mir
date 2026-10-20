@@ -4,7 +4,6 @@
 # A simple SGPR spill. Implicit def for lane VGPR should be inserted just before the spill instruction.
 ---
 name:            sgpr32_spill
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -37,7 +36,6 @@ body:             |
 
 ---
 name:            sgpr_spill_lane_crossover
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -170,7 +168,6 @@ body:             |
 
 ---
 name:            lane_vgpr_implicit_def_at_common_dominator_block
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -239,7 +236,6 @@ body:             |
 
 ---
 name:            dominator_block_follows_the_successors_bbs
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

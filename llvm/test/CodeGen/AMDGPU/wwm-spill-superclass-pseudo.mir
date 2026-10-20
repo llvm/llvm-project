@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -start-before=si-lower-sgpr-spills -stop-after=virt-reg-rewriter,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REWRITER %s
 
 name:            test_wwm_reg_superclass_spill
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true}

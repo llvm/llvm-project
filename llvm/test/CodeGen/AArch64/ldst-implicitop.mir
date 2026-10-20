@@ -3,7 +3,6 @@
 # Check that we copy implicit operands.
 ---
 name:            impdef_op1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $lr
@@ -82,7 +81,6 @@ body:             |
 # bundled together.
 ---
 name:            impdef_renamable
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: -8, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

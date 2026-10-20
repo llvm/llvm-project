@@ -7,7 +7,6 @@
 ---
 name:            test_f16.roundeven
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -39,7 +38,6 @@ body:             |
 ---
 name:            test_f32.roundeven
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -69,7 +67,6 @@ body:             |
 ---
 name:            test_f64.roundeven
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -99,7 +96,6 @@ body:             |
 ---
 name:            test_v8f16.roundeven
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -136,7 +132,6 @@ body:             |
 ---
 name:            test_v4f16.roundeven
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -171,7 +166,6 @@ body:             |
 ---
 name:            test_v2f32.roundeven
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -204,7 +198,6 @@ body:             |
 ---
 name:            test_v4f32.roundeven
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -237,7 +230,6 @@ body:             |
 ---
 name:            test_v2f64.roundeven
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -270,7 +262,6 @@ body:             |
 ---
 name:            test_v4f64.roundeven
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -309,7 +300,6 @@ body:             |
 ---
 name:            test_v2f16.roundeven
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $s1

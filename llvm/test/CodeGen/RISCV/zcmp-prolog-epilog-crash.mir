@@ -31,7 +31,6 @@
 ---
 name:            f
 alignment:       2
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$x10' }

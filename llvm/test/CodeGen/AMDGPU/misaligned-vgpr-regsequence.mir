@@ -14,7 +14,6 @@
 
 ---
 name: misaligned_regsequence
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |

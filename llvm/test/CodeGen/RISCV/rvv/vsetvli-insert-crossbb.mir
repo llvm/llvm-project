@@ -148,7 +148,6 @@
 ---
 name:            load_add_or_sub
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr }
   - { id: 1, class: vr }
@@ -225,7 +224,6 @@ body:             |
 ---
 name:            load_zext_or_sext
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr }
   - { id: 1, class: vr }
@@ -304,7 +302,6 @@ body:             |
 ---
 name:            vmv_x_s
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr }
   - { id: 1, class: vr }
@@ -382,7 +379,6 @@ body:             |
 ---
 name:            vsetvli_add_or_sub
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprnox0 }
   - { id: 1, class: vr }
@@ -457,7 +453,6 @@ body:             |
 ...
 ---
 name:            vsetvli_vcpop
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -541,7 +536,6 @@ body:             |
 ...
 ---
 name:            vsetvli_loop_store
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -608,7 +602,6 @@ body:             |
 ...
 ---
 name:            vsetvli_loop_store2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -683,7 +676,6 @@ body:             |
 ---
 name:            redusum_loop
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -780,7 +772,6 @@ body:             |
 ...
 ---
 name:            vsetvli_vluxei64_regression
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: vsetvli_vluxei64_regression
   ; CHECK: bb.0:
@@ -859,7 +850,6 @@ body:             |
 ...
 ---
 name:            if_in_loop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: if_in_loop
   ; CHECK: bb.0:
@@ -980,7 +970,6 @@ body: |
 ...
 ---
 name: clobberred_forwarded_avl
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: clobberred_forwarded_avl
   ; CHECK: bb.0:
@@ -1022,7 +1011,6 @@ body: |
 ...
 ---
 name: clobberred_forwarded_phi_avl
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: clobberred_forwarded_phi_avl
   ; CHECK: bb.0:
@@ -1082,7 +1070,6 @@ body: |
 ...
 ---
 name: avl_is_last_instr
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: avl_is_last_instr
   ; CHECK: bb.0:

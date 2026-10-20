@@ -175,7 +175,6 @@
 name:            test0a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -219,7 +218,6 @@ body:             |
 name:            test0b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -261,7 +259,6 @@ body:             |
 name:            test1a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -307,7 +304,6 @@ body:             |
 name:            test1b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -353,7 +349,6 @@ body:             |
 name:            test2a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -399,7 +394,6 @@ body:             |
 name:            test2b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -445,7 +439,6 @@ body:             |
 name:            test3
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -491,7 +484,6 @@ body:             |
 name:            test4
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -601,7 +593,6 @@ body:             |
 name:            testBB
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

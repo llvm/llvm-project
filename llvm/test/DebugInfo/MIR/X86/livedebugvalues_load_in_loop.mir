@@ -68,7 +68,6 @@
 ...
 ---
 name: _Z8bb_to_bb
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }

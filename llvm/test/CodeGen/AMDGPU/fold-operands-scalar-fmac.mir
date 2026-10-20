@@ -4,7 +4,6 @@
 
 ---
 name:            fmac_fold_inlinable_src0_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -24,7 +23,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_inlinable_src1_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -44,7 +42,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_inlinable_src2_to_fmaak
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -64,7 +61,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_noninlinable_src0_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -84,7 +80,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_noninlinable_src1_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -104,7 +99,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_noninlinable_src2_to_fmaak
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -125,7 +119,6 @@ body:             |
 
 ---
 name:            fmac_fold_inlinable_src2_noninlinable_src0_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -144,7 +137,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_inlinable_src2_noninlinable_src1_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -163,7 +155,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_noninlinable_src2_to_fmaak_inlinable_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -182,7 +173,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_noninlinable_src2_to_fmaak_dont_fold_other_noninlinable
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -202,7 +192,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_inlinable_src1_to_fmamk_noninlinable_src2_to_fmaak
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -221,7 +210,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_same_noninlinable_src0_and_src1_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -239,7 +227,6 @@ body:             |
 ...
 ---
 name:            fmac_fold_shared_noninlinable_src1_to_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1

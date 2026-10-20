@@ -4,7 +4,6 @@
 ---
 name:            copy_ppr2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p0_p1' }
 frameInfo:
@@ -25,7 +24,6 @@ body:             |
 ---
 name:            copy_ppr2_overlap
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p0_p1' }
 frameInfo:
@@ -46,7 +44,6 @@ body:             |
 ---
 name:            copy_ppr2_max
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p15_p0' }
 frameInfo:

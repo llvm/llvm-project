@@ -3,7 +3,6 @@
 ---
 name:            load_store_test
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -39,7 +38,6 @@ body:             |
 ---
 name:            store_i56
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -73,7 +71,6 @@ body:             |
 ---
 name:            store_s318
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -111,7 +108,6 @@ body:             |
 ---
 name:            store_s158
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -144,7 +140,6 @@ body:             |
 ---
 name:            store_s142
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -178,7 +173,6 @@ body:             |
 ---
 name:            store_i1_zext_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

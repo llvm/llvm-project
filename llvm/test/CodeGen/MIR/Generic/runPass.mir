@@ -10,7 +10,6 @@
 ---
 # CHECK: name: foo
 name: foo
-tracksRegLiveness: true
 body: |
   bb.0:
 ...

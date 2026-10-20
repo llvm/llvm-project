@@ -11,7 +11,6 @@
 # CHECK: ExitSU: CBZW
 ---
 name: addwri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -34,7 +33,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: addwri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -56,7 +54,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: addwri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -79,7 +76,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: addwri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -102,7 +98,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: addwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -125,7 +120,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: addwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -148,7 +142,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: addwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -171,7 +164,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: addwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -194,7 +186,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: addwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -217,7 +208,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: addwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -240,7 +230,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: addwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -263,7 +252,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: addwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -286,7 +274,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_addwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -309,7 +296,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: andwri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -332,7 +318,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: andwri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -355,7 +340,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: andwri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -378,7 +362,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: andwri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -401,7 +384,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: andwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -424,7 +406,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: andwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -447,7 +428,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: andwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -470,7 +450,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: andwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -493,7 +472,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: andwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -516,7 +494,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: andwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -539,7 +516,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: andwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -562,7 +538,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: andwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -585,7 +560,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_andwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -608,7 +582,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: eorwri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -631,7 +604,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: eorwri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -654,7 +626,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: eorwri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -677,7 +648,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: eorwri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -700,7 +670,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: eorwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -723,7 +692,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: eorwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -746,7 +714,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: eorwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -769,7 +736,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: eorwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -792,7 +758,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: eorwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -815,7 +780,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: eorwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -838,7 +802,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: eorwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -861,7 +824,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: eorwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -884,7 +846,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_eorwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -907,7 +868,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: ornwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -930,7 +890,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: ornwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -953,7 +912,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: ornwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -976,7 +934,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: ornwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -999,7 +956,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: ornwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1022,7 +978,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: ornwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1045,7 +1000,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: ornwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1068,7 +1022,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: ornwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1091,7 +1044,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_ornwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1114,7 +1066,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: orrwri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1137,7 +1088,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: orrwri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1160,7 +1110,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: orrwri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1183,7 +1132,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: orrwri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1206,7 +1154,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: orrwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1229,7 +1176,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: orrwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1252,7 +1198,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: orrwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1275,7 +1220,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: orrwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1298,7 +1242,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: orrwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1321,7 +1264,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: orrwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1344,7 +1286,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: orrwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1367,7 +1308,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: orrwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1390,7 +1330,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_orrwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1413,7 +1352,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: subwri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1436,7 +1374,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: subwri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1459,7 +1396,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: subwri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1482,7 +1418,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: subwri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1505,7 +1440,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: subwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1528,7 +1462,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: subwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1551,7 +1484,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: subwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1574,7 +1506,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: subwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1597,7 +1528,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: subwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1620,7 +1550,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: subwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1643,7 +1572,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: subwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1666,7 +1594,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: subwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1689,7 +1616,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_subwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1712,7 +1638,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: bicwrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1735,7 +1660,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: bicwrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1758,7 +1682,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: bicwrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1781,7 +1704,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: bicwrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1804,7 +1726,6 @@ body: |
 # CHECK: ExitSU: CBZW
 ---
 name: bicwrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1827,7 +1748,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: bicwrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1850,7 +1770,6 @@ body: |
 # CHECK: ExitSU: TBZW
 ---
 name: bicwrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1873,7 +1792,6 @@ body: |
 # CHECK: ExitSU: TBNZW
 ---
 name: bicwrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1896,7 +1814,6 @@ body: |
 # CHECK: ExitSU: CBNZW
 ---
 name: no_fuse_positive_shift_bicwrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1919,7 +1836,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: addxri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1942,7 +1858,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: addxri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1965,7 +1880,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: addxri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -1988,7 +1902,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: addxri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2011,7 +1924,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: addxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2034,7 +1946,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: addxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2057,7 +1968,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: addxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2080,7 +1990,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: addxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2103,7 +2012,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: addxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2126,7 +2034,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: addxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2149,7 +2056,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: addxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2172,7 +2078,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: addxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2195,7 +2100,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_addxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2218,7 +2122,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: andxri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2241,7 +2144,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: andxri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2264,7 +2166,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: andxri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2287,7 +2188,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: andxri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2310,7 +2210,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: andxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2333,7 +2232,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: andxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2356,7 +2254,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: andxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2379,7 +2276,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: andxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2402,7 +2298,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: andxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2425,7 +2320,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: andxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2448,7 +2342,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: andxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2471,7 +2364,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: andxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2494,7 +2386,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_andxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2517,7 +2408,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: eorxri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2540,7 +2430,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: eorxri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2563,7 +2452,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: eorxri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2586,7 +2474,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: eorxri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2609,7 +2496,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: eorxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2632,7 +2518,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: eorxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2655,7 +2540,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: eorxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2678,7 +2562,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: eorxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2701,7 +2584,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: eorxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2724,7 +2606,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: eorxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2747,7 +2628,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: eorxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2770,7 +2650,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: eorxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2793,7 +2672,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_eorxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2816,7 +2694,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: ornxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2839,7 +2716,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: ornxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2862,7 +2738,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: ornxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2885,7 +2760,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: ornxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2908,7 +2782,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: ornxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2931,7 +2804,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: ornxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2954,7 +2826,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: ornxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -2977,7 +2848,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: ornxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3000,7 +2870,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_ornxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3023,7 +2892,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: orrxri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3046,7 +2914,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: orrxri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3069,7 +2936,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: orrxri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3092,7 +2958,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: orrxri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3115,7 +2980,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: orrxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3138,7 +3002,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: orrxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3161,7 +3024,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: orrxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3184,7 +3046,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: orrxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3207,7 +3068,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: orrxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3230,7 +3090,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: orrxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3253,7 +3112,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: orrxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3276,7 +3134,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: orrxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3299,7 +3156,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_orrxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3322,7 +3178,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: subxri_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3345,7 +3200,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: subxri_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3368,7 +3222,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: subxri_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3391,7 +3244,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: subxri_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3414,7 +3266,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: subxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3437,7 +3288,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: subxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3460,7 +3310,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: subxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3483,7 +3332,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: subxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3506,7 +3354,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: subxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3529,7 +3376,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: subxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3552,7 +3398,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: subxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3575,7 +3420,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: subxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3598,7 +3442,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_subxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3621,7 +3464,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: bicxrr_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3644,7 +3486,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: bicxrr_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3667,7 +3508,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: bicxrr_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3690,7 +3530,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: bicxrr_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3713,7 +3552,6 @@ body: |
 # CHECK: ExitSU: CBZX
 ---
 name: bicxrs_cbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3736,7 +3574,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: bicxrs_cbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3759,7 +3596,6 @@ body: |
 # CHECK: ExitSU: TBZX
 ---
 name: bicxrs_tbz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3782,7 +3618,6 @@ body: |
 # CHECK: ExitSU: TBNZX
 ---
 name: bicxrs_tbnz
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |
@@ -3805,7 +3640,6 @@ body: |
 # CHECK: ExitSU: CBNZX
 ---
 name: no_fuse_positive_shift_bicxrs
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |

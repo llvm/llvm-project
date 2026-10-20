@@ -84,7 +84,6 @@
 
 name:            _Z3fn1v
 alignment:       16
-tracksRegLiveness: true
 constants:       
 body:             |
   bb.0.entry:

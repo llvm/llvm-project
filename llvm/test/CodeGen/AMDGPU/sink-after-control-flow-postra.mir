@@ -9,7 +9,6 @@
 # Make sure COPY to $sgpr9 is not sunk after S_AND_SAVEEXEC_B64.
 name:            _amdgpu_ps_main
 alignment:       1
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$sgpr4', virtual-reg: '' }
@@ -76,7 +75,6 @@ body:             |
 # Make sure COPY to $sgpr0_sgpr1 is not sunk after S_AND_SAVEEXEC_B64.
 name:            _amdgpu_ps_main2
 alignment:       1
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$sgpr4', virtual-reg: '' }
@@ -144,7 +142,6 @@ body:             |
 # Make sure COPY to $sgpr2_sgpr3 is not sunk after S_AND_SAVEEXEC_B32.
 name:            _amdgpu_ps_main3
 alignment:       1
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$sgpr6_sgpr7', virtual-reg: '' }
@@ -215,7 +212,6 @@ body:             |
 
 ---
 name:            machinesink_loop_vgpr_out_of_divergent_loop_postra
-tracksRegLiveness: true
 body:             |
   ; GFX10-LABEL: name: machinesink_loop_vgpr_out_of_divergent_loop_postra
   ; GFX10: bb.0:
@@ -347,7 +343,6 @@ body:             |
 
 ---
 name:            machinesink_loop_sgpr_out_of_divergent_loop_postra
-tracksRegLiveness: true
 body:             |
   ; GFX10-LABEL: name: machinesink_loop_sgpr_out_of_divergent_loop_postra
   ; GFX10: bb.0:

@@ -3,7 +3,6 @@
 
 ---
 name: shuffle_vector_unused_lhs
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -23,7 +22,6 @@ body:             |
 
 ---
 name: shuffle_vector_unused_rhs
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -43,7 +41,6 @@ body:             |
 
 ---
 name: shuffle_vector_both_used
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -63,7 +60,6 @@ body:             |
 
 ---
 name: shuffle_vector_undef_elems
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1

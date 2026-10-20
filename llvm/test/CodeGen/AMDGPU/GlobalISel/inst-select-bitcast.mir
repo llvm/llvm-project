@@ -5,7 +5,6 @@
 name:            bitcast
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 # GCN-LABEL: name: bitcast
 # GCN: [[A:%[0-9]+]]:vgpr_32 = COPY $vgpr0

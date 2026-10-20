@@ -3,7 +3,6 @@
 ---
 name:            test1BB
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            test2BBs
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:

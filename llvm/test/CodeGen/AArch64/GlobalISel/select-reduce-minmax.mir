@@ -5,7 +5,6 @@ name:            smax_S_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -31,7 +30,6 @@ name:            smin_S_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -57,7 +55,6 @@ name:            umax_S_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -83,7 +80,6 @@ name:            umin_S_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |

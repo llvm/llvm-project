@@ -171,7 +171,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -296,7 +295,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -430,7 +428,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -562,7 +559,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -685,7 +681,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -807,7 +802,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -924,7 +918,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -1042,7 +1035,6 @@ body:             |
 ...
 ---
 name:            emptyblock
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -1149,7 +1141,6 @@ body:             |
 ---
 name:            predvcmp
 alignment:       8
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -1255,7 +1246,6 @@ body:             |
 ---
 name:            predvpt
 alignment:       8
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

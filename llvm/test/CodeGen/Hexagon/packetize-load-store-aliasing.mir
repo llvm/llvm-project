@@ -8,7 +8,6 @@
 
 ---
 name: danny
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 4 }
   - { id: 1, type: default, size: 4, alignment: 4 }
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: sammy
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 4 }
 body: |

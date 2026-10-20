@@ -12,7 +12,6 @@
 ...
 ---
 name:            check_vcc
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5' }
   - { reg: '$sgpr6_sgpr7' }

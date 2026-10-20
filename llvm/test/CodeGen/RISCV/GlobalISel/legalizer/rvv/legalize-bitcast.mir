@@ -5,7 +5,6 @@
 ---
 name:            bitcast_nxv1i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv1i8
@@ -21,7 +20,6 @@ body:             |
 ---
 name:            bitcast_nxv2i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv2i8
@@ -37,7 +35,6 @@ body:             |
 ---
 name:            bitcast_nxv4i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv4i8
@@ -53,7 +50,6 @@ body:             |
 ---
 name:            bitcast_nxv8i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv8i8
@@ -69,7 +65,6 @@ body:             |
 ---
 name:            bitcast_nxv16i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv16i8
@@ -85,7 +80,6 @@ body:             |
 ---
 name:            bitcast_nxv32i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv32i8
@@ -101,7 +95,6 @@ body:             |
 ---
 name:            bitcast_nxv64i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv64i8
@@ -117,7 +110,6 @@ body:             |
 ---
 name:            bitcast_nxv1i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv1i16
@@ -133,7 +125,6 @@ body:             |
 ---
 name:            bitcast_nxv2i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv2i16
@@ -149,7 +140,6 @@ body:             |
 ---
 name:            bitcast_nxv4i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv4i16
@@ -165,7 +155,6 @@ body:             |
 ---
 name:            bitcast_nxv8i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv8i16
@@ -181,7 +170,6 @@ body:             |
 ---
 name:            bitcast_nxv16i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv16i16
@@ -197,7 +185,6 @@ body:             |
 ---
 name:            bitcast_nxv32i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv32i16
@@ -213,7 +200,6 @@ body:             |
 ---
 name:            bitcast_nxv1i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv1i32
@@ -229,7 +215,6 @@ body:             |
 ---
 name:            bitcast_nxv2i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv2i32
@@ -245,7 +230,6 @@ body:             |
 ---
 name:            bitcast_nxv4i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv4i32
@@ -261,7 +245,6 @@ body:             |
 ---
 name:            bitcast_nxv8i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv8i32
@@ -277,7 +260,6 @@ body:             |
 ---
 name:            bitcast_nxv16i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv16i32
@@ -293,7 +275,6 @@ body:             |
 ---
 name:            bitcast_nxv1i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv1i64
@@ -309,7 +290,6 @@ body:             |
 ---
 name:            bitcast_nxv2i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv2i64
@@ -325,7 +305,6 @@ body:             |
 ---
 name:            bitcast_nxv4i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv4i64
@@ -341,7 +320,6 @@ body:             |
 ---
 name:            bitcast_nxv8i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: bitcast_nxv8i64

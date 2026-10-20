@@ -13,7 +13,6 @@
 # avoid using a callee-save register as that will require a spill/fill.
 ---
 name:            regalloc_hint_cmp_dont_introduce_csr_spill
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $z0, $z1, $p0, $p1, $p2, $p3
@@ -39,7 +38,6 @@ body:             |
 # for other purposes.
 ---
 name:            regalloc_hint_cmp_reuse_p4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $z0, $z1, $p0, $p1, $p2, $p3

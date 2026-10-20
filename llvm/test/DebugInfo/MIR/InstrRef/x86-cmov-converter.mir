@@ -93,7 +93,6 @@
 ...
 ---
 name:            CmovInHotPath
-tracksRegLiveness: true
 debugInstrRef:   true
 registers:
   - { id: 0, class: gr64, preferred-register: '' }
@@ -156,7 +155,6 @@ body:             |
 ---
 name:            test_cmov_memoperand_in_group_reuse_for_addr2
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }

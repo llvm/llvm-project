@@ -6,7 +6,6 @@
 name:            v8i8_ST2Twov8b
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $x0
@@ -32,7 +31,6 @@ name:            v16i8_ST2Twov16b
 
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -58,7 +56,6 @@ name:            v4i16_ST2Twov4h
 
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $x0
@@ -84,7 +81,6 @@ name:            v8i16_ST2Twov8h
 
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -109,7 +105,6 @@ body:             |
 name:            v2i32_ST2Twov2s
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $x0
@@ -134,7 +129,6 @@ body:             |
 name:            v4i32_ST2Twov4s
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -159,7 +153,6 @@ body:             |
 name:            v2i64_ST2Twov2d_s64_elts
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -184,7 +177,6 @@ body:             |
 name:            v2i64_ST2Twov2d_s64_p0_elts
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -209,7 +201,6 @@ body:             |
 name:            v1i64_ST1Twov1d_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -234,7 +225,6 @@ body:             |
 name:            v1i64_ST1Twov1d_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2

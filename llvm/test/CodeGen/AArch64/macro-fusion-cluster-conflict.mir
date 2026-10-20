@@ -37,7 +37,6 @@
 # SU(0)→SU(2) is attempted, SU(0) is already clustered.
 ---
 name: fusion-fusion-first-clustered
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: fusion-fusion-first-clustered
@@ -62,7 +61,6 @@ body: |
 # but the load SUnit is already clustered.
 ---
 name: load-fusion-second-clustered
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: load-fusion-second-clustered
@@ -83,7 +81,6 @@ body: |
 # ADRP + LDR2, both are already clustered.
 ---
 name: load-fusion-both-clustered
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: load-fusion-both-clustered
@@ -113,7 +110,6 @@ body: |
 # clustered.
 ---
 name: store-fusion-second-clustered
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -136,7 +132,6 @@ body: |
 # ADRP + STR2, both are already clustered.
 ---
 name: store-fusion-both-clustered
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0

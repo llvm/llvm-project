@@ -19,7 +19,6 @@
 ---
 name:            no_fold_spill_chain_across_call
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

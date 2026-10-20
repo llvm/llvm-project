@@ -4,7 +4,6 @@
 
 ---
 name:            undef_and_operand_to_bitset0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_and_operand_to_bitset0
@@ -17,7 +16,6 @@ body:             |
 
 ---
 name:            undef_or_operand_to_orn2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_or_operand_to_orn2
@@ -30,7 +28,6 @@ body:             |
 
 ---
 name:            undef_xor_operand_to_orn2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_xor_operand_to_orn2
@@ -43,7 +40,6 @@ body:             |
 
 ---
 name:            kill_and_operand_to_bitset0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr4
@@ -61,7 +57,6 @@ body:             |
 # s_mov_b32 imm with s_not_b32 ~imm
 ---
 name:            scalar_immediate_bitwise_not_live_scc
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr4, $sgpr5

@@ -166,7 +166,6 @@ body:             |
 ---
 name:            test_zext_v8s16_from_v8s8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -187,7 +186,6 @@ body:             |
 ---
 name:            test_sext_v8s16_from_v8s8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -208,7 +206,6 @@ body:             |
 ---
 name:            test_anyext_v8s16_from_v8s8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -229,7 +226,6 @@ body:             |
 ---
 name:            test_zext_v4s32_from_v4s16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -251,7 +247,6 @@ body:             |
 ---
 name:            test_sext_v4s32_from_v4s16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -273,7 +268,6 @@ body:             |
 ---
 name:            test_anyext_v4s32_from_v4s16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -295,7 +289,6 @@ body:             |
 ---
 name:            test_zext_v2s64_from_v2s32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -320,7 +313,6 @@ body:             |
 ---
 name:            test_sext_v2s64_from_v2s32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -345,7 +337,6 @@ body:             |
 ---
 name:            test_anyext_v2s64_from_v2s32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

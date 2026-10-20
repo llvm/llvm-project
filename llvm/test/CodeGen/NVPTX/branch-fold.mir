@@ -31,7 +31,6 @@
 ---
 name:            hoge
 alignment:       1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: b64 }
   - { id: 1, class: b64 }

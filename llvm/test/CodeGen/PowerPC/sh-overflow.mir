@@ -3,7 +3,6 @@
 ---
 name:            special_right_shift32_0
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprc }
   - { id: 1, class: gprc }
@@ -31,7 +30,6 @@ body:             |
 ---
 name:            special_right_shift64_0
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc }
   - { id: 1, class: gprc }

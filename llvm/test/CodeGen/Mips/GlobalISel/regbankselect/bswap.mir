@@ -9,7 +9,6 @@
 name:            bswap_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

@@ -36,7 +36,6 @@
 ...
 ---
 name:           overlap
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

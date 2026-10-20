@@ -3,7 +3,6 @@
 
 ---
 name:            bad_ra
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64, preferred-register: '$sgpr4_sgpr5' }
   - { id: 1, class: sgpr_128, preferred-register: '%2' }

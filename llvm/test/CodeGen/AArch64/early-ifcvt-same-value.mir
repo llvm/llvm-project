@@ -4,7 +4,6 @@
 
 ---
 name:            fmov0
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32, preferred-register: '' }
   - { id: 1, class: fpr32, preferred-register: '' }
@@ -59,7 +58,6 @@ body:             |
 ...
 ---
 name:            fmov0_extrapred
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32, preferred-register: '' }
   - { id: 1, class: fpr32, preferred-register: '' }
@@ -129,7 +127,6 @@ body:             |
 ...
 ---
 name:            copy_physreg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32, preferred-register: '' }
   - { id: 1, class: fpr32, preferred-register: '' }
@@ -190,7 +187,6 @@ body:             |
 ...
 ---
 name:            same_def_different_operand
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32, preferred-register: '' }
   - { id: 1, class: fpr32, preferred-register: '' }
@@ -251,7 +247,6 @@ body:             |
 ...
 ---
 name:            csel_fold_undef
-tracksRegLiveness: true
 body: |
   ; A csel-fold operand that is a copy of an undef register has no defining
   ; instruction and must not be dereferenced.

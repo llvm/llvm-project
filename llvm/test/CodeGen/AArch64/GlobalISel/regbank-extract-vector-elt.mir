@@ -4,7 +4,6 @@
 name:            v2s32_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -24,7 +23,6 @@ body:             |
 name:            v4s32_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -52,7 +50,6 @@ body:             |
 name:            v2s64_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -80,7 +77,6 @@ body:             |
 name:            v4s16_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

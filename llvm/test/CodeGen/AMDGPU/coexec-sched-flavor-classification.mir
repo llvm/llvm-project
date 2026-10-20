@@ -43,7 +43,6 @@
 
 ---
 name: test_flavor_classification
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -92,7 +91,6 @@ body: |
 
 ---
 name: blocking_cycles_arith_i64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -106,7 +104,6 @@ body: |
 
 ---
 name: blocking_cycles_cvt_scale_pk8
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_256_align2 = IMPLICIT_DEF
@@ -121,7 +118,6 @@ body: |
 
 ---
 name: blocking_cycles_cvt_f64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -135,7 +131,6 @@ body: |
 
 ---
 name: blocking_cycles_cmp_f64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -149,7 +144,6 @@ body: |
 
 ---
 name: blocking_cycles_cmp_f64_e32
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -165,7 +159,6 @@ body: |
 
 ---
 name: blocking_cycles_arith_f64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -179,7 +172,6 @@ body: |
 
 ---
 name: blocking_cycles_shift_64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -193,7 +185,6 @@ body: |
 
 ---
 name: blocking_cycles_swap
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -207,7 +198,6 @@ body: |
 
 ---
 name: blocking_cycles_int_mul
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -221,7 +211,6 @@ body: |
 
 ---
 name: blocking_cycles_arith_f64_pseudo
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -236,7 +225,6 @@ body: |
 
 ---
 name: blocking_cycles_shift_64_pseudo
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -250,7 +238,6 @@ body: |
 
 ---
 name: blocking_cycles_cmp_class_f64
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -265,7 +252,6 @@ body: |
 
 ---
 name: blocking_cycles_cmp_class_f64_e32
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -280,7 +266,6 @@ body: |
 
 ---
 name: blocking_cycles_cmp_i64_e32
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF
@@ -294,7 +279,6 @@ body: |
 
 ---
 name: blocking_cycles_pseudo_scalar_trans
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:sreg_32 = IMPLICIT_DEF
@@ -308,7 +292,6 @@ body: |
 
 ---
 name: blocking_cycles_dot
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -322,7 +305,6 @@ body: |
 
 ---
 name: blocking_cycles_dpp
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF

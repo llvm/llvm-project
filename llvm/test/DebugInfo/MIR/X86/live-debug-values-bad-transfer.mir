@@ -48,7 +48,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$edi' }

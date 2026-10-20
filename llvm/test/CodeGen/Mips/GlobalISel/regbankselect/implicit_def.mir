@@ -19,7 +19,6 @@
 name:            g_i32
 alignment:       2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_i32
@@ -41,7 +40,6 @@ body:             |
 name:            g_i64
 alignment:       2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_i64
@@ -67,7 +65,6 @@ body:             |
 name:            g_float
 alignment:       2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_float
@@ -89,7 +86,6 @@ body:             |
 name:            g_double
 alignment:       2
 legalized:       true
-tracksRegLiveness: true
 registers:
 body:             |
   bb.1.entry:

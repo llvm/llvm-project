@@ -5,7 +5,6 @@
 ---
 name:            h
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc }
   - { id: 1, class: g8rc }

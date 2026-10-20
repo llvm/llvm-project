@@ -13,7 +13,6 @@
 # information from its predecessors.
 name:            _Z3foob
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 frameInfo:

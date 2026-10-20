@@ -9,7 +9,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 frameInfo:
 # CHECK: stackSize: 544
 # CHECK: localFrameSize: 516

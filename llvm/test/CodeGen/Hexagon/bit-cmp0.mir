@@ -20,7 +20,6 @@
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f0
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 0
@@ -36,7 +35,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f1
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 128
@@ -52,7 +50,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f2
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 0
@@ -68,7 +65,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f3
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 1024
@@ -86,7 +82,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
@@ -105,7 +100,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f5
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
@@ -123,7 +117,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f6
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
@@ -141,7 +134,6 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f7
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0

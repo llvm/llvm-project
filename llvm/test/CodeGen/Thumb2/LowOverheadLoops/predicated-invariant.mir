@@ -48,7 +48,6 @@
 ---
 name:            invariant_predicated_add_use
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

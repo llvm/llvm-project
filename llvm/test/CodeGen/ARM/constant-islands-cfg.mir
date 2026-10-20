@@ -13,7 +13,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r0', virtual-reg: '' }

@@ -18,7 +18,6 @@
 name:            indirectbr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: indirectbr
   ; MIPS32: bb.0.entry:

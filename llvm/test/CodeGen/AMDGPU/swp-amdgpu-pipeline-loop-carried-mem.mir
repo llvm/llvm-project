@@ -17,7 +17,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_loop_carried_mem
-tracksRegLiveness: true
 isSSA:           true
 liveins:
   - { reg: '$sgpr4_sgpr5' }

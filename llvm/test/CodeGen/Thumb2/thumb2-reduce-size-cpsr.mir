@@ -14,7 +14,6 @@
 ...
 ---
 name:            cpsr_dead_no_kill_flag
-tracksRegLiveness: true
 body:             |
   ; $r2 reads CPSR without a kill flag, but CPSR is not live out, so t2ANDrr
   ; narrows to the flag-setting tAND from block liveness.
@@ -32,7 +31,6 @@ body:             |
 ...
 ---
 name:            cpsr_use_in_block_no_kill_flag
-tracksRegLiveness: true
 body:             |
   ; CPSR is live across the AND to an in-block conditional branch (no kill
   ; flag present), so the reduction is rejected from block liveness.
@@ -62,7 +60,6 @@ body:             |
 ...
 ---
 name:            cpsr_live_out_no_kill_flag
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cpsr_live_out_no_kill_flag
   ; CHECK: bb.0:
@@ -100,7 +97,6 @@ body:             |
 ...
 ---
 name:            mul_after_call
-tracksRegLiveness: true
 body:             |
   ; A call resets CPSR tracking in the avoidCPSRPartialUpdate heuristic, so a
   ; partial-flag reduction candidate after a call still narrows to its 16-bit

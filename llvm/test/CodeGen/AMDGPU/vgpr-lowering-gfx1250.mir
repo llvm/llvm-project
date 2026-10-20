@@ -5,7 +5,6 @@
 # DIS-LABEL: <high_vgprs>:
 ---
 name:            high_vgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -255,7 +254,6 @@ body:             |
 # DIS-LABEL: <vopd>:
 ---
 name:            vopd
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -331,7 +329,6 @@ body:             |
 # DIS-LABEL: <fmaak_fmamk>:
 ---
 name:            fmaak_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -420,7 +417,6 @@ body:             |
 # DIS-LABEL: <fmac>:
 ---
 name:            fmac
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -442,7 +438,6 @@ body:             |
 # DIS-LABEL: <rev_opcodes>:
 ---
 name:            rev_opcodes
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -488,7 +483,6 @@ body:             |
 # DIS-LABEL: <minimal_mode_change>:
 ---
 name:            minimal_mode_change
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -557,7 +551,6 @@ body:             |
 # DIS-LABEL: <terminators>:
 ---
 name:            terminators
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -673,7 +666,6 @@ body:             |
 # DIS-LABEL: <control_flow>:
 ---
 name:            control_flow
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -709,7 +701,6 @@ body:             |
 # DIS-LABEL: <inline_asm>:
 ---
 name:            inline_asm
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -744,7 +735,6 @@ body:             |
 # DIS-LABEL: <bundle>:
 ---
 name:            bundle
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -770,7 +760,6 @@ body:             |
 # DIS-LABEL: <hard_clauses>:
 ---
 name:            hard_clauses
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -923,7 +912,6 @@ body:             |
 # DIS-LABEL: <ld_scale>:
 ---
 name:            ld_scale
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -983,7 +971,6 @@ body:             |
 # DIS-LABEL: <commute_no_piggyback>:
 ---
 name:            commute_no_piggyback
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
@@ -1015,7 +1002,6 @@ body:             |
 # DIS-LABEL: <redundant_xcnt>:
 ---
 name: redundant_xcnt
-tracksRegLiveness: true
 body: |
   bb.0:
     ; ASM: %bb.0:

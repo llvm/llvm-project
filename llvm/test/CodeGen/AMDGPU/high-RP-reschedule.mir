@@ -17,7 +17,6 @@
 
 ---
 name: high-RP-reschedule
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 4
 body: |

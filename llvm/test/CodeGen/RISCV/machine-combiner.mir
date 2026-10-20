@@ -24,7 +24,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

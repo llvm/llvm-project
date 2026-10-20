@@ -1164,7 +1164,6 @@
 
 ---
 name:            largeInterleave
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7

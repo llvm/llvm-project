@@ -4,7 +4,6 @@
 # Test live-in with subrange is updated accordingly in postra-machine-sink.
 ---
 name:            test_postra_machine_sink_livein_update
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

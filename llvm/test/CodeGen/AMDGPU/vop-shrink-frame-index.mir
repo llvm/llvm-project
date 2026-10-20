@@ -38,7 +38,6 @@
 
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_fi_vgpr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -59,7 +58,6 @@ body:             |
 # GCN: %1:vgpr_32 = IMPLICIT_DEF
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_vgpr_fi
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -81,7 +79,6 @@ body:             |
 # GCN: %1:sgpr_32 = IMPLICIT_DEF
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %1, %0, implicit-def $vcc, implicit $exec
 name: fold_sgpr_fi
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: sgpr_32 }
@@ -103,7 +100,6 @@ body:             |
 # GCN: %1:sgpr_32 = IMPLICIT_DEF
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %1, %0, implicit-def $vcc, implicit $exec
 name: fold_fi_sgpr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: sgpr_32 }
@@ -124,7 +120,6 @@ body:             |
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_fi_imm
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -145,7 +140,6 @@ body:             |
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 999, %0, implicit-def $vcc, implicit $exec
 name: fold_imm_fi
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

@@ -54,7 +54,6 @@
 name:            direct_debug_use
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -82,7 +81,6 @@ body:             |
 name:            debug_only_copy_use
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -112,7 +110,6 @@ body:             |
 name:            implicit_def_debug_only
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: implicit_def_debug_only

@@ -29,7 +29,6 @@
 
 ---
 name:            fold_adjacent
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_adjacent
   ; CHECK: bb.0:
@@ -55,7 +54,6 @@ body:             |
 # Meta instructions between the pair do not block the fold, but the EXEC write
 # stays where it was.
 name:            fold_across_meta
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_across_meta
   ; CHECK: bb.0:
@@ -82,7 +80,6 @@ body:             |
 ---
 # The EXEC write moves above trailing DBG_VALUEs so they stay after the def.
 name:            fold_across_dbg_value
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_across_dbg_value
   ; CHECK: bb.0:
@@ -109,7 +106,6 @@ body:             |
 ---
 # The scheduler may separate the pair by real instructions.
 name:            fold_across_instr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_across_instr
   ; CHECK: bb.0:
@@ -137,7 +133,6 @@ body:             |
 # S_ANDN2_WREXEC clobbers SCC where the EXEC write is, so do not fold when SCC
 # is live out.
 name:            no_fold_scc_live
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_fold_scc_live
   ; CHECK: bb.0:
@@ -165,7 +160,6 @@ body:             |
 ---
 # The source of the S_ANDN2 must not be redefined before the EXEC write.
 name:            no_fold_src_clobbered
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_fold_src_clobbered
   ; CHECK: bb.0:

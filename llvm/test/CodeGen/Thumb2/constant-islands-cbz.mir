@@ -15,7 +15,6 @@
 ...
 ---
 name:            test_simple
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -52,7 +51,6 @@ body:             |
 ...
 ---
 name:            test_notfirst
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -93,7 +91,6 @@ body:             |
 ...
 ---
 name:            test_redefined
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -133,7 +130,6 @@ body:             |
 ...
 ---
 name:            test_notredefined
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -172,7 +168,6 @@ body:             |
 ...
 ---
 name:            test_notcmp
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -212,7 +207,6 @@ body:             |
 ...
 ---
 name:            test_killflag_1
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -251,7 +245,6 @@ body:             |
 ...
 ---
 name:            test_killflag_2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -290,7 +283,6 @@ body:             |
 ...
 ---
 name:            test_cpsr
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

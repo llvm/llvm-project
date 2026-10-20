@@ -3,7 +3,6 @@
 ---
 
 name: kernel_i1_copy_phi_with_phi_incoming_value
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: kernel_i1_copy_phi_with_phi_incoming_value
   ; GCN: bb.0:

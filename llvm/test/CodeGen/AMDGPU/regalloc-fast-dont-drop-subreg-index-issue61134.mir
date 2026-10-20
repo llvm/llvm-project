@@ -8,7 +8,6 @@
 ---
 name:            func
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
   stackPtrOffsetReg: '$sgpr32'

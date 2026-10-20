@@ -8,7 +8,6 @@
 
 ---
 name: s_copy_frame_index_elimination_failure_pei
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -1483,7 +1482,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -1583,7 +1581,6 @@ body:   |
 
 ---
 name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -2396,7 +2393,6 @@ body:   |
 
 ---
 name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 24, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -2880,7 +2876,6 @@ body:   |
 
 ---
 name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 68, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -3368,7 +3363,6 @@ body:             |
 
 ---
 name: s_cselect_b32_fi_offset_scc_live
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 8 }
   - { id: 1, size: 4, alignment: 4 }
@@ -3463,7 +3457,6 @@ body:             |
 ...
 ---
 name: s_mov_b32_fi_offset_scc_live
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 8 }
   - { id: 1, size: 4, alignment: 4 }

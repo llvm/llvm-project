@@ -18,7 +18,6 @@
 ---
 name:            g
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
 body:             |

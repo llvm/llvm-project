@@ -22,7 +22,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 body:             |

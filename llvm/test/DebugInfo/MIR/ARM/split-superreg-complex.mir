@@ -73,7 +73,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 calleeSavedRegisters: [ '$lr', '$d8', '$d9', '$d10', '$d11', '$d12', '$d13', 
                         '$d14', '$d15', '$q4', '$q5', '$q6', '$q7', '$r4', 
                         '$r5', '$r6', '$r7', '$r8', '$r10', '$r11', '$s16', 

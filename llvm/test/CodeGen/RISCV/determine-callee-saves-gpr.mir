@@ -34,7 +34,6 @@
 
 ---
 name:            csr_modified
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -150,7 +149,6 @@ body: |
 
 ---
 name:            csr_not_modified
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -211,7 +209,6 @@ body: |
 
 ---
 name:            calls_unwind_init
-tracksRegLiveness: true
 callsUnwindInit: true
 frameInfo:
   maxCallFrameSize: 0
@@ -454,7 +451,6 @@ body: |
 
 ---
 name:            naked_no_saves
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -481,7 +477,6 @@ body: |
 
 ---
 name:            noreturn_nounwind_still_saves
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -532,7 +527,6 @@ body: |
 
 ---
 name:            fp_forces_ra_fp
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
   maxCallFrameSize: 0
@@ -650,7 +644,6 @@ body: |
 
 ---
 name:            bp_saves_x9
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
   maxAlignment: 64
@@ -806,7 +799,6 @@ body: |
 
 ---
 name:            zcmp_x26_forces_x27
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -903,7 +895,6 @@ body: |
 
 ---
 name:            save_restore_libcall
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:
@@ -1179,7 +1170,6 @@ body: |
 
 ---
 name:            interrupt_saves_caller_saved
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo:

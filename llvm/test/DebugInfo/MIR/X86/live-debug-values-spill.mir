@@ -307,7 +307,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi' }
   - { reg: '$esi' }

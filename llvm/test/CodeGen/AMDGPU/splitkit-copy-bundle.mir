@@ -4,7 +4,6 @@
 
 ---
 name:            splitkit_copy_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'
@@ -261,7 +260,6 @@ body:             |
 
 ---
 name:            splitkit_copy_unbundle_reorder
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'

@@ -49,7 +49,6 @@
 ---
 name:            variant_max_use
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

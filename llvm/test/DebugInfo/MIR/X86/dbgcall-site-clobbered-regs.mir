@@ -93,7 +93,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$rdi' }

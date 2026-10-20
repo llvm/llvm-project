@@ -3,7 +3,6 @@
 
 ---
 name: shuffle_vector_to_extract
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -29,7 +28,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -56,7 +54,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_odd_elements
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -83,7 +80,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_minus_1_no_conversion
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -110,7 +106,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_across_vectors_no_conversion
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -138,7 +133,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

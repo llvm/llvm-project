@@ -52,7 +52,6 @@
 ...
 ---
 name:            partial_write
-tracksRegLiveness: true
 noVRegs:         true
 noPhis:          true
 isSSA:           false
@@ -66,7 +65,6 @@ body:             |
 ...
 ---
 name:            no_partial_write
-tracksRegLiveness: true
 noVRegs:         true
 noPhis:          true
 isSSA:           false

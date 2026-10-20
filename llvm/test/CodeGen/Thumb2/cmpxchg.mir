@@ -3,7 +3,6 @@
 # RUN: llc -o - %s -mtriple=thumbv7eb-unknown-linux-gnu -verify-machineinstrs -run-pass=arm-pseudo | FileCheck %s
 ---
 name: func64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0_r1, $r4_r5, $r3, $lr
@@ -33,7 +32,6 @@ body: |
 ...
 ---
 name: func64_hihi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0_r1, $r8_r9, $r3, $lr
@@ -63,7 +61,6 @@ body: |
 ...
 ---
 name: func2_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r1, $r2, $r3, $r12, $lr
@@ -92,7 +89,6 @@ body: |
 ...
 ---
 name: func2_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r1, $r2, $r3, $r4, $lr

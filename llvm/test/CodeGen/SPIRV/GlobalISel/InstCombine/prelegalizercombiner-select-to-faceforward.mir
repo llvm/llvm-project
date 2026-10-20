@@ -1,7 +1,6 @@
 # RUN: llc -verify-machineinstrs -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
 ---
 name:            faceforward_instcombine_float
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -31,7 +30,6 @@ body:             |
     OpReturnValue %12:id(s32)
 ---
 name:            faceforward_instcombine_float4
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -62,7 +60,6 @@ body:             |
     OpReturnValue %13:id(<4 x s32>)
 ---
 name:            faceforward_instcombine_float_constants
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -94,7 +91,6 @@ body:             |
     OpReturnValue %11:id(s32)
 ---
 name:            faceforward_instcombine_float4_constants
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -131,7 +127,6 @@ body:             |
     OpReturnValue %12:id(<4 x s32>)
 ---
 name:            faceforward_instcombine_float4_false_fmul
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -166,7 +161,6 @@ body:             |
     OpReturnValue %15:id(<4 x s32>)
 ---
 name:            faceforward_instcombine_float4_ogt
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -197,7 +191,6 @@ body:             |
     OpReturnValue %13:id(<4 x s32>)
 ---
 name:            faceforward_instcombine_float_shared_condition
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:
@@ -229,7 +222,6 @@ body:             |
 ...
 ---
 name:            faceforward_instcombine_float4_shared_dot
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1.entry:

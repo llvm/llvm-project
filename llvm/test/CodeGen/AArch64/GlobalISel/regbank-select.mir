@@ -6,7 +6,6 @@
 name:            select_f32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -33,7 +32,6 @@ body:             |
 name:            select_f64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -60,7 +58,6 @@ body:             |
 name:            two_fpr_inputs_gpr_output
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -93,7 +90,6 @@ body:             |
 name:            one_fpr_input_fpr_output
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -124,7 +120,6 @@ body:             |
 name:            one_fpr_input_gpr_output
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -155,7 +150,6 @@ body:             |
 name:            two_gpr_input_fpr_output
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

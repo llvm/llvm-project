@@ -15,7 +15,6 @@
 name:            xor_s1_vcc_vcc_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -57,7 +56,6 @@ body: |
 name:            xor_s1_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -90,7 +88,6 @@ body: |
 name:            xor_s16_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -123,7 +120,6 @@ body: |
 name:            xor_s16_vgpr_vgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -160,7 +156,6 @@ body: |
 name:            xor_s32_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -191,7 +186,6 @@ body: |
 name:            xor_s64_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -222,7 +216,6 @@ body: |
 name:            xor_v2s16_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -253,7 +246,6 @@ body: |
 name:            xor_v2s32_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -284,7 +276,6 @@ body: |
 name:            xor_v4s16_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -315,7 +306,6 @@ body: |
 name:            xor_s32_vgpr_vgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -346,7 +336,6 @@ body: |
 name:            xor_v2s16_vgpr_vgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -379,7 +368,6 @@ body: |
 name:            xor_s64_vgpr_vgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -410,7 +398,6 @@ body: |
 name:            xor_s1_vcc_copy_to_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -482,7 +469,6 @@ body: |
 name:            copy_select_constrain_vcc_result_reg_wave32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0
@@ -558,7 +544,6 @@ body:             |
 name:            copy_select_constrain_vcc_result_reg_wave64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0

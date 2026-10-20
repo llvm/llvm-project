@@ -10,7 +10,6 @@
 ...
 ---
 name: foo
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: foo

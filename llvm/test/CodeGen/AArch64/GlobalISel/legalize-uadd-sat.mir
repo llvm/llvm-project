@@ -3,7 +3,6 @@
 ---
 name:            func
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -31,7 +30,6 @@ body:             |
 ---
 name:            func2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -59,7 +57,6 @@ body:             |
 ---
 name:            func16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -95,7 +92,6 @@ body:             |
 ---
 name:            func8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -131,7 +127,6 @@ body:             |
 ---
 name:            func3
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }

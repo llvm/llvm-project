@@ -4,7 +4,6 @@
 # Test that the new IMPLICIT_DEF is inserted in the correct location.
 ---
 name:            test_undef
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_undef
   ; GCN: bb.0:

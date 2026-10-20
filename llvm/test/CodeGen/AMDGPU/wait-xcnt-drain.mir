@@ -3,7 +3,6 @@
 
 ---
 name: drain_cbranch
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -49,7 +48,6 @@ body: |
 
 ---
 name: drain_call
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1
@@ -70,7 +68,6 @@ body: |
 
 ---
 name: drain_indirect_branch
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -105,7 +102,6 @@ body: |
 
 ---
 name: drain_trap
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -130,7 +126,6 @@ body: |
 
 ---
 name: drain_getreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -155,7 +150,6 @@ body: |
 
 ---
 name: drain_setreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -180,7 +174,6 @@ body: |
 
 ---
 name: drain_setreg_mode
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -205,7 +198,6 @@ body: |
 
 ---
 name: drain_setreg_imm32
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -230,7 +222,6 @@ body: |
 
 ---
 name: drain_setreg_imm32_mode
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -255,7 +246,6 @@ body: |
 
 ---
 name: drain_sendmsg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -280,7 +270,6 @@ body: |
 
 ---
 name: drain_sendmsg_halt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -305,7 +294,6 @@ body: |
 
 ---
 name: drain_sendmsg_rtn_b32
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -330,7 +318,6 @@ body: |
 
 ---
 name: drain_sendmsg_rtn_b64
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -355,7 +342,6 @@ body: |
 
 ---
 name: drain_barrier_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -380,7 +366,6 @@ body: |
 
 ---
 name: drain_barrier_signal_m0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -405,7 +390,6 @@ body: |
 
 ---
 name: drain_barrier_signal
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -430,7 +414,6 @@ body: |
 
 ---
 name: drain_barrier_signal_isfirst_m0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -455,7 +438,6 @@ body: |
 
 ---
 name: drain_barrier_signal_isfirst
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

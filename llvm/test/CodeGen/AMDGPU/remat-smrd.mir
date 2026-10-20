@@ -4,7 +4,6 @@
 # Case that should really rematerialize
 ---
 name:            test_remat_s_load_dword_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -31,7 +30,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -58,7 +56,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -85,7 +82,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -112,7 +108,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -139,7 +134,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx16_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $vgpr0_vgpr1
@@ -169,7 +163,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx16_subreg_no_shrinking_double_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $vgpr0_vgpr1
@@ -199,7 +192,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx16_subreg_no_shrinking_bundle
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $vgpr0_vgpr1
@@ -224,7 +216,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_immx8_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $vgpr0_vgpr1
@@ -255,7 +246,6 @@ body:             |
 
 ---
 name:            test_remat_s_get_waveid_in_workgroup
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -287,7 +277,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_sgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10
@@ -316,7 +305,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_sgpr_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10
@@ -345,7 +333,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_imm_ci
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -376,7 +363,6 @@ body:             |
 
 ---
 name:            test_remat_s_buffer_load_dword_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11
@@ -403,7 +389,6 @@ body:             |
 
 ---
 name:            test_remat_s_scratch_load_dword_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -430,7 +415,6 @@ body:             |
 
 ---
 name:            test_remat_s_load_dword_invariant_not_dereferenceable
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -462,7 +446,6 @@ body:             |
 
 ---
 name:            test_no_remat_s_load_dword_not_invariant
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -493,7 +476,6 @@ body:             |
 
 ---
 name:            test_no_remat_s_memtime
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -525,7 +507,6 @@ body:             |
 
 ---
 name:            test_no_remat_s_memrealtime
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -557,7 +538,6 @@ body:             |
 
 ---
 name:            test_no_remat_s_load_dword_immx2_tied
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9

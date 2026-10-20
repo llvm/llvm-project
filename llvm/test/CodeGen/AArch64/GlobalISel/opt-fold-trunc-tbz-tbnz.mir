@@ -6,7 +6,6 @@ name:            fold_trunc
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_trunc
   ; CHECK: bb.0:

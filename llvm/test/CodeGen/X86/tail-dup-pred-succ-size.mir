@@ -4,7 +4,6 @@
 
 ---
 name:            foo
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:
@@ -261,7 +260,6 @@ body:             |
 # Based on foo, but with a phi node in a successor of %bb.7 instead of %bb.7.
 ---
 name:            foo_phi_in_tailbb_successor
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:
@@ -516,7 +514,6 @@ body:             |
 # Based on foo, but without any phi nodes.
 ---
 name:            foo_no_phis
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

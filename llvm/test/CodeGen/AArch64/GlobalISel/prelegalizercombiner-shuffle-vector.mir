@@ -5,7 +5,6 @@
 # into concat_vector(Src1, Src2).
 ---
 name: shuffle_vector_to_concat_vector_0123
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -26,7 +25,6 @@ body:             |
 # into concat_vector(Src2, Src1, Src2).
 ---
 name: shuffle_vector_to_concat_vector_230123
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -47,7 +45,6 @@ body:             |
 # into concat_vector(Src2, Src1, Src2).
 ---
 name: shuffle_vector_to_concat_vector_2undef01undef3
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -68,7 +65,6 @@ body:             |
 # when the sources get half mixed.
 ---
 name: shuffle_vector_to_concat_vector_mixed_src_200123_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -89,7 +85,6 @@ body:             |
 # into concat_vector(Src2, undef, Src1).
 ---
 name: shuffle_vector_to_concat_vector_2undef1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -111,7 +106,6 @@ body:             |
 # if a source is flipped.
 ---
 name: shuffle_vector_to_concat_vector_src_flipped_230132_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -132,7 +126,6 @@ body:             |
 # if a source is flipped and the other half is undef.
 ---
 name: shuffle_vector_to_concat_vector_src_flipped_23013undef_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -154,7 +147,6 @@ body:             |
 # into concat_vector(Src1, Src2) with bigger vector type.
 ---
 name: shuffle_vector_to_concat_vector_01234567
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -175,7 +167,6 @@ body:             |
 # into concat_vector(Src2, Src1, Src2) with bigger vector type.
 ---
 name: shuffle_vector_to_concat_vector_45670123
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -196,7 +187,6 @@ body:             |
 # into concat_vector(Src2, Src1, Src2) with bigger vector type.
 ---
 name: shuffle_vector_to_concat_vector_45undefundef0123undefundef67
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -217,7 +207,6 @@ body:             |
 # when the sources get half mixed with bigger vector type.
 ---
 name: shuffle_vector_to_concat_vector_mixed_src_456000123_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -238,7 +227,6 @@ body:             |
 # into concat_vector(Src2, undef, Src1) with bigger vector type.
 ---
 name: shuffle_vector_to_concat_vector_45undefundefundefundefundefundefundefundef23
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -260,7 +248,6 @@ body:             |
 # when we grab less than the full vectors.
 ---
 name: shuffle_vector_to_concat_vector_4501_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -281,7 +268,6 @@ body:             |
 # if a source is flipped and the other half is undef with bigger vector.
 ---
 name: shuffle_vector_to_concat_vector_src_flipped_4567012367undefundef_neg
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -302,7 +288,6 @@ body:             |
 # into concat_vector(Src2, Src1, Src2) with vector of pointers.
 ---
 name: shuffle_vector_to_concat_vector_45undefundef0123undefundef67_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0_q1, $q2_q3
@@ -323,7 +308,6 @@ body:             |
 # when the sources get half mixed with vector of pointers.
 ---
 name: shuffle_vector_to_concat_vector_mixed_src_456000123_neg_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0_q1, $q2_q3
@@ -345,7 +329,6 @@ body:             |
 # concat_vectors gets combined into build_vector.
 ---
 name: shuffle_vector_to_build_vector_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -372,7 +355,6 @@ body:             |
 # Check that shuffle_vector on scalars gets combined into build_vector.
 ---
 name: shuffle_vector_on_scalars_to_build_vector_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -394,7 +376,6 @@ body:             |
 # even if we swap the order of the operands.
 ---
 name: shuffle_vector_on_scalars_to_build_vector_swap_ptr
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1

@@ -41,7 +41,6 @@
 ...
 ---
 name:            testfloatslt
-tracksRegLiveness: true
 registers:
   - { id: 0, class: f4rc, preferred-register: '' }
   - { id: 1, class: f4rc, preferred-register: '' }
@@ -136,7 +135,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: g8rc, preferred-register: '' }

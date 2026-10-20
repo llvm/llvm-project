@@ -11,7 +11,6 @@
 
 ---
 name: exit_to_exact
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_32, preferred-register: '' }
   - { id: 1, class: vreg_64, preferred-register: '' }

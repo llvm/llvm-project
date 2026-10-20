@@ -10,7 +10,6 @@
 # CHECK-NEXT: DBG_INSTR_REF dbg-instr-ref(1, 0)
 ---
 name: test
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }

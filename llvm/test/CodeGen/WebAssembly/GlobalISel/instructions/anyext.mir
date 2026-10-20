@@ -3,7 +3,6 @@
 
 ---
 name: aext_i8_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -20,7 +19,6 @@ body: |
 ...
 ---
 name: aext_i8_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -39,7 +37,6 @@ body: |
 
 ---
 name: aext_i16_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -56,7 +53,6 @@ body: |
 ...
 ---
 name: aext_i16_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -74,7 +70,6 @@ body: |
 ...
 ---
 name: aext_i32_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

@@ -223,7 +223,6 @@ body: |
 ---
 name: uniform_i1_phi
 legalized: true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: uniform_i1_phi
   ; CHECK: bb.0:
@@ -525,7 +524,6 @@ body: |
 ---
 name: divergent_phi_with_uniform_inputs
 legalized: true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: divergent_phi_with_uniform_inputs
   ; CHECK: bb.0:
@@ -581,7 +579,6 @@ body: |
 ---
 name: divergent_because_of_temporal_divergent_use
 legalized: true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: divergent_because_of_temporal_divergent_use
   ; CHECK: bb.0:
@@ -650,7 +647,6 @@ body: |
 ---
 name: loop_with_2breaks
 legalized: true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: loop_with_2breaks
   ; CHECK: bb.0:

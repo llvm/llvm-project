@@ -24,7 +24,6 @@
 ...
 ---
 name:            case_constants_i128
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: case_constants_i128
   ; CHECK: intrinsic(@llvm.spv.switch), {{.*}}, i128 316912650112397582603894390785, {{.*}}, i128 0
@@ -43,7 +42,6 @@ body:             |
 ...
 ---
 name:            case_constants_i64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: case_constants_i64
   ; CHECK: intrinsic(@llvm.spv.switch), {{.*}}, i64 8589934593, {{.*}}, i64 0

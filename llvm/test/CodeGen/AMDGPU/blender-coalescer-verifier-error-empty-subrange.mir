@@ -9,7 +9,6 @@
 # Same as previous, except the initial value isn't an implicit_def
 ---
 name: liveout_defined_register_redefine_sub0_implicit_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: liveout_defined_register_redefine_sub0_implicit_def
   ; CHECK: bb.0:
@@ -56,7 +55,6 @@ body:             |
 # Compare with first
 ---
 name: second_def_is_real
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: second_def_is_real
   ; CHECK: bb.0:

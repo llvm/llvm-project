@@ -13,7 +13,6 @@
 ...
 ---
 name:            regcoal-subrange-join-seg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_128 }
   - { id: 1, class: sgpr_128 }

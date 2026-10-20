@@ -3,7 +3,6 @@
 
 ---
 name:            fold_16bit_subreg_1
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0.entry:
@@ -22,7 +21,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_0
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0.entry:
@@ -41,7 +39,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_3
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0.entry:
@@ -60,7 +57,6 @@ body:             |
 
 ---
 name:            fold_16bit_no_subreg
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0.entry:
@@ -80,7 +76,6 @@ body:             |
 
 ---
 name:            sgpr_lo16
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0.entry:
@@ -102,7 +97,6 @@ body:             |
 
 ---
 name:            fold_16bit_madmix_clamp
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -133,7 +127,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_1_clamp
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -163,7 +156,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_2_clamp
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -194,7 +186,6 @@ body:             |
 
 ---
 name:            fold_16bit_phyreg_clamp
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -226,7 +217,6 @@ body:             |
 
 ---
 name:            fold_16bit_undef_clamp
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -252,7 +242,6 @@ body:             |
 
 ---
 name:            fold_imm16_across_reg_sequence
-tracksRegLiveness: true
 registers:
 body:             |
   bb.0:
@@ -281,7 +270,6 @@ body:             |
 # should probably fail the verifier
 ---
 name:            mov_v16_copy_v32_fold_b32_regression
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

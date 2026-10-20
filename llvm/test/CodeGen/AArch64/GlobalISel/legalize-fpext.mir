@@ -2,7 +2,6 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            fpext_v4s64_v4s32
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
   - { reg: '$x0' }

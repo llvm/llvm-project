@@ -31,7 +31,6 @@
 ...
 ---
 name:            skip_debug_instructions
-tracksRegLiveness: true
 isSSA:             true
 noVRegs:           false
 body:             |

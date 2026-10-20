@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=arm64-apple-macosx -mcpu=apple-m1 -verify-regalloc -run-pass=greedy -o - %s | FileCheck %s
 ---
 name:            func
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 body:             |

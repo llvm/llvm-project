@@ -8,7 +8,6 @@
 
 ---
 name:            test
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:
@@ -44,7 +43,6 @@ body:             |
 
 ---
 name:            test_phys_fallback
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_phys_fallback
   ; CHECK: bb.0:

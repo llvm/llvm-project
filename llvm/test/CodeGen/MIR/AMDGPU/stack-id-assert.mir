@@ -24,7 +24,6 @@ body:             |
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '' }
   - { reg: '$vgpr1', virtual-reg: '' }

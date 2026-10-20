@@ -13,7 +13,6 @@
 
 ---
 name: full_copy
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
@@ -179,7 +178,6 @@ body:             |
 
 ---
 name: partial_copy
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
@@ -344,7 +342,6 @@ body:             |
 
 ---
 name: full_spill
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }

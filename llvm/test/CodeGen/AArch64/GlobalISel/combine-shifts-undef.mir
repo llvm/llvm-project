@@ -3,7 +3,6 @@
 ---
 name:            shl_by_ge_bw
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            lshr_by_ge_bw
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -53,7 +51,6 @@ body:             |
 ---
 name:            ashr_by_ge_bw
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -78,7 +75,6 @@ body:             |
 ---
 name:            shl_by_ge_bw_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -102,7 +98,6 @@ body:             |
 ---
 name:            shl_by_ge_bw_vector_partial
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |

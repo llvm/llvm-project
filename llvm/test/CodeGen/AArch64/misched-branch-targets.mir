@@ -50,7 +50,6 @@
 ---
 name:            f_pac_pseudo
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr
@@ -77,7 +76,6 @@ body:             |
 ---
 name:            f_pac
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr
@@ -103,7 +101,6 @@ body:             |
 ---
 name:            f_bti
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr
@@ -127,7 +124,6 @@ body:             |
 ---
 name:            f_brk
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr
@@ -151,7 +147,6 @@ body:             |
 ---
 name:            f_hlt
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr
@@ -175,7 +170,6 @@ body:             |
 ---
 name:            f_nop
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $lr

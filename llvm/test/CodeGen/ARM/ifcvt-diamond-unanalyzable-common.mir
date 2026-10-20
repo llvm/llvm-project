@@ -18,7 +18,6 @@
 ---
 name:            fn1
 alignment:       2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fn1
   ; CHECK: bb.0:

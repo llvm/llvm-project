@@ -13,7 +13,6 @@
 
 ---
 name:            vop2_64bit
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }

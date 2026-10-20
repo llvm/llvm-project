@@ -3,7 +3,6 @@
 
 ---
 name:           pr71023
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: pr71023
   ; CHECK: bb.0:

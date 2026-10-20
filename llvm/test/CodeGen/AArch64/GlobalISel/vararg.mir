@@ -22,7 +22,6 @@ name:            va_start
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, size: 4, alignment: 16 }
 stack:

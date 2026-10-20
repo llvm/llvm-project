@@ -934,7 +934,6 @@ body: |
 ---
 name:            test_gphi_ptr
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -985,7 +984,6 @@ body:             |
 ---
 name:            test_restricted_tail_call
 legalized:       true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x16, $x17

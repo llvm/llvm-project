@@ -3,7 +3,6 @@
 
 ---
 name: PR58914
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: 0, size: 768 }
 body:             |

@@ -3,7 +3,6 @@
 
 ---
 name: shuffle_vector_undef_rhs
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0

@@ -78,7 +78,6 @@ body:             |
 
 ---
 name:            test_fmaak_inline_literal_f16
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_hi16', virtual-reg: '%0' }
 body:             |

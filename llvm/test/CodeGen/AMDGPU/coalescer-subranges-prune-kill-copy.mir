@@ -6,7 +6,6 @@
 
 ---
 name:            test
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test
   ; GCN: bb.0:

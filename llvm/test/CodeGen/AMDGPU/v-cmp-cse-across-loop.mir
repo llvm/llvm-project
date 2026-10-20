@@ -4,7 +4,6 @@
 
 ---
 name:              v_cmp_cse_across_loop
-tracksRegLiveness: true
 legalized:         true
 regBankSelected:   true
 selected:          true

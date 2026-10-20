@@ -24,7 +24,6 @@
 ---
 name:            f32toi64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -67,7 +66,6 @@ body:             |
 ---
 name:            f32toi32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -96,7 +94,6 @@ body:             |
 ---
 name:            f32toi16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -132,7 +129,6 @@ body:             |
 ---
 name:            f32toi8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -168,7 +164,6 @@ body:             |
 ---
 name:            f64toi64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -211,7 +206,6 @@ body:             |
 ---
 name:            f64toi32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -240,7 +234,6 @@ body:             |
 ---
 name:            f64toi16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -276,7 +269,6 @@ body:             |
 ---
 name:            f64toi8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -312,7 +304,6 @@ body:             |
 ---
 name:            f32tou64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -355,7 +346,6 @@ body:             |
 ---
 name:            f32tou32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -398,7 +388,6 @@ body:             |
 ---
 name:            f32tou16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -446,7 +435,6 @@ body:             |
 ---
 name:            f32tou8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -494,7 +482,6 @@ body:             |
 ---
 name:            f64tou64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -537,7 +524,6 @@ body:             |
 ---
 name:            f64tou32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -580,7 +566,6 @@ body:             |
 ---
 name:            f64tou16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -628,7 +613,6 @@ body:             |
 ---
 name:            f64tou8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6

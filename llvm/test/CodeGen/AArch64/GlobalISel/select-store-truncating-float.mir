@@ -31,7 +31,6 @@ name:            truncating_f32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 frameInfo:
@@ -61,7 +60,6 @@ name:            truncating_f16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 frameInfo:
@@ -91,7 +89,6 @@ name:            truncating_f8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 frameInfo:

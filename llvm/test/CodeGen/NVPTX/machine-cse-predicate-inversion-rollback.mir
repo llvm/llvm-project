@@ -3,7 +3,6 @@
 
 ---
 name:            rollback
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: rollback
   ; CHECK: bb.0:

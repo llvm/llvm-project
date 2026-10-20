@@ -6,7 +6,6 @@
 # Check that we fold two adds of constant offsets with G_PTR_ADD into a single G_PTR_ADD.
 ---
 name: ptradd_chain
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1:
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name: ptradd_chain_nuw
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1:
@@ -54,7 +52,6 @@ body:             |
 ...
 ---
 name: ptradd_chain_nuw_inbounds
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.1:

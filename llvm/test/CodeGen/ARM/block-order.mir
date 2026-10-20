@@ -3,7 +3,6 @@
 # RUN: llc -o - %s -mtriple=thumbv7em-none-eabi -run-pass=block-placement -force-loop-cold-block -verify-machineinstrs | FileCheck %s
 ---
 name:            fn
-tracksRegLiveness: true
 jumpTable:
   kind:            inline
   entries:

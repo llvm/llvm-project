@@ -27,7 +27,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           float f0x2D9299FF

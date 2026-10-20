@@ -70,7 +70,6 @@ body:             |
 ...
 ---
 name:              relax_and_split_block
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }

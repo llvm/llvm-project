@@ -3,7 +3,6 @@
 
 ---
 name: test_fcmp
-tracksRegLiveness: true
 liveins:
 body: |
   bb.0:

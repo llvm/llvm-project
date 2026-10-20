@@ -4,7 +4,6 @@
 
 ---
 name:            LdOffset
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 body:             |
@@ -26,7 +25,6 @@ body:             |
 # Negative test: the IndexReg missing killed flags
 ---
 name:            LdOffset_missing_killed
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 body:             |
@@ -49,7 +47,6 @@ body:             |
 # Negative test: No MOVZWi used for the const offset
 ---
 name:            LdOffset_missing_MOVZ
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 body:             |
@@ -70,7 +67,6 @@ body:             |
 # Negative test: MOVZWi and MOVKWi don't set the same register
 ---
 name:            LdOffset_different_register_MOVZ_MOVK
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 body:             |

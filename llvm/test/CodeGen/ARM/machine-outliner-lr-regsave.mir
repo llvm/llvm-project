@@ -13,7 +13,6 @@
 ---
 
 name:           outline_save_reg_arm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_save_reg_arm
   ; CHECK: bb.0:
@@ -80,7 +79,6 @@ body:             |
 ---
 
 name:           outline_save_reg_thumb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_save_reg_thumb
   ; CHECK: bb.0:

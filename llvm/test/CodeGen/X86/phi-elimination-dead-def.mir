@@ -9,7 +9,6 @@
 
 ---
 name:            dead_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dead_phi
   ; CHECK: bb.0:

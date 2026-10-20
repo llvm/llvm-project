@@ -3,7 +3,6 @@
 
 ---
 name: test_remat_v_pk_mov_b32
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_remat_v_pk_mov_b32
   ; CHECK: bb.0:

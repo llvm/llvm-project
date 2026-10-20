@@ -14,7 +14,6 @@
 
 ---
 name: agpr_excess_tracking
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

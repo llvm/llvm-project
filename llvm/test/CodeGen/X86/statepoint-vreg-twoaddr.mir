@@ -42,7 +42,6 @@
 ---
 name:            test_relocate
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }
@@ -71,7 +70,6 @@ body:             |
 ---
 name:            test_duplicate_gcregs
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
 body:             |

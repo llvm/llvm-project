@@ -3,7 +3,6 @@
 
 ---
 name:            vec_instr_with_scalar_def
-tracksRegLiveness: true
 isSSA:           true
 body:             |
   bb.0:

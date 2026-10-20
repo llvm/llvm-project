@@ -5,7 +5,6 @@
 name: fmed3_s32_vvvv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -30,7 +29,6 @@ body: |
 name: fmed3_s32_vsvv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -55,7 +53,6 @@ body: |
 name: fmed3_s32_vvsv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -80,7 +77,6 @@ body: |
 name: fmed3_s32_vvvs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -107,7 +103,6 @@ body: |
 name: fmed3_s32_vssv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -130,7 +125,6 @@ body: |
 name: fmed3_s32_vsvs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -153,7 +147,6 @@ body: |
 name: fmed3_s32_vvss
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -176,7 +169,6 @@ body: |
 name: fmed3_s32_vsss
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

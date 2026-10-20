@@ -8,7 +8,6 @@
 name:            fpext
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -30,7 +29,6 @@ body:             |
 name:            fptrunc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d

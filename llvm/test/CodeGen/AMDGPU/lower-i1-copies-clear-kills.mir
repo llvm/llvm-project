@@ -5,7 +5,6 @@
 
 ---
 name:            _amdgpu_cs_main
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: _amdgpu_cs_main
   ; CHECK: bb.0:

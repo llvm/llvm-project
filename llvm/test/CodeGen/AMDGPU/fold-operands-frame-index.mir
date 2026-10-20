@@ -5,7 +5,6 @@
 
 ---
 name:  fold_frame_index__s_add_i32__fi_const
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -25,7 +24,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__const_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__materializedconst_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -66,7 +63,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__fi_materializedconst_0
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -89,7 +85,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__fi_materializedconst_1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -110,7 +105,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__reg_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -135,7 +129,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_i32__fi_reg
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -160,7 +153,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e32__const_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -180,7 +172,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e32__materialized_v_const_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -202,7 +193,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e64__imm_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -222,7 +212,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e64___v_fi_imm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -242,7 +231,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e32__const_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -262,7 +250,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e64__v_fi_imm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -282,7 +269,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e64__imm_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -302,7 +288,6 @@ body:             |
 
 ---
 name:  multi_use_scalar_fi__add_imm_add_inline_imm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -337,7 +322,6 @@ body:             |
 
 ---
 name:  multi_add_use_vector_fi__add_imm_add_inline_imm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -397,7 +381,6 @@ body:             |
 
 ---
 name:  fold_frame_index__through_reg_sequence_to_user_subreg
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -431,7 +414,6 @@ body:             |
 ...
 
 name:  fold_frame_index__s_add_u32__fi_const
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -451,7 +433,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_u32__const_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -471,7 +452,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_u32__fi_inlineimm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -491,7 +471,6 @@ body:             |
 
 ---
 name:  fold_frame_index__s_add_u32__inlineimm_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -511,7 +490,6 @@ body:             |
 
 ---
 name:            no_fold_literal_and_fi_s_or_b32
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
   localFrameSize:  8192
@@ -533,7 +511,6 @@ body:             |
 
 ---
 name:            no_fold_literal_or_fi_s_or_b32
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
   localFrameSize:  8192
@@ -555,7 +532,6 @@ body:             |
 
 ---
 name:            no_fold_literal_and_fi_s_mul_i32
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
   localFrameSize:  8192
@@ -577,7 +553,6 @@ body:             |
 
 ---
 name:            no_fold_multiple_fi_s_cselect_b32
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 32, alignment: 4 }
@@ -596,7 +571,6 @@ body:             |
 
 ---
 name:            no_fold_multiple_fi_v_cndmask_b32_e64
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 32, alignment: 4 }
@@ -637,7 +611,6 @@ body:             |
 
 ---
 name:            no_fold_multiple_fi_v_cndmask_b32_e32
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 32, alignment: 4 }

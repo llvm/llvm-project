@@ -103,7 +103,6 @@
 name:            phi_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_i32
   ; MIPS32: bb.0.entry:
@@ -153,7 +152,6 @@ body:             |
 name:            phi_i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
   - { id: 1, offset: 16, size: 4, alignment: 8, isImmutable: true }
@@ -220,7 +218,6 @@ body:             |
 name:            phi_ambiguous_i64_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_ambiguous_i64_in_fpr
   ; MIPS32: bb.0.entry:
@@ -276,7 +273,6 @@ body:             |
 name:            phi_float
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_float
   ; MIPS32: bb.0.entry:
@@ -326,7 +322,6 @@ body:             |
 name:            phi_ambiguous_float_in_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_ambiguous_float_in_gpr
   ; MIPS32: bb.0.entry:
@@ -382,7 +377,6 @@ body:             |
 name:            phi_double
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }
 body:             |

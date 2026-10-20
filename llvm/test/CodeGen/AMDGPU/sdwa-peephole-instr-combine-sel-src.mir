@@ -11,7 +11,6 @@
 
 ---
 name: op_select_byte0_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -31,7 +30,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -51,7 +49,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -71,7 +68,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -91,7 +87,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -111,7 +106,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -131,7 +125,6 @@ body:             |
 
 ---
 name: op_select_byte_0_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -152,7 +145,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -172,7 +164,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -192,7 +183,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -212,7 +202,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -232,7 +221,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -252,7 +240,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -272,7 +259,6 @@ body:             |
 
 ---
 name: op_select_word_0_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -292,7 +278,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -312,7 +297,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -332,7 +316,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -352,7 +335,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -372,7 +354,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -392,7 +373,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -412,7 +392,6 @@ body:             |
 
 ---
 name: op_select_byte_1_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -432,7 +411,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -452,7 +430,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -472,7 +449,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -492,7 +468,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -512,7 +487,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -532,7 +506,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -552,7 +525,6 @@ body:             |
 
 ---
 name: op_select_byte_2_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -572,7 +544,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -592,7 +563,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -612,7 +582,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -632,7 +601,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -652,7 +620,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -672,7 +639,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -692,7 +658,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -712,7 +677,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -732,7 +696,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -752,7 +715,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -772,7 +734,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -792,7 +753,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -812,7 +772,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -832,7 +791,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -852,7 +810,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -872,7 +829,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -892,7 +848,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -912,7 +867,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -932,7 +886,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -952,7 +905,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -972,7 +924,6 @@ body:             |
 
 ---
 name: op_select_dword_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -994,7 +945,6 @@ body:             |
 # The sext on the instruction is a no-op for its DWORD selection. Combining
 # the selection with the operand's WORD_0 must not make the sext take effect.
 name: op_select_word_0_instr_dword_sext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1015,7 +965,6 @@ body:             |
 ---
 # The instruction sext must survive the combine into BYTE_2.
 name: op_select_word_1_instr_byte_0_sext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1038,7 +987,6 @@ body:             |
 # the instruction reads different bits than BYTE_1 of the operand's source. The
 # two selections must not be combined even though they are equal.
 name: op_select_byte_1_instr_sdwa_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -1059,7 +1007,6 @@ body:             |
 ---
 # BYTE_0 of BYTE_0 is BYTE_0, so equal selections do combine in this case.
 name: op_select_byte_0_instr_sdwa_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

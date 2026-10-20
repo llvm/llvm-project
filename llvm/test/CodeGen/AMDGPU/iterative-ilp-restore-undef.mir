@@ -14,7 +14,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       4
 body:             |

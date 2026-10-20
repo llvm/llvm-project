@@ -15,7 +15,6 @@
 
 ---
 name: xaddw
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -27,7 +26,6 @@ body: |
 ...
 ---
 name: xaddd
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -39,7 +37,6 @@ body: |
 ...
 ---
 name: xandd
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -51,7 +48,6 @@ body: |
 ...
 ---
 name: xord
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -63,7 +59,6 @@ body: |
 ...
 ---
 name: xxord
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -75,7 +70,6 @@ body: |
 ...
 ---
 name: xaddw32
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -87,7 +81,6 @@ body: |
 ...
 ---
 name: xandw32
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -99,7 +92,6 @@ body: |
 ...
 ---
 name: xorw32
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |
@@ -111,7 +103,6 @@ body: |
 ...
 ---
 name: xxorw32
-tracksRegLiveness: true
 liveins:
   - { reg: '$r1' }
 body: |

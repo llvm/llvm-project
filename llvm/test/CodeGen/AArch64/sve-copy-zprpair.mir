@@ -4,7 +4,6 @@
 ---
 name:            copy_zpr2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0_z1' }
 frameInfo:
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            copy_zpr2strided
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0_z1' }
 frameInfo:
@@ -50,7 +48,6 @@ body:             |
 ---
 name:            copy_zpr3
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0_z1_z2' }
 frameInfo:
@@ -75,7 +72,6 @@ body:             |
 ---
 name:            copy_zpr4
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0_z1_z2_z3' }
 frameInfo:
@@ -102,7 +98,6 @@ body:             |
 ---
 name:            copy_zpr4strided
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0_z1_z2_z3' }
 frameInfo:

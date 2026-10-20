@@ -121,7 +121,6 @@ name:            test_rhs_inttoptr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_rhs_inttoptr
   ; CHECK: bb.0:
@@ -161,7 +160,6 @@ name:            test_rhs_unknown
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_rhs_unknown
   ; CHECK: bb.0:

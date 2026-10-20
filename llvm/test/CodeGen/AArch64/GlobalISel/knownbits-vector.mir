@@ -3,7 +3,6 @@
 
 ---
 name:            TestKnownBitsBuildVector
-tracksRegLiveness: true
 body:             |
   ; BuildVector KnownBits takes common bits of all elements.
   ;        111??000
@@ -38,7 +37,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorCstPHI
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: @TestKnownBitsVectorCstPHI
   ; CHECK-NEXT:   %0:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -66,7 +64,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorCstPHIToNonGenericReg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: @TestKnownBitsVectorCstPHIToNonGenericReg
   ; CHECK-NEXT:   %1:_ KnownBits:? SignBits:1 IsKnownNeverZero:0
@@ -91,7 +88,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorUnknownPHI
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: @TestKnownBitsVectorUnknownPHI
   ; CHECK-NEXT:   %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
@@ -118,7 +114,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorCstPHIWithLoop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: @TestKnownBitsVectorCstPHIWithLoop
   ; CHECK-NEXT:   %0:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -147,7 +142,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorDecreasingCstPHIWithLoop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: @TestKnownBitsVectorDecreasingCstPHIWithLoop
   ; CHECK-NEXT:   %0:_ KnownBits:00000101 SignBits:5 IsKnownNeverZero:1
@@ -171,7 +165,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorAND
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorAND
@@ -210,7 +203,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorOR
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorOR
@@ -249,7 +241,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorXOR
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorXOR
@@ -288,7 +279,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorXORConstant
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorXORConstant
@@ -316,7 +306,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorASHR
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorASHR
@@ -364,7 +353,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorLSHR
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorLSHR
@@ -412,7 +400,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSHL
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorSHL
@@ -443,7 +430,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorADD
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorADD
@@ -482,7 +468,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSUB
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorSUB
@@ -521,7 +506,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorMUL
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorMUL
@@ -552,7 +536,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSelect
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorSelect
@@ -595,7 +578,6 @@ body:             |
 ...
 ---
 name:            TestVectorNumSignBitsConstant
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; If it is known that all elts have same sign looks at common bits and
@@ -650,7 +632,6 @@ body:             |
 ...
 ---
 name:            TestVectorNumSignBitsSext
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestVectorNumSignBitsSext
@@ -683,7 +664,6 @@ body:             |
 ...
 ---
 name:            TestVectorNumSignBitsSextInReg
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestVectorNumSignBitsSextInReg
@@ -744,7 +724,6 @@ body:             |
 ...
 ---
 name:            TestNumSignBitsVectorAssertSext
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestNumSignBitsVectorAssertSext
@@ -810,7 +789,6 @@ body:             |
 ...
 ---
 name:            TestVectorNumSignBitsTrunc
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestVectorNumSignBitsTrunc
@@ -843,7 +821,6 @@ body:             |
 ...
 ---
 name:            TestVectorKnownBitsExt
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestVectorKnownBitsExt
@@ -870,7 +847,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSextInReg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -929,7 +905,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorAssertSext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -988,7 +963,6 @@ body:             |
 ...
 ---
 name:            TestVectorKnownBitsBSwapBitReverse
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestVectorKnownBitsBSwapBitReverse
@@ -1007,7 +981,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorUMAX
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorUMAX
@@ -1075,7 +1048,6 @@ body:             |
 ...
 ---
 name:            TestVectorKnownBitsUMax
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -1095,7 +1067,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorUMIN
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorUMIN
@@ -1134,7 +1105,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSMAX
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorSMAX
@@ -1173,7 +1143,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorSMIN
-tracksRegLiveness: true
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @TestKnownBitsVectorSMIN
@@ -1212,7 +1181,6 @@ body:             |
 ...
 ---
 name:            TestVectorInvalidQueries
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -1238,7 +1206,6 @@ body:             |
 ...
 ---
 name:            TestKnownBitsVectorAssertZext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -1272,7 +1239,6 @@ body:             |
 ...
 ---
 name:            TestNumSignBitsUAddoOverflow
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1

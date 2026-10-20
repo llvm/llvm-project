@@ -2,7 +2,6 @@
 # RUN: llc -o - %s -mtriple=armv7-- -run-pass=machine-sink | FileCheck %s
 
 name: sink-store-load-dep
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 8, alignment: 8 }
 body: |

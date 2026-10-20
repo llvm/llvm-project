@@ -4,7 +4,6 @@
 ---
 name:            save_inactive_lanes_non_csr_vgpr
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -47,7 +46,6 @@ body:             |
 ---
 name:            save_all_lanes_csr_vgpr
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -87,7 +85,6 @@ body:             |
 ---
 name:            save_csr_sgpr_to_non_csr_vgpr
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -135,7 +132,6 @@ body:             |
 ---
 name:            save_csr_sgpr_to_csr_vgpr
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -180,7 +176,6 @@ body:             |
 ---
 name:            vgpr_and_sgpr_csr
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -246,7 +241,6 @@ body:             |
 ---
 name:            split_orig_exec
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -315,7 +309,6 @@ body:             |
 ---
 name:            vgpr_superregs
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -385,7 +378,6 @@ body:             |
 ---
 name:            dont_restore_used_vgprs
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true
@@ -428,7 +420,6 @@ body:             |
 ---
 name:            multiple_blocks
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

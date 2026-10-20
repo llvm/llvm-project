@@ -8,7 +8,6 @@
 name:            test_trap
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_trap
@@ -22,7 +21,6 @@ body:             |
 name:            test_debugtrap
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_debugtrap

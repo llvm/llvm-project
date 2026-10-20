@@ -6,7 +6,6 @@
 
 ---
 name:            test_kernel
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vreg_64 }

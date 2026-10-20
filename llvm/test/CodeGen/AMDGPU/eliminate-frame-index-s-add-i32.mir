@@ -11,7 +11,6 @@
 
 ---
 name: s_add_i32__inline_imm__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -56,7 +55,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset0__inline_imm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -101,7 +99,6 @@ body:             |
 
 ---
 name: s_add_i32__inline_imm___fi_offset_inline_imm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
   - { id: 1, size: 24, alignment: 4 }
@@ -147,7 +144,6 @@ body:             |
 
 ---
 name: s_add_i32__literal__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
 machineFunctionInfo:
@@ -192,7 +188,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset0__literal
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
 machineFunctionInfo:
@@ -237,7 +232,6 @@ body:             |
 
 ---
 name: s_add_i32__literal__fi_offset96
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 24, alignment: 4 }
@@ -283,7 +277,6 @@ body:             |
 
 ---
 name: s_add_i32____fi_offset96__literal
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
@@ -329,7 +322,6 @@ body:             |
 
 ---
 name: s_add_i32__sgpr__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
 machineFunctionInfo:
@@ -387,7 +379,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset0__sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 128, alignment: 16 }
 machineFunctionInfo:
@@ -445,7 +436,6 @@ body:             |
 
 ---
 name: s_add_i32__sgpr__fi_literal_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 80, alignment: 16 }
   - { id: 1, size: 48, alignment: 4 }
@@ -504,7 +494,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_literal_offset__sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 80, alignment: 16 }
   - { id: 1, size: 48, alignment: 4 }
@@ -563,7 +552,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__literal__fi_offset96__offset_literal
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
@@ -611,7 +599,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__literal__fi_offset96__offset_literal_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
@@ -659,7 +646,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__fi_offset96__offset_literal__literal
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
@@ -708,7 +694,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__sgpr__fi_literal_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -762,7 +747,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__fi_literal_offset__sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -816,7 +800,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__sgpr__fi_offset0__live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
 machineFunctionInfo:
@@ -869,7 +852,6 @@ body:             |
 
 ---
 name: s_add_i32__sgpr__fi_offset0__live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
 machineFunctionInfo:
@@ -923,7 +905,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__sgpr__fi_literal_offset__live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -977,7 +958,6 @@ body:             |
 
 ---
 name: s_add_i32__sgpr__fi_literal_offset__live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -1037,7 +1017,6 @@ body:             |
 # Resulting offset is inline immediate
 ---
 name: s_add_i32__inlineimm__fi_offset_32__total_offset_inlineimm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 16, alignment: 4 }
@@ -1083,7 +1062,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset_32__inlineimm__total_offset_inlineimm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 16, alignment: 4 }
@@ -1129,7 +1107,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel_inlineimm__fi_offset_32__total_offset_inlineimm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 16, alignment: 4 }
@@ -1178,7 +1155,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel_fi_offset_32__inlineimm__total_offset_inlineimm
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 16, alignment: 4 }
@@ -1227,7 +1203,6 @@ body:             |
 
 ---
 name: s_add_i32__0__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1272,7 +1247,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset0__0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1317,7 +1291,6 @@ body:             |
 
 ---
 name: s_add_i32__same_sgpr__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1375,7 +1348,6 @@ body:             |
 
 ---
 name: s_add_i32__different_sgpr__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1433,7 +1405,6 @@ body:             |
 
 ---
 name: s_add_i32__different_sgpr__fi_offset0_live_after
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1491,7 +1462,6 @@ body:             |
 
 ---
 name: s_add_i32__identity_sgpr__fi_offset0__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1545,7 +1515,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset0__identity_sgpr__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1599,7 +1568,6 @@ body:             |
 
 ---
 name: s_add_i32__identity_sgpr__fi_offset32__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -1654,7 +1622,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset32__identity_sgpr__kernel
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -1710,7 +1677,6 @@ body:             |
 
 ---
 name: s_add_i32__identity_sgpr__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -1769,7 +1735,6 @@ body:             |
 
 ---
 name: s_add_i32__fi_offset32__identity_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -1830,7 +1795,6 @@ body:             |
 # Must use the result register as scratch register.
 ---
 name: s_add_i32_use_dst_reg_as_temp_regression
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 1, alignment: 4, local-offset: 0 }
 machineFunctionInfo:
@@ -1884,7 +1848,6 @@ body:             |
 
 ---
 name: s_add_i32_frame_index_elimination_no_sgpr_dead_scc_offset_zero
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 1, alignment: 4, local-offset: 0 }
 machineFunctionInfo:
@@ -1936,7 +1899,6 @@ body:             |
 
 ---
 name: s_add_i32_frame_index_elimination_no_sgpr_dead_scc_offset_non_zero
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -1988,7 +1950,6 @@ body:             |
 ...
 ---
 name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -2037,7 +1998,6 @@ body:             |
 
 ---
 name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -2086,7 +2046,6 @@ body:             |
 
 ---
 name: s_add_i32__inline_imm_wrap__fi_literal_offset__live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
@@ -2136,7 +2095,6 @@ body:             |
 
 ---
 name: s_add_i32__inline_imm_wrap__fi_literal_offset__dead_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }

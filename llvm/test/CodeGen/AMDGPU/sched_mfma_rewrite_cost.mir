@@ -23,7 +23,6 @@
 
 ---
 name:            more_copies_than_spills
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -207,7 +206,6 @@ body:             |
 
 ---
 name:            less_copies_than_spills
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -370,7 +368,6 @@ body:             |
 
 ---
 name:            low_pressure
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

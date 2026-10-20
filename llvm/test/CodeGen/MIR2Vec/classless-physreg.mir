@@ -14,7 +14,6 @@
 ...
 ---
 name:            classless_physreg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fr64 }
   - { id: 1, class: fr64 }

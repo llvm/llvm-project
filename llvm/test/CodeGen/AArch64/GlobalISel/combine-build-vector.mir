@@ -3,7 +3,6 @@
 ---
 name:            full_extracts_from_build_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -38,7 +37,6 @@ body:             |
 ---
 name:            full_extracts_from_build_vector_other_use
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -76,7 +74,6 @@ body:             |
 ---
 name:            partial_extracts_from_build_vector_multiple_per_elt
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -114,7 +111,6 @@ body:             |
 ---
 name:            full_extracts_from_build_vector_idx_out_of_range
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

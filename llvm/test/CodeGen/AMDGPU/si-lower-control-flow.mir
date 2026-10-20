@@ -22,7 +22,6 @@ body: |
 
 ---
 name: preserve_undef_flag_si_if_src
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: preserve_undef_flag_si_if_src
   ; GCN: bb.0:
@@ -57,7 +56,6 @@ body:             |
 # We need to split the block for SI_END_CF, but
 ---
 name: end_cf_split_block_end
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_end
   ; GCN: bb.0:
@@ -106,7 +104,6 @@ body:             |
 
 ---
 name: end_cf_split_block_physreg_livein
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_physreg_livein
   ; GCN: bb.0:
@@ -168,7 +165,6 @@ body:             |
 
 ---
 name: end_cf_split_block_physreg_livein_liveout
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_physreg_livein_liveout
   ; GCN: bb.0:
@@ -231,7 +227,6 @@ body:             |
 
 ---
 name: end_cf_split_block_physreg_liveout
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_physreg_liveout
   ; GCN: bb.0:
@@ -291,7 +286,6 @@ body:             |
 
 ---
 name: end_cf_split_block_physreg_live_across_split
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_physreg_live_across_split
   ; GCN: bb.0:
@@ -356,7 +350,6 @@ body:             |
 
 ---
 name: end_cf_split_block_process_next_inst
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: end_cf_split_block_process_next_inst
   ; GCN: bb.0:

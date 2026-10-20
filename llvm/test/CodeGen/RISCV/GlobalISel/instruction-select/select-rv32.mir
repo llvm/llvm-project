@@ -5,7 +5,6 @@
 name:            select_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12
@@ -31,7 +30,6 @@ body:            |
 name:            select_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12
@@ -57,7 +55,6 @@ body:            |
 name:            select_icmp_ult
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12, $x13, $x14
@@ -87,7 +84,6 @@ body:            |
 name:            select_icmp_ugt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12, $x13, $x14
@@ -117,7 +113,6 @@ body:            |
 name:            select_icmp_sgtneg1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12, $x13, $x14
@@ -147,7 +142,6 @@ body:            |
 name:            select_icmp_slt1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10, $x11, $x12, $x13, $x14

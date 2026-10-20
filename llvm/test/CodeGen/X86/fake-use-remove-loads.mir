@@ -20,7 +20,6 @@
 ---
 name:            enabled
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 noVRegs:         true
 hasFakeUses:     true
@@ -99,7 +98,6 @@ body:             |
 ---
 name:            disabled
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 noVRegs:         true
 hasFakeUses:     true

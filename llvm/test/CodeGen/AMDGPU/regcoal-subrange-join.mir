@@ -17,7 +17,6 @@
 ...
 ---
 name:            regcoal-subrange-join
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64 }
   - { id: 1, class: vreg_128 }

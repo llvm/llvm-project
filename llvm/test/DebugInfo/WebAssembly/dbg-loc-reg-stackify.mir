@@ -37,7 +37,6 @@
 name: sink_same_bb
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments
@@ -56,7 +55,6 @@ body: |
 name: clone_same_bb
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments
@@ -79,7 +77,6 @@ body: |
 name: clone_different_bb_0
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -105,7 +102,6 @@ body: |
 name: clone_different_bb_1
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1

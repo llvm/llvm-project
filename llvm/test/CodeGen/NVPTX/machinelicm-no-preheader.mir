@@ -9,7 +9,6 @@
 
 ---
 name:            test_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: b64, preferred-register: '', flags: [  ] }
   - { id: 1, class: b32, preferred-register: '', flags: [  ] }

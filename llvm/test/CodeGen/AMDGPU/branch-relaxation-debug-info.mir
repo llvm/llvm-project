@@ -77,7 +77,6 @@
 ...
 ---
 name:            long_branch_dbg_value
-tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0.bb:

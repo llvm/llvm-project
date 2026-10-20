@@ -4,7 +4,6 @@
 # This should trigger an emergency spill in the register scavenger because the
 # frame offset into the large argument is too large.
 name: func0
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 4084, size: 4, alignment: 4, isImmutable: true,
       isAliased: false }
@@ -94,7 +93,6 @@ body: |
 ---
 # This should not trigger an emergency spill yet.
 name: func1
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 4044, size: 4, alignment: 4, isImmutable: true,
       isAliased: false }

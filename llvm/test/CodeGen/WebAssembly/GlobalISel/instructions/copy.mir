@@ -4,7 +4,6 @@
 ---
 name: copy_i32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -22,7 +21,6 @@ body: |
 ---
 name: copy_i64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -40,7 +38,6 @@ body: |
 ---
 name: copy_f32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -58,7 +55,6 @@ body: |
 ---
 name: copy_f64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -76,7 +72,6 @@ body: |
 ---
 name: copy_to_sp32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -95,7 +90,6 @@ body: |
 ---
 name: copy_to_sp64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -114,7 +108,6 @@ body: |
 ---
 name: copy_from_sp32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -131,7 +124,6 @@ body: |
 ---
 name: copy_from_sp64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -148,7 +140,6 @@ body: |
 ---
 name: copy_to_fp32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -167,7 +158,6 @@ body: |
 ---
 name: copy_to_fp64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -186,7 +176,6 @@ body: |
 ---
 name: copy_from_fp32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -203,7 +192,6 @@ body: |
 ---
 name: copy_from_fp64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -220,7 +208,6 @@ body: |
 ---
 name: copy_i32_to_f32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -239,7 +226,6 @@ body: |
 ---
 name: copy_f32_to_i32
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -258,7 +244,6 @@ body: |
 ---
 name: copy_i64_to_f64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -277,7 +262,6 @@ body: |
 ---
 name: copy_f64_to_f64
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

@@ -1,7 +1,6 @@
 # RUN: llc %s -mtriple=riscv64 --passes='print<reaching-def>'  -o - 2>&1 | FileCheck %s
 ---
 name:            entry_bb_is_a_loop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: entry_bb_is_a_loop
   ; CHECK-NEXT: %bb.0:

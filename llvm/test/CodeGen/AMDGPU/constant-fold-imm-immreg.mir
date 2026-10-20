@@ -6,7 +6,6 @@
 # GCN: %10:vgpr_32 = V_MOV_B32_e32 1543, implicit $exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
 name:            s_fold_and_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 frameInfo:
@@ -51,7 +50,6 @@ body:             |
 
 
 name:            v_fold_and_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
@@ -120,7 +118,6 @@ body:             |
 
 
 name:            s_fold_shl_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -157,7 +154,6 @@ body:             |
 ---
 
 name:            s_fold_ashr_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -224,7 +220,6 @@ body:             |
 # GCN: FLAT_STORE_DWORD %10, [[VAL9]],
 
 name:            v_fold_ashr_imm_regimm_32
-tracksRegLiveness: true
 isSSA: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
@@ -291,7 +286,6 @@ body:             |
 ---
 
 name:            s_fold_lshr_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -338,7 +332,6 @@ body:             |
 
 
 name:            v_fold_lshr_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%2' }
@@ -439,7 +432,6 @@ body:             |
 # corresponding defining instruction
 
 name: undefined_vreg_operand
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: undefined_vreg_operand
@@ -455,7 +447,6 @@ body:             |
 # Make sure there is no crash if one of the operands is a physical register
 
 name: constant_fold_physreg_op
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: constant_fold_physreg_op
   ; GCN: bb.0:
@@ -498,7 +489,6 @@ body:             |
 ...
 ---
 name:            s_fold_andn2_imm_regimm_32
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -541,7 +531,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -590,7 +579,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }
@@ -657,7 +645,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -700,7 +687,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -743,7 +729,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -786,7 +771,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
 body:             |
@@ -840,7 +824,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%2' }
@@ -934,7 +917,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -957,7 +939,6 @@ body:             |
 
 ---
 name:            constant_s_and_b32_only_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_used
@@ -972,7 +953,6 @@ body:             |
 
 ---
 name:            constant_s_and_b32_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_and_b32_implicit_def_scc_is_used
@@ -987,7 +967,6 @@ body:             |
 
 ---
 name:            constant_s_and_b32_only_implicit_def_scc_is_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_dead
@@ -1001,7 +980,6 @@ body:             |
 
 ---
 name:            constant_s_or_b32_only_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_or_b32_only_implicit_def_scc_is_used
@@ -1016,7 +994,6 @@ body:             |
 
 ---
 name:            constant_s_xor_b32_only_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_xor_b32_only_implicit_def_scc_is_used
@@ -1031,7 +1008,6 @@ body:             |
 
 ---
 name:            constant_s_not_b32_only_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_not_b32_only_implicit_def_scc_is_used
@@ -1046,7 +1022,6 @@ body:             |
 # Really really implicit operand
 ---
 name:            constant_v_and_b32_implicit_def_scc_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_v_and_b32_implicit_def_scc_is_used
@@ -1062,7 +1037,6 @@ body:             |
 
 ---
 name:            constant_v_and_b32_implicit_def_vreg_is_used
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_v_and_b32_implicit_def_vreg_is_used
@@ -1077,7 +1051,6 @@ body:             |
 ...
 ---
 name:            constant_v_and_b32_implicit_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_v_and_b32_implicit_use
@@ -1093,7 +1066,6 @@ body:             |
 
 ---
 name:            constant_s_xor_b32_uses_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_s_xor_b32_uses_subreg
@@ -1110,7 +1082,6 @@ body:             |
 
 ---
 name:            constant_v_or_b32_uses_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: constant_v_or_b32_uses_subreg
@@ -1127,7 +1098,6 @@ body:             |
 
 ---
 name:            constant_v_or_b32_uses_subreg_or_0_regression
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0, $vgpr1

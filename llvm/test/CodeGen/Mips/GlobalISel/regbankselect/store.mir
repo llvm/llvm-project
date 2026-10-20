@@ -12,7 +12,6 @@
 name:            store_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -34,7 +33,6 @@ body:             |
 name:            store_i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -62,7 +60,6 @@ body:             |
 name:            store_float
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r5, $f12
@@ -84,7 +81,6 @@ body:             |
 name:            store_double
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r6, $d6

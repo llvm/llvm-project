@@ -5,7 +5,6 @@
 
 ---
 name:            aligned_agpr_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -23,7 +22,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -41,7 +39,6 @@ body:             |
 
 ---
 name:            aligned_agpr_96_sub0_subg1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -59,7 +56,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_96_sub1_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -78,7 +74,6 @@ body:             |
 
 ---
 name:            aligned_agpr_96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -96,7 +91,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -114,7 +108,6 @@ body:             |
 
 ---
 name:            aligned_agpr_128_sub0_sub1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -132,7 +125,6 @@ body:             |
 
 ---
 name:            aligned_agpr_128_sub2_sub3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -150,7 +142,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_128_sub1_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -169,7 +160,6 @@ body:             |
 
 ---
 name:            aligned_agpr_128_sub0_sub1_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -187,7 +177,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_128_sub1_sub2_sub3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -206,7 +195,6 @@ body:             |
 
 ---
 name:            aligned_agpr_128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -224,7 +212,6 @@ body:             |
 
 ---
 name:            unaligned_agpr_128
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1

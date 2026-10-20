@@ -1,7 +1,6 @@
 # RUN: llc -mtriple=riscv32 -verify-machineinstrs -start-before=riscv-asm-printer -simplify-mir -o /dev/null -pass-remarks-analysis=asm-printer %s 2>&1 | FileCheck %s
 ---
 name: instrs
-tracksRegLiveness: true
 body: |
   bb.0:
     $x0 = ADDI $x0, 0
@@ -17,7 +16,6 @@ body: |
 ...
 ---
 name: bundles
-tracksRegLiveness: true
 body: |
   bb.0:
     $x0 = ADDI $x0, 0
@@ -35,7 +33,6 @@ body: |
 ...
 ---
 name: metainstrs
-tracksRegLiveness: true
 body: |
   bb.0:
     $x0 = ADDI $x0, 0
@@ -54,7 +51,6 @@ body: |
 ...
 ---
 name: metabundles
-tracksRegLiveness: true
 body: |
   bb.0:
     $x0 = ADDI $x0, 0

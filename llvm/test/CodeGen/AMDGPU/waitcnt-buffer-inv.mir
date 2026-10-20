@@ -3,7 +3,6 @@
 
 ---
 name:            buffer_inv_advances_vmcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -27,7 +26,6 @@ body:             |
 
 ---
 name:            buffer_inv_only_does_not_wait_at_return
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
 body:             |

@@ -5,7 +5,6 @@
 ---
 name: divergent_i1_phi_if_then
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_if_then
   ; GFX10: bb.0:
@@ -80,7 +79,6 @@ body: |
 ---
 name: divergent_i1_phi_if_else
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_if_else
   ; GFX10: bb.0:
@@ -190,7 +188,6 @@ body: |
 ---
 name: loop_with_1break
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_1break
   ; GFX10: bb.0:
@@ -323,7 +320,6 @@ body: |
 ---
 name: loop_with_2breaks
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_2breaks
   ; GFX10: bb.0:
@@ -511,7 +507,6 @@ body: |
 ---
 name: loop_with_3breaks
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_3breaks
   ; GFX10: bb.0:
@@ -754,7 +749,6 @@ body: |
 ---
 name: loop_with_div_break_with_body
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_div_break_with_body
   ; GFX10: bb.0:
@@ -947,7 +941,6 @@ body: |
 ---
 name: irreducible_cfg
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: irreducible_cfg
   ; GFX10: bb.0:
@@ -1165,7 +1158,6 @@ body: |
 ---
 name: irreducible_cfg_phi_with_three_incomings
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: irreducible_cfg_phi_with_three_incomings
   ; GFX10: bb.0:

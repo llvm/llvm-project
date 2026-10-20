@@ -16,7 +16,6 @@
 
 name:            save_lr_1
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -38,7 +37,6 @@ body:             |
 ---
 name:            save_lr_2
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -60,7 +58,6 @@ body:             |
 ---
 name:            save_lr_3
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -82,7 +79,6 @@ body:             |
 ---
 name:            save_lr_4
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
