@@ -979,13 +979,6 @@ void ASTContext::cleanup() {
   }
   ASTRecordLayouts.clear();
 
-  for (llvm::DenseMap<const Decl*, AttrVec*>::iterator A = DeclAttrs.begin(),
-                                                    AEnd = DeclAttrs.end();
-       A != AEnd; ++A)
-    A->second->~AttrVec();
-  DeclAttrs.clear();
-  LastDeclAttrsDecl = nullptr;
-
   CtorClosureDefaultArgs.clear();
 
   for (const auto &Value : ModuleInitializers)
@@ -1535,33 +1528,8 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
   return SourceMgr.getDiagnostics();
 }
 
-AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
-  // 85% of lookups use the most recent D, so use a one-entry cache.
-  if (LastDeclAttrsDecl == D) {
-    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
-    return *LastDeclAttrs;
-  }
-
-  AttrVec *&Result = DeclAttrs[D];
-  if (!Result) {
-    void *Mem = Allocate(sizeof(AttrVec));
-    Result = new (Mem) AttrVec;
-  }
-
-  LastDeclAttrsDecl = D;
-  LastDeclAttrs = Result;
-  return *Result;
-}
-
-/// Erase the attributes corresponding to the given declaration.
-void ASTContext::eraseDeclAttrs(const Decl *D) {
-  llvm::DenseMap<const Decl*, AttrVec*>::iterator Pos = DeclAttrs.find(D);
-  if (Pos != DeclAttrs.end()) {
-    Pos->second->~AttrVec();
-    DeclAttrs.erase(Pos);
-  }
-  if (LastDeclAttrsDecl == D)
-    LastDeclAttrsDecl = nullptr;
+AttrVec *ASTContext::allocateAttrVec() {
+  return new (DeclAttrAllocator.Allocate()) AttrVec;
 }
 
 ArrayRef<CXXDefaultArgExpr *>
@@ -13685,7 +13653,7 @@ size_t ASTContext::getSideTableAllocatedMemory() const {
          llvm::capacity_in_bytes(KeyFunctions) +
          llvm::capacity_in_bytes(ObjCImpls) +
          llvm::capacity_in_bytes(BlockVarCopyInits) +
-         llvm::capacity_in_bytes(DeclAttrs) +
+         DeclAttrAllocator.getTotalMemory() +
          llvm::capacity_in_bytes(TemplateOrInstantiation) +
          llvm::capacity_in_bytes(InstantiatedFromUsingDecl) +
          llvm::capacity_in_bytes(InstantiatedFromUsingShadowDecl) +
