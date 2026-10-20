@@ -1367,7 +1367,7 @@ static SDValue combineShiftToAVGSUB(SDValue Op,
   // back to the original type, which is still correct since the subtract can't
   // overflow. Don't form the node if the target can't do it on either type, as
   // expanding it may be worse than the original subtract and shift.
-  // FIXME: Enable for illegal types/operations like combineShiftToAVg.
+  // FIXME: Enable for illegal types/operations like combineShiftToAVG.
   EVT VT = Op.getValueType();
   std::optional<EVT> NarrowVT = getNarrowAVGType(VT, KnownBits, Ctx);
   EVT NVT = VT;
