@@ -12097,8 +12097,16 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
                                       &IsInline, PrevNS);
   }
 
+  // Namespace lookup can find a namespace in an inline namespace. An extension
+  // of that namespace retains its semantic parent, even when it is written in
+  // an enclosing namespace.
+  DeclContext *SemanticContext = CurContext;
+  if (PrevNS && !CurContext->getRedeclContext()->Equals(
+                    PrevNS->getDeclContext()->getRedeclContext()))
+    SemanticContext = PrevNS->getDeclContext();
   NamespaceDecl *Namespc = NamespaceDecl::Create(
-      Context, CurContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+      Context, SemanticContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+  Namespc->setLexicalDeclContext(CurContext);
   if (IsInvalid)
     Namespc->setInvalidDecl();
 
