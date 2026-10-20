@@ -20236,7 +20236,7 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
 
-  SDValue And, Base, Shl, Shift;
+  SDValue And, Base, Shl, ShiftSrc;
   APInt OrImm, ShiftImm;
   bool IsImmediate = sd_match(
       N, m_SpecificVT(
@@ -20251,7 +20251,7 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
               MVT::i32,
               m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
                    m_OneUse(m_Value(
-                       Shl, m_Shl(m_Value(Shift), m_ConstInt(ShiftImm))))))))
+                       Shl, m_Shl(m_Value(ShiftSrc), m_ConstInt(ShiftImm))))))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
@@ -20276,7 +20276,7 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
     if (ShiftImm.ugt(31) || ShiftImm.getZExtValue() != ShAmt ||
         !DAG.MaskedValueIsZero(Shl, ~Known.Zero))
       return SDValue();
-    Source = Shift;
+    Source = ShiftSrc;
   }
 
   // QC_INSB(I) dst, src, #width, #shamt.
