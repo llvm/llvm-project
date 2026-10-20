@@ -2999,8 +2999,8 @@ these cases to a frozen `llvm.sdiv.poison`, `llvm.udiv.poison`,
 `llvm.srem.poison` or `llvm.urem.poison` intrinsic, whose result is an
 arbitrary but fixed value for those operands.
 
-This is the default for OpenCL C and C++ for OpenCL, except on SPIR and
-SPIR-V targets. `-fno-defined-int-divrem` restores the plain instructions.
+This is the default for OpenCL C and C++ for OpenCL. `-fno-defined-int-divrem`
+restores the plain instructions.
 :::
 
 :::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]

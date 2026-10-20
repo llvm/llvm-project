@@ -351,10 +351,12 @@ implementation status.
 | New functionality      | Atomic mem scopes: subgroup, all devices including functions      | <span class="good">done</span> | [D103241][D103241]                                                                   |
 
 As required by OpenCL C v3.0 s6.5.1, integer division and remainder by zero,
-and signed division overflow, yield an unspecified value: except on SPIR and
-SPIR-V targets, clang lowers integer `/` and `%` to frozen `llvm.<op>.poison`
-intrinsics by default, and {option}`-fdefined-int-divrem` and
-{option}`-fno-defined-int-divrem` control this explicitly.
+and signed division overflow, yield an unspecified value: clang lowers integer
+`/` and `%` to frozen `llvm.<op>.poison` intrinsics by default, and
+{option}`-fdefined-int-divrem` and {option}`-fno-defined-int-divrem` control
+this explicitly. SPIR-V has no instruction with these semantics yet, so SPIR-V
+code keeps the guard on the divisor that the generic lowering of the intrinsics
+inserts before an `OpSDiv` or one of its siblings.
 
 [D88300]: https://reviews.llvm.org/D88300
 [D95776]: https://reviews.llvm.org/D95776

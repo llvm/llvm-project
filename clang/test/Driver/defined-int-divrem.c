@@ -1,5 +1,5 @@
 // The driver forwards exactly the spelling that was given to cc1; the default
-// (on for OpenCL on non-SPIR targets) is computed by cc1 itself.
+// (on for OpenCL) is computed by cc1 itself.
 
 // RUN: %clang -### -c -target x86_64-unknown-unknown -fdefined-int-divrem %s 2>&1 | FileCheck %s --check-prefix=ON
 // RUN: %clang -### -c -target x86_64-unknown-unknown -fno-defined-int-divrem %s 2>&1 | FileCheck %s --check-prefix=OFF

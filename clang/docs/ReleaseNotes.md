@@ -294,7 +294,7 @@ features cannot lower the translation-unit ABI level;
   by zero, and signed division overflow (`INT_MIN / -1`), an unspecified result
   instead of undefined behavior by lowering integer `/` and `%` to frozen
   `llvm.<op>.poison` intrinsics. On by default for OpenCL (OpenCL C and C++ for
-  OpenCL) except on SPIR and SPIR-V targets, off for every other language.
+  OpenCL), off for every other language.
 
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
@@ -1023,9 +1023,8 @@ features cannot lower the translation-unit ABI level;
   emitted under ``-fsanitize-trap``.
 - Integer ``/`` and ``%`` now lower to the ``llvm.<op>.poison`` intrinsics,
   frozen to a fixed value (an unspecified result instead of undefined
-  behavior), by default except on SPIR and SPIR-V targets, as required by
-  OpenCL C v3.0 s6.5.1. The new ``-f[no-]defined-int-divrem`` flag controls
-  this explicitly.
+  behavior), by default, as required by OpenCL C v3.0 s6.5.1. The new
+  ``-f[no-]defined-int-divrem`` flag controls this explicitly.
 - In OpenCL C and C++ for OpenCL, ``-Wdivision-by-zero`` now says that integer
   division and remainder by zero result in an unspecified value instead of
   calling them undefined (OpenCL C v3.0 s6.5.1).

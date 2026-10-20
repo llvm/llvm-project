@@ -6103,7 +6103,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_delete_null_pointer_checks);
 
   // Forward the spelling that was given, if any; cc1 computes the default
-  // (on for OpenCL, except on SPIR and SPIR-V targets) itself.
+  // (on for OpenCL) itself.
   Args.addLastArg(CmdArgs, options::OPT_fdefined_int_divrem,
                   options::OPT_fno_defined_int_divrem);
 
