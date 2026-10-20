@@ -885,3 +885,35 @@ func.func @gather_scatter_non_uniform_mask(%src: memref<256xf32>, %dst: memref<2
   return
 }
 }
+
+// -----
+// Runs of 16 (the block width) and 6 elements per lane: the chunk must tile
+// both, so each lane writes 2 elements, never 6 across a block edge.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_chunk_tiles_blocks(
+// CHECK: xegpu.store_matrix %{{.*}}, %{{.*}}[0, 0] <{contiguity = 16 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_chunk_tiles_blocks(
+    %m: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>) {
+  %cst = arith.constant dense<1.0> : vector<8x96xf32>
+  xegpu.store_matrix %cst, %m[0, 0]
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 16]>>
+  return
+}
+}
+
+// -----
+// Runs of 3 and a consumer asking for 2 elements per lane: no chunk above 1
+// tiles both, so the load takes 1 element per lane.
+gpu.module @test {
+// CHECK-LABEL: func.func @load_matrix_chunk_tiles_runs(
+// CHECK: xegpu.load_matrix %{{.*}}[0, 0] <{contiguity = 3 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @load_matrix_chunk_tiles_runs(
+    %src: !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>>,
+    %dst: !xegpu.mem_desc<8x96xf32>) {
+  %v = xegpu.load_matrix %src[0, 0]
+      : !xegpu.mem_desc<8x96xf32, #xegpu.mem_layout<block = [8, 3]>> -> vector<8x96xf32>
+  xegpu.store_matrix %v, %dst[0, 0] <{layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+      : vector<8x96xf32>, !xegpu.mem_desc<8x96xf32>
+  return
+}
+}
