@@ -58,6 +58,7 @@ add_object_library(
   DEPENDS
     .regex_expr_pool
     libc.hdr.regex_macros
+    libc.src.__support.CPP.array
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.macros.config
