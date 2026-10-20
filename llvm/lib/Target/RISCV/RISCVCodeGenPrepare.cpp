@@ -126,6 +126,9 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
     IRBuilder<> Builder(FirstExt);
     auto *PackedTy =
         FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
+    if (!isGuaranteedNotToBeUndefOrPoison(ExtractedVec))
+      ExtractedVec = Builder.CreateFreeze(ExtractedVec, "extracted.frozen");
+
     Value *Packed = Builder.CreateBitCast(ExtractedVec, PackedTy, "packed");
     Value *Word =
         Builder.CreateExtractElement(Packed, (uint64_t)0, "packed.extract");
