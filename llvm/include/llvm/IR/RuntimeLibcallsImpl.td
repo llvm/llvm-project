@@ -156,6 +156,8 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  FuncArgType ReturnType = P.ReturnType;
+  list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
