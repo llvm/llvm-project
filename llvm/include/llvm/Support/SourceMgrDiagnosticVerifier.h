@@ -64,7 +64,11 @@ public:
   /// diagnostic is reported in them. Verifier errors (near misses, unmatched
   /// expected diagnostics, malformed directives) are printed to \p os,
   /// bypassing \p mgr's diagnostic handler.
-  SourceMgrDiagnosticVerifier(const SourceMgr &mgr, raw_ostream &os);
+  ///
+  /// \p prefixes are the directive prefixes to recognize (e.g. "expected"
+  /// for 'expected-error'); they must be non-empty.
+  SourceMgrDiagnosticVerifier(const SourceMgr &mgr, raw_ostream &os,
+                              ArrayRef<StringRef> prefixes = {"expected"});
 
   /// Matches a diagnostic against the expected diagnostics for \p loc, or
   /// against the '@unknown' expected diagnostics if \p loc is std::nullopt.
@@ -127,9 +131,8 @@ private:
   const SourceMgr &mgr;
   raw_ostream &os;
 
-  /// Regex used to recognize 'expected-<kind>' comments.
-  Regex expected{"expected-(error|note|remark|warning)(-re)? "
-                 "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$"};
+  /// Regex used to recognize '<prefix>-<kind>' comments.
+  Regex expected;
 
   /// The expected diagnostics for each buffer that has been scanned so far,
   /// keyed by buffer identifier (i.e. file name).
