@@ -4513,7 +4513,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
       break;
     Value *ACmp = Builder.CreateICmpEQ(A, RHSC);
     Value *BCmp = Builder.CreateICmpEQ(B, RHSC);
-    return SelectInst::Create(ACmp, BCmp, Builder.getFalse());
+    // The original pointer comparison propagates poison from either operand.
+    return BinaryOperator::CreateAnd(ACmp, BCmp);
   }
 
   case Instruction::IntToPtr:
