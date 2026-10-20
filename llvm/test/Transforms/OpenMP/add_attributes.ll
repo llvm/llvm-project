@@ -1835,10 +1835,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC-NEXT: declare void @__kmpc_fork_teams(ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none), ...)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
-; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop(ptr nofree readonly captures(none), i32, ptr, i32, ptr nofree captures(none), ptr nofree captures(none), i64, i32, i32, i64, ptr)
+; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop(ptr nofree readonly captures(none), i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
-; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop_5(ptr nofree readonly captures(none), i32, ptr, i32, ptr nofree captures(none), ptr nofree captures(none), i64, i32, i32, i64, i32, ptr)
+; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop_5(ptr nofree readonly captures(none), i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, i32, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_omp_target_task_alloc(ptr nofree readonly captures(none), i32, i32, i64, i64, ptr nofree readonly captures(none), i64)

@@ -959,11 +959,12 @@ __OMP_RTL_ATTRS(__kmpc_omp_task_with_deps, DefaultAttrs, SExt,
                            ReadOnlyPtrAttrs, SExt, ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_taskloop, DefaultAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, AttributeSet(), SExt,
-                           ArgPtrAttrs, ArgPtrAttrs, AttributeSet(), SExt, SExt))
+                           AttributeSet(), AttributeSet(), AttributeSet(), SExt,
+                           SExt))
 __OMP_RTL_ATTRS(__kmpc_taskloop_5, DefaultAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, AttributeSet(), SExt,
-                           ArgPtrAttrs, ArgPtrAttrs, AttributeSet(), SExt, SExt,
-                           AttributeSet(), SExt))
+                           AttributeSet(), AttributeSet(), AttributeSet(), SExt,
+                           SExt, AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_omp_target_task_alloc, DefaultAttrs, ReturnPtrAttrs,
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, SExt, SizeTyExt, SizeTyExt,
                            ReadOnlyPtrAttrs, AttributeSet()))
