@@ -4299,20 +4299,36 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
   assert(UF > 1 && "Expected plan to have an UF > 1");
 
   auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
+  VPValue *Multiplier = Plan.getConstantInt(64, 1);
+
+  SmallPtrSet<VPActiveLaneMaskPHIRecipe *, 1> Masks;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *Mask = nullptr;
       VPValue *StoredValue = nullptr;
       if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
-          !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
+          !match(&R,
+                 m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))) &&
+          !match(&R, m_MaskedLoad(m_ContiguousVecPtr, m_VPValue(Mask))) &&
+          !match(&R, m_MaskedStore(m_ContiguousVecPtr, m_VPValue(StoredValue),
+                                   m_VPValue(Mask))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
       assert(MemOp->isConsecutive() && "Expected consecutive load/store");
 
-      // TODO: Support masked loads/stores. This requires widening the header
-      // mask to the same factor as the memory operation.
-      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+      // If there's a mask, ensure it's a wide active-lane-mask.
+      if (Mask &&
+          !match(Mask,
+                 m_ActiveLaneMaskPHIRecipe(
+                     m_VPInstruction<VPInstruction::ExtractVectorForPart>(),
+                     m_VPInstruction<VPInstruction::ExtractVectorForPart>())))
+        continue;
+
+      auto MaskSource = MemOp->isMasked()
+                            ? TargetTransformInfo::MaskSource::ActiveLaneMask
+                            : TargetTransformInfo::MaskSource::None;
 
       Type *AccessType = StoredValue ? StoredValue->getScalarType()
                                      : R.getVPSingleValue()->getScalarType();
@@ -4324,36 +4340,67 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
         CastHint = Cast->getOpcode();
 
       VectorType *VectorAccessType = VectorType::get(AccessType, VF);
-      if (!TTI.hasMultiVectorLoadStore(
-              /*NumVectors=*/UF, TargetTransformInfo::MaskSource::None,
-              VectorAccessType, IsStore, CastHint))
+      if (!TTI.hasMultiVectorLoadStore(/*NumVectors=*/UF, MaskSource,
+                                       VectorAccessType, IsStore, CastHint))
         continue;
 
       DebugLoc DL = R.getDebugLoc();
       VPValue *Ptr = MemOp->getAddr();
       VPValue *Align = Plan.getConstantInt(64, MemOp->getAlign().value());
-      VPValue *Multiplier = Plan.getConstantInt(64, 1);
 
       VPBuilder Builder(VPBB, R.getIterator());
+      VPInstruction *NewMemOp;
       if (IsStore) {
         VPValue *WideStoredValue = Builder.createNaryOp(
             VPInstruction::ConcatVectors, {StoredValue}, DL);
-        Builder.createNaryOp(VPInstruction::WideVectorStore,
-                             {Multiplier, Ptr, Align, WideStoredValue}, nullptr,
-                             {}, *MemOp, R.getDebugLoc());
+        NewMemOp =
+            Builder.createNaryOp(VPInstruction::WideVectorStore,
+                                 {Multiplier, Ptr, Align, WideStoredValue},
+                                 nullptr, {}, *MemOp, R.getDebugLoc());
       } else {
         VPValue *OldLoad = R.getVPSingleValue();
-        VPValue *Load = Builder.createNaryOp(
+        NewMemOp = Builder.createNaryOp(
             VPInstruction::WideVectorLoad, {Multiplier, Ptr, Align}, nullptr,
             {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
         VPValue *Extract =
             Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
-                                 {Load, Plan.getConstantInt(64, 0)}, DL);
+                                 {NewMemOp, Plan.getConstantInt(64, 0)}, DL);
         OldLoad->replaceAllUsesWith(Extract);
       }
 
       R.eraseFromParent();
+      if (Mask) {
+        NewMemOp->addMask(Mask);
+        Masks.insert(cast<VPActiveLaneMaskPHIRecipe>(Mask));
+      }
     }
+  }
+
+  // Widen the masks to match the memory operations.
+  for (VPActiveLaneMaskPHIRecipe *ALM : Masks) {
+    auto *EntryMask = cast<VPInstruction>(ALM->getStartValue());
+    auto *LoopMask = cast<VPInstruction>(ALM->getBackedgeValue());
+    auto *EntryALM = cast<VPInstruction>(EntryMask->getOperand(0));
+    auto *LoopALM = cast<VPInstruction>(LoopMask->getOperand(0));
+
+    assert((EntryALM->getOpcode() == VPInstruction::WideActiveLaneMask &&
+            LoopALM->getOpcode() == VPInstruction::WideActiveLaneMask) &&
+           "Expected incoming values of Phi to be WideActiveLaneMask");
+
+    auto Builder = VPBuilder(&*ALM->getParent()->getFirstNonPhi());
+    auto *MaskPart = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                          {ALM, Plan.getConstantInt(64, 0)});
+
+    ALM->replaceUsesWithIf(MaskPart, [&](VPUser *U) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      return U != MaskPart &&
+             (!VPI || (VPI->getOpcode() != VPInstruction::WideVectorLoad &&
+                       VPI->getOpcode() != VPInstruction::WideVectorStore));
+    });
+
+    // Remove any extra ExtractVectorForPart operations.
+    EntryMask->replaceAllUsesWith(EntryALM);
+    LoopMask->replaceAllUsesWith(LoopALM);
   }
 }
 
