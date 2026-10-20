@@ -3,8 +3,20 @@
 // RUN: %clang_cc1 -std=c11 -ast-dump -Wno-gcc-compat -DMISSING_FORMAT_PARAM -verify %s | FileCheck %s --check-prefix=NO-FORMAT-ARG
 // RUN: %clang_cc1 -std=c11 -ast-dump -DCFSTRING_VALID_PROTO -verify %s | FileCheck %s --check-prefix=FORMAT-ARG
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -Wno-gcc-compat -DCFSTRING_INT_PARAM -verify %s
+// RUN: %clang_cc1 -std=c11 -triple spirv64-unknown-unknown -ast-dump -DBUILTIN_ALIAS -verify %s | FileCheck %s --check-prefix=BUILTIN-ALIAS
 
-#ifdef CFSTRING_VALID_PROTO
+#ifdef BUILTIN_ALIAS
+// expected-no-diagnostics
+
+// Do not infer a format attribute for a builtin alias without a prototype.
+// BUILTIN-ALIAS-LABEL: FunctionDecl{{.*}} foo 'void ()'
+// BUILTIN-ALIAS-NOT: FormatAttr
+void foo() __attribute__((clang_builtin_alias(__builtin___printf_chk)));
+
+// BUILTIN-ALIAS-LABEL: FunctionDecl{{.*}} f 'void (void)'
+void f(void) { foo(); }
+
+#elif defined(CFSTRING_VALID_PROTO)
 // expected-no-diagnostics
 
 // Keep inferring format_arg(1) when the referenced parameter exists.
