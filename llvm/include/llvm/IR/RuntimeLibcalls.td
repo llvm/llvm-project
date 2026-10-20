@@ -329,12 +329,14 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ROUNDEVEN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def FLOOR_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def COPYSIGN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMIN_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAX_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAX_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMINIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMAXIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMINIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
-  def FMAXIMUM_NUM_#FPTy.Suffix : RuntimeLibcall<Floating, [Same, Same]>;
+  def FMINIMUM_NUM_#FPTy.Suffix
+      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAXIMUM_NUM_#FPTy.Suffix
+      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def LROUND_#FPTy.Suffix : RuntimeLibcall;
   def LLROUND_#FPTy.Suffix : RuntimeLibcall;
   def LRINT_#FPTy.Suffix : RuntimeLibcall;
