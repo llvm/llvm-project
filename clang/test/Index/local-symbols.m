@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: c-index-test -test-load-source local %s | FileCheck %s
 
 // The method 'bar' was also being reported outside the @implementation

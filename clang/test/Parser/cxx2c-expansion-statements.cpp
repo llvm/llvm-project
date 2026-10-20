@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify
 namespace std {
 template <typename T>

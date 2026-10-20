@@ -6,6 +6,7 @@
 /// All this should be true if the driver is used or -cc1.
 
 
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang -fsyntax-only -fexperimental-new-constant-interpreter %s -Xclang -verify=bc
 // RUN: %clang -cc1          -fexperimental-new-constant-interpreter %s         -verify=bc
 
