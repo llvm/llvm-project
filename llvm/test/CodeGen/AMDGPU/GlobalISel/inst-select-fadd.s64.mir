@@ -6,6 +6,7 @@
 name:            fadd_f64_vvv
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -29,6 +30,7 @@ body: |
 name:            fadd_f64_vsv
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -52,6 +54,7 @@ body: |
 name:            fadd_f64_vvs
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -75,6 +78,7 @@ body: |
 name:            fadd_f64_vvv_fabs_lhs
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -99,6 +103,7 @@ body: |
 name:            fadd_f64_vvv_fabs_rhs
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -122,6 +127,7 @@ body: |
 name:            fadd_f64_vvv_fneg_fabs_lhs
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -147,6 +153,7 @@ body: |
 name:            fadd_f64_vvv_fneg_fabs_rhs
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -173,6 +180,7 @@ body: |
 name:            fadd_f64_fneg_copy_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -203,6 +211,7 @@ body: |
 name:            fadd_f64_copy_fabs_sgpr_copy_fabs_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -232,6 +241,7 @@ body: |
 name:            fadd_f64_copy_fneg_sgpr_copy_fneg_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -261,6 +271,7 @@ body: |
 name:            fadd_f64_copy_fneg_fabs_sgpr_copy_fneg_fabs_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

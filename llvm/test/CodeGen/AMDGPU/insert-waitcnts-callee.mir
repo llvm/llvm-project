@@ -17,6 +17,7 @@ liveins:
   - { reg: '$vgpr0' }
 
 name: entry_callee_wait
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec

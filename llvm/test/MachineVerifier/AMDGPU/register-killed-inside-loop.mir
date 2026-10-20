@@ -8,6 +8,7 @@
 
 ---
 name:            kill_flag_in_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $vgpr0_vgpr1

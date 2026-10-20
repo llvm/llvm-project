@@ -30,6 +30,7 @@
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -75,6 +76,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_noterm
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -106,6 +108,7 @@ body:             |
 # GFX9-NOT: S_WAITCNT .Vmcnt_0{{$}}
 # GFX9-LABEL: bb.2:
 name:            waitcnt_vm_loop_noterm_wait
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -153,6 +156,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -201,6 +205,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_no_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -250,6 +255,7 @@ body:             |
 # GFX12-NOT: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_no_use
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -301,6 +307,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -348,6 +355,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -395,6 +403,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_use_in_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -449,6 +458,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.3:
 name:            waitcnt_vm_loop2_nowait
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -505,6 +515,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_reginterval
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -552,6 +563,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop2_reginterval2
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -607,6 +619,7 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_zero
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -658,6 +671,7 @@ body:             |
 # GFX9-NOT: S_WAITCNT
 
 name:            waitcnt_vm_necessary
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
@@ -699,6 +713,7 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_loop_global_mem
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -747,6 +762,7 @@ body:             |
 # GFX12-LABEL: bb.2:
 
 name:            waitcnt_vm_loop_scratch_mem
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -795,6 +811,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_flat_mem
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -844,6 +861,7 @@ body:             |
 # GFX12: S_WAIT_LOADCNT 0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_flat_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1

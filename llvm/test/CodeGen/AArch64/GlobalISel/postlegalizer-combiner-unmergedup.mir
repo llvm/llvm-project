@@ -4,6 +4,7 @@
 ---
 name:            unmerge_dup8
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: unmerge_dup8
@@ -26,6 +27,7 @@ body:             |
 ---
 name:            unmerge_dup16
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: unmerge_dup16
@@ -48,6 +50,7 @@ body:             |
 ---
 name:            unmerge_dup32
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: unmerge_dup32
@@ -70,6 +73,7 @@ body:             |
 ---
 name:            unmerge_dup64
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: unmerge_dup64

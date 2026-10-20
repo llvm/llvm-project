@@ -3,6 +3,7 @@
 
 ---
 name:            main
+tracksRegLiveness: false
 body:             |
  bb.0.entry:
     liveins: $ymm7

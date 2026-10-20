@@ -4,6 +4,7 @@
 
 ---
 name:             not_shrink_icmp
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: not_shrink_icmp
@@ -13,6 +14,7 @@ body:             |
 
 ---
 name:             shrink_icmp
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: shrink_icmp

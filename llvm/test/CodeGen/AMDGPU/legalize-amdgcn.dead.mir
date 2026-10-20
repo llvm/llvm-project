@@ -3,6 +3,7 @@
 
 ---
 name: test_struct
+tracksRegLiveness: false
 body: |
   bb.1.entry:
 

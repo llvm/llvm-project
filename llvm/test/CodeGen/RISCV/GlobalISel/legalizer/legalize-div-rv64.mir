@@ -5,6 +5,7 @@
 # RUN: | FileCheck %s -check-prefix=CHECK-M
 ---
 name:            sdiv_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i8
@@ -47,6 +48,7 @@ body:             |
 ...
 ---
 name:            sdiv_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i15
@@ -89,6 +91,7 @@ body:             |
 ...
 ---
 name:            sdiv_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i16
@@ -131,6 +134,7 @@ body:             |
 ...
 ---
 name:            sdiv_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i32
@@ -165,6 +169,7 @@ body:             |
 ...
 ---
 name:            sdiv_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i64
@@ -194,6 +199,7 @@ body:             |
 ...
 ---
 name:            sdiv_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i72
@@ -259,6 +265,7 @@ body:             |
 ...
 ---
 name:            sdiv_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: sdiv_i128
@@ -311,6 +318,7 @@ body:             |
 ...
 ---
 name:            udiv_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i8
@@ -349,6 +357,7 @@ body:             |
 ...
 ---
 name:            udiv_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i15
@@ -387,6 +396,7 @@ body:             |
 ...
 ---
 name:            udiv_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i16
@@ -425,6 +435,7 @@ body:             |
 ...
 ---
 name:            udiv_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i32
@@ -460,6 +471,7 @@ body:             |
 ...
 ---
 name:            udiv_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i64
@@ -489,6 +501,7 @@ body:             |
 ...
 ---
 name:            udiv_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i72
@@ -556,6 +569,7 @@ body:             |
 ...
 ---
 name:            udiv_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-I-LABEL: name: udiv_i128
@@ -608,6 +622,7 @@ body:             |
 ...
 ---
 name:            udivrem_i64
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
@@ -653,6 +668,7 @@ body:             |
 ...
 ---
 name:            sdivrem_i64
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10, $x11

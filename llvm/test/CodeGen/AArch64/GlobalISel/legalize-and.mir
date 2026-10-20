@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_scalar_and_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_and_small
@@ -25,6 +26,7 @@ body:             |
 ...
 ---
 name:            test_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_nonpow2
@@ -154,6 +156,7 @@ body:             |
 ...
 ---
 name:            test_vector_and_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_and_v16s16
@@ -174,6 +177,7 @@ body:             |
 ...
 ---
 name:            test_vector_and_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_and_v32s8

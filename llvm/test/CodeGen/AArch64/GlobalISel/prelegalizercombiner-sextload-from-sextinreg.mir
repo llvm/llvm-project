@@ -141,6 +141,7 @@ body:             |
 
 ---
 name:            test_one_use_copy_multi_use_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_one_use_copy_multi_use_load
@@ -162,6 +163,7 @@ body:             |
 
 ---
 name:            test_multi_use_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_load
@@ -180,6 +182,7 @@ body:             |
 
 ---
 name:            test_multi_use_load_large_memsize
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_load_large_memsize

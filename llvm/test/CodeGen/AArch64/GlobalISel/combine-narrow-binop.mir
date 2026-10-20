@@ -3,6 +3,7 @@
 
 ---
 name:            test_combine_trunc_xor_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_xor_i64
@@ -19,6 +20,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_add_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_add_i64
@@ -35,6 +37,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_mul_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_mul_i64
@@ -51,6 +54,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_and_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_and_i64
@@ -67,6 +71,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_or_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_or_i64
@@ -83,6 +88,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128
@@ -99,6 +105,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128_multi_use
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128_multi_use
@@ -117,6 +124,7 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_xor_vector_pattern_did_not_match
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_trunc_xor_vector_pattern_did_not_match

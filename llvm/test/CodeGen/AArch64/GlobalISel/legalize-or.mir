@@ -3,6 +3,7 @@
 
 ---
 name:            test_scalar_or_small
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -27,6 +28,7 @@ body: |
 
 ---
 name:            test_big_scalar_power_of_2
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -105,6 +107,7 @@ body:             |
 ...
 ---
 name:            test_vector_or_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_or_v16s16
@@ -125,6 +128,7 @@ body:             |
 ...
 ---
 name:            test_vector_or_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_or_v32s8

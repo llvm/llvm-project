@@ -21,6 +21,7 @@
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
 name: func
+tracksRegLiveness: false
 body: |
   bb.0:
     dead $wzr = SUBSWri $w1, 0, 0, implicit-def dead $nzcv

@@ -7,6 +7,7 @@
 name:            cttz_s32
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: cttz_s32
@@ -24,6 +25,7 @@ body:             |
 name:            cttz_s64
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: cttz_s64

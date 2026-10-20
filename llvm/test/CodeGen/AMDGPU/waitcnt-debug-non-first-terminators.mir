@@ -3,6 +3,7 @@
 
 ---
 name: waitcnt-debug-non-first-terminators
+tracksRegLiveness: false
 liveins:
 machineFunctionInfo:
   isEntryFunction: true

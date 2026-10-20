@@ -3,6 +3,7 @@
 
 ---
 name: scc_write_in_other_block
+tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_other_block
   ; GFX12: bb.0:
@@ -51,6 +52,7 @@ body: |
 
 ---
 name: scc_write_in_other_block_with_barrier_wait
+tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_other_block_with_barrier_wait
   ; GFX12: bb.0:
@@ -100,6 +102,7 @@ body: |
 
 ---
 name: scc_write_in_multiple_blocks_with_barrier_wait
+tracksRegLiveness: false
 body: |
   ; GFX12-LABEL: name: scc_write_in_multiple_blocks_with_barrier_wait
   ; GFX12: bb.0:

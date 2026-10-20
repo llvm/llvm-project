@@ -6,6 +6,7 @@
 ---
 # select (c, x, x) -> x
 name:            test_combine_select_same_res
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -22,6 +23,7 @@ body:             |
 ---
 # select (undef, x, y) -> y
 name:            test_combine_select_undef_res0_res1
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -39,6 +41,7 @@ body:             |
 ---
 # select (false, x, y) -> y
 name:            test_combine_select_false_res0_res1
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -56,6 +59,7 @@ body:             |
 ---
 # vector select (false, x, y) -> y
 name:            test_combine_vector_select_false_res0_res1
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -74,6 +78,7 @@ body:             |
 ---
 # select (true, x, y) -> x
 name:            test_combine_select_true_res0_res1
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -91,6 +96,7 @@ body:             |
 ---
 # vector select (true, x, y) -> x
 name:            test_combine_vector_select_true_res0_res1
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -109,6 +115,7 @@ body:             |
 ---
 # select Cond, Cond, F --> or Cond, F
 name:            bool_cond_cond_false
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -135,6 +142,7 @@ body:             |
 ---
 # select Cond, 1, F    --> or Cond, F
 name:            bool_cond_one_false
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -162,6 +170,7 @@ body:             |
 ---
 # select Cond, 1, F    --> or Cond, F
 name:            bool_cond_one_false_vector
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2
@@ -188,6 +197,7 @@ body:             |
 ---
 # select Cond, T, Cond --> and Cond, T
 name:            bool_cond_true_cond
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -215,6 +225,7 @@ body:             |
 ---
 # select Cond, T, 0    --> and Cond, T
 name:            bool_cond_true_zero
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -242,6 +253,7 @@ body:             |
 ---
 # select Cond, T, 1 --> or (not Cond), T
 name:            bool_cond_true_one
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -272,6 +284,7 @@ body:             |
 ---
 # select Cond, 0, F --> and (not Cond), F
 name:            bool_cond_zero_false
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -302,6 +315,7 @@ body:             |
 ---
 # select cond, 1, 0 --> zext(Cond)
 name:            select_cond_1_0_to_zext_cond
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -327,6 +341,7 @@ body:             |
 ---
 # select cond, 0, 1 --> zext(!Cond)
 name:            select_cond_0_1_to_sext_not_cond
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -354,6 +369,7 @@ body:             |
 ---
 # select cond, 2, 1 --> and (zext Cond), false
 name:            select_cond_2_1_to_and_zext_cond_false
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -382,6 +398,7 @@ body:             |
 ---
 # select cond, 1, 2 --> and (ext Cond), false
 name:            select_cond_1_2_to_and_sext_cond_false
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -410,6 +427,7 @@ body:             |
 ---
 # select cond, 64, 0 --> (zext Cond) << log2(Pow2)
 name:            select_cond_64_0_to_shift
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -438,6 +456,7 @@ body:             |
 ---
 # select cond, 0, 64 --> (zext (!Cond)) << log2(Pow2)
 name:            select_cond_0_64_to_shift
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -468,6 +487,7 @@ body:             |
 ---
 # select cond, -1, 0 --> sext Cond
 name:            select_cond_minus_1_0_to_sext_cond
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -493,6 +513,7 @@ body:             |
 ---
 # select cond, 0, -1 --> sext (!Cond)
 name:            select_cond_0_minus_1_to_sext_not_cond
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -520,6 +541,7 @@ body:             |
 ---
 # select cond, -1, 101 --> or (sext Cond), 101
 name:            select_cond_minus_1_101_to_or_sext_cond_101
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -548,6 +570,7 @@ body:             |
 ---
 # select cond, 101, -1 --> or (sext (not Cond), 101
 name:            select_cond_101_minus_1_to_or_sext_not_cond_101
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -578,6 +601,7 @@ body:             |
 ---
 # select test(failed,registers) select icmp_ugt t,f_t_f --> umax(t,f)
 name:            select_failed_icmp_ugt_t_f_t_f_umax_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -613,6 +637,7 @@ body:             |
 ---
 # test select icmp_ugt t,f_t_f --> umax(t,f)
 name:            select_icmp_ugt_t_f_t_f_umax_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -640,6 +665,7 @@ body:             |
 ---
 # test select icmp_uge t,f_t_f --> umax(t,f)
 name:            select_icmp_uge_t_f_t_f_umax_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -667,6 +693,7 @@ body:             |
 ---
 # test select icmp_sgt t,f_t_f --> smax(t,f)
 name:            select_icmp_sgt_t_f_t_f_smax_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -694,6 +721,7 @@ body:             |
 ---
 # test select icmp_sge t,f_t_f --> smax(t,f)
 name:            select_icmp_sge_t_f_t_f_smax_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -721,6 +749,7 @@ body:             |
 ---
 # test select icmp_ult t,f_t_f --> umin(t,f)
 name:            select_icmp_ult_t_f_t_f_umin_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -748,6 +777,7 @@ body:             |
 ---
 # test select icmp_ule t,f_t_f --> umin(t,f)
 name:            select_icmp_ule_t_f_t_f_umin_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -775,6 +805,7 @@ body:             |
 ---
 # test select icmp_slt t,f_t_f --> smin(t,f)
 name:            select_icmp_slt_t_f_t_f_smin_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -802,6 +833,7 @@ body:             |
 ---
 # test select icmp_sle t,f_t_f --> smin(t,f)
 name:            select_icmp_sle_t_f_t_f_smin_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -829,6 +861,7 @@ body:             |
 ---
 # multi use test select icmp_sle t,f_t_f --> smin(t,f) failed
 name:            multi_use_select_icmp_sle_t_f_t_f_smin_t_f_failed
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
@@ -858,6 +891,7 @@ body:             |
 ...
 ---
 name:            dont_combine_pointer_type
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0
@@ -886,6 +920,7 @@ body:             |
 ---
 name:            dont_combine_pointer_type_select_of_constant
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -923,6 +958,7 @@ body:             |
 ---
 # test failed select icmp_slef,t_t_f --> smin(t,f)
 name:            select_icmp_sle_f_t_t_f_smin_t_f
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2

@@ -6,6 +6,7 @@
 
 ---
 name:            f1
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: f1
   ; CHECK: bb.0:
