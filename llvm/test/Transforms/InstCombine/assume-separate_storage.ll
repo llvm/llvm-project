@@ -70,7 +70,7 @@ define void @remove_simple_redundant_assumes_inverse_args(ptr %a, ptr %b) {
 }
 
 define void @arguments_with_noalias(ptr noalias %a, ptr noalias %b) {
-; CHECK-LABEL: @keep_with_noalias(
+; CHECK-LABEL: @arguments_with_noalias(
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %a, ptr %b)]
