@@ -3058,9 +3058,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
   mlir::OpBuilder builder(op.getContext());
   mlir::Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
   builder.setInsertionPointToStart(block);
-  // The type of AddressOfOp is always a pointer.
-  assert(!cir::MissingFeatures::addressSpace());
-  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(ty.getContext());
+  cir::CIRDataLayout cirDataLayout(aliasOp->getParentOfType<mlir::ModuleOp>());
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
+      ty.getContext(), cirDataLayout.getProgramAddressSpace());
   auto addrOp = mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, aliasee);
   mlir::LLVM::ReturnOp::create(builder, loc, addrOp);
 

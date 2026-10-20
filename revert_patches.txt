@@ -23,3 +23,6 @@ Need CK to fix their flags
 [LifetimeSafety] Add warning for member functions returning field origins (#229784)
 [LifetimeSafety] Add default member initializers to `LifetimeSafetyOpts` (#231914)
 ---
+534.hpgmg hangs
+[Offload][AMDGPU] Create a host device for each CPU agent (#233099)
+---

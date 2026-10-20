@@ -2728,6 +2728,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sched_get_priority_max",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_get_priority_max.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_sched_get_priority_min",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sched_get_priority_min.h"],
     target_compatible_with = select({
@@ -17091,6 +17106,19 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_getcpu",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "sched_get_priority_max",
+    srcs = ["src/sched/linux/sched_get_priority_max.cpp"],
+    hdrs = ["src/sched/sched_get_priority_max.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_get_priority_max",
         ":errno",
     ],
 )
