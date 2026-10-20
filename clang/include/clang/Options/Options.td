@@ -8132,6 +8132,12 @@ def debug_info_macro_expansion_loc
     : Flag<["-"], "debug-info-macro-expansion-loc">,
       HelpText<"Use expansion location for debug info for multi line macros">,
       MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
+def debug_info_macro_max_depth_EQ
+    : Joined<["-"], "debug-info-macro-max-depth=">,
+      MetaVarName<"<N>">,
+      HelpText<"Use expansion location for debug info for macro arguments "
+               "nested deeper than <N> macro expansions (default 64)">,
+      MarshallingInfoInt<CodeGenOpts<"DebugInfoMacroMaxDepth">, "64">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;

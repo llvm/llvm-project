@@ -1,0 +1,9 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Check that cxx_abi attribute round-trips just fine.
+
+module attributes {cir.cxx_abi = "itanium", cir.triple="aarch64-unknown-linux-gnu"} {
+}
+
+// CHECK: cir.cxx_abi = "itanium"
+// CHECK: cir.triple = "aarch64-unknown-linux-gnu"

@@ -28,7 +28,7 @@ add_clang_library(MLIRCIRTransforms
   clangBasic
 
   MLIRABI
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRIR
   MLIRPass

@@ -4578,6 +4578,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In an OpenMP compilation Sema may defer a function's diagnostics to the end
+  // of the TU (see Sema::emitDeferredDiags). Emitting it before then would let
+  // code with pending errors reach CodeGen.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && isa<FunctionDecl>(Global))
+    return false;
+
   // In OpenMP 5.0 variables and function may be marked as
   // device_type(host/nohost) and we should not emit them eagerly unless we sure
   // that they must be emitted on the host/device. To be sure we need to have

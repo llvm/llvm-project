@@ -6525,7 +6525,8 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
 }
 
 LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                           CallArgList &Args, QualType Ty) {
+                                           CallArgList &Args, QualType Ty,
+                                           bool IsImplicit) {
 
   auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
@@ -6534,7 +6535,8 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
-  Args.add(RValue::get(TmpAddr, *this), Ty);
+  if (!IsImplicit)
+    Args.add(RValue::get(TmpAddr, *this), Ty);
   return TempLV;
 }
 
@@ -7210,32 +7212,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (Chain)
     Args.add(RValue::get(Chain), CGM.getContext().VoidPtrTy);
 
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
-  // FIXME: Revisit this based on C++ committee response to unimplementability.
-  EvaluationOrder Order = EvaluationOrder::Default;
+  EvaluationOrder Order = CodeGenUtils::getCallArgEvaluationOrder(E);
   bool StaticOperator = false;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    if (OCE->isAssignmentOp())
-      Order = EvaluationOrder::ForceRightToLeft;
-    else {
-      switch (OCE->getOperator()) {
-      case OO_LessLess:
-      case OO_GreaterGreater:
-      case OO_AmpAmp:
-      case OO_PipePipe:
-      case OO_Comma:
-      case OO_ArrowStar:
-        Order = EvaluationOrder::ForceLeftToRight;
-        break;
-      default:
-        break;
-      }
-    }
-
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
         MD && MD->isStatic())
