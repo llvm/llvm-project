@@ -67,9 +67,10 @@ public:
   unsigned getMaxGPRs() const { return MaxGPRs ? MaxGPRs : 128; }
 
   /// The threads of one threadgroup that fit on a core when each thread uses
-  /// \p Halves 16-bit registers. G13 and G14 run 2 * floor(3328 / (2 * Halves))
-  /// SIMD-groups of 32 threads, at most 1024 threads (Mesa's agx_occupancy
-  /// table); later generations are assumed to be the same.
+  /// \p Halves 16-bit registers. G13 and G14 run 2 * floor(3328 / (2 * H))
+  /// SIMD-groups of 32 threads, at most 1024 threads, with H the halves
+  /// rounded up to the allocation granule of 8 (Mesa's agx_occupancy table);
+  /// later generations are assumed to be the same.
   static unsigned maxThreadsForHalves(unsigned Halves);
 
   /// The 32-bit GPRs \p F may use: getMaxGPRs(), fewer with the function

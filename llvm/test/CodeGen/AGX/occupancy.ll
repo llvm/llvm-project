@@ -4,13 +4,14 @@
 ; Register limits for occupancy. Without attributes a kernel may use all 128
 ; GPRs, which leaves room for 384 threads per threadgroup; with
 ; "agx-max-threads-per-threadgroup" it uses at most the GPRs that let that
-; many threads fit (2 * floor(3328 / (2 * halves)) SIMD-groups per core), and
+; many threads fit (2 * floor(3328 / (2 * halves)) SIMD-groups per core, halves
+; in groups of 8), and
 ; "agx-max-gprs" (PTX .maxnreg) caps the count directly. The rest is spilled.
 
 declare i32 @llvm.agx.thread.position.in.grid.x()
 
 ; CHECK-LABEL: unbounded:
-; CHECK: general purpose registers: 82 x 32-bit (up to 640 threads per threadgroup)
+; CHECK: general purpose registers: 82 x 32-bit (up to 576 threads per threadgroup)
 ; CHECK: stack size: 0 bytes
 define agx_kernel void @unbounded(ptr addrspace(1) %a, ptr addrspace(1) %out) {
   %t = call i32 @llvm.agx.thread.position.in.grid.x()
@@ -828,8 +829,8 @@ define agx_kernel void @threads_1024(ptr addrspace(1) %a, ptr addrspace(1) %out)
 }
 
 ; CHECK-LABEL: threads_640:
-; CHECK: general purpose registers: 82 x 32-bit (up to 640 threads per threadgroup)
-; CHECK: stack size: 0 bytes
+; CHECK: general purpose registers: 80 x 32-bit (up to 640 threads per threadgroup)
+; CHECK: stack size: 48 bytes
 define agx_kernel void @threads_640(ptr addrspace(1) %a, ptr addrspace(1) %out) #1 {
   %t = call i32 @llvm.agx.thread.position.in.grid.x()
   %p0 = getelementptr i32, ptr addrspace(1) %a, i32 0

@@ -33,7 +33,8 @@ AGXSubtarget::AGXSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       FrameLowering(*this), TLInfo(TM, *this) {}
 
 unsigned AGXSubtarget::maxThreadsForHalves(unsigned Halves) {
-  Halves = std::max(Halves, 104u);
+  // Registers are allocated in groups of 8 halves.
+  Halves = std::max<unsigned>(alignTo(Halves, 8), 104);
   return std::min(64 * (1664 / Halves), 1024u);
 }
 
@@ -47,7 +48,7 @@ unsigned AGXSubtarget::getMaxGPRs(const Function &F) const {
           "agx-max-threads-per-threadgroup", 0)) {
     // The largest register count with maxThreadsForHalves(2 * GPRs) >= T.
     unsigned K = std::max<unsigned>(divideCeil(std::min(T, 1024u), 64), 1);
-    Max = std::min(Max, std::max<unsigned>(1664 / K / 2, MinGPRs));
+    Max = std::min(Max, std::max<unsigned>(alignDown(1664 / K, 8) / 2, MinGPRs));
   }
   return Max;
 }

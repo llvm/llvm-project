@@ -176,8 +176,9 @@ Occupancy attributes
 --------------------
 
 A core of G13 and G14 runs 2 * floor(3328 / (2 * H)) SIMD-groups of 32
-threads, at most 1024 threads, when each thread uses H 16-bit registers (the
-occupancy table of Mesa's AGX compiler). All the threads of a threadgroup run
+threads, at most 1024 threads, when each thread uses H 16-bit registers,
+rounded up to a multiple of 8 (registers are allocated in groups of 8 halves;
+this is the occupancy table of Mesa's AGX compiler). All the threads of a threadgroup run
 on one core, so the registers a kernel uses limit its threadgroup size: 52
 32-bit registers allow 1024 threads, 128 allow 384. The resource comments
 print the limit (``up to N threads per threadgroup``). Two function
