@@ -105,10 +105,9 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
            "Unsupported size");
 
     LLT p0 = LLT::pointer(0, 32);
-    LLT s32 = LLT::integer(32);
     auto SPReg = MIRBuilder.buildCopy(p0, Register(ARM::SP));
 
-    auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(LLT::integer(32), Offset);
 
     auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
