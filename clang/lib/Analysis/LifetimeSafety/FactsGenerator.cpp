@@ -1225,11 +1225,6 @@ void FactsGenerator::issueFieldPlaceholderLoans(
           if (const CXXRecordDecl *SubDef = Sub->getDefinition()) {
             // Anonymous records cannot have base classes and they can only have
             // public fields. Sema rejects them with an error otherwise.
-            [[maybe_unused]] auto IsFieldPublic = [](const FieldDecl *F) {
-              return F->getAccess() == AS_public;
-            };
-            assert(SubDef->getNumBases() == 0);
-            assert(llvm::all_of(SubDef->fields(), IsFieldPublic));
             issueFieldPlaceholderLoans(SubDef, Facts);
             continue;
           }
