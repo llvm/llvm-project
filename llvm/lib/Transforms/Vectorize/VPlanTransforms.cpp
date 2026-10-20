@@ -91,13 +91,6 @@ static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
   return {};
 }
 
-// TODO: Remove this once the partial reduction intrinsics are no worse than
-//       normal vector operations.
-static cl::opt<bool> UsePartialReductionsByDefault(
-    "use-partial-reductions-by-default", cl::init(true), cl::Hidden,
-    cl::desc("Use partial reduction intrinsics for "
-             "all supported unordered reductions."));
-
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
