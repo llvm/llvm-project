@@ -8856,9 +8856,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Res;
     std::tie(Res, Chain) =
         makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
-    if (Subtarget.is64Bit())
-      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
-    SDValue Result = DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
+    SDValue Result =
+        Subtarget.is64Bit()
+            ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res)
+            : DAG.getBitcast(MVT::i32, Res);
     if (IsStrict)
       return DAG.getMergeValues({Result, Chain}, DL);
     return Result;
