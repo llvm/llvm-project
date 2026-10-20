@@ -1362,7 +1362,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // Handle negative steps.
   if (StepOffset->isNegative()) {
     // TODO: Extend to allow steps > -1.
-    if (IsWidened || !(-*StepOffset).isOne())
+    if (!(-*StepOffset).isOne())
       return;
 
     // AR may wrap.
