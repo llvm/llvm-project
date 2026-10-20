@@ -24,7 +24,7 @@ SuperHMCAsmInfo::SuperHMCAsmInfo(const Triple &TheTriple,
   this->IsLittleEndian = TheTriple.isLittleEndian();
   this->CommentString = "!";
   this->InternalSymbolPrefix = ".L";
-  this->MinInstAlignment = 1;
+  this->MinInstAlignment = 2;
 
   // NOTE:  GAS SH Assembly uses Log2(N) alignment specifiers,
   //        we replicate those here.

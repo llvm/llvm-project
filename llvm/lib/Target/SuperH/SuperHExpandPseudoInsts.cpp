@@ -70,7 +70,7 @@ private:
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
-  
+
   void emitStackAdj(Block &MBB, BlockIt MBBI, Register &Base, 
                     bool &BaseIsKill, RelativeAddr Addr);
 
@@ -847,9 +847,9 @@ bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
     // Load to FPUL, assuming data is fr32, then move
     // to destination register.
     BuildMI(MBB, II, DL, TII->get(SH::MOVLI), SH::R1)
-          .addConstantPoolIndex(MI.getOperand(1).getIndex());
+      .addConstantPoolIndex(MI.getOperand(1).getIndex());
     BuildMI(MBB, II, DL, TII->get(SH::LDSFPUL))
-          .addReg(SH::R1);
+      .addReg(SH::R1);
     BuildMI(MBB, II, DL, TII->get(SH::FSTS), DstReg);
     return eraseMI(MI);
   }
@@ -891,34 +891,44 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
-  auto SrcReg = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
+  int64_t Offset = MI.getOperand(1).getImm();
 
-  while (Offset > 0) {
-    if (Offset >= 16) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLL16), DstReg).addReg(SrcReg);
+  if (STI->isSH3() && Offset > 32) {
+    BuildMI(MBB, II, DL, TII->get(SH::MOVI), SH::R0)
+      .addImm(Offset);
+    BuildMI(MBB, II, DL, TII->get(SH::SHAD), DstReg)
+      .addReg(SH::R0);
+  } else {
+    while (Offset > 0) {
+      if (Offset >= 16) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLL16), DstReg)
+          .addReg(DstReg);
 
-      Offset -= 16;
+        Offset -= 16;
+        continue;
+      }
+
+      if (Offset >= 8) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLL8), DstReg)
+          .addReg(DstReg);
+
+        Offset -= 8;
+        continue;
+      }
+
+      if (Offset >= 2) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLL2), DstReg)
+          .addReg(DstReg);
+
+        Offset -= 2;
+        continue;
+      }
+
+      BuildMI(MBB, II, DL, TII->get(SH::SHLL), DstReg)
+        .addReg(DstReg);
+      Offset -= 1;
       continue;
     }
-
-    if (Offset >= 8) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLL8), DstReg).addReg(SrcReg);
-
-      Offset -= 8;
-      continue;
-    }
-
-    if (Offset >= 2) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLL2), DstReg).addReg(SrcReg);
-
-      Offset -= 2;
-      continue;
-    }
-
-    BuildMI(MBB, II, DL, TII->get(SH::SHLL), DstReg).addReg(SrcReg);
-    Offset -= 1;
-    continue;
   }
 
   return eraseMI(MI);
@@ -931,35 +941,45 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
-  auto SrcReg = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
+  int64_t Offset = MI.getOperand(1).getImm();
 
-  while (Offset > 0) {
+  if (STI->isSH3() && Offset > 32) {
+    BuildMI(MBB, II, DL, TII->get(SH::MOVI), SH::R0)
+      .addImm(-Offset);
+    BuildMI(MBB, II, DL, TII->get(SH::SHLD), DstReg)
+      .addReg(SH::R0);
+  } else {
+    while (Offset > 0) {
 
-    if (Offset >= 16) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLR16), DstReg).addReg(SrcReg);
+      if (Offset >= 16) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLR16), DstReg)
+          .addReg(DstReg);
 
-      Offset -= 16;
+        Offset -= 16;
+        continue;
+      }
+
+      if (Offset >= 8) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLR8), DstReg)
+          .addReg(DstReg);
+
+        Offset -= 8;
+        continue;
+      }
+
+      if (Offset >= 2) {
+        BuildMI(MBB, II, DL, TII->get(SH::SHLR2), DstReg)
+          .addReg(DstReg);
+
+        Offset -= 2;
+        continue;
+      }
+
+      BuildMI(MBB, II, DL, TII->get(SH::SHLR), DstReg)
+          .addReg(DstReg);
+      Offset -= 1;
       continue;
     }
-
-    if (Offset >= 8) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLR8), DstReg).addReg(SrcReg);
-
-      Offset -= 8;
-      continue;
-    }
-
-    if (Offset >= 2) {
-      BuildMI(MBB, II, DL, TII->get(SH::SHLR2), DstReg).addReg(SrcReg);
-
-      Offset -= 2;
-      continue;
-    }
-
-    BuildMI(MBB, II, DL, TII->get(SH::SHLR), DstReg).addReg(SrcReg);
-    Offset -= 1;
-    continue;
   }
 
   return eraseMI(MI);
@@ -972,12 +992,21 @@ bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
-  auto SrcReg = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
+  int64_t Offset = MI.getOperand(1).getImm();
+  auto SrcReg = MI.getOperand(2).getReg();
 
-  while (Offset > 0) {
-    BuildMI(MBB, II, DL, TII->get(SH::SHAR), DstReg).addReg(SrcReg);
-    Offset -= 1;
+  if (STI->isSH3()) {
+    BuildMI(MBB, II, DL, TII->get(SH::MOVI), SH::R0)
+      .addImm(-Offset);
+    BuildMI(MBB, II, DL, TII->get(SH::SHAD), DstReg)
+      .addReg(SH::R0)
+      .addReg(SrcReg);
+  } else {
+    while (Offset > 0) {
+      BuildMI(MBB, II, DL, TII->get(SH::SHAR), DstReg)
+        .addReg(SrcReg);
+      Offset -= 1;
+    }
   }
 
   return eraseMI(MI);
@@ -990,11 +1019,12 @@ bool SuperHExpandPseudo::expand<SH::RTLri>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
-  auto SrcReg = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
+  int64_t Offset = MI.getOperand(1).getImm();
+  auto SrcReg = MI.getOperand(2).getReg();
 
   while (Offset > 0) {
-    BuildMI(MBB, II, DL, TII->get(SH::ROTL), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::ROTL), DstReg)
+      .addReg(SrcReg);
     Offset -= 1;
   }
 
@@ -1008,11 +1038,12 @@ bool SuperHExpandPseudo::expand<SH::RTRri>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   auto DstReg = MI.getOperand(0).getReg();
-  auto SrcReg = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
+  int64_t Offset = MI.getOperand(1).getImm();
+  auto SrcReg = MI.getOperand(2).getReg();
 
   while (Offset > 0) {
-    BuildMI(MBB, II, DL, TII->get(SH::ROTR), DstReg).addReg(SrcReg);
+    BuildMI(MBB, II, DL, TII->get(SH::ROTR), DstReg)
+      .addReg(SrcReg);
     Offset -= 1;
   }
 
@@ -1037,9 +1068,26 @@ bool SuperHExpandPseudo::expand<SH::SHLrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, II, DL, TII->get(SH::SHLL)).addReg(Src1Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
+  if (STI->isSH3()) {
+    BuildMI(MBB, II, DL, TII->get(SH::SHAD), Src2Reg)
+      .addReg(Src1Reg);
+  } else {
+
+    // If a shift by 0 was requested, do nothing.
+    BuildMI(MBB, II, DL, TII->get(SH::TST))
+      .addReg(Src1Reg)
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BT))
+      .addImm(2);
+
+    // Shifting loop.
+    BuildMI(MBB, II, DL, TII->get(SH::SHLL))
+      .addReg(Src2Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::DT))
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BF))
+      .addImm(-8);
+  }
 
   return eraseMI(MI);
 }
@@ -1053,9 +1101,28 @@ bool SuperHExpandPseudo::expand<SH::SHRrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, II, DL, TII->get(SH::SHLR)).addReg(Src1Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
+  if (STI->isSH3()) {
+    BuildMI(MBB, II, DL, TII->get(SH::NEG), Src1Reg)
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::SHLD), Src2Reg)
+      .addReg(Src1Reg);
+  } else {
+
+    // If a shift by 0 was requested, do nothing.
+    BuildMI(MBB, II, DL, TII->get(SH::TST))
+      .addReg(Src1Reg)
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BT))
+      .addImm(2);
+
+    // Shifting loop.
+    BuildMI(MBB, II, DL, TII->get(SH::SHLR))
+      .addReg(Src2Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::DT))
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BF))
+      .addImm(-8);
+  }
 
   return eraseMI(MI);
 }
@@ -1069,9 +1136,28 @@ bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, II, DL, TII->get(SH::SHAR)).addReg(Src1Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
+  if (STI->isSH3()) {
+    BuildMI(MBB, II, DL, TII->get(SH::NEG), Src1Reg)
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::SHAD), Src2Reg)
+      .addReg(Src1Reg);
+  } else {
+
+    // If a shift by 0 was requested, do nothing.
+    BuildMI(MBB, II, DL, TII->get(SH::TST))
+      .addReg(Src1Reg)
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BT))
+      .addImm(2);
+
+    // Shifting loop.
+    BuildMI(MBB, II, DL, TII->get(SH::SHAR))
+      .addReg(Src2Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::DT))
+      .addReg(Src1Reg);
+    BuildMI(MBB, II, DL, TII->get(SH::BF))
+      .addImm(-8);
+  }
 
   return eraseMI(MI);
 }
@@ -1085,9 +1171,20 @@ bool SuperHExpandPseudo::expand<SH::RTLrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, II, DL, TII->get(SH::ROTL)).addReg(Src1Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
+  // If a shift by 0 was requested, do nothing.
+  BuildMI(MBB, II, DL, TII->get(SH::TST))
+    .addReg(Src1Reg)
+    .addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BT))
+    .addImm(2);
+
+  // Shifting loop.
+  BuildMI(MBB, II, DL, TII->get(SH::ROTL))
+    .addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT))
+    .addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF))
+    .addImm(-8);
 
   return eraseMI(MI);
 }
@@ -1101,9 +1198,20 @@ bool SuperHExpandPseudo::expand<SH::RTRrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, II, DL, TII->get(SH::ROTR)).addReg(Src1Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::DT)).addReg(Src2Reg);
-  BuildMI(MBB, II, DL, TII->get(SH::BF)).addImm(-8);
+  // If a shift by 0 was requested, do nothing.
+  BuildMI(MBB, II, DL, TII->get(SH::TST))
+    .addReg(Src1Reg)
+    .addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BT))
+    .addImm(2);
+
+  // Shifting loop.
+  BuildMI(MBB, II, DL, TII->get(SH::ROTR))
+    .addReg(Src2Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::DT))
+    .addReg(Src1Reg);
+  BuildMI(MBB, II, DL, TII->get(SH::BF))
+    .addImm(-8);
 
   return eraseMI(MI);
 }
