@@ -660,15 +660,12 @@ entry:
 define { i64, i64 } @not_pack(ptr %x, ptr %y, i64 %v) {
 ; CHECK-LABEL: @not_pack(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X1_P:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 1
-; CHECK-NEXT:    [[Y1_P:%.*]] = getelementptr inbounds i32, ptr [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[X1_P]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load i32, ptr [[Y]], align 4
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, ptr [[Y1_P]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.smin.i32(i32 [[X0]], i32 [[Y0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[X1]], i32 [[Y1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw i64 [[Z1]], 32
 ; CHECK-NEXT:    [[W0:%.*]] = or disjoint i64 [[S1]], [[Z0]]
@@ -698,15 +695,12 @@ entry:
 define { i64, i64 } @mixed_widths(ptr %x, ptr %y) {
 ; CHECK-LABEL: @mixed_widths(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X1_P:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 1
-; CHECK-NEXT:    [[Y1_P:%.*]] = getelementptr inbounds i32, ptr [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[X1_P]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load i32, ptr [[Y]], align 4
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, ptr [[Y1_P]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.smin.i32(i32 [[X0]], i32 [[Y0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[X1]], i32 [[Y1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw i64 [[Z1]], 32
 ; CHECK-NEXT:    [[W0:%.*]] = or disjoint i64 [[S1]], [[Z0]]

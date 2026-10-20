@@ -6,17 +6,20 @@ define float @direct(ptr %p, float %x, float %y, i64 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]], float [[Y:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[NUM:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[NUM]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[X]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[Y]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[ACC2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[X2:%.*]] = fmul float [[X]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = fmul float [[Y]], [[Y]]
-; CHECK-NEXT:    [[SX:%.*]] = call fast float @llvm.sqrt.f32(float [[X2]])
-; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float [[NUM]], [[SX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x float> [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[ACC1:%.*]] = fadd float [[ACC]], [[TMP7]]
-; CHECK-NEXT:    [[SY:%.*]] = call fast float @llvm.sqrt.f32(float [[Y2]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float [[NUM]], [[SY]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[ACC2]] = fadd float [[ACC1]], [[TMP8]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]

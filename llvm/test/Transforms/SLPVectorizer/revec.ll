@@ -542,11 +542,13 @@ define void @alt_cmp_no_reseed(<2 x i8> %x, ptr %p) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <4 x i8> [[TMP2]], <i8 127, i8 127, i8 3, i8 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
-; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
+; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <2 x i1> [[TMP12]] to <2 x i8>
 ; CHECK-NEXT:    store <2 x i8> [[TMP13]], ptr [[P1]], align 1
