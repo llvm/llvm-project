@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 using llvm::SmallVector;
@@ -937,13 +938,88 @@ static bool rangesOverlap(uintptr_t LBegin, uintptr_t LEnd, uintptr_t RBegin,
   return std::max(LBegin, RBegin) < std::min(LEnd, REnd);
 }
 
+/// Called before a FROM transfer of [HstPtr, HstPtr + Size) is issued. Saves
+/// the current host content of each attached pointer/descriptor of \p Entry
+/// that the transfer overwrites, and has it written back once the construct is
+/// synchronized:
+///
+///   struct { int *p; int x; } s;   ; s.p attached, maybe re-pointed on host
+///   Saved[&s.p] = s.p              ; before the transfer              (1)
+///   retrieve(&s, sizeof(s))        ; host s.p = device address        (2)
+///   s.p = Saved[&s.p]              ; after synchronization            (3)
+///
+/// (1) is not the content saved at attach time, which is stale once the host
+/// pointer is re-pointed (allowed since OpenMP 6.1).
+/// (1) must precede (2): a plugin may copy synchronously.
+/// (1) happens only for the first transfer of the construct overlapping a
+/// slot; a later one could read the device address that (2) put there.
+/// Slots outside the range are not saved: (2) does not overwrite them, and the
+/// program may update them concurrently.
+static void saveHostPtrsBeforeRetrieve(StateInfoTy &StateInfo,
+                                       AsyncInfoTy &AsyncInfo,
+                                       const HostDataToTargetTy &Entry,
+                                       void *HstPtr, int64_t Size) {
+  const uintptr_t Begin = reinterpret_cast<uintptr_t>(HstPtr);
+  const uintptr_t End = Begin + Size;
+  bool SavedAny = false;
+  Entry.foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+    const uintptr_t ShadowBegin =
+        reinterpret_cast<uintptr_t>(ShadowPtr.HstPtrAddr);
+    if (!rangesOverlap(Begin, End, ShadowBegin,
+                       ShadowBegin + ShadowPtr.PtrSize))
+      return OFFLOAD_SUCCESS;
+
+    if (!StateInfo.SavedHostPtrs) {
+      StateInfo.SavedHostPtrs = std::make_shared<SavedHostPtrsTy>();
+      AsyncInfo.addPostProcessingFunction(
+          [SavedHostPtrs = StateInfo.SavedHostPtrs]() { //              (3)
+            constexpr int64_t VoidPtrSize = sizeof(void *);
+            const char *Content = SavedHostPtrs->Contents.data();
+            for (const auto &[HstPtrAddr, PtrSize] : SavedHostPtrs->Ptrs) {
+              void *SavedPtr = *reinterpret_cast<void *const *>(Content);
+              if (PtrSize > VoidPtrSize)
+                ODBG(ODT_Mapping)
+                    << "Restoring host descriptor " << HstPtrAddr << " ("
+                    << PtrSize << " bytes) to its content before the "
+                    << "transfer, containing pointee address " << SavedPtr;
+              else
+                ODBG(ODT_Mapping)
+                    << "Restoring host pointer " << HstPtrAddr
+                    << " to its value before the transfer " << SavedPtr;
+              std::memcpy(HstPtrAddr, Content, PtrSize);
+              Content += PtrSize;
+            }
+            return OFFLOAD_SUCCESS;
+          });
+    }
+
+    SavedHostPtrsTy &Saved = *StateInfo.SavedHostPtrs;
+    const uintptr_t ShadowEnd = ShadowBegin + ShadowPtr.PtrSize;
+    if (llvm::any_of(Saved.TransferRanges, [&](const auto &Range) {
+          return rangesOverlap(Range.first, Range.second, ShadowBegin,
+                               ShadowEnd);
+        }))
+      return OFFLOAD_SUCCESS;
+
+    const char *HstContent = //                                           (1)
+        reinterpret_cast<const char *>(ShadowPtr.HstPtrAddr);
+    Saved.Ptrs.emplace_back(ShadowPtr.HstPtrAddr, ShadowPtr.PtrSize);
+    Saved.Contents.append(HstContent, HstContent + ShadowPtr.PtrSize);
+    SavedAny = true;
+    return OFFLOAD_SUCCESS;
+  });
+  if (SavedAny)
+    StateInfo.SavedHostPtrs->TransferRanges.emplace_back(Begin, End);
+}
+
 } // namespace
 
 /// Applies the necessary post-processing procedures to entries listed in \p
 /// EntriesInfo after the execution of all device side operations from a target
-/// data end. This includes the update of pointers at the host and removal of
-/// device buffer when needed. It returns OFFLOAD_FAIL or OFFLOAD_SUCCESS
-/// according to the successfulness of the operations.
+/// data end. This includes the removal of device buffer when needed; host
+/// pointers are restored by saveHostPtrsBeforeRetrieve(). It returns
+/// OFFLOAD_FAIL or OFFLOAD_SUCCESS according to the successfulness of the
+/// operations.
 [[nodiscard]] static int
 postProcessingTargetDataEnd(DeviceTy *Device,
                             SmallVector<PostProcessingInfo> &EntriesInfo) {
@@ -981,33 +1057,6 @@ postProcessingTargetDataEnd(DeviceTy *Device,
       // to the HDTT map and unset the deletion flag.
       HDTTMap.destroy();
       DelEntry = false;
-    }
-
-    // If we copied back to the host a struct/array containing pointers, or
-    // Fortran descriptors (which are larger than a "void *"), we need to
-    // restore the original host pointer/descriptor values from their shadow
-    // copies. If the struct is going to be deallocated, remove any remaining
-    // shadow pointer entries for this struct.
-    const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
-    if (HasFrom) {
-      Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
-        constexpr int64_t VoidPtrSize = sizeof(void *);
-        if (ShadowPtr.PtrSize > VoidPtrSize) {
-          ODBG(ODT_Mapping)
-              << "Restoring host descriptor " << (void *)ShadowPtr.HstPtrAddr
-              << " to its original content (" << ShadowPtr.PtrSize
-              << " bytes), containing pointee address "
-              << (void *)ShadowPtr.HstPtrContent.data();
-        } else {
-          ODBG(ODT_Mapping)
-              << "Restoring host pointer " << (void *)ShadowPtr.HstPtrAddr
-              << " to its original value "
-              << (void *)ShadowPtr.HstPtrContent.data();
-        }
-        std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
-                    ShadowPtr.PtrSize);
-        return OFFLOAD_SUCCESS;
-      });
     }
 
     // Give up the lock as we either don't need it anymore (e.g., done with
@@ -1193,6 +1242,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
+      saveHostPtrsBeforeRetrieve(*StateInfo, AsyncInfo, *Entry, HstPtr, Size);
       int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
                                     /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
@@ -1348,7 +1398,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
 static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                                 void *HstPtrBegin, int64_t ArgSize,
-                                int64_t ArgType, AsyncInfoTy &AsyncInfo) {
+                                int64_t ArgType, AsyncInfoTy &AsyncInfo,
+                                StateInfoTy &StateInfo) {
   TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
       HstPtrBegin, ArgSize, /*UpdateRefCount=*/false,
       /*UseHoldRefCount=*/false, /*MustContain=*/true);
@@ -1432,45 +1483,14 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
   if (ArgType & OMP_TGT_MAPTYPE_FROM) {
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
+    if (auto *Entry = TPR.getEntry())
+      saveHostPtrsBeforeRetrieve(StateInfo, AsyncInfo, *Entry, HstPtrBegin,
+                                 ArgSize);
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
                                   TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
-    }
-
-    // Wait for device-to-host memcopies for whole struct to complete,
-    // before restoring the correct host pointer/descriptor.
-    if (auto *Entry = TPR.getEntry()) {
-      AsyncInfo.addPostProcessingFunction([=]() -> int {
-        int Ret = Entry->foreachShadowPointerInfo(
-            [&](const ShadowPtrInfoTy &ShadowPtr) {
-              constexpr int64_t VoidPtrSize = sizeof(void *);
-              if (ShadowPtr.PtrSize > VoidPtrSize) {
-                ODBG(ODT_Mapping)
-                    << "Restoring host descriptor " << ShadowPtr.HstPtrAddr
-                    << " to its original content (" << ShadowPtr.PtrSize
-                    << " bytes), containing pointee address "
-                    << static_cast<const void *>(
-                           ShadowPtr.HstPtrContent.data());
-              } else {
-                ODBG(ODT_Mapping)
-                    << "Restoring host pointer " << ShadowPtr.HstPtrAddr
-                    << " to its original value "
-                    << static_cast<const void *>(
-                           ShadowPtr.HstPtrContent.data());
-              }
-              std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
-                          ShadowPtr.PtrSize);
-              return OFFLOAD_SUCCESS;
-            });
-        Entry->unlock();
-        if (Ret != OFFLOAD_SUCCESS) {
-          ODBG(ODT_Mapping) << "Updating shadow map failed";
-          return Ret;
-        }
-        return OFFLOAD_SUCCESS;
-      });
     }
   }
 
@@ -1482,7 +1502,8 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
                                    __tgt_target_non_contig *NonContig,
                                    uint64_t Size, int64_t ArgType,
                                    int CurrentDim, int DimSize, uint64_t Offset,
-                                   AsyncInfoTy &AsyncInfo) {
+                                   AsyncInfoTy &AsyncInfo,
+                                   StateInfoTy &StateInfo) {
   int Ret = OFFLOAD_SUCCESS;
   if (CurrentDim < DimSize) {
     for (unsigned int I = 0; I < NonContig[CurrentDim].Count; ++I) {
@@ -1493,7 +1514,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
       if (CurrentDim != DimSize - 1 || I == 0) {
         Ret = targetDataNonContiguous(Loc, Device, ArgsBase, NonContig, Size,
                                       ArgType, CurrentDim + 1, DimSize,
-                                      Offset + CurOffset, AsyncInfo);
+                                      Offset + CurOffset, AsyncInfo, StateInfo);
         // Stop the whole process if any contiguous piece returns anything
         // other than OFFLOAD_SUCCESS.
         if (Ret != OFFLOAD_SUCCESS)
@@ -1505,7 +1526,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
     ODBG(ODT_Mapping) << "Transfer of non-contiguous : host ptr " << Ptr
                       << " offset " << Offset << " len " << Size;
     Ret = targetDataContiguous(Loc, Device, ArgsBase, Ptr, Size, ArgType,
-                               AsyncInfo);
+                               AsyncInfo, StateInfo);
   }
   return Ret;
 }
@@ -1526,6 +1547,8 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
                      StateInfoTy *StateInfo, bool FromMapper) {
+  assert(StateInfo && "StateInfo is required for targetDataUpdate for "
+                      "restoring host pointers after FROM transfers");
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
@@ -1541,7 +1564,7 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Ret = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
                                  ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
-                                 targetDataUpdate);
+                                 targetDataUpdate, StateInfo);
 
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Call to targetDataUpdate via targetDataMapper for custom "
@@ -1570,12 +1593,13 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       uint64_t Size = FirstMergedDim.Count * FirstMergedDim.Stride;
       ODBG(ODT_DataTransfer) << "Transfer size " << Size;
       ODBG(ODT_DataTransfer) << "Base Ptr " << ArgsBase[I];
-      Ret = targetDataNonContiguous(
-          Loc, Device, ArgsBase[I], NonContig, Size, ArgTypes[I],
-          /*current_dim=*/0, DimSize - MergedDim, /*offset=*/0, AsyncInfo);
+      Ret = targetDataNonContiguous(Loc, Device, ArgsBase[I], NonContig, Size,
+                                    ArgTypes[I],
+                                    /*current_dim=*/0, DimSize - MergedDim,
+                                    /*offset=*/0, AsyncInfo, *StateInfo);
     } else {
       Ret = targetDataContiguous(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
-                                 ArgTypes[I], AsyncInfo);
+                                 ArgTypes[I], AsyncInfo, *StateInfo);
     }
     if (Ret == OFFLOAD_FAIL)
       return OFFLOAD_FAIL;
