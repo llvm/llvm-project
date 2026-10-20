@@ -120,9 +120,7 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_Memtag:
-#if 0
     Symbol->setMemtag(true);
-#endif
     break;
 
   default:

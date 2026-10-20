@@ -152,38 +152,6 @@ define ptr @test_randomstorez(ptr %p, i64 %v) {
   ret ptr %1
 }
 
-; --- 0xfc30: memtag.randommask ---
-; CHECK-LABEL: test_randommask:
-; CHECK: local.get 0
-; CHECK: local.get 1
-; CHECK: memtag.randommask 0
-define ptr @test_randommask(ptr %p, i64 %m) {
-  %1 = call ptr @llvm.wasm.memtag.randommask.i64(i32 0, ptr %p, i64 %m)
-  ret ptr %1
-}
-
-; --- 0xfc31: memtag.randommaskstore ---
-; CHECK-LABEL: test_randommaskstore:
-; CHECK: local.get 0
-; CHECK: local.get 1
-; CHECK: local.get 2
-; CHECK: memtag.randommaskstore 0
-define ptr @test_randommaskstore(ptr %p, i64 %v, i64 %m) {
-  %1 = call ptr @llvm.wasm.memtag.randommaskstore.i64(i32 0, ptr %p, i64 %v, i64 %m)
-  ret ptr %1
-}
-
-; --- 0xfc32: memtag.randommaskstorez ---
-; CHECK-LABEL: test_randommaskstorez:
-; CHECK: local.get 0
-; CHECK: local.get 1
-; CHECK: local.get 2
-; CHECK: memtag.randommaskstorez 0
-define ptr @test_randommaskstorez(ptr %p, i64 %v, i64 %m) {
-  %1 = call ptr @llvm.wasm.memtag.randommaskstorez.i64(i32 0, ptr %p, i64 %v, i64 %m)
-  ret ptr %1
-}
-
 ; --- 0xfc33: memtag.add ---
 ; CHECK-LABEL: test_add:
 ; CHECK: local.get 0
@@ -192,30 +160,6 @@ define ptr @test_randommaskstorez(ptr %p, i64 %v, i64 %m) {
 ; CHECK: memtag.add 0
 define ptr @test_add(ptr %p, i64 %o, i64 %t) {
   %1 = call ptr @llvm.wasm.memtag.add.i64(i32 0, ptr %p, i64 %o, i64 %t)
-  ret ptr %1
-}
-
-; --- 0xfc34: memtag.addstore ---
-; CHECK-LABEL: test_addstore:
-; CHECK: local.get 0
-; CHECK: local.get 1
-; CHECK: local.get 2
-; CHECK: local.get 3
-; CHECK: memtag.addstore 0
-define ptr @test_addstore(ptr %p, i64 %v, i64 %o, i64 %t) {
-  %1 = call ptr @llvm.wasm.memtag.addstore.i64(i32 0, ptr %p, i64 %v, i64 %o, i64 %t)
-  ret ptr %1
-}
-
-; --- 0xfc35: memtag.addstorez ---
-; CHECK-LABEL: test_addstorez:
-; CHECK: local.get 0
-; CHECK: local.get 1
-; CHECK: local.get 2
-; CHECK: local.get 3
-; CHECK: memtag.addstorez 0
-define ptr @test_addstorez(ptr %p, i64 %v, i64 %o, i64 %t) {
-  %1 = call ptr @llvm.wasm.memtag.addstorez.i64(i32 0, ptr %p, i64 %v, i64 %o, i64 %t)
   ret ptr %1
 }
 
@@ -271,12 +215,7 @@ declare void @llvm.wasm.memtag.storez.i64(i32, ptr, i64)
 declare ptr @llvm.wasm.memtag.random(i32, ptr)
 declare ptr @llvm.wasm.memtag.randomstore.i64(i32, ptr, i64)
 declare ptr @llvm.wasm.memtag.randomstorez.i64(i32, ptr, i64)
-declare ptr @llvm.wasm.memtag.randommask.i64(i32, ptr, i64)
-declare ptr @llvm.wasm.memtag.randommaskstore.i64(i32, ptr, i64, i64)
-declare ptr @llvm.wasm.memtag.randommaskstorez.i64(i32, ptr, i64, i64)
 declare ptr @llvm.wasm.memtag.add.i64(i32, ptr, i64, i64)
-declare ptr @llvm.wasm.memtag.addstore.i64(i32, ptr, i64, i64, i64)
-declare ptr @llvm.wasm.memtag.addstorez.i64(i32, ptr, i64, i64, i64)
 declare ptr @llvm.wasm.memtag.hint.i64(i32, ptr, ptr, i64)
 declare ptr @llvm.wasm.memtag.hintstore.i64(i32, ptr, i64, ptr, i64)
 declare ptr @llvm.wasm.memtag.hintstorez.i64(i32, ptr, i64, ptr, i64)

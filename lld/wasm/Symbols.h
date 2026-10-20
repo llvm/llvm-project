@@ -88,6 +88,7 @@ public:
   bool isWeak() const;
   bool isHidden() const;
   bool isTLS() const;
+  bool isMemtag() const;
 
   // Returns true if this symbol exists in a discarded (due to COMDAT) section
   bool isDiscarded() const;

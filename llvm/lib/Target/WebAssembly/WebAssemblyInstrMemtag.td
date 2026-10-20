@@ -147,34 +147,6 @@ defm MEMTAG_RANDOMSTOREZ_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, 
                     "memtag.randomstorez\t$tableidx",
                     0xfc2f>;
 
-let hasSideEffects = 1 in
-defm MEMTAG_RANDOMMASK_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$mask),
-                    (outs), (ins i32imm:$tableidx),
-                    [(set rc:$dst,
-                        (int_wasm_memtag_randommask (i32 imm:$tableidx), rc:$src, rc:$mask))],
-                    "memtag.randommask\t$dst, $tableidx, $src, $mask",
-                    "memtag.randommask\t$tableidx",
-                    0xfc30>;
-
-
-let hasSideEffects = 1, mayStore = 1 in
-defm MEMTAG_RANDOMMASKSTORE_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$mask),
-                    (outs), (ins i32imm:$tableidx),
-                    [(set rc:$dst,
-                        (int_wasm_memtag_randommaskstore (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$mask))],
-                    "memtag.randommaskstore\t$dst, $tableidx, $src, $b16, $mask",
-                    "memtag.randommaskstore\t$tableidx",
-                    0xfc31>;
-
-let hasSideEffects = 1, mayStore = 1 in
-defm MEMTAG_RANDOMMASKSTOREZ_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$mask),
-                    (outs), (ins i32imm:$tableidx),
-                    [(set rc:$dst,
-                        (int_wasm_memtag_randommaskstorez (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$mask))],
-                    "memtag.randommaskstorez\t$dst, $src, $tableidx, $b16, $mask",
-                    "memtag.randommaskstorez\t$tableidx",
-                    0xfc32>;
-
 defm MEMTAG_ADD_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$addroffset, rc:$tagoffset),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -182,24 +154,6 @@ defm MEMTAG_ADD_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$addro
                     "memtag.add\t$dst, $tableidx, $src, $addroffset, $tagoffset",
                     "memtag.add\t$tableidx",
                     0xfc33>;
-
-let mayStore = 1 in
-defm MEMTAG_ADDSTORE_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addroffset, rc:$tagoffset),
-                    (outs), (ins i32imm:$tableidx),
-                    [(set rc:$dst,
-                        (int_wasm_memtag_addstore (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addroffset, rc:$tagoffset))],
-                    "memtag.addstore\t$dst, $tableidx, $src, $b16, $addroffset, $tagoffset",
-                    "memtag.addstore\t$tableidx",
-                    0xfc34>;
-
-let mayStore = 1 in
-defm MEMTAG_ADDSTOREZ_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addroffset, rc:$tagoffset),
-                    (outs), (ins i32imm:$tableidx),
-                    [(set rc:$dst,
-                        (int_wasm_memtag_addstorez (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addroffset, rc:$tagoffset))],
-                    "memtag.addstorez\t$dst, $tableidx, $src, $b16, $addroffset, $tagoffset",
-                    "memtag.addstorez\t$tableidx",
-                    0xfc35>;
 
 defm MEMTAG_HINT_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$hintaddr, rc:$index),
                     (outs), (ins i32imm:$tableidx),
