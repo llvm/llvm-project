@@ -1011,6 +1011,50 @@ void OmpStructureChecker::CheckDirectiveSpelling(
   }
 }
 
+void OmpStructureChecker::CheckCompoundDirective(
+    const parser::OmpDirectiveSpecification *beginSpec,
+    const parser::OmpDirectiveSpecification *endSpec) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(DEREF(beginSpec).DirId())};
+  if (leafs.size() == 1) {
+    return;
+  }
+
+  auto findClause{[&](llvm::omp::Clause clauseId) {
+    if (auto *clause{parser::omp::FindClause(*beginSpec, clauseId)}) {
+      return clause;
+    }
+    if (endSpec) {
+      if (auto *clause{parser::omp::FindClause(*endSpec, clauseId)}) {
+        return clause;
+      }
+    }
+    return static_cast<const parser::OmpClause *>(nullptr);
+  }};
+
+  if (leafs[0] == llvm::omp::Directive::OMPD_parallel && version <= 52) {
+    std::string parName{
+        GetUpperName(llvm::omp::Directive::OMPD_parallel, version)};
+    parser::CharBlock dirSource{beginSpec->DirName().source};
+    auto compTxt{
+        "If a compound directive starts with %s, %s clause must not be specified"_err_en_US};
+    auto clauseTxt{"The clause is specified here"_en_US};
+
+    if (auto *clause{findClause(llvm::omp::Clause::OMPC_nowait)}) {
+      context_
+          .Say(dirSource, compTxt, parName,
+              GetUpperName(llvm::omp::Clause::OMPC_nowait, version))
+          .Attach(clause->source, clauseTxt);
+    }
+    if (auto *clause{findClause(llvm::omp::Clause::OMPC_in_reduction)}) {
+      context_
+          .Say(dirSource, compTxt, parName,
+              GetUpperName(llvm::omp::Clause::OMPC_in_reduction, version))
+          .Attach(clause->source, clauseTxt);
+    }
+  }
+}
+
 void OmpStructureChecker::CheckDirectiveDeprecation(
     const parser::OpenMPConstruct &x) {
   parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
@@ -1336,12 +1380,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
             std::is_base_of_v<parser::OmpBlockConstruct, TypeS> ||
             std::is_same_v<parser::OpenMPSectionsConstruct, TypeS>) {
           if (auto &endSpec{s.EndDir()}) {
+            CheckCompoundDirective(&s.BeginDir(), &*endSpec);
             VerifyClauseSyntax(&s.BeginDir(), &*endSpec);
             AddClauses(llvm::iterator_range(s.BeginDir().Clauses().v),
                 llvm::iterator_range(endSpec->Clauses().v));
             return;
           }
         }
+        CheckCompoundDirective(dirStack_.back(), nullptr);
         VerifyClauseSyntax(dirStack_.back(), nullptr);
         AddClauses(llvm::iterator_range(dirStack_.back()->Clauses().v),
             llvm::iterator_range(std::list<parser::OmpClause>{}));

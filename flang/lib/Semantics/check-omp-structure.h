@@ -400,6 +400,9 @@ private:
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
+  void CheckCompoundDirective(
+      const parser::OmpDirectiveSpecification *beginSpec,
+      const parser::OmpDirectiveSpecification *endSpec);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
   void CheckDirectivePureSince(parser::CharBlock source,
       llvm::omp::Directive id, const char *where,
