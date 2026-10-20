@@ -85,7 +85,7 @@ interface ModuleSymbolsArguments {
   moduleName: string;
 
   /**
-   * The index of the first symbol to return. If omitted starts at 0.
+   * The index of the first symbol to return. If omitted, starts at 0.
    * @format uint32
    */
   startIndex?: number;

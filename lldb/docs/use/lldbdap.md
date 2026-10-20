@@ -117,7 +117,7 @@ for more information.
 For more information, see
 [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
 
-`lldb-dap` also extends the protocol with a few LLDB specific requests and
+`lldb-dap` also extends the protocol with a few LLDB-specific requests and
 properties. They are specified in
 [LLDB-DAP Extensions](../resources/lldbdap-extensions.md).
 
