@@ -18,6 +18,7 @@ Implementation Status
    fcntl
    fenv
    float
+   ftw
    glob
    inttypes
    libgen
