@@ -222,22 +222,51 @@ class SROA {
   /// allocas.
   SmallMapVector<SelectInst *, RewriteableMemOps, 8> SelectsToRewrite;
 
-  /// Select instructions that use an alloca and are subsequently loaded can be
-  /// rewritten to load both input pointers and then select between the result,
-  /// allowing the load of the alloca to be promoted.
-  /// From this:
-  ///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
-  ///   %V = load <type>, ptr %P2
+  /// Check whether the loads and stores of the select can be speculatively
+  /// executed or predicated (if \p PreserveCFG is false).
+  ///
+  /// Speculation converts a load like
+  ///
+  ///   %P = select i1 %cond, ptr %Alloca, ptr %Other
+  ///   %V = load <type>, ptr %P
+  ///
   /// to:
+  ///
   ///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
   ///   %V2 = load <type>, ptr %Other
   ///   %V = select i1 %cond, <type> %V1, <type> %V2
   ///
-  /// We can do this to a select if its only uses are loads
-  /// and if either the operand to the select can be loaded unconditionally,
-  ///        or if we are allowed to perform CFG modifications.
+  /// For stores and some kinds of loads that can't be speculated, we need to
+  /// predicate. Predication changes the CFG, so it requires \p PreserveCFG to
+  /// be false. Predication converts a store like:
+  ///
+  ///   block:
+  ///     %P = select i1 %cond, ptr %Alloca, ptr %Other
+  ///     store <type> %Value, ptr %P
+  ///
+  /// to:
+  ///
+  ///   block:
+  ///     br i1 %cond, label %block.then, label %block.else
+  ///
+  ///   block.then:
+  ///     store <type> %Value, ptr %Alloca
+  ///     br label %block.cont
+  ///
+  ///   block.else:
+  ///     store <type> %Value, ptr %Other
+  ///     br label %block.cont
+  ///
+  /// Returns `std::nullopt` when
+  /// - the select has users other than loads or stores, or
+  /// - at least one of the loads and stores is volatile, or
+  /// - the loads and stores can't be speculated and can't be predicated because
+  ///   we're not allowed to modify the CFG. (\p PreserveCFG is true)
+  ///
+  /// Otherwise the stores and loads in the returned vector can either be
+  /// speculated or predicated.
   static std::optional<RewriteableMemOps>
-  isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
+  isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG);
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
@@ -1848,14 +1877,12 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
 }
 
 std::optional<RewriteableMemOps>
-SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
     if (auto *Store = dyn_cast<StoreInst>(U)) {
-      // Note that atomic stores can be transformed; atomic semantics do not
-      // have any meaning for a local alloca. Stores are not speculatable,
-      // however, so if we can't turn it into a predicated store, we are done.
+      // We don't care about atomicity of stores as they're always predicated.
       if (Store->isVolatile() || PreserveCFG)
         return {}; // Give up on this `select`.
       Ops.emplace_back(Store);
@@ -1864,15 +1891,18 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
 
     auto *LI = dyn_cast<LoadInst>(U);
 
-    // Note that atomic loads can be transformed;
-    // atomic semantics do not have any meaning for a local alloca.
     if (!LI || LI->isVolatile())
       return {}; // Give up on this `select`.
 
     PossiblySpeculatableLoad Load(LI);
-    if (!LI->isSimple()) {
-      // If the `load` is not simple, we can't speculatively execute it,
-      // but we could handle this via a CFG modification. But can we?
+
+    // Atomic loads need to be predicated: speculation emits plain loads, which
+    // would drop the atomicity of the load when one of the hands is non-local,
+    // introducing a race.
+    // We could allow this when both hands are allocas (atomicity doesn't mean
+    // anything on allocas), but for now we give up if we're not allowed to
+    // predicate.
+    if (!LI->isSimple()) { // or `LI->isAtomic()`, `isVolatile` already checked
       if (PreserveCFG)
         return {}; // Give up on this `select`.
       Ops.emplace_back(Load);
@@ -5806,7 +5836,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   NewSelectsToRewrite.reserve(SelectUsers.size());
   for (SelectInst *Sel : SelectUsers) {
     std::optional<RewriteableMemOps> Ops =
-        isSafeSelectToSpeculate(*Sel, PreserveCFG);
+        isSafeSelectToSpeculateOrPredicate(*Sel, PreserveCFG);
     if (!Ops) {
       Promotable = false;
       break;

@@ -278,6 +278,10 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Clang no longer crashes on unknown command-line argument when
+  `-fdiagnostics-format=sarif` is passed
+  (#GH233241).
+
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
 - `clang-scan-deps` now reports the directories whose listing a module depends
@@ -1195,6 +1199,11 @@ features cannot lower the translation-unit ABI level;
   libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
   The `-nogpuinc` option disables this path together with the other HIP include
   paths.
+
+- Clang now rejects RTTI operations (`typeid` and `dynamic_cast`) in HIP and
+  CUDA device code. Previously these were silently ignored, potentially causing
+  link-time failures. `dynamic_cast<void*>` is still allowed because it does not
+  use RTTI.
 
 #### CUDA Support
 
