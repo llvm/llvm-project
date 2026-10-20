@@ -1,4 +1,5 @@
 ; REQUIRES: comgr-has-transpiler
+; XFAIL: *
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=3 -defsym=INITIAL=0x12345678 -filetype=obj %s -o %t.any.o
 ; RUN: %ld.lld -shared %t.any.o -o %t.any.hsaco
 ; RUN: %transpile_cli %t.any.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ECC

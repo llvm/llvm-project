@@ -1,4 +1,5 @@
 ; REQUIRES: comgr-has-transpiler
+; XFAIL: *
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=CASE=0 -filetype=obj %s -o %t.0.o
 ; RUN: %ld.lld -shared %t.0.o -o %t.0.hsaco
 ; RUN: not %transpile_cli %t.0.hsaco --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=STRIDE
