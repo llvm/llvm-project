@@ -173,6 +173,9 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
   // Different runtime conditions share a trait, so compare them as well.
+  // A runtime condition can be left out of the traits but keep its key.
+  if (!VMI0.UserCondition.empty() && VMI0.UserCondition != VMI1.UserCondition)
+    return false;
   for (TraitProperty Property :
        {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
         TraitProperty::user_condition_unknown})

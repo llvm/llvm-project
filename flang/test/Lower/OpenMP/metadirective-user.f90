@@ -637,6 +637,41 @@ subroutine test_distinct_conditions_match_none(a, b)
   !$omp &      implementation={extension(match_none)}: taskwait)
 end subroutine
 
+! Under match_any, the first WHEN also matches through `vendor(llvm)` when `a` is
+! false. Both score 3 and the conditions differ, so TASKYIELD is always selected.
+! CHECK-LABEL: func.func @_QPtest_distinct_conditions_match_any(
+! CHECK-NOT:     omp.taskwait
+! CHECK:         omp.taskyield
+! CHECK-NOT:     omp.taskwait
+! CHECK:         return
+subroutine test_distinct_conditions_match_any(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      taskyield) &
+  !$omp & when(user={condition(b)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(1): llvm), extension(match_any)}: &
+  !$omp &      taskwait)
+end subroutine
+
+! A constant condition is different from a runtime condition.
+! CHECK-LABEL: func.func @_QPtest_constant_and_runtime_conditions_match_any(
+! CHECK-NOT:     omp.taskwait
+! CHECK:         omp.taskyield
+! CHECK-NOT:     omp.taskwait
+! CHECK:         return
+subroutine test_constant_and_runtime_conditions_match_any(b)
+  logical, intent(in) :: b
+  !$omp metadirective &
+  !$omp & when(user={condition(.true.)}, &
+  !$omp &      implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      taskyield) &
+  !$omp & when(user={condition(b)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(1): llvm), extension(match_any)}: &
+  !$omp &      taskwait)
+end subroutine
+
 ! Constant conditions are compared by truth value, whatever their kind.
 ! CHECK-LABEL: func.func @_QPtest_constant_condition_kinds(
 ! CHECK-NOT:     omp.taskyield

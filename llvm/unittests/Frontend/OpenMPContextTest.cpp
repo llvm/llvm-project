@@ -375,6 +375,20 @@ TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
   A.ScoreMap[TraitProperty::implementation_vendor_llvm] = Five;
   EXPECT_EQ(Best(A, B), 0);
   EXPECT_EQ(Best(B, A), 1);
+
+  // A runtime condition left out of the traits is still compared by its key.
+  VariantMatchInfo C;
+  C.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  C.UserCondition = "a";
+  EXPECT_EQ(Best(C, B), 0);
+  EXPECT_EQ(Best(B, C), 0);
+  C.UserCondition = "b";
+  EXPECT_EQ(Best(C, B), 1);
+
+  // A constant condition is different from a runtime condition.
+  C.UserCondition = "";
+  C.addTrait(TraitProperty::user_condition_true, "");
+  EXPECT_EQ(Best(C, B), 0);
 }
 
 } // namespace
