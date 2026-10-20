@@ -5123,13 +5123,25 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
         return InstructionCost::getInvalid();
 
-  if (CtxI && CtxI->getOpcode() == Opcode && CtxI->hasOneUse() &&
+  if (CtxI && CtxI->getOpcode() == Opcode && !CtxI->use_empty() &&
       useNeonVector(Ty)) {
     // The Ands of a bit select are folded into the BSL that the Or becomes.
     Instruction *MainAnd, *OtherAnd;
     Value *A, *B;
-    if (Opcode == Instruction::And &&
+    if (Opcode == Instruction::And && CtxI->hasOneUse() &&
         matchBSL(CtxI->user_back(), MainAnd, OtherAnd, A, B))
+      return 0;
+
+    // A Not is folded into the BIC, ORN or BSL of each And/Or using it, unless
+    // that And/Or negates both of its operands.
+    if (match(CtxI, m_Not(m_Value())) &&
+        all_of(CtxI->users(), [&](const User *U) {
+          const auto *UI = cast<Instruction>(U);
+          return is_contained({Instruction::And, Instruction::Or},
+                              UI->getOpcode()) &&
+                 UI->getParent() == CtxI->getParent() &&
+                 !match(UI, m_BinOp(m_Not(m_Value()), m_Not(m_Value())));
+        }))
       return 0;
   }
 
