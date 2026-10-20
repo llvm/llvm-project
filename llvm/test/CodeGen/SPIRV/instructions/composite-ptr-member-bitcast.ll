@@ -3,10 +3,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefix=UNTYPED
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 
-; A pointer extracted from, or inserted into, a composite has the type of the
-; composite member, which can differ from the type its uses expect.
-; OpCompositeExtract and OpCompositeInsert require the object type to match the
-; member type exactly, so the pointer is bitcast at the use instead.
+; OpCompositeExtract results and OpCompositeInsert objects must match the
+; composite member's type. Typed pointers need OpBitcast where pointee types
+; differ; untyped pointers need no casts.
 
 ; UNTYPED-NOT: OpBitcast
 
