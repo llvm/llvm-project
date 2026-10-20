@@ -12,8 +12,8 @@
 ! RUN:   -J %t %t/consumer.f90 -o - | FileCheck %t/consumer.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   %t/cleanup.f90 -o - | FileCheck %t/cleanup.f90
-! RUN: %flang_fc1 -emit-llvm -O2 -fopenmp -fopenmp-version=52 \
-! RUN:   %t/cleanup.f90 -o - | FileCheck %t/cleanup.f90 --check-prefix=LLVM
+! RUN: %flang_fc1 -emit-fir -O2 -fopenmp -fopenmp-version=52 \
+! RUN:   %t/cleanup.f90 -o - | FileCheck %t/cleanup.f90 --check-prefix=FIR
 
 !--- maps.f90
 subroutine declare_mapper_mapper_references()
@@ -373,5 +373,16 @@ end
 ! CHECK:   %[[IT:.*]] = omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[N]] step
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
-! LLVM: define void @declare_mapper_paren_range_()
-! LLVM: define void @declare_mapper_range_cleanup_()
+! The -O2 HLFIR-to-FIR pipeline adds no control flow to the mapper regions.
+! FIR-LABEL: omp.declare_mapper @_QQFdeclare_mapper_range_cleanupm
+! FIR-NOT:     {{fir\.(if|do_loop|iterate_while)}}
+! FIR:         fir.call @_QPextent_of
+! FIR-NOT:     {{fir\.(if|do_loop|iterate_while)}}
+! FIR:         omp.declare_mapper.info map_iterated
+
+! FIR-LABEL: omp.declare_mapper @_QQFdeclare_mapper_paren_rangem
+! FIR-NOT:     {{fir\.(if|do_loop|iterate_while)}}
+! FIR:         %[[N:.*]] = fir.no_reassoc
+! FIR:         omp.iterator(%{{[^:]+}}: i32) = (%{{[^ ]+}} to %[[N]] step
+! FIR-NOT:     {{fir\.(if|do_loop|iterate_while)}}
+! FIR:         omp.declare_mapper.info map_iterated
