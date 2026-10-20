@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
@@ -83,9 +84,18 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
   OS << formatv("/// @brief {0}\n", F.getDesc());
   OS << CommentsBreak;
 
+  // Details starting with "- " are bullets, anything else is a paragraph.
   OS << "/// @details\n";
-  for (auto &Detail : F.getDetails()) {
-    OS << formatv("///    - {0}\n", Detail);
+  bool PrevWasBullet = false;
+  for (auto [I, Detail] : llvm::enumerate(F.getDetails())) {
+    bool IsBullet = Detail.starts_with("- ");
+    if (I > 0 && (!IsBullet || !PrevWasBullet))
+      OS << "///\n";
+    if (IsBullet)
+      OS << formatv("///    - {0}\n", Detail.drop_front(2));
+    else
+      OS << formatv("///    {0}\n", Detail);
+    PrevWasBullet = IsBullet;
   }
   OS << CommentsBreak;
 

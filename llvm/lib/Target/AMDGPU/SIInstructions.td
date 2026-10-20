@@ -3741,12 +3741,14 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
-  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001))), lo16)
+  (EXTRACT_SUBREG (i32 (V_PERM_B32_e64  (i32 0), (lo16_to_vgpr32 VGPR_16:$a),
+                  (S_MOV_B32 (i32 0x0c0c0001)))), lo16)
 >;
 
 def : GCNPat <
   (i32 (zext (bswap i16:$a))),
-  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+  (V_PERM_B32_e64  (i32 0), (lo16_to_vgpr32 VGPR_16:$a),
+            (S_MOV_B32 (i32 0x0c0c0001)))
 >;
 }
 
@@ -4386,7 +4388,7 @@ def : GCNPat<
 // the ignored src1.
 def : GCNPat<
   (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
-  (S_MOV_B32 SReg_32:$src)
+  (S_MOV_B32 (i32 imm:$src))
 >;
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {

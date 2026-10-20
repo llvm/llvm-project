@@ -3768,6 +3768,7 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"wfxt"}, {AArch64::FeatureWFxT}},
     {{"cflt"}, {AArch64::FeatureCFLT}},
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
+    {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -6041,6 +6042,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
   case Match_InvalidMemoryIndexed16UImm6:
     return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
+  case Match_InvalidMemoryIndexed32UImm8:
+    return Error(Loc, "index must be a multiple of 32 in range [0, 8160].");
   case Match_InvalidMemoryIndexed4UImm6:
     return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
   case Match_InvalidMemoryIndexed2UImm6:
@@ -6888,6 +6891,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed4UImm6:
   case Match_InvalidMemoryIndexed8UImm6:
   case Match_InvalidMemoryIndexed16UImm6:
+  case Match_InvalidMemoryIndexed32UImm8:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm8:
