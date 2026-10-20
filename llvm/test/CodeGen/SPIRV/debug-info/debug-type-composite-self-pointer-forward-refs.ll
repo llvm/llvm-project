@@ -1,4 +1,4 @@
-; RUN: llc --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV --implicit-check-not=DebugTypeMember
 ; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=true -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=FWD
 ; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=true -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
@@ -6,21 +6,17 @@
 ; struct S { int x; struct S *next; };
 ;
 ; Without SPV_KHR_relaxed_extended_instruction the back edge is in progress
-; while S is open, so S lists only member x. Once S and the pointer exist, the
-; later walk emits member next. With the extension and
-; -spirv-debug-scope-forward-refs, the pointer is
+; while S is open, so S lists only member x, and member next is not emitted.
+; With the extension and -spirv-debug-scope-forward-refs, the pointer is
 ; OpExtInstWithForwardRefsKHR naming S, and both members are emitted.
 
 ; CHECK-SPIRV: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-SPIRV-DAG: [[void:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: [[str_S:%[0-9]+]] = OpString "S"
 ; CHECK-SPIRV-DAG: [[str_x:%[0-9]+]] = OpString "x"
-; CHECK-SPIRV-DAG: [[str_next:%[0-9]+]] = OpString "next"
 ; CHECK-SPIRV: [[mem_x:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeMember [[str_x]]
-; CHECK-SPIRV-NOT: DebugTypeMember [[str_next]]
 ; CHECK-SPIRV: [[comp:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeComposite [[str_S]] {{.*}} [[mem_x]]{{$}}
 ; CHECK-SPIRV: OpExtInst [[void]] [[ext]] DebugTypePointer [[comp]]
-; CHECK-SPIRV: OpExtInst [[void]] [[ext]] DebugTypeMember [[str_next]]
 
 ; FWD: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; FWD: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
