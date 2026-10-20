@@ -25,8 +25,6 @@ define void @uniform_arg(ptr noalias %src, ptr noalias %dst, i64 %a, i64 %b) {
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
-; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<1000>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -64,8 +62,6 @@ define void @linear_arg(ptr noalias %dst) {
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%call>
-; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<1000>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
