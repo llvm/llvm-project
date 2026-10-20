@@ -1075,6 +1075,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed crashes caused by calling `getSpelling()` on annotation tokens introduced
+  by nested `_Pragma` or Microsoft `__pragma` expressions. (#GH225035)
+
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
   source file. (#GH222310)

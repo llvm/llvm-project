@@ -553,7 +553,8 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     std::string Message;
     Lex(DependencyTok);
     while (DependencyTok.isNot(tok::eod)) {
-      Message += getSpelling(DependencyTok) + " ";
+      if (!DependencyTok.isAnnotation())
+        Message += getSpelling(DependencyTok) + " ";
       Lex(DependencyTok);
     }
 
