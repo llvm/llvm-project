@@ -698,8 +698,11 @@ void GCNDownwardRPTrackerBase::retireVirtReg(Register Reg, SlotIndex SI) {
   }
 }
 
-void GCNDownwardRPTrackerBase::retireDyingUses(const MachineInstr &MI) {
+void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
   assert(MRI && "call reset first");
+
+  if (MI.isPHI())
+    return;
 
   // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
   GCNRegPressure ECDefPressure;
@@ -711,9 +714,6 @@ void GCNDownwardRPTrackerBase::retireDyingUses(const MachineInstr &MI) {
   }
 
   MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
-
-  if (MI.isPHI())
-    return;
 
   SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
   assert(SI.isValid());
@@ -769,11 +769,10 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
   return NextMI == MBBEnd;
 }
 
-void GCNDownwardRPTracker::advanceToNext(bool RetireDeadUses) {
+void GCNDownwardRPTracker::advanceToNext() {
   LastTrackedMI = NextMI++;
   NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
-  if (RetireDeadUses)
-    GCNDownwardRPTrackerBase::retireDyingUses(*LastTrackedMI);
+  GCNDownwardRPTrackerBase::retireDeadUses(*LastTrackedMI);
   GCNDownwardRPTrackerBase::addDefs(*LastTrackedMI);
 }
 
@@ -802,7 +801,7 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
 }
 
 void GCNManualDownwardRPTracker::advance(const MachineInstr &MI) {
-  GCNDownwardRPTrackerBase::retireDyingUses(MI);
+  GCNDownwardRPTrackerBase::retireDeadUses(MI);
   GCNDownwardRPTrackerBase::addDefs(MI);
   GCNDownwardRPTrackerBase::retireDeadDefs(
       MI, LIS.getInstructionIndex(MI).getDeadSlot());

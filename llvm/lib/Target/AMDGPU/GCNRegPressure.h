@@ -405,7 +405,7 @@ protected:
   /// RegPressureTracker::advance(). Early-clobber defs of \p MI are accounted
   /// in \ref MaxPressure as live together with all of its uses. The uses of a
   /// PHI are not retired since they do not die there.
-  void retireDyingUses(const MachineInstr &MI);
+  void retireDeadUses(const MachineInstr &MI);
 
   /// Retires the lanes defined by \p MI that are dead at \p SI, according to
   /// LIS.
@@ -434,6 +434,7 @@ private:
 public:
   GCNDownwardRPTracker(LiveIntervals &LIS) : GCNDownwardRPTrackerBase(LIS) {}
 
+  using GCNDownwardRPTrackerBase::addDefs;
   using GCNRPTracker::reset;
 
   /// Returns the next MI that will be advanced over.
@@ -456,16 +457,14 @@ public:
 
   /// Move to the state right before \ref NextMI or the end of the MBB. This
   /// retires defs of \ref LastTrackedMI that are dead after the instruction.
-  /// Its dying uses were already retired by \ref advanceToNext. \p returns
+  /// Its dead uses were already retired by \ref advanceToNext. \p returns
   /// false if it reached the end of the block.
   bool advanceBeforeNext();
 
   /// Move to the state at \ref NextMI. This retires the uses that die at \p
   /// NextMI, then adds the register lanes it defines to \ref CurPressure. Has
-  /// to be called after \ref advanceBeforeNext. If \p RetireDeadUses is false
-  /// the uses that die at the instruction are kept live. Callers that do this
-  /// must restore the tracked state afterwards.
-  void advanceToNext(bool RetireDeadUses = true);
+  /// to be called after \ref advanceBeforeNext.
+  void advanceToNext();
 
   /// Advance to the state at the next MI in program order. \p returns false if
   /// it reached end of block.
