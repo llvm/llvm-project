@@ -3280,8 +3280,7 @@ private:
 #ifndef NDEBUG
   /// Debug printer.
   LLVM_DUMP_METHOD void dumpVectorizableTree() const {
-    for (unsigned Id = 0, IdE = Candidate.VectorizableTree.size(); Id != IdE;
-         ++Id) {
+    for (unsigned Id : seq<unsigned>(Candidate.VectorizableTree.size())) {
       Candidate.VectorizableTree[Id]->dump();
       if (Shared.TransformedToGatherNodes.contains(
               Candidate.VectorizableTree[Id].get()))
@@ -3450,7 +3449,7 @@ private:
     SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarsInSplitNodes;
 
     using ValueToGatherNodesMap =
-        DenseMap<Value *, SmallSetVector<const TreeEntry *, 4>>;
+        SmallDenseMap<Value *, SmallSetVector<const TreeEntry *, 4>>;
     ValueToGatherNodesMap ValueToGatherNodes;
 
     /// Maps a value to the proposed vectorizable size.
@@ -3462,7 +3461,7 @@ private:
     /// List of gather nodes, depending on other gather/vector nodes, which
     /// should be emitted after the vector instruction emission process to
     /// correctly handle order of the vector instructions and shuffles.
-    SetVector<const TreeEntry *> PostponedGathers;
+    SmallSetVector<const TreeEntry *, 8> PostponedGathers;
 
     /// The loop nest, used to check if only a single loop nest is vectorized,
     /// not multiple, to avoid side-effects from the loop-aware cost model.
@@ -3769,6 +3768,8 @@ private:
   ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
     return Candidate.VectorizableTree;
   }
+
+  /// Returns the external uses for graph visualization.
   ArrayRef<ExternalUser> getExternalUses() const { return Shared.ExternalUses; }
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
