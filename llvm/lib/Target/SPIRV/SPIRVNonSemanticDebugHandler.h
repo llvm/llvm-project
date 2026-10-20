@@ -106,13 +106,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // Types and scopes that are not supported.
   SmallPtrSet<const DIScope *, 8> FailedScopes;
 
-  // DISubprogram nodes that are declarations only (!isDefinition()), collected
-  // in beginModule() for DebugFunctionDeclaration emission.
-  SmallVector<const DISubprogram *> SubprogramDeclarations;
-
-  // DISubprogram nodes that are definitions, collected in beginModule() for
-  // DebugFunction emission.
-  SmallVector<const DISubprogram *> SubprogramDefinitions;
+  // DISubprogram nodes collected in beginModule().
+  SmallVector<const DISubprogram *> Subprograms;
 
   // Distinct DILocations from instruction !dbg attachments and debug program
   // records (#dbg_declare, #dbg_value, #dbg_assign, #dbg_label).

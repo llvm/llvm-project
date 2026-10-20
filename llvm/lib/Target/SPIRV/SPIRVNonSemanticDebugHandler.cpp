@@ -330,8 +330,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
 
   CompileUnits.clear();
   DebugTypes.clear();
-  SubprogramDeclarations.clear();
-  SubprogramDefinitions.clear();
+  Subprograms.clear();
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
   LocalVariables.clear();
@@ -400,12 +399,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     return Ty->getTag() != dwarf::DW_TAG_member;
   });
 
-  for (const DISubprogram *SP : Finder.subprograms()) {
-    if (SP->isDefinition())
-      SubprogramDefinitions.push_back(SP);
-    else
-      SubprogramDeclarations.push_back(SP);
-  }
+  Subprograms.assign(Finder.subprograms().begin(), Finder.subprograms().end());
 
   // Walk LLVM globals to map each DIGlobalVariable to its llvm::GlobalVariable.
   DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
@@ -1611,8 +1605,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     }
   }
 
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions)) {
+  for (const DISubprogram *SP : Subprograms) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(SP, MAI);
@@ -2308,15 +2301,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DINamespace>))
-    getOrCreateDebugScope(S);
-  for (const DIType *Ty : DebugTypes)
-    getOrCreateDebugScope(Ty);
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions))
-    getOrCreateDebugScope(SP);
-  for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DILexicalBlock>))
+       concat<const DIScope *const>(LexicalBlocks, DebugTypes, Subprograms))
     getOrCreateDebugScope(S);
 
   // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the
