@@ -2628,7 +2628,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
-      !Subtarget.isTargetWindows()) {
+      !Subtarget.isTargetWindowsOrUEFI()) {
     // For Windows calling convention on a non-windows OS, where X18 is treated
     // as reserved, back up X18 when entering non-windows code (marked with the
     // Windows calling convention) and restore when returning regardless of

@@ -10108,7 +10108,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // When using the Windows calling convention on a non-windows OS, we want
   // to back up and restore X18 in such functions; we can't do a tail call
   // from those functions.
-  if (CallerCC == CallingConv::Win64 && !Subtarget->isTargetWindows() &&
+  if (CallerCC == CallingConv::Win64 && !Subtarget->isTargetWindowsOrUEFI() &&
       CalleeCC != CallingConv::Win64)
     return false;
 
