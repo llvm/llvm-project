@@ -666,7 +666,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()), 0);
     auto *DummyGV = new GlobalVariable(
         *FirstNewGV->getParent(), GlobalType, false, FirstNewGV->getLinkage(),
-        UndefValue::get(GlobalType), C->getName(), FirstNewGV,
+        PoisonValue::get(GlobalType), C->getName(), FirstNewGV,
         FirstNewGV->getThreadLocalMode(), FirstNewGV->getAddressSpace());
     DummyGV->setComdat(C);
     DummyGV->copyAttributesFrom(FirstNewGV);
