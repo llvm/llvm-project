@@ -4328,8 +4328,6 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
   return true;
 }
 
-// Check that two source operands hold the same value: either the same
-// register or the same constant.
 static bool isEqualSrcOperand(const MCOperand &SrcA, const MCOperand &SrcB) {
   if (SrcA.isReg() && SrcB.isReg())
     return SrcA.getReg() == SrcB.getReg();
