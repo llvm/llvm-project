@@ -1851,42 +1851,51 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
         break;
       case RegGroupInfo::PPR:
         break;
-      case RegGroupInfo::ZPR:
+      case RegGroupInfo::ZPR: {
         // Windows support is possible but the order requirement is reversed.
         // Also, WinCFI has no support for group ZPR loads/stores yet.
         if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
           break;
 
-        // We expect to see pairs and quads in decending order (e.g. [z7, z6,
-        // z5, z4]). We ensure this in `orderZPRCalleeSavesForGroups()`. This is
-        // required as (for Linux) StackFillDir is negative (so we start at
+        // We expect to see pairs and quads in descending order (e.g. [z7, z6,
+        // z5, z4]). We ensure this in `orderZPRCalleeSavesForGroups()`. This
+        // is required as (for Linux) StackFillDir is negative (so we start at
         // higher addresses) and we need to ensure the lower register in the
         // pair has the lower address to store the registers in the correct
         // order.
-        if (unsigned(i + 3 * RegInc) < Count) {
-          MCRegister Reg3 = CSI[i + RegInc * 2].getReg();
-          MCRegister Reg4 = CSI[i + RegInc * 3].getReg();
-          bool Consecutive = (Reg4 + 1 == Reg3) && (Reg3 + 1 == NextReg) &&
-                             (NextReg + 1 == RGI.Reg1);
-          const int NumRegs = 4;
-          int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
+        auto GetZPRTupleLowestReg =
+            [&](unsigned NumRegs, unsigned Opcode) -> std::optional<Register> {
+          // Check Reg1 is the last register in a tuple.
+          if (RGI.Reg1 % NumRegs != NumRegs - 1)
+            return std::nullopt;
 
+          // Check there's enough registers for the tuple.
+          if (i + RegInc * (NumRegs - 1) >= Count)
+            return std::nullopt;
+
+          const int Offset =
+              (ScalableByteOffset + StackFillDir * NumRegs * Scale);
           // Note: ST1B has the same offset constraints.
-          if ((Reg4 - AArch64::Z0) % 4 == 0 && Consecutive &&
-              isValidMemOpOffset(TII, AArch64::LD1B_4Z_IMM, Offset))
-            RGI.Reg2 = Reg4;
-        }
+          if (!isValidMemOpOffset(TII, Opcode, Offset))
+            return std::nullopt;
 
-        if (!RGI.isQuad() && ((NextReg - AArch64::Z0) % 2 == 0) &&
-            (NextReg + 1 == RGI.Reg1)) {
-          const int NumRegs = 2;
-          int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
+          for (unsigned Idx = 1; Idx < NumRegs; ++Idx) {
+            Register Reg = CSI[i + RegInc * Idx].getReg();
+            Register ExpectedReg = RGI.Reg1 - Idx;
+            if (Reg != ExpectedReg)
+              return std::nullopt;
+          }
 
-          // Note: ST1B has the same offset constraints.
-          if (isValidMemOpOffset(TII, AArch64::LD1B_2Z_IMM, Offset))
-            RGI.Reg2 = NextReg;
-        }
+          return RGI.Reg1 - NumRegs + 1;
+        };
+
+        if (auto LowReg = GetZPRTupleLowestReg(4, AArch64::LD1B_4Z_IMM))
+          RGI.Reg2 = *LowReg;
+        else if (auto LowReg = GetZPRTupleLowestReg(2, AArch64::LD1B_2Z_IMM))
+          RGI.Reg2 = *LowReg;
+
         break;
+      }
       case RegGroupInfo::VG:
         break;
       }
