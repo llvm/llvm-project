@@ -27,6 +27,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <utility>
@@ -35,6 +36,16 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
+
+ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  if (!Stride)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = Stride->getValue() * ElementSize;
+  return ConstantInt::get(Stride->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
@@ -60,6 +71,60 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
                             /*CtxI=*/nullptr, VIC);
+}
+
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
+  Value *Stride = getStrideBytesIfConstant(
+      dyn_cast_if_present<ConstantInt>(StrideVal), ScalarTy, DL, IsReverse);
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment,
+                                 /*I=*/nullptr, Stride),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost +=
+        getWidenedStridedCastCost(TTI, StridedLoadTy, VecTy, DL, Ctx, CostKind);
+  return StridedCost;
+}
+
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind) {
+  if (Info.InterleaveFactor) {
+    assert(!Info.IsMasked && "Masked interleaved loads are not supported");
+    return TTI.getInterleavedMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
+        LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+  }
+
+  InstructionCost Cost;
+  if (Info.IsMasked) {
+    Cost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI.getMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind,
+        TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
+  }
+  // For REVEC the emitted shuffle uses the compress mask expanded to the
+  // individual elements of the vector scalars.
+  SmallVector<int> CompressCostMask(Info.CompressMask);
+  transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                         CompressCostMask);
+  // TODO: include this cost into CommonCost.
+  Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
+                         CostKind, CompressCostMask);
+  return Cost;
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -124,6 +189,11 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    const bool IsSameBase =
+        !all_of(Ptrs, IsaPred<GetElementPtrInst>) ||
+        all_equal(map_range(Ptrs, [](Value *V) {
+          return cast<GetElementPtrInst>(V)->getPointerOperand();
+        }));
     // The GEPs of the masked gather loads are accessed with the loaded type
     // and form a chain only if the lanes share the base.
     Type *AccessTy = ScalarTy;
@@ -131,9 +201,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
           auto *Ptr = dyn_cast<GetElementPtrInst>(V);
           return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
         })) {
-      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
-        return cast<GetElementPtrInst>(V)->getPointerOperand();
-      }));
+      PtrsInfo.IsSameBaseAddress = IsSameBase;
       AccessTy = Ptrs.front()->user_back()->getType();
     }
     ScalarCost =
@@ -144,7 +212,21 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
       if (It != Ptrs.end())
         BaseGEP = cast<GEPOperator>(*It);
     }
-    if (BaseGEP) {
+    if (!IsSameBase) {
+      // The different bases are not folded into the addressing of the vector
+      // access, the scaled indices are added to them.
+      const DataLayout &DL = cast<Instruction>(Ptrs.front())->getDataLayout();
+      Type *IdxTy = DL.getIndexType(VecTy);
+      VecCost = TTI.getArithmeticInstrCost(Instruction::Add, IdxTy, CostKind);
+      uint64_t Stride = DL.getTypeAllocSize(BaseGEP->getSourceElementType())
+                            .getKnownMinValue();
+      if (Stride != 1 && !all_of(Ptrs, [](Value *V) {
+            return isa<Constant>(cast<GetElementPtrInst>(V)->getOperand(1));
+          }))
+        VecCost += TTI.getArithmeticInstrCost(
+            isPowerOf2_64(Stride) ? Instruction::Shl : Instruction::Mul, IdxTy,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_None});
+    } else if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, CostKind,
@@ -433,11 +515,15 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
   assert(BitWidth % 8 == 0 &&
          "The byte-multiple field width divides the result bit width.");
-  unsigned OutBytes = BitWidth / 8;
+  unsigned OutBytes = ResultTy->getScalarSizeInBits() / 8;
   auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
   unsigned MinShiftWidth = 8;
   while (MinShiftWidth < MaxAmt + Info.FieldWidth)
     MinShiftWidth *= 2;
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  bool IsTrunc = IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts));
+  auto *FieldTy = FixedVectorType::get(
+      IntegerType::get(SrcTy->getContext(), Info.FieldWidth), NumElts);
   InstructionCost NewCost = InstructionCost::getInvalid();
   ShiftWidth = 0;
   for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
@@ -449,17 +535,36 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
         getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
     InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
                                              PackTy, CCH, CostKind);
-    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
-    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
-      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
-    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    if (IsTrunc) {
+      // Fields in lane order, possibly reversed, are a truncation of the
+      // shifted lanes. A reversal of byte fields is a bswap.
+      if (Info.FieldWidth < W2)
+        C += TTI.getCastInstrCost(Instruction::Trunc, FieldTy, ShiftTy,
+                                  TTI::CastContextHint::None, CostKind);
+      if (IsReversed && Info.FieldWidth == 8) {
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy,
+                                          {ResultTy});
+        C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+      } else if (IsReversed) {
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, FieldTy,
+                                FieldTy, CostKind);
+      }
+    } else {
+      // A narrowing shuffle is a shuffle at the source width followed by an
+      // extract of the low elements.
+      auto *SrcByteTy = FixedVectorType::get(Int8Ty, InBytes);
+      SmallVector<int> WideMask(Mask);
+      WideMask.resize(std::max(InBytes, OutBytes), PoisonMaskElem);
       C += TTI.getShuffleCost(
           is_contained(Info.LaneOfField, BitPackInfo::NoLane)
               ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc,
-          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
-          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+          FixedVectorType::get(Int8Ty, WideMask.size()), SrcByteTy, CostKind,
+          WideMask, /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CtxI);
+      if (InBytes > OutBytes)
+        C += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                PackTy, SrcByteTy, CostKind, /*Mask=*/{},
+                                /*Index=*/0, PackTy, /*Args=*/{}, CtxI);
     }
     if (W2 != BitWidth && W2 != ZExtSrcWidth)
       C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,

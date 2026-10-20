@@ -41,8 +41,8 @@ void while_cond_var(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z14while_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // The loop header branches into the condition region or to the loop exit.
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
@@ -161,8 +161,8 @@ void while_cond_var_break() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -262,8 +262,8 @@ void while_cond_var_continue() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -369,8 +369,8 @@ void for_cond_var_break() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -471,8 +471,8 @@ void for_cond_var_continue() {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -585,8 +585,8 @@ void for_cond_var(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z12for_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -710,9 +710,9 @@ void while_cond_var_temp(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
@@ -866,9 +866,9 @@ void while_cond_var_nested(int n) {
 // CIR:     }
 
 // LLVM-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG_OUTER:.*]] = alloca i8
 // LLVM:         %[[FLAG_INNER:.*]] = alloca i8
+// LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[OUTER_COND:.*]]
 // LLVM:       [[OUTER_COND]]:
@@ -1085,10 +1085,10 @@ void for_cond_var_extended_member() {
 // CIR-NEXT:    }
 
 // LLVM-LABEL: define dso_local void @_Z28for_cond_var_extended_memberv() {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[A:.*]] = alloca %struct.S
 // LLVM:         %[[B:.*]] = alloca %struct.S
 // LLVM:         %[[H:.*]] = alloca %struct.Holder
-// LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         store i8 0, ptr %[[FLAG]]
 // LLVM:         invoke void @_Z5makeSv(ptr {{.*}} %[[A]])
 // LLVM-NEXT:            to label %{{.*}} unwind label %[[LPAD:.*]]
@@ -1318,8 +1318,8 @@ int while_cond_var_extended_return(int n) {
 // CIR-NEXT:    }
 
 // LLVM-LABEL: define dso_local {{.*}}i32 @_Z30while_cond_var_extended_returni(
-// LLVM:         %[[TMP:.*]] = alloca %struct.S
 // LLVM:         %[[FLAG:.*]] = alloca i8
+// LLVM:         %[[TMP:.*]] = alloca %struct.S
 // LLVM:         store i8 0, ptr %[[FLAG]]
 // LLVM-NEXT:    invoke void @_Z5makeSv(ptr {{.*}} %[[TMP]])
 // LLVM-NEXT:            to label %[[MAKE_CONT:.*]] unwind label %[[LPAD:.*]]

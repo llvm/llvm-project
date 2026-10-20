@@ -180,6 +180,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments inside GNU statement expressions unless they form the value of
+  the statement expression.
+
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
   emitting empty notes for type aliases when {option}`ModelImplicitConversions`
@@ -393,6 +398,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives and incorrect fixes caused by synthetic parentheses
     in reference non-type template parameter uses, `__builtin_dump_struct` calls,
     and OpenMP `linear` clauses.
+
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid

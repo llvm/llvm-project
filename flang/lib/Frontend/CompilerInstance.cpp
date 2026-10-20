@@ -384,6 +384,7 @@ bool CompilerInstance::setUpTargetMachine() {
     tOpts.FunctionSplitting = llvm::FunctionSplittingMode::All;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
   tOpts.MCOptions.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.MCOptions.LibraryOptions = &libraryOptions;
   tOpts.FunctionSections = CGOpts.FunctionSections;
   tOpts.DataSections = CGOpts.DataSections;
 

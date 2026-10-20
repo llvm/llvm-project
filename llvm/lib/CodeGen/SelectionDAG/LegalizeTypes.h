@@ -331,7 +331,7 @@ private:
   SDValue PromoteIntRes_SExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_ZExtMaskedIntBinOp(SDNode *N);
   SDValue PromoteIntRes_SExtMaskedIntBinOp(SDNode *N);
-  SDValue PromoteIntRes_UMINUMAX(SDNode *N);
+  SDValue PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_SIGN_EXTEND_INREG(SDNode *N);
   SDValue PromoteIntRes_SRA(SDNode *N);
   SDValue PromoteIntRes_SRL(SDNode *N);
@@ -849,6 +849,7 @@ private:
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
+  SDValue ScalarizeVecRes_ATOMIC_RMW(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);

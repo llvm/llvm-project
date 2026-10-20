@@ -595,6 +595,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":Support",
         "//llvm:BitstreamReader",
         "//llvm:Core",
         "//llvm:Remarks",
@@ -2683,7 +2684,9 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
+        ":VectorTransforms",
         ":VectorUtils",
         ":X86Dialect",
         ":X86Utils",
@@ -4092,6 +4095,7 @@ td_library(
         ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DLTIDialectTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -5017,6 +5021,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
+        ":DLTIDialect",
         ":FuncIncGen",
         ":FunctionInterfaces",
         ":IR",
@@ -5715,6 +5720,7 @@ td_library(
         ":FunctionInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SCFTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -5808,6 +5814,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LoopLikeInterface",
         ":MathDialect",
         ":MemRefDialect",
         ":SCFDialect",
@@ -8871,6 +8878,17 @@ cc_library(
 )
 
 cc_library(
+    name = "ArithCommonConversion",
+    srcs = glob(["lib/Conversion/ArithCommon/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithCommon/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+    ],
+)
+
+cc_library(
     name = "ArithToAMDGPU",
     srcs = glob(["lib/Conversion/ArithToAMDGPU/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToAMDGPU/*.h"]),
@@ -8972,8 +8990,8 @@ cc_library(
     deps = [
         ":Analysis",
         ":ArithAttrToLLVMConversion",
+        ":ArithCommonConversion",
         ":ArithDialect",
-        ":ArithTransforms",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -9856,6 +9874,7 @@ cc_library(
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
+        ":BytecodeOpInterface",
         ":BytecodeWriter",
         ":Debug",
         ":IR",
@@ -10069,6 +10088,7 @@ cc_library(
         ":MPIToLLVM",
         ":MathToEmitC",
         ":MathToLLVM",
+        ":MathTransformOps",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefTransformOps",
@@ -10968,6 +10988,7 @@ td_library(
     deps = [
         ":AtomicInterfacesTdFiles",
         ":LLVMOpsTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -11062,6 +11083,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
+        ":LoopLikeInterface",
         ":OpenACCMPOpsInterfacesIncGen",
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
@@ -11155,6 +11177,7 @@ cc_library(
         ":FuncDialect",
         ":FuncToLLVM",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -13462,6 +13485,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ArithCommonConversion",
         ":ArithDialect",
         ":ArithPassIncGen",
         ":ArithUtils",
@@ -13615,6 +13639,48 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "MathTransformOpsTdFiles",
+    srcs = ["include/mlir/Dialect/Math/TransformOps/MathTransformOps.td"],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "MathTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Math/TransformOps/MathTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/Math/TransformOps/MathTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Math/TransformOps/MathTransformOps.td",
+    deps = [
+        ":MathTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "MathTransformOps",
+    srcs = glob(["lib/Dialect/Math/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Math/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+        ":MathDialect",
+        ":MathTransformOpsIncGen",
+        ":MathTransforms",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":VectorDialect",
+        ":X86Dialect",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "MathToLibm",
     srcs = glob([
@@ -13752,8 +13818,8 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefDialect.h",
-        "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
         "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
+        "include/mlir/Dialect/MemRef/IR/MemorySlotInterfacesImpl.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -14489,12 +14555,24 @@ td_library(
     srcs = [
         "include/mlir/Dialect/DLTI/DLTI.td",
         "include/mlir/Dialect/DLTI/DLTIBase.td",
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
     ],
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "DLTIOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
+    deps = [":DLTIDialectTdFiles"],
 )
 
 gentbl_cc_library(
@@ -14542,6 +14620,7 @@ cc_library(
     deps = [
         ":DLTIAttrsIncGen",
         ":DLTIBaseIncGen",
+        ":DLTIOpInterfacesIncGen",
         ":DataLayoutInterfaces",
         ":IR",
         "//llvm:Support",

@@ -3764,6 +3764,91 @@ omp.private {type = private} @x.privatizer : f32 copy {
 
 // -----
 
+// expected-error @below {{`linear` clauses do not require a `copy` region.}}
+omp.private {type = linear} @x.privatizer : f32 copy {
+^bb0(%arg0: f32, %arg1 : f32):
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{only `linear` clauses can have a `data_address` region.}}
+omp.private {type = private} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+// expected-error @below {{`data_address`: expected 1 region arguments, got: 2}}
+omp.private {type = linear} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+omp.private {type = linear} @x.privatizer : !llvm.ptr data_address {
+^bb0(%arg0: !llvm.ptr):
+  // expected-error @below {{Invalid yielded value. Expected a single value, got: None}}
+  omp.yield
+}
+
+// -----
+
+omp.private {type = linear} @x.privatizer : !llvm.ptr
+
+func.func @linear_privatizer_in_private(%x : !llvm.ptr, %lb : i32) {
+  // expected-error @below {{`linear` privatizer '@x.privatizer' can only be used in a `linear` clause}}
+  omp.simd private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%lb) step (%lb) {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @x.privatizer : i32
+
+func.func @linear_with_private_privatizer(%x : !llvm.ptr, %lb : i32) {
+  // expected-error @below {{privatizer '@x.privatizer' of a linear variable must be `linear`}}
+  omp.simd linear(@x.privatizer %x -> %arg0 : !llvm.ptr = %lb : i32) linear_var_types([i32]) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%lb) step (%lb) {
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @linear_without_privatizer(%x : !llvm.ptr, %lb : i32) {
+  // expected-error @below {{expected as many linear privatizers as linear variables}}
+  "omp.wsloop"(%x, %lb) ({
+  ^bb0(%arg0: !llvm.ptr):
+    omp.loop_nest (%iv) : i32 = (%lb) to (%lb) step (%lb) {
+      omp.yield
+    }
+  }) {linear_var_types = [i32],
+      operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (!llvm.ptr, i32) -> ()
+  return
+}
+
+// -----
+
+omp.private {type = linear} @x.privatizer : i32
+
+func.func @declare_simd_linear_privatizer(%x : i32, %step : i32) {
+  // expected-error @below {{'omp.declare_simd' op linear privatizers are not allowed}}
+  "omp.declare_simd"(%x, %step) <{linear_syms = [@x.privatizer],
+      operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
+  return
+}
+
+// -----
+
 // expected-error @below {{`firstprivate` clauses require at least a `copy` region.}}
 omp.private {type = firstprivate} @x.privatizer : f32 init {
 ^bb0(%arg0: f32, %arg1: f32):
@@ -4809,10 +4894,12 @@ func.func @omp_declare_simd_branch() -> () {
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
                                   %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.wsloop' op linear modifier 'ref' may only be specified on a declare simd directive}}
-  omp.wsloop linear(ref(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
+  omp.wsloop linear(ref(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -4821,11 +4908,13 @@ func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
 }
 
 // -----
+
+omp.private {type = linear} @lin.i32 : i32
 
 func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
                                     %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.wsloop' op linear modifier 'uval' may only be specified on a declare simd directive}}
-  omp.wsloop linear(uval(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
+  omp.wsloop linear(uval(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -4835,10 +4924,12 @@ func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
 
 // -----
 
+omp.private {type = linear} @lin.i32 : i32
+
 func.func @omp_simd_linear_ref(%lb : index, %ub : index, %step : index,
                                 %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.simd' op linear modifier 'ref' may only be specified on a declare simd directive}}
-  omp.simd linear(ref(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
+  omp.simd linear(ref(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -4852,6 +4943,7 @@ func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step 
                                                  %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @below {{'omp.wsloop' op expected as many linear modifiers as linear variables}}
   "omp.wsloop"(%data_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -4866,6 +4958,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
                                                %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @below {{'omp.simd' op expected as many linear modifiers as linear variables}}
   "omp.simd"(%data_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
