@@ -3449,14 +3449,7 @@ void Verifier::visitFunction(const Function &F) {
               I.second);
         break;
       case LLVMContext::MD_annotation:
-        if (auto *Tuple = dyn_cast<MDTuple>(I.second);
-            Tuple && Tuple->getNumOperands() > 0 &&
-            Tuple->getOperand(0).equalsStr("unsafe-stack-size"))
-          Check(Tuple->getNumOperands() == 2 &&
-                    mdconst::dyn_extract_or_null<ConstantInt>(
-                        Tuple->getOperand(1)),
-                "unsafe-stack-size annotation must have an integer value", &F,
-                I.second);
+        visitAnnotationMetadata(I.second);
         break;
       }
 
@@ -5724,6 +5717,15 @@ void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
         "annotation must have at least one operand");
+  // SafeStack records the unsafe stack size as {"unsafe-stack-size", i32 N}.
+  if (Annotation->getOperand(0).equalsStr("unsafe-stack-size")) {
+    Check(Annotation->getNumOperands() == 2 &&
+              mdconst::dyn_extract_or_null<ConstantInt>(
+                  Annotation->getOperand(1)),
+          "unsafe-stack-size annotation must have an integer value",
+          Annotation);
+    return;
+  }
   for (const MDOperand &Op : Annotation->operands()) {
     bool TupleOfStrings =
         isa<MDTuple>(Op.get()) &&
