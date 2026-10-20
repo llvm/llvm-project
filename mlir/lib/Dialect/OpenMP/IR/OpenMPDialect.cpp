@@ -3429,6 +3429,7 @@ OperandRange SectionOp::getReductionVars() {
 void SectionsOp::build(OpBuilder &builder, OperationState &state,
                        const SectionsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
+  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SectionsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                     makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
                     makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
