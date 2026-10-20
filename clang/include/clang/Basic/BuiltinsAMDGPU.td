@@ -1012,6 +1012,11 @@ def __builtin_amdgcn_cvt_sr_f16_f32 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_Ex
 //===----------------------------------------------------------------------===//
 def __builtin_amdgcn_s_cluster_barrier : AMDGPUBuiltin<"void()", [], "gfx1250-insts">;
 
+// Exact GPR register scheduling hints.
+def __builtin_amdgcn_sched_vgpr : AMDGPUBuiltin<"int(int, _Constant int, _Constant bool)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_sched_sgpr : AMDGPUBuiltin<"int(int, _Constant int, _Constant bool)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_sched_agpr : AMDGPUBuiltin<"int(int, _Constant int, _Constant bool)", [Const, CustomTypeChecking], "mai-insts">;
+
 def __builtin_amdgcn_flat_prefetch : AMDGPUBuiltin<"void(void const address_space<0> *, _Constant int)", [Const], "vmem-pref-insts">;
 def __builtin_amdgcn_global_prefetch : AMDGPUBuiltin<"void(void const address_space<1> *, _Constant int)", [Const], "vmem-pref-insts">;
 

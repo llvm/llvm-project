@@ -4478,4 +4478,26 @@ def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem]>;
+
+// Hint the register allocator to place the result in a specific VGPR/SGPR/AGPR
+// register number. These are identity functions at the IR level; the register
+// number and strict flag arguments are consumed by the pre-RA AMDGPUSchedBank
+// pass which attaches a register allocation hint.
+//   regnum: the target HW register index (e.g., 42 means v42/s42/a42).
+//   strict: 1 = allocator must obey if possible, 0 = advisory hint.
+// For wide values (64/128/256 bit), regnum is the starting register index.
+def int_amdgcn_sched_vgpr : DefaultAttrsIntrinsic<
+  [llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+   ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+def int_amdgcn_sched_sgpr : DefaultAttrsIntrinsic<
+  [llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+   ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+def int_amdgcn_sched_agpr : DefaultAttrsIntrinsic<
+  [llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+   ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 }
