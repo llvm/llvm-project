@@ -362,5 +362,24 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
   }
 
+  // CHECK-LABEL: @same_value_different_composite_types
+  spirv.func @same_value_different_composite_types() -> (!spirv.array<2 x i32>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32>
+    %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32>
+    spirv.ReturnValue %0 : !spirv.array<2 x i32>
+  }
+
+  spirv.func @same_value_different_composite_types_struct() -> (!spirv.struct<(i32, i32)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, i32)>
+    %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, i32)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, i32)>
+  }
+
+  spirv.func @same_value_different_composite_types_stride() -> (!spirv.array<2 x i32, stride=4>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32, stride=4>
+    %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32, stride=4>
+    spirv.ReturnValue %0 : !spirv.array<2 x i32, stride=4>
+  }
+
   spirv.EntryPoint "GLCompute" @bool_const
 }
