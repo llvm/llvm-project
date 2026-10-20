@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; sub nuw (and X, LowMask), (zext Y) --> zext (sub nuw (trunc X), Y)
+; sub nuw (zext Y), (and X, LowMask) --> zext (sub nuw Y, (trunc X))
 ; where LowMask has exactly as many low bits set as Y's width.
 
 declare void @use(i16)
@@ -17,6 +18,20 @@ define i16 @sub_nuw_mask_zext(i16 %x, i8 %y) {
   %m = and i16 %x, 255
   %z = zext i8 %y to i16
   %r = sub nuw i16 %m, %z
+  ret i16 %r
+}
+
+define i16 @sub_nuw_zext_mask_swapped(i16 %x, i8 %y) {
+; CHECK-LABEL: define i16 @sub_nuw_zext_mask_swapped(
+; CHECK-SAME: i16 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[X]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i8 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %m = and i16 %x, 255
+  %z = zext i8 %y to i16
+  %r = sub nuw i16 %z, %m
   ret i16 %r
 }
 
@@ -192,20 +207,6 @@ define i16 @sub_nuw_mask_zext_not_low_mask(i16 %x, i8 %y) {
   %m = and i16 %x, 254
   %z = zext i8 %y to i16
   %r = sub nuw i16 %m, %z
-  ret i16 %r
-}
-
-define i16 @sub_nuw_zext_mask_swapped(i16 %x, i8 %y) {
-; CHECK-LABEL: define i16 @sub_nuw_zext_mask_swapped(
-; CHECK-SAME: i16 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = and i16 [[X]], 255
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y]] to i16
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i16 [[Z]], [[M]]
-; CHECK-NEXT:    ret i16 [[R]]
-;
-  %m = and i16 %x, 255
-  %z = zext i8 %y to i16
-  %r = sub nuw i16 %z, %m
   ret i16 %r
 }
 
