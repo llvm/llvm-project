@@ -352,9 +352,13 @@ def Vector_MultiDimReductionOp :
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
-    The optional `fastmath` flags apply to every combining operation of the
-    reduction, including the one with the accumulator. They have the same
-    meaning as on `vector.reduction`.
+    The optional `fastmath` attribute holds `arith` fast-math flags, which have
+    the meaning given in the LLVM Language Reference ("Fast-Math Flags"). Every
+    combining operation of the reduction, including the one with the
+    accumulator, behaves like the matching `arith` op with these flags. For
+    example, with `nnan` on a `maximumf` reduction, the combining operations
+    assume that no operand or result is a NaN. The flags only affect the
+    floating-point kinds.
 
     Example:
 
