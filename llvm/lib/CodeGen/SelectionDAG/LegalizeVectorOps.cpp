@@ -1316,6 +1316,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::FMODF: {
     EVT VT = Node->getValueType(0);
+    if (TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
+        TLI.expandMODF(Node, DAG, Results))
+      return;
+
     RTLIB::Libcall LC = RTLIB::getMODF(VT);
     if (LC != RTLIB::UNKNOWN_LIBCALL &&
         TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,

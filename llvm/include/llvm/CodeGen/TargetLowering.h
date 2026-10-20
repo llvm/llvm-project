@@ -5816,6 +5816,12 @@ public:
   /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
   SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand modf into ftrunc, fsub, comparison with inf, and fcopysign.
+  /// \param Node Node to expand
+  /// \returns true if the node has been expanded, false otherwise
+  bool expandMODF(SDNode *Node, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
+
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
