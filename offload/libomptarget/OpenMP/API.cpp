@@ -266,6 +266,12 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
     return false;
   }
 
+  if (Size == 0) {
+    ODBG(ODT_Interface) << "Call to " << __func__
+                        << " with zero size returning false";
+    return false;
+  }
+
   if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Call to " << __func__ << " on host, returning true";
     return true;

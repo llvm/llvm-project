@@ -124,20 +124,20 @@ define void @lds_dma_wg_fence_release_single32(ptr addrspace(8) inreg %rsrc, ptr
 ; GFX9-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s10, s18
-; GFX9-NEXT:    s_mov_b32 s8, s16
-; GFX9-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GFX9-NEXT:    s_mov_b32 s11, s19
-; GFX9-NEXT:    s_mov_b32 s12, s11
-; GFX9-NEXT:    s_mov_b32 s13, s10
-; GFX9-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
-; GFX9-NEXT:    s_mov_b32 s9, s17
-; GFX9-NEXT:    s_mov_b32 s14, s9
-; GFX9-NEXT:    s_mov_b32 s4, s8
+; GFX9-NEXT:    s_mov_b32 s6, s18
+; GFX9-NEXT:    s_mov_b32 s4, s16
+; GFX9-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX9-NEXT:    s_mov_b32 s7, s19
+; GFX9-NEXT:    s_mov_b32 s8, s7
+; GFX9-NEXT:    s_mov_b32 s9, s6
+; GFX9-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX9-NEXT:    s_mov_b32 s5, s17
+; GFX9-NEXT:    s_mov_b32 s10, s5
+; GFX9-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
 ; GFX9-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GFX9-NEXT:    s_mov_b32 s5, s14
-; GFX9-NEXT:    s_mov_b32 s6, s13
-; GFX9-NEXT:    s_mov_b32 s7, s12
+; GFX9-NEXT:    s_mov_b32 s5, s10
+; GFX9-NEXT:    s_mov_b32 s6, s9
+; GFX9-NEXT:    s_mov_b32 s7, s8
 ; GFX9-NEXT:    s_mov_b32 s8, 0
 ; GFX9-NEXT:    s_mov_b32 m0, s20
 ; GFX9-NEXT:    s_nop 0
@@ -155,19 +155,19 @@ define void @lds_dma_wg_fence_release_single32(ptr addrspace(8) inreg %rsrc, ptr
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b32 s6, s2
-; GFX942-NEXT:    s_mov_b32 s4, s0
+; GFX942-NEXT:    s_mov_b32 s2, s1
 ; GFX942-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
 ; GFX942-NEXT:    s_mov_b32 s7, s3
-; GFX942-NEXT:    s_mov_b32 s8, s7
-; GFX942-NEXT:    s_mov_b32 s9, s6
-; GFX942-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
-; GFX942-NEXT:    s_mov_b32 s5, s1
-; GFX942-NEXT:    s_mov_b32 s10, s5
-; GFX942-NEXT:    s_mov_b32 s0, s4
+; GFX942-NEXT:    s_mov_b32 s4, s7
+; GFX942-NEXT:    s_mov_b32 s5, s6
+; GFX942-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GFX942-NEXT:    s_mov_b32 s1, s2
+; GFX942-NEXT:    s_mov_b32 s6, s1
+; GFX942-NEXT:    ; kill: def $sgpr0 killed $sgpr0 killed $sgpr0_sgpr1
 ; GFX942-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
-; GFX942-NEXT:    s_mov_b32 s1, s10
-; GFX942-NEXT:    s_mov_b32 s2, s9
-; GFX942-NEXT:    s_mov_b32 s3, s8
+; GFX942-NEXT:    s_mov_b32 s1, s6
+; GFX942-NEXT:    s_mov_b32 s2, s5
+; GFX942-NEXT:    s_mov_b32 s3, s4
 ; GFX942-NEXT:    s_mov_b32 s4, 0
 ; GFX942-NEXT:    s_mov_b32 m0, s16
 ; GFX942-NEXT:    s_nop 0
@@ -184,20 +184,20 @@ define void @lds_dma_wg_fence_release_single32(ptr addrspace(8) inreg %rsrc, ptr
 ; GFX10-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s10, s18
-; GFX10-NEXT:    s_mov_b32 s8, s16
-; GFX10-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GFX10-NEXT:    s_mov_b32 s11, s19
-; GFX10-NEXT:    s_mov_b32 s12, s11
-; GFX10-NEXT:    s_mov_b32 s13, s10
-; GFX10-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
-; GFX10-NEXT:    s_mov_b32 s9, s17
-; GFX10-NEXT:    s_mov_b32 s14, s9
-; GFX10-NEXT:    s_mov_b32 s4, s8
+; GFX10-NEXT:    s_mov_b32 s6, s18
+; GFX10-NEXT:    s_mov_b32 s4, s16
+; GFX10-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX10-NEXT:    s_mov_b32 s7, s19
+; GFX10-NEXT:    s_mov_b32 s8, s7
+; GFX10-NEXT:    s_mov_b32 s9, s6
+; GFX10-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX10-NEXT:    s_mov_b32 s5, s17
+; GFX10-NEXT:    s_mov_b32 s10, s5
+; GFX10-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
 ; GFX10-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GFX10-NEXT:    s_mov_b32 s5, s14
-; GFX10-NEXT:    s_mov_b32 s6, s13
-; GFX10-NEXT:    s_mov_b32 s7, s12
+; GFX10-NEXT:    s_mov_b32 s5, s10
+; GFX10-NEXT:    s_mov_b32 s6, s9
+; GFX10-NEXT:    s_mov_b32 s7, s8
 ; GFX10-NEXT:    s_mov_b32 s8, 0
 ; GFX10-NEXT:    s_mov_b32 m0, s20
 ; GFX10-NEXT:    buffer_load_dword off, s[4:7], s8 lds

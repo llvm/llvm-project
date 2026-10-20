@@ -17,10 +17,10 @@
 #include "hdr/types/pid_t.h"
 #include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/clone3.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/execle.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigaction.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/wait4.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
@@ -57,12 +57,8 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
     return -1;
   }
 
-  sigset_t block_mask{};
-  add_signal(block_mask, SIGCHLD);
   sigset_t orig_mask{};
-  if (auto res =
-          linux_syscalls::rt_sigprocmask(SIG_BLOCK, &block_mask, &orig_mask);
-      !res.has_value()) {
+  if (auto res = signals::block(SIGCHLD, &orig_mask); !res.has_value()) {
     linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
     linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
     libc_errno = res.error();
@@ -75,7 +71,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
   if (!fork_res.has_value()) {
     linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
     linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
-    linux_syscalls::rt_sigprocmask(SIG_SETMASK, &orig_mask, nullptr);
+    signals::set_mask(orig_mask);
     libc_errno = fork_res.error();
     return -1;
   }
@@ -84,7 +80,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
   if (pid == 0) {
     linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
     linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
-    linux_syscalls::rt_sigprocmask(SIG_SETMASK, &orig_mask, nullptr);
+    signals::set_mask(orig_mask);
 
     // Error checking isn't helpful since this is the forked process, so we
     // can't set errno. All we can meaningfully do is exit with status 127.
@@ -110,7 +106,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
 
   linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
   linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
-  linux_syscalls::rt_sigprocmask(SIG_SETMASK, &orig_mask, nullptr);
+  signals::set_mask(orig_mask);
 
   return wait_ret;
 }

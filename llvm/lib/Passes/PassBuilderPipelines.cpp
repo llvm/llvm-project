@@ -167,17 +167,21 @@ extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
-PipelineTuningOptions::PipelineTuningOptions() {
-  const PassesOptions &Opts = PassesOptions::Global;
+PipelineTuningOptions::PipelineTuningOptions(
+    const cl::LibraryOptionsContext *LibraryOptions)
+    : LibraryOptions(LibraryOptions) {
+  const PassesOptions &Opts =
+      cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions);
   LoopInterleaving = true;
   LoopVectorization = true;
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = Opts.enable_loopinterchange;
   LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll();
-  LicmMssaOptCap = getLicmMssaOptCap();
-  LicmMssaNoAccForPromotionCap = getLicmMssaNoAccForPromotionCap();
+  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll(LibraryOptions);
+  LicmMssaOptCap = getLicmMssaOptCap(LibraryOptions);
+  LicmMssaNoAccForPromotionCap =
+      getLicmMssaNoAccForPromotionCap(LibraryOptions);
   CallGraphProfile = true;
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
@@ -1127,7 +1131,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsPreLink = !isThinLTOPostLink(Phase);
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen =
-      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
+      IsPreLink &&
+      PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(LibraryOptions);
   const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
@@ -1136,17 +1141,18 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
-  assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
+  assert(!(IsPGOInstrGen &&
+           PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(LibraryOptions)) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
   const bool IsCtxProfUse = !UseCtxProfile.empty() && isThinLTOPreLink(Phase);
 
   assert((Opts.instrument_cold_function_only_path.empty() ||
-          isPGOInstrumentColdFunctionOnly()) &&
+          isPGOInstrumentColdFunctionOnly(LibraryOptions)) &&
          "--instrument-cold-function-only-path is provided but "
          "--pgo-instrument-cold-function-only is not enabled");
   const bool IsColdFuncOnlyInstrGen =
-      isPGOInstrumentColdFunctionOnly() && IsPGOPreLink &&
+      isPGOInstrumentColdFunctionOnly(LibraryOptions) && IsPGOPreLink &&
       !Opts.instrument_cold_function_only_path.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
@@ -1708,7 +1714,8 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
   // like removing CFI/WPD related instructions. Note, we reuse
   // DropTypeTestsPass to clean up type tests rather than duplicate that logic
-  // in FatLtoCleanup.
+  // in FatLtoCleanup; checked-load cleanup is shared the other way, with
+  // FatLtoCleanup calling lowertypetests::cleanUpTypeCheckedLoad.
   MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the

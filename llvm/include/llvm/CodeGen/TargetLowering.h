@@ -360,15 +360,21 @@ public:
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
-    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
-        : ArgListEntry(Val, Node, Val->getType()) {}
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue(),
+                          Attribute::AttrKind ExtAttr = Attribute::None)
+        : ArgListEntry(Val, Node, Val->getType()) {
+      setExtAttribute(ExtAttr);
+    }
 
-    ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
-
-    LLVM_ABI ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr);
+    ArgListEntry(SDValue Node, Type *Ty,
+                 Attribute::AttrKind ExtAttr = Attribute::None)
+        : ArgListEntry(nullptr, Node, Ty) {
+      setExtAttribute(ExtAttr);
+    }
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
+    LLVM_ABI void setExtAttribute(Attribute::AttrKind Attr);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -3204,6 +3210,8 @@ public:
     case ISD::UREM:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
+    case ISD::AVGSUBFLOORS:
+    case ISD::AVGSUBFLOORU:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -5896,6 +5904,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand GET_ACTIVE_LANE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandGetActiveLaneMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand LOOP_DEPENDENCE_MASK nodes
   /// \param N Node to expand

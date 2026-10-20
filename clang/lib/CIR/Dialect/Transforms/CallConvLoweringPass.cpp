@@ -368,9 +368,11 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
                     ptrTy.getAddrSpace()))
           addrSpace = targetAsAttr.getValue();
+        // Any address-space attribute is a qualifier.
+        bool hasAddressSpaceQualifier = ptrTy.getAddrSpace() != nullptr;
         return tb.getPointerType(dl.getTypeSizeInBits(type),
                                  llvm::Align(dl.getTypeABIAlignment(type)),
-                                 addrSpace);
+                                 addrSpace, hasAddressSpaceQualifier);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this

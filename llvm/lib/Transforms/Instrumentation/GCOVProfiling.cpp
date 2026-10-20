@@ -66,12 +66,11 @@ static unsigned wordsOfString(StringRef s) {
   return (s.size() / 4) + 2;
 }
 
-GCOVOptions GCOVOptions::getDefault() {
+static GCOVOptions getDefaultOptions(const InstrumentationOptions &Opts) {
   GCOVOptions Options;
   Options.EmitNotes = true;
   Options.EmitData = true;
   Options.NoRedZone = false;
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
   Options.Atomic = Opts.gcov_atomic_counter;
 
   if (Opts.default_gcov_version.size() != 4) {
@@ -87,8 +86,6 @@ class GCOVFunction;
 
 class GCOVProfiler {
 public:
-  GCOVProfiler()
-      : GCOVProfiler(GCOVOptions::getDefault(), *vfs::getRealFileSystem()) {}
   GCOVProfiler(const GCOVOptions &Opts, vfs::FileSystem &VFS)
       : Options(Opts), VFS(VFS) {}
   bool
@@ -554,7 +551,9 @@ bool GCOVProfiler::runOnModule(
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
                                         ModuleAnalysisManager &AM) {
 
-  GCOVProfiler Profiler(GCOVOpts, *VFS);
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  GCOVProfiler Profiler(GCOVOpts ? *GCOVOpts : getDefaultOptions(Opts), *VFS);
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 

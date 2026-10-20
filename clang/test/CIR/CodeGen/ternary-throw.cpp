@@ -27,8 +27,8 @@ const int& test_cond_throw_false(bool flag) {
 // CIR-NEXT: }) : (!cir.bool) -> !cir.ptr<!s32i>
 
 // LLVMCIR-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
-// LLVMCIR: %[[FLAG_ALLOCA:.*]] = alloca i8
 // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVMCIR: %[[FLAG_ALLOCA:.*]] = alloca i8
 // LLVMCIR: %[[A_ALLOCA:.*]] = alloca i32
 // LLVMCIR: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
 // LLVMCIR: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
@@ -90,8 +90,8 @@ const int& test_cond_throw_true(bool flag) {
 // CIR-NEXT: }) : (!cir.bool) -> !cir.ptr<!s32i>
 
 // LLVMCIR-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
-// LLVMCIR: %[[FLAG_ALLOCA:.*]] = alloca i8
 // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVMCIR: %[[FLAG_ALLOCA:.*]] = alloca i8
 // LLVMCIR: %[[A_ALLOCA:.*]] = alloca i32
 // LLVMCIR: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
 // LLVMCIR: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
@@ -740,9 +740,9 @@ int &test_ref_cond_throw(bool c, int &x) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z19test_ref_cond_throwbRi(
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR:   %[[X_REF:.*]] = cir.alloca "x" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[C_VAL:.*]] = cir.load{{.*}} %[[C]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   %[[RES:.*]] = cir.ternary(%[[C_VAL]], true {
 // CIR:     %[[X_PTR:.*]] = cir.load %[[X_REF]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>

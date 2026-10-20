@@ -22,6 +22,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 
@@ -35,6 +36,34 @@ IncrementalDeviceParser::IncrementalDeviceParser(
       TargetOpts(DeviceInstance.getTargetOpts()) {}
 
 IncrementalDeviceParser::~IncrementalDeviceParser() {}
+
+IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
+  if (Err)
+    return;
+  if (!llvm::Triple(TargetOpts.Triple).isAMDGCN()) {
+    Err = llvm::joinErrors(
+        std::move(Err),
+        llvm::make_error<llvm::StringError>(
+            "Invalid HIP architecture for target '" + TargetOpts.Triple + "'",
+            llvm::inconvertibleErrorCode()));
+    return;
+  }
+}
+
+llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
+  // FIXME: Generate the HSACO and bundle it for the host compilation.
+  return llvm::make_error<llvm::StringError>(
+      "HIP offload binary generation is not supported yet.",
+      llvm::inconvertibleErrorCode());
+}
+
+IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
 
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,

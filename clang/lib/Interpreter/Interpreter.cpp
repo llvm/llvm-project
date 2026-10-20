@@ -479,6 +479,18 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                             std::unique_ptr<CompilerInstance> DCI) {
+  return createWithDevice(std::move(CI), std::move(DCI), OffloadType::CUDA);
+}
+
+llvm::Expected<std::unique_ptr<Interpreter>>
+Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI,
+                              OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -515,9 +527,15 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  if (Type == OffloadType::HIP)
+    DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  else
+    DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);

@@ -42,6 +42,12 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
     cir::ConstRecordAttr constRecord, mlir::SymbolTableCollection &symbolTables,
     const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
 
+/// Return \p attr with the trailing zeros of any array that
+/// adjustGlobalTypeForInit would split off written out as explicit zero
+/// elements, so that it lowers to its own type. For constants that, unlike
+/// global initializers, cannot change type.
+mlir::Attribute spellOutSplitTrailingZeros(mlir::Attribute attr);
+
 /// Adjust \p llvmType (the converted type of \p init) to the concrete LLVM type
 /// a global constant initialized with \p init actually lowers to. This differs
 /// from a plain type conversion for flexible-array-member and union

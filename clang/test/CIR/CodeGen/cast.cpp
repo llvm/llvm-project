@@ -8,13 +8,13 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func{{.*}} @_Z15cxxstaticcast_0j
-// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
 // CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) : !cir.ptr<!u8i>
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
 // CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast integral %[[XVAL]] : !u32i -> !u8i
 // CIR:    cir.store %[[CASTED]], %[[RV]] : !u8i, !cir.ptr<!u8i>
-// CIR:    %[[R:[0-9]+]] = cir.load{{.*}} %1 : !cir.ptr<!u8i>, !u8i
+// CIR:    %[[R:[0-9]+]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!u8i>, !u8i
 // CIR:    cir.return %[[R]] : !u8i
 // CIR:  }
 
@@ -96,8 +96,8 @@ bool cptr(void *d) {
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
 // LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
-// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
 // LLVM:         %[[RETVAL:.*]] = alloca i8, 
+// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
 // LLVM:         %[[X_STORAGE:.*]] = alloca i8, 
 // LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[LOADED_PTR:.*]] = load ptr, ptr %[[ARG_STORAGE]]
