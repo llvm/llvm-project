@@ -596,11 +596,9 @@ define i64 @sext_ashr7_sext_i8(i8 %val) nounwind {
 define i64 @sext_ashr8_sext_i8(i8 %val, ptr %p) nounwind {
 ; CHECK-LABEL: sext_ashr8_sext_i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sbfiz x8, x0, #56, #8
-; CHECK-NEXT:    sxtb w9, w0
-; CHECK-NEXT:    mov x0, x8
-; CHECK-NEXT:    str w9, [x1]
+; CHECK-NEXT:    sxtb w8, w0
+; CHECK-NEXT:    sbfx x0, x8, #8, #24
+; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %1 = sext i8 %val to i32
   store i32 %1, ptr %p
@@ -636,11 +634,9 @@ define i64 @sext_ashr15_sext_i16(i16 %val) nounwind {
 define i64 @sext_ashr16_sext_i16(i16 %val, ptr %p) nounwind {
 ; CHECK-LABEL: sext_ashr16_sext_i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sbfiz x8, x0, #48, #16
-; CHECK-NEXT:    sxth w9, w0
-; CHECK-NEXT:    mov x0, x8
-; CHECK-NEXT:    str w9, [x1]
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    sbfx x0, x8, #16, #16
+; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %1 = sext i16 %val to i32
   store i32 %1, ptr %p
