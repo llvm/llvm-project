@@ -4216,6 +4216,7 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
     declare float @llvm.minnum.f32(float, float)
     declare float @llvm.maxnum.f32(float, float)
     declare float @llvm.minimumnum.f32(float, float)
+    declare float @llvm.maximumnum.f32(float, float)
     declare float @llvm.canonicalize.f32(float)
 
     define float @test(i32 %x, float %arg) {
@@ -4240,10 +4241,14 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
       %min = call float @llvm.minnum.f32(float %u, float 1.0)
       %min.lhs = call float @llvm.minnum.f32(float 1.0, float %u)
       %minimumnum = call float @llvm.minimumnum.f32(float %u, float 1.0)
+      %min.var = call float @llvm.minnum.f32(float %u, float %d)
+      %maximumnum.var = call float @llvm.maximumnum.f32(float %u, float %e)
       %max.nan = call float @llvm.maxnum.f32(float %arg, float 0.0)
       %canon = call float @llvm.canonicalize.f32(float f0x00000001)
       %ninf = fadd ninf float %arg, %arg
       %finite = fadd nnan ninf float %arg, %arg
+      %rhs.unknown = fadd float 1.0, %arg
+      %bf = fadd bfloat 0xR3F80, 0xR4000
       %fpmath = fadd float %u, 0.0, !fpmath !0
       ret float %A
     }
@@ -4253,9 +4258,6 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
   SimplifyQuery SQ(M->getDataLayout());
   const fltSemantics &Sem = APFloat::IEEEsingle();
   ConstantFPRange Full = ConstantFPRange::getFull(Sem);
-  ConstantFPRange AnyOrQNaN(APFloat::getInf(Sem, /*Negative=*/true),
-                            APFloat::getInf(Sem, /*Negative=*/false),
-                            /*MayBeQNaN=*/true, /*MayBeSNaN=*/false);
   APFloat PosZero = APFloat::getZero(Sem, /*Negative=*/false);
   APFloat NegZero = APFloat::getZero(Sem, /*Negative=*/true);
   auto Range = [&](StringRef Name) {
@@ -4285,18 +4287,27 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRange) {
             Range("div.var"));
   EXPECT_EQ(Full, Range("div.var.arcp"));
 
-  ConstantFPRange ZeroToOne =
-      ConstantFPRange::getNonNaN(APFloat(0.0f), APFloat(1.0f));
-  EXPECT_EQ(ZeroToOne, Range("min"));
-  EXPECT_EQ(ZeroToOne, Range("min.lhs"));
-  EXPECT_EQ(ZeroToOne, Range("minimumnum"));
+  // minnum/maxnum may return either zero on a +0/-0 tie.
+  ConstantFPRange NegZeroToOne =
+      ConstantFPRange::getNonNaN(NegZero, APFloat(1.0f));
+  EXPECT_EQ(NegZeroToOne, Range("min"));
+  EXPECT_EQ(NegZeroToOne, Range("min.lhs"));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(PosZero, APFloat(1.0f)),
+            Range("minimumnum"));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(NegZero, APFloat(3.0f)),
+            Range("min.var"));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(255.0f)),
+            Range("maximumnum.var"));
   EXPECT_EQ(Full, Range("max.nan"));
 
   APFloat Denorm = APFloat::getSmallest(Sem);
   EXPECT_EQ(ConstantFPRange(Denorm), Range("canon"));
 
-  EXPECT_EQ(AnyOrQNaN.getWithoutInf(), Range("ninf"));
+  EXPECT_EQ(Full.getWithoutInf(), Range("ninf"));
   EXPECT_EQ(ConstantFPRange::getFinite(Sem), Range("finite"));
+  EXPECT_EQ(Full, Range("rhs.unknown"));
+  APFloat BF3(APFloat::BFloat(), "3.0");
+  EXPECT_EQ(ConstantFPRange(BF3), Range("bf"));
   EXPECT_EQ(Full, Range("fpmath"));
   EXPECT_EQ(Full, computeConstantFPRange(F->getArg(1), SQ));
 }
@@ -4322,10 +4333,12 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRangeUsed) {
 TEST_F(ValueTrackingTest, ComputeConstantFPRangeDenormal) {
   parseAssembly(R"(
     declare float @llvm.canonicalize.f32(float)
+    declare float @llvm.maxnum.f32(float, float)
 
     define float @test() #0 {
       %A = call float @llvm.canonicalize.f32(float f0x00000001)
       %A2 = fadd float f0x00000001, 0.0
+      %A3 = call float @llvm.maxnum.f32(float f0x00000001, float 1.0)
       ret float %A
     }
 
@@ -4339,6 +4352,7 @@ TEST_F(ValueTrackingTest, ComputeConstantFPRangeDenormal) {
   // Output flushing is optional, so both the subnormal and +0 are possible.
   EXPECT_EQ(ZeroToDenorm, computeConstantFPRange(A, SQ));
   EXPECT_EQ(ZeroToDenorm, computeConstantFPRange(A2, SQ));
+  EXPECT_EQ(ConstantFPRange(APFloat(1.0f)), computeConstantFPRange(A3, SQ));
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantFPRangeLimits) {

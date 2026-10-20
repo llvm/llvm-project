@@ -718,10 +718,10 @@ LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
 LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
     const WithCache<const Value *> &V, bool ForSigned, const SimplifyQuery &SQ);
 
-/// Determine the possible range of a scalar half, float or double value.
+/// Determine the possible range of a scalar IEEE-like floating-point value.
 /// Returns the full range if nothing is known. Handles int-to-fp and fp casts,
-/// fadd/fsub/fmul/fdiv, canonicalize and min/max with a constant, taking
-/// fast-math flags and the function's denormal mode into account.
+/// fadd/fsub/fmul/fdiv, canonicalize and min/max, taking fast-math flags and
+/// the function's denormal mode into account.
 ///
 /// The range assumes each instruction is evaluated as written. If \p Used is
 /// non-null, the instructions the range depends on are appended to it; a
