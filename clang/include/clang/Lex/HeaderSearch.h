@@ -771,7 +771,7 @@ public:
   ArrayRef<ModuleMap::KnownHeader>
   findResolvedModulesForHeader(FileEntryRef File) const;
 
-  /// Read the contents of the given module map file.
+  /// Read and load the contents of the given module map file.
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
@@ -801,6 +801,14 @@ public:
   void loadTopLevelSystemModules();
 
 private:
+  /// Lookup a module by name, with retry support for private counterparts of
+  /// framework modules.
+  ///
+  /// \returns Whether the module was found.
+  bool lookupModuleWithPrivateFallbacks(StringRef ModuleName,
+                                        SourceLocation ImportLoc,
+                                        bool AllowExtraModuleMapSearch);
+
   /// Lookup a module with the given module name and search-name.
   ///
   /// \param ModuleName The name of the module we're looking for.
@@ -815,10 +823,10 @@ private:
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
-  /// \returns The module named ModuleName.
-  Module *lookupModule(StringRef ModuleName, StringRef SearchName,
-                       SourceLocation ImportLoc,
-                       bool AllowExtraModuleMapSearch = false);
+  /// \returns Whether the module was found.
+  bool lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
+                        SourceLocation ImportLoc,
+                        bool AllowExtraModuleMapSearch = false);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -1013,15 +1021,25 @@ private:
     MMR_InvalidModuleMap
   };
 
+  /// Determine if the \p Result of reading a modulemap failed.
+  static bool hasModuleMapError(ModuleMapResult Result);
+
+  /// Parse and load the module map \p File and its private module map.
   ModuleMapResult parseAndLoadModuleMapFileImpl(
       FileEntryRef File, bool IsSystem, bool ImplicitlyDiscovered,
       DirectoryEntryRef Dir, FileID ID = FileID(), unsigned *Offset = nullptr,
       bool DiagnosePrivMMap = false);
 
+  /// Parse the module map \p File and its private module map, without loading
+  /// the modules they define.
   ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
                                          bool ImplicitlyDiscovered,
                                          DirectoryEntryRef Dir,
                                          FileID ID = FileID());
+
+  /// Find the directory that resolves the modulemap represented in \p File.
+  OptionalDirectoryEntryRef
+  getModuleMapHomeDir(FileEntryRef File, StringRef OriginalModuleMapFile);
 
   /// Try to load the module map file in the given directory.
   ///
@@ -1049,9 +1067,13 @@ private:
                                             bool ImplicitlyDiscovered,
                                             bool IsFramework);
 
+  /// Parse the module map file in the directory \p DirName.
+  /// Also loads the module unless module maps are loaded lazily.
   ModuleMapResult parseModuleMapFile(StringRef DirName, bool IsSystem,
                                      bool ImplicitlyDiscovered,
                                      bool IsFramework);
+
+  /// Same as above, but takes the directory as a DirectoryEntryRef.
   ModuleMapResult parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                      bool ImplicitlyDiscovered,
                                      bool IsFramework);
