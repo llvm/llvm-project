@@ -2863,7 +2863,8 @@ public:
       // Conservatively require the enclosing 2^valueBits (and its negative
       // for signed inputs) to be representable, so rounding stays within
       // finite bounds. Equality at the exponent bound is safe.
-      if (APFloat::semanticsMaxExponent(semantics) < (int)valueBits)
+      if (APFloat::semanticsMaxExponent(semantics) <
+          static_cast<int>(valueBits))
         return failure();
     }
 
@@ -2875,7 +2876,7 @@ public:
       int exponent = ilogb(rhs);
       if (exponent == APFloat::IEK_Inf) {
         int maxExponent = ilogb(APFloat::getLargest(rhs.getSemantics()));
-        if (maxExponent < (int)valueBits) {
+        if (maxExponent < static_cast<int>(valueBits)) {
           // Conversion could create infinity. For example, sitofp(65536 : i32)
           // to f16 is +inf, so equality against +inf can be true.
           return failure();
