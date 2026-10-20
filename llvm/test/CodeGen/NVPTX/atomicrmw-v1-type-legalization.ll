@@ -16,7 +16,7 @@ define <1 x i32> @add_v1i32(ptr addrspace(1) %p, <1 x i32> %v) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.add.u32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw elementwise add ptr addrspace(1) %p, <1 x i32> %v monotonic
+  %old = atomicrmw add ptr addrspace(1) %p, <1 x i32> %v monotonic
   ret <1 x i32> %old
 }
 
@@ -63,7 +63,7 @@ define <1 x float> @fadd_v1f32(ptr addrspace(1) %p, <1 x float> %v) "denormal-fp
 ; CHECK-NEXT:    atom.relaxed.sys.global.add.f32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw elementwise fadd ptr addrspace(1) %p, <1 x float> %v monotonic
+  %old = atomicrmw fadd ptr addrspace(1) %p, <1 x float> %v monotonic
   ret <1 x float> %old
 }
 
