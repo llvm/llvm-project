@@ -41,7 +41,7 @@ namespace {
 /// operations.
 struct SimpleMakeIsolatedFromAbove
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -54,7 +54,7 @@ struct SimpleMakeIsolatedFromAbove
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
@@ -68,7 +68,7 @@ struct MakeIsolatedFromAboveAndCloneOpsWithNoOperands
 /// with no operands.
 struct MakeIsolatedFromAboveAndCloneOpsWithOperands
     : OpRewritePattern<test::OneRegionWithOperandsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(test::OneRegionWithOperandsOp regionOp,
                                 PatternRewriter &rewriter) const override {
