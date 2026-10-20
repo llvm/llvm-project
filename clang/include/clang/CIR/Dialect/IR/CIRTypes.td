@@ -973,7 +973,15 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.member_kinds, key.is_class);
+    }
 
     bool isClass() const { return getIsClass(); }
     bool isStruct() const { return !getIsClass(); }
@@ -1132,7 +1140,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.padding, key.member_kinds);
+    }
 
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }
