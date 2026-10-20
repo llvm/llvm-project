@@ -149,7 +149,13 @@ These are not `agx` operations. The LLVM AGX backend makes the standard operatio
 
 ## Library kernels
 
-Library kernels (`mlir/lib/Dialect/AGX/Library`, used by ZLUDA's cuBLAS / cuDNN / cuFFT replacements) are MLIR
-functions in `gpu.module`s that mix standard dialects and `agx` operations. Each is compiled per chip from one source
-and tested in the simulator on at least two generations. The first one is a GEMM (`agx_gemm_f32`, `agx_gemm_f16`)
-built on `agx.mma_tile`.
+Library kernels are MLIR functions in `gpu.module`s that mix standard dialects and `agx` operations, with no chip
+names. ZLUDA's cuBLAS / cuDNN / cuFFT replacements keep their sources next to their crates (for example
+`zluda_blas_agx/kernels/sgemm.mlir`). The first GEMM (`gemm.mlir` in the integration tests) is built on `agx.mma_tile`.
+
+`mlir/utils/agx-kernels/agx-build-fatbin.py` compiles one source for a list of chips and packs the objects into one
+*fat AGX object*: magic `ZAGXFAT1`, an entry per chip (name, offset, size), then the AGX ELF objects. For each chip the
+pipeline is `--agxir-attach-target=chip=CHIP`, `--convert-gpu-to-agxir`, `mlir-translate --mlir-to-llvmir` of the
+gpu.module, and `llc -mcpu=CHIP`; the chip is chosen only by the attached `#agxir.target`. A runtime loads the fat
+object and picks the entry for its device (ZLUDA's `cuModuleLoadData` does). Each kernel is tested in the simulator on
+at least two generations.

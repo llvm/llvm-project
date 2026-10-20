@@ -12,9 +12,11 @@ Each ARG is a kernel argument in order: `TYPE:V,V,...` is a buffer
 initialized with the values (TYPE is i32, u32, i64, f16, f32 or f64),
 `TYPE:iota*N` one with 0, 1, ..., N - 1, `TYPE:@FILE` one with the values in
 FILE, `TYPE*N` an output buffer of N
-elements, and `i32=V` / `i64=V` / `index=V` a scalar. Arguments are passed as pointers
-in uniform registers (see AGXUsage.rst). The output buffers are printed one
-per line, `NAME: v v v ...`, with NAME the argument number.
+elements, `inout:TYPE:...` an initialized buffer that is also printed, and
+`i32=V` / `i64=V` / `index=V` / `f32=V` a scalar. Arguments are passed as
+pointers in uniform registers (see AGXUsage.rst). The output buffers are
+printed one per line, `NAME: v v v ...`, with NAME the argument number.
+--grid and --wg take X or X,Y or X,Y,Z threads.
 """
 
 import argparse
@@ -52,8 +54,8 @@ def main():
     ap.add_argument('--agx-run', dest='agx_run', required=True)
     ap.add_argument('--mlir-translate', dest='mlir_translate')
     ap.add_argument('--cpu', default='agx-g13g')
-    ap.add_argument('--grid', type=int, required=True)
-    ap.add_argument('--wg', type=int, required=True)
+    ap.add_argument('--grid', required=True)
+    ap.add_argument('--wg', required=True)
     ap.add_argument('ir')
     ap.add_argument('args', nargs='*')
     a = ap.parse_args()
@@ -73,7 +75,9 @@ def main():
                        check=False)
         grid = int(re.search(r'threadgroups_per_grid at u(\d+)', asm).group(1))
         gm = re.search(r'global data buffer at u(\d+)_u\d+', asm)
-        cmd = [a.agx_run, code, '--grid', str(a.grid), '--wg', str(a.wg)]
+        dims = lambda s: (list(map(int, s.split(','))) + [1, 1])[:3]
+        grid_d, wg_d = dims(a.grid), dims(a.wg)
+        cmd = [a.agx_run, code, '--grid', ','.join(map(str, grid_d)), '--wg', ','.join(map(str, wg_d))]
         uniforms = []
         outs = []
         for i, arg in enumerate(a.args):
@@ -82,6 +86,9 @@ def main():
                 # A scalar: 32-bit values take one uniform, 64-bit ones (index
                 # is 64-bit) two, low word first.
                 t, v = arg.split('=')
+                if t == 'f32':
+                    uniforms += [struct.unpack('<I', struct.pack('<f', float(v)))[0]]
+                    continue
                 v = int(v, 0)
                 uniforms += [v & 0xffffffff] if t == 'i32' else [v & 0xffffffff, (v >> 32) & 0xffffffff]
                 continue
@@ -92,7 +99,8 @@ def main():
                 cmd += ['--alloc', '%#x=%d' % (base, size), '--dump', '%#x=%d:%s' % (base, size, f)]
                 outs.append((i, t, int(n), f))
             else:
-                t, vals = arg.split(':')
+                inout = arg.startswith('inout:')
+                t, vals = arg[6 if inout else 0:].split(':', 1)
                 f = os.path.join(tmp, 'i%d.bin' % i)
                 if vals.startswith('@'):
                     vals = open(vals[1:]).read().strip()
@@ -101,12 +109,15 @@ def main():
                 vs = [float(v) if t[0] == 'f' else int(v, 0) for v in vals.split(',')]
                 open(f, 'wb').write(struct.pack('<%d%s' % (len(vs), FMT[t]), *vs))
                 cmd += ['--map', '%#x=%s' % (base, f)]
+                if inout:
+                    fo = os.path.join(tmp, 'o%d.bin' % i)
+                    cmd += ['--dump', '%#x=%d:%s' % (base, len(vs) * struct.calcsize('<' + FMT[t]), fo)]
+                    outs.append((i, t, len(vs), fo))
             uniforms += [base, 0]
         for k, v in enumerate(uniforms):
             cmd += ['--uniform', '%d=%d' % (k, v)]
-        groups = a.grid // a.wg
-        cmd += ['--uniform', '%d=%d' % (grid, groups), '--uniform', '%d=1' % (grid + 1),
-                '--uniform', '%d=1' % (grid + 2)]
+        for d in range(3):
+            cmd += ['--uniform', '%d=%d' % (grid + d, -(-grid_d[d] // wg_d[d]))]
         if gm:
             g = os.path.join(tmp, 'g2.bin')
             data = open(glob, 'rb').read() if os.path.exists(glob) else b''
