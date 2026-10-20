@@ -3423,6 +3423,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fputil_fp_bitwise",
+    hdrs = ["src/__support/FPUtil/fp_bitwise.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_properties_architectures",
+        ":__support_macros_properties_cpu_features",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_fpbits_str",
     hdrs = ["src/__support/FPUtil/fpbits_str.h"],
     deps = [

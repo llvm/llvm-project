@@ -573,11 +573,13 @@ define void @trunc_as_icmp_ne_and(<2 x i8> %x, <2 x i8> %y, ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i8> [[TMP3]], <i8 1, i8 1, i8 2, i8 2>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i8> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i8>
-; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
 ; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P1]], align 1
 ; CHECK-NEXT:    ret void
@@ -644,11 +646,13 @@ define void @trunc_as_icmp_eq_and(<2 x i8> %x, <2 x i8> %y, ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i8> [[TMP3]], <i8 1, i8 1, i8 2, i8 2>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], <i8 1, i8 1, i8 0, i8 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i8>
-; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
 ; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P1]], align 1
 ; CHECK-NEXT:    ret void
