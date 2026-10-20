@@ -586,6 +586,35 @@ subroutine test_distinct_conditions(a, b)
   !$omp &      implementation={vendor(score(3): llvm)}: taskwait)
 end subroutine
 
+! All three score 5. The first is a strict subset of the third, which ties with
+! the second, so `b` is tested first and TASKYIELD is never selected.
+! CHECK-LABEL: func.func @_QPtest_distinct_conditions_three_way(
+! CHECK-SAME:    %[[ARG0:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK-SAME:    %[[ARG1:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECLA:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[DECLB:.*]]:2 = hlfir.declare %[[ARG1]]
+! CHECK:         %[[LOADB:.*]] = fir.load %[[DECLB]]#0
+! CHECK:         %[[CONDB:.*]] = fir.convert %[[LOADB]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[CONDB]] {
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NEXT:    } else {
+! CHECK:           %[[LOADA:.*]] = fir.load %[[DECLA]]#0
+! CHECK:           %[[CONDA:.*]] = fir.convert %[[LOADA]] : (!fir.logical<4>) -> i1
+! CHECK:           fir.if %[[CONDA]] {
+! CHECK-NEXT:        omp.barrier
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_distinct_conditions_three_way(a, b)
+  logical, intent(in) :: a, b
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp & when(user={condition(b)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: taskwait) &
+  !$omp & when(user={condition(a)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm)}: barrier)
+end subroutine
+
 ! With the same condition, the first selector is a strict subset of the second.
 ! CHECK-LABEL: func.func @_QPtest_same_condition(
 ! CHECK:         fir.if
