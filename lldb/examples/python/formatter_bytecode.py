@@ -522,15 +522,26 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
 ################################################################################
 
 
+# A replacement in an llvm::formatv format string, as supported by formatter
+# bytecode. Replacements are automatically indexed, so there is no index.
+_FMT_REPLACEMENT = r"""
+    \{
+    (?: , [^{}:]* )?  # optional layout, which may not contain "{", "}", or ":"
+    (?: : [^{}]* )?   # optional options, which may not contain "{" or "}"
+    \}
+"""
+
 # Tokens of an llvm::formatv format string, as supported by formatter bytecode.
-# Every character of a format string is part of exactly one token.
+# Every character of a format string is part of exactly one token. The
+# replacement pattern is inserted with %, since the braces in the pattern would
+# each need to be escaped in an f-string.
 _FMT_TOKEN = re.compile(
     r"""
-      \{\{                              # escaped brace
-    | \{ (?:,[^{}:]*)? (?::[^{}]*)? \}  # replacement, with layout (, prefixed) and options (: prefixed)
-    | \{                                # invalid replacement
-    | [^{]+                             # literal text
-    """,
+      \{\{      # escaped brace
+    | (?: %s )  # replacement
+    | \{        # invalid replacement
+    | [^{]+     # literal text
+    """ % _FMT_REPLACEMENT,
     re.VERBOSE,
 )
 
