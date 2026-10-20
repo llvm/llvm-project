@@ -188,3 +188,39 @@ TEST_F(SourceMgrDiagnosticVerifierTest, ColumnChecking) {
       MatchResult::Matched);
   EXPECT_FALSE(Verifier.verify());
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, LineZeroAndLeadingZeroOffsets) {
+  const MemoryBuffer *Buf =
+      addBuffer("// expected-error@+02 {{decimal leading zero}}\n"
+                "// expected-remark@-2 {{implicit module at line 0}}\n"
+                "op\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  using Location = SourceMgrDiagnosticVerifier::Location;
+  EXPECT_EQ(Verifier.process(SourceMgr::DK_Remark, Location{Buf, 0, 0},
+                             "implicit module at line 0"),
+            MatchResult::Matched);
+  EXPECT_EQ(Verifier.process(SourceMgr::DK_Error, Location{Buf, 3, 1},
+                             "decimal leading zero"),
+            MatchResult::Matched);
+  EXPECT_TRUE(Verifier.verify());
+  EXPECT_EQ(Output, "");
+}
+
+TEST_F(SourceMgrDiagnosticVerifierTest, OutOfBoundsLineOffsets) {
+  addBuffer("op\n"
+            "# expected-error@-3 {{before start}}\n"
+            "# expected-error@+5 {{past end}}\n"
+            "# expected-error@+99999999999 {{overflow}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_NE(StringRef(Output).find(
+                "error: line offset '-3' is before the start of the file"),
+            StringRef::npos);
+  EXPECT_NE(StringRef(Output).find(
+                "error: line offset '+5' is past the end of the file"),
+            StringRef::npos);
+  EXPECT_NE(StringRef(Output).find("error: invalid line offset '+99999999999'"),
+            StringRef::npos);
+}

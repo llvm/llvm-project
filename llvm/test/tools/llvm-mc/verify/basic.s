@@ -18,9 +18,11 @@
 ## of a longer word such as 'uncheck'.
 # RUN: llvm-mc --triple=riscv32 --verify=check,alt custom-prefix.s
 
-## Malformed '-re' directives fail verification.
+## Malformed '-re' directives and out-of-range line offsets fail verification.
 # RUN: not llvm-mc --triple=riscv32 --verify invalid-regex.s 2>&1 \
 # RUN:   | FileCheck invalid-regex.s
+# RUN: not llvm-mc --triple=riscv32 --verify invalid-offset.s 2>&1 \
+# RUN:   | FileCheck invalid-offset.s
 
 ## A diagnostic that matches the text but not the kind of a directive.
 # RUN: not llvm-mc --triple=riscv32 --verify near-miss.s 2>&1 \
@@ -126,6 +128,13 @@ addi a0, a0, 1
 # expected-error-re@-2 {{invalid {{[}} regex}}
 # CHECK: error: found start of regex with no end '}}'
 # CHECK: error: invalid regex:
+
+#--- invalid-offset.s
+addi a0, a0, 1
+# expected-error@-99 {{before start}}
+# expected-error@+99 {{past end}}
+# CHECK: error: line offset '-99' is before the start of the file
+# CHECK: error: line offset '+99' is past the end of the file
 
 #--- near-miss.s
 .foo_directive
