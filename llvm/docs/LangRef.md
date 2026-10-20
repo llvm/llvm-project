@@ -2162,8 +2162,10 @@ define void @f() "no-sse" { ... }
       hold for allocators that return storage at an address that is derived from
       their inputs (more at {ref}`llvm.provenance.alloc <int_provenance_alloc>`).
     * "alloc_disjoint": the returned allocation does not overlap with storage
-      of allocas, global variables, `byval` arguments. This only holds for
-      top-level allocators which are not nested within another allocator.
+      of allocas, global variables, `byval` arguments. This does not hold for
+      allocators that may serve memory out of such objects (e.g., by carving up
+      a global array), either directly or through another allocator they are
+      built upon.
     * "poisons_memory": the contents of the freed region are not observable
       after the free call site, meaning that stores to such a region prior to
       the call may be eliminated. This is only valid for "free". Deallocators
