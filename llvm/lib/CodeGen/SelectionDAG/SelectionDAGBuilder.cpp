@@ -2625,8 +2625,8 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   if (BPI != nullptr) {
     // See if we are either likely to get an early out or compute both lhs/rhs
     // of the condition.
-    BasicBlock *IfFalse = I.getSuccessor(0);
-    BasicBlock *IfTrue = I.getSuccessor(1);
+    BasicBlock *IfFalse = I.getSuccessor(1);
+    BasicBlock *IfTrue = I.getSuccessor(0);
 
     std::optional<bool> Likely;
     if (BPI->isEdgeHot(I.getParent(), IfTrue))
