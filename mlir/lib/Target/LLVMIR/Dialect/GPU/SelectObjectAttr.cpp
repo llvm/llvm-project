@@ -384,8 +384,12 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
     structTypes[i] = arg->getType();
 
   Type *structTy = StructType::create(module.getContext(), structTypes);
-  Value *argStruct = builder.CreateAlloca(structTy, 0u);
-  Value *argArray = builder.CreateAlloca(
+  // Allocate in the entry block, so that a launch in a loop does not grow the
+  // stack on every iteration.
+  BasicBlock &entry = builder.GetInsertBlock()->getParent()->getEntryBlock();
+  IRBuilder<> allocaBuilder(&entry, entry.getFirstInsertionPt());
+  Value *argStruct = allocaBuilder.CreateAlloca(structTy, 0u);
+  Value *argArray = allocaBuilder.CreateAlloca(
       ptrTy, ConstantInt::get(intPtrTy, structTypes.size()));
 
   for (auto [i, arg] : enumerate(args)) {
