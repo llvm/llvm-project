@@ -366,7 +366,6 @@ define amdgpu_ps float @bitop3_fshl_select_shared(i32 %n, i32 %wi, i32 %sum) {
 ; SDAG-NEXT:    v_bitop3_b32 v0, v2, v0, v1 bitop3:0x87
 ; SDAG-NEXT:    v_and_b32_e32 v1, v0, v3
 ; SDAG-NEXT:    v_cmp_le_i32_e32 vcc, v0, v3
-; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -379,7 +378,6 @@ define amdgpu_ps float @bitop3_fshl_select_shared(i32 %n, i32 %wi, i32 %sum) {
 ; GISEL-NEXT:    v_xnor_b32_e32 v1, v3, v2
 ; GISEL-NEXT:    v_and_b32_e32 v2, v1, v0
 ; GISEL-NEXT:    v_cmp_gt_i32_e32 vcc, v1, v0
-; GISEL-NEXT:    s_nop 1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -458,7 +456,6 @@ define amdgpu_ps float @bitop3_ctlz_shl_or(i32 %n) {
 ; SDAG-NEXT:    v_ffbh_u32_e32 v0, v0
 ; SDAG-NEXT:    v_min_u32_e32 v0, 32, v0
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SDAG-NEXT:    v_or_b32_e32 v0, 0xefffc000, v0
 ; SDAG-NEXT:    ; return to shader part epilog
@@ -469,7 +466,6 @@ define amdgpu_ps float @bitop3_ctlz_shl_or(i32 %n) {
 ; GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GISEL-NEXT:    v_min_u32_e32 v0, 32, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    s_nop 1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-NEXT:    v_add_u32_e32 v1, 0xefffc000, v0
 ; GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -484,7 +480,6 @@ define amdgpu_ps float @bitop3_ctlz_shl_or(i32 %n) {
 ; O0-NEXT:    v_min_u32_e64 v0, v0, s0
 ; O0-NEXT:    s_mov_b32 s0, 0
 ; O0-NEXT:    v_cmp_ne_u32_e64 s[0:1], v0, s0
-; O0-NEXT:    s_nop 1
 ; O0-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; O0-NEXT:    s_mov_b32 s0, 0xefffc000
 ; O0-NEXT:    v_add_u32_e64 v0, v1, s0

@@ -2658,7 +2658,6 @@ define i64 @test_vector_reduce_add_v2i64(<2 x i64> %v) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2723,10 +2722,8 @@ define i64 @test_vector_reduce_add_v3i64(<3 x i64> %v) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2827,13 +2824,10 @@ define i64 @test_vector_reduce_add_v4i64(<4 x i64> %v) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v7, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3020,25 +3014,18 @@ define i64 @test_vector_reduce_add_v8i64(<8 x i64> %v) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v8
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v9, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v10
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v11, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v12
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v13, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, v6, v14
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v15, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v7, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3370,50 +3357,35 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    scratch_load_dword v31, off, s32
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v16
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v17, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v18
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v19, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v20
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v21, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, v6, v22
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v23, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v8, vcc, v8, v24
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, v9, v25, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v10, vcc, v10, v26
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v11, vcc, v11, v27, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v12, vcc, v12, v28
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v13, vcc, v13, v29, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v8
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v9, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v10
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v11, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v12
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v13, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v8, vcc, v14, v30
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v9, vcc, v15, v31, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, v6, v8
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v7, vcc, v7, v9, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v7, vcc
 ; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

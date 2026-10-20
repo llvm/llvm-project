@@ -99,8 +99,8 @@ define amdgpu_ps void @strict_fptrunc_v2f64_to_v2bf16(<2 x double> %a, ptr %out)
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[6:7], v8
 ; GFX950-NEXT:    v_cmp_gt_f64_e64 s[2:3], |v[2:3]|, |v[6:7]|
 ; GFX950-NEXT:    v_cmp_nlg_f64_e64 s[0:1], v[2:3], v[6:7]
-; GFX950-NEXT:    v_cvt_f32_f64_e32 v9, v[0:1]
 ; GFX950-NEXT:    v_cndmask_b32_e64 v2, -1, 1, s[2:3]
+; GFX950-NEXT:    v_cvt_f32_f64_e32 v9, v[0:1]
 ; GFX950-NEXT:    v_add_u32_e32 v2, v8, v2
 ; GFX950-NEXT:    s_or_b64 vcc, vcc, s[0:1]
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, v2, v8, vcc

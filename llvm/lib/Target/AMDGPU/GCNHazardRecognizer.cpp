@@ -1708,6 +1708,40 @@ static bool consumesDstSelForwardingOperand(const MachineInstr *VALU,
   return false;
 }
 
+// Exempt only known condition/carry inputs from the two-state scalar-data
+// wait. Unlisted opcodes retain the wait even if they have Boolean inputs.
+static bool isConditionOrCarryInput(const MachineInstr &MI, unsigned OpIdx) {
+  const MachineOperand &MO = MI.getOperand(OpIdx);
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_CNDMASK_B32_e32:
+  case AMDGPU::V_CNDMASK_B32_dpp:
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+  case AMDGPU::V_ADDC_U32_e32:
+  case AMDGPU::V_ADDC_U32_dpp:
+  case AMDGPU::V_ADDC_U32_sdwa:
+  case AMDGPU::V_SUBB_U32_e32:
+  case AMDGPU::V_SUBB_U32_dpp:
+  case AMDGPU::V_SUBB_U32_sdwa:
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_dpp:
+  case AMDGPU::V_SUBBREV_U32_sdwa:
+    return MO.isReg() && MO.isUse() && MO.isImplicit() &&
+           (MO.getReg() == AMDGPU::VCC || MO.getReg() == AMDGPU::VCC_LO);
+  case AMDGPU::V_CNDMASK_B32_e64:
+  case AMDGPU::V_CNDMASK_B32_e64_dpp:
+  case AMDGPU::V_ADDC_U32_e64:
+  case AMDGPU::V_ADDC_U32_e64_dpp:
+  case AMDGPU::V_SUBB_U32_e64:
+  case AMDGPU::V_SUBB_U32_e64_dpp:
+  case AMDGPU::V_SUBBREV_U32_e64:
+  case AMDGPU::V_SUBBREV_U32_e64_dpp:
+    return static_cast<int>(OpIdx) ==
+           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src2);
+  default:
+    return false;
+  }
+}
+
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
   int WaitStatesNeeded = 0;
 
@@ -1777,22 +1811,28 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
       return MI.modifiesRegister(UseReg, TRI);
     };
 
-    for (const MachineOperand &Use : VALU->explicit_uses()) {
-      if (!Use.isReg())
+    for (unsigned OpIdx = 0, E = VALU->getNumOperands(); OpIdx != E; ++OpIdx) {
+      const MachineOperand &Use = VALU->getOperand(OpIdx);
+      if (!Use.isReg() || !Use.isUse())
         continue;
 
       UseReg = Use.getReg();
-      if (TRI->isSGPRReg(MRI, UseReg)) {
-        int WaitStatesNeededForDef =
-            VALUWriteSGPRVALUReadWaitstates -
-            getWaitStatesSince(IsVALUDefSGPRFn,
-                               VALUWriteSGPRVALUReadWaitstates);
-        WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
-      }
-    }
+      if (!UseReg)
+        continue;
 
-    if (VALU->readsRegister(AMDGPU::VCC, TRI)) {
-      UseReg = AMDGPU::VCC;
+      // Check explicit SGPR data sources and implicit VCC sources.
+      if (Use.isImplicit()) {
+        if (!TRI->regsOverlap(UseReg, AMDGPU::VCC))
+          continue;
+      } else if (!TRI->isSGPRReg(MRI, UseReg)) {
+        continue;
+      }
+
+      // SGPR/VCC inputs used as a condition or carry do not require the
+      // two-state wait for scalar-data reads, per CDNA3 and CDNA4 ISA section 4.5.
+      if (isConditionOrCarryInput(*VALU, OpIdx))
+        continue;
+
       int WaitStatesNeededForDef =
           VALUWriteSGPRVALUReadWaitstates -
           getWaitStatesSince(IsVALUDefSGPRFn, VALUWriteSGPRVALUReadWaitstates);

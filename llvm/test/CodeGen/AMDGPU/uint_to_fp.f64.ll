@@ -665,7 +665,6 @@ define void @v_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0x3ff00000
 ; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, 0, v3, vcc
 ; GFX942-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -746,7 +745,6 @@ define void @v_select_uint_to_fp_i1_vals_i64(ptr addrspace(1) %out, i32 %in) {
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0x3ff00000
 ; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, 0, v3, vcc
 ; GFX942-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -828,7 +826,6 @@ define void @v_swap_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0x3ff00000
 ; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e64 v5, v3, 0, vcc
 ; GFX942-NEXT:    global_store_dwordx2 v[0:1], v[4:5], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

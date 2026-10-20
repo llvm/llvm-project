@@ -20,44 +20,38 @@ define i8 @to_fp8_f32(float %x) {
 ; GFX942-NEXT:    v_bfe_u32 v7, v2, 0, v6
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
-; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
 ; GFX942-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; GFX942-NEXT:    v_and_or_b32 v7, v5, 1, v7
+; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
 ; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    s_movk_i32 s0, 0x80
-; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v2
-; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 8, vcc
+; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX942-NEXT:    v_or3_b32 v2, v5, v4, v2
 ; GFX942-NEXT:    v_and_b32_e32 v4, 0x7ffff, v1
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 19, v1
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX942-NEXT:    v_bfe_u32 v6, v1, 20, 3
 ; GFX942-NEXT:    v_and_or_b32 v4, v6, 1, v4
+; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 19, v1
 ; GFX942-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GFX942-NEXT:    v_add_u32_e32 v1, v6, v1
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 7, v1
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; GFX942-NEXT:    v_addc_co_u32_e32 v3, vcc, 6, v3, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 3, v3
 ; GFX942-NEXT:    v_or3_b32 v1, v5, v4, v1
 ; GFX942-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; GFX942-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7f
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7f
 ; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %x, metadata !"Float8E4M3FN", metadata !"round.tonearest", i1 false)
@@ -78,40 +72,36 @@ define i8 @to_bf8_f32(float %x) {
 ; GFX942-NEXT:    v_bfe_u32 v7, v2, 0, v6
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
-; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
 ; GFX942-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; GFX942-NEXT:    v_and_or_b32 v7, v5, 1, v7
+; GFX942-NEXT:    v_lshrrev_b32_e32 v2, v6, v2
 ; GFX942-NEXT:    v_and_b32_e32 v2, v2, v7
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    s_movk_i32 s0, 0x80
-; GFX942-NEXT:    v_bfe_u32 v6, v1, 21, 2
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX942-NEXT:    v_add_u32_e32 v2, v5, v2
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 3, v2
-; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    s_movk_i32 s0, 0x80
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 4, vcc
+; GFX942-NEXT:    v_and_b32_sdwa v5, v0, s0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX942-NEXT:    v_or3_b32 v2, v5, v4, v2
 ; GFX942-NEXT:    v_and_b32_e32 v4, 0xfffff, v1
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 20, v1
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX942-NEXT:    v_bfe_u32 v6, v1, 21, 2
 ; GFX942-NEXT:    v_and_or_b32 v4, v6, 1, v4
+; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 20, v1
 ; GFX942-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GFX942-NEXT:    v_add_u32_e32 v1, v6, v1
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 3, v1
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; GFX942-NEXT:    v_addc_co_u32_e32 v3, vcc, 14, v3, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 2, v3
 ; GFX942-NEXT:    v_or3_b32 v4, v5, v4, v1
 ; GFX942-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
-; GFX942-NEXT:    v_cmp_eq_u32_e64 s[0:1], 30, v3
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 3, v1
+; GFX942-NEXT:    v_cmp_eq_u32_e64 s[0:1], 30, v3
 ; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], vcc
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 30, v3
 ; GFX942-NEXT:    v_or_b32_e32 v1, 0x7c, v5
@@ -119,14 +109,11 @@ define i8 @to_bf8_f32(float %x) {
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v2, v1, vcc
 ; GFX942-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX942-NEXT:    s_movk_i32 s0, 0x204
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
 ; GFX942-NEXT:    v_cmp_class_f32_e64 vcc, v0, s0
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0x7e
 ; GFX942-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)

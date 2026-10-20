@@ -29,11 +29,9 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0xc2ce8ed0
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s6, v6
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0x42b17218
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s6, v6
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0x7f800000
-; GCN-NEXT:    s_mov_b32 s6, 0xc2ce8ed0
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v5, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -43,12 +41,12 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_add_f32_e32 v7, v7, v8
 ; GCN-NEXT:    v_exp_f32_e32 v7, v7
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v8, v9
+; GCN-NEXT:    s_mov_b32 s6, 0xc2ce8ed0
 ; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s6, v5
 ; GCN-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v4, v4, v[0:3]
 ; GCN-NEXT:    v_ldexp_f32 v7, v7, v8
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -63,7 +61,6 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_ldexp_f32 v7, v7, v8
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -78,7 +75,6 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_ldexp_f32 v7, v7, v8
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -93,7 +89,6 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_ldexp_f32 v7, v7, v8
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -108,7 +103,6 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_ldexp_f32 v7, v7, v8
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v7, 0x3fb8aa3b, v5
 ; GCN-NEXT:    v_fma_f32 v8, v5, s0, -v7
@@ -121,10 +115,8 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v4, v4, v[0:3]
 ; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s6, v5
 ; GCN-NEXT:    v_ldexp_f32 v4, v7, v8
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v5
-; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GCN-NEXT:    v_mul_f32_e32 v5, 0x3fb8aa3b, v4
 ; GCN-NEXT:    v_fma_f32 v7, v4, s0, -v5
@@ -140,9 +132,9 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_ldexp_f32 v5, v5, v7
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v4
+; GCN-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
 ; GCN-NEXT:    global_store_dword v8, v4, s[2:3]
 ; GCN-NEXT:    s_endpgm
   %mai0 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %in1, i32 0, i32 0, i32 0)
