@@ -6419,6 +6419,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
+  RUN_VPLAN_PASS(VPlanTransforms::materializeFirstOrderRecurrenceStartValue,
+                 *Plan, Range);
   RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
 
