@@ -28,4 +28,9 @@ The kernels in `kernels/` cover the common shapes of CUDA code:
 | `softmax_row` | SIMD reductions + `exp` |
 
 `agx_cost` estimates come from the simulator's model calibrated on an M2 Max. Rebuild it from the simulator's
-current `main` before comparing over time.
+current `main` before comparing over time. The baseline was recorded with simulator `main` f50bd88; that commit's
+33-cycle hold on taken forward jumps adds 32 cycles to `saxpy`, `stencil` and `histogram`.
+
+`agx_cost` runs with every uniform register zero. A kernel guarded by `tid < n`, with `n` a uniform, therefore
+skips its body: its cycles are those of the guard alone (`saxpy`, `stencil`, `histogram`). Code bytes, registers
+and waits still cover the body.

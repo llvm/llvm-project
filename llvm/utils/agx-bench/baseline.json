@@ -1,7 +1,7 @@
 {
  "histogram.ll:histogram:agx-g13g": {
   "bytes": 124,
-  "cycles": 178.1,
+  "cycles": 210.1,
   "gprs": 7,
   "instructions": 22,
   "uniform_halves": 16,
@@ -9,7 +9,7 @@
  },
  "histogram.ll:histogram:agx-g14c": {
   "bytes": 124,
-  "cycles": 178.1,
+  "cycles": 210.1,
   "gprs": 7,
   "instructions": 22,
   "uniform_halves": 16,
@@ -33,7 +33,7 @@
  },
  "saxpy.ll:saxpy:agx-g13g": {
   "bytes": 62,
-  "cycles": 9.2,
+  "cycles": 41.2,
   "gprs": 4,
   "instructions": 11,
   "uniform_halves": 18,
@@ -41,7 +41,7 @@
  },
  "saxpy.ll:saxpy:agx-g14c": {
   "bytes": 62,
-  "cycles": 9.2,
+  "cycles": 41.2,
   "gprs": 4,
   "instructions": 11,
   "uniform_halves": 18,
@@ -81,7 +81,7 @@
  },
  "stencil.ll:stencil:agx-g13g": {
   "bytes": 190,
-  "cycles": 96.1,
+  "cycles": 128.1,
   "gprs": 8,
   "instructions": 28,
   "uniform_halves": 16,
@@ -89,7 +89,7 @@
  },
  "stencil.ll:stencil:agx-g14c": {
   "bytes": 190,
-  "cycles": 96.1,
+  "cycles": 128.1,
   "gprs": 8,
   "instructions": 28,
   "uniform_halves": 16,
