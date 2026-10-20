@@ -497,7 +497,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::AddUIExtendedOp::getShapeForUnroll() {
+arith::AddUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -561,7 +561,7 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::SubUIExtendedOp::getShapeForUnroll() {
+arith::SubUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -733,7 +733,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulSIExtendedOp::getShapeForUnroll() {
+arith::MulSIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -777,7 +777,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulUIExtendedOp::getShapeForUnroll() {
+arith::MulUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
