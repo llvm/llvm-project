@@ -926,33 +926,20 @@ void test_agg_assign_throw(bool c, Agg &a) {
 // CIR:     cir.get_member %[[TMP]][1] {name = "y"}
 // CIR:   }
 // CIR:   %[[A_VAL:.*]] = cir.load %[[A_REF]]
-// CIR:   cir.call @_ZN3AggaSEOS_(%[[A_VAL]], %[[TMP]])
+// CIR:   cir.copy %[[TMP]] to %[[A_VAL]] : !cir.ptr<!rec_Agg>
 
-// LLVMCIR-LABEL: define{{.*}} void @_Z21test_agg_assign_throwbR3Agg(
-// LLVMCIR:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// LLVMCIR: [[TRUE_BB]]:
-// LLVMCIR:   call{{.*}} ptr @__cxa_allocate_exception
-// LLVMCIR:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
-// LLVMCIR:   unreachable
-// LLVMCIR: [[FALSE_BB]]:
-// LLVMCIR:   store i32 1, ptr %{{.*}}
-// LLVMCIR:   store i32 2, ptr %{{.*}}
-// LLVMCIR:   br label %[[END:.*]]
-// LLVMCIR: [[END]]:
-// LLVMCIR:   call{{.*}} ptr @_ZN3AggaSEOS_(
-
-// OGCG-LABEL: define{{.*}} void @_Z21test_agg_assign_throwbR3Agg(
-// OGCG:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// OGCG: [[TRUE_BB]]:
-// OGCG:   call{{.*}} ptr @__cxa_allocate_exception
-// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
-// OGCG:   unreachable
-// OGCG: [[FALSE_BB]]:
-// OGCG:   store i32 1, ptr %{{.*}}
-// OGCG:   store i32 2, ptr %{{.*}}
-// OGCG:   br label %[[END:.*]]
-// OGCG: [[END]]:
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 8
+// LLVM-LABEL: define{{.*}} void @_Z21test_agg_assign_throwbR3Agg(
+// LLVM:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   call{{.*}} ptr @__cxa_allocate_exception
+// LLVM:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// LLVM:   unreachable
+// LLVM: [[FALSE_BB]]:
+// LLVM:   store i32 1, ptr %{{.*}}
+// LLVM:   store i32 2, ptr %{{.*}}
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[END]]:
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 8
 
 // Nested conditional: the inner throw arm terminates the inner cir.if region
 // directly.

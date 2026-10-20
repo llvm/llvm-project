@@ -420,7 +420,7 @@ void store_x87u(X87U *q) { *q = make_x87u(); }
 // LLVM:    %[[RES:.+]] = call x86_fp80 @_Z9make_x87uv()
 // LLVMCIR: store x86_fp80 %[[RES]], ptr %[[SLOT]], align 16
 // LLVMCIR: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TMP]], ptr align 16 %[[SLOT]], i64 16, i1 false)
-// LLVMCIR: call noundef nonnull align 16 dereferenceable(16) ptr @_ZN4X87UaSEOS_(ptr noundef nonnull align 16 dereferenceable(16) %{{[^,)]+}}, ptr noundef nonnull align 16 dereferenceable(16) %[[TMP]])
+// LLVMCIR: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,)]+}}, ptr align 16 %[[TMP]], i64 16, i1 false)
 // OGCG:    store x86_fp80 %[[RES]], ptr %[[TMP]], align 16
 // OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,)]+}}, ptr align 16 %[[TMP]], i64 16, i1 false)
 
