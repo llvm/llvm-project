@@ -6398,8 +6398,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                      RecipeBuilder, CostCtx))
     RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
-                 PSE);
+  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range,
+                 CostCtx);
 
   // Convert remaining VPInstructions to widen or replicate recipes.
   // TODO: This legacy code should eventually be migrated to VPlan.
