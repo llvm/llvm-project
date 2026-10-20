@@ -87,7 +87,7 @@ define <8 x float> @widen_extract4(<8 x float> %ins, <2 x float> %ext) {
 define <8 x i16> @pr26015(<4 x i16> %t0) {
 ; CHECK-LABEL: @pr26015(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[T0:%.*]], <4 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 poison>, <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 10, i32 4, i32 5, i32 6, i32 11>
+; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> <i16 0, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>, <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 0, i32 0, i32 10, i32 0, i32 0, i32 0, i32 11>
 ; CHECK-NEXT:    ret <8 x i16> [[T5]]
 ;
   %t1 = extractelement <4 x i16> %t0, i32 2
@@ -889,7 +889,7 @@ define <4 x ptr> @insert_into_null_ptr_vector(<4 x ptr> %vec) {
 ; Treat insert to a zero vector with one poison lane at insert index as insert into a zero vector
 define <4 x float> @insert_into_poison_lane(<4 x float> %vec) {
 ; CHECK-LABEL: @insert_into_poison_lane(
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x float> [[VEC:%.*]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[VECINS]]
 ;
   %vecext = extractelement <4 x float> %vec, i32 0
@@ -899,7 +899,7 @@ define <4 x float> @insert_into_poison_lane(<4 x float> %vec) {
 
 define <4 x i32> @poison_at_different_idx(<4 x i32> %vec) {
 ; CHECK-LABEL: @poison_at_different_idx(
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> [[VEC:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 3>
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[VEC:%.*]], <4 x i32> <i32 0, i32 4, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[VECINS]]
 ;
   %vecext = extractelement <4 x i32> %vec, i32 0
