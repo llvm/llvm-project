@@ -8,49 +8,36 @@
 
 // UNSUPPORTED: no-rtti
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu1.o -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu2.o -DTU2 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
+// The type A has external linkage, so its RTTI name is not prefixed with '*'.
+// Its RTTI is emitted separately in the shared library and in the main executable,
+// and libc++ compares the names with strcmp, so the two type_index values must be equal.
+
+// RUN: %{cxx} %s %{flags} %{compile_flags} -fPIC -shared -o %t.lib.so -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 %{link_flags}
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.main.o -DMAIN -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2
-// RUN: %{cxx} %t.tu1.o %t.tu2.o %t.main.o %{flags} %{link_flags} -o %t.exe
+// RUN: %{cxx} %t.main.o %t.lib.so %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>
 #include <typeindex>
-#include <vector>
 
-#include "test_macros.h"
+// Hidden visibility keeps each copy of the RTTI local to its own module.
+struct [[gnu::visibility("hidden")]] A {
+  int x;
+};
 
-// Itanium ABI implementations prefix the RTTI name of a type with internal linkage with a '*',
-// which lets this implementation distinguish between two internally linked types
-#if !defined(_LIBCPP_ABI_MICROSOFT) &&                                                                                 \
-    (defined(TEST_COMPILER_GCC) || (defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2400))
-#  define INTERNAL_LINKAGE_RTTI_NAMES_ARE_MARKED
-#endif
-
-extern std::vector<std::type_index> registry;
-
-void register1();
-void register2();
+std::type_index registerA();
 
 #if defined(TU1)
-  namespace { struct A { bool x; }; }
-  void register1() { registry.push_back(std::type_index(typeid(A))); }
-#elif defined(TU2)
-  namespace { struct A { int x, y; }; }
-  void register2() { registry.push_back(std::type_index(typeid(A))); }
+std::type_index registerA() { return std::type_index(typeid(A)); }
+
 #elif defined(MAIN)
-  std::vector<std::type_index> registry;
+int main(int, char**) {
+  std::type_index executable = std::type_index(typeid(A));
+  std::type_index shared     = registerA();
 
-  int main(int, char**) {
-    register1();
-    register2();
-
-    assert(registry.size() == 2);
-#  if defined(INTERNAL_LINKAGE_RTTI_NAMES_ARE_MARKED)
-    assert(registry[0] != registry[1]);
-#  else
-    assert(registry[0] == registry[1]);
-#  endif
-    return 0;
-  }
+  assert(executable == shared);
+  return 0;
+}
+#else
+#  error
 #endif
