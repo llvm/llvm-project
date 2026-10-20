@@ -3570,10 +3570,8 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   // type_info object excludes the "_ZTS" prefix. So we skip past the first 4
   // characters. For types that do not have externally visible Clang/C++
   // linkage, '*' is prepended to the type-name string so that within libstdc++
-  // RTTI names compare correctly via strcmp across translation units. LLVM
-  // internal linkage marks incomplete types as internal linkage, resulting in
-  // '*' being prepended incorrectly, thus Clang/C++ linkage is used, through
-  // isExternal
+  // RTTI names compare correctly via strcmp across translation units. Linkage
+  // of the type name is used, not the LLVM linkage of the typeinfo.
   SmallString<256> TypeName;
   if (!isExternallyVisible(Ty->getLinkage()))
     TypeName += '*';
@@ -3591,8 +3589,6 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
 
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
-  // RTTI type-name object is still emitted with prefix "_ZTS" in the symbol
-  // name, so that it can be found by the linker.
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, Init->getType(), Linkage, Align.getAsAlign());
 

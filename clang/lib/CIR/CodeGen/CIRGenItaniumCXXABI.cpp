@@ -852,10 +852,8 @@ CIRGenItaniumRTTIBuilder::getAddrOfTypeName(mlir::Location loc, QualType ty,
   // type_info object excludes the "_ZTS" prefix. So we skip past the first 4
   // characters. For types that do not have externally visible Clang/C++
   // linkage, '*' is prepended to the type-name string so that within libstdc++
-  // RTTI names compare correctly via strcmp across translation units. LLVM
-  // internal linkage marks incomplete types as internal linkage, resulting in
-  // '*' being prepended incorrectly, thus Clang/C++ linkage is used, through
-  // isExternallyVisible.
+  // RTTI names compare correctly via strcmp across translation units. Linkage
+  // of the type name is used, not the LLVM linkage of the typeinfo.
   SmallString<256> typeName;
   if (!isExternallyVisible(ty->getLinkage()))
     typeName += '*';
@@ -871,8 +869,6 @@ CIRGenItaniumRTTIBuilder::getAddrOfTypeName(mlir::Location loc, QualType ty,
   // So cast Init to a ConstArrayAttr should be safe.
   auto initStr = cast<cir::ConstArrayAttr>(init);
 
-  // RTTI type-name object is still emitted with prefix "_ZTS" in the symbol
-  // name, so that it can be found by the linker.
   cir::GlobalOp gv = cgm.createOrReplaceCXXRuntimeVariable(
       loc, name, initStr.getType(), linkage, align);
   CIRGenModule::setInitializer(gv, init);
