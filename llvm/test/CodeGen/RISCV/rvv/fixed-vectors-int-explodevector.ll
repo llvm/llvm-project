@@ -1743,3 +1743,51 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
   %add14 = add i32 %add13, %e15
   ret i32 %add14
 }
+
+define i8 @explode_4xi8_dominates(<4 x i8> %v) {
+; RV32-LABEL: explode_4xi8_dominates:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    divu a0, a0, a1
+; RV32-NEXT:    vslidedown.vi v9, v8, 1
+; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    zext.b a2, a2
+; RV32-NEXT:    divu a1, a2, a1
+; RV32-NEXT:    divu a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_4xi8_dominates:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 1
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    divuw a0, a0, a1
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    zext.b a2, a2
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    divuw a1, a2, a1
+; RV64-NEXT:    divuw a0, a1, a0
+; RV64-NEXT:    ret
+  %e2 = extractelement <4 x i8> %v, i32 2
+  %e3 = extractelement <4 x i8> %v, i32 3
+  %udiv1 = udiv i8 %e2, %e3
+  %e1 = extractelement <4 x i8> %v, i32 1
+  %e0 = extractelement <4 x i8> %v, i32 0
+  %udiv0 = udiv i8 %e0, %e1
+  %udiv2 = udiv i8 %udiv0, %udiv1
+  ret i8 %udiv2
+}
