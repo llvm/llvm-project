@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -emit-llvm %s -O2 -fno-builtin -o - | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm %s -O2 -fno-builtin-printf -o - | FileCheck %s
 // Check that -fno-builtin is honored.

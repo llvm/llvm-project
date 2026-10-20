@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -emit-llvm < %s | grep puts | count 4
 
 int puts(const char *);

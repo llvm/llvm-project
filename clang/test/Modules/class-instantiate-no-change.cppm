@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t

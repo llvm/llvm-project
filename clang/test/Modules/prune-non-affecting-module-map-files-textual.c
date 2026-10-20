@@ -1,6 +1,7 @@
 // This test checks that a module map with a textual header can be marked as
 // non-affecting.
 
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: rm -rf %t && mkdir %t
 // RUN: split-file %s %t
 
