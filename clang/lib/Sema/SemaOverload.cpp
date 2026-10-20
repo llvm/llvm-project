@@ -6356,13 +6356,10 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   } else if (getLangOpts().HLSL && FromAS == LangAS::hlsl_groupshared) {
     ASTContext &Ctx = SemaRef.getASTContext();
     QualType Ty = From->getType().getLocalUnqualifiedType();
-    ExprResult Res =
-        SemaRef.HLSL()
-            .CreateOutArgExprHelper(From, Ty, Ty,
-                                    InitializedEntity::InitializeTemporary(
-                                        Ty.getNonLValueExprType(Ctx)),
-                                    From->getBeginLoc(), /*IsInOut=*/true)
-            .get();
+    InitializedEntity TempEntity =
+        InitializedEntity::InitializeTemporary(Ty.getNonLValueExprType(Ctx));
+    ExprResult Res = SemaRef.HLSL().CreateOutArgExpr(
+        From, Ty, Ty, TempEntity, From->getBeginLoc(), /*IsInOut=*/true);
     if (Res.isInvalid())
       return ExprError();
     From = Res.get();

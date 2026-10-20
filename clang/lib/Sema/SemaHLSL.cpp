@@ -5335,10 +5335,10 @@ bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
           Ctx.hasSameUnqualifiedType(SrcTy, UIntTy));
 }
 
-ExprResult SemaHLSL::CreateOutArgExprHelper(Expr *Arg, QualType ArgTy,
-                                            QualType ParamTy,
-                                            InitializedEntity Entity,
-                                            SourceLocation Loc, bool IsInOut) {
+ExprResult SemaHLSL::CreateOutArgExpr(Expr *Arg, QualType ArgTy,
+                                      QualType ParamTy,
+                                      InitializedEntity Entity,
+                                      SourceLocation Loc, bool IsInOut) {
   ASTContext &Ctx = SemaRef.getASTContext();
 
   QualType Ty = ParamTy.getNonLValueExprType(Ctx);
@@ -5398,8 +5398,8 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   InitializedEntity Entity =
       InitializedEntity::InitializeParameter(Ctx, Ty, false);
 
-  return CreateOutArgExprHelper(Arg, Arg->getType(), Param->getType(), Entity,
-                                Param->getBeginLoc(), IsInOut);
+  return CreateOutArgExpr(Arg, Arg->getType(), Param->getType(), Entity,
+                          Param->getBeginLoc(), IsInOut);
 }
 
 QualType SemaHLSL::getInoutParameterType(QualType Ty) {
