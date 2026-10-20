@@ -58,5 +58,14 @@ define i32 @0(ptr addrspace(1) %ptr) {
   ret i32 %add
 }
 
+; The second def gets an error assignment to the register of the tied def.
+; Freeing the defs must not release it before the tied use is allocated.
+; CHECK: error: inline assembly requires more registers than available at line 23
+; DBGINFO-CHECK: error: inline assembly requires more registers than available at line 23
+define void @ran_out_of_registers_asm_tied(ptr addrspace(1) %ptr) {
+  %ld = load i32, ptr addrspace(1) %ptr
+  %asm = call { i32, i32 } asm sideeffect "; def $0 $1 use $2", "=v,=v,0"(i32 %ld), !srcloc !0
+  ret void
+}
 
 !0 = !{i32 23}
