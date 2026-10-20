@@ -14,6 +14,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -512,8 +513,8 @@ static const StringMap<SIAtomicAddrSpace> ASNames = {{
 }};
 
 std::optional<SIAtomicAddrSpace>
-getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
-                        function_ref<void(StringRef)> Diag) {
+getSynchronizeAddrSpace(const MMRAMetadata &MMRA, const Function *DiagFn,
+                        const DebugLoc &DL) {
   static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   if (!MMRA)
@@ -526,14 +527,15 @@ getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
 
     if (auto It = ASNames.find(Suffix); It != ASNames.end()) {
       Result |= It->second;
-    } else {
+    } else if (DiagFn) {
       SmallString<128> Str;
       raw_svector_ostream OS(Str);
       OS << "unknown address space '" << Suffix << "'; expected one of ";
       ListSeparator LS;
       for (const auto &[Name, Val] : ASNames)
         OS << LS << '\'' << Name << '\'';
-      Diag(Str);
+      DiagFn->getContext().diagnose(
+          DiagnosticInfoUnsupported(*DiagFn, Str, DL, DS_Warning));
     }
   }
 
@@ -544,8 +546,7 @@ getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
 }
 
 std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I) {
-  const auto MMRA = MMRAMetadata(I);
-  return getSynchronizeAddrSpace(MMRA, [](StringRef) {});
+  return getSynchronizeAddrSpace(MMRAMetadata(I));
 }
 
 } // end namespace llvm::AMDGPU
