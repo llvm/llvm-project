@@ -42,24 +42,6 @@ define i64 @match_andAsRem_lshrAsDiv_shlAsMul(i64 %x) {
   %t4 = add i64 %t, %t3
   ret i64 %t4
 }
-define { i32, i32 } @match_unsigned_shared_remainder(i32 noundef %x) {
-; CHECK-LABEL: @match_unsigned_shared_remainder(
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], 6
-; CHECK-NEXT:    [[RB:%.*]] = shl nuw nsw i32 [[R]], 1
-; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } poison, i32 [[RB]], 0
-; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[A]], i32 [[SUM]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[B]]
-;
-  %q = udiv i32 %x, 6
-  %r = urem i32 %x, 6
-  %qb = mul i32 %q, 12
-  %rb = shl i32 %r, 1
-  %sum = add i32 %qb, %rb
-  %a = insertvalue { i32, i32 } poison, i32 %rb, 0
-  %b = insertvalue { i32, i32 } %a, i32 %sum, 1
-  ret { i32, i32 } %b
-}
 
 define i64 @match_signed(i64 %x) {
 ; CHECK-LABEL: @match_signed(
@@ -95,6 +77,40 @@ bb:
   %tmp7 = mul <2 x i64> %tmp4, <i64 19136, i64 19136>
   %tmp8 = add <2 x i64> %tmp6, %tmp7
   ret <2 x i64> %tmp8
+}
+
+define { i32, i32 } @match_shared_remainder(i32 noundef %x) {
+; CHECK-LABEL: @match_shared_remainder(
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[RB:%.*]] = shl nuw nsw i32 [[R]], 1
+; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } poison, i32 [[RB]], 0
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[A]], i32 [[SUM]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[B]]
+;
+  %q = udiv i32 %x, 6
+  %r = urem i32 %x, 6
+  %qb = mul i32 %q, 12
+  %rb = shl i32 %r, 1
+  %sum = add i32 %qb, %rb
+  %a = insertvalue { i32, i32 } poison, i32 %rb, 0
+  %b = insertvalue { i32, i32 } %a, i32 %sum, 1
+  ret { i32, i32 } %b
+}
+
+define i32 @match_masked_recombination(i32 noundef %x) {
+; CHECK-LABEL: @match_masked_recombination(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], 1536
+; CHECK-NEXT:    [[SUM:%.*]] = and i32 [[TMP1]], -2048
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %q = lshr i32 %x, 4
+  %r = and i32 %x, 15
+  %qb = mul i32 %q, 24576
+  %rb = mul i32 %r, 1536
+  %masked = and i32 %rb, 30720
+  %sum = add i32 %qb, %masked
+  ret i32 %sum
 }
 
 define i64 @not_match_inconsistent_signs(i64 %x) {
