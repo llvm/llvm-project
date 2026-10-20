@@ -13,6 +13,7 @@
 
 ; CHECK: <SOURCE_FILENAME
 ; "main"
+; CHECK-NEXT: <GUIDLIST
 ; CHECK-NEXT: <FUNCTION op0=0 op1=4
 ; "analias"
 ; CHECK-NEXT: <FUNCTION op0=4 op1=7

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -run-pass=none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses mmra metadata correctly.
 
 --- |
@@ -19,7 +19,7 @@ body:             |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: test_mmra
-    ; CHECK: ATOMIC_FENCE 5, 2, mmra !0
+    ; CHECK: ATOMIC_FENCE 5, 2, mmra !{{[0-9]+}}
     ATOMIC_FENCE 5, 2, mmra !0
     S_ENDPGM 0
 ...

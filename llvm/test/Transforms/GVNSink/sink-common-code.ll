@@ -311,8 +311,10 @@ if.end:
 !0 = !{ !"an example type tree" }
 !1 = !{ !"int", !0 }
 !2 = !{ !"float", !0 }
-!3 = !{ !"const float", !2, i64 0 }
-!4 = !{ !"special float", !2, i64 1 }
+!3 = !{!5, !5, i64 0, i64 0}
+!4 = !{!6, !6, i64 0, i64 1}
+!5 = !{!"const float", !2}
+!6 = !{!"special float", !2}
 
 ; CHECK-LABEL: test13
 ; CHECK-DAG: select

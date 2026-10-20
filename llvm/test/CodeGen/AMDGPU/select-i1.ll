@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; FIXME: This should go in existing select.ll test, except the current testcase there is broken on GCN
 

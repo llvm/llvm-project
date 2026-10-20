@@ -15,6 +15,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 
@@ -513,11 +514,12 @@ bool M68kOperand::isPCIBD32() const {
          // If InnerReg is NoReg, this is essentially a PCD with larger
          // displacement.
          (!MemOp.InnerReg.isValid() ||
-          M68kMCRegisterClasses[M68k::XR32RegClassID].contains(MemOp.InnerReg));
+          getM68kMCRegisterClass(M68k::XR32RegClassID)
+              .contains(MemOp.InnerReg));
 }
 bool M68kOperand::isPCIBD16() const {
   return isPCIBD() &&
-         M68kMCRegisterClasses[M68k::XR16RegClassID].contains(MemOp.InnerReg);
+         getM68kMCRegisterClass(M68k::XR16RegClassID).contains(MemOp.InnerReg);
 }
 void M68kOperand::addPCIBDOperands(MCInst &Inst, unsigned N) const {
   M68kOperand::addExpr(Inst, MemOp.OuterDisp);

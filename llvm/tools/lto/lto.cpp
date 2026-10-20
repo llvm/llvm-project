@@ -25,6 +25,7 @@
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -95,6 +96,9 @@ static enum class OptParsingState {
 
 static LLVMContext *LTOContext = nullptr;
 
+// Records -mllvm arguments parsed through the legacy debug-option APIs.
+static std::vector<std::string> ThinLTOMllvmArgs;
+
 struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
     if (DI.getSeverity() != DS_Error) {
@@ -154,6 +158,7 @@ struct LibLTOCodeGenerator : LTOCodeGenerator {
   LibLTOCodeGenerator() : LTOCodeGenerator(*LTOContext) { init(); }
   LibLTOCodeGenerator(std::unique_ptr<LLVMContext> Context)
       : LTOCodeGenerator(*Context), OwnedContext(std::move(Context)) {
+    OwnedContext->getLibraryOptions().assign(LTOContext->getLibraryOptions());
     init();
   }
 
@@ -461,7 +466,13 @@ void lto_codegen_add_must_preserve_symbol(lto_code_gen_t cg,
 static void maybeParseOptions(lto_code_gen_t cg) {
   if (optionParsingState != OptParsingState::Done) {
     // Parse options if any were set by the lto_codegen_debug_options* function.
-    unwrap(cg)->parseCodeGenDebugOptions();
+    LibLTOCodeGenerator *CG = unwrap(cg);
+    CG->parseCodeGenDebugOptions();
+    // Later code generators in a local context copy the options from
+    // LTOContext.
+    if (CG->OwnedContext)
+      LTOContext->getLibraryOptions().assign(
+          CG->getContext().getLibraryOptions());
     lto_add_attrs(cg);
     optionParsingState = OptParsingState::Done;
   }
@@ -502,15 +513,17 @@ bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
   return !unwrap(cg)->compile_to_file(name);
 }
 
+static void parseDebugOptions(ArrayRef<const char *> Options) {
+  lto_initialize();
+  std::vector<const char *> CodegenArgv(1, "libLTO");
+  append_range(CodegenArgv, Options);
+  cl::parseCommandLineOptions(LTOContext->getLibraryOptions(), CodegenArgv);
+}
+
 void lto_set_debug_options(const char *const *options, int number) {
   assert(optionParsingState == OptParsingState::NotParsed &&
          "option processing already happened");
-  // Need to put each suboption in a null-terminated string before passing to
-  // parseCommandLineOptions().
-  std::vector<std::string> Options;
-  llvm::append_range(Options, ArrayRef(options, number));
-
-  llvm::parseCommandLineOptions(Options);
+  parseDebugOptions(ArrayRef(options, number));
   optionParsingState = OptParsingState::Early;
 }
 
@@ -553,7 +566,9 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
-  ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  ThinLTOCodeGenerator *CodeGen =
+      new ThinLTOCodeGenerator(LTOContext->getLibraryOptions());
+  CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
   CodeGen->setFreestanding(EnableFreestanding);
@@ -630,11 +645,10 @@ void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
 }
 
 void thinlto_debug_options(const char *const *options, int number) {
-  // if options were requested, set them
+  // If options were requested, parse and retain them.
   if (number && options) {
-    std::vector<const char *> CodegenArgv(1, "libLTO");
-    append_range(CodegenArgv, ArrayRef<const char *>(options, number));
-    cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    parseDebugOptions(ArrayRef(options, number));
+    ThinLTOMllvmArgs.assign(options, options + number);
   }
 }
 
@@ -746,4 +760,15 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
 extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
   *size = RuntimeLibcallSymbols.size();
   return RuntimeLibcallSymbols.data();
+}
+
+extern const char *const *
+lto_runtime_lib_symbols_list_for_triple(const char *TS, size_t *size) {
+  static StringMap<SmallVector<const char *>> RTLibcallSymMap;
+  Triple TT(TS);
+  auto [It, Inserted] = RTLibcallSymMap.try_emplace(TT.normalize());
+  if (Inserted)
+    It->second = lto::LTO::getRuntimeLibcallSymbols(TT);
+  *size = It->second.size();
+  return It->second.data();
 }

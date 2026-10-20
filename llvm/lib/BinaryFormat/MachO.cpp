@@ -66,6 +66,8 @@ static MachO::CPUSubTypeARM64 getARM64SubType(const Triple &T) {
     return (MachO::CPUSubTypeARM64)MachO::CPU_SUBTYPE_ARM64_32_V8;
   if (T.isArm64e())
     return MachO::CPU_SUBTYPE_ARM64E;
+  if (T.isArm64e_x1())
+    return MachO::CPU_SUBTYPE_ARM64E_X1;
 
   return MachO::CPU_SUBTYPE_ARM64_ALL;
 }

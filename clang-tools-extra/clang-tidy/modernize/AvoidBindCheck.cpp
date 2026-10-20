@@ -181,10 +181,10 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
 static bool anyDescendantIsLocal(const Stmt *Statement) {
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Statement)) {
     const ValueDecl *Decl = DeclRef->getDecl();
-    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl)) {
-      if (Var->isLocalVarDeclOrParm())
-        return true;
-    }
+    if (const auto *Var = dyn_cast_or_null<VarDecl>(Decl);
+        Var && Var->isLocalVarDeclOrParm())
+      return true;
+
   } else if (isa<CXXThisExpr>(Statement)) {
     return true;
   }
@@ -378,12 +378,10 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
 
 static bool isPlaceHolderIndexRepeated(const ArrayRef<BindArgument> Args) {
   llvm::SmallSet<size_t, 4> PlaceHolderIndices;
-  for (const BindArgument &B : Args) {
-    if (B.PlaceHolderIndex) {
-      if (!PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
-        return true;
-    }
-  }
+  for (const BindArgument &B : Args)
+    if (B.PlaceHolderIndex &&
+        !PlaceHolderIndices.insert(B.PlaceHolderIndex).second)
+      return true;
   return false;
 }
 
@@ -514,7 +512,7 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
 
   const auto *CE = dyn_cast<CXXConstructExpr>(NoTemporaries);
   const auto *FC = dyn_cast<CXXFunctionalCastExpr>(NoTemporaries);
-  if ((isa<CallExpr>(NoTemporaries)) || (CE && (CE->getNumArgs() > 0)) ||
+  if (isa<CallExpr>(NoTemporaries) || (CE && (CE->getNumArgs() > 0)) ||
       (FC && (FC->getCastKind() == CK_ConstructorConversion)))
     // CE is something that looks like a call, with arguments - either
     // a function call or a constructor invocation.
@@ -653,7 +651,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("bind");
 
   LambdaProperties LP = getLambdaProperties(Result);
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getBeginLoc(),
            formatv("prefer a lambda to {0}::bind", LP.BindNamespace).str());
   if (!LP.IsFixitSupported)

@@ -8,7 +8,7 @@
 
 #include "src/fcntl/fcntl.h"
 
-#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   arg = va_arg(varargs, void *);
   va_end(varargs);
 
-  auto result = LIBC_NAMESPACE::internal::fcntl(fd, cmd, arg);
+  auto result = LIBC_NAMESPACE::linux_syscalls::fcntl(fd, cmd, arg);
 
   if (!result.has_value()) {
     libc_errno = result.error();

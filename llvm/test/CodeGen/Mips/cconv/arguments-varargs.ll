@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=mipsel-linux -relocation-model=static < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN-TODO: llc -mtriple=mips64 -relocation-model=static -target-abi o32 < %s \
-; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64el -relocation-model=static -target-abi o32 < %s \
-; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64 -relocation-model=static -target-abi o32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64el -relocation-model=static -target-abi o32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,O32 %s
 
 ; RUN: llc -mtriple=mips64-linux -relocation-model=static -target-abi n32 < %s \
 ; RUN:   | FileCheck --check-prefixes=ALL,NEW,N32,NEW-BE %s

@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFILD %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -combiner-tokenfactor-inline-limit=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFIL7 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFILD %s
+; RUN: llc -mtriple=amdgpu9.00 -combiner-tokenfactor-inline-limit=7 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFIL7 %s
 
 
 ; GCN-LABEL: {{^}}token_factor_inline_limit_test:
 
-; GCN-TFLID: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
-; GCN-TFLID: buffer_store_dword [[REG7]], {{.*$}}
+; GCN-TFILD: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
+; GCN-TFILD: buffer_store_dword [[REG7]], {{.*$}}
 ; GCN-TFILD: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
 ; GCN-TFILD: buffer_store_dword [[REG8]], {{.*}} offset:4
 ; GCN-TFILD: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
@@ -39,8 +39,8 @@
 ; GCN-TFIL7: buffer_store_dword [[REG9]], {{.*}} offset:8
 ; GCN-TFIL7: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
 ; GCN-TFIL7: buffer_store_dword [[REG8]], {{.*}} offset:4
-; GCN-TFLL7: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
-; GCN-TFLL7: buffer_store_dword [[REG7]], {{.*$}}
+; GCN-TFIL7: v_mov_b32_e32 [[REG7:v[0-9]+]], 7
+; GCN-TFIL7: buffer_store_dword [[REG7]], {{.*$}}
 
 ; GCN: s_getpc
 define void @token_factor_inline_limit_test() {

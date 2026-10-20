@@ -2,11 +2,13 @@
 Test lldb-dap launch request.
 """
 
-import lldbdap_testcase
 import os
 
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
-class TestDAP_launch_sourcePath(lldbdap_testcase.DAPTestCaseBase):
+
+class TestDAP_launch_sourcePath(DAPTestCaseBase):
     """
     Tests the "sourcePath" will set the target.source-map.
     """
@@ -14,20 +16,23 @@ class TestDAP_launch_sourcePath(lldbdap_testcase.DAPTestCaseBase):
     def test(self):
         program = self.getBuildArtifact("a.out")
         program_dir = os.path.dirname(program)
-        self.build_and_launch(program, sourcePath=program_dir)
-        self.continue_to_exit()
-        output = self.get_console()
+        session = self.build_and_create_session()
+        process_event = session.launch(
+            LaunchArgs(program=program, sourcePath=program_dir)
+        )
+        session.verify_process_exited(after=process_event)
+
+        output = session.get_console()
         self.assertTrue(output and len(output) > 0, "expect console output")
-        lines = output.splitlines()
         prefix = '(lldb) settings set target.source-map "." '
         found = False
-        for line in lines:
+        for line in output.splitlines():
             if line.startswith(prefix):
                 found = True
-                quoted_path = '"%s"' % (program_dir)
+                quoted_path = f'"{program_dir}"'
                 self.assertEqual(
                     quoted_path,
                     line[len(prefix) :],
-                    "lldb-dap working dir %s == %s" % (quoted_path, line[6:]),
+                    f"lldb-dap working dir {quoted_path} == {line[6:]}",
                 )
         self.assertTrue(found, 'found "sourcePath" in console output')

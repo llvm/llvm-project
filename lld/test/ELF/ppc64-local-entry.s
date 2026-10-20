@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t
 # RUN: ld.lld -r %t -o %t2
-# RUN: llvm-objdump -s --section=.symtab %t2 | FileCheck %s
+# RUN: llvm-readelf -s %t2 | FileCheck %s
 
 .text
 .abiversion 2
@@ -37,11 +37,6 @@ _start:
 	.type	g,@object               # @g
 	.lcomm	g,4,4
 
-// We expect the st_other byte to be 0x60:
-// localentry = 011 (gep + 2 instructions), reserved = 000,
-// visibility = 00 (STV_DEFAULT)
-// Currently, llvm-objdump does not support displaying
-// st_other's PPC64 specific flags, thus we check the
-// result of the hexdump of .symtab section.
-
-// CHECK: 0060 00000003 12600001 00000000 00000000
+## We expect st_other to be 0x60: localentry = 011 (gep + 2 instructions),
+## reserved = 000, visibility = 00 (STV_DEFAULT).
+# CHECK: FUNC    GLOBAL DEFAULT [<other: 0x60>] [[#]] _start

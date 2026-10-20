@@ -198,18 +198,18 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
 // CHECK-LABEL: @index_vector
-func.func @index_vector(%arg0: vector<4xindex>) {
+func.func @index_vector(%arg0: vector<4xindex>, %arg1: vector<4xindex>) {
   // CHECK: spirv.UMod %{{.*}}, %{{.*}}: vector<4xi32>
-  %0 = arith.remui %arg0, %arg0: vector<4xindex>
+  %0 = arith.remui %arg0, %arg1: vector<4xindex>
   return
 }
 
@@ -743,6 +743,21 @@ func.func @constant_16bit() {
   return
 }
 
+// Without the Int8 capability, 8-bit floats are emulated as i8 and then
+// widened to i32 like any other 8-bit integer.
+// CHECK-LABEL: @constant_8bit_float
+func.func @constant_8bit_float() {
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %0 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : tensor<2xi32> : !spirv.array<2 x i32>
+  %1 = arith.constant dense<[1.0, -0.5]> : tensor<2xf8E4M3FN>
+  // CHECK: spirv.Constant dense<[56, -80]> : vector<2xi32>
+  %2 = arith.constant dense<[1.0, -0.5]> : vector<2xf8E4M3>
+  // CHECK: spirv.Constant dense<[56, -80, 64, -72]> : tensor<4xi32> : !spirv.array<4 x i32>
+  %3 = arith.constant dense<[[1.0, -0.5], [2.0, -1.0]]> : tensor<2x2xf8E4M3FN>
+  return
+}
+
 // CHECK-LABEL: @constant_size1
 func.func @constant_size1() {
   // CHECK: spirv.Constant 4 : i32
@@ -1158,6 +1173,43 @@ func.func @fptosi2(%arg0 : f16) -> i16 {
 
 // -----
 
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Float16, BFloat16TypeKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+  // CHECK: spirv.FConvert %{{.*}} : f16 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+  // CHECK: spirv.FConvert %{{.*}} : bf16 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @convertf_vector_f16_to_bf16
+func.func @convertf_vector_f16_to_bf16(%arg0 : vector<4xf16>) -> vector<4xbf16> {
+  // CHECK: spirv.FConvert %{{.*}} : vector<4xf16> to vector<4xbf16>
+  %0 = arith.convertf %arg0 : vector<4xf16> to vector<4xbf16>
+  return %0 : vector<4xbf16>
+}
+
+// CHECK-LABEL: @convertf_rounding_mode
+func.func @convertf_rounding_mode(%arg0 : f16) -> bf16 {
+  // CHECK: spirv.FConvert %{{.*}} {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f16 to bf16
+  %0 = arith.convertf %arg0 to_nearest_even : f16 to bf16
+  return %0 : bf16
+}
+
+} // end module
+
+// -----
+
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {
@@ -1494,15 +1546,9 @@ func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 }
 
 // CHECK-LABEL: @float32_minnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MIN]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMin %arg0, %arg1 : f32
   %0 = arith.minnumf %arg0, %arg1 : f32
-  // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
@@ -1520,25 +1566,19 @@ func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>)
 }
 
 // CHECK-LABEL: @float32_maxnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
-  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MAX]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMax %arg0, %arg1 : vector<2xf32>
   %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
-  // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
@@ -1582,11 +1622,11 @@ module attributes {
 } {
 
 // CHECK-LABEL: @int_vector23
-func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
+func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<3xi16>, %arg3: vector<3xi16>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
-  %1 = arith.divsi %arg1, %arg1: vector<3xi16>
+  %1 = arith.divsi %arg2, %arg3: vector<3xi16>
   return
 }
 

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -stop-after=amdgpu-isel %s -o - | FileCheck --check-prefix=MIR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -stop-after=amdgpu-isel -o %t.mir %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -start-after=amdgpu-isel -verify-machineinstrs %t.mir -o - | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -stop-after=amdgpu-isel %s -o - | FileCheck --check-prefix=MIR %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -stop-after=amdgpu-isel -o %t.mir %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -start-after=amdgpu-isel -verify-machineinstrs %t.mir -o - | FileCheck --check-prefix=ASM %s
 
 ; Test that kernarg preloading information is correctly serialized to MIR and
 ; can be round-tripped through MIR serialization/deserialization.

@@ -1,0 +1,43 @@
+// Top-level Artifact tests for clang-ssaf-format auto mode (no --type, or
+// explicit --type auto, dispatch by the self-describing 'type' field).
+// Covers both the resolved Artifact path and the ArtifactEncoding path.
+
+// ============================================================================
+// readArtifact errors (no --type, no --encoding)
+// ============================================================================
+
+// 'type' field is absent.
+// RUN: not clang-ssaf-format %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ARTIFACT-MISSING-TYPE
+// RUN: not clang-ssaf-format --type auto %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ARTIFACT-MISSING-TYPE
+// ARTIFACT-MISSING-TYPE:      clang-ssaf-format: error: reading Artifact from file '{{.*}}missing-type.json'
+// ARTIFACT-MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// 'type' field names an unrecognized artifact kind.
+// RUN: not clang-ssaf-format %S/Inputs/unknown-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ARTIFACT-UNKNOWN-TYPE
+// RUN: not clang-ssaf-format --type auto %S/Inputs/unknown-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ARTIFACT-UNKNOWN-TYPE
+// ARTIFACT-UNKNOWN-TYPE:      clang-ssaf-format: error: reading Artifact from file '{{.*}}unknown-type.json'
+// ARTIFACT-UNKNOWN-TYPE-NEXT: unknown value 'Mystery' for field 'type': expected 'TUSummary', 'LUSummary', or 'WPASuite'
+
+// ============================================================================
+// readArtifactEncoding errors (no --type, --encoding)
+// ============================================================================
+
+// 'type' field is absent.
+// RUN: not clang-ssaf-format --encoding %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENCODING-MISSING-TYPE
+// RUN: not clang-ssaf-format --type auto --encoding %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENCODING-MISSING-TYPE
+// ENCODING-MISSING-TYPE:      clang-ssaf-format: error: reading ArtifactEncoding from file '{{.*}}missing-type.json'
+// ENCODING-MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// 'type' field names an unrecognized artifact kind.
+// RUN: not clang-ssaf-format --encoding %S/Inputs/unknown-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENCODING-UNKNOWN-TYPE
+// RUN: not clang-ssaf-format --type auto --encoding %S/Inputs/unknown-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENCODING-UNKNOWN-TYPE
+// ENCODING-UNKNOWN-TYPE:      clang-ssaf-format: error: reading ArtifactEncoding from file '{{.*}}unknown-type.json'
+// ENCODING-UNKNOWN-TYPE-NEXT: unknown value 'Mystery' for field 'type': expected 'TUSummary', 'LUSummary', 'StaticLibrary', 'MultiArchStaticLibrary', or 'MultiArchSharedLibrary'

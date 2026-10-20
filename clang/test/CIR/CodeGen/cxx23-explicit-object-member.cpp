@@ -34,7 +34,7 @@ int call_with_member(Adder a) {
 
 // CIR-LABEL: cir.func{{.*}} @_ZNH5AdderclERKS_i(%arg0: !cir.ptr<!rec_Adder>
 // CIR-SAME:                                     %arg1: !s32i
-// CIR:         %[[SELF_SLOT:.+]] = cir.alloca !cir.ptr<!rec_Adder>, {{.*}}["self"
+// CIR:         %[[SELF_SLOT:.+]] = cir.alloca "self" {{.*}} : !cir.ptr<!cir.ptr<!rec_Adder>>
 // CIR:         %[[SELF_PTR:.+]] = cir.load{{.*}} %[[SELF_SLOT]] : !cir.ptr<!cir.ptr<!rec_Adder>>, !cir.ptr<!rec_Adder>
 // CIR:         %[[BASE_PTR:.+]] = cir.get_member %[[SELF_PTR]][0] {name = "base"} : !cir.ptr<!rec_Adder> -> !cir.ptr<!s32i>
 // CIR:         %[[BASE:.+]] = cir.load{{.*}} %[[BASE_PTR]] : !cir.ptr<!s32i>, !s32i

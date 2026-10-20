@@ -37,7 +37,7 @@ template <class _InIter, class _OutIter>
 using replace_copy_if_result = in_out_result<_InIter, _OutIter>;
 
 template <class _InIter, class _Sent, class _OutIter, class _Pred, class _Type, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr replace_copy_if_result<_InIter, _OutIter> __replace_copy_if_impl(
+constexpr replace_copy_if_result<_InIter, _OutIter> __replace_copy_if_impl(
     _InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, const _Type& __new_value, _Proj& __proj) {
   while (__first != __last) {
     if (std::invoke(__pred, std::invoke(__proj, *__first)))
@@ -60,7 +60,7 @@ struct __replace_copy_if {
             class _Proj = identity,
             indirect_unary_predicate<projected<_InIter, _Proj>> _Pred>
     requires indirectly_copyable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_if_result<_InIter, _OutIter> operator()(
+  constexpr replace_copy_if_result<_InIter, _OutIter> operator()(
       _InIter __first, _Sent __last, _OutIter __result, _Pred __pred, const _Type& __new_value, _Proj __proj = {})
       const {
     return ranges::__replace_copy_if_impl(
@@ -73,7 +73,7 @@ struct __replace_copy_if {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr replace_copy_if_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr replace_copy_if_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Pred __pred, const _Type& __new_value, _Proj __proj = {}) const {
     return ranges::__replace_copy_if_impl(
         ranges::begin(__range), ranges::end(__range), std::move(__result), __pred, __new_value, __proj);

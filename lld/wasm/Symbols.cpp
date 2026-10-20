@@ -62,6 +62,8 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "UndefinedTable";
   case wasm::Symbol::UndefinedTagKind:
     return "UndefinedTag";
+  case wasm::Symbol::CommonKind:
+    return "CommonKind";
   case wasm::Symbol::LazyKind:
     return "LazyKind";
   case wasm::Symbol::SectionKind:
@@ -73,7 +75,7 @@ std::string toString(wasm::Symbol::Kind kind) {
   case wasm::Symbol::SharedDataKind:
     return "SharedDataKind";
   case wasm::Symbol::SharedTagKind:
-    return "SharedTagSymbol";
+    return "SharedTagKind";
   }
   llvm_unreachable("invalid symbol kind");
 }

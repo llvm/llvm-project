@@ -90,7 +90,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -279,10 +279,9 @@ Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }
 bool Haiku::HasNativeLLVMSupport() const { return true; }
 
 SanitizerMask
-Haiku::getSupportedSanitizers(StringRef BoundArch,
+Haiku::getSupportedSanitizers(BoundArch BA,
                               Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 
   Res |= SanitizerKind::Address;
 

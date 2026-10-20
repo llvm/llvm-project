@@ -95,14 +95,19 @@ struct TSDRegistrySharedT {
     initThread(Instance);
   }
 
+  // Only the first NumberOfTSDs TSDs are ever handed out, so skip the rest to
+  // avoid dirtying their pages around fork(). setNumberOfTSDs() only grows the
+  // count under Mutex, which is held until enable(), so both loops match.
   void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
-    for (u32 I = 0; I < TSDsArraySize; I++)
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    for (u32 I = 0; I < TotalTSDs; I++)
       TSDs[I].lock();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
-    for (s32 I = static_cast<s32>(TSDsArraySize - 1); I >= 0; I--)
+    const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
+    for (s32 I = static_cast<s32>(TotalTSDs - 1); I >= 0; I--)
       TSDs[I].unlock();
     Mutex.unlock();
   }
@@ -141,16 +146,14 @@ private:
   ALWAYS_INLINE TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
     TSD<Allocator> *TSD = getCurrentTSD();
     DCHECK(TSD);
-    // Try to lock the currently associated context.
-    if (TSD->tryLock())
-      return TSD;
-    // If that fails, go down the slow path.
     if (TSDsArraySize == 1U) {
-      // Only 1 TSD, not need to go any further.
-      // The compiler will optimize this one way or the other.
+      // Only 1 TSD, lock and return.
       TSD->lock();
       return TSD;
     }
+
+    if (TSD->tryLock())
+      return TSD;
     return getTSDSlow(TSD);
   }
 
@@ -176,6 +179,7 @@ private:
 
   // Requires a lock to avoid multiple threads trying to set the TSDs at once.
   bool setNumberOfTSDs(u32 N) REQUIRES(Mutex) {
+    DCHECK_GT(N, 0);
     const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
     // In order to avoid needing locks for these values, the number of TSDs
     // can never be decreased.
@@ -234,7 +238,7 @@ private:
   // capability.
   NOINLINE TSD<Allocator> *getTSDSlow(TSD<Allocator> *CurrentTSD) {
     const u32 TotalTSDs = atomic_load_relaxed(&NumberOfTSDs);
-    if (UNLIKELY(TotalTSDs <= 1U)) {
+    if (UNLIKELY(TotalTSDs == 1U)) {
       CurrentTSD->lock();
       return CurrentTSD;
     }

@@ -462,6 +462,13 @@ config("thin_archive") {
   }
 }
 
+# Executables that load plugins or need symbols must remove this config.
+config("no_exported_symbols") {
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-no_exported_symbols" ]
+  }
+}
+
 config("llvm_code") {
   include_dirs = [
     "//llvm/include",

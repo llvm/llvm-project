@@ -128,8 +128,9 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
     for (Value input : op->getOperands())
       operands.push_back(
           vector::ExtractOp::create(rewriter, loc, input, positions));
-    Value scalarOp =
-        Op::create(rewriter, loc, vecType.getElementType(), operands);
+    Value scalarOp = Op::create(
+        rewriter, loc, TypeRange{vecType.getElementType()}, operands,
+        op.getProperties(), op->getDiscardableAttrDictionary().getValue());
     result =
         vector::InsertOp::create(rewriter, loc, scalarOp, result, positions);
   }
@@ -159,8 +160,6 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///   if (p == T(0))
 ///     return T(1);
 ///   if (p < T(0)) {
-///     if (b == T(0))
-///       return T(1) / T(0); // trigger div-by-zero
 ///     if (b == T(1))
 ///       return T(1);
 ///     if (b == T(-1)) {
@@ -168,7 +167,7 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///         return T(-1);
 ///       return T(1);
 ///     }
-///     return T(0);
+///     return T(0); // |b| > 1 or b == 0
 ///   }
 ///   T result = T(1);
 ///   while (true) {
@@ -197,7 +196,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -231,22 +230,8 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   builder.setInsertionPointToEnd(fallthroughBlock);
   auto pIsNeg = arith::CmpIOp::create(builder, arith::CmpIPredicate::sle, pArg,
                                       zeroValue);
-  //   if (b == T(0))
-  builder.createBlock(funcBody);
-  auto bIsZero =
-      arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, bArg, zeroValue);
-  //     return T(1) / T(0);
-  thenBlock = builder.createBlock(funcBody);
-  func::ReturnOp::create(
-      builder,
-      arith::DivSIOp::create(builder, oneValue, zeroValue).getResult());
-  fallthroughBlock = builder.createBlock(funcBody);
-  // Set up conditional branch for (b == T(0)).
-  builder.setInsertionPointToEnd(bIsZero->getBlock());
-  cf::CondBranchOp::create(builder, bIsZero, thenBlock, fallthroughBlock);
-
   //   if (b == T(1))
-  builder.setInsertionPointToEnd(fallthroughBlock);
+  builder.createBlock(funcBody);
   auto bIsOne =
       arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, bArg, oneValue);
   //    return T(1);
@@ -294,7 +279,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   // Set up conditional branch for (p < T(0)).
   builder.setInsertionPointToEnd(pIsNeg->getBlock());
   // Set initial values of 'result', 'b' and 'p' for the loop.
-  cf::CondBranchOp::create(builder, pIsNeg, bIsZero->getBlock(), loopHeader,
+  cf::CondBranchOp::create(builder, pIsNeg, bIsOne->getBlock(), loopHeader,
                            ValueRange{oneValue, bArg, pArg});
 
   // T result = T(1);
@@ -424,7 +409,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -674,7 +659,7 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function

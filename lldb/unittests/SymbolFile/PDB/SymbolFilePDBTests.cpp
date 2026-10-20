@@ -94,7 +94,7 @@ protected:
     if (!left.FileEquals(right))
       return false;
     // If BOTH have a directory, also compare the directories.
-    if (left.GetDirectory() && right.GetDirectory())
+    if (!left.GetDirectory().empty() && !right.GetDirectory().empty())
       return left.DirectoryEquals(right);
 
     // If one has a directory but not the other, they match.

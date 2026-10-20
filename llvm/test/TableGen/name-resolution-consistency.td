@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK: def B0a {
 // CHECK:   string e = "B0";

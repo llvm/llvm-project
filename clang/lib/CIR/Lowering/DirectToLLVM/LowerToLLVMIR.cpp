@@ -18,7 +18,11 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace llvm;
 
@@ -59,11 +63,104 @@ public:
     } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() == "cir.riscv_nontemporal_domain") {
+      if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
+                                                   moduleTranslation)))
+        return mlir::failure();
+    } else if (attribute.getName() == cir::CIRDialect::getSrcLocAttrName()) {
+      if (mlir::failed(amendSrcLoc(instructions, attribute, moduleTranslation)))
+        return mlir::failure();
+    } else if (attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
     }
     return mlir::success();
   }
 
 private:
+  // Convert the raw-encoded clang::SourceLocation into !srcloc, so that
+  // dontcall-error/warn works.
+  mlir::LogicalResult
+  amendSrcLoc(llvm::ArrayRef<llvm::Instruction *> instructions,
+              mlir::NamedAttribute attribute,
+              mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto srcLoc = mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue());
+    if (!srcLoc)
+      return mlir::failure();
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::MDNode *node = llvm::MDNode::get(
+        llvmContext, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         llvm::Type::getInt64Ty(llvmContext),
+                         srcLoc.getValue().getZExtValue())));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("srcloc", node);
+    return mlir::success();
+  }
+
+  /// Attach the AMDGPU atomic metadata that lets the backend select a native
+  /// atomic instruction instead of expanding to a cmpxchg loop.
+  void amendAMDGPUAtomicMetadata(
+      llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
+      llvm::MDNode *asRange = mdHelper.createRange(
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
+      return;
+    }
+    llvm::MDNode *empty =
+        llvm::MDNode::get(moduleTranslation.getLLVMContext(), {});
+    // !atomic.ignore.denormal.mode is a fixed metadata kind so it has to be
+    // attached via its enum rather than by name.
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                          empty);
+      return;
+    }
+    llvm::StringRef mdName;
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName())
+      mdName = "amdgpu.no.fine.grained.memory";
+    else if (attribute.getName() ==
+             cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName())
+      mdName = "amdgpu.no.remote.memory";
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(mdName, empty);
+  }
+
+  mlir::LogicalResult amendRISCVNontemporalDomain(
+      mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto domain = mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue());
+    if (!domain)
+      return op->emitError()
+             << "expected cir.riscv_nontemporal_domain to be an integer";
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::MDNode *node = llvm::MDNode::get(
+        llvmContext, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         llvm::Type::getInt32Ty(llvmContext),
+                         domain.getValue().getZExtValue())));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("riscv-nontemporal-domain", node);
+    return mlir::success();
+  }
+
   // Translate CIR function attributes to LLVM function attributes.
   mlir::LogicalResult
   amendFunction(mlir::LLVM::LLVMFuncOp func,
@@ -103,6 +200,22 @@ private:
             llvm::MDString::get(llvmContext, strAttr.getValue());
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                   mdStr);
+      }
+    }
+
+    if (attribute.getName() == "cir.amdgpu_xnack") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
+                                  static_cast<uint32_t>(intAttr.getInt()));
+      }
+    }
+
+    if (attribute.getName() == "cir.amdgpu_sramecc") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.sramecc",
+                                  static_cast<uint32_t>(intAttr.getInt()));
       }
     }
 

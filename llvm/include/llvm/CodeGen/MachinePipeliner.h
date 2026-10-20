@@ -42,6 +42,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -57,59 +58,34 @@
 namespace llvm {
 
 class AAResults;
+class LiveIntervals;
 class NodeSet;
 class SMSchedule;
 
-extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
-extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
+/// Software pipelining policy for a loop, which a target can customize by
+/// implementing TargetSubtargetInfo::overridePipelinerPolicy.
+struct MachinePipelinerPolicy {
+  /// Limit the register pressure of the scheduled loop, retrying at a higher
+  /// II when a schedule needs too many registers.
+  bool ShouldLimitRegPressure = false;
+};
 
-/// The main class in the implementation of the target independent
-/// software pipeliner pass.
-class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
+class LLVM_ABI MachinePipelinerLegacy : public MachineFunctionPass {
 public:
-  MachineFunction *MF = nullptr;
-  MachineOptimizationRemarkEmitter *ORE = nullptr;
-  const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
-  const InstrItineraryData *InstrItins = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  RegisterClassInfo RegClassInfo;
-  bool disabledByPragma = false;
-  unsigned II_setByPragma = 0;
-
-#ifndef NDEBUG
-  static int NumTries;
-#endif
-
-  /// Cache the target analysis information about the loop.
-  struct LoopInfo {
-    MachineBasicBlock *TBB = nullptr;
-    MachineBasicBlock *FBB = nullptr;
-    SmallVector<MachineOperand, 4> BrCond;
-    MachineInstr *LoopInductionVar = nullptr;
-    MachineInstr *LoopCompare = nullptr;
-    std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopPipelinerInfo =
-        nullptr;
-  };
-  LoopInfo LI;
-
   static char ID;
 
-  MachinePipeliner() : MachineFunctionPass(ID) {}
+  MachinePipelinerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
 
-private:
-  void preprocessPhiNodes(MachineBasicBlock &B);
-  bool canPipelineLoop(MachineLoop &L);
-  bool scheduleLoop(MachineLoop &L);
-  bool swingModuloScheduler(MachineLoop &L);
-  void setPragmaPipelineOptions(MachineLoop &L);
-  bool runWindowScheduler(MachineLoop &L);
-  bool useSwingModuloScheduler();
-  bool useWindowScheduler(bool Changed);
+class LLVM_ABI MachinePipelinerPass
+    : public OptionalPassInfoMixin<MachinePipelinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Represents a dependence between two instruction.
@@ -219,8 +195,10 @@ struct LoopCarriedEdges {
   LLVM_ABI void modifySUnits(std::vector<SUnit> &SUnits,
                              const TargetInstrInfo *TII);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_ABI void dump(SUnit *SU, const TargetRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI) const;
+#endif
 };
 
 /// This class provides APIs to retrieve edges from/to an SUnit node, with a
@@ -280,7 +258,7 @@ public:
 /// This class builds the dependence graph for the instructions in a loop,
 /// and attempts to schedule the instructions using the SMS algorithm.
 class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
-  MachinePipeliner &Pass;
+  MachineOptimizationRemarkEmitter *ORE;
 
   std::unique_ptr<SwingSchedulerDDG> DDG;
 
@@ -295,6 +273,9 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   const RegisterClassInfo &RegClassInfo;
   unsigned II_setByPragma = 0;
   TargetInstrInfo::PipelinerLoopInfo *LoopPipelinerInfo = nullptr;
+
+  /// Policy for this loop, after target and command line overrides.
+  MachinePipelinerPolicy Policy;
 
   /// A topological ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
@@ -381,17 +362,11 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   };
 
 public:
-  SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
-                    const RegisterClassInfo &rci, unsigned II,
-                    TargetInstrInfo::PipelinerLoopInfo *PLI, AliasAnalysis *AA)
-      : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
-        RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-        Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
-    P.MF->getSubtarget().getSMSMutations(Mutations);
-    if (SwpEnableCopyToPhi)
-      Mutations.push_back(std::make_unique<CopyToPhiMutation>());
-    BAA.enableCrossIterationMode();
-  }
+  SwingSchedulerDAG(MachineFunction &MF, const MachineLoopInfo *MLI,
+                    MachineOptimizationRemarkEmitter *ORE, MachineLoop &L,
+                    LiveIntervals &lis, const RegisterClassInfo &rci,
+                    unsigned II, TargetInstrInfo::PipelinerLoopInfo *PLI,
+                    AliasAnalysis *AA);
 
   void schedule() override;
   void finishBlock() override;
@@ -453,6 +428,8 @@ public:
                              const MachineInstr *OtherMI) const;
 
 private:
+  /// Set the policy for this loop, allowing the target to override it.
+  void initPolicy();
   LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();
@@ -630,9 +607,9 @@ public:
 
   iterator begin() { return Nodes.begin(); }
   iterator end() { return Nodes.end(); }
-  LLVM_ABI void print(raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_ABI void print(raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
@@ -691,18 +668,8 @@ private:
 #endif
 
 public:
-  ResourceManager(const TargetSubtargetInfo *ST, ScheduleDAGInstrs *DAG)
-      : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
-        DAG(DAG), UseDFA(ST->useDFAforSMS()),
-        ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
-        IssueWidth(SM.IssueWidth) {
-    initProcResourceVectors(SM, ProcResourceMasks);
-    if (IssueWidth <= 0)
-      // If IssueWidth is not specified, set a sufficiently large value
-      IssueWidth = 100;
-    if (SwpForceIssueWidth > 0)
-      IssueWidth = SwpForceIssueWidth;
-  }
+  LLVM_ABI ResourceManager(const TargetSubtargetInfo *ST,
+                           ScheduleDAGInstrs *DAG);
 
   LLVM_ABI void initProcResourceVectors(const MCSchedModel &SM,
                                         SmallVectorImpl<uint64_t> &Masks);

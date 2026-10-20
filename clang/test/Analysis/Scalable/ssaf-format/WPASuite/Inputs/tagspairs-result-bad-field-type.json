@@ -16,5 +16,6 @@
         "unique_tag_count": "not-a-number"
       }
     }
-  ]
+  ],
+  "type": "WPASuite"
 }

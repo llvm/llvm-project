@@ -1,4 +1,4 @@
-; RUN: opt -S %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadNPMPolly '-passes=polly-custom<deps>' -plugin-arg=Polly,-polly-print-deps -disable-output < %s | FileCheck %s
 
 ; CHECK: RAW dependences:
 ; CHECK:   { Stmt_bb9[0] -> Stmt_bb10[0] }

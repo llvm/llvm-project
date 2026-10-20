@@ -31,6 +31,11 @@ public:
 
   const LoongArchRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &LoongArch::GPRRegClass;
+  }
+
   MCInst getNop() const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -65,6 +70,8 @@ public:
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
+
+  int getJumpTableIndex(const MachineInstr &MI) const override;
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 

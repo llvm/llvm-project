@@ -34,4 +34,6 @@ void ListOfModules::init() {}
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 #endif
 
+char* DladdrElfHeaderBase(void* ld, char* addr) { return addr; }
+
 }  // namespace __sanitizer

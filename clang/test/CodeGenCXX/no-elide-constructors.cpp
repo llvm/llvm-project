@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple i386-unknown-unknown -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11
-// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS
+// RUN: %clang_cc1 -std=c++11 -triple amdgpu-amd-amdhsa -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS
 // RUN: %clang_cc1 -std=c++11 -triple spirv64-amd-amdhsa -fno-elide-constructors -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK --check-prefix=CHECK-CXX11-SPIRV
 // RUN: %clang_cc1 -std=c++98 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98-ELIDE
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-ELIDE
-// RUN: %clang_cc1 -std=c++11 -triple amdgcn-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS-ELIDE
+// RUN: %clang_cc1 -std=c++11 -triple amdgpu-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-NONZEROALLOCAAS-ELIDE
 // RUN: %clang_cc1 -std=c++11 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX11-SPIRV-ELIDE
 
 // Reduced from PR12208

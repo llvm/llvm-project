@@ -275,10 +275,14 @@ fma(InType x, InType y, InType z) {
   if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    prod_sign = Sign::POS;
+#else
     if (fputil::quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   }
 
   DyadicFloat result(prod_sign, prod_lsb_exp - InFPBits::EXP_BIAS, prod_mant);

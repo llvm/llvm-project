@@ -32,26 +32,26 @@ define void @bar(i1 %arg) {
 ; CHECK-NEXT:    store double [[I7]], ptr [[I1]], align 8
 ; CHECK-NEXT:    [[I10]] = load double, ptr [[I3]], align 8
 ; CHECK-NEXT:    [[TMP0]] = load <2 x double>, ptr [[I2]], align 8
-; CHECK-NEXT:    br i1 %arg, label [[BB11:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[I4]], align 8
-; CHECK-NEXT:    br i1 %arg, label [[BB13:%.*]], label [[BB14:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB13:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    br label [[BB14]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    br i1 %arg, label [[BB15:%.*]], label [[BB16]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB15:%.*]], label [[BB16]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb16:
-; CHECK-NEXT:    [[TMP1]] = extractelement <2 x double> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1]] = extractelement <2 x double> [[TMP0]], i64 0
 ; CHECK-NEXT:    switch i32 undef, label [[BB17]] [
 ; CHECK-NEXT:      i32 32, label [[BB6]]
 ; CHECK-NEXT:      i32 103, label [[BB6]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb17:
-; CHECK-NEXT:    br i1 %arg, label [[BB6]], label [[BB18:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB6]], label [[BB18:%.*]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    unreachable
 ;

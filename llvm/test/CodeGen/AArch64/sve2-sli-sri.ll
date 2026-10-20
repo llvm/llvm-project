@@ -118,14 +118,22 @@ define <vscale x 8 x i16> @testRightGood8x16(<vscale x 8 x i16> %src1, <vscale x
 }
 
 define <vscale x 8 x i16> @testRightBad8x16(<vscale x 8 x i16> %src1, <vscale x 8 x i16> %src2) {
-; CHECK-LABEL: testRightBad8x16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16500 // =0x4074
-; CHECK-NEXT:    lsr z1.h, z1.h, #14
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: testRightBad8x16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mov w8, #16500 // =0x4074
+; SVE-NEXT:    lsr z1.h, z1.h, #14
+; SVE-NEXT:    mov z2.h, w8
+; SVE-NEXT:    and z0.d, z0.d, z2.d
+; SVE-NEXT:    orr z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: testRightBad8x16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mov w8, #16500 // =0x4074
+; SVE2-NEXT:    mov z2.h, w8
+; SVE2-NEXT:    and z0.d, z0.d, z2.d
+; SVE2-NEXT:    usra z0.h, z1.h, #14
+; SVE2-NEXT:    ret
   %and.i = and <vscale x 8 x i16> %src1, splat(i16 16500)
   %vshl_n = lshr <vscale x 8 x i16> %src2, splat(i16 14)
   %result = or <vscale x 8 x i16> %and.i, %vshl_n

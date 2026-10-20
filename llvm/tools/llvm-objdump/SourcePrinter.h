@@ -19,7 +19,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
 #include <set>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -215,9 +214,9 @@ protected:
   const object::ObjectFile *Obj = nullptr;
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
   // File name to file contents of source.
-  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
+  StringMap<std::unique_ptr<MemoryBuffer>> SourceCache;
   // Mark the line endings of the cached source.
-  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
+  StringMap<std::vector<StringRef>> LineCache;
   // Keep track of missing sources.
   StringSet<> MissingSources;
   // Only emit 'invalid debug info' warning once.

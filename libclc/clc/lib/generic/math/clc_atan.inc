@@ -49,7 +49,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_HALFN __clc_atan(__CLC_HALFN x) {
 
   __CLC_HALFN a = __clc_atan_reduced(v);
 
-  __CLC_HALFN y = __clc_mad(0x1.ea8p-1h, 0x1.a3cp+0h, -a);
+  __CLC_HALFN y = __clc_fma(0x1.ea8p-1h, 0x1.a3cp+0h, -a);
   a = g ? y : a;
 
   return __clc_copysign(a, x);

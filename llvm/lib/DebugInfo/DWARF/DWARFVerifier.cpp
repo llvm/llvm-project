@@ -298,6 +298,7 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
     }
 
     NumUnitErrors += verifyDebugInfoCallSite(Die);
+    NumUnitErrors += verifyDebugInfoSubprogram(Die);
   }
 
   DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
@@ -381,6 +382,44 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
           Die.dump(OS, /*indent*/ 1);
         });
     return 1;
+  }
+
+  return 0;
+}
+
+unsigned DWARFVerifier::verifyDebugInfoSubprogram(const DWARFDie &Die) {
+  if (Die.getTag() != DW_TAG_subprogram)
+    return 0;
+
+  // Also show the immediate children: they are usually the reason an otherwise
+  // meaningless subprogram entry was emitted.
+  auto DumpWithChildren = [&]() {
+    DIDumpOptions ChildDumpOpts = DumpOpts;
+    ChildDumpOpts.ShowChildren = true;
+    ChildDumpOpts.ChildRecurseDepth = 1;
+    Die.dump(OS, 0, ChildDumpOpts);
+  };
+
+  // DW_AT_sibling only describes the shape of the DIE tree, so it doesn't say
+  // anything about the subprogram itself.
+  if (all_of(Die.attributes(), [](const DWARFAttribute &AttrValue) {
+        return AttrValue.Attr == DW_AT_sibling;
+      })) {
+    ErrorCategory.Report("Subprogram DIE has no attributes", [&]() {
+      error() << "Subprogram DIE has no attributes:\n";
+      DumpWithChildren();
+    });
+    return 1;
+  }
+
+  // DWARF doesn't require any of these, but without them a consumer can't
+  // find the subprogram by name, relate it to another entry, or map code to it.
+  if (!Die.find({DW_AT_name, DW_AT_linkage_name, DW_AT_MIPS_linkage_name,
+                 DW_AT_abstract_origin, DW_AT_specification, DW_AT_low_pc,
+                 DW_AT_ranges, DW_AT_entry_pc})) {
+    warn() << "Subprogram DIE has no name, abstract origin, specification or "
+              "address range:\n";
+    DumpWithChildren();
   }
 
   return 0;
@@ -1925,6 +1964,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
+        Expression.isMemoryLocation() &&
         any_of(Expression, [](const DWARFExpression::Operation &Op) {
           return !Op.isError() && (Op.getCode() == DW_OP_addr ||
                                    Op.getCode() == DW_OP_form_tls_address ||
@@ -1986,8 +2026,11 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_GNU_template_template_param:
     return;
 
-  // Object members aren't globally visible.
+  // Object members aren't globally visible. Properties are accessed through
+  // their containing subprogram/type, not looked up globally by name, so
+  // they belong in the same category.
   case DW_TAG_member:
+  case DW_TAG_property:
     return;
 
   // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
@@ -2343,20 +2386,19 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("String offset error", [&]() {
       error() << formatv("{0}: {1}\n", SectionName, Msg);
-      return false;
     });
   }
   return Success;
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef s, std::function<void(void)> detailCallback) {
-  this->Report(s, "", detailCallback);
+void OutputCategoryAggregator::Report(StringRef s,
+                                      function_ref<void(void)> detailCallback) {
+  Report(s, "", detailCallback);
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef category, StringRef sub_category,
-    std::function<void(void)> detailCallback) {
+void OutputCategoryAggregator::Report(StringRef category,
+                                      StringRef sub_category,
+                                      function_ref<void(void)> detailCallback) {
   std::lock_guard<std::mutex> Lock(WriteMutex);
   ++NumErrors;
   std::string category_str = std::string(category);
@@ -2370,13 +2412,13 @@ void OutputCategoryAggregator::Report(
 }
 
 void OutputCategoryAggregator::EnumerateResults(
-    std::function<void(StringRef, unsigned)> handleCounts) {
+    function_ref<void(StringRef, unsigned)> handleCounts) {
   for (const auto &[name, aggData] : Aggregation) {
     handleCounts(name, aggData.OverallCount);
   }
 }
 void OutputCategoryAggregator::EnumerateDetailedResultsFor(
-    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+    StringRef category, function_ref<void(StringRef, unsigned)> handleCounts) {
   const auto Agg = Aggregation.find(category);
   if (Agg != Aggregation.end()) {
     for (const auto &[name, aggData] : Agg->second.DetailedCounts) {

@@ -39,6 +39,9 @@ struct AttributesInfo {
 
   /// Does the DIE have a string offset attribute?
   bool HasStringOffsetBaseAttr = false;
+
+  /// Does the DIE have an address base attribute?
+  bool HasAddrBaseAttr = false;
 };
 
 /// This class creates clones of input DIE attributes.
@@ -130,6 +133,15 @@ protected:
   size_t
   cloneAddressAttr(const DWARFFormValue &Val,
                    const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
+
+  /// Returns the input DIE's DW_AT_high_pc value \p HighPC, constrained so the
+  /// code range it ends stays clear of the symbol the linker places next. \p
+  /// IsLength tells whether high_pc is encoded as a length rather than an
+  /// address.
+  ///
+  /// A scope nested in a function inherits the overrun of the function, so it
+  /// is constrained as well.
+  uint64_t constrainHighPC(uint64_t HighPC, bool IsLength);
 
   /// Returns true if attribute should be skipped.
   bool

@@ -29,12 +29,13 @@ def : SysReg<"csr2", 0x7C0>;
 
 // CHECK: #ifdef GET_List1_DECL
 // CHECK-NEXT: llvm::iterator_range<const SysReg *> lookupSysRegByEncoding(uint16_t Encoding);
+// CHECK-NEXT: StringRef getSysRegStr(StringTable::Offset);
 // CHECK-NEXT: #endif
 
 // CHECK: #ifdef GET_List1_IMPL
 // CHECK-NEXT: constexpr SysReg List1[] = {
-// CHECK-NEXT:   { "csr1", 0x7C0,  {Feature1}  }, // 0
-// CHECK-NEXT:   { "csr2", 0x7C0,  {Feature2}  }, // 1
+// CHECK-NEXT:   { {{[0-9]+}} /* "csr1" */, 0x7C0,  {Feature1}  }, // 0
+// CHECK-NEXT:   { {{[0-9]+}} /* "csr2" */, 0x7C0,  {Feature2}  }, // 1
 // CHECK-NEXT:  };
 
 // CHECK: llvm::iterator_range<const SysReg *> lookupSysRegByEncoding(uint16_t Encoding) {

@@ -26,6 +26,6 @@ end
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
-!PARSE-TREE: | OmpClause -> Default -> OmpDefaultClause -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpClause -> DefaultVariant -> OmpDefaultVariantClause -> OmpDirectiveSpecification
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | OmpClauseList ->

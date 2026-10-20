@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 ...
 # Ensure that objects with StackID > 0 are not allocated on the default stack
 # (will not be allocated an offset) and are not considered in the calculation of

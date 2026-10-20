@@ -15,7 +15,6 @@
 #include "flang/Common/indirection.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -241,6 +240,11 @@ public:
     return getHashValue(x.base()) * 139u -
            static_cast<unsigned>(x.field()) * 13u +
            static_cast<unsigned>(x.dimension());
+  }
+  static unsigned
+  getHashValue(const Fortran::evaluate::RankOneBoundElement &x) {
+    return getHashValue(x.base()) * 141u +
+           static_cast<unsigned>(x.dimension()) * 17u;
   }
   static unsigned
   getHashValue(const Fortran::evaluate::StructureConstructor &x) {
@@ -548,6 +552,10 @@ public:
     return isEqual(x.base(), y.base()) && x.field() == y.field() &&
            x.dimension() == y.dimension();
   }
+  static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
+                      const Fortran::evaluate::RankOneBoundElement &y) {
+    return x.dimension() == y.dimension() && isEqual(x.base(), y.base());
+  }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
     const auto &xValues = x.values();
@@ -620,11 +628,6 @@ unsigned getHashValue(const Fortran::lower::SomeExpr *x) {
   return HashEvaluateExpr::getHashValue(*x);
 }
 
-unsigned getHashValue(const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
-  return Fortran::common::visit(
-      [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
-}
-
 unsigned getHashValue(const Fortran::evaluate::Component *x) {
   return HashEvaluateExpr::getHashValue(*x);
 }
@@ -632,26 +635,6 @@ unsigned getHashValue(const Fortran::evaluate::Component *x) {
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
-}
-
-bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
-             const Fortran::lower::ExplicitIterSpace::ArrayBases &y) {
-  return Fortran::common::visit(
-      Fortran::common::visitors{
-          // Fortran::semantics::Symbol * are the exception here. These pointers
-          // have identity; if two Symbol * values are the same (different) then
-          // they are the same (different) logical symbol.
-          [&](Fortran::lower::FrontEndSymbol p,
-              Fortran::lower::FrontEndSymbol q) { return p == q; },
-          [&](const auto *p, const auto *q) {
-            if constexpr (std::is_same_v<decltype(p), decltype(q)>) {
-              return IsEqualEvaluateExpr::isEqual(*p, *q);
-            } else {
-              // Different subtree types are never equal.
-              return false;
-            }
-          }},
-      x, y);
 }
 
 bool isEqual(const Fortran::evaluate::Component *x,
@@ -689,7 +672,7 @@ void privatizeSymbol(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays) {
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -727,6 +710,8 @@ void privatizeSymbol(
   // not emit the copy region when dealing with the SIMD directive.
   if (dir && dir == llvm::omp::Directive::OMPD_simd)
     emitCopyRegion = false;
+  assert((!isLinear || std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) &&
+         "only omp.private has a `linear` type");
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -741,23 +726,37 @@ void privatizeSymbol(
       TODO(symLoc, "create polymorphic host associated copy");
   }
 
-  // fir.array<> cannot be converted to any single llvm type and fir helpers
-  // are not available in openmp to llvmir translation so we cannot generate
-  // an alloca for a fir.array type there. Get around this by boxing all
-  // arrays.
-  if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
-    entity = genVariableBox(symLoc, firOpBuilder, entity);
-    privVal = entity.getBase();
-    allocType = privVal.getType();
+  // fir.array<> has no single LLVM type and the openmp-to-llvmir translation
+  // cannot build an alloca for it, so arrays are boxed here. Exception: a
+  // constant-shape array of trivial elements (e.g. real(8)::xx(3)) maps to a
+  // fixed-size LLVM array the translation can stack-allocate, so it is left
+  // unboxed -- avoiding a per-thread heap allocation and letting alias analysis
+  // prove the private does not alias dummy arguments. Firstprivate,
+  // dynamic-extent, unknown-shape, character and derived-type arrays stay
+  // boxed, as do arrays whose HLFIR variable is already a descriptor and so
+  // never reach this branch as a fir.array (e.g. non-default lower bounds).
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(allocType)) {
+    bool requiresBox = emitCopyRegion || seqTy.hasUnknownShape() ||
+                       seqTy.hasDynamicExtents() ||
+                       !fir::isa_trivial(seqTy.getEleTy());
+    if (requiresBox) {
+      hlfir::Entity entity{hsb.getAddr()};
+      entity = genVariableBox(symLoc, firOpBuilder, entity);
+      privVal = entity.getBase();
+      allocType = privVal.getType();
+    }
   }
 
   if (mlir::isa<fir::BaseBoxType>(privVal.getType())) {
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+    // Get name so later passes (e.g. MapsForPrivatizedSymbols) can report it in
+    // offload info.
+    mlir::Location boxLoc = mlir::NameLoc::get(
+        firOpBuilder.getStringAttr(sym->name().ToString()), symLoc);
     auto alloca =
-        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
+        fir::AllocaOp::create(firOpBuilder, boxLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
     fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
@@ -772,7 +771,8 @@ void privatizeSymbol(
     auto moduleOp = firOpBuilder.getModule();
     std::string privatizerPrefix =
         converter.mangleName(*sym) +
-        (emitCopyRegion ? "_firstprivate" : "_private");
+        (emitCopyRegion ? "_firstprivate"
+                        : (isLinear ? "_linear" : "_private"));
     if (forceHeapAllocation)
       privatizerPrefix += "_heap";
     auto uniquePrivatizerName = fir::getTypeAsString(
@@ -794,12 +794,15 @@ void privatizeSymbol(
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
       result = OpType::create(
-          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          firOpBuilder, symLoc, uniquePrivatizerName,
+          /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
+          : isLinear     ? mlir::omp::DataSharingClauseType::Linear
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
-          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName,
+                         /*sym_visibility=*/nullptr, allocType,
                          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
                                         : fir::LocalitySpecifierType::Local);
     }
@@ -893,6 +896,20 @@ void privatizeSymbol(
       }
     }
 
+    // A `linear` privatizer of a descriptor gives the address of its data.
+    if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
+      if (isLinear && mlir::isa<fir::BaseBoxType>(allocType)) {
+        mlir::Block *block =
+            firOpBuilder.createBlock(&result.getDataAddressRegion(),
+                                     /*insertPt=*/{}, {argType}, {symLoc});
+        firOpBuilder.setInsertionPointToEnd(block);
+        mlir::Value box =
+            fir::LoadOp::create(firOpBuilder, symLoc, block->getArgument(0));
+        mlir::Value addr = fir::BoxAddrOp::create(firOpBuilder, symLoc, box);
+        mlir::omp::YieldOp::create(firOpBuilder, symLoc, addr);
+      }
+    }
+
     return result;
   }();
 
@@ -917,7 +934,7 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -928,6 +945,6 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
 } // end namespace Fortran::lower

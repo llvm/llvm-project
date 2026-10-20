@@ -29,41 +29,41 @@ define void @test1(ptr noalias nocapture %points, ptr noalias nocapture readonly
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = shl nuw nsw <4 x i64> [[VEC_IND]], splat (i64 2)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP5]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP5]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP5]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP5]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP6]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP5]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP7]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP5]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP8]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP5]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP9]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP1]], ptr [[TMP10]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP2]], ptr [[TMP11]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP3]], ptr [[TMP12]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP4]], ptr [[TMP13]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2 x i8], ptr [[Y]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP14]], align 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = or disjoint <4 x i64> [[TMP5]], splat (i64 1)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP19]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP19]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP19]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP19]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP20]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP19]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP21]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP19]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP22]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP19]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[POINTS]], i64 [[TMP23]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP15]], ptr [[TMP24]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP16]], ptr [[TMP25]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP17]], ptr [[TMP26]], align 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[WIDE_LOAD1]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP18]], ptr [[TMP27]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)

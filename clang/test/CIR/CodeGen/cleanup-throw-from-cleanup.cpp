@@ -17,8 +17,8 @@ void testSwitchWithCleanup(int n) {
 // region runs the destructor for `x` on the EH unwind path.
 
 // CIR: cir.func{{.*}} @_Z21testSwitchWithCleanupi(%[[ARG:.*]]: !s32i
-// CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:   %[[X:.*]] = cir.alloca !rec_Local, !cir.ptr<!rec_Local>, ["x"]
+// CIR:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!rec_Local>
 // CIR:   cir.store %[[ARG]], %[[N_ADDR]] : !s32i
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
@@ -35,12 +35,12 @@ void testSwitchWithCleanup(int n) {
 
 // After CFG flattening the cleanup scope is gone: the `cir.throw` becomes a
 // `cir.try_throw` whose normal destination is a literally-unreachable block
-// at the end of the function and whose unwind destination is the EH
+// right after the throw's block and whose unwind destination is the EH
 // cleanup chain that runs the destructor and then resumes.
 
 // CIR-FLAT: cir.func{{.*}} @_Z21testSwitchWithCleanupi(%[[ARG:.*]]: !s32i
-// CIR-FLAT:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR-FLAT:   %[[X:.*]] = cir.alloca !rec_Local, !cir.ptr<!rec_Local>, ["x"]
+// CIR-FLAT:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR-FLAT:   %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!rec_Local>
 // CIR-FLAT:   cir.store %[[ARG]], %[[N_ADDR]]
 // CIR-FLAT:   cir.br ^[[BODY:.+]]
 // CIR-FLAT: ^[[BODY]]:
@@ -48,6 +48,8 @@ void testSwitchWithCleanup(int n) {
 // CIR-FLAT:   %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-FLAT:   cir.store{{.*}} %[[VAL]], %[[EXN]]
 // CIR-FLAT:   cir.try_throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi ^[[UNREACH:.+]], ^[[UNWIND:.+]]
+// CIR-FLAT-NEXT: ^[[UNREACH]]:
+// CIR-FLAT-NEXT:   cir.unreachable
 // CIR-FLAT: ^[[UNWIND]]:
 // CIR-FLAT:   %[[ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
 // CIR-FLAT:   cir.br ^[[CLEANUP:.+]](%[[ET]] : !cir.eh_token)
@@ -57,8 +59,6 @@ void testSwitchWithCleanup(int n) {
 // CIR-FLAT:   cir.end_cleanup %[[CT]]
 // CIR-FLAT:   cir.resume %[[ET2]]
 // CIR-FLAT:   cir.return
-// CIR-FLAT: ^[[UNREACH]]:
-// CIR-FLAT:   cir.unreachable
 
 // In LLVM IR the throw becomes an `invoke @__cxa_throw` whose unwind
 // destination is a landingpad with a `cleanup` clause, runs the destructor,
@@ -71,13 +71,13 @@ void testSwitchWithCleanup(int n) {
 // LLVM:   store i32 42, ptr %[[EXN]]
 // LLVM:   invoke void @__cxa_throw(ptr %[[EXN]], ptr @_ZTIi, ptr null)
 // LLVM-NEXT: to label %[[NORMAL:.*]] unwind label %[[LPAD:.*]]
+// LLVM: [[NORMAL]]:
+// LLVM-NEXT: unreachable
 // LLVM: [[LPAD]]:
 // LLVM:   %{{.*}} = landingpad { ptr, i32 }
 // LLVM-NEXT: cleanup
 // LLVM:   call void @_ZN5LocalD1Ev(ptr {{.*}} %[[X]])
 // LLVM:   resume { ptr, i32 } %{{.*}}
-// LLVM: [[NORMAL]]:
-// LLVM:   unreachable
 
 // OGCG produces equivalent IR: an `invoke __cxa_throw` whose unwind path
 // is a `cleanup` landingpad that calls the destructor and resumes.

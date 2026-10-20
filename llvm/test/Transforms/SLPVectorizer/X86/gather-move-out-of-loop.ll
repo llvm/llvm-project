@@ -4,7 +4,7 @@
 define void @test(i16 %0) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  for.body92.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[TMP0:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[TMP0:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>

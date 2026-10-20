@@ -34,6 +34,9 @@ struct Y4095 {
 Y4095::Y4095() {}
 // CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@??_R4@" = linkonce_odr constant %rtti.CompleteObjectLocator
 // CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@" = alias
+// The TypeDescriptor's name string is replaced by its md5 form as well, just
+// like MSVC does.
+// CHECK-DAG: @"??@c14087f0ec22b387aea7c59083f4f546@" = linkonce_odr global %rtti.TypeDescriptor37 { ptr @"??_7type_info@@6B@", ptr null, [38 x i8] c".??@5ca87b4c7c2322ca1e21f8b01a23e135@\00" }, comdat
 
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=18.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=HAVECTOR %s
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=19.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=OMITCTOR %s
@@ -71,3 +74,36 @@ int X4088(z) = 1515;
 // Use initialization to verify mangled name association in the il
 int X4089(z) = 1717;
 // CHECK-DAG: @"??@0269945400a3474730d6880df0967d8f@" = dso_local global i32 1717, align 4
+
+// Verify the threshold where md5 mangling kicks in for the TypeDescriptor
+// name string. MSVC hashes the string once it reaches 4096 characters
+// counting the leading '.', which is one character sooner than for symbols
+// since the '.' is not part of the hashed input.
+
+// Name string is ".?AU" + 4089 + "@@" = 4095 characters: kept in full, even
+// though the "??_R0" symbol itself is over the limit and gets hashed.
+#define P4089 X4088(p)
+struct P4089 {
+  P4089();
+  virtual void f();
+};
+P4089::P4089() {}
+// CHECK-DAG: @"??@{{[0-9a-f]+}}@" = linkonce_odr global %rtti.TypeDescriptor4095 { ptr @"??_7type_info@@6B@", ptr null, [4096 x i8] c".?AU{{p+}}@@\00" }, comdat
+
+// Name string is 4096 characters: hashed. Hash value matches MSVC's output
+// for the same type byte for byte.
+#define R4090 X4089(r)
+struct R4090 {
+  R4090();
+  virtual void f();
+};
+R4090::R4090() {}
+// CHECK-DAG: @"??@{{[0-9a-f]+}}@" = linkonce_odr global %rtti.TypeDescriptor37 { ptr @"??_7type_info@@6B@", ptr null, [38 x i8] c".??@ad624783add47d25188bc51f70637e97@\00" }, comdat
+
+#define R4091 C2(X4089(s), s)
+struct R4091 {
+  R4091();
+  virtual void f();
+};
+R4091::R4091() {}
+// CHECK-DAG: @"??@{{[0-9a-f]+}}@" = linkonce_odr global %rtti.TypeDescriptor37 { ptr @"??_7type_info@@6B@", ptr null, [38 x i8] c".??@c9d63594821ede4ea693d109deaa7a17@\00" }, comdat

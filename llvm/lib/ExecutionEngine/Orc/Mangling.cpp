@@ -7,25 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Mangler.h"
 
 #define DEBUG_TYPE "orc"
 
-namespace llvm {
-namespace orc {
-
-MangleAndInterner::MangleAndInterner(ExecutionSession &ES, const DataLayout &DL)
-    : ES(ES), DL(DL) {}
-
-SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
-  std::string MangledName;
-  {
-    raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-  }
-  return ES.intern(MangledName);
-}
+namespace llvm::orc {
 
 void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
                          ArrayRef<GlobalValue *> GVs,
@@ -79,5 +66,4 @@ void IRSymbolMapper::add(ExecutionSession &ES, const ManglingOptions &MO,
   }
 }
 
-} // End namespace orc.
-} // End namespace llvm.
+} // namespace llvm::orc

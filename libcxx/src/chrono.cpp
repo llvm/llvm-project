@@ -41,14 +41,14 @@
 #  define _LIBCPP_HAS_CLOCK_GETTIME
 #endif
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define VC_EXTRA_LEAN
 #  include <windows.h>
 #  if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 #    include <winapifamily.h>
 #  endif
-#endif // defined(_LIBCPP_WIN32API)
+#endif // _WIN32
 
 #if defined(__Fuchsia__)
 #  include <zircon/syscalls.h>
@@ -71,7 +71,7 @@ namespace chrono {
 // system_clock
 //
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 #  if _WIN32_WINNT < _WIN32_WINNT_WIN8
 
@@ -184,7 +184,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
-#  elif defined(_LIBCPP_WIN32API)
+#  elif defined(_WIN32)
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms644905(v=vs.85).aspx says:
 //    If the function fails, the return value is zero. <snip>

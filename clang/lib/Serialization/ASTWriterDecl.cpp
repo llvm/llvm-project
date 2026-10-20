@@ -145,6 +145,7 @@ namespace clang {
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
+    void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -625,7 +626,7 @@ void ASTDeclWriter::VisitTypeAliasDecl(TypeAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
-  static_assert(DeclContext::NumTagDeclBits == 23,
+  static_assert(DeclContext::NumTagDeclBits == 22,
                 "You need to update the serializer after you change the "
                 "TagDeclBits");
 
@@ -655,7 +656,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
 }
 
 void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
-  static_assert(DeclContext::NumEnumDeclBits == 43,
+  static_assert(DeclContext::NumEnumDeclBits == 42,
                 "You need to update the serializer after you change the "
                 "EnumDeclBits");
 
@@ -698,7 +699,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
-  static_assert(DeclContext::NumRecordDeclBits == 64,
+  static_assert(DeclContext::NumRecordDeclBits == 63,
                 "You need to update the serializer after you change the "
                 "RecordDeclBits");
 
@@ -770,7 +771,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 45,
+  static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -805,10 +806,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     // Template arguments.
     Record.AddTemplateArgumentList(FTSInfo->TemplateArguments);
 
-    Record.push_back(FTSInfo->TemplateParameters != nullptr);
-    if (FTSInfo->TemplateParameters)
-      Record.AddTemplateParameterList(FTSInfo->TemplateParameters);
-
     // Template args as written.
     Record.push_back(FTSInfo->TemplateArgumentsAsWritten != nullptr);
     if (FTSInfo->TemplateArgumentsAsWritten)
@@ -842,10 +839,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.push_back(DFTSInfo->getCandidates().size());
     for (FunctionTemplateDecl *FTD : DFTSInfo->getCandidates())
       Record.AddDeclRef(FTD);
-
-    Record.push_back(DFTSInfo->TemplateParameters != nullptr);
-    if (DFTSInfo->TemplateParameters)
-      Record.AddTemplateParameterList(DFTSInfo->TemplateParameters);
 
     // Templates args.
     Record.push_back(DFTSInfo->TemplateArgumentsAsWritten != nullptr);
@@ -906,6 +899,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       if (DeletedMessage)
         Record.AddStmt(DeletedMessage);
 
+      Record.push_back(FDI->getFPFeatures().getAsOpaqueInt());
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -959,7 +954,7 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-  static_assert(DeclContext::NumObjCMethodDeclBits == 37,
+  static_assert(DeclContext::NumObjCMethodDeclBits == 36,
                 "You need to update the serializer after you change the "
                 "ObjCMethodDeclBits");
 
@@ -1442,6 +1437,7 @@ void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
 
 void ASTDeclWriter::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
   VisitDecl(D);
+  Record.push_back(D->getOrdinal());
   Record.AddStmt(D->getStmt());
   Code = serialization::DECL_TOP_LEVEL_STMT_DECL;
 }
@@ -1513,7 +1509,7 @@ void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
 }
 
 void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-  static_assert(DeclContext::NumLinkageSpecDeclBits == 17,
+  static_assert(DeclContext::NumLinkageSpecDeclBits == 16,
                 "You need to update the serializer after you change the"
                 "LinkageSpecDeclBits");
 
@@ -1754,7 +1750,6 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       if (FTSInfo->TemplateArguments->size() == 1) {
         const TemplateArgument &TA = FTSInfo->TemplateArguments->get(0);
         if (TA.getKind() == TemplateArgument::Type &&
-            !FTSInfo->TemplateParameters &&
             !FTSInfo->TemplateArgumentsAsWritten &&
             !FTSInfo->getMemberSpecializationInfo())
           AbbrevToUse = Writer.getDeclCXXMethodAbbrev(D->getTemplatedKind());
@@ -1763,8 +1758,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
                FunctionDecl::TK_DependentFunctionTemplateSpecialization) {
       DependentFunctionTemplateSpecializationInfo *DFTSInfo =
           D->getDependentSpecializationInfo();
-      if (!DFTSInfo->TemplateArgumentsAsWritten &&
-          !DFTSInfo->TemplateParameters)
+      if (!DFTSInfo->TemplateArgumentsAsWritten)
         AbbrevToUse = Writer.getDeclCXXMethodAbbrev(D->getTemplatedKind());
     }
   }
@@ -1773,7 +1767,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 64,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 63,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 
@@ -1783,6 +1777,12 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     Record.AddDeclRef(Inherited.getShadowDecl());
     Record.AddDeclRef(Inherited.getConstructor());
   }
+
+  ArrayRef<CXXDefaultArgExpr *> CtorClosureDefaultArgs =
+      D->getCtorClosureDefaultArgs();
+  Record.push_back((unsigned)CtorClosureDefaultArgs.size());
+  for (CXXDefaultArgExpr *Arg : CtorClosureDefaultArgs)
+    Record.writeStmtRef(Arg);
 
   VisitCXXMethodDecl(D);
   Code = serialization::DECL_CXX_CONSTRUCTOR;
@@ -1832,9 +1832,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1842,26 +1839,47 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  for (unsigned i = 0; i < D->NumTPLists; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
-  Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  // Record the number of template parameter lists here to simplify memory
+  // allocation during deserialization.
+  Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  Record.push_back(D->getNumTemplateParameters());
-  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
-    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
-  Record.push_back(D->getFriendDecl() != nullptr);
-  if (D->getFriendDecl())
-    Record.AddDeclRef(D->getFriendDecl());
-  else
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    Record.AddTemplateParameterList(TPL);
+  FriendTemplateDeclKind Kind;
+  if (D->getFriendType()) {
+    Kind = D->Template.isNull() ? FTDK_Type : FTDK_Dependent;
+  } else if (D->Template.isNull()) {
+    assert(D->getFriendDecl());
+    Kind = FTDK_Decl;
+  } else {
+    Kind = FTDK_Template;
+  }
+  Record.push_back(Kind);
+  switch (Kind) {
+  case FTDK_Type:
     Record.AddTypeSourceInfo(D->getFriendType());
-  Record.AddSourceLocation(D->getFriendLoc());
+    break;
+  case FTDK_Dependent:
+    Record.AddTypeSourceInfo(D->getFriendType());
+    Record.AddTemplateName(D->Template);
+    break;
+  case FTDK_Decl:
+    Record.AddDeclRef(D->getFriendDecl());
+    break;
+  case FTDK_Template:
+    Record.AddTemplateName(D->Template);
+    break;
+  }
+  Record.AddDeclRef(D->getNextFriend());
+  Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 
@@ -1934,7 +1952,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *> InstFrom
     = D->getSpecializedTemplateOrPartial();
-  if (Decl *InstFromD = InstFrom.dyn_cast<ClassTemplateDecl *>()) {
+  if (Decl *InstFromD = dyn_cast<ClassTemplateDecl *>(InstFrom)) {
     Record.AddDeclRef(InstFromD);
   } else {
     Record.AddDeclRef(cast<ClassTemplatePartialSpecializationDecl *>(InstFrom));
@@ -1945,35 +1963,28 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
   Record.push_back(D->hasStrictPackMatch());
-
-  switch (D->getSpecializationKind()) {
-  case TSK_Undeclared:
-  case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
-    assert(!D->getExplicitSpecializationInfo());
-    assert(!D->getExplicitInstantiationInfo());
-    break;
-  case TSK_ExplicitSpecialization: {
-    const auto *Info = D->getExplicitSpecializationInfo();
-    Record.AddTemplateParameterList(Info->TemplateParams);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  case TSK_ExplicitInstantiationDeclaration:
-  case TSK_ExplicitInstantiationDefinition: {
-    const auto *Info = D->getExplicitInstantiationInfo();
-    Record.AddSourceLocation(Info->ExternKeywordLoc);
-    Record.AddSourceLocation(Info->TemplateKeywordLoc);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  }
-
   Record.push_back(D->isCanonicalDecl());
+
   if (D->isCanonicalDecl()) {
     // When reading, we'll add it to the folding set of the following template.
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
+
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
+    Record.AddSourceLocation(D->getTemplateKeywordLoc());
+  }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   // Mention the implicitly generated C++ deduction guide to make sure the
   // deduction guide will be rewritten as expected.
@@ -1996,7 +2007,9 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
 }
 
 void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
-    ClassTemplatePartialSpecializationDecl *D) {
+                                    ClassTemplatePartialSpecializationDecl *D) {
+  Record.AddTemplateParameterList(D->getTemplateParameters());
+
   VisitClassTemplateSpecializationDecl(D);
 
   // These are read/set from/to the first declaration.
@@ -2022,40 +2035,33 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   InstFrom = D->getSpecializedTemplateOrPartial();
-  if (Decl *InstFromD = InstFrom.dyn_cast<VarTemplateDecl *>()) {
+  if (Decl *InstFromD = dyn_cast<VarTemplateDecl *>(InstFrom)) {
     Record.AddDeclRef(InstFromD);
   } else {
     Record.AddDeclRef(cast<VarTemplatePartialSpecializationDecl *>(InstFrom));
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
+    Record.AddSourceLocation(D->getTemplateKeywordLoc());
+  }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
+
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
   Record.push_back(D->IsCompleteDefinition);
-
-  switch (D->getSpecializationKind()) {
-  case TSK_Undeclared:
-  case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
-    assert(!D->getExplicitSpecializationInfo());
-    assert(!D->getExplicitInstantiationInfo());
-    break;
-  case TSK_ExplicitSpecialization: {
-    const auto *Info = D->getExplicitSpecializationInfo();
-    Record.AddTemplateParameterList(Info->TemplateParams);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  case TSK_ExplicitInstantiationDeclaration:
-  case TSK_ExplicitInstantiationDefinition: {
-    const auto *Info = D->getExplicitInstantiationInfo();
-    Record.AddSourceLocation(Info->ExternKeywordLoc);
-    Record.AddSourceLocation(Info->TemplateKeywordLoc);
-    Record.AddASTTemplateArgumentListInfo(Info->TemplateArgsAsWritten);
-    break;
-  }
-  }
 
   VisitVarDecl(D);
 
@@ -2075,6 +2081,8 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 
 void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
+  Record.AddTemplateParameterList(D->getTemplateParameters());
+
   VisitVarTemplateSpecializationDecl(D);
 
   // These are read/set from/to the first declaration.
@@ -2234,9 +2242,17 @@ void ASTDeclWriter::VisitExplicitInstantiationDecl(
   Code = serialization::DECL_EXPLICIT_INSTANTIATION;
 }
 
+void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
+  VisitDecl(D);
+  Record.AddStmt(D->getExpansionPattern());
+  Record.AddStmt(D->getInstantiations());
+  Record.AddDeclRef(D->getIndexTemplateParm());
+  Code = serialization::DECL_EXPANSION_STMT;
+}
+
 /// Emit the DeclContext part of a declaration context decl.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
-  static_assert(DeclContext::NumDeclContextBits == 13,
+  static_assert(DeclContext::NumDeclContextBits == 12,
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
   LookupBlockOffsets Offsets;
@@ -2362,7 +2378,7 @@ void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 15,
+  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 14,
                 "You need to update the serializer after you change the "
                 "NumOMPDeclareReductionDeclBits");
 
@@ -2451,7 +2467,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
     Abv->Add(
         BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Template Argument Type
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is Defaulted
-    Abv->Add(BitCodeAbbrevOp(0));                         // TemplateParams
     Abv->Add(BitCodeAbbrevOp(0)); // TemplateArgumentsAsWritten
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SourceLocation
     Abv->Add(BitCodeAbbrevOp(0));
@@ -2461,7 +2476,6 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
                                    TK_DependentFunctionTemplateSpecialization) {
     // Candidates of specialization
     Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    Abv->Add(BitCodeAbbrevOp(0)); // TemplateParams
     Abv->Add(BitCodeAbbrevOp(0)); // TemplateArgumentsAsWritten
   } else {
     llvm_unreachable("Unknown templated kind?");

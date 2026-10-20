@@ -18,125 +18,21 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/ContiguousBlobAccumulator.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
-#include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace llvm;
+using llvm::yaml::ContiguousBlobAccumulator;
 
-// This class is used to build up a contiguous binary blob while keeping
-// track of an offset in the output (which notionally begins at
-// `InitialOffset`).
-// The blob might be limited to an arbitrary size. All attempts to write data
-// are ignored and the error condition is remembered once the limit is reached.
-// Such an approach allows us to simplify the code by delaying error reporting
-// and doing it at a convenient time.
 namespace {
-class ContiguousBlobAccumulator {
-  const uint64_t InitialOffset;
-  const uint64_t MaxSize;
-
-  SmallVector<char, 128> Buf;
-  raw_svector_ostream OS;
-  Error ReachedLimitErr = Error::success();
-
-  bool checkLimit(uint64_t Size) {
-    if (!ReachedLimitErr && getOffset() + Size <= MaxSize)
-      return true;
-    if (!ReachedLimitErr)
-      ReachedLimitErr = createStringError(errc::invalid_argument,
-                                          "reached the output size limit");
-    return false;
-  }
-
-public:
-  ContiguousBlobAccumulator(uint64_t BaseOffset, uint64_t SizeLimit)
-      : InitialOffset(BaseOffset), MaxSize(SizeLimit), OS(Buf) {}
-
-  uint64_t tell() const { return OS.tell(); }
-  uint64_t getOffset() const { return InitialOffset + OS.tell(); }
-  void writeBlobToStream(raw_ostream &Out) const { Out << OS.str(); }
-
-  Error takeLimitError() {
-    // Request to write 0 bytes to check we did not reach the limit.
-    checkLimit(0);
-    return std::move(ReachedLimitErr);
-  }
-
-  /// \returns The new offset.
-  uint64_t padToAlignment(unsigned Align) {
-    uint64_t CurrentOffset = getOffset();
-    if (ReachedLimitErr)
-      return CurrentOffset;
-
-    uint64_t AlignedOffset = alignTo(CurrentOffset, Align == 0 ? 1 : Align);
-    uint64_t PaddingSize = AlignedOffset - CurrentOffset;
-    if (!checkLimit(PaddingSize))
-      return CurrentOffset;
-
-    writeZeros(PaddingSize);
-    return AlignedOffset;
-  }
-
-  raw_ostream *getRawOS(uint64_t Size) {
-    if (checkLimit(Size))
-      return &OS;
-    return nullptr;
-  }
-
-  void writeAsBinary(const yaml::BinaryRef &Bin, uint64_t N = UINT64_MAX) {
-    if (!checkLimit(Bin.binary_size()))
-      return;
-    Bin.writeAsBinary(OS, N);
-  }
-
-  void writeZeros(uint64_t Num) {
-    if (checkLimit(Num))
-      OS.write_zeros(Num);
-  }
-
-  void write(const char *Ptr, size_t Size) {
-    if (checkLimit(Size))
-      OS.write(Ptr, Size);
-  }
-
-  void write(unsigned char C) {
-    if (checkLimit(1))
-      OS.write(C);
-  }
-
-  unsigned writeULEB128(uint64_t Val) {
-    if (!checkLimit(sizeof(uint64_t)))
-      return 0;
-    return encodeULEB128(Val, OS);
-  }
-
-  unsigned writeSLEB128(int64_t Val) {
-    if (!checkLimit(10))
-      return 0;
-    return encodeSLEB128(Val, OS);
-  }
-
-  template <typename T> void write(T Val, llvm::endianness E) {
-    if (checkLimit(sizeof(T)))
-      support::endian::write<T>(OS, Val, E);
-  }
-
-  void updateDataAt(uint64_t Pos, void *Data, size_t Size) {
-    assert(Pos >= InitialOffset && Pos + Size <= getOffset());
-    memcpy(&Buf[Pos - InitialOffset], Data, Size);
-  }
-};
-
 // Used to keep track of section and symbol names, so that in the YAML file
 // sections and symbols can be referenced by name instead of by index.
 class NameToIdxMap {
@@ -1462,119 +1358,10 @@ void ELFState<ELFT>::writeSectionContent(
       PGOAnalyses = &Section.PGOAnalyses.value();
   }
 
-  for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
-    // Write version and feature values.
-    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 5)
-        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
-                             << static_cast<int>(E.Version)
-                             << "; encoding using the most recent version";
-      CBA.write(E.Version);
-      SHeader.sh_size += 1;
-      if (E.Version < 5) {
-        CBA.write(static_cast<uint8_t>(E.Feature));
-        SHeader.sh_size += 1;
-      } else {
-        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
-        SHeader.sh_size += 2;
-      }
-    }
-    auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
-    bool MultiBBRangeFeatureEnabled = false;
-    if (!FeatureOrErr)
-      WithColor::warning() << toString(FeatureOrErr.takeError());
-    else
-      MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
-    bool MultiBBRange =
-        MultiBBRangeFeatureEnabled ||
-        (E.NumBBRanges.has_value() && E.NumBBRanges.value() != 1) ||
-        (E.BBRanges && E.BBRanges->size() != 1);
-    if (MultiBBRange && !MultiBBRangeFeatureEnabled)
-      WithColor::warning() << "feature value(" << E.Feature
-                           << ") does not support multiple BB ranges.";
-    if (MultiBBRange) {
-      // Write the number of basic block ranges, which is overridden by the
-      // 'NumBBRanges' field when specified.
-      uint64_t NumBBRanges =
-          E.NumBBRanges.value_or(E.BBRanges ? E.BBRanges->size() : 0);
-      SHeader.sh_size += CBA.writeULEB128(NumBBRanges);
-    }
-    if (!E.BBRanges)
-      continue;
-    uint64_t TotalNumBlocks = 0;
-    bool EmitCallsiteEndOffsets =
-        FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
-    for (const BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
-      // Write the base address of the range.
-      CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
-      // Write number of BBEntries (number of basic blocks in this basic block
-      // range). This is overridden by the 'NumBlocks' YAML field when
-      // specified.
-      uint64_t NumBlocks =
-          BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
-      SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-      // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
-        continue;
-      for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
-        ++TotalNumBlocks;
-        if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-          SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
-        if (EmitCallsiteEndOffsets) {
-          size_t NumCallsiteEndOffsets =
-              BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
-          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
-          if (BBE.CallsiteEndOffsets) {
-            for (uint32_t Offset : *BBE.CallsiteEndOffsets)
-              SHeader.sh_size += CBA.writeULEB128(Offset);
-          }
-        }
-        SHeader.sh_size += CBA.writeULEB128(BBE.Size);
-        SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
-        if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
-          uint64_t Hash =
-              BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
-          CBA.write<uint64_t>(Hash, ELFT::Endianness);
-          SHeader.sh_size += 8;
-        }
-      }
-    }
-    if (!PGOAnalyses)
-      continue;
-    const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
-
-    if (PGOEntry.FuncEntryCount)
-      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
-
-    if (!PGOEntry.PGOBBEntries)
-      continue;
-
-    const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
-    if (TotalNumBlocks != PGOBBEntries.size()) {
-      WithColor::warning() << "PBOBBEntries must be the same length as "
-                              "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
-                           << "Mismatch on function with address: "
-                           << E.getFunctionAddress();
-      continue;
-    }
-
-    for (const auto &PGOBBE : PGOBBEntries) {
-      if (PGOBBE.BBFreq)
-        SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
-      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
-      if (PGOBBE.Successors) {
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
-          SHeader.sh_size += CBA.writeULEB128(ID);
-          SHeader.sh_size += CBA.writeULEB128(BrProb);
-          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
-            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
-        }
-      }
-    }
-  }
+  uint64_t CurrentOffset = CBA.getOffset();
+  BBAddrMapYAML::encodePayload(*Section.Entries, PGOAnalyses, CBA,
+                               ELFT::Endianness, sizeof(uintX_t));
+  SHeader.sh_size += CBA.getOffset() - CurrentOffset;
 }
 
 template <class ELFT>

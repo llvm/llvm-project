@@ -55,10 +55,12 @@ public:
                          EVT VT) const override;
 
   // Exception handling support.
-  Register getExceptionPointerRegister(const Constant *) const override {
+  Register getExceptionPointerRegister(ExceptionHandling EH,
+                                       const Constant *) const override {
     return BPF::R0;
   }
-  Register getExceptionSelectorRegister(const Constant *) const override {
+  Register getExceptionSelectorRegister(ExceptionHandling EH,
+                                        const Constant *) const override {
     return BPF::R0;
   }
 
@@ -117,11 +119,6 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
-
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override {
-    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
-  }
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
     return false;

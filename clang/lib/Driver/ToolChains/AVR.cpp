@@ -466,7 +466,7 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // Reject C/C++ compilation for avr1 devices since they have no SRAM.
   const Driver &D = getDriver();
   std::string CPU = getCPUName(D, DriverArgs, getTriple());

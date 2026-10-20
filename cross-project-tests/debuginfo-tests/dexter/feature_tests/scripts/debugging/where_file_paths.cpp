@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t -- %s | FileCheck %s --implicit-check-not="header.h(9"
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t -- %s | FileCheck %s --implicit-check-not="header.h(9"
 
 /// Test that we can use file paths as part of a !where node, and that we can
 /// use a trailing subset of the file path, including just the base filename, to

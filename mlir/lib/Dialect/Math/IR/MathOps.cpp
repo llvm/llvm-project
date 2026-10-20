@@ -305,7 +305,8 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 // SinCosOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+math::SincosOp::getIterationShapeToUnroll() {
   if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -456,8 +457,6 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
           curBase *= curBase;
         }
       });
-
-  return Attribute();
 }
 
 //===----------------------------------------------------------------------===//
@@ -831,23 +830,29 @@ OpFoldResult math::FPowIOp::fold(FoldAdaptor adaptor) {
   return constFoldBinaryOpConditional<FloatAttr, IntegerAttr>(
       adaptor.getOperands(),
       [](const APFloat &base, const APInt &exp) -> std::optional<APFloat> {
-        const llvm::fltSemantics &sem = base.getSemantics();
-        // Fold when the exponent is exactly representable in the
-        // floating-point type of the base.
-        APFloat fExp(sem);
-        if (fExp.convertFromAPInt(exp, /*isSigned=*/true,
-                                  APFloat::rmNearestTiesToEven) !=
-            APFloat::opOK)
-          return {};
-
-        switch (APFloat::SemanticsToEnum(sem)) {
+        switch (APFloat::SemanticsToEnum(base.getSemantics())) {
         case APFloat::Semantics::S_IEEEdouble:
-          return APFloat(pow(base.convertToDouble(), fExp.convertToDouble()));
         case APFloat::Semantics::S_IEEEsingle:
-          return APFloat(powf(base.convertToFloat(), fExp.convertToFloat()));
+          break;
         default:
           return {};
         }
+
+        // Square-and-multiply using the base's own semantics, matching the
+        // multiply sequence ExpandPowI builds in SelectionDAGBuilder.cpp.
+        const llvm::fltSemantics &sem = base.getSemantics();
+        APInt magnitude = exp.abs();
+        APFloat res = APFloat::getOne(sem);
+        APFloat curSquare = base;
+        while (!magnitude.isZero()) {
+          if (magnitude[0])
+            res = res * curSquare;
+          curSquare = curSquare * curSquare;
+          magnitude.lshrInPlace(1);
+        }
+        if (exp.isNegative())
+          res = APFloat::getOne(sem) / res;
+        return res;
       });
 }
 

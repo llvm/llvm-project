@@ -144,7 +144,7 @@ define i64 @sad8_64bit_icmp_sext_slt(ptr nocapture readonly %cur, ptr nocapture 
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_64bit_icmp_sext_slt:
@@ -152,7 +152,7 @@ define i64 @sad8_64bit_icmp_sext_slt(ptr nocapture readonly %cur, ptr nocapture 
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
   br label %for.body
@@ -177,7 +177,7 @@ define i64 @sad8_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr nocapture 
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_64bit_icmp_zext_slt:
@@ -185,7 +185,7 @@ define i64 @sad8_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr nocapture 
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
   br label %for.body
@@ -210,7 +210,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr noca
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: sad8_early_64bit_icmp_zext_slt:
@@ -218,7 +218,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(ptr nocapture readonly %cur, ptr noca
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
   br label %for.body

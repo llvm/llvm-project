@@ -596,10 +596,10 @@ define <8 x i16> @foov8i16(<16 x i8> %a1, <2 x i64> %b1) {
 }
 
 define <2 x i64> @hadd32_zext_asr(<16 x i8> %src1a) {
-; CHECK-LE-LABEL: hadd32_zext_asr:
-; CHECK-LE:       // %bb.0:
-; CHECK-LE-NEXT:    ushll2 v0.2d, v0.4s, #1
-; CHECK-LE-NEXT:    ret
+; CHECK-LABEL: hadd32_zext_asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #1
+; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: hadd32_zext_asr:
 ; CHECK-BE:       // %bb.0:
@@ -608,12 +608,6 @@ define <2 x i64> @hadd32_zext_asr(<16 x i8> %src1a) {
 ; CHECK-BE-NEXT:    ushll2 v0.2d, v0.4s, #1
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
-;
-; CHECK-GI-LABEL: hadd32_zext_asr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #1
-; CHECK-GI-NEXT:    ret
   %src1 = bitcast <16 x i8> %src1a to <4 x i32>
   %s1 = shufflevector <4 x i32> %src1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
   %zextsrc1 = zext <2 x i32> %s1 to <2 x i64>

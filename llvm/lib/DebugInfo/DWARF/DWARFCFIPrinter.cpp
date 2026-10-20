@@ -12,11 +12,9 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <optional>
 
@@ -83,6 +81,12 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
     else
       OS << formatv(" {0}*data_alignment_factor", int64_t(Operand));
     break;
+  case CFIProgram::OT_SignedFactCodeOffset:
+    if (P.codeAlign())
+      OS << formatv(" {0}", int64_t(Operand) * (int64_t)P.codeAlign());
+    else
+      OS << formatv(" {0}*code_alignment_factor", int64_t(Operand));
+    break;
   case CFIProgram::OT_UnsignedFactDataOffset:
     if (P.dataAlign())
       OS << formatv(" {0}", int64_t(Operand * P.dataAlign()));
@@ -92,6 +96,9 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
   case CFIProgram::OT_Register:
     OS << ' ';
     printRegister(OS, DumpOpts, Operand);
+    break;
+  case CFIProgram::OT_RAState:
+    OS << ' ' << Operand;
     break;
   case CFIProgram::OT_AddressSpace:
     OS << formatv(" in addrspace{0}", Operand);

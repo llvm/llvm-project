@@ -63,7 +63,7 @@ void foo(OtherObject* other)
     uncheckedDowncast<SubDerived>(other->obj());
     newCastFunction<SubDerived>(other->obj());
     badCastFunction<SubDerived>(other->obj());
-    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'other->obj()' (to 'badCastFunction<SubDerived, Derived>') is a raw pointer to RefPtr-capable type 'Derived'}}
     toString(other->obj());
 }
 

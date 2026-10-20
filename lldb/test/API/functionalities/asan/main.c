@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 char *pointer;
@@ -18,7 +17,7 @@ int main (int argc, char const *argv[])
     f1();
     f2();
 
-    printf("Hello world!\n"); // break line
+    int bp = 0; // break line
 
     pointer[0] = 'A'; // BOOM line
 

@@ -3,7 +3,7 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DTARGET=dx -check-prefixes=CHECK,CHECK-DXIL
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s \
+// RUN:   spirv-unknown-vulkan-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DTARGET=spv -check-prefixes=CHECK,CHECK-SPIRV
 

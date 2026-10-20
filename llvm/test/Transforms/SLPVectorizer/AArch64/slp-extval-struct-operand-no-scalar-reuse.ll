@@ -8,9 +8,9 @@ define [2 x i64] @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.ssub.with.overflow.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[RETVAL_SROA_5_8_INSERT_SHIFT_I52_I:%.*]] = select i1 [[TMP5]], i64 0, i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr getelementptr inbounds nuw (i8, ptr null, i64 104), align 8

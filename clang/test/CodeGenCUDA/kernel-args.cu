@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -x hip -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:     -emit-llvm %s -o - | FileCheck -check-prefix=AMDGCN %s
 // RUN: %clang_cc1 -x hip -triple spirv64-amd-amdhsa -fcuda-is-device \
 // RUN:     -emit-llvm %s -o - | FileCheck -check-prefix=AMDGCNSPIRV %s

@@ -650,6 +650,36 @@ func.func @xfer_read_scalable_column(%a: index, %b: index, %pad: f32, %src: memr
 
 // -----
 
+// CHECK-LABEL:   func.func @xfer_read_scalable_column_f64(
+// CHECK-SAME:      %[[IDX_0:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[IDX_1:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:      %[[PAD:.*]]: f64,
+// CHECK-SAME:      %[[SRC:.*]]: memref<?x?xf64>) -> vector<[4]x1xf64> {
+func.func @xfer_read_scalable_column_f64(%a: index, %b: index, %pad: f64, %src: memref<?x?xf64>) -> (vector<[4]x1xf64>) {
+  // CHECK:           %[[INIT:.*]] = arith.constant dense<0.000000e+00> : vector<[4]xf64>
+  // CHECK:           %[[STEP:.*]] = arith.constant 1 : index
+  // CHECK:           %[[C4:.*]] = arith.constant 4 : index
+  // CHECK:           %[[LB:.*]] = arith.constant 0 : index
+  // CHECK:           %[[VSCALE:.*]] = vector.vscale
+  // CHECK:           %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
+
+  // <scf.for>
+  // CHECK:           %[[SCF:.*]] = scf.for %[[IND_VAR:.*]] = %[[LB]] to %[[C4_VSCALE]] step %[[STEP]] iter_args(%[[SCF_RES:.*]] = %[[INIT]]) -> (vector<[4]xf64>) {
+  // CHECK:             %[[IDX_0_UPDATED:.*]] = arith.addi %[[IND_VAR]], %[[IDX_0]] : index
+  // CHECK:             %[[VAL_10:.*]] = memref.load %[[SRC]][%[[IDX_0_UPDATED]], %[[IDX_1]]] : memref<?x?xf64>
+  // CHECK:             %[[RES_UPDATED:.*]] = vector.insert %[[VAL_10]], %[[SCF_RES]] [%[[IND_VAR]]] : f64 into vector<[4]xf64>
+  // CHECK:             scf.yield %[[RES_UPDATED]] : vector<[4]xf64>
+  // CHECK:           }
+
+  // <shape-cast>
+  // CHECK:           %[[SC:.*]] = vector.shape_cast %[[SCF]] : vector<[4]xf64> to vector<[4]x1xf64>
+  // CHECK:           return %[[SC]]
+  %read = vector.transfer_read %src[%a, %b], %pad : memref<?x?xf64>, vector<[4]x1xf64>
+  return %read : vector<[4]x1xf64>
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @negative_xfer_read_scalable_column_x2
 func.func @negative_xfer_read_scalable_column_x2(%a: index, %b: index, %pad: f32, %src: memref<?x?xf32>) -> (vector<[4]x2xf32>) {
   // CHECK-NOT: scf.for

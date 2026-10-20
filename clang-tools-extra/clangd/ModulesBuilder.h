@@ -26,10 +26,13 @@
 #include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
 
 namespace clang {
 namespace clangd {
+
+struct FileEvent;
 
 /// Store all the needed module files information to parse a single
 /// source file. e.g.,
@@ -76,6 +79,9 @@ public:
   canReuse(const CompilerInvocation &CI,
            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const = 0;
 
+  /// Returns the set of directly required module names
+  virtual llvm::StringSet<> getRequiredModuleNames() const = 0;
+
   virtual ~PrerequisiteModules() = default;
 };
 
@@ -94,10 +100,21 @@ public:
   ModulesBuilder &operator=(const ModulesBuilder &) = delete;
   ModulesBuilder &operator=(ModulesBuilder &&) = delete;
 
+  /// Makes an opened module interface available to project module queries.
+  /// Returns whether a new module path was observed.
+  bool observeSourcePath(PathRef File);
+
+  /// Updates project module queries after a watched file event. Returns whether
+  /// the event may have changed an observed module.
+  bool onFileEvent(const FileEvent &Event);
+
   std::unique_ptr<PrerequisiteModules>
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
 
   bool hasRequiredModules(PathRef File);
+
+  /// Returns the list of directly required module names
+  std::vector<std::string> getRequiredModuleNames(PathRef File);
 
 private:
   class ModulesBuilderImpl;

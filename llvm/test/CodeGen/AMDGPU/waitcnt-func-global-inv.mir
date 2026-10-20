@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GFX12 %s
+# RUN: llc -mtriple=amdgpu12.00 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GFX12 %s
 
 # Test that we can optimize away s_wait_loadcnt at function boundaries when
 # the only pending LOAD_CNT events are from GLOBAL_INV (which doesn't write

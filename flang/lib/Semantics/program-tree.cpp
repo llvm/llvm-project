@@ -234,7 +234,9 @@ std::optional<ProgramTree> ProgramTree::Build(
 
 std::optional<ProgramTree> ProgramTree::Build(
     const parser::OpenACCRoutineConstruct &, SemanticsContext &) {
-  DIE("ProgramTree::Build() called for OpenACCRoutineConstruct");
+  // OpenACC ROUTINE can appear in a module subprogram part but it does not
+  // introduce a program unit node in the semantics program tree.
+  return std::nullopt;
 }
 
 const parser::ParentIdentifier &ProgramTree::GetParentId() const {

@@ -1223,20 +1223,20 @@ define i32 @madd_quad_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %
 ; CHECK-NEXT:    [[TMP22:%.*]] = sext <8 x i16> [[TMP20]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP23:%.*]] = sext <8 x i16> [[TMP21]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul nsw <8 x i32> [[TMP23]], [[TMP22]]
-; CHECK-NEXT:    [[TMP26:%.*]] = add nuw nsw <8 x i32> [[TMP25]], [[TMP19]]
+; CHECK-NEXT:    [[I26:%.*]] = add nuw nsw <8 x i32> [[TMP25]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = load <8 x i16>, ptr [[ARG4]], align 1
 ; CHECK-NEXT:    [[TMP41:%.*]] = load <8 x i16>, ptr [[ARG5]], align 1
 ; CHECK-NEXT:    [[TMP42:%.*]] = sext <8 x i16> [[TMP40]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP43:%.*]] = sext <8 x i16> [[TMP41]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP45:%.*]] = mul nsw <8 x i32> [[TMP43]], [[TMP42]]
-; CHECK-NEXT:    [[TMP56:%.*]] = add nuw nsw <8 x i32> [[TMP26]], [[TMP45]]
+; CHECK-NEXT:    [[I56:%.*]] = add nuw nsw <8 x i32> [[I26]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = load <8 x i16>, ptr [[ARG6]], align 1
 ; CHECK-NEXT:    [[TMP51:%.*]] = load <8 x i16>, ptr [[ARG7]], align 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = sext <8 x i16> [[TMP50]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP53:%.*]] = sext <8 x i16> [[TMP51]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP55:%.*]] = mul nsw <8 x i32> [[TMP53]], [[TMP52]]
-; CHECK-NEXT:    [[TMP57:%.*]] = add nuw nsw <8 x i32> [[TMP56]], [[TMP55]]
-; CHECK-NEXT:    [[TMP35:%.*]] = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP57]])
+; CHECK-NEXT:    [[I57:%.*]] = add nuw nsw <8 x i32> [[I56]], [[TMP55]]
+; CHECK-NEXT:    [[TMP35:%.*]] = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[I57]])
 ; CHECK-NEXT:    ret i32 [[TMP35]]
 ;
   %i = load <8 x i16>, ptr %arg, align 1

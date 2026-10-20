@@ -115,7 +115,14 @@ void llvm_thread_join_impl(pthread_t Thread) {
 }
 
 llvm::thread::id llvm_thread_get_id_impl(pthread_t Thread) {
-#ifdef __MVS__
+#if defined(__LLVM_LIBC__)
+  llvm::thread::id Id;
+  int errnum;
+  if ((errnum = ::pthread_getunique_np(&Thread, &Id)) != 0) {
+    ReportErrnumFatal("pthread_getunique_np failed", errnum);
+  }
+  return Id;
+#elif defined(__MVS__)
   return Thread.__;
 #else
   return Thread;
@@ -123,7 +130,11 @@ llvm::thread::id llvm_thread_get_id_impl(pthread_t Thread) {
 }
 
 llvm::thread::id llvm_thread_get_current_id_impl() {
+#if defined(__LLVM_LIBC__)
+  return ::pthread_getthreadid_np();
+#else
   return llvm_thread_get_id_impl(::pthread_self());
+#endif
 }
 
 } // namespace llvm

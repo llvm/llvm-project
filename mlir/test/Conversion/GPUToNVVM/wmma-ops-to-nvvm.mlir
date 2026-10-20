@@ -8,32 +8,32 @@ gpu.module @test_module {
   // CHECK-SAME: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   // CHECK32-LABEL: func @gpu_wmma_load_op() ->
   func.func @gpu_wmma_load_op() -> (!gpu.mma_matrix<16x16xf16, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] {leadDimension = 32 : index, transpose} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
-    // CHECK-SAME: {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32}  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+    // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  llvm.return %[[FRAG]] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f16
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
-    // CHECK32-SAME: {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32}  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+    // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  llvm.return %[[FRAG]] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     return %0 : !gpu.mma_matrix<16x16xf16, "AOp">
   }
@@ -47,32 +47,32 @@ gpu.module @test_module {
   // CHECK-SAME: !llvm.struct<(i32, i32)>
   // CHECK32-LABEL: func @gpu_wmma_int8_load_op() ->
   func.func @gpu_wmma_int8_load_op() -> (!gpu.mma_matrix<16x16xsi8, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xi8, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xi8, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] {leadDimension = 32 : index, transpose} : memref<32x32xi8, 3> -> !gpu.mma_matrix<16x16xsi8, "AOp">
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xi8, 3> -> !gpu.mma_matrix<16x16xsi8, "AOp">
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i8
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
-    // CHECK-SAME: {eltype = #nvvm.mma_type<s8>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32}  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+    // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <s8>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
     // CHECK:  llvm.return %[[FRAG]] : !llvm.struct<(i32, i32)>
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, i8
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
-    // CHECK32-SAME: {eltype = #nvvm.mma_type<s8>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32}  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+    // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <s8>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
     // CHECK32:  llvm.return %[[FRAG]] : !llvm.struct<(i32, i32)>
     return %0 : !gpu.mma_matrix<16x16xsi8, "AOp">
   }
@@ -86,16 +86,16 @@ gpu.module @test_module {
   // CHECK-SAME: f64
   // CHECK32-LABEL: func @gpu_wmma_f64_load_op() ->
   func.func @gpu_wmma_f64_load_op() -> (!gpu.mma_matrix<8x4xf64, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf64, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf64, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] {leadDimension = 32 : index} : memref<32x32xf64, 3> -> !gpu.mma_matrix<8x4xf64, "AOp">
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 : memref<32x32xf64, 3> -> !gpu.mma_matrix<8x4xf64, "AOp">
     return %0 : !gpu.mma_matrix<8x4xf64, "AOp">
     // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} : i64
     // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} : i64
     // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f64
-    // CHECK: %[[C32_I32:.*]] = llvm.mlir.constant(32 : index) : i32
-    // CHECK: %[[LOAD:.*]] = nvvm.wmma.load %[[GEP]], %[[C32_I32]] {eltype = #nvvm.mma_type<f64>, frag = #nvvm.mma_frag<a>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32} : (!llvm.ptr<3>) -> f64
+    // CHECK: %[[C32_I32:.*]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[LOAD:.*]] = nvvm.wmma.load %[[GEP]], %[[C32_I32]], m = 8, n = 8, k = 4, layout = <row>, element_type = <f64>, fragment = a : (!llvm.ptr<3>) -> f64
     // CHECK: llvm.return %[[LOAD]] : f64
   }
 }
@@ -109,11 +109,11 @@ gpu.module @test_module {
   // CHECK32-LABEL: func @gpu_wmma_store_op
   // CHECK32-SAME: (%[[D:.*]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>)
   func.func @gpu_wmma_store_op(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
-    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index, transpose} : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] leadDimension 32 transpose : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
@@ -123,16 +123,16 @@ gpu.module @test_module {
     // CHECK:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  nvvm.wmma.store %[[ADDRESS]], %[[LDM32]], %[[EL1]], %[[EL2]], %[[EL3]], %[[EL4]]
-    // CHECK-SAME: {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32} : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
+    // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16> : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
     // CHECK:  llvm.return
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
@@ -142,13 +142,13 @@ gpu.module @test_module {
     // CHECK32:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f16
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  nvvm.wmma.store %[[ADDRESS]], %[[LDM32]], %[[EL1]], %[[EL2]], %[[EL3]], %[[EL4]]
-    // CHECK32-SAME: {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<col>, m = 16 : i32, n = 16 : i32} : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
+    // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16> : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
     // CHECK32:  llvm.return
     return
   }
@@ -161,7 +161,7 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_wmma_mma_op
   // CHECK-SAME: (%[[A:.*]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>, %[[B:.*]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>, %[[C:.*]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>)
   func.func @gpu_wmma_mma_op(%A : !gpu.mma_matrix<16x16xf16, "AOp">, %B : !gpu.mma_matrix<16x16xf16, "BOp">, %C : !gpu.mma_matrix<16x16xf16, "COp">) -> (!gpu.mma_matrix<16x16xf16, "COp">) {
-    %D = gpu.subgroup_mma_compute %A, %B, %C {a_transpose} : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
+    %D = gpu.subgroup_mma_compute %A, %B, %C a_transpose : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
     // CHECK:  %[[A1:.*]] = llvm.extractvalue %[[A]][0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[A2:.*]] = llvm.extractvalue %[[A]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[A3:.*]] = llvm.extractvalue %[[A]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
@@ -183,7 +183,7 @@ gpu.module @test_module {
     // CHECK:  %[[C3:.*]] = llvm.extractvalue %[[C]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[C4:.*]] = llvm.extractvalue %[[C]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[RES:.*]] = nvvm.wmma.mma %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A5]], %[[A6]], %[[A7]], %[[A8]], %[[B1]], %[[B2]], %[[B3]], %[[B4]], %[[B5]], %[[B6]], %[[B7]], %[[B8]], %[[C1]], %[[C2]], %[[C3]], %[[C4]]
-    // CHECK-SAME: {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f16>, k = 16 : i32, layoutA = #nvvm.mma_layout<col>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : (
+    // CHECK-SAME: m = 16, n = 16, k = 16, layout_a = <col>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f16> : (
     // CHECK-SAME: vector<2xf16>, {{.*}}) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  llvm.return %[[RES]] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     return %D : !gpu.mma_matrix<16x16xf16, "COp">
@@ -197,7 +197,7 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_wmma_mma_int8_op
   // CHECK-SAME: (%[[A:.*]]: !llvm.struct<(i32, i32, i32, i32)>, %[[B:.*]]: !llvm.struct<(i32)>, %[[C:.*]]: !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>)
   func.func @gpu_wmma_mma_int8_op(%A : !gpu.mma_matrix<32x16xsi8, "AOp">, %B : !gpu.mma_matrix<16x8xsi8, "BOp">, %C : !gpu.mma_matrix<32x8xi32, "COp">) -> (!gpu.mma_matrix<32x8xi32, "COp">) {
-    %D = gpu.subgroup_mma_compute %A, %B, %C {a_transpose} : !gpu.mma_matrix<32x16xsi8, "AOp">, !gpu.mma_matrix<16x8xsi8, "BOp"> -> !gpu.mma_matrix<32x8xi32, "COp">
+    %D = gpu.subgroup_mma_compute %A, %B, %C a_transpose : !gpu.mma_matrix<32x16xsi8, "AOp">, !gpu.mma_matrix<16x8xsi8, "BOp"> -> !gpu.mma_matrix<32x8xi32, "COp">
     // CHECK:  %[[A1:.*]] = llvm.extractvalue %[[A]][0] : !llvm.struct<(i32, i32, i32, i32)>
     // CHECK:  %[[A2:.*]] = llvm.extractvalue %[[A]][1] : !llvm.struct<(i32, i32, i32, i32)>
     // CHECK:  %[[A3:.*]] = llvm.extractvalue %[[A]][2] : !llvm.struct<(i32, i32, i32, i32)>
@@ -212,7 +212,7 @@ gpu.module @test_module {
     // CHECK:  %[[C7:.*]] = llvm.extractvalue %[[C]][6] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
     // CHECK:  %[[C8:.*]] = llvm.extractvalue %[[C]][7] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
     // CHECK:  %[[RES:.*]] = nvvm.wmma.mma %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[B1]], %[[C1]], %[[C2]], %[[C3]], %[[C4]], %[[C5]], %[[C6]], %[[C7]], %[[C8]]
-    // CHECK-SAME: {eltypeA = #nvvm.mma_type<s8>, eltypeB = #nvvm.mma_type<s32>, k = 16 : i32, layoutA = #nvvm.mma_layout<col>, layoutB = #nvvm.mma_layout<row>, m = 32 : i32, n = 8 : i32} : (
+    // CHECK-SAME: m = 32, n = 8, k = 16, layout_a = <col>, layout_b = <row>, element_type_a = <s8>, element_type_b = <s32> : (
     // CHECK-SAME: i32, {{.*}}) -> !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
     // CHECK:  llvm.return %[[RES]] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
     return %D : !gpu.mma_matrix<32x8xi32, "COp">
@@ -224,13 +224,13 @@ gpu.module @test_module {
 gpu.module @test_module {
 
 // CHECK-LABEL: func @gpu_wmma_mma_loop_op
-//       CHECK:   %[[C:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}} {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<c>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK:   %[[C:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}}, m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = c : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   llvm.br ^bb1(%{{.*}}, %[[C]] : i64, !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>)
 //       CHECK:  ^bb1(%{{.*}}: i64, %[[ACC:.+]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>):  // 2 preds: ^bb0, ^bb2
 //       CHECK:   llvm.cond_br %{{.*}}, ^bb2, ^bb3
 //       CHECK:  ^bb2:  // pred: ^bb1
-//       CHECK:   %[[A:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}} {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
-//       CHECK:   %[[B:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}} {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<b>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK:   %[[A:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}}, m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = a : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK:   %[[B:.+]] = nvvm.wmma.load %{{.*}}, %{{.*}}, m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = b : (!llvm.ptr) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[A0:.+]] = llvm.extractvalue %[[A]][0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[A1:.+]] = llvm.extractvalue %[[A]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[A2:.+]] = llvm.extractvalue %[[A]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
@@ -251,32 +251,32 @@ gpu.module @test_module {
 //       CHECK:   %[[ACC1:.+]] = llvm.extractvalue %[[ACC]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[ACC2:.+]] = llvm.extractvalue %[[ACC]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[ACC3:.+]] = llvm.extractvalue %[[ACC]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
-//       CHECK:   %[[ACC_MUL:.+]] = nvvm.wmma.mma %[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A5]], %[[A6]], %[[A7]], %[[B0]], %[[B1]], %[[B2]], %[[B3]], %[[B4]], %[[B5]], %[[B6]], %[[B7]], %[[ACC0]], %[[ACC1]], %[[ACC2]], %[[ACC3]] {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f16>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : (vector<2xf16>, {{.*}} -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK:   %[[ACC_MUL:.+]] = nvvm.wmma.mma %[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A5]], %[[A6]], %[[A7]], %[[B0]], %[[B1]], %[[B2]], %[[B3]], %[[B4]], %[[B5]], %[[B6]], %[[B7]], %[[ACC0]], %[[ACC1]], %[[ACC2]], %[[ACC3]] m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f16> : (vector<2xf16>, {{.*}} -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   llvm.br ^bb1(%{{.*}}, %[[ACC_MUL]] : i64, !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>)
 //       CHECK:  ^bb3:  // pred: ^bb1
 //       CHECK:   %[[E0:.+]] = llvm.extractvalue %[[ACC]][0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[E1:.+]] = llvm.extractvalue %[[ACC]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[E2:.+]] = llvm.extractvalue %[[ACC]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK:   %[[E3:.+]] = llvm.extractvalue %[[ACC]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
-//       CHECK:   nvvm.wmma.store %{{.*}}, %{{.*}}, %[[E0]], %[[E1]], %[[E2]], %[[E3]] {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32} : !llvm.ptr, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
+//       CHECK:   nvvm.wmma.store %{{.*}}, %{{.*}}, %[[E0]], %[[E1]], %[[E2]], %[[E3]] m = 16, n = 16, k = 16, layout = <row>, element_type = <f16> : !llvm.ptr, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
 
   func.func @gpu_wmma_mma_loop_op(%arg0: memref<128x128xf16>, %arg1: memref<128x128xf16>, %arg2: memref<128x128xf16>) {
       %c0 = arith.constant 0 : index
       %c128 = arith.constant 128 : index
       %c32 = arith.constant 32 : index
-      %0 = gpu.subgroup_mma_load_matrix %arg2[%c0, %c0] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+      %0 = gpu.subgroup_mma_load_matrix %arg2[%c0, %c0] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
       cf.br ^bb1(%c0, %0 : index, !gpu.mma_matrix<16x16xf16, "COp">)
     ^bb1(%1: index, %2: !gpu.mma_matrix<16x16xf16, "COp">):  // 2 preds: ^bb0, ^bb2
       %3 = arith.cmpi slt, %1, %c128 : index
       cf.cond_br %3, ^bb2, ^bb3
     ^bb2:  // pred: ^bb1
-      %4 = gpu.subgroup_mma_load_matrix %arg0[%c0, %1] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-      %5 = gpu.subgroup_mma_load_matrix %arg1[%1, %c0] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+      %4 = gpu.subgroup_mma_load_matrix %arg0[%c0, %1] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+      %5 = gpu.subgroup_mma_load_matrix %arg1[%1, %c0] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
       %6 = gpu.subgroup_mma_compute %4, %5, %2 : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
       %7 = arith.addi %1, %c32 : index
       cf.br ^bb1(%7, %6 : index, !gpu.mma_matrix<16x16xf16, "COp">)
     ^bb3:  // pred: ^bb1
-      gpu.subgroup_mma_store_matrix %2, %arg2[%c0, %c0] {leadDimension = 128 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf16>
+      gpu.subgroup_mma_store_matrix %2, %arg2[%c0, %c0] leadDimension 128 : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf16>
       return
     }
 }

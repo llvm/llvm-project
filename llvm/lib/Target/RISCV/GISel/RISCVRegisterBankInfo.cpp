@@ -168,6 +168,10 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
   case TargetOpcode::G_FCMP:
     return true;
   default:
@@ -462,6 +466,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
   case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
@@ -547,7 +555,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
     }
 
-    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
+    if (IntrinsicID == Intrinsic::riscv_orc_b ||
+        IntrinsicID == Intrinsic::riscv_vsetvli ||
         IntrinsicID == Intrinsic::riscv_vsetvlimax) {
       for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
         const MachineOperand &MO = MI.getOperand(Idx);

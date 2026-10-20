@@ -55,6 +55,10 @@ typedef struct MlirLinalgConvolutionDimensions {
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensions(MlirOperation op);
 
+MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
+mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
+                                             size_t numMaps);
+
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLinalgGetIndexingMapsAttribute(MlirOperation op);
 

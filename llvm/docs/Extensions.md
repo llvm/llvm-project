@@ -1,8 +1,5 @@
 # LLVM Extensions
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -432,7 +429,30 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 5 (newest): Capable of encoding Post-Link CFG information, which
+Version 6 (newest): Capable of encoding the function GUID (as computed by
+`Function::getGUID`). This allows tools like Propeller to identify functions
+(including functions with internal linkage) without requiring
+`-funique-internal-linkage-names`. This feature is enabled by the 9th bit of
+the feature entry. When enabled, the GUID is stored as an 8-byte value
+immediately after the feature entry.
+
+Example:
+
+```gas
+.section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+.byte     6                             # version number
+.short    256                           # feature entry
+.quad     -2624081020897602054          # function GUID
+.quad     .Lfunc_begin0                 # address of the function
+.byte     1                             # number of basic blocks
+# BB record for BB_0
+ .byte     0                            # BB_0 ID
+ .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+ .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+ .byte     x                            # BB_0 metadata
+```
+
+Version 5: Capable of encoding Post-Link CFG information, which
 provides basic block and edge frequencies obtained from a post-link tool like
 Propeller, reflecting the final binary layout. This feature is enabled by the 8th
 bit of the feature entry.
@@ -681,6 +701,18 @@ For example:
 This indicates that `ball` calls `foo`, `bar` and `baz` directly;
 `ball` indirectly calls functions whose types are `4524972987496481828`,
 `3498816979441845844` and `8646233951371320954`.
+
+#### `SHT_LLVM_DYNDBG_ELF` Section (Dynamic Debugging ELF)
+
+This section is used to embed a dynamic debugging ELF object. The section is
+created by the compiler when dynamic debugging is enabled. The content of this
+section is an ELF object with code that is compiled unoptimized and compatible
+with the optimized ELF object in which it is embedded. The linker combines
+embedded dynamic debugging ELF objects into a single embedded dynamic debugging
+ELF object in the linker output. The unoptimized code within the embedded
+dynamic debugging object can be used by a debugger to replace the optimized
+equivalent during debugging. See {doc}`DynamicDebugging` for further
+details.
 
 ### CodeView-Dependent
 

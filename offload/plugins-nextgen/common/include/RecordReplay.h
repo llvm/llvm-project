@@ -40,6 +40,30 @@ namespace plugin {
 struct GenericKernelTy;
 struct GenericDeviceTy;
 
+struct KernelRecordArgsTy {
+  /// Number of kernel arguments in \p Args.
+  uint32_t NumArgs = 0;
+  /// Array of \p NumArgs pointers, each pointing at one argument's value,
+  /// with any offsets already resolved.
+  void **Args = nullptr;
+  /// Tripcount for the teams / distribute loop, 0 otherwise.
+  uint64_t Tripcount = 0;
+  /// Number of blocks originally requested by the program for the first
+  /// dimension (e.g., num_teams clause), or 0 if none was requested.
+  uint32_t RequestedNumBlocks = 0;
+  /// Maximum number of threads per block that this kernel may use.
+  uint32_t MaxNumThreads = 0;
+  /// Effective number of blocks for this launch (for x,y,z dimension).
+  uint32_t NumBlocks[3] = {0, 0, 0};
+  /// Effective number of threads for this launch (for x,y,z dimension).
+  uint32_t NumThreads[3] = {0, 0, 0};
+  /// Amount of dynamic cgroup memory this launch requests.
+  uint32_t DynCGroupMem = 0;
+  /// Set by the caller when replaying a previously recorded kernel launch, so
+  /// the outcome can be reported back; null for a normal launch.
+  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
+};
+
 struct RecordReplayTy {
 protected:
   struct InstanceTy;
@@ -57,7 +81,8 @@ public:
     EpilogueSnapshot,
     Descriptor,
     Globals,
-    Program
+    Program,
+    IRImage
   };
 
   struct HandleTy {
@@ -80,8 +105,11 @@ protected:
   /// Whether a memory snapshot should be recorded a kernel execution.
   bool SaveOutput;
 
-  /// Whether a report should be emitted afther the recording.
+  /// Whether a report should be emitted after the recording.
   bool EmitReport;
+
+  /// The name of the file where to emit the record report.
+  std::string ReportFilename;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -157,13 +185,15 @@ protected:
 
   /// Tracker of record replay instances.
   std::unordered_set<InstanceTy, InstanceHasher> Instances;
+  SmallVector<const InstanceTy *> OrderedInstances;
   std::mutex InstancesLock;
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename,
+                 GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
-        Device(Device) {
+        ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -198,11 +228,8 @@ public:
   /// executing the kernel. This phase can include the recording of memory
   /// snapshot, the record descriptor and the globals. When replaying, only the
   /// instance is registered.
-  Expected<HandleTy>
-  recordPrologue(const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
-                 const KernelExtraArgsTy *KernelExtraArgs,
-                 const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
-                 uint32_t NumThreads[3], uint32_t SharedMemorySize);
+  Expected<HandleTy> recordPrologue(const GenericKernelTy &Kernel,
+                                    const KernelRecordArgsTy &RecordArgs);
 
   /// Record the epilogue if necessary, which can include the memory snapshot
   /// when recording or replaying.
@@ -236,10 +263,8 @@ private:
                              KernelReplayOutcomeTy &Outcome);
 
   /// Record the prologue data.
-  virtual Error
-  recordPrologueImpl(const GenericKernelTy &Kernel, const InstanceTy &Instance,
-                     const KernelArgsTy &KernelArgs,
-                     const KernelLaunchParamsTy &LaunchParams) = 0;
+  virtual Error recordPrologueImpl(const GenericKernelTy &Kernel,
+                                   const InstanceTy &Instance) = 0;
 
   /// Record the epilogue data.
   virtual Error recordEpilogueImpl(const GenericKernelTy &Kernel,
@@ -248,8 +273,7 @@ private:
   /// Record the descriptor of the kernel.
   virtual Error recordDescImpl(const GenericKernelTy &Kernel,
                                const InstanceTy &Instance,
-                               const KernelArgsTy &KernelArgs,
-                               const KernelLaunchParamsTy &LaunchParams) = 0;
+                               const KernelRecordArgsTy &RecordArgs) = 0;
 
   /// Get a string with the filename.
   virtual SmallString<128> getFilenameImpl(const InstanceTy &Instance,
@@ -261,21 +285,18 @@ private:
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
                        bool SaveOutput, bool EmitReport,
-                       GenericDeviceTy &Device)
+                       StringRef ReportFilename, GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
-                       Device) {}
+                       ReportFilename, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,
-                           const InstanceTy &Instance,
-                           const KernelArgsTy &KernelArgs,
-                           const KernelLaunchParamsTy &LaunchParams) override;
+                           const InstanceTy &Instance) override;
   Error recordEpilogueImpl(const GenericKernelTy &Kernel,
                            const InstanceTy &Instance) override;
   Error recordDescImpl(const GenericKernelTy &Kernel,
                        const InstanceTy &Instance,
-                       const KernelArgsTy &KernelArgs,
-                       const KernelLaunchParamsTy &LaunchParams) override;
+                       const KernelRecordArgsTy &RecordArgs) override;
 
   /// Get a string with the filename.
   SmallString<128> getFilenameImpl(const InstanceTy &Instance, FileTy FileType,
@@ -291,7 +312,8 @@ private:
   Error recordGlobals(StringRef Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
+  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename,
+                    StringRef IRImageFilename);
 };
 
 } // namespace plugin

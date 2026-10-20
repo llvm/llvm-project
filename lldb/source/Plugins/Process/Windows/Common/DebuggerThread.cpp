@@ -17,6 +17,7 @@
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/LazyImport.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -29,12 +30,14 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <pathcch.h>
 #include <psapi.h>
+#include <winternl.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
 #define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64
@@ -187,10 +190,10 @@ Status DebuggerThread::StopDebugging(bool terminate) {
       // Initiate the termination before continuing the exception, so that the
       // next debug event we get is the exit process event, and not some other
       // event.
-      BOOL terminate_suceeded = TerminateProcess(handle, 0);
+      BOOL terminate_succeeded = TerminateProcess(handle, 0);
       LLDB_LOG(log,
                "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
-               handle, pid, terminate_suceeded);
+               handle, pid, terminate_succeeded);
     } else {
       LLDB_LOG(log,
                "NOT calling TerminateProcess because the inferior is not valid "
@@ -203,10 +206,12 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   // breakpoint messing around in the debugger), continue it now.  But only
   // AFTER calling TerminateProcess to make sure that the very next call to
   // WaitForDebugEventEx is an exit process event.
-  if (m_active_exception.get()) {
+  if (GetActiveException()) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
   }
+
+  ContinueAsyncDllEvent();
 
   if (!terminate) {
     // Indicate that we want to detach.
@@ -237,16 +242,28 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   return error;
 }
 
+ExceptionRecordSP DebuggerThread::GetActiveException() {
+  std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+  return m_active_exception;
+}
+
 void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
-  if (!m_active_exception.get())
-    return;
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    if (!m_active_exception)
+      return;
+    m_active_exception.reset();
+  }
 
   Log *log = GetLog(WindowsLog::Process | WindowsLog::Exception);
   LLDB_LOG(log, "broadcasting for inferior process {0}.",
            m_process.GetProcessId());
 
-  m_active_exception.reset();
   m_exception_pred.SetValue(result, eBroadcastAlways);
+}
+
+void DebuggerThread::ContinueAsyncDllEvent() {
+  m_dll_event_pred.SetValue(true, eBroadcastAlways);
 }
 
 void DebuggerThread::FreeProcessHandles() {
@@ -269,9 +286,10 @@ void DebuggerThread::DebugLoop() {
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
       bool shutting_down = m_is_shutting_down;
+      HANDLE exited_process = nullptr;
       switch (dbe.dwDebugEventCode) {
       default:
-        llvm_unreachable("Unhandle debug event code!");
+        llvm_unreachable("Unhandled debug event code!");
       case EXCEPTION_DEBUG_EVENT: {
         ExceptionResult status = HandleExceptionEvent(
             dbe.u.Exception, dbe.dwThreadId, shutting_down);
@@ -296,8 +314,11 @@ void DebuggerThread::DebugLoop() {
             HandleExitThreadEvent(dbe.u.ExitThread, dbe.dwThreadId);
         break;
       case EXIT_PROCESS_DEBUG_EVENT:
-        continue_status =
-            HandleExitProcessEvent(dbe.u.ExitProcess, dbe.dwThreadId);
+        if (!::DuplicateHandle(::GetCurrentProcess(),
+                               m_process.GetNativeProcess().GetSystemHandle(),
+                               ::GetCurrentProcess(), &exited_process,
+                               SYNCHRONIZE, FALSE, 0))
+          exited_process = nullptr;
         should_debug = false;
         break;
       case LOAD_DLL_DEBUG_EVENT:
@@ -322,6 +343,14 @@ void DebuggerThread::DebugLoop() {
           ::GetCurrentThreadId());
 
       ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId, continue_status);
+
+      if (dbe.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+        if (exited_process) {
+          ::WaitForSingleObject(exited_process, INFINITE);
+          ::CloseHandle(exited_process);
+        }
+        HandleExitProcessEvent(dbe.u.ExitProcess, dbe.dwThreadId);
+      }
 
       // We have to DebugActiveProcessStop after ContinueDebugEvent, otherwise
       // the target process will crash
@@ -362,9 +391,8 @@ void DebuggerThread::DebugLoop() {
         }
       }
 
-      if (m_detached) {
+      if (m_detached)
         should_debug = false;
-      }
     } else {
       LLDB_LOG(log, "returned FALSE from WaitForDebugEventEx.  Error = {0}",
                ::GetLastError());
@@ -396,15 +424,29 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
 
   bool first_chance = (info.dwFirstChance != 0);
 
-  m_active_exception.reset(
-      new ExceptionRecord(info.ExceptionRecord, thread_id));
+  ExceptionRecordSP active_exception =
+      std::make_shared<ExceptionRecord>(info.ExceptionRecord, thread_id);
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    m_active_exception = active_exception;
+  }
+  // Set this before calling the delegate. The delegate can wake up the thread
+  // driving the debugger, and that thread can call ContinueAsyncException
+  // before OnDebugException returns.
+  m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
+
   LLDB_LOG(log, "encountered {0} chance exception {1:x} on thread {2:x}",
            first_chance ? "first" : "second",
            info.ExceptionRecord.ExceptionCode, thread_id);
 
   ExceptionResult result =
-      m_debug_delegate->OnDebugException(first_chance, *m_active_exception);
-  m_exception_pred.SetValue(result, eBroadcastNever);
+      m_debug_delegate->OnDebugException(first_chance, *active_exception);
+  // The delegate only says what to do, it never continues the exception. If the
+  // result is not BreakInDebugger, continue it here, or the wait below never
+  // ends. If the other thread already continued it, this does nothing and its
+  // result is what the wait below returns.
+  if (result != ExceptionResult::BreakInDebugger)
+    ContinueAsyncException(result);
 
   LLDB_LOG(log, "waiting for ExceptionPred != BreakInDebugger");
   result = *m_exception_pred.WaitForValueNotEqualTo(
@@ -426,6 +468,49 @@ DebuggerThread::HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
+/// Read the path the process was created with from its process parameters
+/// (PEB::ProcessParameters->ImagePathName).
+///
+/// This keeps the subst drive, junction or symbolic link the process was
+/// launched through.
+static std::optional<std::string> GetImagePathFromPEB(HANDLE process) {
+  // winternl.h declares NtQueryInformationProcess, but there is no import
+  // library for it.
+  static LazyImport<decltype(&::NtQueryInformationProcess)>
+      s_query_information_process{L"ntdll.dll", "NtQueryInformationProcess"};
+  if (!s_query_information_process)
+    return std::nullopt;
+
+  PROCESS_BASIC_INFORMATION pbi = {};
+  if ((*s_query_information_process)(process, ProcessBasicInformation, &pbi,
+                                     sizeof(pbi), nullptr) < 0 ||
+      !pbi.PebBaseAddress)
+    return std::nullopt;
+
+  PEB peb = {};
+  if (!::ReadProcessMemory(process, pbi.PebBaseAddress, &peb, sizeof(peb),
+                           nullptr) ||
+      !peb.ProcessParameters)
+    return std::nullopt;
+
+  RTL_USER_PROCESS_PARAMETERS params = {};
+  if (!::ReadProcessMemory(process, peb.ProcessParameters, &params,
+                           sizeof(params), nullptr) ||
+      !params.ImagePathName.Buffer || params.ImagePathName.Length == 0)
+    return std::nullopt;
+
+  std::wstring wpath(params.ImagePathName.Length / sizeof(wchar_t), L'\0');
+  if (!::ReadProcessMemory(process, params.ImagePathName.Buffer, wpath.data(),
+                           params.ImagePathName.Length, nullptr))
+    return std::nullopt;
+
+  std::string path;
+  if (!llvm::convertWideToUTF8(wpath, path))
+    return std::nullopt;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  return StripExtendedLengthPrefix(path);
+}
+
 DWORD
 DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
                                          DWORD thread_id) {
@@ -442,12 +527,14 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.
   m_process = HostProcess(info.hProcess);
-  ((HostProcessWindows &)m_process.GetNativeProcess()).SetOwnsHandle(false);
+  static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
+      .SetOwnsHandle(false);
   m_main_thread = HostThread(info.hThread);
   m_main_thread.GetNativeThread().SetOwnsHandle(false);
   m_image_file = info.hFile;
 
   lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfImage);
+  m_image_path = GetImagePathFromPEB(info.hProcess).value_or("");
   m_debug_delegate->OnDebuggerConnected(load_addr);
 
   return DBG_CONTINUE;
@@ -539,13 +626,32 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
     dos_wide.append(nt_path.begin() + dev_len, nt_path.end());
 
     std::string result;
-    llvm::convertWideToUTF8(std::wstring(dos_wide.begin(), dos_wide.end()),
+    llvm::convertWideToUTF8(std::wstring_view(dos_wide.data(), dos_wide.size()),
                             result);
     return result;
   } while (::FindNextVolumeW(vol_iter, vol_name.data(), vol_name.size()));
 
   LLDB_LOG(log, "ConvertNtDevicePathToDosPath: no matching volume found");
   return std::nullopt;
+}
+
+// Query the file name backing the mapping at `addr` in `process` and convert
+// the resulting NT device path to a DOS path.
+static std::optional<std::string> GetMappedFileDosPath(HANDLE process,
+                                                       LPVOID addr) {
+  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
+  DWORD mapped_len = 0;
+  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
+    mapped_len = ::GetMappedFileNameW(process, addr, mapped_filename.data(),
+                                      mapped_filename.size());
+    if (mapped_len == 0)
+      return std::nullopt;
+    if (mapped_len < mapped_filename.size())
+      break;
+    mapped_filename.resize(mapped_filename.size() * 2);
+  }
+  return ConvertNtDevicePathToDosPath(
+      llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
 }
 
 static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
@@ -567,42 +673,29 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   if (!pMem)
     return std::nullopt;
 
-  std::array<wchar_t, MAX_PATH + 1> mapped_filename;
-  if (!::GetMappedFileNameW(::GetCurrentProcess(), pMem.get(),
-                            mapped_filename.data(), mapped_filename.size()))
-    return std::nullopt;
-
-  return ConvertNtDevicePathToDosPath(mapped_filename);
+  return GetMappedFileDosPath(::GetCurrentProcess(), pMem.get());
 }
 
-static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
-                                                           LPVOID base_addr) {
-  std::array<wchar_t, MAX_PATH + 1> module_filename;
-  DWORD len =
-      ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
-                             module_filename.data(), module_filename.size());
-  if (len > 0 && len < module_filename.size()) {
-    std::string path_utf8;
-    llvm::convertWideToUTF8(std::wstring(module_filename.data(), len),
-                            path_utf8);
-    return path_utf8;
-  }
-
-  // Fallback: ask the kernel for the file backing the mapping at this address.
-  std::vector<wchar_t> mapped_filename(MAX_PATH + 1);
-  DWORD mapped_len = 0;
-  while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
-    mapped_len = ::GetMappedFileNameW(
-        process, base_addr, mapped_filename.data(), mapped_filename.size());
-    if (mapped_len < mapped_filename.size())
-      break;
-    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+/// The path the loader recorded for the module at \p base_addr, or nullopt if
+/// the loader's module list has no entry for it yet.
+static std::optional<std::string> GetLoaderModuleName(HANDLE process,
+                                                      LPVOID base_addr) {
+  std::vector<wchar_t> module_filename(MAX_PATH + 1);
+  while (module_filename.size() <= PATHCCH_MAX_CCH) {
+    DWORD len =
+        ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
+                               module_filename.data(), module_filename.size());
+    if (len == 0)
       return std::nullopt;
-    mapped_filename.resize(mapped_filename.size() * 2);
+    if (len < module_filename.size()) {
+      std::string path_utf8;
+      llvm::convertWideToUTF8(std::wstring_view(module_filename.data(), len),
+                              path_utf8);
+      return path_utf8;
+    }
+    module_filename.resize(module_filename.size() * 2);
   }
-  std::optional<std::string> dos_path = ConvertNtDevicePathToDosPath(
-      llvm::ArrayRef<wchar_t>(mapped_filename.data(), mapped_len + 1));
-  return dos_path;
+  return std::nullopt;
 }
 
 // Determine how many bytes can be read at `addr` in `process` before crossing
@@ -623,48 +716,58 @@ static SIZE_T BytesReadableAt(HANDLE process, LPCVOID addr) {
 
 static std::optional<std::string> ReadRemotePathStringW(HANDLE process,
                                                         LPCVOID addr) {
-  SIZE_T to_read = std::min<SIZE_T>((MAX_PATH + 1) * sizeof(wchar_t),
-                                    BytesReadableAt(process, addr));
-  to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
-  if (to_read < sizeof(wchar_t))
-    return std::nullopt;
+  SIZE_T limit = std::min<SIZE_T>(PATHCCH_MAX_CCH * sizeof(wchar_t),
+                                  BytesReadableAt(process, addr));
+  std::vector<wchar_t> buf;
+  for (SIZE_T capacity = MAX_PATH * sizeof(wchar_t);; capacity *= 2) {
+    SIZE_T to_read = std::min<SIZE_T>(capacity, limit);
+    to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
+    if (to_read < sizeof(wchar_t))
+      return std::nullopt;
 
-  std::array<wchar_t, MAX_PATH + 1> buf{};
-  SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
-    return std::nullopt;
+    buf.resize(to_read / sizeof(wchar_t));
+    SIZE_T bytes_read = 0;
+    if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+      return std::nullopt;
 
-  size_t max_chars = bytes_read / sizeof(wchar_t);
-  size_t len = ::wcsnlen(buf.data(), max_chars);
-  if (len == max_chars) // no null terminator found
-    return std::nullopt;
-  if (len == 0) // empty string
-    return std::nullopt;
-
-  std::string result;
-  llvm::convertWideToUTF8(std::wstring(buf.data(), len), result);
-  return result;
+    size_t max_chars = bytes_read / sizeof(wchar_t);
+    size_t len = ::wcsnlen(buf.data(), max_chars);
+    if (len < max_chars) { // found the null terminator
+      if (len == 0)        // empty string
+        return std::nullopt;
+      std::string result;
+      llvm::convertWideToUTF8(std::wstring_view(buf.data(), len), result);
+      return result;
+    }
+    if (to_read >= limit) // read everything available without a terminator
+      return std::nullopt;
+  }
 }
 
 static std::optional<std::string> ReadRemotePathStringA(HANDLE process,
                                                         LPCVOID addr) {
-  SIZE_T to_read =
-      std::min<SIZE_T>(MAX_PATH + 1, BytesReadableAt(process, addr));
-  if (to_read == 0)
-    return std::nullopt;
+  SIZE_T limit =
+      std::min<SIZE_T>(PATHCCH_MAX_CCH, BytesReadableAt(process, addr));
+  std::vector<char> buf;
+  for (SIZE_T capacity = MAX_PATH;; capacity *= 2) {
+    SIZE_T to_read = std::min<SIZE_T>(capacity, limit);
+    if (to_read == 0)
+      return std::nullopt;
 
-  std::array<char, MAX_PATH + 1> buf{};
-  SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
-    return std::nullopt;
+    buf.resize(to_read);
+    SIZE_T bytes_read = 0;
+    if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+      return std::nullopt;
 
-  size_t len = ::strnlen(buf.data(), bytes_read);
-  if (len == bytes_read) // no null terminator found
-    return std::nullopt;
-  if (len == 0) // empty string
-    return std::nullopt;
-
-  return std::string(buf.data(), len);
+    size_t len = ::strnlen(buf.data(), bytes_read);
+    if (len < bytes_read) { // found the null terminator
+      if (len == 0)         // empty string
+        return std::nullopt;
+      return std::string(buf.data(), len);
+    }
+    if (to_read >= limit) // read everything available without a terminator
+      return std::nullopt;
+  }
 }
 
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
@@ -690,6 +793,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
 
+  DllEventAction action = DllEventAction::ContinueDebugLoop;
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
@@ -698,10 +802,26 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
-    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+    m_dll_event_pred.SetValue(false, eBroadcastNever);
+    action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
-  std::optional<std::string> resolved_path;
+  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
+
+  // Prefer the path the loader used for the DLL, which keeps the subst drive,
+  // junction or symbolic link it was reached through.
+  std::optional<std::string> loader_path =
+      GetFileNameFromImageNameField(process, info);
+  if (loader_path && !llvm::sys::path::is_absolute(
+                         *loader_path, llvm::sys::path::Style::windows))
+    loader_path.reset();
+  if (!loader_path)
+    loader_path = GetLoaderModuleName(process, info.lpBaseOfDll);
+  if (loader_path)
+    loader_path = StripExtendedLengthPrefix(*loader_path);
+
+  // The file handle gives the resolved path, with the on-disk case.
+  std::optional<std::string> file_path;
   if (info.hFile != nullptr) {
     std::vector<wchar_t> buffer(1);
     DWORD required_size =
@@ -712,19 +832,24 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                 VOLUME_NAME_DOS);
       std::string path_str_utf8;
       llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
-      llvm::StringRef path_str = path_str_utf8;
-      path_str.consume_front("\\\\?\\");
-      resolved_path = path_str.str();
+      file_path = StripExtendedLengthPrefix(path_str_utf8);
     } else {
-      resolved_path = GetFileNameFromHandleFallback(info.hFile);
+      file_path = GetFileNameFromHandleFallback(info.hFile);
     }
   }
 
-  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
+  // The loader's path often differs from the on-disk one only in case (e.g.
+  // C:\windows\System32\KERNEL32.DLL). If that's the case, keep the on disk
+  // spelling.
+  std::optional<std::string> resolved_path = loader_path;
+  if (!resolved_path ||
+      (file_path &&
+       llvm::StringRef(*file_path).equals_insensitive(*resolved_path)))
+    resolved_path = file_path;
   if (!resolved_path)
     resolved_path = GetFileNameFromImageNameField(process, info);
   if (!resolved_path)
-    resolved_path = GetFileNameByLoadAddress(process, info.lpBaseOfDll);
+    resolved_path = GetMappedFileDosPath(process, info.lpBaseOfDll);
 
   if (resolved_path)
     on_load_dll(*resolved_path);
@@ -738,6 +863,9 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
   // Windows does not automatically close info.hFile, so we need to do it.
   if (info.hFile != nullptr)
     ::CloseHandle(info.hFile);
+
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 
@@ -748,8 +876,11 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
   LLDB_LOG(log, "process {0} unloading DLL at addr {1:x}.",
            m_process.GetProcessId(), info.lpBaseOfDll);
 
-  m_debug_delegate->OnUnloadDll(
-      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll));
+  m_dll_event_pred.SetValue(false, eBroadcastNever);
+  DllEventAction action = m_debug_delegate->OnUnloadDll(
+      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 

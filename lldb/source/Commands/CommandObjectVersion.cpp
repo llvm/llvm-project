@@ -41,10 +41,9 @@ static void dump(const StructuredData::Array &array, Stream &s) {
   s << '[' << llvm::join(values, ", ") << ']';
 }
 
-// The default dump output is too verbose.
 static void dump(const StructuredData::Dictionary &config, Stream &s) {
-  config.ForEach(
-      [&](llvm::StringRef key, StructuredData::Object *object) -> bool {
+  config.ForEachSorted(
+      [&s](llvm::StringRef key, StructuredData::Object *object) -> bool {
         assert(object);
 
         StructuredData::Dictionary *value_dict = object->GetAsDictionary();
@@ -59,7 +58,6 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
         else if (StructuredData::Array *array = value_sp->GetAsArray())
           dump(*array, s);
         s << '\n';
-
         return true;
       });
 }

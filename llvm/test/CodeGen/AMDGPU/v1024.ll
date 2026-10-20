@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.08 < %s | FileCheck -check-prefix=GCN %s
 
 ; Check that we do not use AGPRs for v32i32 type
 

@@ -20,6 +20,7 @@ Implementation Status
    float
    glob
    inttypes
+   libgen
    locale
    math/index.rst
    net/if
@@ -41,6 +42,7 @@ Implementation Status
    strings
    sys/ipc
    sys/mman
+   sys/msg
    sys/resource
    sys/select
    sys/sem
@@ -51,6 +53,7 @@ Implementation Status
    sys/uio
    sys/utsname
    sys/wait
+   syslog
    termios
    threads
    time

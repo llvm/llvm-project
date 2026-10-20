@@ -28,5 +28,5 @@ class InvalidArgsLogTestCase(TestBase):
         self.expect(
             "log enable lldb all -f " + invalid_path,
             error=True,
-            substrs=["Unable to open log file '" + invalid_path + "': ", "\n"],
+            substrs=["Unable to open log file '" + invalid_path + "': "],
         )

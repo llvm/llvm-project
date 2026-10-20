@@ -7,72 +7,80 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/SFrame.h"
-#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/ADT/Enum.h"
 
 using namespace llvm;
 
-ArrayRef<EnumEntry<sframe::Version>> sframe::getVersions() {
-  static constexpr EnumEntry<Version> Versions[] = {
-#define HANDLE_SFRAME_VERSION(CODE, NAME) {#NAME, sframe::Version::NAME},
+EnumStrings<sframe::Version> sframe::getVersions() {
+  constexpr EnumStringDef<Version> VersionDefs[] = {
+#define HANDLE_SFRAME_VERSION(CODE, NAME) {{#NAME}, sframe::Version::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-
-  return ArrayRef(Versions);
+  static constexpr auto Versions = BUILD_ENUM_STRINGS(VersionDefs);
+  return EnumStrings(Versions);
 }
 
-ArrayRef<EnumEntry<sframe::Flags>> sframe::getFlags() {
-  static constexpr EnumEntry<sframe::Flags> Flags[] = {
-#define HANDLE_SFRAME_FLAG(CODE, NAME) {#NAME, sframe::Flags::NAME},
+EnumStrings<sframe::Flags> sframe::getFlags() {
+  constexpr EnumStringDef<sframe::Flags> FlagDefs[] = {
+#define HANDLE_SFRAME_FLAG(CODE, NAME) {{#NAME}, sframe::Flags::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(Flags);
+  static constexpr auto Flags = BUILD_ENUM_STRINGS(FlagDefs);
+  return EnumStrings(Flags);
 }
 
-ArrayRef<EnumEntry<sframe::ABI>> sframe::getABIs() {
-  static constexpr EnumEntry<sframe::ABI> ABIs[] = {
-#define HANDLE_SFRAME_ABI(CODE, NAME) {#NAME, sframe::ABI::NAME},
+EnumStrings<sframe::ABI> sframe::getABIs() {
+  constexpr EnumStringDef<sframe::ABI> ABIDefs[] = {
+#define HANDLE_SFRAME_ABI(CODE, NAME) {{#NAME}, sframe::ABI::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(ABIs);
+  static constexpr auto ABIs = BUILD_ENUM_STRINGS(ABIDefs);
+  return EnumStrings(ABIs);
 }
 
-ArrayRef<EnumEntry<sframe::FREType>> sframe::getFRETypes() {
-  static constexpr EnumEntry<sframe::FREType> FRETypes[] = {
-#define HANDLE_SFRAME_FRE_TYPE(CODE, NAME) {#NAME, sframe::FREType::NAME},
+EnumStrings<sframe::FREType> sframe::getFRETypes() {
+  constexpr EnumStringDef<sframe::FREType> FRETypeDefs[] = {
+#define HANDLE_SFRAME_FRE_TYPE(CODE, NAME) {{#NAME}, sframe::FREType::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(FRETypes);
+  static constexpr auto FRETypes = BUILD_ENUM_STRINGS(FRETypeDefs);
+  return EnumStrings(FRETypes);
 }
 
-ArrayRef<EnumEntry<sframe::FDEType>> sframe::getFDETypes() {
-  static constexpr EnumEntry<sframe::FDEType> FDETypes[] = {
-#define HANDLE_SFRAME_FDE_TYPE(CODE, NAME) {#NAME, sframe::FDEType::NAME},
+EnumStrings<sframe::FDEType> sframe::getFDETypes() {
+  constexpr EnumStringDef<sframe::FDEType> FDETypeDefs[] = {
+#define HANDLE_SFRAME_FDE_TYPE(CODE, NAME) {{#NAME}, sframe::FDEType::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(FDETypes);
+  static constexpr auto FDETypes = BUILD_ENUM_STRINGS(FDETypeDefs);
+  return EnumStrings(FDETypes);
 }
 
-ArrayRef<EnumEntry<sframe::AArch64PAuthKey>> sframe::getAArch64PAuthKeys() {
-  static constexpr EnumEntry<sframe::AArch64PAuthKey> AArch64PAuthKeys[] = {
+EnumStrings<sframe::AArch64PAuthKey> sframe::getAArch64PAuthKeys() {
+  constexpr EnumStringDef<sframe::AArch64PAuthKey> AArch64PAuthKeyDefs[] = {
 #define HANDLE_SFRAME_AARCH64_PAUTH_KEY(CODE, NAME)                            \
-  {#NAME, sframe::AArch64PAuthKey::NAME},
+  {{#NAME}, sframe::AArch64PAuthKey::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(AArch64PAuthKeys);
+  static constexpr auto AArch64PAuthKeys =
+      BUILD_ENUM_STRINGS(AArch64PAuthKeyDefs);
+  return EnumStrings(AArch64PAuthKeys);
 }
 
-ArrayRef<EnumEntry<sframe::FREOffset>> sframe::getFREOffsets() {
-  static constexpr EnumEntry<sframe::FREOffset> FREOffsets[] = {
-#define HANDLE_SFRAME_FRE_OFFSET(CODE, NAME) {#NAME, sframe::FREOffset::NAME},
+EnumStrings<sframe::FREOffset> sframe::getFREOffsets() {
+  constexpr EnumStringDef<sframe::FREOffset> FREOffsetDefs[] = {
+#define HANDLE_SFRAME_FRE_OFFSET(CODE, NAME) {{#NAME}, sframe::FREOffset::NAME},
 #include "llvm/BinaryFormat/SFrameConstants.def"
   };
-  return ArrayRef(FREOffsets);
+  static constexpr auto FREOffsets = BUILD_ENUM_STRINGS(FREOffsetDefs);
+  return EnumStrings(FREOffsets);
 }
 
-ArrayRef<EnumEntry<sframe::BaseReg>> sframe::getBaseRegisters() {
-  static constexpr EnumEntry<sframe::BaseReg> BaseRegs[] = {
-      {"FP", sframe::BaseReg::FP},
-      {"SP", sframe::BaseReg::SP},
+EnumStrings<sframe::BaseReg> sframe::getBaseRegisters() {
+  constexpr EnumStringDef<sframe::BaseReg> BaseRegDefs[] = {
+      {{"FP"}, sframe::BaseReg::FP},
+      {{"SP"}, sframe::BaseReg::SP},
   };
-  return ArrayRef(BaseRegs);
+  static constexpr auto BaseRegs = BUILD_ENUM_STRINGS(BaseRegDefs);
+  return EnumStrings(BaseRegs);
 }

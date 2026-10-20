@@ -408,6 +408,11 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   ///   * void print(OpAsmPrinter &p)
   bit hasCustomAssemblyFormat = 0;
 
+  /// This field indicates that the operation provides a custom
+  /// `printProperties` hook. Setting it avoids generating the default
+  /// per-field `prop-dict` printer that the hook would shadow.
+  bit hasCustomPropertiesPrinter = 0;
+
   // A bit indicating if the operation has additional invariants that need to
   // verified (aside from those verified by other ODS constructs). If set to `1`,
   // an additional `LogicalResult verify()` declaration will be generated on the

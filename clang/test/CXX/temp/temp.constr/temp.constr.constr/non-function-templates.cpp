@@ -89,7 +89,9 @@ template<typename T> requires (T{}) // expected-error{{atomic constraint must be
 struct D { };
 
 static_assert(C<int>{}); // expected-note{{while checking constraint satisfaction for template 'C<int>' required here}}
+// expected-error@-1 {{constraints not satisfied for class template 'C'}}
 static_assert(D<int>{}); // expected-note{{while checking constraint satisfaction for template 'D<int>' required here}}
+// expected-error@-1 {{constraints not satisfied for class template 'D'}}
 
 // Test the delayed instantiation, the 'foo' implementation shouldn't cause the
 // constraint failure(or crash!) until the use to create 'y'.

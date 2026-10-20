@@ -32,7 +32,8 @@ enum OpenCLVersionID : unsigned int {
   OCL_C_12 = 0x4,
   OCL_C_20 = 0x8,
   OCL_C_30 = 0x10,
-  OCL_C_ALL = 0x1f,
+  OCL_C_31 = 0x20,
+  OCL_C_ALL = 0x3f,
   OCL_C_11P = OCL_C_ALL ^ OCL_C_10,              // OpenCL C 1.1+
   OCL_C_12P = OCL_C_ALL ^ (OCL_C_10 | OCL_C_11), // OpenCL C 1.2+
 };
@@ -51,6 +52,8 @@ static inline OpenCLVersionID encodeOpenCLVersion(unsigned OpenCLVersion) {
     return OCL_C_20;
   case 300:
     return OCL_C_30;
+  case 310:
+    return OCL_C_31;
   }
 }
 
@@ -80,7 +83,7 @@ public:
   // C++ for OpenCL inherits rule from OpenCL C v2.0.
   bool areProgramScopeVariablesSupported(const LangOptions &Opts) const {
     return Opts.getOpenCLCompatibleVersion() == 200 ||
-           (Opts.getOpenCLCompatibleVersion() == 300 &&
+           (Opts.getOpenCLCompatibleVersion() >= 300 &&
             isSupported("__opencl_c_program_scope_global_variables", Opts));
   }
 

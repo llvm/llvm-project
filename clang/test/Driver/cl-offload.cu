@@ -18,9 +18,9 @@
 // CUDA-SAME: "-Weverything"
 // CUDA: link
 
-// HIP: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-pc-windows-msvc"
+// HIP: "-cc1" "-triple" "amdgpu10.10-amd-amdhsa" "-aux-triple" "x86_64-pc-windows-msvc"
 // HIP-SAME: "-Weverything"
-// HIP: "-cc1" "-triple" "x86_64-pc-windows-msvc{{.*}}" "-aux-triple" "amdgcn-amd-amdhsa"
+// HIP: "-cc1" "-triple" "x86_64-pc-windows-msvc{{.*}}" "-aux-triple" "amdgpu-amd-amdhsa"
 // HIP-SAME: "-Weverything"
 // HIP: {{link.* "amdhip64.lib"}}
 

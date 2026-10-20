@@ -13,8 +13,10 @@
 // template <class T, size_t N> constexpr T* begin(T (&array)[N]) noexcept;
 // template <class T, size_t N> constexpr T* end(T (&array)[N]) noexcept;
 //
-// template <class T, size_t N> constexpr reverse_iterator<T*> rbegin(T (&array)[N]);      // C++14, constexpr since C++17
-// template <class T, size_t N> constexpr reverse_iterator<T*> rend(T (&array)[N]);        // C++14, constexpr since C++17
+// template <class T, size_t N>
+// constexpr reverse_iterator<T*> rbegin(T (&array)[N]) noexcept; // C++14, constexpr since C++17
+// template <class T, size_t N>
+// constexpr reverse_iterator<T*> rend(T (&array)[N]) noexcept;   // C++14, constexpr since C++17
 
 #include <cassert>
 #include <iterator>
@@ -55,16 +57,20 @@ TEST_CONSTEXPR_CXX17 bool test_r() {
 
   // std::rbegin(T (&)[N]) / std::rend(T (&)[N])
   {
+    ASSERT_NOEXCEPT(std::rbegin(a));
     ASSERT_SAME_TYPE(decltype(std::rbegin(a)), std::reverse_iterator<int*>);
     assert(std::rbegin(a).base() == a + 3);
 
+    ASSERT_NOEXCEPT(std::rend(a));
     ASSERT_SAME_TYPE(decltype(std::rend(a)), std::reverse_iterator<int*>);
     assert(std::rend(a).base() == a);
 
     // kind of overkill since it follows from the definition, but worth testing
+    ASSERT_NOEXCEPT(std::rbegin(ca));
     ASSERT_SAME_TYPE(decltype(std::rbegin(ca)), std::reverse_iterator<const int*>);
     assert(std::rbegin(ca).base() == ca + 3);
 
+    ASSERT_NOEXCEPT(std::rend(ca));
     ASSERT_SAME_TYPE(decltype(std::rend(ca)), std::reverse_iterator<const int*>);
     assert(std::rend(ca).base() == ca);
   }

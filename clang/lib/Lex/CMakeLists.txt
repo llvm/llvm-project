@@ -29,8 +29,10 @@ add_clang_library(clangLex
   Preprocessor.cpp
   PreprocessorLexer.cpp
   ScratchBuffer.cpp
+  TextEncoding.cpp
   TokenConcatenation.cpp
   TokenLexer.cpp
+  UnicodeCharSetsGenerated.cpp
 
   LINK_LIBS
   clangBasic

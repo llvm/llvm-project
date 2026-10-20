@@ -11,7 +11,7 @@
 
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
-#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -41,7 +41,7 @@ public:
 protected:
   RegisterContextCorePOSIX_arm64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+      std::unique_ptr<RegisterInfo_arm64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 
@@ -78,7 +78,7 @@ private:
 
   struct sme_pseudo_regs m_sme_pseudo_regs;
 
-  lldb_private::Arm64RegisterFlagsDetector m_register_flags_detector;
+  lldb_private::Arm64RegisterTypeDetector m_register_type_detector;
 
   const uint8_t *GetSVEBuffer(uint64_t offset = 0);
 

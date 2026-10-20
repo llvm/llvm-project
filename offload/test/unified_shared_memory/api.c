@@ -2,8 +2,7 @@
 // RUN: env HSA_XNACK=1 \
 // RUN: %libomptarget-run-generic | %fcheck-generic
 
-// REQUIRES: unified_shared_memory
-// UNSUPPORTED: intelgpu
+// REQUIRES: unified_shared_memory, amdgpu
 
 #include <omp.h>
 #include <stdio.h>

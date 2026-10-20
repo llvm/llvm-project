@@ -15,6 +15,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 using namespace TargetOpcode;
 using namespace LegalizeActions;
 using namespace LegalityPredicates;
@@ -49,7 +51,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasLZCNT = Subtarget.hasLZCNT();
   bool HasBMI = Subtarget.hasBMI();
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
+  const LLT p0 = LLT::pointer(0, Subtarget.isTarget64BitLP64() ? 64 : 32);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -623,8 +625,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
       .alwaysLegal();
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+  getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
 }
 
@@ -929,12 +931,12 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
       MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
 
   // Check if Src is a constant
-  auto *SrcDef = MRI.getVRegDef(Src);
   Register RMBits;
   Register MXCSRRMBits;
 
-  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+  APInt SrcCst;
+  if (mi_match(Src, MRI, m_ICst(SrcCst))) {
+    uint64_t RM = SrcCst.getZExtValue();
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {

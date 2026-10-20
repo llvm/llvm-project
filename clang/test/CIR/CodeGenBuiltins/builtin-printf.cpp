@@ -4,6 +4,14 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++11 -triple powerpc64le-linux-gnu -mabi=ieeelongdouble -fclangir -emit-llvm %s -o %t-ppc-ieee128-cir.ll
+// RUN: FileCheck --input-file=%t-ppc-ieee128-cir.ll %s -check-prefix=PPC-IEEE128
+// RUN: %clang_cc1 -std=c++11 -triple powerpc64le-linux-gnu -mabi=ieeelongdouble -emit-llvm %s -o %t-ppc-ieee128.ll
+// RUN: FileCheck --input-file=%t-ppc-ieee128.ll %s -check-prefix=PPC-IEEE128
+// RUN: %clang_cc1 -std=c++11 -triple powerpc64le-linux-gnu -fclangir -emit-llvm %s -o %t-ppc-cir.ll
+// RUN: FileCheck --input-file=%t-ppc-cir.ll %s -check-prefix=PPC-DEFAULT
+// RUN: %clang_cc1 -std=c++11 -triple powerpc64le-linux-gnu -emit-llvm %s -o %t-ppc.ll
+// RUN: FileCheck --input-file=%t-ppc.ll %s -check-prefix=PPC-DEFAULT
 
 // CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"%s" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> 
 // CIR: cir.global "private" constant cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
@@ -18,11 +26,9 @@ void func(char const * const str, int i) {
   __builtin_printf("%s %d\n", str, i);
 }
 
-// CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
-
 // CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i
-// CIR:   %[[str_ptr:.+]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["str", init, const]
-// CIR:   %[[i_ptr:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[str_ptr:.+]] = cir.alloca "str" {{.*}} init const : !cir.ptr<!cir.ptr<!s8i>>
+// CIR:   %[[i_ptr:.+]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[arg0]], %[[str_ptr]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CIR:   cir.store %[[arg1]], %[[i_ptr]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[null_ptr:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
@@ -37,6 +43,8 @@ void func(char const * const str, int i) {
 // CIR:   %[[i_val:.+]] = cir.load{{.*}} %[[i_ptr]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[printf_result3:.+]] = cir.call @printf(%[[full_fmt_ptr]], %[[str_val2]], %[[i_val]]) nothrow : (!cir.ptr<!s8i> {llvm.noundef}, !cir.ptr<!s8i> {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 // CIR:   cir.return
+
+// CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
 
 // LLVM: define{{.*}} void @_Z4funcPKci(ptr noundef %[[arg0:.+]], i32 noundef %[[arg1:.+]])
 // LLVM:   %[[str_ptr:.+]] = alloca ptr
@@ -63,3 +71,26 @@ void func(char const * const str, int i) {
 // OGCG:   %[[i_val:.+]] = load i32, ptr %[[i_ptr]]{{.*}}
 // OGCG:   %[[printf_result3:.+]] = call i32 (ptr, ...) @printf(ptr noundef @.str.1, ptr noundef %[[str_val2]], i32 noundef %[[i_val]])
 // OGCG:   ret void
+
+// On PPC64 with IEEE 128-bit long double, the printf family of library
+// builtins is redirected to the *ieee128 entry points. With the default
+// (IBM double-double) long double the plain names are used.
+char buf[20];
+
+extern "C" void test_ppc_printf() { __builtin_printf("hi"); }
+// PPC-IEEE128-LABEL: define {{.*}}void @test_ppc_printf(
+// PPC-IEEE128:         call {{.*}}i32 (ptr, ...) @__printfieee128(
+// PPC-DEFAULT-LABEL: define {{.*}}void @test_ppc_printf(
+// PPC-DEFAULT:         call {{.*}}i32 (ptr, ...) @printf(
+
+extern "C" void test_ppc_sprintf() { __builtin_sprintf(buf, "hi"); }
+// PPC-IEEE128-LABEL: define {{.*}}void @test_ppc_sprintf(
+// PPC-IEEE128:         call {{.*}}i32 (ptr, ptr, ...) @__sprintfieee128(
+// PPC-DEFAULT-LABEL: define {{.*}}void @test_ppc_sprintf(
+// PPC-DEFAULT:         call {{.*}}i32 (ptr, ptr, ...) @sprintf(
+
+extern "C" void test_ppc_snprintf() { __builtin_snprintf(buf, 20, "hi"); }
+// PPC-IEEE128-LABEL: define {{.*}}void @test_ppc_snprintf(
+// PPC-IEEE128:         call {{.*}}i32 (ptr, i64, ptr, ...) @__snprintfieee128(
+// PPC-DEFAULT-LABEL: define {{.*}}void @test_ppc_snprintf(
+// PPC-DEFAULT:         call {{.*}}i32 (ptr, i64, ptr, ...) @snprintf(

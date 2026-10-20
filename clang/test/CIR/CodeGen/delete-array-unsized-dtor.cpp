@@ -20,10 +20,9 @@ void test(Dtor *ptr) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z4testP4Dtor
-// CIR-BEFORE:   cir.delete_array %{{.*}} : !cir.ptr<!rec_Dtor> {
-// CIR-BEFORE-SAME: delete_fn = @_ZdaPv,
-// CIR-BEFORE-SAME: delete_params = #cir.usual_delete_params<>,
-// CIR-BEFORE-SAME: element_dtor = @_ZN4DtorD1Ev}
+// CIR-BEFORE:   cir.delete_array %{{.*}} : !cir.ptr<!rec_Dtor>
+// CIR-BEFORE-SAME: delete_fn(@_ZdaPv)
+// CIR-BEFORE-SAME: element_dtor(@_ZN4DtorD1Ev)
 
 // CIR: cir.func {{.*}} @_Z4testP4Dtor
 // CIR:   %[[PTR:.*]] = cir.load
@@ -44,7 +43,7 @@ void test(Dtor *ptr) {
 // CIR:     cir.if %[[NOT_EMPTY]] {
 //
 // Destruct elements in reverse order.
-// CIR:       %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_Dtor>, !cir.ptr<!cir.ptr<!rec_Dtor>>, ["__array_idx"]
+// CIR:       %[[ARR_IDX:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_Dtor>>
 // CIR:       cir.store %[[END]], %[[ARR_IDX]]
 // CIR:       cir.do {
 // CIR:         %[[CUR:.*]] = cir.load %[[ARR_IDX]]

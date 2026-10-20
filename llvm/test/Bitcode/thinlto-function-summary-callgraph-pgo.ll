@@ -11,6 +11,7 @@
 ; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-pgo-combined.1.bc  | FileCheck %s --check-prefix=OLD-COMBINED
 
 ; CHECK: <SOURCE_FILENAME
+; CHECK-NEXT: <GUIDLIST abbrevid={{[0-9]+}} op0=3684000822 op1=3884832250 op2=1697143370 op3=1603531901/>
 ; CHECK-NEXT: <FUNCTION
 ; "func"
 ; CHECK-NEXT: <FUNCTION op0=4 op1=4

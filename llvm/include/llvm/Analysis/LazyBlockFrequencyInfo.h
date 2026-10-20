@@ -22,32 +22,32 @@
 
 namespace llvm {
 class Function;
-class LoopInfo;
+class CycleInfo;
 
 /// Wraps a BFI to allow lazy computation of the block frequencies.
 ///
 /// A pass that only conditionally uses BFI can uncondtionally require the
 /// analysis without paying for the overhead if BFI doesn't end up being used.
 template <typename FunctionT, typename BranchProbabilityInfoPassT,
-          typename LoopInfoT, typename BlockFrequencyInfoT>
+          typename CycleInfoT, typename BlockFrequencyInfoT>
 class LazyBlockFrequencyInfo {
 public:
   LazyBlockFrequencyInfo() = default;
 
   /// Set up the per-function input.
   void setAnalysis(const FunctionT *F, BranchProbabilityInfoPassT *BPIPass,
-                   const LoopInfoT *LI) {
+                   const CycleInfoT *CI) {
     this->F = F;
     this->BPIPass = BPIPass;
-    this->LI = LI;
+    this->CI = CI;
   }
 
   /// Retrieve the BFI with the block frequencies computed.
   BlockFrequencyInfoT &getCalculated() {
     if (!Calculated) {
-      assert(F && BPIPass && LI && "call setAnalysis");
+      assert(F && BPIPass && CI && "call setAnalysis");
       BFI.calculate(
-          *F, BPIPassTrait<BranchProbabilityInfoPassT>::getBPI(BPIPass), *LI);
+          *F, BPIPassTrait<BranchProbabilityInfoPassT>::getBPI(BPIPass), *CI);
       Calculated = true;
     }
     return BFI;
@@ -68,7 +68,7 @@ private:
   bool Calculated = false;
   const FunctionT *F = nullptr;
   BranchProbabilityInfoPassT *BPIPass = nullptr;
-  const LoopInfoT *LI = nullptr;
+  const CycleInfoT *CI = nullptr;
 };
 
 /// This is an alternative analysis pass to
@@ -88,15 +88,15 @@ private:
 ///   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU)
 ///
 /// 3. The computed BFI should be requested with
-///    getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() before either LoopInfo
-///    or BPI could be invalidated for example by changing the CFG.
+///    getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() before either
+///    CycleInfo or BPI could be invalidated for example by changing the CFG.
 ///
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
 
 class LLVM_ABI LazyBlockFrequencyInfoPass : public FunctionPass {
 private:
-  LazyBlockFrequencyInfo<Function, LazyBranchProbabilityInfoPass, LoopInfo,
+  LazyBlockFrequencyInfo<Function, LazyBranchProbabilityInfoPass, CycleInfo,
                          BlockFrequencyInfo>
       LBFI;
 

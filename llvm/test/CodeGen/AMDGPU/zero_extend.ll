@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 %s
 
 ; R600: {{^}}s_mad_zext_i32_to_i64:
@@ -19,7 +19,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_cmp_zext_i1_to_i32
-; GCN: v_cndmask_b32
+; GCN: s_cselect_b32 s{{[0-9]+}}, 1, 0
 define amdgpu_kernel void @s_cmp_zext_i1_to_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
   %tmp0 = icmp eq i32 %a, %b
@@ -36,9 +36,8 @@ define amdgpu_kernel void @s_arg_zext_i1_to_i64(ptr addrspace(1) %out, i1 zeroex
 }
 
 ; GCN-LABEL: {{^}}s_cmp_zext_i1_to_i64:
-; GCN-DAG: s_mov_b32 s{{[0-9]+}}, 0
 ; GCN-DAG: s_cmp_eq_u32
-; GCN:     v_cndmask_b32
+; GCN:     s_cselect_b64 s[{{[0-9:]+}}], 1, 0
 define amdgpu_kernel void @s_cmp_zext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %cmp = icmp eq i32 %a, %b
   %ext = zext i1 %cmp to i64
@@ -55,8 +54,8 @@ define amdgpu_kernel void @s_cmp_zext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i
 ; GCN-DAG: s_and_b32 [[MASK_B:s[0-9]+]], [[B]], 0xffff{{$}}
 ; VI: s_cmp_eq_u32 [[MASK_B]], [[MASK_A]]
 ; SI: s_cmp_eq_u32 [[MASK_A]], [[MASK_B]]
-; GCN: s_cselect_b64 [[CC:s\[[0-9:]+\]]], -1, 0
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
+; GCN: s_cselect_b32 [[SRESULT:s[0-9]+]], 1, 0
+; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_short [[RESULT]]
 define amdgpu_kernel void @s_cmp_zext_i1_to_i16(ptr addrspace(1) %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) #0 {
   %tmp0 = icmp eq i16 %a, %b

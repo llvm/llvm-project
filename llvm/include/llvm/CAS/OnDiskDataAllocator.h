@@ -58,34 +58,33 @@ public:
   /// Get the data of \p Size stored at the given \p Offset. Note the allocator
   /// doesn't keep track of the allocation size, thus \p Size doesn't need to
   /// match the size of allocation but needs to be smaller.
-  LLVM_ABI_FOR_TEST Expected<ArrayRef<char>> get(FileOffset Offset,
-                                                 size_t Size) const;
+  LLVM_ABI Expected<ArrayRef<char>> get(FileOffset Offset, size_t Size) const;
 
   /// Allocate at least \p Size with 8-byte alignment.
-  LLVM_ABI_FOR_TEST Expected<OnDiskPtr> allocate(size_t Size);
+  LLVM_ABI Expected<OnDiskPtr> allocate(size_t Size);
 
   /// \returns the buffer that was allocated at \p create time, with size
   /// \p UserHeaderSize.
-  MutableArrayRef<uint8_t> getUserHeader() const;
+  LLVM_ABI MutableArrayRef<uint8_t> getUserHeader() const;
 
-  LLVM_ABI_FOR_TEST size_t size() const;
-  LLVM_ABI_FOR_TEST size_t capacity() const;
+  LLVM_ABI size_t size() const;
+  LLVM_ABI size_t capacity() const;
 
-  LLVM_ABI_FOR_TEST static Expected<OnDiskDataAllocator>
+  LLVM_ABI static Expected<OnDiskDataAllocator>
   create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
          std::optional<uint64_t> NewFileInitialSize,
          uint32_t UserHeaderSize = 0,
          std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr,
          function_ref<void(void *)> UserHeaderInit = nullptr);
 
-  LLVM_ABI_FOR_TEST OnDiskDataAllocator(OnDiskDataAllocator &&RHS);
-  LLVM_ABI_FOR_TEST OnDiskDataAllocator &operator=(OnDiskDataAllocator &&RHS);
+  LLVM_ABI OnDiskDataAllocator(OnDiskDataAllocator &&RHS);
+  LLVM_ABI OnDiskDataAllocator &operator=(OnDiskDataAllocator &&RHS);
 
   // No copy. Just call \a create() again.
   OnDiskDataAllocator(const OnDiskDataAllocator &) = delete;
   OnDiskDataAllocator &operator=(const OnDiskDataAllocator &) = delete;
 
-  LLVM_ABI_FOR_TEST ~OnDiskDataAllocator();
+  LLVM_ABI ~OnDiskDataAllocator();
 
 private:
   struct ImplType;

@@ -25,6 +25,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
@@ -205,6 +206,11 @@ public:
   // Add this as a super-register to all sub-registers after the sub-register
   // graph has been built.
   void computeSuperRegs(CodeGenRegBank &);
+
+  // Diagnose an explicit SubRegIndex whose declared size makes a sub-register
+  // extend past the register that contains it (an oversized lane mask that
+  // silently corrupts sub-register liveness and spilling). See the definition.
+  void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
   const SubRegMap &getSubRegs() const {
     assert(SubRegsComplete && "Must precompute sub-registers");
@@ -447,6 +453,15 @@ public:
     SubClassWithSubReg[SubIdx] = SubRC;
   }
 
+  /// Checks if there are any super-register classes for this SubIdx of this
+  /// class.
+  bool hasAnySuperRegClasses(const CodeGenSubRegIndex *SubIdx) const;
+
+  /// Checks if there is a super-register class for this SubIdx of this
+  /// class containing RC register class.
+  bool hasSuperRegClass(const CodeGenSubRegIndex *SubIdx,
+                        const CodeGenRegisterClass *RC) const;
+
   // getSuperRegClasses - Returns a bit vector of all register classes
   // containing only SubIdx super-registers of this class.
   void getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
@@ -659,6 +674,7 @@ class CodeGenRegBank {
 
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
+  StringSet<> RegClassNames;
   DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
   using RCKeyMap = std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *>;
   RCKeyMap Key2RC;

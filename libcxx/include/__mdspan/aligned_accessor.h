@@ -33,9 +33,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ElementType, size_t _ByteAlignment>
 struct aligned_accessor {
@@ -78,9 +78,9 @@ struct aligned_accessor {
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS
 

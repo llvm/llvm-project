@@ -33,8 +33,8 @@ void DIEAttributeCloner::clone() {
       DWARFDataExtractor(DIECopy, Data.isLittleEndian(), Data.getAddressSize());
 
   // Modify the copy with relocated addresses.
-  InUnit.getContaingFile().Addresses->applyValidRelocs(DIECopy, Offset,
-                                                       Data.isLittleEndian());
+  InUnit.getContainingFile().Addresses->applyValidRelocs(DIECopy, Offset,
+                                                         Data.isLittleEndian());
 
   // Reset the Offset to 0 as we will be working on the local copy of
   // the data.
@@ -115,10 +115,10 @@ void DIEAttributeCloner::clone() {
   }
 
   // We convert source strings into the indexed form for DWARFv5.
-  // Check if original compile unit already has DW_AT_str_offsets_base
+  // Check if original unit already has DW_AT_str_offsets_base
   // attribute.
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasStringOffsetBaseAttr && OutUnit.isCompileUnit()) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{AttrOutOffset,
                          &OutUnit->getOrCreateSectionDescriptor(
@@ -132,6 +132,25 @@ void DIEAttributeCloner::clone() {
                                 dwarf::DW_FORM_sec_offset,
                                 OutUnit->getDebugStrOffsetsHeaderSize())
             .second;
+  }
+
+  // No DW_AT_addr_base: add one for the addrx-indexed entries. Except in
+  // update mode, where HasAddrBaseAttr is never set.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasAddrBaseAttr &&
+      !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
+            true},
+        PatchesOffsets);
+
+    AttrOutOffset += Generator
+                         .addScalarAttribute(dwarf::DW_AT_addr_base,
+                                             dwarf::DW_FORM_sec_offset,
+                                             OutUnit->getDebugAddrHeaderSize())
+                         .second;
   }
 }
 
@@ -253,6 +272,31 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
   if (RefDIEInfo.needToPlaceInTypeTable())
     RefTypeName = RefDiePair->CU->getDieTypeEntry(RefDiePair->DieEntry);
 
+  // The importing unit's DW_TAG_module skeleton can have a different
+  // DW_AT_LLVM_include_path than the unit built from the .pcm and the import
+  // must use the latter. The type pool already merges copies, so a reference
+  // with a type entry resolves correctly. Without one, the module's anchor is
+  // the only link between the two, and it is not known until the unit
+  // describing the module has been emitted.
+  if (RefDiePair->DieEntry->getTag() == dwarf::DW_TAG_module &&
+      AttrSpec.Attr == dwarf::DW_AT_import && !OutUnit.isTypeUnit() &&
+      !RefTypeName) {
+    SmallString<128> Path;
+    if (RefDiePair->CU->getModulePath(RefDiePair->DieEntry, Path)) {
+      ModuleAnchor *Anchor =
+          InUnit.getGlobalData().getModulePool().getOrCreate(Path);
+
+      DebugInfoOutputSection.notePatchWithOffsetUpdate(
+          DebugDieModuleRefPatch{
+              AttrOutOffset, RefDiePair->CU,
+              RefDiePair->CU->getDIEIndex(RefDiePair->DieEntry), Anchor},
+          PatchesOffsets);
+      return Generator
+          .addScalarAttribute(AttrSpec.Attr, dwarf::DW_FORM_ref_addr, 0xBADDEF)
+          .second;
+    }
+  }
+
   if (OutUnit.isTypeUnit()) {
     assert(RefTypeName && "Type name for referenced DIE is not set");
     assert(InUnit.getDieTypeEntry(InputDIEIdx) &&
@@ -312,7 +356,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   case dwarf::DW_AT_macro_info: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          InUnit.getContaingFile().Dwarf->getDebugMacinfo();
+          InUnit.getContainingFile().Dwarf->getDebugMacinfo();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
@@ -326,7 +370,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   case dwarf::DW_AT_macros: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          InUnit.getContaingFile().Dwarf->getDebugMacro();
+          InUnit.getContainingFile().Dwarf->getDebugMacro();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
@@ -507,6 +551,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
     // Use size of .debug_addr header as attribute value. The offset to
     // .debug_addr would be added later while patching.
+    AttrInfo.HasAddrBaseAttr = true;
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
                             OutUnit->getDebugAddrHeaderSize())
@@ -524,6 +569,12 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence &&
       !OutUnit.isCompileUnit())
     return 0;
+
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      InputDieEntry->getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(Value, /*IsLength=*/true);
 
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
@@ -549,12 +600,29 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   return Result.second;
 }
 
+static bool expressionDependsOnOriginUnit(const DWARFExpression &Expr) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  for (const DWARFExpression::Operation &Op : Expr) {
+    switch (Op.getCode()) {
+    case dwarf::DW_OP_addr:
+    case dwarf::DW_OP_addrx:
+    case dwarf::DW_OP_constx:
+      return true;
+    default:
+      break;
+    }
+
+    if (llvm::is_contained(Op.getDescription().Op, Encoding::BaseTypeRef))
+      return true;
+  }
+
+  return false;
+}
+
 size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
-
-  if (OutUnit.isTypeUnit())
-    return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
@@ -568,6 +636,12 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
+
+    // A type unit is shared by every compile unit that references the type, so
+    // an expression resolving against one origin unit has no single correct
+    // value there.
+    if (OutUnit.isTypeUnit() && expressionDependsOnOriginUnit(Expr))
+      return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
                                   VarAddressAdjustment, PatchesOffsets);
@@ -656,6 +730,8 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(*Addr, /*IsLength=*/false);
     if (VarAddressAdjustment)
       *Addr += *VarAddressAdjustment;
     else if (FuncAddressAdjustment)
@@ -671,6 +747,19 @@ size_t DIEAttributeCloner::cloneAddressAttr(
       .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx,
                           OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr))
       .second;
+}
+
+uint64_t DIEAttributeCloner::constrainHighPC(uint64_t HighPC, bool IsLength) {
+  if (!FuncAddressAdjustment)
+    return HighPC;
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained =
+      InUnit.getContainingFile().Addresses->constrainCodeRangeHighPC(
+          *LowPC, IsLength ? *LowPC + HighPC : HighPC, *FuncAddressAdjustment);
+  return IsLength ? Constrained - *LowPC : Constrained;
 }
 
 unsigned DIEAttributeCloner::finalizeAbbreviations(bool HasChildrenToClone) {

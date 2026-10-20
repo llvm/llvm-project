@@ -27,7 +27,7 @@
 #include <sys/ptrace.h>
 #include <unistd.h>
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 using namespace lldb;
@@ -81,7 +81,7 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -238,13 +238,14 @@ Status NativeProcessAIX::Kill() {
   return error;
 }
 
-Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessAIX::ReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size,
                                     size_t &bytes_read) {
   return Status("unsupported");
 }
 
-Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
-                                     size_t size, size_t &bytes_written) {
+Status NativeProcessAIX::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                       size_t size, size_t &bytes_written) {
   return Status("unsupported");
 }
 

@@ -9,8 +9,10 @@
 #include "lldb/API/SBProcessInfo.h"
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -60,7 +62,7 @@ const char *SBProcessInfo::GetName() {
   if (!m_opaque_up)
     return nullptr;
 
-  return ConstString(m_opaque_up->GetName()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetName());
 }
 
 SBFileSpec SBProcessInfo::GetExecutableFile() {
@@ -71,6 +73,15 @@ SBFileSpec SBProcessInfo::GetExecutableFile() {
     file_spec.SetFileSpec(m_opaque_up->GetExecutableFile());
   }
   return file_spec;
+}
+
+const char *SBProcessInfo::GetArg0() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_up)
+    return nullptr;
+
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetArg0());
 }
 
 lldb::pid_t SBProcessInfo::GetProcessID() {
@@ -183,7 +194,7 @@ const char *SBProcessInfo::GetTriple() {
   if (!arch.IsValid())
     return nullptr;
 
-  return ConstString(arch.GetTriple().getTriple()).GetCString();
+  return StringPool::GetSystemPool().Intern(arch.GetTriple().getTriple());
 }
 
 uint32_t SBProcessInfo::GetNumArguments() const {
@@ -203,5 +214,5 @@ const char *SBProcessInfo::GetArgumentAtIndex(uint32_t idx) const {
     return nullptr;
 
   const Args &args = m_opaque_up->GetArguments();
-  return ConstString(args.GetArgumentAtIndex(idx)).GetCString();
+  return StringPool::GetSystemPool().Intern(args.GetArgumentAtIndex(idx));
 }

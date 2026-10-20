@@ -18,6 +18,10 @@ namespace clang::tidy::bugprone {
 /// detecting switch statements where two or more consecutive branches are
 /// Type I clones of each other, and for detecting conditional operators where
 /// the true and false expressions are Type I clones of each other.
+/// Additionally, this check also reports situations like
+///   if (some && condition) { if (some && condition) { foo(); } }
+/// where an `if` statement directly contains another `if` statement that has
+/// exactly the same expression as its condition.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html

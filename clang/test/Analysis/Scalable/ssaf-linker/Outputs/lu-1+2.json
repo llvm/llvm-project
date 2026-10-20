@@ -648,5 +648,7 @@
       "kind": "LinkUnit",
       "name": "lu-1+2"
     }
-  ]
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
 }

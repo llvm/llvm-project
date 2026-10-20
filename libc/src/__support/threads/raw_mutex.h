@@ -19,8 +19,6 @@
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/abs_timeout.h"
 
-#include <stdio.h>
-
 // TODO(bojle): check this for darwin impl
 #ifdef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #include "src/__support/time/monotonicity.h"
@@ -83,8 +81,8 @@ private:
           futex.exchange(IN_CONTENTION, cpp::MemoryOrder::ACQUIRE) == UNLOCKED)
         return true;
       // Contention persists. Park the thread and wait for further notification.
-      if (!futex.wait(IN_CONTENTION, timeout, is_pshared).has_value() &&
-          timeout.has_value())
+      ErrorOr<int> res = futex.wait(IN_CONTENTION, timeout, is_pshared);
+      if (!res.has_value() && res.error() == ETIMEDOUT)
         return false;
 
       // Continue to spin after waking up.

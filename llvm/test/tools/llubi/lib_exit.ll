@@ -23,7 +23,7 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %before = alloca [7 x i8], align 1 => ptr 0x8 [before]
 ; CHECK-NEXT:   store [7 x i8] c"Before\00", ptr %before, align 1
-; CHECK-NEXT:   %after = alloca [6 x i8], align 1 => ptr 0xF [after]
+; CHECK-NEXT:   %after = alloca [6 x i8], align 1 => ptr 0x10 [after]
 ; CHECK-NEXT:   store [6 x i8] c"After\00", ptr %after, align 1
 ; CHECK-NEXT: Before
 ; CHECK-NEXT:   %0 = call i32 @puts(ptr %before) => i32 1

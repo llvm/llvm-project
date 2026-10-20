@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ProfDataUtils.h"
+#include "IROptions.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -105,13 +106,6 @@ SmallVector<uint32_t> llvm::fitWeights(ArrayRef<uint64_t> Weights) {
   return Ret;
 }
 
-static cl::opt<bool> ElideAllZeroBranchWeights("elide-all-zero-branch-weights",
-#if defined(LLVM_ENABLE_PROFCHECK)
-                                               cl::init(false)
-#else
-                                               cl::init(true)
-#endif
-);
 const char *MDProfLabels::BranchWeights = "branch_weights";
 const char *MDProfLabels::ExpectedBranchWeights = "expected";
 const char *MDProfLabels::ValueProfile = "VP";
@@ -282,15 +276,13 @@ void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
   F = F ? F : I.getFunction();
   assert(F && "Either pass a instruction attached to a Function, or explicitly "
               "pass the Function that it will be attached to");
-  if (std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      EC && EC->getCount() > 0)
+  if (std::optional<uint64_t> EC = F->getEntryCount(); EC && *EC > 0)
     setExplicitlyUnknownBranchWeights(I, PassName);
 }
 
 MDNode *llvm::getExplicitlyUnknownBranchWeightsIfProfiled(Function &F,
                                                           StringRef PassName) {
-  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
-      !EC || EC->getCount() == 0)
+  if (std::optional<uint64_t> EC = F.getEntryCount(); !EC || *EC == 0)
     return nullptr;
   MDBuilder MDB(F.getContext());
   return MDNode::get(
@@ -324,8 +316,8 @@ bool llvm::hasExplicitlyUnknownBranchWeights(const Instruction &I) {
 
 void llvm::setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                             bool IsExpected, bool ElideAllZero) {
-  if ((ElideAllZeroBranchWeights && ElideAllZero) &&
-      llvm::all_of(Weights, equal_to(0))) {
+  if (ElideAllZero && llvm::all_of(Weights, equal_to(0)) &&
+      getIROptions(I.getContext()).elide_all_zero_branch_weights) {
     I.setMetadata(LLVMContext::MD_prof, nullptr);
     return;
   }

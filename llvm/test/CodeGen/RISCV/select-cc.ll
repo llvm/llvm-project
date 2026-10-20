@@ -469,11 +469,11 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ; RV32IXQCI-LABEL: select_sge_int32min:
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    srli a6, a1, 31
-; RV32IXQCI-NEXT:    srli a7, a0, 31
-; RV32IXQCI-NEXT:    xori a0, a6, 1
-; RV32IXQCI-NEXT:    qc.mveqi a0, a1, -1, a7
-; RV32IXQCI-NEXT:    qc.mveqi a2, a0, 0, a4
-; RV32IXQCI-NEXT:    qc.mveqi a3, a0, 0, a5
+; RV32IXQCI-NEXT:    srli a0, a0, 31
+; RV32IXQCI-NEXT:    xori a6, a6, 1
+; RV32IXQCI-NEXT:    qc.mveqi a6, a1, -1, a0
+; RV32IXQCI-NEXT:    qc.mveqi a2, a6, 0, a4
+; RV32IXQCI-NEXT:    qc.mveqi a3, a6, 0, a5
 ; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    mv a1, a3
 ; RV32IXQCI-NEXT:    ret

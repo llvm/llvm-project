@@ -111,7 +111,7 @@ void addInstToMergeableList(
     // Check all arguments (DMask, VAddr, RSrc etc).
     bool AllEqual = true;
     assert(IIList.front()->arg_size() == II->arg_size());
-    for (int I = 1, E = II->arg_size(); AllEqual && I != E; ++I) {
+    for (int I = 0, E = II->arg_size(); AllEqual && I != E; ++I) {
       Value *ArgList = IIList.front()->getArgOperand(I);
       Value *Arg = II->getArgOperand(I);
       if (I == ImageDimIntr->VAddrEnd - 1) {
@@ -240,7 +240,8 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);
       Args[FragIdIndex] = ConstantInt::get(FragId->getType(), NewFragIdVal);
-      CallInst *NewCall = B.CreateIntrinsic(NewIntrinID, OverloadTys, Args);
+      CallInst *NewCall =
+          B.CreateIntrinsicWithoutFolding(NewIntrinID, OverloadTys, Args);
       LLVM_DEBUG(dbgs() << "Optimize: " << *NewCall << "\n");
 
       NewCalls.push_back(NewCall);

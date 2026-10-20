@@ -172,7 +172,13 @@ DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
 
 std::unique_ptr<UnwindPlan>
 DWARFCallFrameInfo::GetUnwindPlan(const Address &addr) {
-  return GetUnwindPlan({AddressRange(addr, 1)}, addr);
+  return GetUnwindPlan(addr, addr);
+}
+
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(const Address &pc,
+                                  const Address &func_start) {
+  return GetUnwindPlan({AddressRange(pc, 1)}, func_start);
 }
 
 std::unique_ptr<UnwindPlan>
@@ -474,7 +480,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
   if (m_fde_index_initialized) // if two threads hit the locker
     return;
 
-  LLDB_SCOPED_TIMERF("%s", m_objfile.GetFileSpec().GetFilename().AsCString(""));
+  LLDB_SCOPED_TIMERF("%s", m_objfile.GetFileSpec().GetFilename().str().c_str());
 
   bool clear_address_zeroth_bit = false;
   if (ArchSpec arch = m_objfile.GetArchitecture()) {

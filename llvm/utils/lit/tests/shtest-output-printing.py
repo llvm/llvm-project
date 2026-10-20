@@ -47,7 +47,7 @@
 #  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
 #  CHECK-NEXT: # | All work and no play makes Jack a dull boy.
 #       CHECK: # | ...
-#  CHECK-NEXT: # `---data was truncated--------
+#  CHECK-NEXT: # `---data was truncated (10240/{{[0-9]+}}) (change limit with -D output_limit=N)
 #  CHECK-NEXT: # note: command had no output on stdout or stderr
 #  CHECK-NEXT: # error: command failed with exit status: 1
 # CHECK-EMPTY:

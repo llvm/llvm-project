@@ -14,7 +14,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir::acc {
 class FortranSafeTempArrayCopyAttrImpl

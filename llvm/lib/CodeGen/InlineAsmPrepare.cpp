@@ -173,7 +173,7 @@ static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
 static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
-  IRBuilder<> Builder(CBR->getContext());
+  IRBuilder<> Builder(*CBR->getModule());
 
   if (!CBR->getNumIndirectDests())
     return false;
@@ -188,7 +188,7 @@ static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
       continue;
 
     Builder.SetInsertPoint(&*IndDest->begin());
-    CallInst *Intrinsic = Builder.CreateIntrinsic(
+    CallInst *Intrinsic = Builder.CreateIntrinsicWithoutFolding(
         CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
     SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
     updateSSA(DT, CBR, Intrinsic, SSAUpdate);

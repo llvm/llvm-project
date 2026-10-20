@@ -42,6 +42,17 @@ struct AllocatedAsArray : public Bird {
 
 };
 
+struct KernelBase {
+  static void* operator new(__SIZE_TYPE__ n, int tag = 0);
+  static void operator delete(void* p);
+  static void operator delete[](void* p);
+  virtual ~KernelBase();
+};
+
+struct KernelDerived : KernelBase {
+  virtual ~KernelDerived();
+};
+
 // Vector deleting dtor for Bird is an alias because no new Bird[] expressions
 // in the TU.
 // X64: @"??_EBird@@UEAAPEAXI@Z" = weak dso_local unnamed_addr alias ptr (ptr, i32), ptr @"??_GBird@@UEAAPEAXI@Z"
@@ -81,6 +92,14 @@ void bar() {
   dealloc(p);
 
   sp.foo();
+}
+
+KernelBase::~KernelBase() {}
+KernelDerived::~KernelDerived() {}
+
+void kernelTest() {
+  KernelBase *p = new KernelDerived[2];
+  delete[] p;
 }
 
 // CHECK-LABEL: define dso_local void @{{.*}}dealloc{{.*}}(
@@ -177,6 +196,14 @@ void bar() {
 // CHECK: delete.end:
 // CHECK-NEXT:   ret void
 
+// The __empty_global_delete fallback is emitted at the first ::delete site,
+// which here lands before the deleting-destructor helpers. Verify it traps
+// (the fallback path is unreachable at runtime once a real forwarding body is
+// linked in).
+// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @llvm.trap()
+// X64-NEXT: unreachable
+
 // Vector dtor definition for Parrot.
 // X64-LABEL: define weak dso_local noundef ptr @"??_EParrot@@UEAAPEAXI@Z"(
 // X64-SAME: ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[IMPLICIT_PARAM:.*]]) unnamed_addr
@@ -260,10 +287,28 @@ void bar() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"?__global_array_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
+// Test that when a class provides its own operator delete, the deleting
+// destructor calls __global_delete instead of directly
+// referencing ::operator delete. This is critical for environments like
+// kernel mode where no global ::operator delete exists.
+
+// X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
+// Verify the array delete path in the VDD uses __global_array_delete.
+// X64: dtor.call_glob_delete_after_array_destroy:
+// X64: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// Verify the scalar deleting dtor uses __global_delete, not ::operator delete.
+// X64: dtor.call_delete:
+// X64-NEXT:  %[[FLAGCHECK:.*]] = and i32 %should_call_delete2, 4
+// X64-NEXT:  %[[ISGLOB:.*]] = icmp eq i32 %[[FLAGCHECK]], 0
+// X64-NEXT:  br i1 %[[ISGLOB]], label %dtor.call_class_delete, label %dtor.call_glob_delete
+// X64: dtor.call_glob_delete:
+// X64-NEXT:  call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 8)
+// X64: dtor.call_class_delete:
+// X64-NEXT:  call void @"??3KernelBase@@SAXPEAX@Z"(ptr noundef %{{.*}})
 
 
 struct BaseDelete1 {
@@ -346,3 +391,15 @@ void foobartest() {
 // X64: define weak dso_local noundef ptr @"??_EAllocatedAsArray@@UEAAPEAXI@Z"
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"
 // CLANG21: define linkonce_odr dso_local noundef ptr @"??_GAllocatedAsArray@@UEAAPEAXI@Z"
+
+// The forwarding bodies for the global-delete wrappers are emitted at
+// end-of-module (after all the deleting-destructor helpers). Because ::delete[]
+// is used in the TU, both wrappers get real forwarding bodies: the array
+// __global_array_delete forwards to ::operator delete[] (??_V@) and the scalar
+// __global_delete forwards to ::operator delete (??3@).
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
+
+// CLANG21-NOT: __global_delete

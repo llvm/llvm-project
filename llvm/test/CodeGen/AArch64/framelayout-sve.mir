@@ -1,6 +1,6 @@
-# RUN: llc -mattr=+sve -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -start-before=prologepilog %s -o - | FileCheck %s --check-prefix=ASM
-# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -start-before=prologepilog %s -filetype=obj -o %t
+# RUN: llc -mattr=+sve -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -start-before=prolog-epilog %s -o - | FileCheck %s --check-prefix=ASM
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -start-before=prolog-epilog %s -filetype=obj -o %t
 # RUN: llvm-objdump --dwarf=frames %t | FileCheck %s --check-prefix=UNWINDINFO
 # RUN: rm -rf %t
 #
