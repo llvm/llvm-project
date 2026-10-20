@@ -22,7 +22,10 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -82,6 +85,12 @@ AGXTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  // The module flag "agx-mesa-isa" selects Mesa's instruction forms for every
+  // function of the module.
+  if (const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("agx-mesa-isa")))
+    if (!Flag->isZero())
+      FS = FS.empty() ? "+mesa-isa" : FS + ",+mesa-isa";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)

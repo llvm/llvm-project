@@ -139,6 +139,16 @@ def FeatureMeshShading : SubtargetFeature<"mesh-shading",
   "Has hardware mesh shading (not used by code generation)"
 >;
 
+// Code may contain only the instruction forms Mesa's asahi compiler emits for
+// the same GPU (llvm/utils/agx-mesa-isa). Requires a G13 or G14 processor and
+// turns off the capabilities Mesa does not use: the G14 device atomic float
+// add and u64 min/max, and the simdgroup matrix instruction. Every emitted
+// instruction is checked against Mesa's forms. In IR: the function attribute
+// "target-features"="+mesa-isa", or the module flag !"agx-mesa-isa" = 1.
+def FeatureMesaISA : SubtargetFeature<"mesa-isa", "HasMesaISA", "true",
+  "Emit only the instruction forms Mesa's AGX compiler emits"
+>;
+
 def FeatureSourceLifetime : SubtargetFeature<"source-lifetime",
   "HasSourceLifetime", "true",
   "ALU sources carry release flags that free the register after the read; "

@@ -28,12 +28,16 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace llvm;
@@ -44,6 +48,9 @@ namespace {
 
 class AGXAsmPrinter : public AsmPrinter {
   bool ReportedMissingEncoding = false;
+  /// Encodes instructions printed as text in mesa-isa mode, so that they are
+  /// checked against Mesa's forms as object output is.
+  std::unique_ptr<MCCodeEmitter> MesaChecker;
   /// The .agx.kernels record of each kernel, emitted at the end of the file.
   SmallVector<std::pair<std::string, SmallVector<uint32_t, 16>>, 4> Kernels;
 
@@ -267,6 +274,14 @@ void AGXAsmPrinter::emitInstruction(const MachineInstr *MI) {
       ReportedMissingEncoding = true;
     }
     return;
+  }
+  if (ST.hasMesaISA() && OutStreamer->hasRawTextSupport()) {
+    if (!MesaChecker)
+      MesaChecker.reset(
+          TM.getTarget().createMCCodeEmitter(*TM.getMCInstrInfo(), OutContext));
+    SmallVector<char, 16> Bytes;
+    SmallVector<MCFixup, 2> Fixups;
+    MesaChecker->encodeInstruction(Inst, Bytes, Fixups, ST);
   }
   EmitToStreamer(*OutStreamer, Inst);
 }

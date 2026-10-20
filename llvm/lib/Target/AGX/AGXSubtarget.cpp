@@ -8,6 +8,7 @@
 
 #include "AGXSubtarget.h"
 #include "AGXTargetMachine.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -22,6 +23,15 @@ AGXSubtarget &AGXSubtarget::initializeSubtargetDependencies(StringRef CPU,
   if (CPU.empty())
     CPU = "generic";
   ParseSubtargetFeatures(CPU, /*TuneCPU=*/CPU, FS);
+  if (HasMesaISA) {
+    if (Gen != G13 && Gen != G14)
+      report_fatal_error("the mesa-isa feature needs a G13 or G14 processor, "
+                         "not " + CPU);
+    // Instructions Mesa's compiler never emits.
+    HasDeviceAtomicFAdd = false;
+    HasDeviceAtomicU64MinMax = false;
+    HasSIMDMatrix = false;
+  }
   return *this;
 }
 

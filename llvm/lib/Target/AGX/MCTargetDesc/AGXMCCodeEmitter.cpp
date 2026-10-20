@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/AGXFixupKinds.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
+#include "MCTargetDesc/AGXMesaISA.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -85,6 +86,9 @@ private:
   /// [11:10] extension.
   uint64_t encodeALUSrc(const MCInst &MI, unsigned OpNo) const;
   void report(const MCInst &MI, const Twine &Msg) const;
+  /// Reports \p Bytes, the encoding of \p MI, unless Mesa emits that form.
+  void checkMesa(const MCInst &MI, ArrayRef<uint8_t> Bytes,
+                 const MCSubtargetInfo &STI) const;
 };
 
 } // namespace
@@ -129,6 +133,21 @@ uint64_t AGXMCCodeEmitter::encodeALUSrc(const MCInst &MI,
 }
 
 static void setOp(APInt &Op, uint64_t V) { Op = APInt(Op.getBitWidth(), V); }
+
+/// Instructions Mesa's packer always emits in the long form, even when the
+/// short one would hold them (agx_pack.c: "TODO: when would you want short?").
+static bool isMesaLongOnly(unsigned Opcode) {
+  switch (Opcode) {
+  case AGX::DEVICE_LOAD_g13:
+  case AGX::DEVICE_STORE_g13:
+  case AGX::THREADGROUP_LOAD_g13:
+  case AGX::THREADGROUP_STORE_g13:
+  case AGX::THREADGROUP_ATOMIC_g13:
+    return true;
+  default:
+    return false;
+  }
+}
 
 void AGXMCCodeEmitter::getSrcEncoding(const MCInst &MI, unsigned OpNo,
                                       APInt &Op, SmallVectorImpl<MCFixup> &,
@@ -394,15 +413,40 @@ void AGXMCCodeEmitter::encodeInstruction(const MCInst &MI,
   unsigned Short = AGX::TSFlags::getShortSize(Desc.TSFlags);
   unsigned Long = AGX::TSFlags::getLongSize(Desc.TSFlags);
   unsigned Size = Long;
-  if (Short != Long) {
+  // Mesa packs memory instructions in their long form only.
+  bool MesaLong = STI.hasFeature(AGX::FeatureMesaISA) &&
+                  isMesaLongOnly(MI.getOpcode());
+  if (Short != Long && !MesaLong) {
     if (Inst.lshr(Short * 8).isZero())
       Size = Short;
     else
       Inst.setBit(AGX::TSFlags::getLengthBit(Desc.TSFlags));
+  } else if (MesaLong && Short != Long) {
+    Inst.setBit(AGX::TSFlags::getLengthBit(Desc.TSFlags));
   }
 
+  size_t Start = CB.size();
   for (unsigned I = 0; I < Size; ++I)
     CB.push_back(char(Inst.extractBitsAsZExtValue(8, I * 8)));
+
+  if (STI.hasFeature(AGX::FeatureMesaISA))
+    checkMesa(MI, ArrayRef(reinterpret_cast<const uint8_t *>(CB.data()) + Start,
+                           Size),
+              STI);
+}
+
+void AGXMCCodeEmitter::checkMesa(const MCInst &MI, ArrayRef<uint8_t> Bytes,
+                                 const MCSubtargetInfo &STI) const {
+  std::optional<AGX::MesaGen> Gen = AGX::getMesaGen(STI);
+  std::string Why;
+  if (!Gen)
+    Why = "the processor is not a G13 or G14";
+  else if (AGX::isMesaInstruction(Bytes, *Gen, nullptr, &Why))
+    return;
+  Ctx.reportError(MI.getLoc(), Twine(MCII.getName(MI.getOpcode())) +
+                                   " is not an instruction Mesa emits "
+                                   "(mesa-isa): " +
+                                   Why);
 }
 
 #include "AGXGenMCCodeEmitter.inc"

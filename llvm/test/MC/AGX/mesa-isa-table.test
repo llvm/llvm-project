@@ -1,0 +1,8 @@
+# The Mesa ISA table is generated from llvm/utils/agx-mesa-isa/mesa_isa.py.
+# RUN: %python %S/../../../utils/agx-mesa-isa/mesa_isa.py --cpp %t.inc
+# RUN: diff %t.inc %S/../../../lib/Target/AGX/MCTargetDesc/AGXMesaISA.inc
+# Instructions packed by Mesa's agx_pack.c are accepted by the reference
+# engine, and others are not.
+# RUN: %python %S/../../../utils/agx-mesa-isa/mesa_isa.py --gen g14 --check 3800 8800 0500000d00c01200
+# RUN: not %python %S/../../../utils/agx-mesa-isa/mesa_isa.py --gen g14 --check 7800 | FileCheck %s
+# CHECK: 7800: not Mesa (no Mesa form)
