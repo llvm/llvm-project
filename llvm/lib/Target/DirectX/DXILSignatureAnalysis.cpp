@@ -340,7 +340,7 @@ static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   if (!CorrectType)
     return AccessError("signature access type disagrees with its element");
   uint8_t Mask = ((1U << Width) - 1) << Col->getZExtValue();
-  E.UsageMask |= Mask << (E.isAllocated() ? E.StartCol : 0);
+  E.UsageMask |= Mask << E.getStartColOrZero();
   if (!Row)
     E.DynIndexMask |= Mask;
   return Error::success();
@@ -473,8 +473,7 @@ static MDNode *emitSignature(LLVMContext &Ctx,
     if (E.UsageMask &&
         (ValidatorVersion.empty() || ValidatorVersion == VersionTuple(0, 0) ||
          ValidatorVersion >= VersionTuple(1, 5)))
-      Props.append(
-          {I32(3), I32(E.UsageMask >> (E.isAllocated() ? E.StartCol : 0))});
+      Props.append({I32(3), I32(E.UsageMask >> E.getStartColOrZero())});
     Nodes.push_back(MDNode::get(
         Ctx, {I32(E.SigId), MDString::get(Ctx, E.SemanticName),
               I8(static_cast<uint8_t>(E.CompType)),
@@ -597,7 +596,7 @@ static void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
                                                               : StringRef(),
          E.SemanticIndices,
          E.isAllocated() ? static_cast<uint8_t>(E.StartRow) : uint8_t(0),
-         E.Cols, E.isAllocated() ? E.StartCol : uint8_t(0), E.isAllocated(),
+         E.Cols, E.getStartColOrZero(), E.isAllocated(),
          E.SemanticKind, static_cast<dxbc::PSV::ComponentType>(Type),
          E.InterpMode, E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
   }

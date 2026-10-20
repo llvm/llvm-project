@@ -163,8 +163,12 @@ struct SemanticSignatureElement {
     return StartRow != UnallocatedRow && StartCol != UnallocatedCol;
   }
 
+  // Register column of the element's first component. Unallocated elements
+  // have no register, so their masks are relative to component 0.
+  uint8_t getStartColOrZero() const { return isAllocated() ? StartCol : 0; }
+
   uint8_t getDeclaredMask() const {
-    unsigned Column = isAllocated() ? StartCol : 0;
+    unsigned Column = getStartColOrZero();
     assert(Cols >= 1 && Column + Cols <= 4 &&
            "declared components must fit within one register row");
     return static_cast<uint8_t>(((1U << Cols) - 1U) << Column);
