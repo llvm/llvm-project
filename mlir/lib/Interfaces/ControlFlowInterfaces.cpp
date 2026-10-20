@@ -222,10 +222,8 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
 }
 
 /// Stop condition for `traverseRegionGraph`. The traversal is interrupted if
-/// this function returns "true" for a successor region. The first parameter is
-/// the successor region. The second parameter indicates all already visited
-/// regions.
-using StopConditionFn = function_ref<bool(Region *, ArrayRef<bool> visited)>;
+/// this function returns "true" for a successor region.
+using StopConditionFn = function_ref<bool(Region *)>;
 
 /// Traverse the region graph starting at `begin`. The traversal is interrupted
 /// if `stopCondition` evaluates to "true" for a successor region. In that case,
@@ -280,7 +278,7 @@ static bool traverseRegionGraph(Region *begin,
     LDBG() << "Processing region #" << nextRegion->getRegionNumber()
            << " from worklist (remaining: " << worklist.size() << ")";
 
-    if (stopConditionFn(nextRegion, visited)) {
+    if (stopConditionFn(nextRegion)) {
       LDBG() << "Stop condition met for region #"
              << nextRegion->getRegionNumber() << ", returning true";
       return true;
@@ -309,11 +307,10 @@ static bool traverseRegionGraph(Region *begin,
 static bool isRegionReachable(Region *begin, Region *r) {
   assert(begin->getParentOp() == r->getParentOp() &&
          "expected that both regions belong to the same op");
-  return traverseRegionGraph(begin,
-                             [&](Region *nextRegion, ArrayRef<bool> visited) {
-                               // Interrupt traversal if `r` was reached.
-                               return nextRegion == r;
-                             });
+  return traverseRegionGraph(begin, [&](Region *nextRegion) {
+    // Interrupt traversal if `r` was reached.
+    return nextRegion == r;
+  });
 }
 
 /// Return `true` if `a` and `b` are in mutually exclusive regions.
@@ -405,35 +402,17 @@ bool RegionBranchOpInterface::hasLoop() {
   LDBG() << "Checking if operation " << getOperation()->getName()
          << " has loops";
 
+  // There is a loop iff some region reachable from the parent op can reach
+  // itself. Reaching a region along several paths (e.g., from multiple
+  // terminators that branch to the same successor region) is not a loop.
   SmallVector<RegionSuccessor> entryRegions;
   getSuccessorRegions(RegionBranchPoint::parent(), entryRegions);
-  LDBG() << "Found " << entryRegions.size() << " entry regions";
-
-  for (RegionSuccessor successor : entryRegions) {
-    if (successor.isRegion()) {
-      LDBG() << "Checking entry region #"
-             << successor.getSuccessor()->getRegionNumber() << " for loops";
-
-      bool hasLoop =
-          traverseRegionGraph(successor.getSuccessor(),
-                              [](Region *nextRegion, ArrayRef<bool> visited) {
-                                // Interrupt traversal if the region was already
-                                // visited.
-                                return visited[nextRegion->getRegionNumber()];
-                              });
-
-      if (hasLoop) {
-        LDBG() << "Found loop in entry region #"
-               << successor.getSuccessor()->getRegionNumber();
-        return true;
-      }
-    } else {
-      LDBG() << "Skipping operation successor";
-    }
-  }
-
-  LDBG() << "No loops found in operation";
-  return false;
+  return llvm::any_of(entryRegions, [](RegionSuccessor successor) {
+    return successor.isRegion() &&
+           traverseRegionGraph(successor.getSuccessor(), [](Region *region) {
+             return isRegionReachable(region, region);
+           });
+  });
 }
 
 OperandRange
