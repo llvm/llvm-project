@@ -559,3 +559,26 @@ define <4 x i1> @trunc_as_icmp_ne_and_inst_operand(i8 %x, i8 %y) {
   %i4 = insertelement <4 x i1> %i3, i1 %c4, i32 3
   ret <4 x i1> %i4
 }
+
+define <4 x i1> @trunc_as_icmp_eq_and(i8 %x) {
+; CHECK-LABEL: define <4 x i1> @trunc_as_icmp_eq_and(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i8> [[TMP2]], <i8 1, i8 2, i8 4, i8 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[TMP3]], <i8 1, i8 0, i8 0, i8 0>
+; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
+;
+  %c1 = trunc i8 %x to i1
+  %m2 = and i8 %x, 2
+  %c2 = icmp eq i8 %m2, 0
+  %m3 = and i8 %x, 4
+  %c3 = icmp eq i8 %m3, 0
+  %m4 = and i8 %x, 8
+  %c4 = icmp ult i8 %m4, 1
+  %i1 = insertelement <4 x i1> poison, i1 %c1, i32 0
+  %i2 = insertelement <4 x i1> %i1, i1 %c2, i32 1
+  %i3 = insertelement <4 x i1> %i2, i1 %c3, i32 2
+  %i4 = insertelement <4 x i1> %i3, i1 %c4, i32 3
+  ret <4 x i1> %i4
+}
