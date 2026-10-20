@@ -106,7 +106,7 @@ LLVM_ABI LLVM_READONLY const CharProperties &charProperties(int UCS);
 /// returns true for any code point defined by Unicode as a character, false for
 /// any code point defined as a non-character, as reserved, as a surrogate code
 /// point, or not defined at all.
-LLVM_ABI inline bool isCharacter(int UCS) {
+inline bool isCharacter(int UCS) {
   return charProperties(UCS).isCharacter();
 }
 
@@ -120,17 +120,17 @@ LLVM_ABI inline bool isCharacter(int UCS) {
 /// displayed on most terminals.
 ///
 /// \return true if the character is considered printable.
-LLVM_ABI inline bool isPrintable(int UCS) {
+inline bool isPrintable(int UCS) {
   return charProperties(UCS).isPrintable(UCS);
 }
 
 // Control codepoints are codepoints in the Cc category.
-LLVM_ABI inline bool isControl(int UCS) {
+inline bool isControl(int UCS) {
   return charProperties(UCS).isControl();
 }
 
 // Formatting codepoints are codepoints in the Cf category.
-LLVM_ABI inline bool isFormatting(int UCS) {
+inline bool isFormatting(int UCS) {
   return charProperties(UCS).isFormatting();
 }
 
