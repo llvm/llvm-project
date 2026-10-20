@@ -25,9 +25,8 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
 
   // Force de-serialization of a redeclaration that might initialize this
   // global.
-  if (B->getMetadataSize() != 0 &&
-      B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
-          GlobalInitState::Initialized) {
+  if (B->isGlobal() && B->getBlockDesc<GlobalInlineDescriptor>().InitState !=
+                           GlobalInitState::Initialized) {
     if (const VarDecl *VD = B->getDescriptor()->asVarDecl()) {
       const VarDecl *MD = VD->getMostRecentDecl();
       if (MD != VD && MD->hasInit() && !MD->getInit()->isValueDependent()) {
@@ -82,24 +81,21 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
 
 UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
                                      bool IsConstexprUnknown) {
-  bool IsStatic, IsExtern;
+  bool IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
-    IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = Var->hasExternalStorage();
-  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl,
-                 TemplateParamObjectDecl>(VD)) {
-    IsStatic = true;
-    IsExtern = false;
   } else {
-    IsStatic = false;
-    IsExtern = true;
+    assert((isa<UnnamedGlobalConstantDecl, MSGuidDecl, TemplateParamObjectDecl>(
+        VD)));
+    IsExtern = false;
   }
 
   // Register all previous declarations as well. For extern blocks, just replace
+  //
   // the index with the new variable.
-  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern,
-                                    IsWeak, IsConstexprUnknown, Init);
+  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsExtern, IsWeak,
+                                    IsConstexprUnknown, Init);
   if (!Idx)
     return std::nullopt;
 
@@ -136,7 +132,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
 UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
+  if (auto Idx = createGlobal(E, ExprType,
                               /*IsExtern=*/false, /*IsWeak=*/false,
                               /*IsConstexprUnknown=*/false)) {
     GlobalIndices[E] = *Idx;
@@ -145,9 +141,8 @@ UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   return std::nullopt;
 }
 
-UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
-                                     bool IsExtern, bool IsWeak,
-                                     bool IsConstexprUnknown,
+UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
+                                     bool IsWeak, bool IsConstexprUnknown,
                                      const Expr *Init) {
   // Since this global variable is constexpr-unknown and a reference, register
   // the pointee type instead. When referencing the variable, the pointer will
@@ -174,13 +169,15 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
-  auto *G = new (Allocator, Desc->getAllocSize() + Block::GlobalMD)
-      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::GlobalMD, IsStatic,
-             IsExtern, IsWeak);
+  auto *G = new (Allocator,
+                 Desc->getAllocSize() + Block::getMetadataSize(Block::Global))
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, IsExtern,
+             IsWeak);
   G->block()->invokeCtor();
 
   // Initialize GlobalInlineDescriptor fields.
-  auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
+  auto *GD = new (&G->block()->getBlockDesc<GlobalInlineDescriptor>())
+      GlobalInlineDescriptor();
   if (!Init)
     GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);

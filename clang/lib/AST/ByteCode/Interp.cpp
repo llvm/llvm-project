@@ -243,7 +243,7 @@ void noteValueLocation(InterpState &S, const Pointer &Ptr) {
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
                            AccessKinds AK) {
   if (B->getDeclID()) {
-    if (!(B->isStatic() && B->isTemporary()))
+    if (!(B->isGlobal() && B->isTemporary()))
       return true;
 
     const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
@@ -595,7 +595,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
   if (S.checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl()))
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
-  if (!Ptr.block()->isStatic())
+  if (!Ptr.block()->isGlobal())
     return true;
   if (!Ptr.block()->getDeclID())
     return true;
@@ -899,7 +899,7 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
-  const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
   const Descriptor *BlockDesc = B->getDescriptor();
   if (!Desc.IsInitialized)
     return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
@@ -1939,7 +1939,7 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   }
 
   // Can't call a dtor on a global variable.
-  if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
+  if (Ptr.isOpaquePointer() || Ptr.block()->isGlobal()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
     return false;
@@ -2241,7 +2241,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   QualType DynamicType = TypePtr.getType();
-  if (TypePtr.Pointee->isStatic() || TypePtr.isConst()) {
+  if (TypePtr.Pointee->isGlobal() || TypePtr.isConst()) {
     if (const VarDecl *VD = Pointer(TypePtr).getRootVarDecl();
         VD && !VD->isConstexpr())
       return diagUnknownDynamicType(Pointer(TypePtr));
@@ -3054,7 +3054,7 @@ bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
     return true;
   }
 
-  const auto &ID = B->getBlockDesc<const InlineDescriptor>();
+  const auto &ID = B->getBlockDesc<InlineDescriptor>();
   if (!ID.IsInitialized) {
     if (!S.checkingPotentialConstantExpression())
       S.FFDiag(S.Current->getSource(OpPC),
