@@ -2281,10 +2281,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
 
       Val = FPLiteral.bitcastToAPInt().getZExtValue();
       if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT &&
-          AsmParser->isGFX11Plus() && Lit == LitModifier::None) {
-        // Match the duplicated value printed for a packed FP16 inline source.
+          Lit == LitModifier::None) {
+        // Use the splat only when this target's inline encoding produces it.
         uint32_t Packed = Val | (Val << 16);
-        if (AMDGPU::isPKFMACF16InlineConstant(Packed, /*IsGFX11Plus=*/true))
+        if (AMDGPU::isPKFMACF16InlineConstant(Packed, AsmParser->isGFX11Plus()))
           Val = Packed;
       }
       break;
