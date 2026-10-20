@@ -908,6 +908,16 @@ define float @maxnum_with_pos_one_op(float %a) {
   ret float %fabs
 }
 
+define float @maxnum_with_pos_one_op_nosnan(float nofpclass(snan) %a) {
+; CHECK-LABEL: @maxnum_with_pos_one_op_nosnan(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %max = call float @llvm.maxnum.f32(float %a, float 1.0)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}
+
 define double @fadd_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fadd_nnan_inf_op0(
 ; CHECK-NEXT:    ret double +inf
