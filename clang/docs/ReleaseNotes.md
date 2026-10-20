@@ -278,6 +278,10 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Clang no longer crashes on unknown command-line argument when
+  `-fdiagnostics-format=sarif` is passed
+  (#GH233241).
+
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
 - `clang-scan-deps` now reports the directories whose listing a module depends
