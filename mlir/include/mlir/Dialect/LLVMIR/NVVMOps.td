@@ -7204,118 +7204,55 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
 // NVVM spcompress and spdecompress Ops
 //===----------------------------------------------------------------------===//
 
-// Structured sparsity factor: spXtoY keeps X out of every Y elements.
-def SPFactor1To2  : I32EnumAttrCase<"SP1TO2",  0, "sp1to2">;
-def SPFactor1To4  : I32EnumAttrCase<"SP1TO4",  1, "sp1to4">;
-def SPFactor1To8  : I32EnumAttrCase<"SP1TO8",  2, "sp1to8">;
-def SPFactor1To16 : I32EnumAttrCase<"SP1TO16", 3, "sp1to16">;
-def SPFactor2To4  : I32EnumAttrCase<"SP2TO4",  4, "sp2to4">;
-def SPFactor2To8  : I32EnumAttrCase<"SP2TO8",  5, "sp2to8">;
-def SPFactor2To16 : I32EnumAttrCase<"SP2TO16", 6, "sp2to16">;
-def SPFactor4To8  : I32EnumAttrCase<"SP4TO8",  7, "sp4to8">;
-def SPFactor4To16 : I32EnumAttrCase<"SP4TO16", 8, "sp4to16">;
-def SPFactor : I32EnumAttr<"SPFactor", "Structured sparsity factor", [
-    SPFactor1To2,
-    SPFactor1To4,
-    SPFactor1To8,
-    SPFactor1To16,
-    SPFactor2To4,
-    SPFactor2To8,
-    SPFactor2To16,
-    SPFactor4To8,
-    SPFactor4To16,
-  ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SPFactorAttr : EnumAttr<NVVM_Dialect, SPFactor, "sp_factor">;
+// Size in bits of each structured sparsity metadata index.
+def SPIdxSizeAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4]>]>;
 
-// Structured sparsity metadata index size
-def SPIndexSizeB2 : I32EnumAttrCase<"B2", 2, "b2">;
-def SPIndexSizeB4 : I32EnumAttrCase<"B4", 4, "b4">;
-def SPIndexSize : I32EnumAttr<"SPIndexSize",
-    "Structured sparsity metadata index size", [
-    SPIndexSizeB2,
-    SPIndexSizeB4,
-  ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SPIndexSizeAttr : EnumAttr<NVVM_Dialect, SPIndexSize, "sp_index_size">;
+// Size of each structured sparsity group in the dense data.
+def SPNumTgtAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4, 8, 16]>]>;
 
-// Structured sparsity element size
-def SPElemSizeB8  : I32EnumAttrCase<"B8",  8,  "b8">;
-def SPElemSizeB16 : I32EnumAttrCase<"B16", 16, "b16">;
-def SPElemSize : I32EnumAttr<"SPElemSize", "Structured sparsity element size", [
-    SPElemSizeB8,
-    SPElemSizeB16,
-  ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SPElemSizeAttr : EnumAttr<NVVM_Dialect, SPElemSize, "sp_elem_size">;
+// Dense and compressed data are vectors of 8-bit or 16-bit elements.
+defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
 
-// Structured sparsity repetition factor
-def SPRepFactorAttr : ConfinedAttr<I32Attr, [
-    IntIsOneOf<[1, 2, 4, 8, 16, 32, 64]>]>;
-
-// spcompress only supports the 2:4 sparsity factor.
-def SPCompressFactorAttr : ConfinedAttr<SPFactorAttr, [
-    EnumAttrIsOneOf<SPFactorAttr, [
-      SPFactor2To4,
-    ]>
-  ]>;
-
-// Register bundles are i32 or fixed-length, rank-1 vectors of i32. A
+// Metadata is a bundle of 32-bit registers: i32 or a vector of i32. A
 // single-register bundle may be either i32 or vector<1xi32>.
-defvar SPDataType = FixedVectorOfRankAndLengthAndType<[1],
-    [2, 4, 8, 16, 32, 64, 128], [I32]>;
-defvar SPRegType = AnyTypeOf<[I32,
-    FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32, 64], [I32]>]>;
+defvar SPMetadataType = AnyTypeOf<[I32,
+    FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
 
 def NVVM_SPCompressOp : NVVM_Op<"spcompress",
     [Pure, NVVMRequiresSMa<[107]>]> {
   let summary = "Compress dense vector to structured sparse vector";
   let description = [{
     Compresses elements from a dense vector `data` into a structured sparse
-    vector `compressed_data`. The indices of the selected elements are
-    returned in `metadata`.
+    vector `compressed_data` using the 2:4 sparsity pattern: 2 out of every
+    4 elements of `data` are selected. The indices of the selected elements
+    are returned in `metadata`.
 
-    All vectors are bundles of 32-bit registers. A single-register bundle may
-    be either `i32` or `vector<1xi32>`. The elements are packed into these
-    registers according to `elemSize`.
+    The element size (8 or 16 bits) is given by the element type of `data`
+    and `compressed_data`. `data` must occupy `2 * repFactor` 32-bit
+    registers, where the repeat factor `repFactor` is a power of two from 1
+    to 64.
 
     Arguments:
     - `spDesc`: Sparsity descriptor specifying the selection operation and the
       element data type.
-    - `data`: Input dense vector of `2 * repFactor` registers containing the
-      elements to be compressed.
-    - `compFactor`: Compression factor. Only `sp2to4` is supported.
-    - `indexSize`: Size in bits of each metadata index (`b2` or `b4`).
-    - `elemSize`: Size in bits of each element in `data` (`b8` or `b16`).
-    - `repFactor`: Repeat factor of the operation (a power of two from 1 to 64).
+    - `data`: Dense vector containing the elements to be compressed.
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
 
     Results:
     - `metadata`: Indices of the selected elements, stored in
-      `ceil(repFactor * indexSize / elemSize)` registers.
-    - `compressed_data`: Selected elements, stored in `repFactor` registers.
+      `ceil(repFactor * idxSize / elemSize)` 32-bit registers. A single
+      register may be either `i32` or `vector<1xi32>`.
+    - `compressed_data`: Selected elements; half as many as in `data`.
 
     Examples:
     ```mlir
     // 8-bit elements, 2-bit indices, repeat factor of 1.
-    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data
-        comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 1
-        : i32, vector<2xi32> -> i32, i32
-
-    // 8-bit elements, 4-bit indices, repeat factor of 2.
-    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data
-        comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 2
-        : i32, vector<4xi32> -> i32, vector<2xi32>
+    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 2
+        : i32, vector<8xi8> -> i32, vector<4xi8>
 
     // 16-bit elements, 4-bit indices, repeat factor of 8.
-    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data
-        comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 8
-        : i32, vector<16xi32> -> vector<2xi32>, vector<8xi32>
+    %metadata, %compressed_data = nvvm.spcompress %spdesc, %data idx_size = 4
+        : i32, vector<32xi16> -> vector<2xi32>, vector<16xi16>
     ```
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress)
@@ -7323,23 +7260,16 @@ def NVVM_SPCompressOp : NVVM_Op<"spcompress",
 
   let arguments = (ins
     I32:$spDesc,
-    SPDataType:$data,
-    SPCompressFactorAttr:$compFactor,
-    SPIndexSizeAttr:$indexSize,
-    SPElemSizeAttr:$elemSize,
-    SPRepFactorAttr:$repFactor);
+    SPElemVectorType:$data,
+    SPIdxSizeAttr:$idxSize);
 
   let results = (outs
-    SPRegType:$metadata,
-    SPRegType:$compressed_data);
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data);
 
   let assemblyFormat = [{
-    $spDesc `,` $data
-    `comp_factor` `=` enum($compFactor)
-    `index_size` `=` enum($indexSize)
-    `elem_size` `=` enum($elemSize)
-    `rep_factor` `=` $repFactor
-    attr-dict `:` type(operands) `->` type($metadata) `,` type($compressed_data)
+    $spDesc `,` $data `idx_size` `=` $idxSize attr-dict
+    `:` type(operands) `->` type($metadata) `,` type($compressed_data)
   }];
 
   let extraClassDeclaration = [{
@@ -7362,79 +7292,62 @@ def NVVM_SPDecompressOp : NVVM_Op<"spdecompress",
     into a dense vector `data`, using the indices stored in `metadata`. Dense
     positions not selected by `metadata` are set to zero.
 
-    All vectors are bundles of 32-bit registers. A single-register bundle may
-    be either `i32` or `vector<1xi32>`. The elements are packed into these
-    registers according to `elemSize`. For a decompression factor
-    `spXtoY`, the number of registers in each bundle is:
-    - `metadata`: `ceil(X * indexSize * repFactor / 32)`
-    - `compressed_data`: `ceil(X * elemSize * repFactor / 32)`
-    - `data`: `Y * elemSize * repFactor / 32`
+    `data` consists of `repFactor` groups of `numTgt` elements, and
+    `compressed_data` holds `numSrc` elements for each group, i.e. the
+    sparsity factor is `numSrc:numTgt`. Both `numSrc` and the repeat factor
+    `repFactor` are derived from the vector lengths. The element size
+    `elemSize` (8 or 16 bits) is given by the element type of `data` and
+    `compressed_data`.
 
     The following conditions must hold:
-    - `Y * elemSize * repFactor` is between 32 and 4096.
-    - `X * elemSize` is at most 32.
-    - `indexSize` is `b2` only if `Y` is at most 4.
+    - `numSrc:numTgt` is one of 1:2, 1:4, 1:8, 1:16, 2:4, 2:8, 2:16, 4:8, or
+      4:16.
+    - `repFactor` is a power of two from 1 to 64.
+    - `numTgt * elemSize * repFactor` is between 32 and 4096.
+    - `numSrc * elemSize` is at most 32.
+    - `idxSize` is 2 only if `numTgt` is at most 4.
+    - `metadata` occupies `ceil(numSrc * idxSize * repFactor / 32)` 32-bit
+      registers. A single register may be either `i32` or `vector<1xi32>`.
 
     Arguments:
     - `metadata`: Indices of the selected elements.
     - `compressed_data`: Compressed vector containing the selected elements.
-    - `compFactor`: Decompression factor (`sp1to2`, `sp1to4`, `sp1to8`,
-      `sp1to16`, `sp2to4`, `sp2to8`, `sp2to16`, `sp4to8`, or `sp4to16`).
-    - `indexSize`: Size in bits of each metadata index (`b2` or `b4`).
-    - `elemSize`: Size in bits of each element (`b8` or `b16`).
-    - `repFactor`: Repeat factor of the operation (a power of two from 1 to 64).
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
+    - `numTgt`: Size of each group in `data` (2, 4, 8, or 16).
 
     Results:
-    - `data`: Output dense vector containing the decompressed elements.
+    - `data`: Dense vector containing the decompressed elements.
 
     Examples:
     ```mlir
-    // 8-bit elements, 2-bit indices, repeat factor of 1.
-    %res = nvvm.spdecompress %metadata, %compdata
-        comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 1
-        : i32, i32 -> i32
+    // 2:4 sparsity, 8-bit elements, 2-bit indices, repeat factor of 1.
+    %res = nvvm.spdecompress %metadata, %compdata idx_size = 2 num_tgt = 4
+        : i32, vector<2xi8> -> vector<4xi8>
 
-    // 8-bit elements, 4-bit indices, repeat factor of 2.
-    %res = nvvm.spdecompress %metadata, %compdata
-        comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 2
-        : i32, i32 -> vector<2xi32>
-
-    // 16-bit elements, 4-bit indices, repeat factor of 64.
-    %res = nvvm.spdecompress %metadata, %compdata
-        comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 64
-        : vector<16xi32>, vector<64xi32> -> vector<128xi32>
+    // 2:4 sparsity, 16-bit elements, 4-bit indices, repeat factor of 64.
+    %res = nvvm.spdecompress %metadata, %compdata idx_size = 4 num_tgt = 4
+        : vector<16xi32>, vector<128xi16> -> vector<256xi16>
     ```
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress)
   }];
 
   let arguments = (ins
-    SPRegType:$metadata,
-    SPRegType:$compressed_data,
-    SPFactorAttr:$compFactor,
-    SPIndexSizeAttr:$indexSize,
-    SPElemSizeAttr:$elemSize,
-    SPRepFactorAttr:$repFactor);
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data,
+    SPIdxSizeAttr:$idxSize,
+    SPNumTgtAttr:$numTgt);
 
   let results = (outs
-    AnyTypeOf<[I32,
-      FixedVectorOfRankAndLengthAndType<[1],
-        [1, 2, 4, 8, 16, 32, 64, 128], [I32]>]>:$data);
+    SPElemVectorType:$data);
 
   let assemblyFormat = [{
     $metadata `,` $compressed_data
-    `comp_factor` `=` enum($compFactor)
-    `index_size` `=` enum($indexSize)
-    `elem_size` `=` enum($elemSize)
-    `rep_factor` `=` $repFactor
-    attr-dict `:` type($metadata) `,` type($compressed_data) `->` type($data)
+    `idx_size` `=` $idxSize `num_tgt` `=` $numTgt attr-dict
+    `:` type($metadata) `,` type($compressed_data) `->` type($data)
   }];
 
   let extraClassDeclaration = [{
-    // Returns the {source, target} group sizes of `compFactor`, e.g. {2, 4}
-    // for sp2to4.
-    std::pair<unsigned, unsigned> getCompFactorSizes();
-
     static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                               llvm::IRBuilderBase &builder);
   }];

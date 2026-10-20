@@ -7074,90 +7074,88 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // spcompress and spdecompress Ops
 //===----------------------------------------------------------------------===//
 
-// Returns the number of 32-bit registers in a register bundle, which is either
-// an i32 or a vector of i32.
+// Returns the number of 32-bit registers in a metadata register bundle, which
+// is either an i32 or a vector of i32.
 static unsigned getNumSPRegisters(Type type) {
   if (auto vecTy = dyn_cast<VectorType>(type))
     return vecTy.getNumElements();
   return 1;
 }
 
-std::pair<unsigned, unsigned> SPDecompressOp::getCompFactorSizes() {
-  switch (getCompFactor()) {
-  case NVVM::SPFactor::SP1TO2:
-    return {1, 2};
-  case NVVM::SPFactor::SP1TO4:
-    return {1, 4};
-  case NVVM::SPFactor::SP1TO8:
-    return {1, 8};
-  case NVVM::SPFactor::SP1TO16:
-    return {1, 16};
-  case NVVM::SPFactor::SP2TO4:
-    return {2, 4};
-  case NVVM::SPFactor::SP2TO8:
-    return {2, 8};
-  case NVVM::SPFactor::SP2TO16:
-    return {2, 16};
-  case NVVM::SPFactor::SP4TO8:
-    return {4, 8};
-  case NVVM::SPFactor::SP4TO16:
-    return {4, 16};
-  }
-  llvm_unreachable("Invalid SPFactor");
+// The repeat factor of spcompress and spdecompress is a power of two up to 64.
+static bool isValidSPRepFactor(unsigned repFactor) {
+  return llvm::isPowerOf2_32(repFactor) && repFactor <= 64;
 }
 
 LogicalResult SPCompressOp::verify() {
-  unsigned repFactor = getRepFactor();
-  unsigned indexSize = static_cast<unsigned>(getIndexSize());
-  unsigned elemSize = static_cast<unsigned>(getElemSize());
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
 
-  if (getNumSPRegisters(getData().getType()) != 2 * repFactor)
-    return emitError(
-        "Operation attributes and provided input data size doesn't match");
+  // data occupies 2 * repFactor 32-bit registers.
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = dataTy.getNumElements() * elemSize;
+  unsigned repFactor = dataBits / 64;
+  if (dataBits % 64 != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to occupy 2 * repFactor 32-bit "
+                       "registers, where repFactor is a power of two up to 64");
 
-  if (getNumSPRegisters(getCompressedData().getType()) != repFactor)
-    return emitError("Operation attributes and provided output compressed data "
-                     "size doesn't match");
+  // spcompress only supports the 2:4 sparsity factor.
+  if (2 * compressedTy.getNumElements() != dataTy.getNumElements())
+    return emitOpError(
+        "expects compressed data to have half as many elements as data");
 
-  if (getNumSPRegisters(getMetadata().getType()) !=
-      llvm::divideCeil(repFactor * indexSize, elemSize))
-    return emitError(
-        "Operation attributes and provided output metadata size doesn't match");
+  unsigned numMetadataRegs =
+      llvm::divideCeil(repFactor * getIdxSize(), elemSize);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
 
   return success();
 }
 
 LogicalResult SPDecompressOp::verify() {
-  unsigned repFactor = getRepFactor();
-  unsigned indexSize = static_cast<unsigned>(getIndexSize());
-  unsigned elemSize = static_cast<unsigned>(getElemSize());
-  auto [numSrc, numTgt] = getCompFactorSizes();
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
 
-  unsigned dataBits = numTgt * elemSize * repFactor;
+  // data holds repFactor groups of numTgt elements, and compressed data holds
+  // numSrc elements for each of those groups.
+  unsigned idxSize = getIdxSize();
+  unsigned numTgt = getNumTgt();
+  unsigned numData = dataTy.getNumElements();
+  unsigned numCompressed = compressedTy.getNumElements();
+  unsigned repFactor = numData / numTgt;
+  if (numData % numTgt != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to have repFactor * num_tgt elements, "
+                       "where repFactor is a power of two up to 64");
+
+  unsigned numSrc = numCompressed / repFactor;
+  if (numCompressed % repFactor != 0 ||
+      !llvm::is_contained({1u, 2u, 4u}, numSrc) || numSrc >= numTgt)
+    return emitOpError("unsupported sparsity factor: compressed data has ")
+           << numCompressed << " elements for " << repFactor << " group(s) of "
+           << numTgt << " elements";
+
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = numData * elemSize;
   if (dataBits < 32 || dataBits > 4096)
-    return emitError(
-        "Invalid compFactor, element size, and repeat factor combination");
+    return emitOpError("expects data to be between 32 and 4096 bits");
 
   if (numSrc * elemSize > 32)
-    return emitError("Invalid compFactor and element size combination");
+    return emitOpError("expects at most 32 bits of compressed data per group");
 
-  if (indexSize == 2 && numTgt > 4)
-    return emitError("Invalid index size and target combination, target "
-                     "should be at most 4 if index size is 2");
+  if (idxSize == 2 && numTgt > 4)
+    return emitOpError("expects num_tgt to be at most 4 if idx_size is 2");
 
-  if (getNumSPRegisters(getData().getType()) != dataBits / 32)
-    return emitError(
-        "Operation attributes and provided output data size doesn't match");
-
-  if (getNumSPRegisters(getCompressedData().getType()) !=
-      llvm::divideCeil(numSrc * elemSize * repFactor, 32))
-    return emitError("Operation attributes and provided input compressed data "
-                     "size doesn't match");
-
-  if (getNumSPRegisters(getMetadata().getType()) !=
-      llvm::divideCeil(numSrc * indexSize * repFactor, 32))
-    return emitError(
-        "Operation attributes and provided input metadata size doesn't match");
+  unsigned numMetadataRegs = llvm::divideCeil(numSrc * idxSize * repFactor, 32);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
 
   return success();
 }
