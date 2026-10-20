@@ -2225,7 +2225,19 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
       context_.Say(
           source, "The DEPOBJ directive requires a single argument"_err_en_US);
     }
+  } else if (!arguments.v.empty()) {
+    if (arguments.v.size() > 1) {
+      context_.Say(arguments.source,
+          "When DEPOBJ directive is specified with an argument only one argument may be present"_err_en_US);
+    }
+    if (clauses.v.size() != 1) {
+      parser::CharBlock source(
+          clauses.v.empty() ? dirName.source : clauses.source);
+      context_.Say(source,
+          "When DEPOBJ directive is specified with an argument a single clause must be present"_err_en_US);
+    }
   }
+
   if (clauses.v.size() != 1) {
     return;
   }
