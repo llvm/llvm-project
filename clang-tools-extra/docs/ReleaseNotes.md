@@ -139,6 +139,16 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
+- {program}`clang-tidy` now warns when `HeaderFilterRegex` or
+  `ExcludeHeaderFilterRegex` (or `--header-filter` or
+  `--exclude-header-filter`) is not a valid POSIX extended regular expression,
+  and `--verify-config` reports it. Previously such a filter silently matched
+  no headers.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
