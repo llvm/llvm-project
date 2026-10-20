@@ -106,9 +106,7 @@ LLVM_ABI LLVM_READONLY const CharProperties &charProperties(int UCS);
 /// returns true for any code point defined by Unicode as a character, false for
 /// any code point defined as a non-character, as reserved, as a surrogate code
 /// point, or not defined at all.
-inline bool isCharacter(int UCS) {
-  return charProperties(UCS).isCharacter();
-}
+inline bool isCharacter(int UCS) { return charProperties(UCS).isCharacter(); }
 
 /// Determines if a character is likely to be displayed correctly on the
 /// terminal. Exact implementation would have to depend on the specific
@@ -125,14 +123,10 @@ inline bool isPrintable(int UCS) {
 }
 
 // Control codepoints are codepoints in the Cc category.
-inline bool isControl(int UCS) {
-  return charProperties(UCS).isControl();
-}
+inline bool isControl(int UCS) { return charProperties(UCS).isControl(); }
 
 // Formatting codepoints are codepoints in the Cf category.
-inline bool isFormatting(int UCS) {
-  return charProperties(UCS).isFormatting();
-}
+inline bool isFormatting(int UCS) { return charProperties(UCS).isFormatting(); }
 
 /// Gets the number of positions the UTF8-encoded \p Text is likely to occupy
 /// when output on a terminal ("character width"). This depends on the
