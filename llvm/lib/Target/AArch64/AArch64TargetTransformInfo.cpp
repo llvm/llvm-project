@@ -3332,9 +3332,9 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
 static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
                      Instruction *&OtherAnd, Value *&A, Value *&B) {
   Value *MaskValue;
-  if (!match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
-                       m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
-                                        m_Value(A))))))
+  if (!match(I,
+             m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
+                    m_OneUse(m_c_And(m_Not(m_Value(MaskValue)), m_Value(A))))))
     return false;
 
   if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Value(B))))
