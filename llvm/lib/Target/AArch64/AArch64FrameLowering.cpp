@@ -979,7 +979,6 @@ bool AArch64FrameLowering::canUseAsPrologue(
 bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
     const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Split unwind ranges are currently supported only for native ARM64, not
   // ARM64EC's hybrid unwinding model.
@@ -1001,10 +1000,6 @@ bool AArch64FrameLowering::enableWindowsCFIShrinkWrapping(
 
   // Naked functions do not have a compiler-generated prologue to shrink-wrap.
   if (F.hasFnAttribute(Attribute::Naked))
-    return false;
-
-  // The copied unwind recipe currently supports only fixed-size stack frames.
-  if (MFI.hasVarSizedObjects())
     return false;
 
   // Dynamically realigned frames need stack-pointer recovery that is not yet

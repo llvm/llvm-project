@@ -3,9 +3,14 @@
 # RUN: FileCheck %s --check-prefix=MIR --input-file=%t.mir
 # RUN: llc -mtriple=aarch64-pc-windows-msvc -passes=aarch64-win-cfi,verify \
 # RUN:   %s -o - | FileCheck %s --check-prefix=MIR
-# RUN: llc -mtriple=aarch64-pc-windows-msvc \
+# Running range insertion twice must abort instead of accepting existing ranges.
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc \
 # RUN:   -run-pass=aarch64-win-cfi,aarch64-win-cfi -verify-machineinstrs \
-# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
+# RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=REPEATED
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc \
+# RUN:   -passes=aarch64-win-cfi,aarch64-win-cfi,verify \
+# RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=REPEATED
+# REPEATED: LLVM ERROR: AArch64 Windows unwind range insertion cannot be run twice
 # RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
 # RUN:   -verify-machineinstrs -filetype=obj %t.mir -o %t-roundtrip.obj
 # RUN: llvm-readobj --unwind %t-roundtrip.obj | FileCheck %s
@@ -57,6 +62,28 @@
 # CHECK-NEXT: 0x01                ; sub sp, #16
 # CHECK-NEXT: 0xe4                ; end
 
+# CHECK: Function: dynamic_frame_paths +0x4
+# CHECK: FunctionLength: 20
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe202              ; add fp, sp, #16
+# CHECK-NEXT: 0x42                ; stp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; sub sp, #32
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Function: dynamic_frame_paths +0x1C
+# CHECK: FunctionLength: 16
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xe202              ; add fp, sp, #16
+# CHECK-NEXT: 0x42                ; stp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; sub sp, #32
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Epilogue [
+# CHECK-NEXT: 0xe202              ; sub sp, fp, #16
+# CHECK-NEXT: 0x42                ; ldp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; add sp, #32
+# CHECK-NEXT: 0xe4                ; end
+
 # ASM-LABEL: frame_before_prologue:
 # ASM: DEBUG_LABEL: frame_before_prologue:before_return
 # ASM-NEXT: .pseudoprobe 1234 1 0 0 frame_before_prologue
@@ -77,6 +104,9 @@
     ret i32 0
   }
   define void @frame_before_prologue() uwtable !dbg !4 {
+    ret void
+  }
+  define void @dynamic_frame_paths(i64 %size) uwtable {
     ret void
   }
   declare void @work(i32)
@@ -263,4 +293,75 @@ body:             |
     DBG_LABEL !8, debug-location !9
     PSEUDO_PROBE 1234, 2, 0, 0
     B %bb.1
+...
+---
+# A range entered with a dynamically adjusted SP must retain the FP recovery
+# operation in its phantom recipe, not copy the dynamic adjustment. The leaf
+# return between ranges remains uncovered, and the epilogue recovers SP from FP.
+name:            dynamic_frame_paths
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       32
+  maxAlignment:    16
+  adjustsStack:    true
+stack:
+  - { id: 0, type: variable-sized, alignment: 16 }
+body:             |
+  ; MIR-LABEL: name: dynamic_frame_paths
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 32, 0
+  ; MIR: frame-setup SEH_AddFP 16
+  ; MIR-NEXT: frame-setup SEH_PrologEnd
+  ; MIR-NEXT: $sp = SUBXrx64 $sp, $x0, 28
+  ; MIR-NEXT: B %bb.3 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: RET
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 32
+  ; MIR-NEXT: frame-setup SEH_SaveFPLR 16
+  ; MIR-NEXT: frame-setup SEH_AddFP 16
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: frame-destroy SEH_EpilogStart
+  ; MIR-NEXT: $sp = frame-destroy SUBXri $fp, 16, 0
+  bb.0:
+    successors: %bb.1, %bb.2
+    CBZX $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $sp = frame-setup SUBXri $sp, 32, 0
+    frame-setup SEH_StackAlloc 32
+    frame-setup STPXi $fp, $lr, $sp, 2
+    frame-setup SEH_SaveFPLR 16
+    $fp = frame-setup ADDXri $sp, 16, 0
+    frame-setup SEH_AddFP 16
+    frame-setup SEH_PrologEnd
+    $sp = SUBXrx64 $sp, $x0, 28
+    B %bb.3
+
+  bb.2:
+    RET undef $lr
+
+  bb.3:
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy SUBXri $fp, 16, 0
+    frame-destroy SEH_AddFP 16
+    $fp, $lr = frame-destroy LDPXi $sp, 2
+    frame-destroy SEH_SaveFPLR 16
+    $sp = frame-destroy ADDXri $sp, 32, 0
+    frame-destroy SEH_StackAlloc 32
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
 ...
