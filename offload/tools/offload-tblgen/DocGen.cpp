@@ -135,7 +135,7 @@ void processFunction(const FunctionRec &F, raw_ostream &OS) {
     OS << formatv("  :retval {0}:\n", R.getValue());
     for (StringRef C : R.getConditions()) {
       OS << "    * ";
-      if (C.starts_with("`") && C.ends_with("`")) {
+      if (ReturnRec::isValidationCondition(C)) {
         OS << ":c:expr:" << C;
       } else {
         OS << makeDoubleBackticks(C);

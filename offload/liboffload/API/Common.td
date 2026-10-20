@@ -172,10 +172,9 @@ def olInit : Function {
     "down when the count reaches zero, and may be initialized again "
     "afterwards.",
     "`InitArgs` selects the platforms the library can use. While the library "
-    "is initialized, further calls ignore `InitArgs` and only increment the "
-    "reference count. If `InitArgs` "
-    "is NULL or `InitArgs->NumPlatforms` is zero, all platforms are "
-    "selected. Otherwise:",
+    "is initialized, further calls only increment the reference count and "
+    "`InitArgs` is ignored. If `InitArgs` is NULL or `InitArgs->NumPlatforms` "
+    "is zero, all platforms are selected. Otherwise:",
     "- The backends listed in `InitArgs->Platforms` are selected.",
     "- The host platform is always selected, whether listed or not.",
     "- Duplicate entries, unknown values, and backends not supported by this "
@@ -186,7 +185,8 @@ def olInit : Function {
     "loaded reports no devices rather than an error.",
     "The environment variables `OFFLOAD_TRACE` and "
     "`OFFLOAD_DISABLE_VALIDATION` are read when `olInit` initializes the "
-    "library. Changes made afterwards take effect at the next initialization.",
+    "library. Changes made afterwards are not seen until the library has been "
+    "shut down and initialized again.",
     "`olInit` is thread safe."
   ];
   let params = [
@@ -194,10 +194,10 @@ def olInit : Function {
   ];
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
-      "InitArgs->Size is smaller than sizeof(ol_init_args_t)"
+      "`InitArgs->Size` is smaller than `sizeof(ol_init_args_t)`"
     ]>,
     Return<"OL_ERRC_INVALID_NULL_POINTER", [
-      "InitArgs->NumPlatforms is greater than zero and InitArgs->Platforms is NULL"
+      "`InitArgs->NumPlatforms` is greater than zero and `InitArgs->Platforms` is NULL"
     ]>,
     Return<"OL_ERRC_UNINITIALIZED", [
       "The library was shut down at process exit and cannot be initialized again"
