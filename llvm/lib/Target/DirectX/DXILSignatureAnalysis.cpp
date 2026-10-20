@@ -154,10 +154,10 @@ static Error parseSignature(Metadata *MD,
   auto *List = dyn_cast<MDNode>(MD);
   if (!List)
     return signatureError("expected a signature element list or null");
-  if (List->getNumOperands() > 128)
-    return signatureError("too many signature elements");
 
   std::set<std::pair<std::string, uint32_t>> Semantics;
+  constexpr unsigned MaxAllocatedElements = MaxSignatureRows * 4;
+  unsigned NumAllocated = 0;
   std::array<uint8_t, MaxSignatureRows> AllocatedColumns = {};
   std::array<dxbc::PSV::InterpolationMode, MaxSignatureRows> RowModes = {};
   std::array<bool, MaxSignatureRows> RowNative16 = {};
@@ -245,6 +245,8 @@ static Error parseSignature(Metadata *MD,
           "integer pixel inputs require constant interpolation");
 
     if (E.isAllocated()) {
+      if (++NumAllocated > MaxAllocatedElements)
+        return signatureError("too many signature elements");
       // Co-packed elements must obey row constraints, even when their component
       // masks do not overlap. Min-precision types occupy 32-bit components.
       bool IsNative16 = Native16 && (E.CompType == ElementType::F16 ||
