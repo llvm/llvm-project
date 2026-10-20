@@ -12,7 +12,11 @@ baseline.json; a metric that gets worse by more than --tolerance is a regression
 --update rewrites the baseline. The JSON lines on stdout can be collected over time.
 
   agx-bench.py --llc build/bin/llc --cost path/to/agx_cost [--objcopy build/bin/llvm-objcopy]
-               [--zoc ZLUDA/target/debug/zoc --ptx a.ptx b.ptx] [--update]
+               [--zoc ZLUDA/target/debug/zoc --ptx a.ptx b.ptx] [--mesa-isa] [--update]
+
+--mesa-isa compiles with the mesa-isa feature (only the instruction forms Mesa's AGX compiler emits; zoc --mesa-isa)
+and costs with agx_cost --mesa-isa, which rejects any other instruction; compared with the default baseline it shows
+what the mode costs.
 """
 
 import argparse
@@ -71,6 +75,10 @@ def launch_args(src):
     return []
 
 
+MATTR = []   # ["-mattr=+mesa-isa"] with --mesa-isa
+COST_ARGS = []  # ["--mesa-isa", CHIP] with --mesa-isa, set per chip
+
+
 def cost(costbin, code, tmp, args=()):
     """(cycles, launch inputs used). An agx_cost without launch inputs (before AGX-Performance-Simulator#7)
     rejects them; the kernel is then costed on the emulation's zero-input path."""
@@ -78,7 +86,7 @@ def cost(costbin, code, tmp, args=()):
     open(p, "wb").write(code)
     for extra in ([list(args)] if args else []) + [[]]:
         try:
-            r = run([costbin, p, "--allow-unknown"] + extra)
+            r = run([costbin, p, "--allow-unknown"] + COST_ARGS + extra)
             j = json.loads(r.stdout.strip().splitlines()[-1])
             return j.get("cycles"), bool(extra)
         except (subprocess.CalledProcessError, ValueError, IndexError):
@@ -87,15 +95,15 @@ def cost(costbin, code, tmp, args=()):
 
 
 def compile_ll(llc, src, chip, tmp):
-    asm = run([llc, "-mtriple=agx", "-mcpu=" + chip, src, "-o", "-"]).stdout
+    asm = run([llc, "-mtriple=agx", "-mcpu=" + chip, *MATTR, src, "-o", "-"]).stdout
     obj = os.path.join(tmp, "k.o")
-    run([llc, "-mtriple=agx", "-mcpu=" + chip, "-filetype=obj", src, "-o", obj])
+    run([llc, "-mtriple=agx", "-mcpu=" + chip, *MATTR, "-filetype=obj", src, "-o", obj])
     return asm, obj
 
 
 def compile_ptx(zoc, src, chip, tmp):
     d = tempfile.mkdtemp(dir=tmp)
-    run([zoc, "--target", "agx", "--arch", chip, "--output-dir", d, src])
+    run([zoc, "--target", "agx", "--arch", chip, *(["--mesa-isa"] if MATTR else []), "--output-dir", d, src])
     stem = os.path.splitext(os.path.basename(src))[0]
     return open(os.path.join(d, stem + ".asm")).read(), os.path.join(d, stem + ".o")
 
@@ -126,9 +134,13 @@ def main():
     ap.add_argument("--ll", nargs="*", default=[], help="more LLVM IR files (for example MLIR library kernels)")
     ap.add_argument("--baseline", default=os.path.join(HERE, "baseline.json"))
     ap.add_argument("--update", action="store_true")
+    ap.add_argument("--mesa-isa", action="store_true",
+                    help="only Mesa's instruction forms (llc -mattr=+mesa-isa, zoc and agx_cost --mesa-isa)")
     ap.add_argument("--tolerance", type=float, default=0.02, help="relative slack before a change counts")
     a = ap.parse_args()
     objcopy = a.objcopy or os.path.join(os.path.dirname(a.llc), "llvm-objcopy")
+    if a.mesa_isa:
+        MATTR.append("-mattr=+mesa-isa")
 
     sources = [("ll", os.path.join(HERE, "kernels", f)) for f in sorted(os.listdir(os.path.join(HERE, "kernels")))
                if f.endswith(".ll")]
@@ -142,6 +154,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         for kind, src in sources:
             for chip in CHIPS:
+                COST_ARGS[:] = ["--mesa-isa", chip] if a.mesa_isa else []
                 try:
                     asm, obj = (compile_ll(a.llc, src, chip, tmp) if kind == "ll" else compile_ptx(a.zoc, src, chip, tmp))
                 except subprocess.CalledProcessError as e:
@@ -156,7 +169,7 @@ def main():
                     results[key] = m
                     print(json.dumps(dict(key=key, **m)))
 
-    if a.update or not os.path.exists(a.baseline):
+    if (a.update or not os.path.exists(a.baseline)) and not (a.mesa_isa and a.baseline.endswith("/baseline.json")):
         json.dump(results, open(a.baseline, "w"), indent=1, sort_keys=True)
         print("baseline written: %d kernels" % len(results), file=sys.stderr)
         return 0
