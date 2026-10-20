@@ -3,4 +3,3 @@
 
 v_floor_f64 v[0:1], 1.23456
 // CHECK: :[[@LINE-1]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
-
