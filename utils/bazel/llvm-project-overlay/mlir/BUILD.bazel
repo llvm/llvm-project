@@ -13817,8 +13817,8 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefDialect.h",
-        "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
         "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
+        "include/mlir/Dialect/MemRef/IR/MemorySlotInterfacesImpl.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -14564,6 +14564,17 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "DLTIOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
+    deps = [":DLTIDialectTdFiles"],
+)
+
+gentbl_cc_library(
     name = "DLTIBaseIncGen",
     tbl_outs = {
         "include/mlir/Dialect/DLTI/DLTIDialect.h.inc": [
@@ -14598,17 +14609,6 @@ gentbl_cc_library(
         ":AttrTdFiles",
         ":DLTIDialectTdFiles",
     ],
-)
-
-gentbl_cc_library(
-    name = "DLTIOpInterfacesIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
-    deps = [":DLTIDialectTdFiles"],
 )
 
 cc_library(

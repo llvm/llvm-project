@@ -45,13 +45,6 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
   LocalAsyncInfo.ProfilerData = nullptr;
 }
 
-Error AsyncInfoWrapperTy::synchronize() {
-  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
-
-  // Synchronize with the async info's operations without releasing the queue.
-  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
-}
-
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
@@ -122,39 +115,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
         error::ErrorCode::INVALID_ARGUMENT,
         "Requested block memory size (static + dynamic) exceeds maximum");
 
-  RecordReplayTy::HandleTy RRHandle;
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
-  if (RecordReplay) {
-    // Record replay requires synchronization of any previous operation.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the kernel prologue data before kernel launch.
-    auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
-        LaunchArgs.DynCGroupMem);
-    if (!RRHandleOrErr)
-      return RRHandleOrErr.takeError();
-    RRHandle = *RRHandleOrErr;
-  }
-
   Profiler.handlePreKernelLaunch(&GenericDevice, EffectiveNumBlocks,
                                  AsyncInfoWrapper);
 
-  if (auto Err =
-          launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                     LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper))
-    return Err;
-
-  if (RecordReplay) {
-    // Record replay requires synchronization.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the epilogue data after kernel synchronization.
-    return RecordReplay->recordEpilogue(*this, RRHandle);
-  }
-  return Plugin::success();
+  return launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
+                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper);
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
@@ -1226,31 +1191,6 @@ int32_t GenericPluginTy::initialize_record_replay(
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::load_binary(int32_t DeviceId,
-                                     __tgt_device_image *TgtImage,
-                                     __tgt_device_binary *Binary,
-                                     GenericProfilerTy *ProfilerPtr) {
-  GenericDeviceTy &Device = getDevice(DeviceId);
-
-  StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
-                   utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
-  auto ImageOrErr =
-      Device.loadBinary(*this, Buffer, /*Context=*/nullptr, ProfilerPtr);
-  if (!ImageOrErr) {
-    auto Err = ImageOrErr.takeError();
-    REPORT() << "Failure to load binary image " << TgtImage << " on device "
-             << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  DeviceImageTy *Image = *ImageOrErr;
-  assert(Image != nullptr && "Invalid Image");
-
-  *Binary = __tgt_device_binary{reinterpret_cast<uint64_t>(Image)};
-
-  return OFFLOAD_SUCCESS;
-}
-
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
@@ -1358,56 +1298,6 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
-}
-
-int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
-                                    const char *Name, void **DevicePtr) {
-  assert(Binary.handle && "Invalid device binary handle");
-  DeviceImageTy &Image = *reinterpret_cast<DeviceImageTy *>(Binary.handle);
-
-  GenericDeviceTy &Device = Image.getDevice();
-
-  GlobalTy DeviceGlobal(Name, Size);
-  GenericGlobalHandlerTy &GHandler = getGlobalHandler();
-  if (auto Err =
-          GHandler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal)) {
-    consumeError(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  *DevicePtr = DeviceGlobal.getPtr();
-  assert(DevicePtr && "Invalid device global's address");
-
-  // Save the loaded globals if we are recording.
-  RecordReplayTy *RecordReplay = Device.getRecordReplay();
-  if (RecordReplay && RecordReplay->isRecording())
-    RecordReplay->addGlobal(Name, Size, *DevicePtr);
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
-                                      const char *Name, void **KernelPtr) {
-  assert(Binary.handle && "Invalid device binary handle");
-  DeviceImageTy &Image = *reinterpret_cast<DeviceImageTy *>(Binary.handle);
-
-  GenericDeviceTy &Device = Image.getDevice();
-
-  auto KernelOrErr = Device.constructKernel(Name);
-  if (Error Err = KernelOrErr.takeError()) {
-    REPORT() << "Failure to look up kernel: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  GenericKernelTy &Kernel = *KernelOrErr;
-  if (auto Err = Kernel.init(Device, Image)) {
-    REPORT() << "Failure to init kernel: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  // Note that this is not the kernel's device address.
-  *KernelPtr = &Kernel;
-  return OFFLOAD_SUCCESS;
 }
 
 /// Create OpenMP interop with the given interop context

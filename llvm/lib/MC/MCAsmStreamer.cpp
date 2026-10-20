@@ -690,7 +690,8 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
+  if (Sec)
+    MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 

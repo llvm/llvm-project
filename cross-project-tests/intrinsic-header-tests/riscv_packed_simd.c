@@ -2283,7 +2283,7 @@ uint16x4_t test_pabdu_u16x4(uint16x4_t a, uint16x4_t b) {
 
 // CHECK-LABEL: test_predsum_i8x4_i32:
 // RV32:        predsum.bs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsum.bs
 int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
   return __riscv_predsum_i8x4_i32(a, b);
@@ -2291,7 +2291,7 @@ int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
 
 // CHECK-LABEL: test_predsumu_u8x4_u32:
 // RV32:        predsumu.bs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsumu.bs
 uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
   return __riscv_predsumu_u8x4_u32(a, b);
@@ -2299,7 +2299,7 @@ uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
 
 // CHECK-LABEL: test_predsum_i16x2_i32:
 // RV32:        predsum.hs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsum.hs
 int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
   return __riscv_predsum_i16x2_i32(a, b);
@@ -2307,7 +2307,7 @@ int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
 
 // CHECK-LABEL: test_predsumu_u16x2_u32:
 // RV32:        predsumu.hs
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        predsumu.hs
 uint32_t test_predsumu_u16x2_u32(uint16x2_t a, uint32_t b) {
   return __riscv_predsumu_u16x2_u32(a, b);
@@ -3470,7 +3470,7 @@ uint32x2_t test_prev_u32x2(uint32x2_t a) { return __riscv_prev_u32x2(a); }
 
 // CHECK-LABEL: test_pabdsumu_u8x4_u32:
 // RV32:        pabdsumu.b
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pabdsumu.b
 uint32_t test_pabdsumu_u8x4_u32(uint8x4_t a, uint8x4_t b) {
   return __riscv_pabdsumu_u8x4_u32(a, b);
@@ -3478,7 +3478,7 @@ uint32_t test_pabdsumu_u8x4_u32(uint8x4_t a, uint8x4_t b) {
 
 // CHECK-LABEL: test_pabdsumau_u8x4_u32:
 // RV32:        pabdsumau.b
-// RV64:        zext.w
+// RV64:        pack{{[[:space:]]}}
 // RV64:        pabdsumau.b
 uint32_t test_pabdsumau_u8x4_u32(uint32_t rd, uint8x4_t a, uint8x4_t b) {
   return __riscv_pabdsumau_u8x4_u32(rd, a, b);
@@ -4508,6 +4508,56 @@ uint64_t test_pm4addu_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
 // RV64:        pm4addsu.h
 int64_t test_pm4addsu_i16x4(int16x4_t rs1, uint16x4_t rs2) {
   return __riscv_pm4addsu_i16x4(rs1, rs2);
+}
+
+// Packed Multiplication with Widening Horizontal Addition.
+// CHECK-LABEL: test_pm2wadd_i64:
+// RV32:        pm2wadd.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4add.h
+int64_t test_pm2wadd_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wadd_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wadd_x_i64:
+// RV32:        pm2wadd.hx
+// RV64:        pack{{[[:space:]]}}
+// RV64:        ppairoe.h
+// RV64:        pm4add.h
+int64_t test_pm2wadd_x_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wadd_x_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2waddu_u64:
+// RV32:        pm2waddu.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4addu.h
+uint64_t test_pm2waddu_u64(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2waddu_u64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wsub_i64:
+// RV32:        pm2wsub.h
+// RV64:        pm2sub.h
+// RV64:        sext.w
+int64_t test_pm2wsub_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wsub_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2wsub_x_i64:
+// RV32:        pm2wsub.hx
+// RV64:        pm2sub.hx
+// RV64:        sext.w
+int64_t test_pm2wsub_x_i64(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2wsub_x_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2waddsu_i64:
+// RV32:        pm2waddsu.h
+// RV64:        pack{{[[:space:]]}}
+// RV64:        pm4addsu.h
+int64_t test_pm2waddsu_i64(int16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2waddsu_i64(rs1, rs2);
 }
 
 // Packed Multiply Parts.
