@@ -680,6 +680,8 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1903,6 +1905,9 @@ def CIR_BrOp : CIR_Op<"br",[
     Note that for source level `goto`'s crossing scope boundaries, those are
     usually represented with the "symbolic" `cir.goto` operation.
 
+    When a loop is flattened, the optional `loop_hints` attribute is placed on
+    the branches that form the loop's back edge (see `cir.brcond`).
+
     Example:
 
     ```
@@ -1921,10 +1926,12 @@ def CIR_BrOp : CIR_Op<"br",[
     }]>
   ];
 
-  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
-    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -2236,6 +2243,10 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
     it branches to 'bb1'.
 
+    The optional `loop_hints` attribute is attached by CFG flattening to
+    branches that target a loop header (i.e. the loop's back edge), carrying
+    the `#cir.loop_hint` of the original loop op.
+
     Example:
 
     ```
@@ -2253,20 +2264,21 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
                CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
                CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
       build($_builder, $_state, cond, destOperandsTrue,
-            destOperandsFalse, destTrue, destFalse);
+            destOperandsFalse, /*loop_hints=*/nullptr, destTrue, destFalse);
     }]>
   ];
 
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
-                       Variadic<CIR_AnyType>:$destOperandsFalse);
+                       Variadic<CIR_AnyType>:$destOperandsFalse,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
     $cond
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
-    attr-dict
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 }
 
@@ -2367,11 +2379,13 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let description = [{
@@ -2447,8 +2461,11 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
+  let arguments = (ins OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
-  let assemblyFormat = " $body `while` $cond attr-dict";
+  let assemblyFormat = [{
+    $body `while` $cond (`loop_hints` $loop_hints^)? attr-dict
+  }];
 
   let extraClassDeclaration = [{
     mlir::Region &getEntry() { return getBody(); }
@@ -2522,7 +2539,8 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
                         MinSizedRegion<1>:$step,
@@ -2532,6 +2550,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `body` $body
     `step` $step
     (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)?
     attr-dict
   }];
 
@@ -2966,22 +2985,26 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // and result must all be the same floating-point scalar or vector type.
 //
 // The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation.
+// handling of the operation. The optional `fastmath_flags` attribute holds the
+// fast-math flags of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
                      Type type = CIR_AnyFloatOrVecOfFloatType>
     : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
-  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FenvAttr>:$fenv,
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? attr-dict
+    $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let constrainedLLVMIntrinsic = mnemonic;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 }
@@ -5538,10 +5561,15 @@ def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
     ```
   }];
 
-  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+  let arguments = !con(commonArgs, (ins
+    CIR_AnyFundamentalUIntType:$len,
+    OptionalAttr<I64Attr>:$dst_alignment,
+    OptionalAttr<I64Attr>:$src_alignment
+  ));
 
   let assemblyFormat = [{
-    $len `bytes` `from` $src `to` $dst attr-dict
+    $len `bytes` `from` $src (`align` `(` $src_alignment^ `)`)?
+    `to` $dst (`align` `(` $dst_alignment^ `)`)? attr-dict
     `:` qualified(type($dst)) `,` type($len)
   }];
 

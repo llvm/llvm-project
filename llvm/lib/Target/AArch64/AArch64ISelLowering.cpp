@@ -3477,8 +3477,11 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (MF->getRegInfo().use_empty(ResultReg)) {
-    // Nothing to do. Pseudo erased below.
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  if (MRI.use_nodbg_empty(ResultReg)) {
+    // There are no non-debug uses, so no state read is needed. ResultReg will
+    // have no definition, so make its debug uses undef.
+    MRI.markUsesInDebugValueAsUndef(ResultReg);
   } else if (Subtarget->hasSME()) {
     BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
         .addImm(AArch64SysReg::SVCR)
@@ -4132,6 +4135,18 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
     // of a SUB operation can be reused.
     PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
                                     {Val->getOperand(0), Val->getOperand(1)});
+    // The first comparison supports the full 12-bit CMP/CMN immediate range,
+    // while subsequent CCMP/CCMN comparisons only support a 5-bit immediate [0,
+    // 31]. Prefer a wider-immediate comparison first to avoid materializing
+    // constants.
+    if (!PreferFirst && VT.isInteger()) {
+      if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(1))) {
+        APInt CVal = C->getAPIntValue();
+        if (CVal.abs().ugt(31) &&
+            AArch64_AM::isLegalArithImmed(CVal.abs().getZExtValue()))
+          PreferFirst = true;
+      }
+    }
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -20196,6 +20211,14 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
     if (isa<ScalableVectorType>(Ty)) {
       EVT VT = getValueType(DL, Ty);
+
+      // Check if I is an extending load (that may need splitting).
+      if (I) {
+        User *U = I->getUniqueUndroppableUser();
+        if (isa_and_nonnull<ZExtInst, SExtInst>(U))
+          VT = getValueType(DL, U->getType());
+      }
+
       LLVMContext &Ctx = Ty->getContext();
       TargetLowering::LegalizeTypeAction Action = getTypeAction(Ctx, VT);
 
@@ -31268,9 +31291,9 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
-    TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
+    TruncHighOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncHighOp);
   if (TruncLowOpVT != UZP1VT)
-    TruncLowOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncLowOp);
+    TruncLowOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncLowOp);
 
   SDValue UZP1 =
       DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);

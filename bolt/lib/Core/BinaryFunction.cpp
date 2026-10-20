@@ -1441,9 +1441,11 @@ Error BinaryFunction::disassemble() {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);
           } else {
             if (TargetAddress == getAddress() + getSize() &&
-                TargetAddress < getAddress() + getMaxSize() &&
-                !(BC.isAArch64() &&
-                  BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
+                (!BC.getSectionForAddress(TargetAddress) ||
+                 (TargetAddress < getAddress() + getMaxSize() &&
+                  !(BC.isAArch64() &&
+                    BC.handleAArch64Veneer(TargetAddress,
+                                           /*MatchOnly*/ true))))) {
               // Result of __builtin_unreachable().
               errs() << "BOLT-WARNING: jump past end detected at 0x"
                      << Twine::utohexstr(AbsoluteInstrAddr) << " in function "

@@ -67,7 +67,7 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   Opt.DisableVerify = DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions;
+  PipelineTuningOptions PTOptions(&M.getContext().getLibraryOptions());
   TargetMachine *TMPointer = &TM;
   PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC, VFS);
   PB.registerModuleAnalyses(MAM);
@@ -95,8 +95,9 @@ Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
                                CodeGenFileType CGFT, bool DisableVerify,
                                bool DisableSimplifyLibCalls,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  if (valueOr(PassesOptions::Global.force_new_pm_codegen,
-              TM.shouldDefaultToNewPM())) {
+  const PassesOptions &Opts =
+      M.getContext().getLibraryOptions().get<PassesOptions>();
+  if (valueOr(Opts.force_new_pm_codegen, TM.shouldDefaultToNewPM())) {
     return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, VFS);
   }
 
