@@ -1186,9 +1186,17 @@ public:
   NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
-  /// _Nonnull one.
+  /// _Nonnull one. Suppressed when the nullability safety analysis covers the
+  /// enclosing function (see isNullabilitySafetyOptedIn), since the
+  /// flow-sensitive check reports the same conversions more precisely.
   void diagnoseNullableToNonnullConversion(QualType DstType, QualType SrcType,
                                            SourceLocation Loc);
+
+  /// Whether the nullability safety analysis covers \p D (a function, ObjC
+  /// method, or block): -fnullability-safety is on, and either
+  /// -fnullability-default is set or \p D carries an explicit nullability
+  /// annotation on its return type or a parameter.
+  bool isNullabilitySafetyOptedIn(const Decl *D) const;
 
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);

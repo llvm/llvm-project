@@ -1,0 +1,7 @@
+// RUN: rm -rf %t.json
+// RUN: clang-ssaf-format -type=tu %S/Inputs/tu-summary.json -o %t.json
+// RUN: diff %S/Inputs/tu-summary.json %t.json
+
+// RUN: not clang-ssaf-format -type=tu %S/Inputs/tu-summary-no-key.json 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CHECK-MISSING-KEY
+// CHECK-MISSING-KEY: saw an object of 2 key(s) but expected an Object with a key NonnullEvidence

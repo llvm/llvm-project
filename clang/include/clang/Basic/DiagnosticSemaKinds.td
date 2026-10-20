@@ -13129,6 +13129,59 @@ def warn_nullability_lost : Warning<
   "implicit conversion from nullable pointer %0 to non-nullable pointer "
   "type %1">,
   InGroup<NullableToNonNullConversion>, DefaultIgnore;
+def warn_nullability_safety_dereference : Warning<
+  "dereference of nullable pointer %0">,
+  InGroup<NullabilitySafetyDereference>;
+def warn_nullability_safety_null_init : Warning<
+  "initializing a variable of nonnull type %0 with null">,
+  InGroup<NullabilitySafetyAssignment>;
+def note_nullable_dereference_fix : Note<
+  "add a null check before dereferencing, or annotate as '_Nonnull' if this "
+  "pointer cannot be null">;
+def warn_nullability_safety_arithmetic : Warning<
+  "pointer arithmetic on nullable pointer %0">,
+  InGroup<NullabilitySafetyArithmetic>;
+def note_nullable_arithmetic_fix : Note<
+  "add a null check before performing arithmetic, or annotate as '_Nonnull' "
+  "if this pointer cannot be null">;
+def warn_nullability_safety_return : Warning<
+  "returning nullable pointer from function with nonnull return type">,
+  InGroup<NullabilitySafetyReturn>;
+def note_nullable_return_fix : Note<
+  "add a null check before returning, or change the return type to '_Nullable'">;
+def warn_nullability_safety_assignment : Warning<
+  "assigning nullable pointer to nonnull variable %0">,
+  InGroup<NullabilitySafetyAssignment>;
+def warn_nullability_safety_field_init : Warning<
+  "initializing nonnull member %0 with null">,
+  InGroup<NullabilitySafetyAssignment>;
+def note_nullable_field_init_fix : Note<
+  "remove '_Nonnull' if this member can be null, or remove the null initializer">;
+def warn_nullability_safety_member_assignment : Warning<
+  "assigning nullable pointer to nonnull member %0">,
+  InGroup<NullabilitySafetyAssignment>;
+def note_nullable_member_assignment_fix : Note<
+  "add a null check before assigning, or remove '_Nonnull' from the member">;
+def warn_nullability_safety_member_exit : Warning<
+  "nonnull member %0 is null when the function returns">,
+  InGroup<NullabilitySafetyAssignment>;
+def note_nullable_member_exit_fix : Note<
+  "it was reset, released, or moved from on every path; assign it a value "
+  "before returning, or remove '_Nonnull' from the member">;
+def warn_nullability_safety_default_arg : Warning<
+  "nullable default argument for nonnull parameter %0">,
+  InGroup<NullabilitySafetyAssignment>;
+def note_nullable_default_arg_fix : Note<
+  "remove '_Nonnull' from the parameter, or change the default to a nonnull value">;
+def note_nullable_assignment_fix : Note<
+  "add a null check before assigning, or change the variable type to "
+  "'_Nullable'">;
+def warn_nullability_safety_argument : Warning<
+  "passing nullable pointer to nonnull parameter %select{%1|%2}0">,
+  InGroup<NullabilitySafetyArgument>;
+def note_nullable_argument_fix : Note<
+  "add a null check before the call, or change the parameter type to "
+  "'_Nullable'">;
 def warn_zero_as_null_pointer_constant : Warning<
   "zero as null pointer constant">,
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;

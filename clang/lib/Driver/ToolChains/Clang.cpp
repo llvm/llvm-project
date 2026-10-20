@@ -8080,6 +8080,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fapple_pragma_pack,
                     options::OPT_fno_apple_pragma_pack);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fnullability_safety,
+                    options::OPT_fno_nullability_safety);
+  // The built-in list of libc functions with nullable returns is on by
+  // default, so only the -fno- form needs to be forwarded to cc1.
+  Args.addOptOutFlag(CmdArgs, options::OPT_fnullability_libc_nullable_returns,
+                     options::OPT_fno_nullability_libc_nullable_returns);
+  if (Arg *A = Args.getLastArg(options::OPT_fnullability_default_EQ))
+    A->render(Args, CmdArgs);
+
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
   if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
     renderRemarksOptions(Args, CmdArgs, Triple, Input, Output, JA);

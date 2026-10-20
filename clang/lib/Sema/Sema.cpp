@@ -24,6 +24,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/Analyses/NullabilitySafety.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -710,7 +711,37 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
+  // The flow-sensitive analysis subsumes this type-based warning: it respects
+  // null checks, tracks reset/move/reassignment, and handles
+  // -fnullability-default=nullable. Warning here as well would only add false
+  // positives, e.g. on `if (p) return p;` where p is declared _Nullable but is
+  // known to be nonnull.
+  //
+  // The flow analysis only covers functions that opted in, though (see
+  // isNullabilitySafetyOptedIn). Suppress only in that case; otherwise nothing
+  // else would report the conversion.
+  if (getLangOpts().NullabilitySafety) {
+    // The enclosing decl may be a block or an ObjC method, where
+    // getCurFunctionDecl returns null. Use the innermost of block, method, and
+    // function so an annotated block or method doesn't get both warnings.
+    const Decl *EnclosingDecl = nullptr;
+    if (sema::BlockScopeInfo *BSI = getCurBlock())
+      EnclosingDecl = BSI->TheDecl;
+    else if (ObjCMethodDecl *MD = getCurMethodDecl())
+      EnclosingDecl = MD;
+    else
+      EnclosingDecl = getCurFunctionDecl(/*AllowLambda=*/true);
+    if (isNullabilitySafetyOptedIn(EnclosingDecl))
+      return;
+  }
+
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
+}
+
+bool Sema::isNullabilitySafetyOptedIn(const Decl *D) const {
+  return getLangOpts().NullabilitySafety &&
+         clang::isNullabilitySafetyOptedIn(
+             D, NullabilitySafetyOptions::fromLangOptions(getLangOpts()));
 }
 
 // Generate diagnostics when adding or removing effects in a type conversion.

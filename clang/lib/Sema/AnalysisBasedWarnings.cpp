@@ -33,6 +33,7 @@
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/NullabilitySafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -51,8 +52,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -3044,8 +3047,167 @@ static bool shouldSuggestUnsafeBufferUsageSuggestions(const Sema &S) {
                                              .ShowSafeBufferUsageSuggestions;
 }
 
+namespace {
+class NullabilitySafetyReporter : public NullabilitySafetyHandler {
+  Sema &S;
+  // Buffered so finishFunction() can sort by source location. The analysis
+  // reports in CFG block order, not source order (as in ThreadSafetyReporter).
+  DiagList Warnings;
+  // Dedupe key: (diag ID, location, distinguishing argument). The analysis
+  // can report the same location more than once per function; for example,
+  // `p - p` reports p once for each operand.
+  llvm::DenseSet<std::tuple<unsigned, SourceLocation, const void *>>
+      SeenDiags;
+
+  /// Returns true the first time this (ID, Loc, Arg) triple is seen since
+  /// the last finishFunction().
+  bool isFirst(unsigned DiagID, SourceLocation Loc,
+               const void *Arg = nullptr) {
+    return SeenDiags.insert({DiagID, Loc, Arg}).second;
+  }
+
+public:
+  explicit NullabilitySafetyReporter(Sema &S) : S(S) {}
+
+  /// Emit the function's buffered diagnostics in source-location order, then
+  /// reset the buffers.
+  void finishFunction(const Decl *) override {
+    Warnings.sort(SortDiagBySourceLocation(S.getSourceManager()));
+    for (const auto &Diag : Warnings) {
+      S.Diag(Diag.first.first, Diag.first.second);
+      for (const auto &Note : Diag.second)
+        S.Diag(Note.first, Note.second);
+    }
+    Warnings.clear();
+    // Dedupe only within a function, so each template instantiation still
+    // gets its own warning.
+    SeenDiags.clear();
+  }
+
+  QualType withoutUnspecifiedTag(QualType T) const {
+    Qualifiers Quals = T.getLocalQualifiers();
+    QualType U = T.getLocalUnqualifiedType();
+    bool Changed = false;
+    QualType Stripped = U;
+    if (AttributedType::stripOuterNullability(Stripped) ==
+        NullabilityKind::Unspecified) {
+      U = Stripped;
+      Changed = true;
+    }
+    if (const auto *PT = U->getAs<PointerType>()) {
+      QualType Pointee = withoutUnspecifiedTag(PT->getPointeeType());
+      if (Pointee != PT->getPointeeType()) {
+        U = S.Context.getPointerType(Pointee);
+        Changed = true;
+      }
+    }
+    return Changed ? S.Context.getQualifiedType(U, Quals) : T;
+  }
+
+  void handleNullableDereference(const Expr *DerefExpr,
+                                 QualType PtrType) override {
+    PtrType = withoutUnspecifiedTag(PtrType);
+    SourceLocation Loc = DerefExpr->getExprLoc();
+    if (!isFirst(diag::warn_nullability_safety_dereference, Loc,
+                 PtrType.getAsOpaquePtr()))
+      return;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_nullability_safety_dereference) << PtrType);
+    PartialDiagnosticAt Note(Loc,
+                             S.PDiag(diag::note_nullable_dereference_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableArithmetic(const Expr *ArithExpr, QualType PtrType,
+                                const VarDecl *VD) override {
+    PtrType = withoutUnspecifiedTag(PtrType);
+    SourceLocation Loc = ArithExpr->getExprLoc();
+    // Keyed on the variable, not the type: `a - b` faults both operands at one
+    // location, and they usually share a type.
+    if (!isFirst(diag::warn_nullability_safety_arithmetic, Loc, VD))
+      return;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_nullability_safety_arithmetic) << PtrType);
+    PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_nullable_arithmetic_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableReturn(const Expr *ReturnExpr) override {
+    SourceLocation Loc = ReturnExpr->getExprLoc();
+    if (!isFirst(diag::warn_nullability_safety_return, Loc))
+      return;
+    PartialDiagnosticAt Warning(Loc,
+                                S.PDiag(diag::warn_nullability_safety_return));
+    PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_nullable_return_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableAssignment(const Expr *AssignExpr,
+                                const VarDecl *LHSVar) override {
+    SourceLocation Loc = AssignExpr->getExprLoc();
+    if (!isFirst(diag::warn_nullability_safety_assignment, Loc, LHSVar))
+      return;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_nullability_safety_assignment) << LHSVar);
+    PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_nullable_assignment_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableMemberAssignment(const Expr *AssignExpr,
+                                      const FieldDecl *Member) override {
+    SourceLocation Loc = AssignExpr->getExprLoc();
+    if (!isFirst(diag::warn_nullability_safety_member_assignment, Loc, Member))
+      return;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_nullability_safety_member_assignment)
+                 << Member);
+    PartialDiagnosticAt Note(
+        Loc, S.PDiag(diag::note_nullable_member_assignment_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableMemberAtExit(SourceLocation Loc,
+                                  const FieldDecl *Member) override {
+    if (!isFirst(diag::warn_nullability_safety_member_exit, Loc, Member))
+      return;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_nullability_safety_member_exit) << Member);
+    PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_nullable_member_exit_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+
+  void handleNullableArgument(const Expr *ArgExpr,
+                              const ParmVarDecl *Param) override {
+    SourceLocation Loc = ArgExpr->getExprLoc();
+    if (!isFirst(diag::warn_nullability_safety_argument, Loc, Param))
+      return;
+    PartialDiagnosticAt Warning(Loc,
+                                S.PDiag(diag::warn_nullability_safety_argument)
+                                    << Param->getDeclName().isEmpty() << Param
+                                    << Param->getFunctionScopeIndex() + 1);
+    PartialDiagnosticAt Note(Loc, S.PDiag(diag::note_nullable_argument_fix));
+    Warnings.emplace_back(std::move(Warning), OptionalNotes(1, Note));
+  }
+};
+
+/// Run flow-sensitive nullability analysis over the entire TU, callees before
+/// callers (see runNullabilitySafetyOnTU).
+static void NullabilitySafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU) {
+  llvm::TimeTraceScope TimeProfile("NullabilitySafetyTUAnalysis");
+  NullabilitySafetyReporter Reporter(S);
+  bool SkipSystemHeaders = S.getDiagnostics().getSuppressSystemWarnings();
+  runNullabilitySafetyOnTU(
+      TU, Reporter, NullabilitySafetyOptions::fromLangOptions(S.getLangOpts()),
+      [&](const Decl *Def) {
+        return !SkipSystemHeaders ||
+               !S.SourceMgr.isInSystemHeader(Def->getLocation());
+      });
+}
+
+} // anonymous namespace
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
-     TranslationUnitDecl *TU) {
+    TranslationUnitDecl *TU) {
   if (!TU)
     return; // This is unexpected, give up quietly.
 
@@ -3086,6 +3248,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   if (lifetimes::IsLifetimeSafetyEnabled(S, TU))
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
+
+  // Run whenever -fnullability-safety is on, without first checking whether
+  // the warnings are enabled: diagnostic state at an invalid SourceLocation
+  // reflects only the command line and would miss warnings re-enabled by a
+  // pragma. Each diagnostic is still filtered at its own location.
+  if (S.getLangOpts().NullabilitySafety)
+    NullabilitySafetyTUAnalysis(S, TU);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarningsForImplicitFunction(
@@ -3175,17 +3344,17 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // appropriately.  This is essentially a layering violation.
   if (P.enableCheckUnreachable || P.enableThreadSafetyAnalysis ||
       P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
-    // Unreachable code analysis and thread safety require a linearized CFG.
+    // These analyses require a linearized CFG with all statements visible.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
   } else {
     AC.getCFGBuildOptions()
-      .setAlwaysAdd(Stmt::BinaryOperatorClass)
-      .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
-      .setAlwaysAdd(Stmt::BlockExprClass)
-      .setAlwaysAdd(Stmt::CStyleCastExprClass)
-      .setAlwaysAdd(Stmt::DeclRefExprClass)
-      .setAlwaysAdd(Stmt::ImplicitCastExprClass)
-      .setAlwaysAdd(Stmt::UnaryOperatorClass);
+        .setAlwaysAdd(Stmt::BinaryOperatorClass)
+        .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
+        .setAlwaysAdd(Stmt::BlockExprClass)
+        .setAlwaysAdd(Stmt::CStyleCastExprClass)
+        .setAlwaysAdd(Stmt::DeclRefExprClass)
+        .setAlwaysAdd(Stmt::ImplicitCastExprClass)
+        .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
   if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;
@@ -3242,6 +3411,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                                           &S.ThreadSafetyDeclCache);
     Reporter.emitDiagnostics();
   }
+
+  // Nullability safety runs separately as a TU-level analysis in call-graph
+  // order (see NullabilitySafetyTUAnalysis), so inferring a nonnull return
+  // from a callee's body works regardless of source order.
 
   // Check for violations of consumed properties.
   if (P.enableConsumedAnalysis) {

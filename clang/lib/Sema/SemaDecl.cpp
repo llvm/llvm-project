@@ -3553,6 +3553,53 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
   return Old == New;
 }
 
+static bool isNullableKind(NullabilityKind K) {
+  return K == NullabilityKind::Nullable || K == NullabilityKind::NullableResult;
+}
+
+static void checkReturnNullabilityRedecl(FunctionDecl *New,
+                                         const FunctionDecl *Old, Sema &S) {
+  auto OldN = Old->getReturnType()->getNullability();
+  auto NewN = New->getReturnType()->getNullability();
+  if (!OldN || !NewN || *OldN == *NewN)
+    return;
+  SourceLocation Loc = New->getReturnTypeSourceRange().getBegin();
+  S.Diag(Loc.isValid() ? Loc : New->getLocation(),
+         diag::warn_mismatched_nullability_attr)
+      << DiagNullabilityKind(*NewN, false) << DiagNullabilityKind(*OldN, false);
+  S.Diag(Old->getLocation(), diag::note_previous_declaration);
+}
+
+static void checkOverridingNullability(const CXXMethodDecl *New,
+                                       const CXXMethodDecl *Old, Sema &S) {
+  auto OldRet = Old->getReturnType()->getNullability();
+  auto NewRet = New->getReturnType()->getNullability();
+  if (OldRet && NewRet && *OldRet == NullabilityKind::NonNull &&
+      isNullableKind(*NewRet)) {
+    S.Diag(New->getLocation(),
+           diag::warn_conflicting_nullability_attr_overriding_ret_types)
+        << DiagNullabilityKind(*NewRet, false)
+        << DiagNullabilityKind(*OldRet, false);
+    S.Diag(Old->getLocation(), diag::note_overridden_virtual_function);
+  }
+  if (New->getNumParams() != Old->getNumParams())
+    return;
+  for (unsigned I = 0, E = New->getNumParams(); I != E; ++I) {
+    const ParmVarDecl *NewP = New->getParamDecl(I);
+    const ParmVarDecl *OldP = Old->getParamDecl(I);
+    auto OldN = OldP->getType()->getNullability();
+    auto NewN = NewP->getType()->getNullability();
+    if (OldN && NewN && isNullableKind(*OldN) &&
+        *NewN == NullabilityKind::NonNull) {
+      S.Diag(NewP->getLocation(),
+             diag::warn_conflicting_nullability_attr_overriding_param_types)
+          << DiagNullabilityKind(*NewN, false)
+          << DiagNullabilityKind(*OldN, false);
+      S.Diag(OldP->getLocation(), diag::note_overridden_virtual_function);
+    }
+  }
+}
+
 static void mergeParamDeclTypes(ParmVarDecl *NewParam,
                                 const ParmVarDecl *OldParam,
                                 Sema &S) {
@@ -4556,6 +4603,7 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
         mergeParamDeclAttributes(NewParam, OldParam, *this);
         mergeParamDeclTypes(NewParam, OldParam, *this);
       }
+  checkReturnNullabilityRedecl(New, Old, *this);
 
   if (getLangOpts().CPlusPlus)
     return MergeCXXFunctionDecl(New, Old, S);
@@ -9375,6 +9423,7 @@ bool Sema::AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD) {
       if (Overridden.insert(BaseMD).second) {
         MD->addOverriddenMethod(BaseMD);
         CheckOverridingFunctionReturnType(MD, BaseMD);
+        checkOverridingNullability(MD, BaseMD, *this);
         CheckOverridingFunctionAttributes(MD, BaseMD);
         CheckOverridingFunctionExceptionSpec(MD, BaseMD);
         CheckIfOverriddenFunctionIsMarkedFinal(MD, BaseMD);
@@ -14355,6 +14404,26 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
 
     Init = Result.getAs<Expr>();
+
+    // Skip discarded `if constexpr` branches, which are parsed in a
+    // discarded-statement evaluation context: a null initializer there never
+    // runs. The flow analysis doesn't see these branches because they aren't
+    // in the CFG, but this type-based check has to test for them explicitly.
+    if (VDecl && Init && getLangOpts().NullabilitySafety &&
+        !ExprEvalContexts.empty() &&
+        !ExprEvalContexts.back().isDiscardedStatementContext()) {
+      QualType VDeclType = VDecl->getType();
+      if (auto Nullability = VDeclType->getNullability()) {
+        if (*Nullability == NullabilityKind::NonNull) {
+          if (Init->isNullPointerConstant(Context,
+                                          Expr::NPC_ValueDependentIsNotNull)) {
+            Diag(Init->getBeginLoc(), diag::warn_nullability_safety_null_init)
+                << VDeclType << Init->getSourceRange();
+          }
+        }
+      }
+    }
+
     IsParenListInit = !InitSeq.steps().empty() &&
                       InitSeq.step_begin()->Kind ==
                           InitializationSequence::SK_ParenthesizedListInit;

@@ -534,6 +534,14 @@ def CXX26Compat : DiagGroup<"c++2c-compat", [DeleteIncomplete]>;
 
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
+def NullabilitySafetyDereference : DiagGroup<"nullability-safety-dereference">;
+def NullabilitySafetyArithmetic : DiagGroup<"nullability-safety-arithmetic">;
+def NullabilitySafetyReturn : DiagGroup<"nullability-safety-return">;
+def NullabilitySafetyAssignment : DiagGroup<"nullability-safety-assignment">;
+def NullabilitySafetyArgument : DiagGroup<"nullability-safety-argument">;
+def NullabilitySafety : DiagGroup<"nullability-safety", [
+  NullabilitySafetyDereference, NullabilitySafetyArithmetic, NullabilitySafetyReturn,
+  NullabilitySafetyAssignment, NullabilitySafetyArgument]>;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
 def GlobalConstructors : DiagGroup<"global-constructors"> {
  code Documentation = [{
