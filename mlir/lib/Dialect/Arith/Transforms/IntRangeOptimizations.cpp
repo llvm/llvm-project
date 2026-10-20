@@ -359,7 +359,7 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
                     ArrayRef<unsigned> target)
       : OpTraitRewritePattern(context), solver(s), targetBitwidths(target) {}
 
-  using OpTraitRewritePattern::OpTraitRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() == 0)
