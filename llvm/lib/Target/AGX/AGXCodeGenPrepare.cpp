@@ -40,6 +40,8 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -225,7 +227,88 @@ static bool isCheapDivision(const BinaryOperator &BO) {
   return BO.getType()->isIntegerTy(32);
 }
 
+/// A 32-bit division or remainder without a loop over the quotient bits, as
+/// AMDGPU expands them (AMDGPUCodeGenPrepare::expandDivRem32): an estimate of
+/// 2^32 / y from the f32 reciprocal (within one ulp, Sail AGX model), one
+/// Newton-Raphson step in integers, then corrections; the last one loops, so
+/// a less accurate reciprocal only costs iterations. The estimate never
+/// exceeds the quotient. Division by zero gives all ones (remainder: x), as on
+/// NVIDIA GPUs.
+static Value *expandDivRem32(BinaryOperator &BO) {
+  IRBuilder<> B(&BO);
+  Instruction::BinaryOps Op = BO.getOpcode();
+  bool IsSigned = Op == Instruction::SDiv || Op == Instruction::SRem;
+  bool IsRem = Op == Instruction::URem || Op == Instruction::SRem;
+  Type *I32 = B.getInt32Ty();
+  Value *X = BO.getOperand(0), *Y = BO.getOperand(1);
+  Value *XNeg = nullptr, *Neg = nullptr;
+  if (IsSigned) {
+    XNeg = B.CreateICmpSLT(X, B.getInt32(0));
+    Value *YNeg = B.CreateICmpSLT(Y, B.getInt32(0));
+    Neg = IsRem ? XNeg : B.CreateXor(XNeg, YNeg);
+    X = B.CreateSelect(XNeg, B.CreateNeg(X), X);
+    Y = B.CreateSelect(YNeg, B.CreateNeg(Y), Y);
+  }
+  Value *FY = B.CreateUIToFP(Y, B.getFloatTy());
+  Value *Rcp = B.CreateUnaryIntrinsic(Intrinsic::agx_rcp, FY);
+  Value *Scaled = B.CreateFMul(Rcp, ConstantFP::get(B.getFloatTy(), 4294966784.0));
+  Value *Z = B.CreateFPToUI(Scaled, I32);
+  auto MulHi = [&](Value *A, Value *C) {
+    Value *P = B.CreateMul(B.CreateZExt(A, B.getInt64Ty()), B.CreateZExt(C, B.getInt64Ty()));
+    return B.CreateTrunc(B.CreateLShr(P, 32), I32);
+  };
+  Z = B.CreateAdd(Z, MulHi(Z, B.CreateMul(B.CreateNeg(Y), Z)));
+  Value *Q = MulHi(X, Z);
+  Value *R = B.CreateSub(X, B.CreateMul(Q, Y));
+  Value *C = B.CreateICmpUGE(R, Y);
+  Q = B.CreateSelect(C, B.CreateAdd(Q, B.getInt32(1)), Q);
+  R = B.CreateSelect(C, B.CreateSub(R, Y), R);
+
+  // The remaining correction, normally none or one step.
+  BasicBlock *Pre = B.GetInsertBlock();
+  BasicBlock *Done = SplitBlock(Pre, &BO);
+  BasicBlock *Fix = BasicBlock::Create(BO.getContext(), "divrem.fix",
+                                       Pre->getParent(), Done);
+  Pre->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(Pre);
+  // A zero divisor (result chosen below) would never leave the loop.
+  Value *Enter = B.CreateAnd(B.CreateICmpUGE(R, Y),
+                             B.CreateICmpNE(Y, B.getInt32(0)));
+  B.CreateCondBr(Enter, Fix, Done);
+  B.SetInsertPoint(Fix);
+  PHINode *QF = B.CreatePHI(I32, 2), *RF = B.CreatePHI(I32, 2);
+  QF->addIncoming(Q, Pre);
+  RF->addIncoming(R, Pre);
+  Value *QN = B.CreateAdd(QF, B.getInt32(1)), *RN = B.CreateSub(RF, Y);
+  QF->addIncoming(QN, Fix);
+  RF->addIncoming(RN, Fix);
+  B.CreateCondBr(B.CreateICmpUGE(RN, Y), Fix, Done);
+  B.SetInsertPoint(Done, Done->begin());
+  PHINode *QD = B.CreatePHI(I32, 2), *RD = B.CreatePHI(I32, 2);
+  QD->addIncoming(Q, Pre);
+  QD->addIncoming(QN, Fix);
+  RD->addIncoming(R, Pre);
+  RD->addIncoming(RN, Fix);
+  B.SetInsertPoint(&BO);
+  Value *Res = IsRem ? static_cast<Value *>(RD) : QD;
+  if (IsSigned)
+    Res = B.CreateSelect(Neg, B.CreateNeg(Res), Res);
+  Value *Zero = B.CreateICmpEQ(BO.getOperand(1), B.getInt32(0));
+  return B.CreateSelect(Zero, IsRem ? BO.getOperand(0) : B.getInt32(-1), Res);
+}
+
 bool AGXCodeGenPrepare::expandDivisions(Function &F) {
+  // 64-bit divisions whose operands fit in 32 bits (checked at run time, or
+  // known) take the 32-bit expansion. Division and remainder of the same
+  // operands share one.
+  bool Bypassed = false;
+  SmallVector<BasicBlock *, 16> Blocks;
+  for (BasicBlock &BB : F)
+    Blocks.push_back(&BB);
+  DenseMap<unsigned, unsigned> BypassWidth = {{64, 32}};
+  for (BasicBlock *BB : Blocks)
+    Bypassed |= bypassSlowDivision(BB, BypassWidth);
+
   SmallVector<BinaryOperator *, 8> Worklist;
   for (Instruction &I : instructions(F)) {
     auto *BO = dyn_cast<BinaryOperator>(&I);
@@ -249,12 +332,19 @@ bool AGXCodeGenPrepare::expandDivisions(Function &F) {
     bool IsRem = BO->getOpcode() == Instruction::URem ||
                  BO->getOpcode() == Instruction::SRem;
     bool Is64 = BO->getType()->getIntegerBitWidth() > 32;
+    if (BO->getType()->isIntegerTy(32)) {
+      Value *R = expandDivRem32(*BO);
+      R->takeName(BO);
+      BO->replaceAllUsesWith(R);
+      BO->eraseFromParent();
+      continue;
+    }
     if (IsRem)
       Is64 ? expandRemainderUpTo64Bits(BO) : expandRemainderUpTo32Bits(BO);
     else
       Is64 ? expandDivisionUpTo64Bits(BO) : expandDivisionUpTo32Bits(BO);
   }
-  return !Worklist.empty();
+  return Bypassed || !Worklist.empty();
 }
 
 bool AGXCodeGenPrepare::expandMemIntrinsics(Function &F,
