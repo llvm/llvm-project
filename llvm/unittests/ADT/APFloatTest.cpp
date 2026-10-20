@@ -11246,19 +11246,19 @@ static void initFloat16E6M9(FloatRepr &R, const APInt &api);
 static APInt bitcastFloat16E6M9(const FloatRepr &R);
 
 static const fltSemantics semFloat16E6M9 = {
-  31,   // maxExponent (bias = 31)
-  -30,  // minExponent (1 - bias = 1 - 31 = -30)
-  10,   // precision (9 mantissa + 1 implicit integer bit)
-  16,   // sizeInBits
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,  // hasZero
-  true,  // hasSignedRepr
-  true,  // hasSignBitInMSB
-  true,  // hasDenormals
-  false, // hasExplicitIntegerBit
-  initFloat16E6M9,
-  bitcastFloat16E6M9,
+    31,  // maxExponent (bias = 31)
+    -30, // minExponent (1 - bias = 1 - 31 = -30)
+    10,  // precision (9 mantissa + 1 implicit integer bit)
+    16,  // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,  // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    true,  // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat16E6M9,
+    bitcastFloat16E6M9,
 };
 
 static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
@@ -11267,8 +11267,8 @@ static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
 
   // Extract fields
   unsigned sign = (bits >> 15) & 1;
-  unsigned biasedExp = (bits >> 9) & 0x3F;  // 6 bits
-  uint64_t mantissa = bits & 0x1FF;         // 9 bits
+  unsigned biasedExp = (bits >> 9) & 0x3F; // 6 bits
+  uint64_t mantissa = bits & 0x1FF;        // 9 bits
 
   // Initialize the representation with our semantics
   R.initialize(Sem);
@@ -11287,7 +11287,7 @@ static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
       R.setSignificand(APInt(Sem.precision, 0));
     } else {
       R.setCategory(APFloat::fcNaN);
-      R.setExponent(Sem.maxExponent + 1);  // exponentNaN
+      R.setExponent(Sem.maxExponent + 1); // exponentNaN
       // Set significand with the integer bit
       R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
     }
@@ -11299,7 +11299,7 @@ static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
   } else {
     // Normal
     R.setCategory(APFloat::fcNormal);
-    R.setExponent(biasedExp - 31);  // unbias
+    R.setExponent(biasedExp - 31); // unbias
     // Set significand with the integer bit (bit 9)
     R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
   }
@@ -11311,7 +11311,8 @@ static APInt bitcastFloat16E6M9(const FloatRepr &R) {
   EXPECT_EQ(&R.getSemantics(), &Sem);
 
   // Get sign
-  if (R.isNegative()) bits |= (1 << 15);
+  if (R.isNegative())
+    bits |= (1 << 15);
 
   APFloat::fltCategory cat = R.getCategory();
 
@@ -11330,7 +11331,8 @@ static APInt bitcastFloat16E6M9(const FloatRepr &R) {
     // NaN: exp=all 1s, mantissa!=0
     bits |= (0x3F << 9);
     uint64_t sig = R.getSignificand().getZExtValue() & 0x1FF;
-    if (sig == 0) sig = 1;  // Ensure at least one bit set
+    if (sig == 0)
+      sig = 1; // Ensure at least one bit set
     bits |= sig;
     return APInt(16, bits);
   }
@@ -11344,9 +11346,9 @@ static APInt bitcastFloat16E6M9(const FloatRepr &R) {
     bits |= (sig & 0x1FF);
   } else {
     // Normal
-    int biasedExp = exp + 31;  // add bias
+    int biasedExp = exp + 31; // add bias
     bits |= ((biasedExp & 0x3F) << 9);
-    bits |= (sig & 0x1FF);  // mask off integer bit
+    bits |= (sig & 0x1FF); // mask off integer bit
   }
 
   return APInt(16, bits);
@@ -11388,14 +11390,16 @@ TEST(APFloatTest, UserDefinedSemanticsConversion) {
   EXPECT_FALSE(One.isNegative());
   bool losesInfo;
   APFloat OneCopy(One);
-  OneCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
+  OneCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
   EXPECT_NEAR(OneCopy.convertToDouble(), 1.0, 1e-6);
 
   APFloat Two(Sem, APInt(16, 0x4000));
   EXPECT_TRUE(Two.isFiniteNonZero());
 
   APFloat TwoCopy(Two);
-  TwoCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
+  TwoCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
   EXPECT_NEAR(TwoCopy.convertToDouble(), 2.0, 1e-6);
 }
 
@@ -11404,13 +11408,13 @@ TEST(APFloatTest, UserDefinedSemanticsBitcastRoundtrip) {
 
   // Test various bit patterns for roundtrip
   uint16_t testPatterns[] = {
-      0x0000,  // +0
-      0x8000,  // -0
-      0x3E00,  // 1.0
-      0xBE00,  // -1.0
-      0x4000,  // 2.0
-      0x7E00,  // +inf
-      0xFE00,  // -inf
+      0x0000, // +0
+      0x8000, // -0
+      0x3E00, // 1.0
+      0xBE00, // -1.0
+      0x4000, // 2.0
+      0x7E00, // +inf
+      0xFE00, // -inf
   };
 
   for (uint16_t pattern : testPatterns) {

@@ -710,8 +710,7 @@ private:
   integerPart *significandParts();
   const integerPart *significandParts() const;
   LLVM_ABI unsigned int partCount() const;
-  template<const fltSemantics& S>
-  static unsigned int partCountForSemantic();
+  template <const fltSemantics &S> static unsigned int partCountForSemantic();
 
   /// @}
 
@@ -782,13 +781,13 @@ private:
 
   static IEEEFloat &fromRepr(const FloatRepr &R);
 
-  template<const fltSemantics& S>
-  friend APInt bitcastForSemantics(const FloatRepr& R);
+  template <const fltSemantics &S>
+  friend APInt bitcastForSemantics(const FloatRepr &R);
 
   template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
 
-  template<const fltSemantics& S>
-  friend void initFromAPIntForSemantics(FloatRepr&, const APInt&);
+  template <const fltSemantics &S>
+  friend void initFromAPIntForSemantics(FloatRepr &, const APInt &);
 
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
