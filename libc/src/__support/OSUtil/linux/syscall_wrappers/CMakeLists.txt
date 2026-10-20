@@ -51,6 +51,18 @@ add_header_library(
 )
 
 add_header_library(
+  sched_get_priority_max
+  HDRS
+    sched_get_priority_max.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_get_priority_min
   HDRS
     sched_get_priority_min.h
