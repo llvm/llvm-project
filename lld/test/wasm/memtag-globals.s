@@ -9,34 +9,34 @@
 # The payload is: ULEB version (1), ULEB count, then (ULEB address,
 # ULEB size) pairs sorted by address. Untagged symbols are not listed.
 
-        .memtag tagged16
-        .globl  tagged16
-        .section .data.tagged16,"",@
+        .memtag tagged16b
+        .globl  tagged16b
+        .section .data.tagged16b,"",@
         .p2align 4
-tagged16:
+tagged16b:
         .int32  42
-        .size tagged16, 16
+        .size tagged16b, 16
 
-        .memtag local16
-        .section .data.local16,"",@
+        .memtag local16b
+        .section .data.local16b,"",@
         .p2align 4
-local16:
+local16b:
         .int32  1
         .int32  2
         .int32  3
         .int32  4
-        .size local16, 16
+        .size local16b, 16
 
-        .memtag tagged32
-        .globl  tagged32
-        .section .data.tagged32,"",@
+        .memtag tagged32b
+        .globl  tagged32b
+        .section .data.tagged32b,"",@
         .p2align 4
-tagged32:
+tagged32b:
         .int64  1
         .int64  2
         .int64  3
         .int64  4
-        .size tagged32, 32
+        .size tagged32b, 32
 
         .globl  plain
         .section .data.plain,"",@
