@@ -1825,6 +1825,12 @@ public:
     if (!isa<IntegerType>(inputTy.getElementType()))
       return rewriter.notifyMatchFailure(op, "only support integer type");
 
+    // The generic body computes in i32 and saturates to the output type.
+    auto outputElemTy = dyn_cast<IntegerType>(outputTy.getElementType());
+    if (!outputElemTy || outputElemTy.getWidth() > 32)
+      return rewriter.notifyMatchFailure(
+          op, "only support integer output types up to 32 bits");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {

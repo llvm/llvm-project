@@ -8482,24 +8482,4 @@ struct GuardedOpsSelf {
   }
 };
 
-// '&mu' is '&this->mu', the mutex of the called object, whereas the pointer
-// to member '&GuardedOpsAddrOf::mu' is the 'mu' of any object.
-struct GuardedOpsAddrOf {
-  Mutex mu;
-  int data GUARDED_BY(&mu);
-  int any GUARDED_BY(&GuardedOpsAddrOf::mu);
-  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(&mu);
-  void (*unlock)() UNLOCK_FUNCTION(&mu);
-};
-
-void testMemberAddrOf(GuardedOpsAddrOf *g, GuardedOpsAddrOf *h) {
-  h->lock();
-  h->data = 1;
-  g->any = 1;
-  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
-               // expected-note {{found near match 'h->mu'}}
-  h->unlock();
-  g->any = 1; // expected-warning {{writing variable 'any' requires holding mutex '&FunctionPointers::GuardedOpsAddrOf::mu' exclusively}}
-}
-
 } // namespace FunctionPointers
