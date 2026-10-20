@@ -78,12 +78,14 @@ define float @float_load_expand_addr1(ptr addrspace(1) %ptr) {
 define <1 x float> @float_vector1_load_expand_elementwise(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define <1 x float> @float_vector1_load_expand_elementwise(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = load atomic volatile elementwise <1 x float>, ptr addrspace(1) [[PTR]] syncscope("singlethread") acquire, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic volatile i32, ptr addrspace(1) [[PTR]] syncscope("singlethread") acquire, align 8
+; CHECK-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP1]] to <1 x float>
 ; CHECK-NEXT:    ret <1 x float> [[RES]]
 ;
 ; CX16-LABEL: define <1 x float> @float_vector1_load_expand_elementwise(
 ; CX16-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CX16-NEXT:    [[RES:%.*]] = load atomic volatile elementwise <1 x float>, ptr addrspace(1) [[PTR]] syncscope("singlethread") acquire, align 8
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic volatile i32, ptr addrspace(1) [[PTR]] syncscope("singlethread") acquire, align 8
+; CX16-NEXT:    [[RES:%.*]] = bitcast i32 [[TMP1]] to <1 x float>
 ; CX16-NEXT:    ret <1 x float> [[RES]]
 ;
   %res = load atomic volatile elementwise <1 x float>, ptr addrspace(1) %ptr syncscope("singlethread") acquire, align 8
