@@ -17,6 +17,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -205,8 +206,10 @@ bool UnrolledInstAnalyzer::isInvariantComputation(Instruction *I) {
     return true;
   if (auto It = InvariantInsts.find(I); It != InvariantInsts.end())
     return It->second;
-  if (isa<PHINode>(I) || isa<AllocaInst>(I) || I->isTerminator() ||
-      I->mayReadOrWriteMemory() || I->mayHaveSideEffects()) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (isa<PHINode, AllocaInst>(I) || I->isTerminator() ||
+      (II && II->isAssumeLikeIntrinsic()) || I->mayReadOrWriteMemory() ||
+      I->mayHaveSideEffects()) {
     InvariantInsts[I] = false;
     return false;
   }
