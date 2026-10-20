@@ -1,33 +1,37 @@
 {
  "histogram.ll:histogram:agx-g13g": {
   "bytes": 124,
-  "cycles": 210.1,
+  "cycles": 248.3,
   "gprs": 7,
   "instructions": 22,
+  "launch_inputs": true,
   "uniform_halves": 16,
   "waits": 1
  },
  "histogram.ll:histogram:agx-g14c": {
   "bytes": 124,
-  "cycles": 210.1,
+  "cycles": 248.3,
   "gprs": 7,
   "instructions": 22,
+  "launch_inputs": true,
   "uniform_halves": 16,
   "waits": 1
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
   "bytes": 698,
-  "cycles": 109.0,
+  "cycles": 5840.7,
   "gprs": 39,
   "instructions": 105,
+  "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
   "bytes": 698,
-  "cycles": 109.0,
+  "cycles": 5840.7,
   "gprs": 39,
   "instructions": 105,
+  "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
  },
@@ -36,6 +40,7 @@
   "cycles": 1548.5,
   "gprs": 6,
   "instructions": 40,
+  "launch_inputs": false,
   "uniform_halves": 14,
   "waits": 3
  },
@@ -44,22 +49,25 @@
   "cycles": 1449.7,
   "gprs": 6,
   "instructions": 30,
+  "launch_inputs": false,
   "uniform_halves": 14,
   "waits": 2
  },
  "saxpy.ll:saxpy:agx-g13g": {
   "bytes": 62,
-  "cycles": 41.2,
+  "cycles": 116.5,
   "gprs": 4,
   "instructions": 11,
+  "launch_inputs": true,
   "uniform_halves": 18,
   "waits": 1
  },
  "saxpy.ll:saxpy:agx-g14c": {
   "bytes": 62,
-  "cycles": 41.2,
+  "cycles": 116.5,
   "gprs": 4,
   "instructions": 11,
+  "launch_inputs": true,
   "uniform_halves": 18,
   "waits": 1
  },
@@ -68,6 +76,7 @@
   "cycles": 125.7,
   "gprs": 4,
   "instructions": 7,
+  "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
  },
@@ -76,6 +85,7 @@
   "cycles": 125.7,
   "gprs": 4,
   "instructions": 7,
+  "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
  },
@@ -84,6 +94,7 @@
   "cycles": 180.8,
   "gprs": 7,
   "instructions": 20,
+  "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
  },
@@ -92,22 +103,25 @@
   "cycles": 180.8,
   "gprs": 7,
   "instructions": 20,
+  "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
  },
  "stencil.ll:stencil:agx-g13g": {
   "bytes": 190,
-  "cycles": 128.1,
+  "cycles": 139.9,
   "gprs": 8,
   "instructions": 28,
+  "launch_inputs": true,
   "uniform_halves": 16,
   "waits": 1
  },
  "stencil.ll:stencil:agx-g14c": {
   "bytes": 190,
-  "cycles": 128.1,
+  "cycles": 139.9,
   "gprs": 8,
   "instructions": 28,
+  "launch_inputs": true,
   "uniform_halves": 16,
   "waits": 1
  },
@@ -116,6 +130,7 @@
   "cycles": 193.4,
   "gprs": 8,
   "instructions": 23,
+  "launch_inputs": false,
   "uniform_halves": 16,
   "waits": 1
  },
@@ -124,6 +139,7 @@
   "cycles": 193.4,
   "gprs": 8,
   "instructions": 23,
+  "launch_inputs": false,
   "uniform_halves": 16,
   "waits": 1
  }

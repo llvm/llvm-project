@@ -1,4 +1,5 @@
 ; 1-D 5-point stencil with clamped edges.
+; agx-cost: --uniform 4=1024 --wg 256
 declare i32 @llvm.agx.thread.position.in.grid.x()
 define agx_kernel void @stencil(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
   %i = call i32 @llvm.agx.thread.position.in.grid.x()

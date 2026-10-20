@@ -32,6 +32,9 @@ The kernels in `kernels/` cover the common shapes of CUDA code:
 current `main` before comparing over time. The baseline was recorded with simulator `main` f50bd88; that commit's
 33-cycle hold on taken forward jumps adds 32 cycles to `saxpy`, `stencil` and `histogram`.
 
-`agx_cost` runs with every uniform register zero. A kernel guarded by `tid < n`, with `n` a uniform, therefore
-skips its body: its cycles are those of the guard alone (`saxpy`, `stencil`, `histogram`). Code bytes, registers
-and waits still cover the body.
+A kernel file may name launch inputs in a `; agx-cost: ARGS` line (for example `--uniform 5=1024 --wg 256`):
+agx_cost then traces that launch, so bounds checks and loops on kernel arguments take their real path
+(`saxpy`, `stencil`, `histogram`: `n = 1024`; `matrixmul`: `wA = wB = 64`, four K tiles). This needs an agx_cost
+with launch inputs (AGX-Performance-Simulator#7). An older one rejects them and the kernel is costed with every
+uniform zero, which skips a guarded body; each result records `launch_inputs`, and cycles are only compared
+between runs of the same kind. The baseline was recorded with launch inputs.

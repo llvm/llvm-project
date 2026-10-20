@@ -60,15 +60,30 @@ def text_without_padding(obj, objcopy, tmp):
     return data
 
 
-def cost(costbin, code, tmp):
+def launch_args(src):
+    """The `; agx-cost: ARGS` line of a kernel file: launch inputs (uniforms, workgroup size) agx_cost
+    traces the kernel with, so that loops and bounds checks on kernel arguments take their real path."""
+    if not src.endswith(".ll"):
+        return []
+    for line in open(src):
+        if line.startswith("; agx-cost:"):
+            return line.split(":", 1)[1].split()
+    return []
+
+
+def cost(costbin, code, tmp, args=()):
+    """(cycles, launch inputs used). An agx_cost without launch inputs (before AGX-Performance-Simulator#7)
+    rejects them; the kernel is then costed on the emulation's zero-input path."""
     p = os.path.join(tmp, "k.bin")
     open(p, "wb").write(code)
-    try:
-        r = run([costbin, p, "--allow-unknown"])
-        j = json.loads(r.stdout.strip().splitlines()[-1])
-        return j.get("cycles")
-    except (subprocess.CalledProcessError, ValueError, IndexError):
-        return None
+    for extra in ([list(args)] if args else []) + [[]]:
+        try:
+            r = run([costbin, p, "--allow-unknown"] + extra)
+            j = json.loads(r.stdout.strip().splitlines()[-1])
+            return j.get("cycles"), bool(extra)
+        except (subprocess.CalledProcessError, ValueError, IndexError):
+            continue
+    return None, False
 
 
 def compile_ll(llc, src, chip, tmp):
@@ -136,7 +151,7 @@ def main():
                     m = kernel_metrics(asm, name)
                     code = single_kernel_code(asm, obj, name, objcopy, tmp)
                     m["bytes"] = len(code)
-                    m["cycles"] = cost(a.cost, code, tmp)
+                    m["cycles"], m["launch_inputs"] = cost(a.cost, code, tmp, launch_args(src))
                     key = "%s:%s:%s" % (os.path.basename(src), name, chip)
                     results[key] = m
                     print(json.dumps(dict(key=key, **m)))
@@ -152,6 +167,9 @@ def main():
         if not b:
             continue
         for k in METRICS:
+            # cycles from different paths (with and without launch inputs) do not compare
+            if k == "cycles" and b.get("launch_inputs", False) != m.get("launch_inputs", False):
+                continue
             x, y = b.get(k), m.get(k)
             if x is None or y is None:
                 continue

@@ -1,4 +1,5 @@
 ; y[i] = a * x[i] + y[i]
+; agx-cost: --uniform 5=1024 --wg 256
 declare i32 @llvm.agx.thread.position.in.grid.x()
 define agx_kernel void @saxpy(ptr addrspace(1) %x, ptr addrspace(1) %y, float %a, i32 %n) {
   %i = call i32 @llvm.agx.thread.position.in.grid.x()

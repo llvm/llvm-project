@@ -1,4 +1,5 @@
 ; 256-bin histogram of bytes: threadgroup atomics, then one device atomic per bin.
+; agx-cost: --uniform 4=1024 --wg 256
 @bins = internal addrspace(3) global [256 x i32] undef
 declare i32 @llvm.agx.thread.position.in.grid.x()
 declare i32 @llvm.agx.thread.position.in.threadgroup.x()
