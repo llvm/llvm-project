@@ -171,6 +171,17 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
   return mlir::success();
 }
 
+/// A void member has no layout, so a record holding one has none either.
+static mlir::LogicalResult
+verifyRecordMemberTypes(function_ref<mlir::InFlightDiagnostic()> emitError,
+                        llvm::ArrayRef<mlir::Type> members) {
+  for (auto [idx, memberTy] : llvm::enumerate(members))
+    if (mlir::isa<cir::VoidType>(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " cannot be void";
+  return mlir::success();
+}
+
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
 static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
@@ -349,6 +360,8 @@ mlir::LogicalResult StructType::verify(
     bool packed, llvm::ArrayRef<RecordMemberKind> member_kinds, bool is_class) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
   return verifyRecordMemberKinds(emitError, members.size(), member_kinds);
 }
 
@@ -524,6 +537,10 @@ UnionType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
   // padding slot.
   if (llvm::is_contained(member_kinds, RecordMemberKind::Pad))
     return emitError() << "a union member cannot be marked pad";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
+  if (mlir::isa_and_nonnull<cir::VoidType>(padding))
+    return emitError() << "union padding cannot be void";
   // Every variant starts at offset zero, so a bit-field variant is an access
   // unit of its own.  There is no run for a zero-width bit-field to end, so a
   // variant always has storage.

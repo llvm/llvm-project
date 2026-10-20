@@ -281,6 +281,10 @@ class CIR_PtrToAnyOf<list<Type> types, string summary = "">
 def CIR_AnyVoidType : CIR_TypeBase<"::cir::VoidType", "void type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
 
+// Void has no layout, so neither does an array of it.
+def CIR_ArrayElementType
+    : Type<Neg<CIR_AnyVoidType.predicate>, "any type except void">;
+
 // Void pointer type constraints
 def CIR_VoidPtrType : CIR_PtrTo<CIR_AnyVoidType, "void type">;
 
