@@ -1864,19 +1864,13 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
         // pair has the lower address to store the registers in the correct
         // order.
         auto GetZPRTupleLowestReg =
-            [&](unsigned NumRegs, unsigned Opcode) -> std::optional<Register> {
+            [&](unsigned NumRegs) -> std::optional<Register> {
           // Check Reg1 is the last register in a tuple.
           if (RGI.Reg1 % NumRegs != NumRegs - 1)
             return std::nullopt;
 
           // Check there's enough registers for the tuple.
           if (i + RegInc * (NumRegs - 1) >= Count)
-            return std::nullopt;
-
-          const int Offset =
-              (ScalableByteOffset + StackFillDir * NumRegs * Scale);
-          // Note: ST1B has the same offset constraints.
-          if (!isValidMemOpOffset(TII, Opcode, Offset))
             return std::nullopt;
 
           for (unsigned Idx = 1; Idx < NumRegs; ++Idx) {
@@ -1889,10 +1883,20 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
           return RGI.Reg1 - NumRegs + 1;
         };
 
-        if (auto LowReg = GetZPRTupleLowestReg(4, AArch64::LD1B_4Z_IMM))
-          RGI.Reg2 = *LowReg;
-        else if (auto LowReg = GetZPRTupleLowestReg(2, AArch64::LD1B_2Z_IMM))
-          RGI.Reg2 = *LowReg;
+        for (unsigned TupleSize : {4, 2}) {
+          if (auto LowReg = GetZPRTupleLowestReg(TupleSize)) {
+            unsigned Opcode =
+                TupleSize == 4 ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM;
+            const int Offset =
+                (ScalableByteOffset + StackFillDir * TupleSize * Scale);
+            // Note: ST1B has the same offset constraints.
+            if (!isValidMemOpOffset(TII, Opcode, Offset))
+              continue;
+
+            RGI.Reg2 = *LowReg;
+            break;
+          }
+        }
 
         break;
       }
@@ -1970,7 +1974,7 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
     if (NeedGapToAlignStack && !IsWindows && !RGI.isScalable() &&
-        RGI.Type != RegGroupInfo::FPR128 && !RGI.isGrouped() &&
+        RGI.Type != RegGroupInfo::FPR128 && !RGI.isPaired() &&
         ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
       assert(MFI.getObjectAlign(RGI.FrameIdx) <= Align(16));
