@@ -19,7 +19,8 @@
 /// even for one in-loop reader, so the loop body does not hit the counter. A
 /// copy inside a loop that modifies exec stays in that loop. The VGPR latches
 /// each lane as it drops out, so a use after the loop keeps the SGPR and reads
-/// the reconverged scalar.
+/// the reconverged scalar. A subregister use is copied at that width, so two
+/// lanes of one SGPR tuple stay independent.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,7 +65,7 @@ class SIMaterializeWMMAScale {
   bool loopModifiesExec(const MachineLoop &L);
   bool crossesUnsafeDivergentLoop(const MachineBasicBlock *DefBB,
                                   const MachineBasicBlock *UseBB);
-  bool materialize(Register Reg, ArrayRef<ScaleUse> Uses);
+  bool materialize(Register Reg, unsigned SubReg, ArrayRef<ScaleUse> Uses);
 
 public:
   SIMaterializeWMMAScale() = default;
@@ -138,7 +139,7 @@ bool SIMaterializeWMMAScale::crossesUnsafeDivergentLoop(
   return false;
 }
 
-bool SIMaterializeWMMAScale::materialize(Register Reg,
+bool SIMaterializeWMMAScale::materialize(Register Reg, unsigned SubReg,
                                          ArrayRef<ScaleUse> Uses) {
   MachineInstr *Def = MRI->getVRegDef(Reg);
   if (!Def || Def->isTerminator())
@@ -167,8 +168,13 @@ bool SIMaterializeWMMAScale::materialize(Register Reg,
   if (Readers.size() <= VaSsrcDepth && !DefOutsideReaderLoop)
     return false;
 
-  const TargetRegisterClass *VRC = TRI->getAlignedLo256VGPRClassForBitWidth(
-      TRI->getRegSizeInBits(*MRI->getRegClass(Reg)).getFixedValue());
+  // Size the VGPR from the subregister, not the surrounding tuple. Copying
+  // the whole SGPR would move lanes this use does not read.
+  unsigned BitWidth =
+      SubReg ? TRI->getSubRegIdxSize(SubReg)
+             : TRI->getRegSizeInBits(*MRI->getRegClass(Reg)).getFixedValue();
+  const TargetRegisterClass *VRC =
+      TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth);
   if (!VRC)
     return false;
 
@@ -177,15 +183,16 @@ bool SIMaterializeWMMAScale::materialize(Register Reg,
   MachineBasicBlock::iterator InsertPt =
       Def->isPHI() ? MBB.getFirstNonPHI() : std::next(Def->getIterator());
   BuildMI(MBB, InsertPt, Def->getDebugLoc(), TII->get(TargetOpcode::COPY), VReg)
-      .addReg(Reg);
+      .addUse(Reg, {}, SubReg);
 
   for (const ScaleUse &Use : Rewritable) {
     MachineOperand &MO = Use.MI->getOperand(Use.OpNo);
     MO.setReg(VReg);
+    MO.setSubReg(0);
     MO.setIsKill(false);
   }
 
-  LLVM_DEBUG(dbgs() << "Materialized WMMA scale " << printReg(Reg, TRI)
+  LLVM_DEBUG(dbgs() << "Materialized WMMA scale " << printReg(Reg, TRI, SubReg)
                     << " -> " << printReg(VReg, TRI) << '\n');
   ++NumWMMAScalesMaterialized;
   return true;
@@ -203,8 +210,9 @@ bool SIMaterializeWMMAScale::run(MachineFunction &MF,
   MLI = &Loops;
   ExecLoopCache.clear();
 
-  // Insertion order keeps copy placement deterministic.
-  MapVector<Register, SmallVector<ScaleUse, 4>> ScaleUses;
+  // Insertion order keeps copy placement deterministic. Subregister lanes of
+  // one tuple are separate scales.
+  MapVector<std::pair<Register, unsigned>, SmallVector<ScaleUse, 4>> ScaleUses;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!SIInstrInfo::isWMMA(MI) ||
@@ -217,18 +225,19 @@ bool SIMaterializeWMMAScale::run(MachineFunction &MF,
         if (Idx < 0)
           continue;
         MachineOperand &MO = MI.getOperand(Idx);
-        if (!MO.isReg() || !MO.getReg().isVirtual() || MO.getSubReg())
+        if (!MO.isReg() || !MO.getReg().isVirtual())
           continue;
         if (!TRI->isSGPRReg(*MRI, MO.getReg()))
           continue;
-        ScaleUses[MO.getReg()].push_back({&MI, static_cast<unsigned>(Idx)});
+        ScaleUses[{MO.getReg(), MO.getSubReg()}].push_back(
+            {&MI, static_cast<unsigned>(Idx)});
       }
     }
   }
 
   bool Changed = false;
-  for (const auto &[Reg, Uses] : ScaleUses)
-    Changed |= materialize(Reg, Uses);
+  for (const auto &[Key, Uses] : ScaleUses)
+    Changed |= materialize(Key.first, Key.second, Uses);
   return Changed;
 }
 

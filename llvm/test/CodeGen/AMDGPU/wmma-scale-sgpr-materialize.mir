@@ -4,7 +4,8 @@
 # Two WMMA instructions reading the same SGPR scale must share one VGPR copy.
 # Both scale operands of a single WMMA count as one va_ssrc issue, so that
 # case stays on the SGPR. A scale defined outside a loop is copied there.
-# V_WMMA_SCALE16_* scale operands are 64 bits.
+# V_WMMA_SCALE16_* scale operands are 64 bits. A subregister use is copied at
+# that lane's width; the other lane of the tuple stays an SGPR.
 
 ---
 name: two_wmma_shared_sgpr_scale
@@ -343,5 +344,65 @@ body: |
     %4:vreg_64_lo256_align2 = IMPLICIT_DEF
     %5:vreg_256_align2 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %3, %0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %6:vreg_256_align2 = V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %5, %0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: two_wmma_shared_sgpr_subreg
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: two_wmma_shared_sgpr_subreg
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32_lo256 = COPY [[COPY]].sub0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+    ; CHECK-NEXT: early-clobber %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[COPY1]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, %5, [[COPY1]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    %3:vreg_256_align2 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %3, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %5, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: wmma_scale_subreg_lanes_independent
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: wmma_scale_subreg_lanes_independent
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32_lo256 = COPY [[COPY]].sub0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+    ; CHECK-NEXT: early-clobber %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[COPY1]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, %5, [[COPY1]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: early-clobber %7:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, %6, [[COPY]].sub1, [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    %3:vreg_256_align2 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %3, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %5, %0.sub0, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %7:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %1, %2, 0, %6, %0.sub1, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
