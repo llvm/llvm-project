@@ -101,11 +101,9 @@ walk_stack_to_main (SBThread thread)
 
 // Function names are spelled differently on each platform, for example
 // "foo()" on Linux and "int foo(void)" on Windows, so check the breakpoint.
-bool
-stopped_at_breakpoint (SBThread thread, SBBreakpoint breakpoint)
-{
-    return thread.GetStopReason() == eStopReasonBreakpoint &&
-           thread.GetStopReasonDataAtIndex(0) == (uint64_t) breakpoint.GetID();
+bool stopped_at_breakpoint(SBThread thread, SBBreakpoint breakpoint) {
+  return thread.GetStopReason() == eStopReasonBreakpoint &&
+         thread.GetStopReasonDataAtIndex(0) == (uint64_t)breakpoint.GetID();
 }
 
 void *do_one_debugger (void *in)
@@ -128,7 +126,8 @@ void *do_one_debugger (void *in)
     {
         debugger.SetAsync (true);
         // Like dotest, give lldb-server time to answer on a loaded host.
-        debugger.HandleCommand ("settings set plugin.process.gdb-remote.packet-timeout 600");
+        debugger.HandleCommand(
+            "settings set plugin.process.gdb-remote.packet-timeout 600");
         SBTarget target = debugger.CreateTargetWithFileAndArch(inferior_process_name,
                                                                STR(LLDB_HOST_ARCH));
         SBCommandInterpreter command_interp = debugger.GetCommandInterpreter();
@@ -149,11 +148,11 @@ void *do_one_debugger (void *in)
             SBLaunchInfo launch_info (NULL);
             SBError error;
             SBProcess process = target.Launch (launch_info, error);
-            if (error.Fail())
-            {
-                printf ("#%" PRIu64 ": process failed to launch: %s\n", threadnum, error.GetCString());
-                completed_threads_array[threadnum] = true;
-                return (void*) 1;
+            if (error.Fail()) {
+              printf("#%" PRIu64 ": process failed to launch: %s\n", threadnum,
+                     error.GetCString());
+              completed_threads_array[threadnum] = true;
+              return (void *)1;
             }
             if (process.IsValid())
             {
@@ -168,18 +167,20 @@ void *do_one_debugger (void *in)
 
                 wait_for_stop_event (process, listener);
 
-                if (!walk_stack_to_main (process.GetSelectedThread()))
-                {
-                    printf ("#%" PRIu64 ": backtrace while @ foo() failed\n", threadnum);
-                    completed_threads_array[threadnum] = true;
-                    return (void *) 1;
+                if (!walk_stack_to_main(process.GetSelectedThread())) {
+                  printf("#%" PRIu64 ": backtrace while @ foo() failed\n",
+                         threadnum);
+                  completed_threads_array[threadnum] = true;
+                  return (void *)1;
                 }
 
-                if (!stopped_at_breakpoint (process.GetSelectedThread(), foo_br))
-                {
-                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo()\n", threadnum);
-                    completed_threads_array[threadnum] = true;
-                    return (void*) 1;
+                if (!stopped_at_breakpoint(process.GetSelectedThread(),
+                                           foo_br)) {
+                  printf("#%" PRIu64
+                         ": First breakpoint did not stop at foo()\n",
+                         threadnum);
+                  completed_threads_array[threadnum] = true;
+                  return (void *)1;
                 }
 
                 process.Continue();
@@ -193,19 +194,20 @@ void *do_one_debugger (void *in)
                     return (void *) 1;
                 }
 
-
-                if (!walk_stack_to_main (process.GetSelectedThread()))
-                {
-                    printf ("#%" PRIu64 ": backtrace while @ bar() failed\n", threadnum);
-                    completed_threads_array[threadnum] = true;
-                    return (void *) 1;
+                if (!walk_stack_to_main(process.GetSelectedThread())) {
+                  printf("#%" PRIu64 ": backtrace while @ bar() failed\n",
+                         threadnum);
+                  completed_threads_array[threadnum] = true;
+                  return (void *)1;
                 }
 
-                if (!stopped_at_breakpoint (process.GetSelectedThread(), bar_br))
-                {
-                    printf ("#%" PRIu64 ": Second breakpoint did not stop at bar()\n", threadnum);
-                    completed_threads_array[threadnum] = true;
-                    return (void*) 1;
+                if (!stopped_at_breakpoint(process.GetSelectedThread(),
+                                           bar_br)) {
+                  printf("#%" PRIu64
+                         ": Second breakpoint did not stop at bar()\n",
+                         threadnum);
+                  completed_threads_array[threadnum] = true;
+                  return (void *)1;
                 }
 
                 process.Kill();
@@ -304,10 +306,10 @@ int main (int argc, char **argv)
             printf ("%d threads completed successfully out of %d\n", successful_threads, NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
 #endif
             SBDebugger::Terminate();
-            if (successful_threads != NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS)
-            {
-                printf ("only %d threads completed successfully, out of %d\n", successful_threads, NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
-                exit(1);
+            if (successful_threads != NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS) {
+              printf("only %d threads completed successfully, out of %d\n",
+                     successful_threads, NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
+              exit(1);
             }
             exit(0);
         }
