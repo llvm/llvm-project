@@ -1221,6 +1221,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::SatULongFract:
     Encoding = llvm::dwarf::DW_ATE_unsigned_fixed;
     break;
+  case BuiltinType::MetaInfo:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
 
   BTName = BT->getName(CGM.getLangOpts());
@@ -2112,6 +2114,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
 
     llvm::DIFile *VUnit = getOrCreateFile(Loc);
 
+    FieldIndexCache[*Field] = elements.size();
     elements.push_back(createFieldType(
         GetLambdaCaptureName(Capture), Field->getType(), Loc,
         Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
@@ -2232,6 +2235,7 @@ void CGDebugInfo::CollectRecordNormalField(
                         OffsetInBits, Align, tunit, RecordTy, RD, Annotations);
   }
 
+  FieldIndexCache[field] = elements.size();
   elements.push_back(FieldType);
 }
 
@@ -3091,11 +3095,21 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   EltTys.push_back(VPtrMember);
 }
 
-llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
-                                                 SourceLocation Loc) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  llvm::DIType *T = getOrCreateType(RTy, getOrCreateFile(Loc));
-  return T;
+std::pair<llvm::DIType *, unsigned>
+CGDebugInfo::getOrCreatePreserveAccessInfo(QualType Ty,
+                                           const FieldDecl *Field) {
+  const RecordDecl *RD = Field->getParent();
+  // Preserve-access intrinsics need complete layouts, including base classes.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    CXXRD->forallBases([this](const CXXRecordDecl *Base) {
+      completeClass(Base);
+      return true;
+    });
+  completeClass(RD);
+  llvm::DIType *T = getOrCreateStandaloneType(Ty, RD->getLocation());
+  auto I = FieldIndexCache.find(Field);
+  assert(I != FieldIndexCache.end() && "Missing field debug information");
+  return {T, I->second};
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateInterfaceType(QualType D,
@@ -5275,9 +5289,19 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
-    EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
-                     Func);
+  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined()) {
+    // If this is a CXX method, use getFunctionDeclaration which checks the
+    // SPCache first otherwise calls CreateCXXMemberFunction. This ensures that
+    // debug info generated for a declaration here is consistent with that
+    // generated for methods via other means.
+    if (isa<CXXMethodDecl>(CalleeDecl->getCanonicalDecl())) {
+      if (auto *SP = getFunctionDeclaration(CalleeDecl))
+        Func->setSubprogram(SP);
+    } else {
+      EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
+                       Func);
+    }
+  }
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {

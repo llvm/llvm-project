@@ -624,15 +624,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_BaseToDerived: {
     if (!this->delegate(SubExpr))
       return false;
-    unsigned DerivedOffset =
-        collectBaseOffset(SubExpr->getType(), E->getType());
 
-    const Type *TargetType = E->getType().getTypePtr();
-    if (TargetType->isPointerOrReferenceType())
-      TargetType = TargetType->getPointeeType().getTypePtr();
-    return this->emitGetPtrDerivedPop(DerivedOffset,
-                                      /*NullOK=*/E->getType()->isPointerType(),
-                                      TargetType, E);
+    auto unwrapPointerType = [](const Type *T) -> const Type * {
+      if (T->isPointerOrReferenceType())
+        return T->getPointeeType().getTypePtr();
+      return T;
+    };
+
+    bool NullOK = false;
+    const Type *FinalType = E->getType().getTypePtr();
+    if (FinalType->isPointerOrReferenceType()) {
+      NullOK = true;
+      FinalType = FinalType->getPointeeType().getTypePtr();
+    }
+
+    for (const CXXBaseSpecifier *B :
+         llvm::drop_begin(llvm::reverse(E->path()))) {
+      const Type *TargetType = unwrapPointerType(B->getType().getTypePtr());
+      if (!this->emitGetPtrDerivedPop(NullOK, TargetType, FinalType, E))
+        return false;
+    }
+
+    return this->emitGetPtrDerivedPop(NullOK, FinalType, FinalType, E);
   }
 
   case CK_FloatingCast: {
@@ -2773,17 +2786,25 @@ bool Compiler<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
   if (!E->hasAPValueResult())
     return this->delegate(E->getSubExpr());
 
+  // Emitting an APValue never has side effects.
+  if (DiscardResult)
+    return true;
+
   if (OptPrimType T = classify(E)) {
     // Try to emit the APValue directly, without visiting the subexpr.
     // This will only fail if we can't emit the APValue, so won't emit any
     // diagnostics or any double values.
-    if (DiscardResult)
-      return true;
     return this->visitAPValue(E->getAPValueResult(), *T, E);
   }
 
-  // Fall back to the subexpr for non-primitive APValues.
-  return this->delegate(E->getSubExpr());
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+  return this->visitAPValueInitializer(E->getAPValueResult(), E, E->getType());
 }
 
 template <class Emitter>
@@ -2792,11 +2813,8 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
   return this->visit(*It);
 }
 
-static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
+static CharUnits alignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
-  bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
-
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -2806,6 +2824,8 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
 
+  bool AlignOfReturnsPreferred =
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
@@ -2888,7 +2908,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     if (E->isArgumentType()) {
       QualType ArgType = E->getTypeOfArgument();
 
-      Size = AlignOfType(ArgType, ASTCtx, Kind);
+      Size = alignOfType(ArgType, ASTCtx, Kind);
     } else {
       // Argument is an expression, not a type.
       const Expr *Arg = E->getArgumentExpr()->IgnoreParens();
@@ -2904,12 +2924,12 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       // default to 1 in those cases.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
         Size = ASTCtx.getDeclAlign(DRE->getDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else if (const auto *ME = dyn_cast<MemberExpr>(Arg))
         Size = ASTCtx.getDeclAlign(ME->getMemberDecl(),
-                                   /*RefAsPointee*/ true);
+                                   /*ForAlignOf=*/true);
       else
-        Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
+        Size = alignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
     if (DiscardResult)
@@ -4245,8 +4265,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
     const CXXInheritedCtorInitExpr *E) {
   const CXXConstructorDecl *Ctor = E->getConstructor();
-  assert(!Ctor->isTrivial() &&
-         "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
+
+  if (Ctor->isTrivial())
+    return true;
+
   const Function *F = this->getFunction(Ctor);
   if (!F)
     return false;
@@ -4630,6 +4652,26 @@ bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
   if (E->isExpressibleAsConstantInitializer())
     return this->emitDummyPtr(E, E);
   return this->emitError(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
+  }
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
 }
 
 template <class Emitter>
@@ -5166,6 +5208,8 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(QT);
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
+  case PT_Reflect:
+    return this->emitReflectValue(ReflectionKind::Null, nullptr, E);
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -5395,6 +5439,7 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, SourceInfo Info) {
   case PT_IntAP:
   case PT_IntAPS:
   case PT_FixedPoint:
+  case PT_Reflect:
     llvm_unreachable("Invalid integral type");
     break;
   }
@@ -5968,57 +6013,97 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
-
-    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
-      return this->visit(BaseExpr);
-    if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    QualType EntryType;
+    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
+      if (!this->visit(BaseExpr))
+        return false;
+      EntryType = BaseExpr->getType();
+    } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
+      EntryType = VD->getType();
+    } else if (Base.is<TypeInfoLValue>()) {
+      // The type_info object for the type the lvalue describes.
+      const Type *OperandType = Base.get<TypeInfoLValue>()
+                                    .getType()
+                                    ->getCanonicalTypeUnqualified()
+                                    .getTypePtr();
+      EntryType = Base.getTypeInfoType();
+      if (!this->emitGetTypeid(OperandType, EntryType.getTypePtr(), Info))
+        return false;
+    } else if (!Base) {
+      // An integer cast to a pointer.
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      QualType PtrType = E->isGLValue()
+                             ? Ctx.getASTContext().getPointerType(E->getType())
+                             : E->getType();
+      uint64_t Offset = Val.getLValueOffset().getQuantity();
+      if (!this->emitConstUint64(Offset, Info))
+        return false;
+      if (!this->emitGetIntPtrUint64(PtrType.getTypePtr(), Info))
+        return false;
+      EntryType = PtrType->getPointeeType();
+    } else {
+      return false;
+    }
 
-      QualType EntryType = VD->getType();
-      if (Val.hasLValuePath()) {
-        ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
-        for (auto &Entry : Path) {
-          if (EntryType->isArrayType()) {
-            uint64_t Index = Entry.getAsArrayIndex();
-            QualType ElemType =
-                EntryType->getAsArrayTypeUnsafe()->getElementType();
-            if (!this->emitConst(Index, PT_Uint64, Info))
+    if (Val.hasLValuePath()) {
+      for (auto &Entry : Val.getLValuePath()) {
+        if (EntryType->isArrayType()) {
+          uint64_t Index = Entry.getAsArrayIndex();
+          QualType ElemType =
+              EntryType->getAsArrayTypeUnsafe()->getElementType();
+          if (!this->emitConst(Index, PT_Uint64, Info))
+            return false;
+          if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
+            return false;
+          EntryType = ElemType;
+        } else {
+          assert(EntryType->isRecordType());
+          const Record *EntryRecord = getRecord(EntryType);
+          if (!EntryRecord)
+            return false;
+
+          const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
+          if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+            unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
+            if (!this->emitGetPtrFieldPop(EntryOffset, Info))
               return false;
-            if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
-              return false;
-            EntryType = ElemType;
+            EntryType = FD->getType();
           } else {
-            assert(EntryType->isRecordType());
-            const Record *EntryRecord = getRecord(EntryType);
-            if (!EntryRecord)
-              return false;
-
-            const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
-            if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
-              unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
-              if (!this->emitGetPtrFieldPop(EntryOffset, Info))
+            const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
+            if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
+              if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
                 return false;
-              EntryType = FD->getType();
             } else {
-              const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
-              if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
-                if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
-                  return false;
-              } else {
-                // Must be a virtual base.
-                assert(EntryRecord->findVirtualBase(Base));
-                if (!this->emitGetPtrVirtBasePop(Base, Info))
-                  return false;
-              }
-              EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
+              // Must be a virtual base.
+              assert(EntryRecord->findVirtualBase(Base));
+              if (!this->emitGetPtrVirtBasePop(Base, Info))
+                return false;
             }
+            EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
           }
         }
       }
-
-      return true;
     }
+
+    if (isPtrType(ValType))
+      return true;
+
+    // A pointer cast to an integer is stored as an lvalue; cast it the same
+    // way the source expression does.
+    if (ValType == PT_IntAP || ValType == PT_IntAPS) {
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      uint32_t BitWidth = Ctx.getBitWidth(E->getType());
+      return ValType == PT_IntAP
+                 ? this->emitCastPointerIntegralAP(BitWidth, Info)
+                 : this->emitCastPointerIntegralAPS(BitWidth, Info);
+    }
+    return this->emitCastPointerIntegral(ValType, Info);
   }
 
   return false;
@@ -6156,8 +6241,47 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     }
     return true;
   }
-  // TODO: Other types.
+  if (Val.isComplexFloat()) {
+    assert(T->isComplexType());
+    if (!this->emitFloat(Val.getComplexFloatReal(), Info))
+      return false;
+    if (!this->emitInitElemFloat(0, Info))
+      return false;
+    if (!this->emitFloat(Val.getComplexFloatImag(), Info))
+      return false;
+    if (!this->emitInitElemFloat(1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isComplexInt()) {
+    assert(T->isComplexIntegerType());
+    PrimType IntT = classifyPrim(T->castAs<ComplexType>()->getElementType());
+    if (!this->emitConst(Val.getComplexIntReal(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 0, Info))
+      return false;
+    if (!this->emitConst(Val.getComplexIntImag(), IntT, Info))
+      return false;
+    if (!this->emitInitElem(IntT, 1, Info))
+      return false;
+    return true;
+  }
+  if (Val.isVector()) {
+    assert(T->isVectorType());
+    PrimType ElemT = classifyPrim(T->castAs<VectorType>()->getElementType());
+    for (unsigned I = 0, N = Val.getVectorLength(); I != N; ++I) {
+      const APValue &Elem = Val.getVectorElt(I);
+      if (Elem.isIndeterminate())
+        continue;
+      if (!this->visitAPValue(Elem, ElemT, Info))
+        return false;
+      if (!this->emitInitElem(ElemT, I, Info))
+        return false;
+    }
+    return true;
+  }
 
+  // TODO: Other types.
   return false;
 }
 

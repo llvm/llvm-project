@@ -1109,6 +1109,16 @@ TEST_F(FormatTestVerilog, Operators) {
   verifyFormat("req dist {1};");                           // dist
   verifyFormat("a inside {b, c};");                        // inside
   verifyFormat("bus.randomize() with { atype == low; };"); // with
+
+  verifyFormat("x dist {100 := 1, 200 := 2, 300 := 5};");
+  verifyFormat("x dist {[100 : 102] := 1, 200 := 2, 300 := 5};");
+  verifyFormat("x dist {[100 : 102] :/ 1, 200 :/ 2, 300 :/ 5};");
+  auto Style = getDefaultStyle();
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("x dist { 100 := 1, 200 := 2, 300 := 5 };", Style);
+  verifyFormat("x dist { [100 : 102] := 1, 200 := 2, 300 := 5 };", Style);
+  verifyFormat("x dist { [100 : 102] :/ 1, 200 :/ 2, 300 :/ 5 };", Style);
+  verifyFormat("a inside { b, c };", Style);
 }
 
 TEST_F(FormatTestVerilog, Preprocessor) {

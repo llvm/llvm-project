@@ -14,16 +14,19 @@ add_clang_library(MLIRCIRTransforms
   GotoSolver.cpp
   IdiomRecognizer.cpp
   LibOpt.cpp
+  RecordTypeConverter.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
 
+  LINK_COMPONENTS
+  ABI
+
   LINK_LIBS PUBLIC
   clangBasic
 
-  LLVMABI
   MLIRABI
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRIR
   MLIRPass

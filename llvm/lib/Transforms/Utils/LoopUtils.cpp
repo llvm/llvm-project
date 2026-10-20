@@ -1044,7 +1044,7 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   assert(Src != Dst && "Passed in same source as destination");
 
   Instruction *TI = Src->getTerminator();
-  if (!TI || TI->getNumSuccessors() == 0)
+  if (TI->getNumSuccessors() == 0)
     return BranchProbability::getZero();
 
   SmallVector<uint32_t, 4> Weights;
@@ -1434,7 +1434,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
     NewLoop->addBasicBlockToLoop(LoopBB, *LI);
   }
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Res;
 }
 
@@ -2217,11 +2217,11 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
+  SmallPtrSet<Value *, 4> CheckedStrides;
 
   for (const auto &[A, B] : ExpandedChecks) {
     // Check if two pointers (A and B) conflict where conflict is computed as:
@@ -2244,13 +2244,13 @@ Value *llvm::addRuntimeChecks(
     Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
     Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
-    if (A.StrideToCheck) {
+    if (A.StrideToCheck && CheckedStrides.insert(A.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
           A.StrideToCheck, ConstantInt::get(A.StrideToCheck->getType(), 0),
           "stride.check");
       IsConflict = ChkBuilder.CreateOr(IsConflict, IsNegativeStride);
     }
-    if (B.StrideToCheck) {
+    if (B.StrideToCheck && CheckedStrides.insert(B.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
           B.StrideToCheck, ConstantInt::get(B.StrideToCheck->getType(), 0),
           "stride.check");
@@ -2272,9 +2272,8 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                                   SCEVExpander &Expander, ElementCount VF,
                                   unsigned IC) {
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 

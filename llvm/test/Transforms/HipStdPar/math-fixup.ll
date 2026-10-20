@@ -171,7 +171,7 @@ define void @test_exp(double %dbl) {
 ; CHECK-LABEL: define void @test_exp(
 ; CHECK-SAME: double [[DBL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call double @__hipstdpar_exp_f64(double [[DBL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.exp.f64(double [[DBL]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -183,7 +183,7 @@ define void @test_exp2(double %dbl) {
 ; CHECK-LABEL: define void @test_exp2(
 ; CHECK-SAME: double [[DBL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call double @__hipstdpar_exp2_f64(double [[DBL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.exp2.f64(double [[DBL]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

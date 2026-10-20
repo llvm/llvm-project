@@ -302,4 +302,68 @@ module {
   //CHECK:     }
   //CHECK:     cir.yield
   //CHECK:   }
+
+  // A case label nested inside a sibling case's body (e.g. falling through
+  // into a compound statement, as with Duff's device) must not be folded
+  // into an unrelated later case just because that later case's *sibling*
+  // happens to be a cir.case.
+  //
+  //   switch (op) {
+  //   case 1: {
+  //   case 2:;
+  //   }
+  //     return 2;
+  //   case 3:
+  //     return 3;
+  //   }
+  cir.func @noFoldCascadeNestedInSiblingCase(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    cir.scope {
+      cir.switch (%arg0 : !s32i) {
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.scope {
+            cir.case(equal, [#cir.int<2> : !s32i]) {
+              cir.yield
+            }
+          }
+          %1 = cir.const #cir.int<2> : !s32i
+          cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+          %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+          cir.return %2 : !s32i
+        }
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          %1 = cir.const #cir.int<3> : !s32i
+          cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+          %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+          cir.return %2 : !s32i
+        }
+        cir.yield
+      }
+    }
+    %1 = cir.const #cir.int<0> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+  //CHECK: cir.func @noFoldCascadeNestedInSiblingCase
+  //CHECK:   cir.switch(%[[COND:.*]] : !s32i) {
+  //CHECK:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  //CHECK:       cir.scope {
+  //CHECK:         cir.case(equal, [#cir.int<2> : !s32i]) {
+  //CHECK:           cir.yield
+  //CHECK:         }
+  //CHECK:       }
+  //CHECK:       %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+  //CHECK:       cir.store %[[TWO]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+  //CHECK:       %[[RET2:.*]] = cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
+  //CHECK:       cir.return %[[RET2]] : !s32i
+  //CHECK:     }
+  //CHECK:     cir.case(equal, [#cir.int<3> : !s32i]) {
+  //CHECK:       %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+  //CHECK:       cir.store %[[THREE]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+  //CHECK:       %[[RET3:.*]] = cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
+  //CHECK:       cir.return %[[RET3]] : !s32i
+  //CHECK:     }
+  //CHECK:     cir.yield
+  //CHECK:   }
 }

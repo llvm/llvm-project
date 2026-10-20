@@ -3,8 +3,8 @@
 
 // one argument ANY
 func.func @_QPany1(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "s"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFany1Ea"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "_QFany1Es"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFany1Ea") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("_QFany1Es") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   %2 = hlfir.any %0#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.logical<4>
   hlfir.assign %2 to %1#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
   return
@@ -23,9 +23,9 @@ func.func @_QPany1(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_nam
 
 // ANY with dim argument by-ref
 func.func @_QPany2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "s"}, %arg2: !fir.ref<i32> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFany2Ea"} : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.box<!fir.array<?x?x!fir.logical<4>>>)
-  %1:2 = hlfir.declare %arg2 {uniq_name = "_QFany2Ed"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "_QFany2Es"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFany2Ea") : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.box<!fir.array<?x?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg2 uniq_name("_QFany2Ed") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 uniq_name("_QFany2Es") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = hlfir.any %0#0 dim %3 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, i32) -> !hlfir.expr<?x!fir.logical<4>>
   hlfir.assign %4 to %2#0 : !hlfir.expr<?x!fir.logical<4>>, !fir.box<!fir.array<?x!fir.logical<4>>>
@@ -57,7 +57,7 @@ func.func @_QPany2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
-// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
+// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) uniq_name(".tmp.intrinsic_result")
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[EXPR]]
@@ -70,10 +70,10 @@ func.func @_QPany3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
   %c2 = arith.constant 2 : index
   %c2_0 = arith.constant 2 : index
   %1 = fir.shape %c2, %c2_0 : (index, index) -> !fir.shape<2>
-  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QFany3Ea"} : (!fir.ref<!fir.array<2x2x!fir.logical<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2x!fir.logical<4>>>, !fir.ref<!fir.array<2x2x!fir.logical<4>>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QFany3Ea") : (!fir.ref<!fir.array<2x2x!fir.logical<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2x!fir.logical<4>>>, !fir.ref<!fir.array<2x2x!fir.logical<4>>>)
   %c2_1 = arith.constant 2 : index
   %3 = fir.shape %c2_1 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %arg0(%3) {uniq_name = "_QFany3Es"} : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.ref<!fir.array<2x!fir.logical<4>>>)
+  %4:2 = hlfir.declare %arg0(%3) uniq_name("_QFany3Es") : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.ref<!fir.array<2x!fir.logical<4>>>)
   %c1_i32 = arith.constant 1 : i32
   %5 = hlfir.any %2#0 dim %c1_i32 : (!fir.ref<!fir.array<2x2x!fir.logical<4>>>, i32) -> !hlfir.expr<2x!fir.logical<4>>
   hlfir.assign %5 to %4#0 : !hlfir.expr<2x!fir.logical<4>>, !fir.ref<!fir.array<2x!fir.logical<4>>>
@@ -104,7 +104,7 @@ func.func @_QPany3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
-// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
+// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) uniq_name(".tmp.intrinsic_result")
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]
 // CHECK:         hlfir.destroy %[[EXPR]]
@@ -113,9 +113,9 @@ func.func @_QPany3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 
 // any with dim from pointer
 func.func @_QPany4(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "s"}, %arg2: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFany4Ea"} : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.box<!fir.array<?x?x!fir.logical<4>>>)
-  %1:2 = hlfir.declare %arg2 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFany4Ed"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "_QFany4Es"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFany4Ea") : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.box<!fir.array<?x?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg2 uniq_name("_QFany4Ed") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+  %2:2 = hlfir.declare %arg1 uniq_name("_QFany4Es") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   %3 = fir.load %1#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
   %4 = fir.box_addr %3 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
   %5 = fir.load %4 : !fir.ptr<i32>
@@ -153,7 +153,7 @@ func.func @_QPany4(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
-// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
+// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) uniq_name(".tmp.intrinsic_result")
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]
 // CHECK:         hlfir.destroy %[[EXPR]]

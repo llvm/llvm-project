@@ -28,20 +28,10 @@ define <8 x i8> @interleave2_v8i8(<4 x i8> %v0, <4 x i8> %v1) {
 }
 
 define <8 x i32> @interleave2_v8i32(<4 x i32> %v0, <4 x i32> %v1) {
-; NOZVZIP-LABEL: 'interleave2_v8i32'
-; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
-;
-; V-LABEL: 'interleave2_v8i32'
-; V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
-;
-; ZVE32-LABEL: 'interleave2_v8i32'
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+; CHECK-LABEL: 'interleave2_v8i32'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
 ;
   %concat = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %res = shufflevector <8 x i32> %concat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
@@ -62,7 +52,7 @@ define <8 x i64> @interleave2_v8i64(<4 x i64> %v0, <4 x i64> %v1) {
 ;
 ; V-LABEL: 'interleave2_v8i64'
 ; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %concat = shufflevector <4 x i64> %v0, <4 x i64> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; V-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %res = shufflevector <8 x i64> %concat, <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; V-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = shufflevector <8 x i64> %concat, <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %res
 ;
 ; ZVE32-LABEL: 'interleave2_v8i64'
@@ -75,14 +65,73 @@ define <8 x i64> @interleave2_v8i64(<4 x i64> %v0, <4 x i64> %v1) {
   ret <8 x i64> %res
 }
 
+define <8 x i32> @interleave2_2src_v8i32(<4 x i32> %a, <4 x i32> %b) {
+; NOZVZIP-LABEL: 'interleave2_2src_v8i32'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+; ZVZIP-LABEL: 'interleave2_2src_v8i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+  %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @interleave2_2src_swapped_v8i32(<4 x i32> %a, <4 x i32> %b) {
+; NOZVZIP-LABEL: 'interleave2_2src_swapped_v8i32'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+; ZVZIP-LABEL: 'interleave2_2src_swapped_v8i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+  %res = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @interleave2_2src_low_halves_v8i32(<8 x i32> %a, <8 x i32> %b) {
+; NOZVZIP-LABEL: 'interleave2_2src_low_halves_v8i32'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+; ZVZIP-LABEL: 'interleave2_2src_low_halves_v8i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+  %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @interleave2_2src_upper_half_v8i32(<8 x i32> %a, <8 x i32> %b) {
+; NOZVZIP-LABEL: 'interleave2_2src_upper_half_v8i32'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 12, i32 1, i32 13, i32 2, i32 14, i32 3, i32 15>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+; ZVZIP-LABEL: 'interleave2_2src_upper_half_v8i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 12, i32 1, i32 13, i32 2, i32 14, i32 3, i32 15>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
+;
+  %res = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 12, i32 1, i32 13, i32 2, i32 14, i32 3, i32 15>
+  ret <8 x i32> %res
+}
+
 ; TODO: getInstructionCost doesn't call getShuffleCost here because the shuffle changes length
 define {<4 x i8>, <4 x i8>} @deinterleave_2(<8 x i8> %v) {
-; CHECK-LABEL: 'deinterleave_2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v0 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v1 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i8>, <4 x i8> } poison, <4 x i8> %v0, 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i8>, <4 x i8> } %res0, <4 x i8> %v1, 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i8>, <4 x i8> } %res1
+; NOZVZIP-LABEL: 'deinterleave_2'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v0 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v1 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i8>, <4 x i8> } poison, <4 x i8> %v0, 0
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i8>, <4 x i8> } %res0, <4 x i8> %v1, 1
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i8>, <4 x i8> } %res1
+;
+; ZVZIP-LABEL: 'deinterleave_2'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i8>, <4 x i8> } poison, <4 x i8> %v0, 0
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i8>, <4 x i8> } %res0, <4 x i8> %v1, 1
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i8>, <4 x i8> } %res1
 ;
   %v0 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %v1 = shufflevector <8 x i8> %v, <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -92,12 +141,19 @@ define {<4 x i8>, <4 x i8>} @deinterleave_2(<8 x i8> %v) {
 }
 
 define {<4 x i32>, <4 x i32>} @deinterleave_2_m1_dest(<8 x i32> %v) {
-; CHECK-LABEL: 'deinterleave_2_m1_dest'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v1 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> %v0, 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i32>, <4 x i32> } %res0, <4 x i32> %v1, 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res1
+; NOZVZIP-LABEL: 'deinterleave_2_m1_dest'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v1 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> %v0, 0
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i32>, <4 x i32> } %res0, <4 x i32> %v1, 1
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res1
+;
+; ZVZIP-LABEL: 'deinterleave_2_m1_dest'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i32>, <4 x i32> } poison, <4 x i32> %v0, 0
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i32>, <4 x i32> } %res0, <4 x i32> %v1, 1
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res1
 ;
   %v0 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %v1 = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -107,12 +163,19 @@ define {<4 x i32>, <4 x i32>} @deinterleave_2_m1_dest(<8 x i32> %v) {
 }
 
 define {<8 x i32>, <8 x i32>} @deinterleave_2_m2_dest(<16 x i32> %v) {
-; CHECK-LABEL: 'deinterleave_2_m2_dest'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v1 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %v0, 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <8 x i32>, <8 x i32> } %res0, <8 x i32> %v1, 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res1
+; NOZVZIP-LABEL: 'deinterleave_2_m2_dest'
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v1 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %v0, 0
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <8 x i32>, <8 x i32> } %res0, <8 x i32> %v1, 1
+; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res1
+;
+; ZVZIP-LABEL: 'deinterleave_2_m2_dest'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v1 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %v0, 0
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <8 x i32>, <8 x i32> } %res0, <8 x i32> %v1, 1
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res1
 ;
   %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %v1 = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -121,18 +184,56 @@ define {<8 x i32>, <8 x i32>} @deinterleave_2_m2_dest(<16 x i32> %v) {
   ret {<8 x i32>, <8 x i32>} %res1
 }
 
+define {<4 x i64>, <4 x i64>} @deinterleave_v8i64(<8 x i64> %v) {
+; RV32-LABEL: 'deinterleave_v8i64'
+; RV32-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %even = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %odd = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i64>, <4 x i64> } poison, <4 x i64> %even, 0
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i64>, <4 x i64> } %res0, <4 x i64> %odd, 1
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res1
+;
+; RV64-LABEL: 'deinterleave_v8i64'
+; RV64-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %even = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %odd = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i64>, <4 x i64> } poison, <4 x i64> %even, 0
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i64>, <4 x i64> } %res0, <4 x i64> %odd, 1
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res1
+;
+; V-LABEL: 'deinterleave_v8i64'
+; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %even = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %odd = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i64>, <4 x i64> } poison, <4 x i64> %even, 0
+; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i64>, <4 x i64> } %res0, <4 x i64> %odd, 1
+; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res1
+;
+; ZVE32-LABEL: 'deinterleave_v8i64'
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %even = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %odd = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res0 = insertvalue { <4 x i64>, <4 x i64> } poison, <4 x i64> %even, 0
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res1 = insertvalue { <4 x i64>, <4 x i64> } %res0, <4 x i64> %odd, 1
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res1
+;
+  %even = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %odd = shufflevector <8 x i64> %v, <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %res0 = insertvalue {<4 x i64>, <4 x i64>} poison, <4 x i64> %even, 0
+  %res1 = insertvalue {<4 x i64>, <4 x i64>} %res0, <4 x i64> %odd, 1
+  ret {<4 x i64>, <4 x i64>} %res1
+}
+
 ; Fixed-length interleave2 intrinsics.
-; TODO: we haven't supported the cost calculation of Zvzip in getShuffleCost
-; yet, so the cost of fixed vector may seem weird.
 
 define <2 x i32> @interleave2_intrinsic_v2i32(<1 x i32> %a, <1 x i32> %b) {
 ; NOZVZIP-LABEL: 'interleave2_intrinsic_v2i32'
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <2 x i32> @llvm.vector.interleave2.v2i32(<1 x i32> %a, <1 x i32> %b)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
 ;
-; ZVZIP-LABEL: 'interleave2_intrinsic_v2i32'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <2 x i32> @llvm.vector.interleave2.v2i32(<1 x i32> %a, <1 x i32> %b)
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
+; V-LABEL: 'interleave2_intrinsic_v2i32'
+; V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = call <2 x i32> @llvm.vector.interleave2.v2i32(<1 x i32> %a, <1 x i32> %b)
+; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
+;
+; ZVE32-LABEL: 'interleave2_intrinsic_v2i32'
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <2 x i32> @llvm.vector.interleave2.v2i32(<1 x i32> %a, <1 x i32> %b)
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %res
 ;
   %res = call <2 x i32> @llvm.vector.interleave2.v2i32(<1 x i32> %a, <1 x i32> %b)
   ret <2 x i32> %res
@@ -148,7 +249,7 @@ define <2 x i64> @interleave2_intrinsic_v2i64(<1 x i64> %a, <1 x i64> %b) {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %res
 ;
 ; V-LABEL: 'interleave2_intrinsic_v2i64'
-; V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <2 x i64> @llvm.vector.interleave2.v2i64(<1 x i64> %a, <1 x i64> %b)
+; V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <2 x i64> @llvm.vector.interleave2.v2i64(<1 x i64> %a, <1 x i64> %b)
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %res
 ;
 ; ZVE32-LABEL: 'interleave2_intrinsic_v2i64'
@@ -174,7 +275,7 @@ define <4 x i8> @interleave2_intrinsic_v4i8(<2 x i8> %a, <2 x i8> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %res
 ;
 ; ZVZIP-LABEL: 'interleave2_intrinsic_v4i8'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <4 x i8> @llvm.vector.interleave2.v4i8(<2 x i8> %a, <2 x i8> %b)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = call <4 x i8> @llvm.vector.interleave2.v4i8(<2 x i8> %a, <2 x i8> %b)
 ; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %res
 ;
   %res = call <4 x i8> @llvm.vector.interleave2.v4i8(<2 x i8> %a, <2 x i8> %b)
@@ -186,9 +287,13 @@ define <4 x i32> @interleave2_intrinsic_v4i32(<2 x i32> %a, <2 x i32> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
-; ZVZIP-LABEL: 'interleave2_intrinsic_v4i32'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
+; V-LABEL: 'interleave2_intrinsic_v4i32'
+; V-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
+; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
+;
+; ZVE32-LABEL: 'interleave2_intrinsic_v4i32'
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
   %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
   ret <4 x i32> %res
@@ -204,7 +309,7 @@ define <4 x i64> @interleave2_intrinsic_v4i64(<2 x i64> %a, <2 x i64> %b) {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %res
 ;
 ; V-LABEL: 'interleave2_intrinsic_v4i64'
-; V-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
+; V-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %res
 ;
 ; ZVE32-LABEL: 'interleave2_intrinsic_v4i64'
@@ -221,7 +326,7 @@ define <8 x i16> @interleave2_intrinsic_v8i16(<4 x i16> %a, <4 x i16> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %res
 ;
 ; ZVZIP-LABEL: 'interleave2_intrinsic_v8i16'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> %a, <4 x i16> %b)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> %a, <4 x i16> %b)
 ; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %res
 ;
   %res = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> %a, <4 x i16> %b)
@@ -234,7 +339,7 @@ define <8 x i32> @interleave2_intrinsic_v8i32(<4 x i32> %a, <4 x i32> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
 ;
 ; ZVZIP-LABEL: 'interleave2_intrinsic_v8i32'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %res = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
 ; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %res
 ;
   %res = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
@@ -256,7 +361,7 @@ define <16 x i32> @interleave2_intrinsic_v16i32(<8 x i32> %a, <8 x i32> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %res
 ;
 ; ZVZIP-LABEL: 'interleave2_intrinsic_v16i32'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %a, <8 x i32> %b)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %a, <8 x i32> %b)
 ; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %res
 ;
   %res = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %a, <8 x i32> %b)
@@ -269,7 +374,7 @@ define <32 x i32> @interleave2_intrinsic_v32i32(<16 x i32> %a, <16 x i32> %b) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i32> %res
 ;
 ; ZVZIP-LABEL: 'interleave2_intrinsic_v32i32'
-; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %res = call <32 x i32> @llvm.vector.interleave2.v32i32(<16 x i32> %a, <16 x i32> %b)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <32 x i32> @llvm.vector.interleave2.v32i32(<16 x i32> %a, <16 x i32> %b)
 ; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i32> %res
 ;
   %res = call <32 x i32> @llvm.vector.interleave2.v32i32(<16 x i32> %a, <16 x i32> %b)
@@ -514,7 +619,7 @@ define { <2 x i32>, <2 x i32> } @deinterleave2_intrinsic_v4i32(<4 x i32> %v) {
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <2 x i32>, <2 x i32> } %res
 ;
 ; ZVE32-LABEL: 'deinterleave2_intrinsic_v4i32'
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %v)
+; ZVE32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %v)
 ; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <2 x i32>, <2 x i32> } %res
 ;
   %res = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %v)
@@ -531,7 +636,7 @@ define { <2 x i64>, <2 x i64> } @deinterleave2_intrinsic_v4i64(<4 x i64> %v) {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <2 x i64>, <2 x i64> } %res
 ;
 ; V-LABEL: 'deinterleave2_intrinsic_v4i64'
-; V-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> %v)
+; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> %v)
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <2 x i64>, <2 x i64> } %res
 ;
 ; ZVE32-LABEL: 'deinterleave2_intrinsic_v4i64'
@@ -560,13 +665,9 @@ define { <4 x i32>, <4 x i32> } @deinterleave2_intrinsic_v8i32(<8 x i32> %v) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %res = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %v)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res
 ;
-; V-LABEL: 'deinterleave2_intrinsic_v8i32'
-; V-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %v)
-; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res
-;
-; ZVE32-LABEL: 'deinterleave2_intrinsic_v8i32'
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %v)
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res
+; ZVZIP-LABEL: 'deinterleave2_intrinsic_v8i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %v)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i32>, <4 x i32> } %res
 ;
   %res = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %v)
   ret { <4 x i32>, <4 x i32> } %res
@@ -582,7 +683,7 @@ define { <4 x i64>, <4 x i64> } @deinterleave2_intrinsic_v8i64(<8 x i64> %v) {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res
 ;
 ; V-LABEL: 'deinterleave2_intrinsic_v8i64'
-; V-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %res = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> %v)
+; V-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> %v)
 ; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <4 x i64>, <4 x i64> } %res
 ;
 ; ZVE32-LABEL: 'deinterleave2_intrinsic_v8i64'
@@ -598,13 +699,9 @@ define { <8 x i32>, <8 x i32> } @deinterleave2_intrinsic_v16i32(<16 x i32> %v) {
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 93 for instruction: %res = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> %v)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res
 ;
-; V-LABEL: 'deinterleave2_intrinsic_v16i32'
-; V-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> %v)
-; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res
-;
-; ZVE32-LABEL: 'deinterleave2_intrinsic_v16i32'
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %res = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> %v)
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res
+; ZVZIP-LABEL: 'deinterleave2_intrinsic_v16i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> %v)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <8 x i32>, <8 x i32> } %res
 ;
   %res = call { <8 x i32>, <8 x i32> } @llvm.vector.deinterleave2.v16i32(<16 x i32> %v)
   ret { <8 x i32>, <8 x i32> } %res
@@ -615,13 +712,9 @@ define { <16 x i32>, <16 x i32> } @deinterleave2_intrinsic_v32i32(<32 x i32> %v)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 189 for instruction: %res = call { <16 x i32>, <16 x i32> } @llvm.vector.deinterleave2.v32i32(<32 x i32> %v)
 ; NOZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <16 x i32>, <16 x i32> } %res
 ;
-; V-LABEL: 'deinterleave2_intrinsic_v32i32'
-; V-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call { <16 x i32>, <16 x i32> } @llvm.vector.deinterleave2.v32i32(<32 x i32> %v)
-; V-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <16 x i32>, <16 x i32> } %res
-;
-; ZVE32-LABEL: 'deinterleave2_intrinsic_v32i32'
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 148 for instruction: %res = call { <16 x i32>, <16 x i32> } @llvm.vector.deinterleave2.v32i32(<32 x i32> %v)
-; ZVE32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <16 x i32>, <16 x i32> } %res
+; ZVZIP-LABEL: 'deinterleave2_intrinsic_v32i32'
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call { <16 x i32>, <16 x i32> } @llvm.vector.deinterleave2.v32i32(<32 x i32> %v)
+; ZVZIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret { <16 x i32>, <16 x i32> } %res
 ;
   %res = call { <16 x i32>, <16 x i32> } @llvm.vector.deinterleave2.v32i32(<32 x i32> %v)
   ret { <16 x i32>, <16 x i32> } %res

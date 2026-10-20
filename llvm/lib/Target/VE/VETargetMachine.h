@@ -16,6 +16,7 @@
 #include "VEInstrInfo.h"
 #include "VESubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include <list>
 #include <optional>
 
 namespace llvm {

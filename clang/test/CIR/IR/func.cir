@@ -234,3 +234,10 @@ cir.func comdat alignment(3) preferred_alignment(4) @has_alignment3() {
 // CHECK: cir.func comdat alignment(3) preferred_alignment(4) @has_alignment3() {
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func comdat("some_other_symbol") @has_named_comdat() {
+  cir.return
+}
+// CHECK: cir.func comdat("some_other_symbol") @has_named_comdat() {
+// CHECK:   cir.return
+// CHECK: }

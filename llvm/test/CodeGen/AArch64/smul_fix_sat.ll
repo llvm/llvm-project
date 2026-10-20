@@ -102,7 +102,7 @@ define i4 @func3(i4 %x, i4 %y) {
 ; CHECK-GI-NEXT:    sbfx w10, w1, #0, #4
 ; CHECK-GI-NEXT:    mov w8, #7 // =0x7
 ; CHECK-GI-NEXT:    mul w9, w9, w10
-; CHECK-GI-NEXT:    sbfx w9, w9, #2, #6
+; CHECK-GI-NEXT:    asr w9, w9, #2
 ; CHECK-GI-NEXT:    cmp w9, #7
 ; CHECK-GI-NEXT:    csel w8, w9, w8, lt
 ; CHECK-GI-NEXT:    mov w9, #-8 // =0xfffffff8
@@ -205,7 +205,6 @@ define i4 @func6(i4 %x, i4 %y) {
 ; CHECK-GI-NEXT:    sbfx w10, w1, #0, #4
 ; CHECK-GI-NEXT:    mov w8, #7 // =0x7
 ; CHECK-GI-NEXT:    mul w9, w9, w10
-; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    cmp w9, #7
 ; CHECK-GI-NEXT:    csel w8, w9, w8, lt
 ; CHECK-GI-NEXT:    mov w9, #-8 // =0xfffffff8

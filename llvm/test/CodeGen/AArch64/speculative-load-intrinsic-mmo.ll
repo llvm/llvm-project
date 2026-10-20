@@ -2,7 +2,7 @@
 ; RUN:   -stop-after=finalize-isel < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,SDAG
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+sve -global-isel \
-; RUN:   -aarch64-enable-gisel-sve=1 -stop-after=irtranslator < %s \
+; RUN:   -aarch64-enable-gisel-sve=1 -stop-after=ir-translator < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,GISEL
 
 define <4 x i32> @plain(ptr %ptr) {
