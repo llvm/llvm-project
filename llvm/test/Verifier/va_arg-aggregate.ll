@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output %s 2>&1 | FileCheck %s
 
 ; No target can lower va_arg with an aggregate type, so frontends expand it
 ; into accesses to its members instead (see issue #162900).
