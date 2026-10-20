@@ -1053,6 +1053,17 @@ VectorPointerRecipe_match<Op0_t, Op1_t> m_VecPtr(const Op0_t &Op0,
   return VectorPointerRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+using ActiveLaneMaskPHIRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPActiveLaneMaskPHIRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+ActiveLaneMaskPHIRecipe_match<Op0_t, Op1_t>
+m_ActiveLaneMaskPHIRecipe(const Op0_t &Op0, const Op1_t &Op1) {
+  return ActiveLaneMaskPHIRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
 template <typename Op0_t>
 using VPWidenLoadRecipe_match =
     Recipe_match<std::tuple<Op0_t>, 0,

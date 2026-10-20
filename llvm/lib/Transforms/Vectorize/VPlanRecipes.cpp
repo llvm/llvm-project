@@ -1208,7 +1208,13 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    LoadInst *WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    Instruction *WideLI;
+    if (isMasked()) {
+      Value *Mask = State.get(getMask());
+      WideLI = Builder.CreateMaskedLoad(WideDataTy, Addr, Alignment, Mask);
+    } else {
+      WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    }
     applyMetadata(*WideLI);
     return WideLI;
   }
@@ -1222,7 +1228,13 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    StoreInst *WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    Instruction *WideSI;
+    if (isMasked()) {
+      Value *Mask = State.get(getMask());
+      WideSI = Builder.CreateMaskedStore(WideData, Addr, Alignment, Mask);
+    } else {
+      WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    }
     applyMetadata(*WideSI);
     return WideSI;
   }
@@ -1718,7 +1730,7 @@ void VPInstruction::addOperand(VPValue *Op) {
 }
 
 void VPInstruction::execute(VPTransformState &State) {
-  assert(!isMasked() && "cannot execute masked VPInstruction");
+  assert(canExecute() && "cannot execute this VPInstruction");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -1827,9 +1839,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Intrinsic:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::WideVectorLoad:
   case VPInstruction::BuildVector:
     return true;
+  case VPInstruction::WideVectorLoad:
   case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::PtrAdd:
