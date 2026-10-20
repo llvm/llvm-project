@@ -38,7 +38,9 @@ declare void @clobber()
 ; CHECK-NOT:     x30
 ; CHECK-NOT:     .seh_pac_sign_lr
 ; CHECK:         add sp, sp, #16
-; CHECK:         .seh_endepilogue
+; CHECK:         .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @pac_grow(i64 %a) "sign-return-address"="all" {
   call void @clobber()
@@ -111,7 +113,9 @@ define swifttailcc void @pac_ret(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64,
 ; CHECK:         mov sp, x29
 ; CHECK-NEXT:    .seh_set_fp
 ; CHECK:         add sp, sp, #16
-; CHECK:         .seh_endepilogue
+; CHECK:         .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @pac_alloca(i64 %a, i64 %n) "sign-return-address"="all" {
   %buf = alloca i64, i64 %n
@@ -138,7 +142,9 @@ define swifttailcc void @pac_alloca(i64 %a, i64 %n) "sign-return-address"="all" 
 ; CHECK:         mov sp, x29
 ; CHECK-NEXT:    .seh_set_fp
 ; CHECK:         add sp, sp, #16
-; CHECK:         .seh_endepilogue
+; CHECK:         .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @pac_align(i64 %a) "sign-return-address"="all" {
   %buf = alloca [4 x i64], align 64
@@ -166,7 +172,9 @@ define swifttailcc void @pac_align(i64 %a) "sign-return-address"="all" {
 ; CHECK-NOT:     .seh_pac_sign_lr
 ; CHECK:         ldr x25, [sp, #32]
 ; CHECK:         add sp, sp, #64
-; CHECK:         .seh_endepilogue
+; CHECK:         .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @pac_csr(i64 %a) "sign-return-address"="all" {
   call void asm sideeffect "", "~{x19},~{x21},~{x23},~{x24},~{x25},~{d8},~{d9}"()
@@ -200,9 +208,13 @@ define swifttailcc void @pac_leaf(i64 %a) "sign-return-address"="all" {
 ; UNWIND:       Prologue [
 ; UNWIND:         pacibsp
 ; UNWIND:       ]
-; UNWIND-NEXT:  Epilogue [
-; UNWIND-NEXT:    add sp, #16
-; UNWIND-NEXT:    end
+; UNWIND-NEXT:  EpilogueScopes [
+; UNWIND-NEXT:    EpilogueScope {
+; UNWIND:           Opcodes [
+; UNWIND-NEXT:        add sp, #16
+; UNWIND-NEXT:        end_c
+; UNWIND-NEXT:        add sp, #32
+; UNWIND-NEXT:        end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: pac_shrink (
 ; UNWIND:       Epilogue [
@@ -215,26 +227,32 @@ define swifttailcc void @pac_leaf(i64 %a) "sign-return-address"="all" {
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: pac_alloca (
-; UNWIND:       Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND-NEXT:    mov sp, fp
 ; UNWIND-NEXT:    ldr x29, [sp, #0]
 ; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: pac_align (
-; UNWIND:       Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND-NEXT:    mov sp, fp
 ; UNWIND-NEXT:    ldr x29, [sp, #0]
 ; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: pac_csr (
-; UNWIND:       Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND-NEXT:    ldp d8, d9, [sp, #48]
 ; UNWIND-NEXT:    ldr x25, [sp, #32]
 ; UNWIND-NEXT:    ldp x23, x24, [sp, #16]
 ; UNWIND-NEXT:    ldr x21, [sp, #8]
 ; UNWIND-NEXT:    ldr x19, [sp, #0]
 ; UNWIND-NEXT:    add sp, #64
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]

@@ -211,6 +211,9 @@ private:
 
   void finalizeEpilogue() const;
 
+  /// Returns true if the epilogue has unwind ops describing real instructions.
+  bool hasEpilogueUnwindOps() const;
+
   MachineBasicBlock::iterator SEHEpilogueStartI;
   DebugLoc DL;
 

@@ -9,6 +9,8 @@
 
 declare swifttailcc void @callee12(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 declare swifttailcc void @callee1(i64)
+declare swifttailcc void @callee9(i64, i64, i64, i64, i64, i64, i64, i64, i64)
+declare swifttailcc void @callee11(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 declare void @use(ptr)
 
 ; The tail callee needs 32 bytes of stack arguments but this function has none.
@@ -24,6 +26,8 @@ declare void @use(ptr)
 ; CHECK-NEXT:    .seh_save_reg x30, 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @grow(i64 %a) {
@@ -68,6 +72,8 @@ define swifttailcc void @shrink(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64, 
 ; CHECK-NEXT:    .seh_save_fplr 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @grow_dynamic(i64 %a, i64 %n) {
@@ -90,6 +96,8 @@ define swifttailcc void @grow_dynamic(i64 %a, i64 %n) {
 ; CHECK-NEXT:    .seh_save_reg x19, 0
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    .seh_stackalloc 96
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    b callee12
 define swifttailcc void @grow_csr(i64 %a) {
@@ -106,9 +114,11 @@ define swifttailcc void @grow_csr(i64 %a) {
 ; UNWIND-NEXT:    str x30, [sp, #-48]!
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
-; UNWIND-NEXT:  Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND-NEXT:    ldr x30, [sp, #0]
 ; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: shrink (
@@ -118,15 +128,98 @@ define swifttailcc void @grow_csr(i64 %a) {
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: grow_dynamic (
-; UNWIND:       Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND-NEXT:    mov sp, fp
 ; UNWIND-NEXT:    ldp x29, x30, [sp, #0]
 ; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]
 ; UNWIND-LABEL: Function: grow_csr (
-; UNWIND:       Epilogue [
+; UNWIND:       Opcodes [
 ; UNWIND:         ldr x19, [sp, #0]
 ; UNWIND-NEXT:    add sp, #96
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
+; UNWIND-NEXT:    end
+; UNWIND-NEXT:  ]
+
+; Both this function and its tail callee have stack arguments, and the callee
+; has fewer. The epilogue pops the difference, then the callee's arguments are
+; left for the callee to pop, which the unwinder must do after end_c.
+; CHECK-LABEL: shrink_both:
+; CHECK:         .seh_endprologue
+; CHECK:         .seh_startepilogue
+; CHECK-NEXT:    ldr x19, [sp], #16
+; CHECK-NEXT:    .seh_save_reg_x x19, 16
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    b callee9
+define swifttailcc void @shrink_both(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) {
+  call void asm sideeffect "", "~{x19}"()
+  musttail call swifttailcc void @callee9(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a)
+  ret void
+}
+
+; The callee has more stack arguments than this function, which has some.
+; CHECK-LABEL: grow_both:
+; CHECK:         .seh_endprologue
+; CHECK:         .seh_startepilogue
+; CHECK-NEXT:    ldr x19, [sp]
+; CHECK-NEXT:    .seh_save_reg x19, 0
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    b callee11
+define swifttailcc void @grow_both(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64, i64) {
+  call void asm sideeffect "", "~{x19}"()
+  musttail call swifttailcc void @callee11(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a)
+  ret void
+}
+
+; The callee has the same stack argument size, so there is nothing to pop in
+; the epilogue, but the unwinder still has to pop the callee's arguments.
+; CHECK-LABEL: same_both:
+; CHECK:         .seh_endprologue
+; CHECK:         .seh_startepilogue
+; CHECK-NEXT:    ldr x19, [sp], #16
+; CHECK-NEXT:    .seh_save_reg_x x19, 16
+; CHECK-NEXT:    .seh_end_c
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    b callee9
+define swifttailcc void @same_both(i64 %a, i64, i64, i64, i64, i64, i64, i64, i64, i64) {
+  call void asm sideeffect "", "~{x19}"()
+  musttail call swifttailcc void @callee9(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, i64 %a)
+  ret void
+}
+
+; UNWIND-LABEL: Function: shrink_both (
+; UNWIND:       Opcodes [
+; UNWIND-NEXT:    ldr x19, [sp], #16
+; UNWIND-NEXT:    add sp, #32
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end
+; UNWIND-NEXT:  ]
+; UNWIND-LABEL: Function: grow_both (
+; UNWIND:       Opcodes [
+; UNWIND-NEXT:    ldr x19, [sp, #0]
+; UNWIND-NEXT:    add sp, #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #32
+; UNWIND-NEXT:    end
+; UNWIND-NEXT:  ]
+; UNWIND-LABEL: Function: same_both (
+; UNWIND:       Opcodes [
+; UNWIND-NEXT:    ldr x19, [sp], #16
+; UNWIND-NEXT:    end_c
+; UNWIND-NEXT:    add sp, #16
 ; UNWIND-NEXT:    end
 ; UNWIND-NEXT:  ]

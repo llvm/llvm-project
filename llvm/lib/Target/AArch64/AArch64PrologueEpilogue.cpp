@@ -1879,6 +1879,18 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
   }
 }
 
+bool AArch64EpilogueEmitter::hasEpilogueUnwindOps() const {
+  // The return address is authenticated by an unwind op that the
+  // AArch64PointerAuth pass adds later.
+  if (AFI->shouldSignReturnAddress(MF) && !AuthenticatedReturnAddressEarly)
+    return true;
+  return std::any_of(std::next(SEHEpilogueStartI), MBB.end(),
+                     [](const MachineInstr &MI) {
+                       return AArch64InstrInfo::isSEHInstruction(MI) &&
+                              MI.getOpcode() != AArch64::SEH_EpilogEnd;
+                     });
+}
+
 void AArch64EpilogueEmitter::finalizeEpilogue() const {
   if (AFI->needsShadowCallStackPrologueEpilogue(MF)) {
     emitShadowCallStackEpilogue(MBB.getFirstTerminator(), DL);
@@ -1896,6 +1908,24 @@ void AArch64EpilogueEmitter::finalizeEpilogue() const {
     // address was authenticated early (see
     // emitEarlyReturnAddressAuthentication()).
     HasWinCFI |= NeedsWinCFI;
+  }
+  // A tail call leaves the stack arguments for the tail callee, which pops them
+  // itself. Until then the unwinder must pop them to recover the caller's SP,
+  // as in the prologue; there is no instruction to describe that, so it goes
+  // after end_c. An epilogue with no unwind ops of its own gains nothing from
+  // this, as the prologue's codes cover it.
+  if (NeedsWinCFI && HasWinCFI && !IsFunclet && hasEpilogueUnwindOps()) {
+    int64_t TailCalleePopBytes = AFI->getArgumentStackToRestore() -
+                                 AFL.getArgumentStackToRestore(MF, MBB);
+    if (TailCalleePopBytes > 0) {
+      BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EndC))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      BuildMI(MBB, MBB.getFirstTerminator(), DL,
+              TII->get(AArch64::SEH_StackAlloc))
+          .addImm(TailCalleePopBytes)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      HasWinCFI = true;
+    }
   }
   if (HasWinCFI) {
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EpilogEnd))
