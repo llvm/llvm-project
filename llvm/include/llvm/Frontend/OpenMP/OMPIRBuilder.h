@@ -3996,7 +3996,7 @@ private:
   /// \param RMWOp		  The binary operation used for update. If
   ///                   operation is not supported by atomicRMW,
   ///                   or belong to {FMaximumNum, FMinimumNum, UDecWrap,
-  ///                   UIncWrap, USubCond, USubSat, Xchg, BAD_BINOP}.
+  ///                   UIncWrap, USubCond, USubSat, BAD_BINOP}.
   ///                   Then a `cmpExch` based	atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
@@ -4074,7 +4074,7 @@ public:
   /// \param RMWOp    The binary operation used for update. If operation
   ///                 is	not supported by atomicRMW, or belong to
   ///                 {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
-  ///                 USubCond, USubSat, Xchg, BAD_BINOP}. Then a
+  ///                 USubCond, USubSat, BAD_BINOP}. Then a
   ///                 `cmpExch` based atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
@@ -4107,7 +4107,7 @@ public:
   /// \param RMWOp      The binary operation used for update. If
   ///                   operation is not supported by atomicRMW, or belong to
   ///                   {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
-  ///                   USubCond, USubSat, Xchg, BAD_BINOP}. Then a
+  ///                   USubCond, USubSat, BAD_BINOP}. Then a
   ///                   `cmpExch` based atomic will be generated.
   /// \param UpdateOp   Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.

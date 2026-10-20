@@ -1673,7 +1673,7 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 
 // -----
 
-// Check a double precision atomic uptade that uses atomicrmw.
+// Check a double precision atomic update that uses atomicrmw.
 // CHECK-LABEL: @omp_atomic_update
 // CHECK-SAME: (ptr %[[x:.*]], double %[[expr:.*]])
 llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: f64) {
