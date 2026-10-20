@@ -104,15 +104,14 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    v_cmp_eq_f32_e64 vcc, s0, 0
 ; GCN-NEXT:    s_cbranch_vccz .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
-; GCN-NEXT:    s_getpc_b64 s[8:9]
+; GCN-NEXT:    s_getpc_b64 s[2:3]
 ; GCN-NEXT:  .Lpost_getpc1:
-; GCN-NEXT:    s_add_u32 s8, s8, (.LBB2_2-.Lpost_getpc1)&4294967295
-; GCN-NEXT:    s_addc_u32 s9, s9, (.LBB2_2-.Lpost_getpc1)>>32
-; GCN-NEXT:    s_setpc_b64 s[8:9]
+; GCN-NEXT:    s_add_u32 s2, s2, (.LBB2_2-.Lpost_getpc1)&4294967295
+; GCN-NEXT:    s_addc_u32 s3, s3, (.LBB2_2-.Lpost_getpc1)>>32
+; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes
@@ -257,34 +256,33 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
-; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_cbranch_scc1 .LBB5_1
-; GCN-NEXT:  ; %bb.5: ; %bb0
+; GCN-NEXT:    s_cbranch_scc0 .LBB5_1
+; GCN-NEXT:  ; %bb.6: ; %bb0
+; GCN-NEXT:    s_getpc_b64 s[6:7]
+; GCN-NEXT:  .Lpost_getpc5:
+; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_2-.Lpost_getpc5)&4294967295
+; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_2-.Lpost_getpc5)>>32
+; GCN-NEXT:    s_setpc_b64 s[6:7]
+; GCN-NEXT:  .LBB5_1: ; %bb2
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v0, 17
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:  ; %bb.4: ; %bb2
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc4:
-; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_2-.Lpost_getpc4)&4294967295
-; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_2-.Lpost_getpc4)>>32
+; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_3-.Lpost_getpc4)&4294967295
+; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_3-.Lpost_getpc4)>>32
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
-; GCN-NEXT:  .LBB5_1: ; %bb3
+; GCN-NEXT:  .LBB5_2: ; %bb3
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_mov_b64 s[0:1], 0
-; GCN-NEXT:  .LBB5_2: ; %Flow
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s0, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB5_4
-; GCN-NEXT:  ; %bb.3: ; %bb2
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, 17
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:  .LBB5_4: ; %bb4
+; GCN-NEXT:  .LBB5_3: ; %bb4
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1

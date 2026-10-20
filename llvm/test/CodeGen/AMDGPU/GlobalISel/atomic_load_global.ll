@@ -261,7 +261,7 @@ define i32 @atomic_load_global_monotonic_i16_sext_to_i32(ptr addrspace(1) %ptr) 
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0x100f000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
-; GFX6-NEXT:    buffer_load_sbyte v0, v[0:1], s[4:7], 0 addr64 glc
+; GFX6-NEXT:    buffer_load_sshort v0, v[0:1], s[4:7], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;

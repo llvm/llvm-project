@@ -157,7 +157,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const DiagnosticArgument &arg) {
 /// A diagnostic may contain multiple message parts that share its location,
 /// severity, metadata, and attached notes. Empty message parts are ignored.
 class Diagnostic {
-  using NoteVector = std::vector<std::unique_ptr<Diagnostic>>;
+  using NoteVector = SmallVector<std::unique_ptr<Diagnostic>, 0>;
 
 public:
   Diagnostic(Location loc, DiagnosticSeverity severity)
@@ -318,10 +318,11 @@ private:
 
   /// A list of string values used as arguments. This is used to guarantee the
   /// liveness of non-constant strings used in diagnostics.
-  std::vector<std::unique_ptr<char[]>> strings;
+  SmallVector<std::unique_ptr<char[]>, 0> strings;
 
   /// The exclusive end indices in `arguments` of completed message parts.
-  SmallVector<size_t, 2> messagePartEnds;
+  /// Most diagnostics have only one part, so avoid reserving inline storage.
+  SmallVector<size_t, 0> messagePartEnds;
 
   /// A list of attached notes.
   NoteVector notes;
@@ -693,12 +694,13 @@ public:
   /// verified correctly, failure otherwise.
   LogicalResult verify();
 
-  /// Register this handler with the given context. This is intended for use
-  /// with the splitAndProcessBuffer function.
-  void registerInContext(MLIRContext *ctx);
+  /// Register this handler with `ctx` and return a scoped registration.
+  /// Destroy the returned handle before either this handler or `ctx`.
+  [[nodiscard]] std::unique_ptr<ScopedDiagnosticHandler>
+  registerInContext(MLIRContext *ctx);
 
 private:
-  /// Process a single diagnostic.
+  /// Process a diagnostic and its notes.
   void process(Diagnostic &diag);
 
   /// Process a LocationAttr diagnostic.
@@ -735,10 +737,15 @@ public:
   /// '1'; and so on and so forth. This provides a way for the handler to
   /// deterministically order the diagnostics that it receives given the thread
   /// that it is receiving on.
+  ///
+  /// Each set must be paired with an erase on the same thread before the
+  /// handler is destroyed. Nesting distinct handlers on one thread is
+  /// supported; reentrant use of one handler on one thread is not.
   void setOrderIDForThread(size_t orderID);
 
   /// Remove the order id for the current thread. This removes the thread from
-  /// diagnostics tracking.
+  /// diagnostics tracking. Must be called on the same thread that set it,
+  /// before the handler is destroyed.
   void eraseOrderIDForThread();
 
 private:

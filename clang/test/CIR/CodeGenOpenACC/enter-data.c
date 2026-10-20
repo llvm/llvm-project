@@ -123,3 +123,24 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: acc.enter_data wait_devnum(%[[PARM_CAST]] : si32) wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 }
+
+void gh228290(int i) {
+  // CHECK: cir.func{{.*}}@gh228290(
+
+#pragma acc enter data copyin(i) wait wait
+// CHECK: acc.enter_data wait dataOperands({{.*}})
+
+#pragma acc enter data copyin(i) wait wait(1)
+// CHECK: acc.enter_data wait dataOperands({{.*}})
+
+#pragma acc enter data copyin(i) wait(1) wait
+// CHECK: acc.enter_data wait dataOperands({{.*}})
+
+#pragma acc enter data copyin(i) wait(1) wait(2)
+// CHECK: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
+// CHECK: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO]] : !s32i -> si32
+// CHECK: acc.enter_data wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands({{.*}})
+}
+

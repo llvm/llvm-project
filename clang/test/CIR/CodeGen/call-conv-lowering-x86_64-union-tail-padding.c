@@ -154,9 +154,13 @@ Odd24 ret_odd24(Odd24 u) { return u; }
 // CIR: cir.func{{.*}} @ret_odd24(%arg0: !cir.ptr<!rec_Odd24> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Odd24, llvm.writable} loc{{.*}}, %arg1: !cir.ptr<!rec_Odd24> {llvm.align = 8 : i64, llvm.byval = !rec_Odd24, llvm.noundef} loc{{.*}})
 // LLVM: define{{.*}} void @ret_odd24(ptr dead_on_unwind noalias writable sret(%union.Odd24) align 8 %{{[^,]+}}, ptr noundef byval(%union.Odd24) align 8 %{{.+}})
 
+// The parameter's own slot is the operand's storage, so the call forwards it
+// rather than building a second one.
 void call_odd24(Odd24 u) { take_odd24(u); }
 // CIR: cir.func{{.*}} @call_odd24(%arg0: !cir.ptr<!rec_Odd24> {llvm.align = 8 : i64, llvm.byval = !rec_Odd24, llvm.noundef} loc{{.*}})
-// CIR:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Odd24>
-// CIR:   cir.call @take_odd24(%[[SLOT]])
+// CIR:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_Odd24>
+// CIR-NOT: cir.alloca "byval"
+// CIR:   cir.copy %arg0 align(8) to %[[U]] align(8) : !cir.ptr<!rec_Odd24>
+// CIR-NEXT: cir.call @take_odd24(%[[U]])
 // LLVM: define{{.*}} void @call_odd24(ptr noundef byval(%union.Odd24) align 8 %{{.+}})
 // LLVM:   call void @take_odd24(ptr noundef byval(%union.Odd24) align 8 %{{.+}})

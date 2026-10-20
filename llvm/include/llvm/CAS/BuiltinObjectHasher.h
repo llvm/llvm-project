@@ -10,6 +10,7 @@
 #define LLVM_CAS_BUILTINOBJECTHASHER_H
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm::cas {
@@ -78,6 +79,8 @@ private:
   ~BuiltinObjectHasher() = default;
   HasherT Hasher;
 };
+
+extern template class LLVM_TEMPLATE_ABI BuiltinObjectHasher<BLAKE3>;
 
 } // namespace llvm::cas
 

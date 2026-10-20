@@ -88,7 +88,8 @@ walk_stack_to_main (SBThread thread)
     while (!found_main && curr_frame < framecount)
     {
         SBFrame frame = thread.GetFrameAtIndex (curr_frame);
-        if (strcmp (frame.GetFunctionName(), "main") == 0)
+        const char* function_name = frame.GetFunctionName();
+        if (function_name && strcmp (function_name, "main") == 0)
         {
             found_main = true;
             break;
@@ -158,11 +159,15 @@ void *do_one_debugger (void *in)
                 }
 
                 // On Linux the () are included.
-                const char* hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
-                if (strcmp (hit_fn, "foo") != 0 && strcmp (hit_fn, "foo()") != 0)
+                const char* hit_fn_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (!hit_fn_name || (strcmp (hit_fn_name, "foo") != 0 && strcmp (hit_fn_name, "foo()") != 0))
                 {
 #if DEBUG == 1
-                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo(), instead stopped at '%s'\n", threadnum, process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName());
+                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo(), instead stopped at ", threadnum);
+                    if (hit_fn_name)
+                        printf ("'%s'\n", hit_fn_name);
+                    else
+                        printf ("an unnamed function\n");
 #endif
                     completed_threads_array[threadnum] = true;
                     return (void*) 1;
@@ -187,8 +192,8 @@ void *do_one_debugger (void *in)
                     return (void *) 1;
                 }
 
-                hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
-                if (strcmp (hit_fn, "bar") != 0 && strcmp (hit_fn, "bar()") != 0)
+                hit_fn_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (!hit_fn_name || (strcmp (hit_fn_name, "bar") != 0 && strcmp (hit_fn_name, "bar()") != 0))
                 {
                     printf ("#%" PRIu64 ": First breakpoint did not stop at bar()\n", threadnum);
                     completed_threads_array[threadnum] = true;

@@ -1,7 +1,7 @@
 // Check frontend and linker invocations on the IMG MIPS toolchain.
 //
 // = Big-endian, mips32r6
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-32R6 %s
@@ -28,7 +28,7 @@
 // CHECK-BE-32R6: "[[TC]]/../../../../sysroot/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, mips32r6
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -EL -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-32R6 %s
@@ -55,7 +55,7 @@
 // CHECK-LE-32R6: "[[TC]]/../../../../sysroot/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, mips64r6, N32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=n32 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N32 %s
@@ -82,7 +82,7 @@
 // CHECK-BE-64R6-N32: "[[TC]]/../../../../sysroot/mips64r6/usr/lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, mips64r6, N32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=n32 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N32 %s
@@ -109,7 +109,7 @@
 // CHECK-LE-64R6-N32: "[[TC]]/../../../../sysroot/mips64r6/el/usr/lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, mips64r6, N64
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=64 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N64 %s
@@ -136,7 +136,7 @@
 // CHECK-BE-64R6-N64: "[[TC]]/../../../../sysroot/mips64r6/64/usr/lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, mips64r6, N64
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=64 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N64 %s

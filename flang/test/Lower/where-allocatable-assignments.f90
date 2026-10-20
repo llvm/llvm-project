@@ -11,8 +11,8 @@ contains
 subroutine foo(a, b)
   integer :: a(:)
   integer, allocatable :: b(:)
-! CHECK:  %[[A:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QMmtestFfooEa"}
-! CHECK:  %[[B:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmtestFfooEb"}
+! CHECK:  %[[A:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} uniq_name("_QMmtestFfooEa")
+! CHECK:  %[[B:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} uniq_name("_QMmtestFfooEb") fortran_attrs<allocatable>
         ! WHERE construct: mask, region_assign, elsewhere
 ! CHECK:  hlfir.where {
 ! CHECK:    %[[BOX_B:.*]] = fir.load %[[B]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

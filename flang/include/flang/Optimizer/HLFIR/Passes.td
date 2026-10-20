@@ -103,13 +103,8 @@ def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
                      /*default=*/"false",
                      "Only inline assignments where RHS is a numeric or "
                      "logical scalar broadcast "
-                     "to an array LHS. Used at O0 to avoid runtime calls in "
-                     "device code without inlining all array assignments.">,
-                 Option<"onlyCUDADeviceContext", "only-cuda-device-context",
-                        "bool", /*default=*/"false",
-                        "Only inline assignments in CUDA Fortran device "
-                        "code. Used at O0, where a module holds both host "
-                        "and device subprograms, to leave host code alone.">];
+                     "to an array LHS, even when other array operations "
+                     "are left to the runtime.">];
 }
 
 def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {

@@ -564,8 +564,10 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
     Value *Rewrite = TTI->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
     if (!Rewrite)
       return false;
-    if (Rewrite != II)
+    if (Rewrite != II) {
       II->replaceAllUsesWith(Rewrite);
+      II->eraseFromParent();
+    }
     return true;
   }
   }
@@ -807,7 +809,14 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
     return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
 
-  NewI->insertBefore(Inst->getIterator());
+  // During cloning phase, the cast is placed before the original flat
+  // instruction, as its clone in the new address space has not been inserted
+  // yet. During poison fixup phase, the clone already exists, thus make sure
+  // the cast is inserted before it.
+  Instruction *InsertPt = Inst;
+  if (Value *NewUser = ValueWithNewAddrSpace.lookup(Inst))
+    InsertPt = cast<Instruction>(NewUser);
+  NewI->insertBefore(InsertPt->getIterator());
   NewI->setDebugLoc(Inst->getDebugLoc());
   return NewI;
 }
@@ -986,22 +995,21 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
           ? getPtrOrVecOfPtrsWithNewAS(CE->getType(), NewAddrSpace)
           : CE->getType();
 
-  if (CE->getOpcode() == Instruction::AddrSpaceCast) {
+  switch (CE->getOpcode()) {
+  case Instruction::AddrSpaceCast:
     // Because CE is flat, the source address space must be specific.
     // Therefore, the inferred address space must be the source space according
     // to our algorithm.
     assert(CE->getOperand(0)->getType()->getPointerAddressSpace() ==
            NewAddrSpace);
     return CE->getOperand(0);
-  }
 
-  if (CE->getOpcode() == Instruction::BitCast) {
+  case Instruction::BitCast:
     if (Value *NewOperand = ValueWithNewAddrSpace.lookup(CE->getOperand(0)))
       return ConstantExpr::getBitCast(cast<Constant>(NewOperand), TargetType);
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
-  }
 
-  if (CE->getOpcode() == Instruction::IntToPtr) {
+  case Instruction::IntToPtr:
     if (isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI)) {
       Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
       assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
@@ -1009,47 +1017,33 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
     }
     assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(CE)));
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
-  }
 
-  // Computes the operands of the new constant expression.
-  bool IsNew = false;
-  SmallVector<Constant *, 4> NewOperands;
-  for (unsigned Index = 0; Index < CE->getNumOperands(); ++Index) {
-    Constant *Operand = CE->getOperand(Index);
-    // If the address space of `Operand` needs to be modified, the new operand
-    // with the new address space should already be in ValueWithNewAddrSpace
-    // because (1) the constant expressions we consider (i.e. addrspacecast,
-    // bitcast, and getelementptr) do not incur cycles in the data flow graph
-    // and (2) this function is called on constant expressions in postorder.
-    if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
-      IsNew = true;
-      NewOperands.push_back(cast<Constant>(NewOperand));
-      continue;
-    }
-    if (auto *CExpr = dyn_cast<ConstantExpr>(Operand))
-      if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
-              CExpr, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI)) {
-        IsNew = true;
-        NewOperands.push_back(cast<Constant>(NewOperand));
-        continue;
-      }
-    // Otherwise, reuses the old operand.
-    NewOperands.push_back(Operand);
-  }
+  case Instruction::GetElementPtr: {
+    // Only the pointer operand is rewritten: the indices are not related to
+    // the pointer and NewAddrSpace may not be valid for them. The pointer
+    // operand is an address expression, but it is not guaranteed to have been
+    // cloned already, so clone it here if needed.
+    Constant *Base = CE->getOperand(0);
+    Value *NewBase = ValueWithNewAddrSpace.lookup(Base);
+    if (!NewBase)
+      NewBase = cloneConstantExprWithNewAddressSpace(
+          cast<ConstantExpr>(Base), NewAddrSpace, ValueWithNewAddrSpace, DL,
+          TTI);
+    assert(NewBase && "pointer operand of a rewritten GEP was not rewritten");
 
-  // If !IsNew, we will replace the Value with itself. However, replaced values
-  // are assumed to wrapped in an addrspacecast cast later so drop it now.
-  if (!IsNew)
-    return nullptr;
-
-  if (CE->getOpcode() == Instruction::GetElementPtr) {
+    SmallVector<Constant *, 4> NewOperands;
+    NewOperands.push_back(cast<Constant>(NewBase));
+    for (unsigned Index = 1; Index < CE->getNumOperands(); ++Index)
+      NewOperands.push_back(CE->getOperand(Index));
     // Needs to specify the source type while constructing a getelementptr
     // constant expression.
     return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
                                cast<GEPOperator>(CE)->getSourceElementType());
   }
 
-  return CE->getWithOperands(NewOperands, TargetType);
+  default:
+    llvm_unreachable("unexpected constant expression");
+  }
 }
 
 // Returns a clone of the value `V`, with its operands replaced as specified in
@@ -1333,8 +1327,9 @@ static bool replaceOperandIfSame(Instruction *Inst, unsigned OpIdx,
 
 template <typename InstrType>
 static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
-                                    InstrType *MemInstr, unsigned AddrSpace,
-                                    Value *OldV, Value *NewV) {
+                                    InstrType *MemInstr, Value *OldV,
+                                    Value *NewV) {
+  unsigned AddrSpace = NewV->getType()->getPointerAddressSpace();
   if (!MemInstr->isVolatile() || TTI.hasVolatileVariant(MemInstr, AddrSpace)) {
     return replaceOperandIfSame(MemInstr, InstrType::getPointerOperandIndex(),
                                 OldV, NewV);
@@ -1351,19 +1346,18 @@ static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
 ///
 /// \p returns true the user replacement was made.
 static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
-                                      User *Inst, unsigned AddrSpace,
-                                      Value *OldV, Value *NewV) {
+                                      User *Inst, Value *OldV, Value *NewV) {
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return replaceSimplePointerUse(TTI, LI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, LI, OldV, NewV);
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return replaceSimplePointerUse(TTI, SI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, SI, OldV, NewV);
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return replaceSimplePointerUse(TTI, RMW, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, RMW, OldV, NewV);
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
-    return replaceSimplePointerUse(TTI, CmpX, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, CmpX, OldV, NewV);
 
   return false;
 }
@@ -1463,8 +1457,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  unsigned AddrSpace = V->getType()->getPointerAddressSpace();
-  if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Skip if the current user is the new value itself.

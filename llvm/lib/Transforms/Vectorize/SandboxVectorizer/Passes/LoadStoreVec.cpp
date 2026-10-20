@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
+#include "../../VectorizeOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
@@ -20,8 +20,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-extern cl::opt<int> CostThreshold; // Defined in TransactionAcceptOrRevert.cpp
 
 namespace sandboxir {
 
@@ -57,7 +55,9 @@ bool LoadStoreVec::acceptOrRevert() {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "CostGain=" << CostGain
                     << " (After=" << CostAfter << " Before=" << CostBefore
                     << ")\n");
-  if (CostGain > CostThreshold) {
+  const VectorizeOptions &Opts =
+      Ctx->getLibraryOptions().get<VectorizeOptions>();
+  if (CostGain > Opts.sbvec_cost_threshold) {
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Not profitable, reverting.\n");
     Ctx->revert();
     return false;
@@ -82,11 +82,10 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-Value *LoadStoreVec::createConstantVector(BndlRef<Value *> Operands) {
+Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Operands) {
   SmallVector<Constant *, 8> Constants;
   Constants.reserve(Operands.size());
-  for (Value *Op : Operands) {
-    auto *COp = cast<Constant>(Op);
+  for (Constant *COp : Operands) {
     if (auto *AggrCOp = dyn_cast<ConstantAggregate>(COp)) {
       // If the operand is a constant aggregate, then append all its elements.
       for (Value *Elm : AggrCOp->operands())
@@ -156,9 +155,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   // profitable on some targets, so save state here.
   saveIR(Rgn);
   Value *VecOp = nullptr;
+  SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
-    // TODO: Try to avoid the extra copy to an instruction vector.
-    SmallVector<Instruction *, 8> Loads;
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
@@ -168,7 +166,11 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
       return false;
     }
   } else if (AllConstants) {
-    VecOp = createConstantVector(Operands);
+    SmallVector<Constant *, 8> Constants;
+    Constants.reserve(Operands.size());
+    for (Value *Op : Operands)
+      Constants.push_back(cast<Constant>(Op));
+    VecOp = createConstantVector(Constants);
   }
 
   // Generate vector store.
@@ -180,7 +182,7 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
-    DeadInstrMorgue.collectPotentiallyDeadInstrs<Value>(Operands);
+    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
 
   return acceptOrRevert();

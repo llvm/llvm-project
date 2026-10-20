@@ -127,6 +127,18 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
+  Attribute SignReturnAddrHardenFnAttr =
+      F.getFnAttribute("sign-return-address-harden");
+  if (SignReturnAddrHardenFnAttr.isValid()) {
+    SignReturnAddressHardening =
+        StringSwitch<SignReturnAddressHardeningKind>(
+            SignReturnAddrHardenFnAttr.getValueAsString())
+            .Case("none", SignReturnAddressHardeningKind::None)
+            .Case("load-return-address",
+                  SignReturnAddressHardeningKind::LoadReturnAddress)
+            .DefaultUnreachable();
+  }
+
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
@@ -213,8 +225,7 @@ bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
 bool AArch64FunctionInfo::needsDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsDwarfUnwindInfo)
-    NeedsDwarfUnwindInfo =
-        MF.needsFrameMoves() && !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+    NeedsDwarfUnwindInfo = !MF.usesWindowsUnwindInfo() && MF.needsFrameMoves();
 
   return *NeedsDwarfUnwindInfo;
 }

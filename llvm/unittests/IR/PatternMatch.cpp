@@ -1532,6 +1532,17 @@ TEST_F(PatternMatchTest, VectorOps) {
       SP2, m_Shuffle(m_InsertElt(m_Undef(), m_Value(A), m_Zero()),
                      m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
+
+  // Repeat the above with m_Splat.
+  EXPECT_TRUE(match(SI1, m_Splat(m_SpecificInt(1))));
+  EXPECT_FALSE(match(SI2, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI3, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI4, m_Splat(m_Value())));
+
+  A = nullptr;
+  EXPECT_TRUE(match(SP1, m_Splat(m_SpecificInt(2))));
+  EXPECT_TRUE(match(SP2, m_Splat(m_Value(A))));
+  EXPECT_TRUE(A == Val);
 }
 
 TEST_F(PatternMatchTest, UndefPoisonMix) {
@@ -1606,6 +1617,15 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(ScalarZero, m_Zero()));
   EXPECT_TRUE(match(VectorZero, m_Zero()));
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(ScalarPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(ScalarZero, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(VectorZero, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroPoison, m_ZeroForbidPoison()));
 
   const APInt *C;
   // Regardless of whether poison is allowed,

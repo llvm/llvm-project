@@ -783,6 +783,51 @@ class GdbRemoteTestSequence(object):
                     raise Exception('unknown entry type "%s"' % entry_type)
 
 
+def _windows_process_is_running(pid):
+    """Return True if pid names a process on this Windows host that has not
+    exited yet, False if it has exited or no such process exists.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    SYNCHRONIZE = 0x00100000
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    ERROR_ACCESS_DENIED = 5
+    ERROR_INVALID_PARAMETER = 87
+    WAIT_OBJECT_0 = 0
+    WAIT_TIMEOUT = 0x102
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(
+        SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+    )
+    if not handle:
+        error = ctypes.get_last_error()
+        # No process object has this pid.
+        if error == ERROR_INVALID_PARAMETER:
+            return False
+        # The process exists but we may not open it (e.g. another user's).
+        if error == ERROR_ACCESS_DENIED:
+            return True
+        raise ctypes.WinError(error)
+    try:
+        result = kernel32.WaitForSingleObject(handle, 0)
+        if result == WAIT_TIMEOUT:
+            return True
+        if result == WAIT_OBJECT_0:
+            return False
+        raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def process_is_running(pid, unknown_value=True):
     """If possible, validate that the given pid represents a running process on the local system.
 
@@ -821,12 +866,7 @@ def process_is_running(pid, unknown_value=True):
         # Convert text pids to ints
         process_ids = [int(text_pid) for text_pid in text_process_ids if text_pid != ""]
     elif platform.system() == "Windows":
-        output = subprocess.check_output(
-            'for /f "tokens=2 delims=," %F in (\'tasklist /nh /fi "PID ne 0" /fo csv\') do @echo %~F',
-            shell=True,
-        ).decode("utf-8")
-        text_process_ids = output.split("\n")[1:]
-        process_ids = [int(text_pid) for text_pid in text_process_ids if text_pid != ""]
+        return _windows_process_is_running(pid)
     # elif {your_platform_here}:
     #   fill in process_ids as a list of int type process IDs running on
     #   the local system.

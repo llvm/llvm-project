@@ -3080,12 +3080,8 @@ define void @store_atomic_vec16_bfloat_unaligned(ptr %x, <16 x bfloat> %v) nounw
 ; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
 ; CHECK-AVX512-O0:       # %bb.0:
 ; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    vmovaps %ymm0, %ymm1
 ; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; CHECK-AVX512-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
-; CHECK-AVX512-O0-NEXT:    vmovaps %xmm1, (%rsp)
-; CHECK-AVX512-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-AVX512-O0-NEXT:    movl $32, %edi
 ; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX512-O0-NEXT:    movl $3, %ecx
@@ -3897,12 +3893,8 @@ define void @store_atomic_vec16_bfloat_align(ptr %x, <16 x bfloat> %v) nounwind 
 ; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_align:
 ; CHECK-AVX512-O0:       # %bb.0:
 ; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    vmovaps %ymm0, %ymm1
 ; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; CHECK-AVX512-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
-; CHECK-AVX512-O0-NEXT:    vmovaps %xmm1, (%rsp)
-; CHECK-AVX512-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-AVX512-O0-NEXT:    movl $32, %edi
 ; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX512-O0-NEXT:    movl $3, %ecx

@@ -80,17 +80,15 @@ bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
 
   // Check if MI is "addiu $dst, $zero, 0" or "daddiu $dst, $zero, 0".
   if ((MI.getOpcode() == Mips::ADDiu) &&
-      (MI.getOperand(1).getReg() == Mips::ZERO) &&
-      (MI.getOperand(2).isImm()) &&
+      (MI.getOperand(1).getReg() == Mips::R0) && (MI.getOperand(2).isImm()) &&
       (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
-    ZeroReg = Mips::ZERO;
+    ZeroReg = Mips::R0;
   } else if ((MI.getOpcode() == Mips::DADDiu) &&
-             (MI.getOperand(1).getReg() == Mips::ZERO_64) &&
-             (MI.getOperand(2).isImm()) &&
-             (MI.getOperand(2).getImm() == 0)) {
+             (MI.getOperand(1).getReg() == Mips::R0_64) &&
+             (MI.getOperand(2).isImm()) && (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
-    ZeroReg = Mips::ZERO_64;
+    ZeroReg = Mips::R0_64;
   }
 
   if (!DstReg)
@@ -125,24 +123,24 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
   if (!Subtarget->isABI_O32()) { // N32, N64
     // Save current return address.
     BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::OR64))
-        .addDef(Mips::AT_64)
+        .addDef(Mips::R1_64)
         .addUse(Mips::RA_64, RegState::Undef)
-        .addUse(Mips::ZERO_64);
+        .addUse(Mips::R0_64);
     // Stops instruction above from being removed later on.
-    MIB.addUse(Mips::AT_64, RegState::Implicit);
+    MIB.addUse(Mips::R1_64, RegState::Implicit);
   } else {  // O32
     // Save current return address.
     BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::OR))
-        .addDef(Mips::AT)
+        .addDef(Mips::R1)
         .addUse(Mips::RA, RegState::Undef)
-        .addUse(Mips::ZERO);
+        .addUse(Mips::R0);
     // _mcount pops 2 words from stack.
     BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::ADDiu))
         .addDef(Mips::SP)
         .addUse(Mips::SP)
         .addImm(-8);
     // Stops first instruction above from being removed later on.
-    MIB.addUse(Mips::AT, RegState::Implicit);
+    MIB.addUse(Mips::R1, RegState::Implicit);
   }
 }
 
@@ -246,7 +244,7 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
   // Hence take an extremely conservative view and presume it's sticky. We
   // therefore need to clear it.
 
-  SDValue Zero = CurDAG->getRegister(Mips::ZERO, MVT::i32);
+  SDValue Zero = CurDAG->getRegister(Mips::R0, MVT::i32);
 
   SDValue InsOps[4] = {Zero, OuFlag, CstOne, SDValue(DSPCFWithCarry, 0)};
   SDNode *DSPCtrlFinal =
@@ -289,7 +287,7 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
         Base = Addr.getOperand(0);
         // If base is a FI, additional offset calculation is done in
         // eliminateFrameIndex, otherwise we need to check the alignment
-        const Align Alignment(1ULL << ShiftAmount);
+        const Align Alignment = Align::fromLog2(ShiftAmount);
         if (!isAligned(Alignment, CN->getZExtValue()))
           return false;
       }
@@ -752,17 +750,17 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     if (Node->getValueType(0) == MVT::f64 && CN->isPosZero()) {
       if (Subtarget->isGP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                                              Mips::ZERO_64, MVT::i64);
+                                              Mips::R0_64, MVT::i64);
         ReplaceNode(Node,
                     CurDAG->getMachineNode(Mips::DMTC1, DL, MVT::f64, Zero));
       } else if (Subtarget->isFP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                                              Mips::ZERO, MVT::i32);
+                                              Mips::R0, MVT::i32);
         ReplaceNode(Node, CurDAG->getMachineNode(Mips::BuildPairF64_64, DL,
                                                  MVT::f64, Zero, Zero));
       } else {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
-                                              Mips::ZERO, MVT::i32);
+                                              Mips::R0, MVT::i32);
         ReplaceNode(Node, CurDAG->getMachineNode(Mips::BuildPairF64, DL,
                                                  MVT::f64, Zero, Zero));
       }
@@ -796,10 +794,9 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     if (Inst->Opc == Mips::LUi64)
       RegOpnd = CurDAG->getMachineNode(Inst->Opc, DL, MVT::i64, ImmOpnd);
     else
-      RegOpnd =
-        CurDAG->getMachineNode(Inst->Opc, DL, MVT::i64,
-                               CurDAG->getRegister(Mips::ZERO_64, MVT::i64),
-                               ImmOpnd);
+      RegOpnd = CurDAG->getMachineNode(
+          Inst->Opc, DL, MVT::i64, CurDAG->getRegister(Mips::R0_64, MVT::i64),
+          ImmOpnd);
 
     // The remaining instructions in the sequence are handled here.
     for (++Inst; Inst != Seq.end(); ++Inst) {
@@ -1031,10 +1028,10 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
     if (PtrVT == MVT::i32) {
       RdhwrOpc = Mips::RDHWR;
-      DestReg = Mips::V1;
+      DestReg = Mips::R3;
     } else {
       RdhwrOpc = Mips::RDHWR64;
-      DestReg = Mips::V1_64;
+      DestReg = Mips::R3_64;
     }
 
     SDNode *Rdhwr =
@@ -1062,8 +1059,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     // same set/ of registers. Similarly, ldi.h isn't capable of producing {
     // 0x00000000, 0x00000001, 0x00000000, 0x00000001 } but 'ldi.d wd, 1' can.
 
-    const MipsABIInfo &ABI =
-        static_cast<const MipsTargetMachine &>(TM).getABI();
+    const MipsABIInfo &ABI = Subtarget->getABI();
 
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
     APInt SplatValue, SplatUndef;
@@ -1124,8 +1120,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       bool Is32BitSplat = ABI.IsO32() || SplatBitSize < 64;
       const unsigned ADDiuOp = Is32BitSplat ? Mips::ADDiu : Mips::DADDiu;
       const MVT SplatMVT = Is32BitSplat ? MVT::i32 : MVT::i64;
-      SDValue ZeroVal = CurDAG->getRegister(
-          Is32BitSplat ? Mips::ZERO : Mips::ZERO_64, SplatMVT);
+      SDValue ZeroVal =
+          CurDAG->getRegister(Is32BitSplat ? Mips::R0 : Mips::R0_64, SplatMVT);
 
       const unsigned FILLOp =
           SplatBitSize == 16
@@ -1148,7 +1144,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       // of the SplatValue here.
       const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();
       const unsigned Hi = SplatValue.lshr(16).getLoBits(16).getZExtValue();
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
+      SDValue ZeroVal = CurDAG->getRegister(Mips::R0, MVT::i32);
 
       SDValue LoVal = CurDAG->getTargetConstant(Lo, DL, MVT::i32);
       SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
@@ -1171,7 +1167,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       // zero/sign extension.
       const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();
       const unsigned Hi = SplatValue.lshr(16).getLoBits(16).getZExtValue();
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
+      SDValue ZeroVal = CurDAG->getRegister(Mips::R0, MVT::i32);
 
       SDValue LoVal = CurDAG->getTargetConstant(Lo, DL, MVT::i32);
       SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
@@ -1225,7 +1221,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
       SDValue HigherVal = CurDAG->getTargetConstant(Higher, DL, MVT::i32);
       SDValue HighestVal = CurDAG->getTargetConstant(Highest, DL, MVT::i32);
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
+      SDValue ZeroVal = CurDAG->getRegister(Mips::R0, MVT::i32);
 
       // Independent of whether we're targeting MIPS64 or not, the basic
       // operations are the same. Also, directly use the $zero register if
@@ -1282,7 +1278,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
             CurDAG->getTargetConstant(0, DL, MVT::i32));
       } else if (ABI.IsN64() || ABI.IsN32()) {
 
-        SDValue Zero64Val = CurDAG->getRegister(Mips::ZERO_64, MVT::i64);
+        SDValue Zero64Val = CurDAG->getRegister(Mips::R0_64, MVT::i64);
         const bool HiResNonZero = Highest || Higher;
         const bool ResNonZero = Hi || Lo;
 

@@ -6,9 +6,9 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 void use(const int *);
-// CIR-DAG: cir.global "private" constant cir_private @[[CONST_ARR_16:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 4> {alignment = 16 : i64}
+// CIR-DAG: cir.global "private" constant cir_private @[[CONST_ARR_16:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 4> align(16)
 // LLVM-DAG: @[[CONST_ARR_16:.*]] = private {{.*}}constant [4 x i32] [i32 1, i32 2, i32 3, i32 4], align 16
-// CIR-DAG: cir.global "private" constant cir_private @[[CONST_ARR_32:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 4> {alignment = 32 : i64}
+// CIR-DAG: cir.global "private" constant cir_private @[[CONST_ARR_32:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 4> align(32)
 // LLVM-DAG: @[[CONST_ARR_32:.*]] = private {{.*}}constant [4 x i32] [i32 1, i32 2, i32 3, i32 4], align 32
 
 void f(bool condition) {

@@ -29,6 +29,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_builtin_arg_out_of_range : Note<
+  "argument value %0 is outside the valid range [%1, %2]">;
 def note_constexpr_offsetof_overflow : Note<
   "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
@@ -282,6 +284,9 @@ def note_constexpr_alignment_compute : Note<
   "cannot constant evaluate whether run-time alignment is at least %0">;
 def note_constexpr_alignment_adjust : Note<
   "cannot constant evaluate the result of adjusting alignment to %0">;
+def note_constexpr_load8_unaligned : Note<
+  "%0 requires a pointer aligned to %1 %plural{1:byte|:bytes}1, but the "
+  "given pointer is only aligned to %2 %plural{1:byte|:bytes}2">;
 def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
@@ -415,8 +420,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode
-    : Note<"stateful alloc token mode not supported in constexpr">;
+def note_constexpr_infer_alloc_token_unsupported_mode
+    : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
