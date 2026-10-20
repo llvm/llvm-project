@@ -526,9 +526,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v2i16, MVT::v4i8}, Custom);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
                          Custom);
-      // Operand legalization queries the action using the illegal subvector.
-      setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
-                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -4775,6 +4772,10 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   if (!Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+    // Splats are legal; don't build them with PPAIRE/PACK.
+    if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue())
+      return DAG.getSplatVector(VT, DL, Splat);
+
     if (VT == MVT::v2i16) {
       SDValue Lo = DAG.getBitcast(
           MVT::v2i16,
@@ -6742,7 +6743,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG, Subtarget.is64Bit()))
       return V;
-    return SDValue();
+
+    // As a last resort, widen the elements so the shuffle can be matched on a
+    // wider type, e.g. v4i16 <0,1,6,7> -> v2i32 <0,3>.
+    return tryWidenMaskForShuffle(Op, DAG);
   }
 
   if (VT.getVectorElementType() == MVT::i1) {
@@ -14492,9 +14496,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   bool IsPExtInsert =
       Subtarget.hasStdExtP() &&
-      ((Subtarget.is64Bit() &&
-        (SubVecVT == MVT::v2i16 || SubVecVT == MVT::v4i8)) ||
-       (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)));
+      (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8));
 
   // Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
   // at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
@@ -14504,11 +14506,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
         !ISD::isConstantSplatVectorAllZeros(Vec.getNode()))
       return SDValue();
 
-    if (!Subtarget.is64Bit()) {
-      SDValue Zero = DAG.getBitcast(SubVecVT, DAG.getConstant(0, DL, MVT::i32));
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
-    }
-    return widenPackedVectorWithZeros(DAG, DL, SubVec, VecVT);
+    SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
   }
 
   if (OrigIdx == 0 && Vec.isUndef())
@@ -16934,13 +16933,12 @@ static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
-// Zero-extend a 32-bit packed vector to the 64-bit packed type WideVT,
-// clearing the upper lanes.
+// Widen a 32-bit packed vector to the 64-bit packed type WideVT by
+// concatenating it with zeros, clearing the upper lanes.
 static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
                                           SDValue V, MVT WideVT) {
-  SDValue Wide =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, DAG.getBitcast(MVT::i32, V));
-  return DAG.getBitcast(WideVT, Wide);
+  SDValue Zero = DAG.getConstant(0, DL, V.getValueType());
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, V, Zero);
 }
 
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
@@ -19835,8 +19833,12 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     break;
   case ISD::MUL:
-    // MULH*/MULHR*: shift amount must be element size, only for i16/i32
-    if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
+    // MULH*/MULHR*: shift amount must be element size, only for i16/i32. The
+    // exception is the RV64 v8i8 MULHSU which is built from multiply halves.
+    if (ShAmtVal != EltBits)
+      return SDValue();
+    if (EltBits != 16 && EltBits != 32 &&
+        !(Subtarget.is64Bit() && VT == MVT::v8i8 && !IsRounding))
       return SDValue();
     if (!Subtarget.is64Bit() && VT == MVT::v4i16)
       return SDValue();
@@ -20226,8 +20228,10 @@ static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
-// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
-// being inserted only sets known zero bits.
+// Generate a QC_INSB/QC_INSBI from either
+// 'or (and X, MaskImm), OrImm' or
+// 'or (and X, MaskImm), (shl Y, ShAmt)' when the inserted value only sets
+// bits known to be zero in X.
 static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                             const RISCVSubtarget &Subtarget) {
   // Supported only in Xqcibm for now.
@@ -20236,38 +20240,52 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
 
-  SDValue Inserted;
-  APInt MaskImm, OrImm;
-  if (!sd_match(
-          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
-                                                        m_ConstInt(MaskImm))),
-                                         m_ConstInt(OrImm)))))
+  SDValue And, Base, Shl, ShiftSrc;
+  APInt OrImm, ShiftImm;
+  bool IsImmediate = sd_match(
+      N, m_SpecificVT(
+             MVT::i32,
+             m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                  m_ConstInt(OrImm))));
+
+  if (!IsImmediate &&
+      !sd_match(
+          N,
+          m_SpecificVT(
+              MVT::i32,
+              m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                   m_OneUse(m_Value(
+                       Shl, m_Shl(m_Value(ShiftSrc), m_ConstInt(ShiftImm))))))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
   // cases than just looking for AND with imm.
-  KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
-
-  // The bits being inserted must only set those bits that are known to be
-  // zero.
-  if (!OrImm.isSubsetOf(Known.Zero)) {
-    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
-    // currently handle this case.
-    return SDValue();
-  }
-
+  KnownBits Known = DAG.computeKnownBits(And);
   unsigned ShAmt, Width;
   // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
   if (!Known.Zero.isShiftedMask(ShAmt, Width))
     return SDValue();
 
+  SDValue Source;
+  if (IsImmediate) {
+    // The bits being inserted must only set those bits that are known to be
+    // zero.
+    if (!OrImm.isSubsetOf(Known.Zero))
+      // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we
+      // don't currently handle this case.
+      return SDValue();
+    Source = DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, SDLoc(N),
+                                   MVT::i32);
+  } else {
+    if (ShiftImm.ugt(31) || ShiftImm.getZExtValue() != ShAmt ||
+        !DAG.MaskedValueIsZero(Shl, ~Known.Zero))
+      return SDValue();
+    Source = ShiftSrc;
+  }
+
   // QC_INSB(I) dst, src, #width, #shamt.
   SDLoc DL(N);
-
-  SDValue ImmNode =
-      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
-
-  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+  SDValue Ops[] = {Base, Source, DAG.getConstant(Width, DL, MVT::i32),
                    DAG.getConstant(ShAmt, DL, MVT::i32)};
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
@@ -30046,6 +30064,28 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   // e8 element type access.  Given this, we effectively support all unmasked
   // misaligned accesses.  TODO: Work through the codegen implications of
   // allowing such accesses to be formed, and considered fast.
+  if (Fast)
+    *Fast = Subtarget.enableUnalignedVectorMem();
+  return Subtarget.enableUnalignedVectorMem();
+}
+
+// Same as above but handling LLTs instead.
+bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
+    LLT Ty, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  if (!Ty.isVector() || Subtarget.hasStdExtP()) {
+    if (Fast)
+      *Fast = Subtarget.enableUnalignedScalarMem();
+    return Subtarget.enableUnalignedScalarMem();
+  }
+
+  // All vector implementations must support element alignment.
+  if (Alignment >= Ty.getScalarType().getSizeInBytes()) {
+    if (Fast)
+      *Fast = 1;
+    return true;
+  }
+
   if (Fast)
     *Fast = Subtarget.enableUnalignedVectorMem();
   return Subtarget.enableUnalignedVectorMem();
