@@ -766,7 +766,6 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
       IsDependentVar(VD))
     return;
   const Expr *Init = VD->getInit();
-
   if (IsDeviceOrConstantVar || IsSharedVar) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))
