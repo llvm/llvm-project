@@ -245,10 +245,6 @@ static bool ActionDependsOn(const Action *A, const Action *Other) {
          });
 }
 
-static bool ActionsAreIndependent(const Action *A, const Action *B) {
-  return !ActionDependsOn(A, B) && !ActionDependsOn(B, A);
-}
-
 static bool CanRunInParallelOffloadJobGroup(const Command &Job) {
   return !Job.InProcess && !Job.PrintInputFilenames &&
          !Job.getBoundArch().empty() &&
@@ -321,9 +317,13 @@ tryExecuteParallelOffloadJobGroup(const Driver &D, const ArgList &Args,
         !HasDistinctBoundArch(Candidate, ParallelJobs))
       continue;
 
-    if (!llvm::all_of(ParallelJobs, [&](const Command *Other) {
-          return ActionsAreIndependent(&Candidate.getSource(),
-                                       &Other->getSource());
+    // In this topologically ordered list, only the candidate can depend on
+    // an earlier job, such as preprocessing with -save-temps.
+    auto EarlierJobs = llvm::make_range(JobStorage.begin() + StartIndex,
+                                        JobStorage.begin() + I);
+    if (!llvm::all_of(EarlierJobs, [&](const auto &Other) {
+          return Done.contains(Other.get()) ||
+                 !ActionDependsOn(&Candidate.getSource(), &Other->getSource());
         }))
       continue;
 
