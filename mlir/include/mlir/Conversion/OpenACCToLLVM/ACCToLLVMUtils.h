@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_OPENACCTOLLVM_ACCTOLLVMUTILS_H
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -79,6 +80,13 @@ Value createIdent(Location loc, StringRef functionName, OpBuilder &builder,
 /// for values like queue numbers.
 Value castToI64(Location loc, Value value, OpBuilder &builder);
 
+/// Creates an i64 constant.
+Value constantI64(Location loc, int64_t value, OpBuilder &builder);
+
+/// Returns the value \p value was converted to, or \p value itself when the
+/// conversion left it as it was. Returns a null value for a null \p value.
+Value remapOrSelf(Value value, ConversionPatternRewriter &rewriter);
+
 /// Returns the queue an `async` clause selects: the value of the clause when it
 /// has one, the queue standing for an `async` clause without a value when
 /// \p asyncOnly is set, and the synchronous queue when there is no clause at
@@ -138,12 +146,6 @@ emitValueSelectedByIfCond(Location loc, Value ifCond, RewriterBase &rewriter,
 /// its blocks.
 void spliceConstructRegion(Operation *op, Region &region,
                            RewriterBase &rewriter);
-
-/// The clauses of a construct can be given once per device type. Of the values
-/// that reach a given device type, the ones naming it are the most specific,
-/// then the ones naming every device type, then the ones given before any
-/// device_type clause.
-SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
 
 namespace detail {
 /// The constructs carrying a `device_type` clause hold their async and wait

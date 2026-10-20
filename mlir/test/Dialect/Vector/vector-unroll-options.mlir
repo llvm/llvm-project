@@ -423,6 +423,25 @@ func.func @vector_broadcast_with_tailing_unit_dim(%v: vector<4x1xf32>) -> vector
 
 // -----
 
+// Verify unrolling when the broadcast result rank is greater than the
+// native shape rank.
+// CHECK-LABEL: func.func @vector_broadcast_rank_mismatch(
+//  CHECK-SAME: [[arg0:%.+]]: vector<2x4xi16>
+//       CHECK: [[c:%.+]] = arith.constant dense<0> : vector<1x2x4xi16>
+//       CHECK: [[s0:%.+]] = vector.extract_strided_slice [[arg0]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<2x4xi16> to vector<2x2xi16>
+//       CHECK: [[b0:%.+]] = vector.broadcast [[s0]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK: [[r0:%.+]] = vector.insert_strided_slice [[b0]], [[c]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x2x4xi16>
+//       CHECK: [[s1:%.+]] = vector.extract_strided_slice [[arg0]] offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<2x4xi16> to vector<2x2xi16>
+//       CHECK: [[b1:%.+]] = vector.broadcast [[s1]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK: [[r1:%.+]] = vector.insert_strided_slice [[b1]], [[r0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x2x4xi16>
+//       CHECK: return [[r1]] : vector<1x2x4xi16>
+func.func @vector_broadcast_rank_mismatch(%arg: vector<2x4xi16>) -> vector<1x2x4xi16> {
+  %0 = vector.broadcast %arg : vector<2x4xi16> to vector<1x2x4xi16>
+  return %0 : vector<1x2x4xi16>
+}
+
+// -----
+
 func.func @vector_load_2D(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
   %c0 = arith.constant 0 : index
   %0 = vector.load %mem[%c0, %c0] : memref<4x4xf16>, vector<4x4xf16>
@@ -888,3 +907,31 @@ func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: ve
 //       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R3]], %[[V1]] offsets = [1, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   return %[[V2]] : vector<2x2xf32>
+
+// -----
+
+// Region-masked ops are not unrolled: the enclosing mask would not be sliced.
+
+func.func @masked_vector_contract(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
+                                  %init : vector<8x8xf32>, %mask : vector<8x8x4xi1>) -> vector<8x8xf32> {
+  %0 = vector.mask %mask { vector.contract
+         {indexing_maps = [affine_map<(i, j, k) -> (i, k)>,
+                           affine_map<(i, j, k) -> (j, k)>,
+                           affine_map<(i, j, k) -> (i, j)>],
+          iterator_types = ["parallel", "parallel", "reduction"]}
+       %lhs, %rhs, %init : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> } : vector<8x8x4xi1> -> vector<8x8xf32>
+  return %0 : vector<8x8xf32>
+}
+// CHECK-LABEL: func @masked_vector_contract
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.contract {{.*}} : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> }
+//  CHECK-NEXT:   return %[[R]]
+
+// -----
+
+func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>, %mask : vector<4x6xi1>) -> vector<4xf32> {
+  %0 = vector.mask %mask { vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32> } : vector<4x6xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+// CHECK-LABEL: func @masked_vector_multi_reduction
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.multi_reduction <add>, {{.*}} : vector<4x6xf32> to vector<4xf32> }
+//  CHECK-NEXT:   return %[[R]]

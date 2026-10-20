@@ -35,6 +35,22 @@ _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, -1), ""); // expected-error {{stat
 _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 4), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
                                                           expected-note {{argument value 4 is outside the valid range [0, 3]}}
 
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 1 / 0), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                              expected-note {{division by zero}}
+
+int get_object_size_type(void);
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, get_object_size_type()), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+
+void test_non_constant_object_size_type(int type) {
+  _Static_assert(OBJECT_SIZE_BUILTIN((void *)0, type), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+}
+
+volatile int volatile_object_size_type = 0;
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, volatile_object_size_type), ""); // expected-error {{static assertion expression is not an integral constant expression}}
+
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, *(int *)0), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                                  expected-note {{dereferencing a null pointer is not allowed in a constant expression}}
+
 // cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {
  __builtin_va_list args;

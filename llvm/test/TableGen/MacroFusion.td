@@ -413,3 +413,17 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestSingleFusion)) Fusions.push_back(llvm::isTestSingleFusion);
 // CHECK-SUBTARGET-NEXT:   return Fusions;
 // CHECK-SUBTARGET-NEXT: }
+
+// Check that the generated fusion subtarget features are ignored for inlining.
+// CHECK-SUBTARGET:      const FeatureBitset &TestGenSubtargetInfo::getInlineIgnoreFeatures() const {
+// CHECK-SUBTARGET-NEXT:   static constexpr FeatureBitset Features = {
+// CHECK-SUBTARGET-NEXT: Test::TestBothFusionPredicate,
+// CHECK-SUBTARGET-NEXT: Test::TestCommutableFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestFirstSameRegFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestPostRAOnlyFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestPreRAOnlyFusion,
+// CHECK-SUBTARGET-NEXT: Test::TestSingleFusion,
+// CHECK-SUBTARGET-NEXT:   };
+// CHECK-SUBTARGET-NEXT:   return Features;
+// CHECK-SUBTARGET-NEXT: }

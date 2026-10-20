@@ -931,10 +931,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
         if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
           CheckIntegerNoRef(symbol, source);
         } else {
-          if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
-              !IsPolymorphic(*symbol)) {
+          if (IsAllocatable(*symbol) || IsAssumedShape(*symbol) ||
+              IsPolymorphic(*symbol)) {
             context_.Say(source,
-                "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
+                "The list item `%s` specified with the REF '%s' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
                 symbol->name(), desc.getName());
           }
         }

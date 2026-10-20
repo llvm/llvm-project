@@ -52,7 +52,7 @@ public:
   /// default, handled automatically. For data types which need custom
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
-  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -120,7 +120,8 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -317,25 +318,15 @@ public:
       AddExpressionPath(path);
   }
 
-  void AddExpressionPath(const char *path) {
-    AddExpressionPath(std::string(path));
-  }
-
   void Clear() { m_expression_paths.clear(); }
 
   size_t GetCount() const { return m_expression_paths.size(); }
 
-  const char *GetExpressionPathAtIndex(size_t i) const {
-    return m_expression_paths[i].c_str();
-  }
+  llvm::StringRef GetExpressionPathAtIndex(size_t i) const;
 
-  bool SetExpressionPathAtIndex(size_t i, const char *path) {
-    return SetExpressionPathAtIndex(i, std::string(path));
-  }
+  void AddExpressionPath(llvm::StringRef path);
 
-  void AddExpressionPath(const std::string &path);
-
-  bool SetExpressionPathAtIndex(size_t i, const std::string &path);
+  bool SetExpressionPathAtIndex(size_t i, llvm::StringRef path);
 
   bool IsScripted() override { return false; }
 
@@ -365,7 +356,8 @@ public:
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -465,7 +457,8 @@ public:
 
     bool MightHaveChildren() override;
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     lldb::ValueObjectSP GetSyntheticValue() override;
 
@@ -524,7 +517,8 @@ private:
     lldb::ChildCacheState Update() override;
     llvm::Expected<uint32_t> CalculateNumChildren() override;
     lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
   private:
     const SyntheticBytecodeImplementation &m_impl;
