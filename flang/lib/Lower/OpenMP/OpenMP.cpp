@@ -3564,26 +3564,21 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerived(const semantics::Symbol &sym) {
-  const auto *type = sym.GetUltimate().GetType();
-  return type && type->AsIntrinsic();
+static bool isNonDerivedNonAllocatable(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  const auto *type = ultimate.GetType();
+  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate);
 }
 
-static bool isNonDerivedItem(const semantics::Symbol &sym) {
+static bool isNonDerivedNonAllocatableItem(const semantics::Symbol &sym) {
   const auto &ultimate = sym.GetUltimate();
-  // May be a common block
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
     return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerived(*member);
+      return isNonDerivedNonAllocatable(*member);
     });
   }
-  return isNonDerived(ultimate);
-}
-
-static bool isDerivedVariable(mlir::Value variable) {
-  mlir::Type type = variable.getType();
-  return !fir::isa_derived(fir::getFortranElementType(type));
+  return isNonDerivedNonAllocatable(ultimate);
 }
 
 static mlir::omp::SectionsOp
@@ -3681,21 +3676,24 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
   // TODO: sections still uses eager privatisation. Use clauseOps.privateVars
   // once delayedPrivatization is turned on.
-  bool allPrivateVarsEligible = llvm::all_of(
-      dsp.getAllSymbolsToPrivatize(),
-      [](const semantics::Symbol *sym) { return isNonDerivedItem(*sym); });
+  const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
+  if (!privateSyms.empty() &&
+      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
+        return isNonDerivedNonAllocatableItem(*sym);
+      }))
+    sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
-  bool allReductionVarsEligible =
+  if (!clauseOps.reductionVars.empty() &&
       llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
         return variable == lpAlloca ||
-               isDerivedVariable(variable);
-      });
-
-  if (allPrivateVarsEligible && allReductionVarsEligible)
-    sectionsOp.setAssumeBoundedRecipeEffects(true);
+               (!fir::isAllocatableType(variable.getType()) &&
+                !fir::isa_derived(
+                    fir::getFortranElementType(variable.getType())));
+      }))
+    sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
   // Create entry block with reduction variables as arguments.
   ObjectEntryBlockArgs args;

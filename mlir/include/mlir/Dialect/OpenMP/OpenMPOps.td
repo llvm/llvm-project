@@ -333,8 +333,9 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     HasParallelRegion,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClause
+    OpenMP_AllocateClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>,
+    OpenMP_ReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "sections construct";
   let description = [{
@@ -345,28 +346,7 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     implicit task.
     Block arguments for reduction variables should be mirrored in enclosed
     `omp.section` operations.
-
-    The `assume_bounded_recipe_effects` flag makes the memory-effect interface
-    assume that all regions of the referenced privatisation and reduction
-    recipes obey the following bounds at this use:
-    - Privatisation may read the original variable as a mold or firstprivate
-      copy source, and may allocate, write and free private storage.
-      Lastprivate copy-back is represented by explicit nested operations.
-    - Reduction may read and write the original variable. It may allocate,
-      free, read or write private accumulators.
-    - These effects apply only to storage directly designated by the original
-      variables and their corresponding private block arguments.
-    - They may not access other storage, including globals or pointees reached
-      by loading pointers from these variables.
-
-    These are upper bounds, not a claim that every recipe performs every
-    permitted effect. Without the flag, referenced recipes are assumed to have
-    arbitrary memory effects.
   }] # clausesDescription;
-
-  let arguments = !con(clausesArgs, (ins
-    UnitAttr:$assume_bounded_recipe_effects
-  ));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);

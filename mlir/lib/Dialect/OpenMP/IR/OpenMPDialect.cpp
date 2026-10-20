@@ -3429,16 +3429,17 @@ OperandRange SectionOp::getReductionVars() {
 void SectionsOp::build(OpBuilder &builder, OperationState &state,
                        const SectionsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SectionsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                     makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
                     makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-                    clauses.nowait, /*private_vars=*/{},
-                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    clauses.nowait, clauses.privateVars,
+                    makeArrayAttr(ctx, clauses.privateSyms),
+                    clauses.privateNeedsBarrier,
+                    /*private_assume_bounded_recipe_effects=*/nullptr,
                     clauses.reductionMod, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms),
-                    /*assume_bounded_recipe_effects=*/nullptr);
+                    /*reduction_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult SectionsOp::verify() {
@@ -3538,16 +3539,17 @@ void SectionsOp::getEffects(
   if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
     getBarrierEffects(effects);
   }
-  bool hasReduction = !getReductionVars().empty();
-  bool hasPrivatisation = !getPrivateVars().empty();
-  if (getAssumeBoundedRecipeEffects()) {
-    if (hasPrivatisation)
-      getPrivatisationEffects(*this, effects);
-    if (hasReduction)
-      getReductionEffects(*this, effects);
+
+  bool hasUnknownRecipeEffects =
+      (!getPrivateVars().empty() && !getPrivateAssumeBoundedRecipeEffects()) ||
+      (!getReductionVars().empty() &&
+       !getReductionAssumeBoundedRecipeEffects());
+
+  if (hasUnknownRecipeEffects) {
+    addUnknownMemoryEffects(effects);
   } else {
-    if (hasReduction || hasPrivatisation)
-      addUnknownMemoryEffects(effects);
+    getPrivatisationEffects(*this, effects);
+    getReductionEffects(*this, effects);
   }
 }
 
