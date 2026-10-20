@@ -67,6 +67,7 @@ public:
   AGX_ENCODER(Dst)
   AGX_ENCODER(MemReg)
   AGX_ENCODER(AtomicDst)
+  AGX_ENCODER(AtomicMode)
   AGX_ENCODER(LocalAtomicDst)
   AGX_ENCODER(MemBase)
   AGX_ENCODER(MemIndex)
@@ -247,6 +248,16 @@ void AGXMCCodeEmitter::getAtomicDstEncoding(const MCInst &MI, unsigned OpNo,
   if (Info.Kind != AGX::RegKind::GPR32)
     report(MI, "atomic results are 32-bit registers");
   setOp(Op, Info.HalfIndex | (1u << 8));
+}
+
+void AGXMCCodeEmitter::getAtomicModeEncoding(const MCInst &MI, unsigned OpNo,
+                                             APInt &Op,
+                                             SmallVectorImpl<MCFixup> &,
+                                             const MCSubtargetInfo &) const {
+  uint64_t V = MI.getOperand(OpNo).getImm();
+  if (V > 3)
+    report(MI, "atomic mode must be 0-3");
+  setOp(Op, (V & 1) | (((V >> 1) ^ 1) << 1));
 }
 
 void AGXMCCodeEmitter::getLocalAtomicDstEncoding(

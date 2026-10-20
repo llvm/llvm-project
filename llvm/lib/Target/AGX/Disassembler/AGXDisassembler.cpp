@@ -258,6 +258,13 @@ static DecodeStatus decodeAtomicDst(MCInst &MI, uint64_t V, uint64_t,
   return addReg(MI, AGX::RegKind::GPR32, V & 0xff, D);
 }
 
+// Device atomic bits 45-46; see AGXAtomicMode.
+static DecodeStatus decodeAtomicMode(MCInst &MI, uint64_t V, uint64_t,
+                                     const MCDisassembler *) {
+  MI.addOperand(MCOperand::createImm((V & 1) | (((V >> 1) ^ 1) << 1)));
+  return MCDisassembler::Success;
+}
+
 // Threadgroup atomic result: [7:0] register, [8] 32-bit, [9] present.
 static DecodeStatus decodeLocalAtomicDst(MCInst &MI, uint64_t V, uint64_t,
                                          const MCDisassembler *D) {

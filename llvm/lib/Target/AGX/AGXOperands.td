@@ -243,6 +243,17 @@ def AGXMemReg : Operand<i32> {
 }
 
 // Optional atomic result register ('_' for none).
+// Bits 45-46 of the device atomic. Operand bit 0 is bit 45 (the coherency bit,
+// or the float / 64-bit variant on G14); operand bit 1 clears bit 46, which is
+// set in every encoding Mesa emits. 0 and 1 are therefore Mesa's encodings,
+// and 3 with cmpxchg is the 64-bit unsigned min.
+def AGXAtomicMode : Operand<i32> {
+  let PrintMethod = "printImm";
+  let ParserMatchClass = AGXImmAsm;
+  let EncoderMethod = "getAtomicModeEncoding";
+  let DecoderMethod = "decodeAtomicMode";
+}
+
 def AGXAtomicDst : Operand<i32> {
   let PrintMethod = "printAtomicDst";
   let EncoderMethod = "getAtomicDstEncoding";

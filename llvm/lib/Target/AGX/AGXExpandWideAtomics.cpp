@@ -26,6 +26,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSubtarget.h"
+#include "AGXTargetMachine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -45,10 +47,14 @@ namespace {
 class AGXExpandWideAtomics : public FunctionPass {
 public:
   static char ID;
-  AGXExpandWideAtomics() : FunctionPass(ID) {}
+  explicit AGXExpandWideAtomics(const AGXTargetMachine *TM = nullptr)
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override { return "AGX Expand Wide Atomics"; }
   bool runOnFunction(Function &F) override;
+
+private:
+  const AGXTargetMachine *TM;
 };
 
 } // namespace
@@ -58,8 +64,8 @@ char AGXExpandWideAtomics::ID = 0;
 INITIALIZE_PASS(AGXExpandWideAtomics, DEBUG_TYPE, "AGX Expand Wide Atomics",
                 false, false)
 
-FunctionPass *llvm::createAGXExpandWideAtomicsPass() {
-  return new AGXExpandWideAtomics();
+FunctionPass *llvm::createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM) {
+  return new AGXExpandWideAtomics(TM);
 }
 
 static GlobalVariable *getLocks(Module &M) {
@@ -222,10 +228,19 @@ bool AGXExpandWideAtomics::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   const DataLayout &DL = F.getDataLayout();
+  const AGXTargetLowering *TLI =
+      TM ? TM->getSubtargetImpl(F)->getTargetLowering() : nullptr;
   SmallVector<std::pair<Instruction *, unsigned>, 4> Wide;
-  for (Instruction &I : instructions(F))
+  for (Instruction &I : instructions(F)) {
+    // Wide operations the chip has an instruction for.
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(&I);
+        RMW && TLI &&
+        TLI->shouldExpandAtomicRMWInIR(RMW) ==
+            TargetLowering::AtomicExpansionKind::None)
+      continue;
     if (unsigned Bits = wideAtomicSize(I, DL))
       Wide.push_back({&I, Bits});
+  }
   if (Wide.empty())
     return false;
   GlobalVariable *Locks = getLocks(*F.getParent());

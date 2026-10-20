@@ -59,7 +59,9 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
   setJumpIsExpensive(true);
-  setMaxAtomicSizeInBitsSupported(32);
+  // Wider atomics are expanded with locks by AGXExpandWideAtomics, except
+  // the 64-bit operations the chip has (shouldExpandAtomicRMWInIR).
+  setMaxAtomicSizeInBitsSupported(ST.hasDeviceAtomicU64MinMax() ? 64 : 32);
   setMinCmpXchgSizeInBits(32);
 
   // There are no calls and no scalar branches: all control flow is
@@ -227,6 +229,13 @@ AGXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   // threadgroup atomic has none.
   if (RMW->getOperation() == AtomicRMWInst::FAdd && RMW->getType()->isFloatTy() &&
       ST.hasDeviceAtomicFAdd() &&
+      RMW->getPointerAddressSpace() != AGX::THREADGROUP_ADDRESS)
+    return AtomicExpansionKind::None;
+  // A native u64 min / max on device memory when the old value is unused.
+  if ((RMW->getOperation() == AtomicRMWInst::UMin ||
+       RMW->getOperation() == AtomicRMWInst::UMax) &&
+      RMW->getType()->isIntegerTy(64) && RMW->use_empty() &&
+      ST.hasDeviceAtomicU64MinMax() &&
       RMW->getPointerAddressSpace() != AGX::THREADGROUP_ADDRESS)
     return AtomicExpansionKind::None;
   return AtomicExpansionKind::CmpXChg;

@@ -100,6 +100,14 @@ def FeatureDeviceAtomicFAdd : SubtargetFeature<"device-atomic-fadd",
   "Device atomics include a float32 add"
 >;
 
+// G14C: cmpxchg with bit 45 is a u64 unsigned min (bit 46 clear) or max
+// (bit 46 set). With a result register it returns only whether memory changed,
+// so only atomics whose result is unused use it (2026-10-17-atomic-variants).
+def FeatureDeviceAtomicU64MinMax : SubtargetFeature<"device-atomic-u64-minmax",
+  "HasDeviceAtomicU64MinMax", "true",
+  "Device atomics include a 64-bit unsigned min and max without a result"
+>;
+
 def FeatureThreadgroupAtomics : SubtargetFeature<"threadgroup-atomics",
   "HasThreadgroupAtomics", "true",
   "Has threadgroup memory atomics"
@@ -171,7 +179,7 @@ def FeatureG14 : AGXSubtargetFeatureGeneration<"G14", "g14",
   [FeatureAGX2Encoding, FeatureFP16Arith, FeatureInt64Add, FeatureSIMDShuffle,
    FeatureSIMDReduce, FeatureSIMDBallot, FeatureSIMDMatrix,
    FeatureQuadShuffleIndexMerge, FeatureThreadgroupAtomics,
-   FeatureDeviceAtomics, FeatureDeviceAtomicFAdd, FeatureStackAccess,
+   FeatureDeviceAtomics, FeatureDeviceAtomicFAdd, FeatureDeviceAtomicU64MinMax, FeatureStackAccess,
    FeatureMaxGPRs128]
 >;
 
@@ -216,3 +224,4 @@ def HasInt64Add : Predicate<"Subtarget->hasInt64Add()">;
 def HasThreadgroupAtomics : Predicate<"Subtarget->hasThreadgroupAtomics()">;
 def HasDeviceAtomics : Predicate<"Subtarget->hasDeviceAtomics()">;
 def HasDeviceAtomicFAdd : Predicate<"Subtarget->hasDeviceAtomicFAdd()">;
+def HasDeviceAtomicU64MinMax : Predicate<"Subtarget->hasDeviceAtomicU64MinMax()">;

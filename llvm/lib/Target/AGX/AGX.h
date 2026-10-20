@@ -28,7 +28,7 @@ FunctionPass *createAGXCodeGenPreparePass();
 FunctionPass *createAGXStrictFPPass();
 FunctionPass *createAGXLowerFPEnvPass();
 FunctionPass *createAGXSoftF64Pass();
-FunctionPass *createAGXExpandWideAtomicsPass();
+FunctionPass *createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM = nullptr);
 FunctionPass *createAGXAnnotateControlFlowPass();
 
 // Instruction selection.

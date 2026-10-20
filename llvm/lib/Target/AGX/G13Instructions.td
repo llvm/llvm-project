@@ -982,7 +982,7 @@ let mayLoad = 1, mayStore = 1, hasSideEffects = 1, IsAsync = 1 in
 def ATOMIC_g13 : AGXReal<"atomic", (outs AGXAtomicDst:$R),
                          (ins AGXAtomicOp:$op, AGXImm:$g, AGXMemBase:$A,
                               AGXMemIndex:$O, AGXSignedness:$sgn,
-                              AGXAtomicSrc:$S, AGXImm:$coherent),
+                              AGXAtomicSrc:$S, AGXAtomicMode:$coherent),
                          "$op, $g, $R, $A, $O, $sgn, $S, $coherent", 8> {
   bits<4> op;
   bits<1> g;
@@ -991,7 +991,7 @@ def ATOMIC_g13 : AGXReal<"atomic", (outs AGXAtomicDst:$R),
   bits<17> O;
   bits<1> sgn;
   bits<8> S;
-  bits<1> coherent;
+  bits<2> coherent;
   let IsMemory = 1;
   let Inst{5-0} = 0b010101;
   let Inst{9-6} = op;
@@ -1010,8 +1010,7 @@ def ATOMIC_g13 : AGXReal<"atomic", (outs AGXAtomicDst:$R),
   let Inst{41-40} = R{7-6};
   let Inst{43-42} = 0;
   let Inst{44} = 1;
-  let Inst{45} = coherent;
-  let Inst{46} = 1;
+  let Inst{46-45} = coherent;
   let Inst{47} = R{8};
   let Inst{55-48} = S;
   let Inst{63-56} = O{15-8};

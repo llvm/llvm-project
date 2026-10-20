@@ -149,7 +149,7 @@ void AGXPassConfig::addIRPasses() {
   addPass(createAlwaysInlinerLegacyPass());
 
   // 64- and 128-bit atomics take locks; the others are hardware atomics.
-  addPass(createAGXExpandWideAtomicsPass());
+  addPass(createAGXExpandWideAtomicsPass(&getAGXTargetMachine()));
   addPass(createAtomicExpandLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInferAddressSpacesPass());

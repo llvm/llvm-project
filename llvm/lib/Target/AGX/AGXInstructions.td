@@ -1049,6 +1049,17 @@ def DEVICE_ATOMIC_CMPXCHG : AGXPseudo<(outs GPR32:$R),
   let SchedRW = [WriteAtomic];
 }
 
+// A 64-bit atomic without a result (the hardware returns only a "changed"
+// flag).
+def DEVICE_ATOMIC64_NORET : AGXPseudo<(outs),
+                                      (ins i32imm:$op, i32imm:$g, Base64Op:$A,
+                                           IndexOp:$O, i32imm:$sgn, GPR64:$S,
+                                           i32imm:$coherent)> {
+  let G13Real = ATOMIC_g13;
+  let IsAsync = 1;
+  let SchedRW = [WriteAtomic];
+}
+
 def LOCAL_ATOMIC : AGXPseudo<(outs GPR32:$R),
                              (ins i32imm:$op, LocalBaseOp:$A, LocalIndexOp:$O,
                                   GPR32:$S)> {
@@ -1115,6 +1126,26 @@ def agx_atomic_fadd_device
 let Predicates = [HasDeviceAtomicFAdd] in
 def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
           (DEVICE_ATOMIC AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
+
+// u64 min / max whose old value is unused: cmpxchg with bit 45 set, bit 46
+// clear for min (mode 3) and set for max (mode 1).
+class AtomicNoRet64Frag<SDPatternOperator op>
+    : PatFrag<(ops node:$ptr, node:$val), (op node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty();
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+  let AddressSpaces = DeviceAS;
+}
+def agx_atomic_umin64_noret : AtomicNoRet64Frag<atomic_load_umin>;
+def agx_atomic_umax64_noret : AtomicNoRet64Frag<atomic_load_umax>;
+
+let Predicates = [HasDeviceAtomicU64MinMax] in {
+def : Pat<(i64 (agx_atomic_umin64_noret i64:$ptr, i64:$val)),
+          (DEVICE_ATOMIC64_NORET AOP_CMPXCHG, 0, $ptr, (i32 0), 0, $val, 3)>;
+def : Pat<(i64 (agx_atomic_umax64_noret i64:$ptr, i64:$val)),
+          (DEVICE_ATOMIC64_NORET AOP_CMPXCHG, 0, $ptr, (i32 0), 0, $val, 1)>;
+}
 
 def agx_cmpxchg_device : AtomicCmpSwapFrag<DeviceAS>;
 def agx_cmpxchg_local : AtomicCmpSwapFrag<LocalAS>;

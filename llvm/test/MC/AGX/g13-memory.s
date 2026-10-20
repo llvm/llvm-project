@@ -42,3 +42,11 @@ threadgroup_store i32, xz, r110l_r110h, u65h, -17937
 threadgroup_store rg11b10f.rtz, xzw, r100l_r100h_r101l, u65h, 30145
 # CHECK: threadgroup_store rg11b10f.rtz, xzw, r100l_r100h_r101l, u65h, 30145{{ +}}// encoding: [0x29,0x90,0x43,0x1e,0xd4,0x00,0xd7,0x39]
 
+
+# Bits 45-46 of the device atomic (G14C measurements, Apple-M2-Playground
+# 2026-10-17-atomic-variants): mode 3 clears bit 46 (u64 min with cmpxchg),
+# and "_" leaves the result unwritten.
+atomic cmpxchg, 0, _, r10_r11, 0, signed, r4_r5, 3
+# CHECK: atomic cmpxchg, 0, _, r10_r11, 0, signed, r4_r5, 3{{ +}}// encoding: [0xd5,0x00,0x04,0x85,0x10,0x30,0x08,0x00]
+atomic cmpxchg, 0, _, r10_r11, 0, signed, r4_r5, 1
+# CHECK: atomic cmpxchg, 0, _, r10_r11, 0, signed, r4_r5, 1{{ +}}// encoding: [0xd5,0x00,0x04,0x85,0x10,0x70,0x08,0x00]

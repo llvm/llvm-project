@@ -34,3 +34,32 @@ define agx_kernel void @sub_device(ptr addrspace(1) %p, ptr addrspace(1) %o, i32
   store i32 %old, ptr addrspace(1) %o
   ret void
 }
+
+; u64 min / max without a used result: cmpxchg with bit 45, bit 46 clear for
+; min (mode 3) and set for max (mode 1), and no result register. Elsewhere,
+; and with the old value used, the wide-atomic lock.
+; CHECK-LABEL: umin64_noret:
+; G14:         atomic cmpxchg, 0, _, u0_u1, 0, signed, r{{[0-9]+}}_r{{[0-9]+}}, 3
+; G14-NOT:     atomic xchg
+; G13:         atomic cmpxchg
+; G13:         atomic xchg
+define agx_kernel void @umin64_noret(ptr addrspace(1) %p, i64 %v) {
+  %old = atomicrmw umin ptr addrspace(1) %p, i64 %v monotonic
+  ret void
+}
+
+; CHECK-LABEL: umax64_noret:
+; G14:         atomic cmpxchg, 0, _, u0_u1, 0, signed, r{{[0-9]+}}_r{{[0-9]+}}, 1
+; G14-NOT:     atomic xchg
+define agx_kernel void @umax64_noret(ptr addrspace(1) %p, i64 %v) {
+  %old = atomicrmw umax ptr addrspace(1) %p, i64 %v monotonic
+  ret void
+}
+
+; CHECK-LABEL: umax64_ret:
+; CHECK:       atomic xchg
+define agx_kernel void @umax64_ret(ptr addrspace(1) %p, ptr addrspace(1) %o, i64 %v) {
+  %old = atomicrmw umax ptr addrspace(1) %p, i64 %v monotonic
+  store i64 %old, ptr addrspace(1) %o
+  ret void
+}

@@ -151,6 +151,10 @@ another.
    ``device-atomic-fadd``         A float32 device atomic add (G14; rounds to
                                   nearest even and flushes denormals, like
                                   PTX ``atom.add.f32``).
+   ``device-atomic-u64-minmax``   A 64-bit unsigned device atomic min and max
+                                  without a result (G14), used for
+                                  ``atomicrmw umin/umax i64`` whose old value
+                                  is unused.
    ``stack-access``               Per-thread stack loads and stores.
    ``dynamic-caching``            Registers and threadgroup memory are
                                   allocated dynamically (G15 and later).

@@ -67,6 +67,10 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   bool InsertCache = PseudoDesc.getNumDefs() > 0 &&
                      RealDesc.getNumOperands() == PseudoDesc.getNumOperands() + 1;
 
+  // Atomics whose result is unused write no register.
+  if (MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET)
+    OutMI.addOperand(MCOperand::createReg(MCRegister()));
+
   unsigned Idx = 0;
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
@@ -83,10 +87,11 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   // Device atomics on parts with several dies must bypass the per-die
   // caches.
   if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||
-       MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG) &&
+       MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG ||
+       MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET) &&
       ST.hasMultiDieCoherency()) {
     int Idx = AGX::getNamedOperandIdx(Opcode, AGX::OpName::coherent);
-    OutMI.getOperand(Idx).setImm(1);
+    OutMI.getOperand(Idx).setImm(OutMI.getOperand(Idx).getImm() | 1);
   }
 
   assert(OutMI.getNumOperands() == RealDesc.getNumOperands() &&
