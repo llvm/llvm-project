@@ -148,6 +148,11 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                      {MVT::i16, MVT::f16, MVT::f32}, Expand);
   // The generic expansion truncates; round to nearest even instead.
   setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32}, Custom);
+  // Constrained bfloat16 arithmetic (promoted to f32) narrows with the strict
+  // form. Directed rounding is done in software, so the dynamic rounding
+  // mode is round to nearest even and it is lowered the same way.
+  setOperationAction(ISD::STRICT_FP_TO_BF16, {MVT::i16, MVT::f16, MVT::f32},
+                     Custom);
 
   // 64-bit conversions are expanded with 32-bit conversions.
   setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
@@ -408,6 +413,9 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerCTLZ_CTTZ64(Op, DAG);
   case ISD::FP_TO_BF16:
     return lowerFP_TO_BF16(Op, DAG);
+  case ISD::STRICT_FP_TO_BF16:
+    return DAG.getMergeValues({lowerFP_TO_BF16(Op, DAG), Op.getOperand(0)},
+                              SDLoc(Op));
   case ISD::FDIV:
     return lowerFDIV(Op, DAG);
   case ISD::FREM:
@@ -913,7 +921,7 @@ SDValue AGXTargetLowering::lowerFCOPYSIGN(SDValue Op,
 SDValue AGXTargetLowering::lowerFP_TO_BF16(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0);
   if (Src.getValueType() != MVT::f32)
     Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
   SDValue X = DAG.getBitcast(MVT::i32, Src);
