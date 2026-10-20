@@ -36,6 +36,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1307,6 +1308,32 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
+/// Returns true if `value` is computed, through elementwise ops only, from an
+/// op whose result layout the hardware fixes (`dpas`, `dpas_mx`, `load_nd`).
+/// Other producers, such as broadcasts, reductions, and gather or matrix loads,
+/// can take the layout a consumer asks for, so the walk stops there.
+///
+/// A store picks its `lane_data` before propagation reaches the producer. If it
+/// widens `lane_data` for such a value, the fixed result needs a `lane_data`
+/// repack across lanes, which costs more than the wider store saves.
+static bool hasFixedLayoutProducer(Value value) {
+  SmallVector<Value> worklist{value};
+  llvm::SmallPtrSet<Operation *, 8> visited;
+  while (!worklist.empty()) {
+    Operation *def = worklist.pop_back_val().getDefiningOp();
+    if (!def || !visited.insert(def).second)
+      continue;
+    if (isa<xegpu::DpasOp, xegpu::DpasMxOp, xegpu::LoadNdOp>(def))
+      return true;
+    if (!OpTrait::hasElementwiseMappableTraits(def))
+      continue;
+    for (Value operand : def->getOperands())
+      if (isa<VectorType>(operand.getType()))
+        worklist.push_back(operand);
+  }
+  return false;
+}
+
 /// Set the layout for the value, tensor descriptor, offset and mask operands
 /// in the StoreScatterOp.
 void LayoutInfoPropagation::visitStoreScatterOp(
@@ -1324,7 +1351,10 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // single access. Absent, only one element per lane is safe. The lowering
   // gates a lane's whole access on one mask bit, so a mask that is not uniform
   // also limits the access to one element.
-  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask())
+  // A value from a fixed-layout producer also stays at one element per lane;
+  // see `hasFixedLayoutProducer`.
+  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask()) &&
+                                !hasFixedLayoutProducer(storeScatter.getValue())
                             ? storeScatter.getContiguity().value_or(1)
                             : 1;
 
@@ -1445,8 +1475,11 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     }
   } else {
     // `contiguity` says how many neighbouring elements one lane may write in a
-    // single access. Absent, only one element per lane is safe.
-    int contigChunkSize = storeMatrix.getContiguity().value_or(1);
+    // single access. Absent, or for a value from a fixed-layout producer (see
+    // `hasFixedLayoutProducer`), only one element per lane is used.
+    int contigChunkSize = hasFixedLayoutProducer(storeMatrix.getData())
+                              ? 1
+                              : storeMatrix.getContiguity().value_or(1);
     auto numSgOrErr =
         getNumSgOrFail(storeMatrix, uArch->getSubgroupSize(), nullptr);
     if (failed(numSgOrErr))

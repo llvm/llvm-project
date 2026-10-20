@@ -917,3 +917,37 @@ func.func @load_matrix_chunk_tiles_runs(
   return
 }
 }
+
+// -----
+// The stored value comes from a dpas through elementwise ops only. The dpas
+// result layout is fixed, so widening the store would need a lane_data repack:
+// the store keeps one element per lane despite its contiguity.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_dpas_no_widening(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK: xegpu.store_matrix %[[EXP]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+func.func @store_matrix_after_dpas_no_widening(%a: vector<8x16xf16>, %b: vector<16x32xf16>,
+    %m: !xegpu.mem_desc<8x64xf32>) {
+  %acc = arith.constant dense<0.0> : vector<8x32xf32>
+  %c = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x32xf16>, vector<8x32xf32> -> vector<8x32xf32>
+  %e = math.exp %c : vector<8x32xf32>
+  xegpu.store_matrix %e, %m[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
+
+// -----
+// A broadcast can take any lane_data, so the walk stops there and the store
+// widens.
+gpu.module @test {
+// CHECK-LABEL: func.func @store_matrix_after_broadcast_widens(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}
+// CHECK: xegpu.store_matrix %[[EXP]], %{{.*}}[0, 0] <{contiguity = 32 : i64, layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>}>
+func.func @store_matrix_after_broadcast_widens(%s: vector<8x1xf32>,
+    %m: !xegpu.mem_desc<8x64xf32>) {
+  %b = vector.broadcast %s : vector<8x1xf32> to vector<8x32xf32>
+  %e = math.exp %b : vector<8x32xf32>
+  xegpu.store_matrix %e, %m[0, 0] : vector<8x32xf32>, !xegpu.mem_desc<8x64xf32>
+  return
+}
+}
