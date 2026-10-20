@@ -14,9 +14,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SETPAYLOADSIGF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SETPAYLOADSIGF128_H
 
-#include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/float128.h"
-#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
