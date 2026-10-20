@@ -17,8 +17,8 @@
 #define LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
@@ -140,8 +140,8 @@ private:
   /// false and prints a message on error.
   bool computeRegex(ExpectedDiag &diag);
 
-  /// Scans \p buf for expected diagnostics and returns the list for its
-  /// buffer identifier.
+  /// Scans \p buf for expected diagnostics, if it has not been scanned yet,
+  /// and returns its list.
   MutableArrayRef<ExpectedDiag> computeExpectedDiags(const MemoryBuffer *buf);
 
   const SourceMgr &mgr;
@@ -156,9 +156,9 @@ private:
   /// Whether a directive can only match one diagnostic, see the constructor.
   bool oneDiagPerDirective;
 
-  /// The expected diagnostics for each buffer that has been scanned so far,
-  /// keyed by buffer identifier (i.e. file name).
-  StringMap<SmallVector<ExpectedDiag, 2>> expectedDiagsPerFile;
+  /// The expected diagnostics for each buffer that has been scanned so far.
+  DenseMap<const MemoryBuffer *, SmallVector<ExpectedDiag, 2>>
+      expectedDiagsPerBuffer;
 
   /// The expected diagnostics with an '@unknown' location.
   SmallVector<ExpectedDiag, 2> expectedUnknownLocDiags;

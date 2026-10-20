@@ -224,3 +224,20 @@ TEST_F(SourceMgrDiagnosticVerifierTest, OutOfBoundsLineOffsets) {
   EXPECT_NE(StringRef(Output).find("error: invalid line offset '+99999999999'"),
             StringRef::npos);
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, BuffersWithSameName) {
+  const MemoryBuffer *Buf1 =
+      addBuffer("op\n# expected-error@-1 {{first}}\n", "same.s");
+  const MemoryBuffer *Buf2 =
+      addBuffer("op\n# expected-error@-1 {{second}}\n", "same.s");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  // Directives only match diagnostics in their own buffer.
+  EXPECT_EQ(Verifier.process(getMessage(Buf2, SourceMgr::DK_Error, "first")),
+            MatchResult::Unexpected);
+  EXPECT_EQ(Verifier.process(getMessage(Buf1, SourceMgr::DK_Error, "first")),
+            MatchResult::Matched);
+  EXPECT_EQ(Verifier.process(getMessage(Buf2, SourceMgr::DK_Error, "second")),
+            MatchResult::Matched);
+  EXPECT_FALSE(Verifier.verify());
+}
