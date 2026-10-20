@@ -4,17 +4,3 @@
 v_floor_f64 v[0:1], 1.23456
 // CHECK: :[[@LINE-1]]:1: warning: Can't encode literal as exact 64-bit floating-point operand. Low 32-bits will be set to zero
 
-v_div_scale_f32 v0, vcc, v1, v2, v3
-// CHECK: :[[@LINE-1]]:26: warning: src0 should be equal to src1 or src2
-v_div_scale_f64 v[0:1], vcc, v[2:3], v[4:5], v[6:7]
-// CHECK: :[[@LINE-1]]:30: warning: src0 should be equal to src1 or src2
-v_div_scale_f32 v0, vcc, 0.5, v2, v3
-// CHECK: :[[@LINE-1]]:26: warning: src0 should be equal to src1 or src2
-v_div_scale_f32 v0, vcc, v1, v1, v3
-
-v_div_scale_f32 v0, vcc, v1, v2, v1
-
-v_div_scale_f32 v0, vcc, 0.5, 0.5, v3
-
-// CHECK-NOT: src0 should be equal to src1 or src2
-

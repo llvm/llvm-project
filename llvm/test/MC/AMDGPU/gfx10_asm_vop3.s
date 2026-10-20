@@ -6818,333 +6818,333 @@ v_mul_hi_i32 v5, v1, 0.5
 v_mul_hi_i32 v5, v1, -4.0
 // GFX10: v_mul_hi_i32 v5, v1, -4.0               ; encoding: [0x05,0x00,0x6c,0xd5,0x01,0xef,0x01,0x02]
 
-v_div_scale_f32 v5, s0, v1, v2, v3
-// W32: v_div_scale_f32 v5, s0, v1, v2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x04]
+v_div_scale_f32 v5, s0, v1, v1, v3
+// W32: v_div_scale_f32 v5, s0, v1, v1, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x03,0x0e,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v255, s0, v1, v2, v3
-// W32: v_div_scale_f32 v255, s0, v1, v2, v3    ; encoding: [0xff,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x04]
+v_div_scale_f32 v255, s0, v1, v1, v3
+// W32: v_div_scale_f32 v255, s0, v1, v1, v3    ; encoding: [0xff,0x00,0x6d,0xd5,0x01,0x03,0x0e,0x04]
 // W64-ERR: :[[@LINE-2]]:23: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v255, v2, v3
-// W32: v_div_scale_f32 v5, s0, v255, v2, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0x05,0x0e,0x04]
+v_div_scale_f32 v5, s0, v255, v255, v3
+// W32: v_div_scale_f32 v5, s0, v255, v255, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0xff,0x0f,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, s1, v2, v3
-// W32: v_div_scale_f32 v5, s0, s1, v2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, s1, s1, v3
+// W32: v_div_scale_f32 v5, s0, s1, s1, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x02,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, s103, v2, v3
-// W32: v_div_scale_f32 v5, s0, s103, v2, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, s103, s103, v3
+// W32: v_div_scale_f32 v5, s0, s103, s103, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0xce,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, vcc_lo, v2, v3
-// W32: v_div_scale_f32 v5, s0, vcc_lo, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, vcc_lo, vcc_lo, v3
+// W32: v_div_scale_f32 v5, s0, vcc_lo, vcc_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0xd4,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, vcc_hi, v2, v3
-// W32: v_div_scale_f32 v5, s0, vcc_hi, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, vcc_hi, vcc_hi, v3
+// W32: v_div_scale_f32 v5, s0, vcc_hi, vcc_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0xd6,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, ttmp11, v2, v3
-// W32: v_div_scale_f32 v5, s0, ttmp11, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, ttmp11, ttmp11, v3
+// W32: v_div_scale_f32 v5, s0, ttmp11, ttmp11, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0xee,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, m0, v2, v3
-// W32: v_div_scale_f32 v5, s0, m0, v2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, m0, m0, v3
+// W32: v_div_scale_f32 v5, s0, m0, m0, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0xf8,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, exec_lo, v2, v3
-// W32: v_div_scale_f32 v5, s0, exec_lo, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, exec_lo, exec_lo, v3
+// W32: v_div_scale_f32 v5, s0, exec_lo, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0xfc,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, exec_hi, v2, v3
-// W32: v_div_scale_f32 v5, s0, exec_hi, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, exec_hi, exec_hi, v3
+// W32: v_div_scale_f32 v5, s0, exec_hi, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0xfe,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, 0, v2, v3
-// W32: v_div_scale_f32 v5, s0, 0, v2, v3       ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, 0, 0, v3
+// W32: v_div_scale_f32 v5, s0, 0, 0, v3        ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x00,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, -1, v2, v3
-// W32: v_div_scale_f32 v5, s0, -1, v2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, -1, -1, v3
+// W32: v_div_scale_f32 v5, s0, -1, -1, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x82,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, 0.5, v2, v3
-// W32: v_div_scale_f32 v5, s0, 0.5, v2, v3     ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, 0.5, 0.5, v3
+// W32: v_div_scale_f32 v5, s0, 0.5, 0.5, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0xe0,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, -4.0, v2, v3
-// W32: v_div_scale_f32 v5, s0, -4.0, v2, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0x04,0x0e,0x04]
+v_div_scale_f32 v5, s0, -4.0, -4.0, v3
+// W32: v_div_scale_f32 v5, s0, -4.0, -4.0, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0xee,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v255, v3
-// W32: v_div_scale_f32 v5, s0, v1, v255, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xff,0x0f,0x04]
+v_div_scale_f32 v5, s0, v255, v255, v3
+// W32: v_div_scale_f32 v5, s0, v255, v255, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0xff,0x0f,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, s2, v3
-// W32: v_div_scale_f32 v5, s0, v1, s2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0c,0x04]
+v_div_scale_f32 v5, s0, s2, s2, v3
+// W32: v_div_scale_f32 v5, s0, s2, s2, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x02,0x04,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, s103, v3
-// W32: v_div_scale_f32 v5, s0, v1, s103, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xcf,0x0c,0x04]
+v_div_scale_f32 v5, s0, s103, s103, v3
+// W32: v_div_scale_f32 v5, s0, s103, s103, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0xce,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, vcc_lo, v3
-// W32: v_div_scale_f32 v5, s0, v1, vcc_lo, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xd5,0x0c,0x04]
+v_div_scale_f32 v5, s0, vcc_lo, vcc_lo, v3
+// W32: v_div_scale_f32 v5, s0, vcc_lo, vcc_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0xd4,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, vcc_hi, v3
-// W32: v_div_scale_f32 v5, s0, v1, vcc_hi, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xd7,0x0c,0x04]
+v_div_scale_f32 v5, s0, vcc_hi, vcc_hi, v3
+// W32: v_div_scale_f32 v5, s0, vcc_hi, vcc_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0xd6,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, ttmp11, v3
-// W32: v_div_scale_f32 v5, s0, v1, ttmp11, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xef,0x0c,0x04]
+v_div_scale_f32 v5, s0, ttmp11, ttmp11, v3
+// W32: v_div_scale_f32 v5, s0, ttmp11, ttmp11, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0xee,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, m0, v3
-// W32: v_div_scale_f32 v5, s0, v1, m0, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xf9,0x0c,0x04]
+v_div_scale_f32 v5, s0, m0, m0, v3
+// W32: v_div_scale_f32 v5, s0, m0, m0, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0xf8,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, exec_lo, v3
-// W32: v_div_scale_f32 v5, s0, v1, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xfd,0x0c,0x04]
+v_div_scale_f32 v5, s0, exec_lo, exec_lo, v3
+// W32: v_div_scale_f32 v5, s0, exec_lo, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0xfc,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, exec_hi, v3
-// W32: v_div_scale_f32 v5, s0, v1, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xff,0x0c,0x04]
+v_div_scale_f32 v5, s0, exec_hi, exec_hi, v3
+// W32: v_div_scale_f32 v5, s0, exec_hi, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0xfe,0x0c,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, 0, v3
-// W32: v_div_scale_f32 v5, s0, v1, 0, v3       ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x01,0x0d,0x04]
+v_div_scale_f32 v5, s0, 0, 0, v3
+// W32: v_div_scale_f32 v5, s0, 0, 0, v3        ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x00,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, -1, v3
-// W32: v_div_scale_f32 v5, s0, v1, -1, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x83,0x0d,0x04]
+v_div_scale_f32 v5, s0, -1, -1, v3
+// W32: v_div_scale_f32 v5, s0, -1, -1, v3      ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x82,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, 0.5, v3
-// W32: v_div_scale_f32 v5, s0, v1, 0.5, v3     ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xe1,0x0d,0x04]
+v_div_scale_f32 v5, s0, 0.5, 0.5, v3
+// W32: v_div_scale_f32 v5, s0, 0.5, 0.5, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0xe0,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, -4.0, v3
-// W32: v_div_scale_f32 v5, s0, v1, -4.0, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xef,0x0d,0x04]
+v_div_scale_f32 v5, s0, -4.0, -4.0, v3
+// W32: v_div_scale_f32 v5, s0, -4.0, -4.0, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0xee,0x0d,0x04]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, v255
-// W32: v_div_scale_f32 v5, s0, v1, v2, v255    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfe,0x07]
+v_div_scale_f32 v5, s0, v255, v2, v255
+// W32: v_div_scale_f32 v5, s0, v255, v2, v255  ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0x05,0xfe,0x07]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, s3
-// W32: v_div_scale_f32 v5, s0, v1, v2, s3      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x00]
+v_div_scale_f32 v5, s0, s3, v2, s3
+// W32: v_div_scale_f32 v5, s0, s3, v2, s3      ; encoding: [0x05,0x00,0x6d,0xd5,0x03,0x04,0x0e,0x00]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, s103
-// W32: v_div_scale_f32 v5, s0, v1, v2, s103    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x9e,0x01]
+v_div_scale_f32 v5, s0, s103, v2, s103
+// W32: v_div_scale_f32 v5, s0, s103, v2, s103  ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0x04,0x9e,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, vcc_lo
-// W32: v_div_scale_f32 v5, s0, v1, v2, vcc_lo  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xaa,0x01]
+v_div_scale_f32 v5, s0, vcc_lo, v2, vcc_lo
+// W32: v_div_scale_f32 v5, s0, vcc_lo, v2, vcc_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0x04,0xaa,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, vcc_hi
-// W32: v_div_scale_f32 v5, s0, v1, v2, vcc_hi  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xae,0x01]
+v_div_scale_f32 v5, s0, vcc_hi, v2, vcc_hi
+// W32: v_div_scale_f32 v5, s0, vcc_hi, v2, vcc_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0x04,0xae,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, ttmp11
-// W32: v_div_scale_f32 v5, s0, v1, v2, ttmp11  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xde,0x01]
+v_div_scale_f32 v5, s0, ttmp11, v2, ttmp11
+// W32: v_div_scale_f32 v5, s0, ttmp11, v2, ttmp11 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0x04,0xde,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, m0
-// W32: v_div_scale_f32 v5, s0, v1, v2, m0      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xf2,0x01]
+v_div_scale_f32 v5, s0, m0, v2, m0
+// W32: v_div_scale_f32 v5, s0, m0, v2, m0      ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0x04,0xf2,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, exec_lo
-// W32: v_div_scale_f32 v5, s0, v1, v2, exec_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfa,0x01]
+v_div_scale_f32 v5, s0, exec_lo, v2, exec_lo
+// W32: v_div_scale_f32 v5, s0, exec_lo, v2, exec_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0x04,0xfa,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, exec_hi
-// W32: v_div_scale_f32 v5, s0, v1, v2, exec_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfe,0x01]
+v_div_scale_f32 v5, s0, exec_hi, v2, exec_hi
+// W32: v_div_scale_f32 v5, s0, exec_hi, v2, exec_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0x04,0xfe,0x01]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, 0
-// W32: v_div_scale_f32 v5, s0, v1, v2, 0       ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x02,0x02]
+v_div_scale_f32 v5, s0, 0, v2, 0
+// W32: v_div_scale_f32 v5, s0, 0, v2, 0        ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x04,0x02,0x02]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, -1
-// W32: v_div_scale_f32 v5, s0, v1, v2, -1      ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x06,0x03]
+v_div_scale_f32 v5, s0, -1, v2, -1
+// W32: v_div_scale_f32 v5, s0, -1, v2, -1      ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x04,0x06,0x03]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, 0.5
-// W32: v_div_scale_f32 v5, s0, v1, v2, 0.5     ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xc2,0x03]
+v_div_scale_f32 v5, s0, 0.5, v2, 0.5
+// W32: v_div_scale_f32 v5, s0, 0.5, v2, 0.5    ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0x04,0xc2,0x03]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s0, v1, v2, -4.0
-// W32: v_div_scale_f32 v5, s0, v1, v2, -4.0    ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xde,0x03]
+v_div_scale_f32 v5, s0, -4.0, v2, -4.0
+// W32: v_div_scale_f32 v5, s0, -4.0, v2, -4.0  ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0x04,0xde,0x03]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
-v_div_scale_f32 v5, s[0:1], v1, v2, v3
+v_div_scale_f32 v5, s[0:1], v1, v1, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], v1, v1, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f32 v255, s[0:1], v1, v2, v3
+v_div_scale_f32 v255, s[0:1], v1, v1, v3
 // W32-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
-// W64: v_div_scale_f32 v255, s[0:1], v1, v2, v3 ; encoding: [0xff,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x04]
+// W64: v_div_scale_f32 v255, s[0:1], v1, v1, v3 ; encoding: [0xff,0x00,0x6d,0xd5,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f32 v5, s[0:1], v255, v2, v3
+v_div_scale_f32 v5, s[0:1], v255, v255, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v255, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0x05,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], v255, v255, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0xff,0x0f,0x04]
 
-v_div_scale_f32 v5, s[0:1], s1, v2, v3
+v_div_scale_f32 v5, s[0:1], s1, s1, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], s1, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], s1, s1, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x02,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], s103, v2, v3
+v_div_scale_f32 v5, s[0:1], s103, s103, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], s103, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], s103, s103, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0xce,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], vcc_lo, v2, v3
+v_div_scale_f32 v5, s[0:1], vcc_lo, vcc_lo, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], vcc_lo, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_lo, vcc_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0xd4,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], vcc_hi, v2, v3
+v_div_scale_f32 v5, s[0:1], vcc_hi, vcc_hi, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], vcc_hi, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_hi, vcc_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0xd6,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], ttmp11, v2, v3
+v_div_scale_f32 v5, s[0:1], ttmp11, ttmp11, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], ttmp11, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], ttmp11, ttmp11, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0xee,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], m0, v2, v3
+v_div_scale_f32 v5, s[0:1], m0, m0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], m0, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], m0, m0, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0xf8,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], exec_lo, v2, v3
+v_div_scale_f32 v5, s[0:1], exec_lo, exec_lo, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], exec_lo, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], exec_lo, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0xfc,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], exec_hi, v2, v3
+v_div_scale_f32 v5, s[0:1], exec_hi, exec_hi, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], exec_hi, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], exec_hi, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0xfe,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], 0, v2, v3
+v_div_scale_f32 v5, s[0:1], 0, 0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], 0, v2, v3   ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], 0, 0, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x00,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], -1, v2, v3
+v_div_scale_f32 v5, s[0:1], -1, -1, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], -1, v2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], -1, -1, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x82,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], 0.5, v2, v3
+v_div_scale_f32 v5, s[0:1], 0.5, 0.5, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], 0.5, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], 0.5, 0.5, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0xe0,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], -4.0, v2, v3
+v_div_scale_f32 v5, s[0:1], -4.0, -4.0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], -4.0, v2, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0x04,0x0e,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], -4.0, -4.0, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0xee,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, v255, v3
+v_div_scale_f32 v5, s[0:1], v255, v255, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v255, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xff,0x0f,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], v255, v255, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0xff,0x0f,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, s2, v3
+v_div_scale_f32 v5, s[0:1], s2, s2, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, s2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], s2, s2, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x02,0x04,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, s103, v3
+v_div_scale_f32 v5, s[0:1], s103, s103, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, s103, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xcf,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], s103, s103, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0xce,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, vcc_lo, v3
+v_div_scale_f32 v5, s[0:1], vcc_lo, vcc_lo, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, vcc_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xd5,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_lo, vcc_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0xd4,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, vcc_hi, v3
+v_div_scale_f32 v5, s[0:1], vcc_hi, vcc_hi, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, vcc_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xd7,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_hi, vcc_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0xd6,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, ttmp11, v3
+v_div_scale_f32 v5, s[0:1], ttmp11, ttmp11, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, ttmp11, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xef,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], ttmp11, ttmp11, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0xee,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, m0, v3
+v_div_scale_f32 v5, s[0:1], m0, m0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, m0, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xf9,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], m0, m0, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0xf8,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, exec_lo, v3
+v_div_scale_f32 v5, s[0:1], exec_lo, exec_lo, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xfd,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], exec_lo, exec_lo, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0xfc,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, exec_hi, v3
+v_div_scale_f32 v5, s[0:1], exec_hi, exec_hi, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xff,0x0c,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], exec_hi, exec_hi, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0xfe,0x0c,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, 0, v3
+v_div_scale_f32 v5, s[0:1], 0, 0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, 0, v3   ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x01,0x0d,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], 0, 0, v3    ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x00,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, -1, v3
+v_div_scale_f32 v5, s[0:1], -1, -1, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, -1, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x83,0x0d,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], -1, -1, v3  ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x82,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, 0.5, v3
+v_div_scale_f32 v5, s[0:1], 0.5, 0.5, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, 0.5, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xe1,0x0d,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], 0.5, 0.5, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0xe0,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, -4.0, v3
+v_div_scale_f32 v5, s[0:1], -4.0, -4.0, v3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, -4.0, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0xef,0x0d,0x04]
+// W64: v_div_scale_f32 v5, s[0:1], -4.0, -4.0, v3 ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0xee,0x0d,0x04]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, v255
+v_div_scale_f32 v5, s[0:1], v255, v2, v255
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, v255 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfe,0x07]
+// W64: v_div_scale_f32 v5, s[0:1], v255, v2, v255 ; encoding: [0x05,0x00,0x6d,0xd5,0xff,0x05,0xfe,0x07]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, s3
+v_div_scale_f32 v5, s[0:1], s3, v2, s3
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, s3  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x0e,0x00]
+// W64: v_div_scale_f32 v5, s[0:1], s3, v2, s3  ; encoding: [0x05,0x00,0x6d,0xd5,0x03,0x04,0x0e,0x00]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, s103
+v_div_scale_f32 v5, s[0:1], s103, v2, s103
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, s103 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x9e,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], s103, v2, s103 ; encoding: [0x05,0x00,0x6d,0xd5,0x67,0x04,0x9e,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, vcc_lo
+v_div_scale_f32 v5, s[0:1], vcc_lo, v2, vcc_lo
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, vcc_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xaa,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_lo, v2, vcc_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x6a,0x04,0xaa,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, vcc_hi
+v_div_scale_f32 v5, s[0:1], vcc_hi, v2, vcc_hi
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, vcc_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xae,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], vcc_hi, v2, vcc_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x6b,0x04,0xae,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, ttmp11
+v_div_scale_f32 v5, s[0:1], ttmp11, v2, ttmp11
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, ttmp11 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xde,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], ttmp11, v2, ttmp11 ; encoding: [0x05,0x00,0x6d,0xd5,0x77,0x04,0xde,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, m0
+v_div_scale_f32 v5, s[0:1], m0, v2, m0
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, m0  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xf2,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], m0, v2, m0  ; encoding: [0x05,0x00,0x6d,0xd5,0x7c,0x04,0xf2,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, exec_lo
+v_div_scale_f32 v5, s[0:1], exec_lo, v2, exec_lo
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, exec_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfa,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], exec_lo, v2, exec_lo ; encoding: [0x05,0x00,0x6d,0xd5,0x7e,0x04,0xfa,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, exec_hi
+v_div_scale_f32 v5, s[0:1], exec_hi, v2, exec_hi
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, exec_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xfe,0x01]
+// W64: v_div_scale_f32 v5, s[0:1], exec_hi, v2, exec_hi ; encoding: [0x05,0x00,0x6d,0xd5,0x7f,0x04,0xfe,0x01]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, 0
+v_div_scale_f32 v5, s[0:1], 0, v2, 0
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, 0   ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x02,0x02]
+// W64: v_div_scale_f32 v5, s[0:1], 0, v2, 0    ; encoding: [0x05,0x00,0x6d,0xd5,0x80,0x04,0x02,0x02]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, -1
+v_div_scale_f32 v5, s[0:1], -1, v2, -1
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, -1  ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0x06,0x03]
+// W64: v_div_scale_f32 v5, s[0:1], -1, v2, -1  ; encoding: [0x05,0x00,0x6d,0xd5,0xc1,0x04,0x06,0x03]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, 0.5
+v_div_scale_f32 v5, s[0:1], 0.5, v2, 0.5
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, 0.5 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xc2,0x03]
+// W64: v_div_scale_f32 v5, s[0:1], 0.5, v2, 0.5 ; encoding: [0x05,0x00,0x6d,0xd5,0xf0,0x04,0xc2,0x03]
 
-v_div_scale_f32 v5, s[0:1], v1, v2, -4.0
+v_div_scale_f32 v5, s[0:1], -4.0, v2, -4.0
 // W32-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// W64: v_div_scale_f32 v5, s[0:1], v1, v2, -4.0 ; encoding: [0x05,0x00,0x6d,0xd5,0x01,0x05,0xde,0x03]
+// W64: v_div_scale_f32 v5, s[0:1], -4.0, v2, -4.0 ; encoding: [0x05,0x00,0x6d,0xd5,0xf7,0x04,0xde,0x03]
 
 v_div_fmas_f32 v5, v1, v2, v3
 // GFX10: v_div_fmas_f32 v5, v1, v2, v3           ; encoding: [0x05,0x00,0x6f,0xd5,0x01,0x05,0x0e,0x04]

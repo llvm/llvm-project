@@ -1645,7 +1645,8 @@ private:
   bool validateBLGP(const MCInst &Inst, const OperandVector &Operands);
   bool validateDS(const MCInst &Inst, const OperandVector &Operands);
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
-  bool validateDivScale(const MCInst &Inst, const OperandVector &Operands);
+  bool validateDivScale(const MCInst &Inst, const OperandVector &Operands,
+                        SMLoc IDLoc);
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              SMLoc IDLoc);
@@ -4346,7 +4347,8 @@ static bool isEqualSrcOperand(const MCOperand &SrcA, const MCOperand &SrcB) {
 }
 
 bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst,
-                                       const OperandVector &Operands) {
+                                       const OperandVector &Operands,
+                                       SMLoc IDLoc) {
   switch (Inst.getOpcode()) {
   default:
     return true;
@@ -4365,12 +4367,12 @@ bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst,
     if (Inst.getOperand(AMDGPU::getNamedOperandIdx(Inst.getOpcode(), Name))
             .getImm() &
         SISrcMods::ABS) {
+      Error(IDLoc, "ABS not allowed in VOP3B instructions");
       return false;
     }
   }
 
-  // The hardware requires src0 to be equal to src1 or src2. Warn rather than
-  // fail since the encoding is still valid.
+  // The hardware requires src0 to be equal to src1 or src2.
   const unsigned Opc = Inst.getOpcode();
   const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   const int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
@@ -4380,8 +4382,9 @@ bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst,
     const MCOperand &Src1 = Inst.getOperand(Src1Idx);
     const MCOperand &Src2 = Inst.getOperand(Src2Idx);
     if (!isEqualSrcOperand(Src0, Src1) && !isEqualSrcOperand(Src0, Src2)) {
-      Warning(getOperandLoc(Operands, Src0Idx),
-              "src0 should be equal to src1 or src2");
+      Error(getOperandLoc(Operands, Src0Idx),
+            "src0 must be equal to src1 or src2");
+      return false;
     }
   }
 
@@ -5732,8 +5735,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
 
-  if (!validateDivScale(Inst, Operands)) {
-    Error(IDLoc, "ABS not allowed in VOP3B instructions");
+  if (!validateDivScale(Inst, Operands, IDLoc)) {
     return false;
   }
   if (!validateWaitCnt(Inst, Operands)) {

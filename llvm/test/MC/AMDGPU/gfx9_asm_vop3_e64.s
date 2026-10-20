@@ -5155,317 +5155,222 @@ v_div_fmas_f64 v[5:6], |v[1:2]|, v[2:3], v[3:4]
 v_div_fmas_f64 v[5:6], |v[1:2]|, |v[2:3]|, |v[3:4]|
 // CHECK: v_div_fmas_f64 v[5:6], |v[1:2]|, |v[2:3]|, |v[3:4]| ; encoding: [0x05,0x07,0xe3,0xd1,0x01,0x05,0x0e,0x04]
 
-v_div_scale_f32 v255, vcc, v1, v2, v3
-// CHECK: v_div_scale_f32 v255, vcc, v1, v2, v3   ; encoding: [0xff,0x6a,0xe0,0xd1,0x01,0x05,0x0e,0x04]
+v_div_scale_f32 v255, vcc, v1, v1, v3
+// CHECK: v_div_scale_f32 v255, vcc, v1, v1, v3   ; encoding: [0xff,0x6a,0xe0,0xd1,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f32 v5, vcc, -1, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, -1, v2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0xc1,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, -1, -1, v3
+// CHECK: v_div_scale_f32 v5, vcc, -1, -1, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0xc1,0x82,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, -4.0, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, -4.0, v2, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0xf7,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, -1, v2, -1
+// CHECK: v_div_scale_f32 v5, vcc, -1, v2, -1     ; encoding: [0x05,0x6a,0xe0,0xd1,0xc1,0x04,0x06,0x03]
 
-v_div_scale_f32 v5, vcc, 0, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, 0, v2, v3      ; encoding: [0x05,0x6a,0xe0,0xd1,0x80,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, -4.0, -4.0, v3
+// CHECK: v_div_scale_f32 v5, vcc, -4.0, -4.0, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xf7,0xee,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, 0.5, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, 0.5, v2, v3    ; encoding: [0x05,0x6a,0xe0,0xd1,0xf0,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, -4.0, v2, -4.0
+// CHECK: v_div_scale_f32 v5, vcc, -4.0, v2, -4.0 ; encoding: [0x05,0x6a,0xe0,0xd1,0xf7,0x04,0xde,0x03]
 
-v_div_scale_f32 v5, vcc, exec_hi, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, exec_hi, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7f,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, 0, 0, v3
+// CHECK: v_div_scale_f32 v5, vcc, 0, 0, v3       ; encoding: [0x05,0x6a,0xe0,0xd1,0x80,0x00,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, exec_lo, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, exec_lo, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7e,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, 0, v2, 0
+// CHECK: v_div_scale_f32 v5, vcc, 0, v2, 0       ; encoding: [0x05,0x6a,0xe0,0xd1,0x80,0x04,0x02,0x02]
 
-v_div_scale_f32 v5, vcc, flat_scratch_hi, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_hi, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x67,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, 0.5, 0.5, v3
+// CHECK: v_div_scale_f32 v5, vcc, 0.5, 0.5, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0xf0,0xe0,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, flat_scratch_lo, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_lo, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x66,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, 0.5, v2, 0.5
+// CHECK: v_div_scale_f32 v5, vcc, 0.5, v2, 0.5   ; encoding: [0x05,0x6a,0xe0,0xd1,0xf0,0x04,0xc2,0x03]
 
-v_div_scale_f32 v5, vcc, m0, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, m0, v2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x7c,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, exec_hi, exec_hi, v3
+// CHECK: v_div_scale_f32 v5, vcc, exec_hi, exec_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7f,0xfe,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, s1, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, s1, v2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, exec_hi, v2, exec_hi
+// CHECK: v_div_scale_f32 v5, vcc, exec_hi, v2, exec_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x7f,0x04,0xfe,0x01]
 
-v_div_scale_f32 v5, vcc, s101, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, s101, v2, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0x65,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, exec_lo, exec_lo, v3
+// CHECK: v_div_scale_f32 v5, vcc, exec_lo, exec_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7e,0xfc,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, src_execz, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, src_execz, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfc,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, exec_lo, v2, exec_lo
+// CHECK: v_div_scale_f32 v5, vcc, exec_lo, v2, exec_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x7e,0x04,0xfa,0x01]
 
-v_div_scale_f32 v5, vcc, src_lds_direct, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, src_lds_direct, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfe,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, flat_scratch_hi, flat_scratch_hi, v3
+// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_hi, flat_scratch_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x67,0xce,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, src_scc, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, src_scc, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfd,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, flat_scratch_hi, v2, flat_scratch_hi
+// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_hi, v2, flat_scratch_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x67,0x04,0x9e,0x01]
 
-v_div_scale_f32 v5, vcc, src_vccz, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, src_vccz, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfb,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, flat_scratch_lo, flat_scratch_lo, v3
+// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_lo, flat_scratch_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x66,0xcc,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, ttmp15, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, ttmp15, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7b,0x04,0x0e,0x04]
+v_div_scale_f32 v5, vcc, flat_scratch_lo, v2, flat_scratch_lo
+// CHECK: v_div_scale_f32 v5, vcc, flat_scratch_lo, v2, flat_scratch_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x66,0x04,0x9a,0x01]
 
-v_div_scale_f32 v5, vcc, v1, -1, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, -1, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x83,0x0d,0x04]
+v_div_scale_f32 v5, vcc, m0, m0, v3
+// CHECK: v_div_scale_f32 v5, vcc, m0, m0, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x7c,0xf8,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, -4.0, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, -4.0, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xef,0x0d,0x04]
+v_div_scale_f32 v5, vcc, m0, v2, m0
+// CHECK: v_div_scale_f32 v5, vcc, m0, v2, m0     ; encoding: [0x05,0x6a,0xe0,0xd1,0x7c,0x04,0xf2,0x01]
 
-v_div_scale_f32 v5, vcc, v1, 0, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, 0, v3      ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x01,0x0d,0x04]
+v_div_scale_f32 v5, vcc, s1, s1, v3
+// CHECK: v_div_scale_f32 v5, vcc, s1, s1, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x02,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, 0.5, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, 0.5, v3    ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xe1,0x0d,0x04]
+v_div_scale_f32 v5, vcc, s101, s101, v3
+// CHECK: v_div_scale_f32 v5, vcc, s101, s101, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x65,0xca,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, exec_hi, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, exec_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xff,0x0c,0x04]
+v_div_scale_f32 v5, vcc, s101, v2, s101
+// CHECK: v_div_scale_f32 v5, vcc, s101, v2, s101 ; encoding: [0x05,0x6a,0xe0,0xd1,0x65,0x04,0x96,0x01]
 
-v_div_scale_f32 v5, vcc, v1, exec_lo, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, exec_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xfd,0x0c,0x04]
+v_div_scale_f32 v5, vcc, s2, s2, v3
+// CHECK: v_div_scale_f32 v5, vcc, s2, s2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x02,0x04,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, flat_scratch_hi, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, flat_scratch_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xcf,0x0c,0x04]
+v_div_scale_f32 v5, vcc, s3, v2, s3
+// CHECK: v_div_scale_f32 v5, vcc, s3, v2, s3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x03,0x04,0x0e,0x00]
 
-v_div_scale_f32 v5, vcc, v1, flat_scratch_lo, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, flat_scratch_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xcd,0x0c,0x04]
+v_div_scale_f32 v5, vcc, src_execz, src_execz, v3
+// CHECK: v_div_scale_f32 v5, vcc, src_execz, src_execz, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfc,0xf8,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, m0, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, m0, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xf9,0x0c,0x04]
+v_div_scale_f32 v5, vcc, src_execz, v2, src_execz
+// CHECK: v_div_scale_f32 v5, vcc, src_execz, v2, src_execz ; encoding: [0x05,0x6a,0xe0,0xd1,0xfc,0x04,0xf2,0x03]
 
-v_div_scale_f32 v5, vcc, v1, s101, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, s101, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xcb,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, s2, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, s2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x0c,0x04]
+v_div_scale_f32 v5, vcc, src_scc, src_scc, v3
+// CHECK: v_div_scale_f32 v5, vcc, src_scc, src_scc, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfd,0xfa,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, src_execz, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, src_execz, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xf9,0x0d,0x04]
+v_div_scale_f32 v5, vcc, src_scc, v2, src_scc
+// CHECK: v_div_scale_f32 v5, vcc, src_scc, v2, src_scc ; encoding: [0x05,0x6a,0xe0,0xd1,0xfd,0x04,0xf6,0x03]
 
-v_div_scale_f32 v5, vcc, v1, src_scc, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, src_scc, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xfb,0x0d,0x04]
+v_div_scale_f32 v5, vcc, src_vccz, src_vccz, v3
+// CHECK: v_div_scale_f32 v5, vcc, src_vccz, src_vccz, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xfb,0xf6,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, src_vccz, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, src_vccz, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xf7,0x0d,0x04]
+v_div_scale_f32 v5, vcc, src_vccz, v2, src_vccz
+// CHECK: v_div_scale_f32 v5, vcc, src_vccz, v2, src_vccz ; encoding: [0x05,0x6a,0xe0,0xd1,0xfb,0x04,0xee,0x03]
 
-v_div_scale_f32 v5, vcc, v1, ttmp15, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, ttmp15, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xf7,0x0c,0x04]
+v_div_scale_f32 v5, vcc, ttmp15, ttmp15, v3
+// CHECK: v_div_scale_f32 v5, vcc, ttmp15, ttmp15, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7b,0xf6,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, -1
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, -1     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x06,0x03]
+v_div_scale_f32 v5, vcc, ttmp15, v2, ttmp15
+// CHECK: v_div_scale_f32 v5, vcc, ttmp15, v2, ttmp15 ; encoding: [0x05,0x6a,0xe0,0xd1,0x7b,0x04,0xee,0x01]
 
-v_div_scale_f32 v5, vcc, v1, v2, -4.0
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, -4.0   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xde,0x03]
+v_div_scale_f32 v5, vcc, v1, v1, v3
+// CHECK: v_div_scale_f32 v5, vcc, v1, v1, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, 0
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, 0      ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x02,0x02]
+v_div_scale_f32 v5, vcc, v255, v2, v255
+// CHECK: v_div_scale_f32 v5, vcc, v255, v2, v255 ; encoding: [0x05,0x6a,0xe0,0xd1,0xff,0x05,0xfe,0x07]
 
-v_div_scale_f32 v5, vcc, v1, v2, 0.5
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, 0.5    ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xc2,0x03]
+v_div_scale_f32 v5, vcc, v255, v255, v3
+// CHECK: v_div_scale_f32 v5, vcc, v255, v255, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0xff,0xff,0x0f,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, exec_hi
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, exec_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xfe,0x01]
+v_div_scale_f32 v5, vcc, vcc_hi, v2, vcc_hi
+// CHECK: v_div_scale_f32 v5, vcc, vcc_hi, v2, vcc_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x6b,0x04,0xae,0x01]
 
-v_div_scale_f32 v5, vcc, v1, v2, exec_lo
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, exec_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xfa,0x01]
+v_div_scale_f32 v5, vcc, vcc_hi, vcc_hi, v3
+// CHECK: v_div_scale_f32 v5, vcc, vcc_hi, vcc_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x6b,0xd6,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, flat_scratch_hi
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, flat_scratch_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x9e,0x01]
+v_div_scale_f32 v5, vcc, vcc_lo, v2, vcc_lo
+// CHECK: v_div_scale_f32 v5, vcc, vcc_lo, v2, vcc_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x6a,0x04,0xaa,0x01]
 
-v_div_scale_f32 v5, vcc, v1, v2, flat_scratch_lo
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, flat_scratch_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x9a,0x01]
+v_div_scale_f32 v5, vcc, vcc_lo, vcc_lo, v3
+// CHECK: v_div_scale_f32 v5, vcc, vcc_lo, vcc_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x6a,0xd4,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, m0
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, m0     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xf2,0x01]
+v_div_scale_f64 v[254:255], vcc, v[1:2], v[1:2], v[3:4]
+// CHECK: v_div_scale_f64 v[254:255], vcc, v[1:2], v[1:2], v[3:4] ; encoding: [0xfe,0x6a,0xe1,0xd1,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, s101
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, s101   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x96,0x01]
+v_div_scale_f64 v[5:6], vcc, -1, -1, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, -1, -1, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xc1,0x82,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, s3
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, s3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x0e,0x00]
+v_div_scale_f64 v[5:6], vcc, -1, v[2:3], -1
+// CHECK: v_div_scale_f64 v[5:6], vcc, -1, v[2:3], -1 ; encoding: [0x05,0x6a,0xe1,0xd1,0xc1,0x04,0x06,0x03]
 
-v_div_scale_f32 v5, vcc, v1, v2, src_execz
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, src_execz ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xf2,0x03]
+v_div_scale_f64 v[5:6], vcc, -4.0, -4.0, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, -4.0, -4.0, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xf7,0xee,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, src_scc
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, src_scc ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xf6,0x03]
+v_div_scale_f64 v[5:6], vcc, -4.0, v[2:3], -4.0
+// CHECK: v_div_scale_f64 v[5:6], vcc, -4.0, v[2:3], -4.0 ; encoding: [0x05,0x6a,0xe1,0xd1,0xf7,0x04,0xde,0x03]
 
-v_div_scale_f32 v5, vcc, v1, v2, src_vccz
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, src_vccz ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xee,0x03]
+v_div_scale_f64 v[5:6], vcc, 0, 0, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, 0, 0, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x80,0x00,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, ttmp15
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, ttmp15 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xee,0x01]
+v_div_scale_f64 v[5:6], vcc, 0, v[2:3], 0
+// CHECK: v_div_scale_f64 v[5:6], vcc, 0, v[2:3], 0 ; encoding: [0x05,0x6a,0xe1,0xd1,0x80,0x04,0x02,0x02]
 
-v_div_scale_f32 v5, vcc, v1, v2, v255
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, v255   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xfe,0x07]
+v_div_scale_f64 v[5:6], vcc, 0.5, 0.5, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, 0.5, 0.5, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xf0,0xe0,0x0d,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, v3     ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, 0.5, v[2:3], 0.5
+// CHECK: v_div_scale_f64 v[5:6], vcc, 0.5, v[2:3], 0.5 ; encoding: [0x05,0x6a,0xe1,0xd1,0xf0,0x04,0xc2,0x03]
 
-v_div_scale_f32 v5, vcc, v1, v2, vcc_hi
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, vcc_hi ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xae,0x01]
+v_div_scale_f64 v[5:6], vcc, exec, exec, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, exec, exec, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x7e,0xfc,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, v2, vcc_lo
-// CHECK: v_div_scale_f32 v5, vcc, v1, v2, vcc_lo ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0x05,0xaa,0x01]
+v_div_scale_f64 v[5:6], vcc, exec, v[2:3], exec
+// CHECK: v_div_scale_f64 v[5:6], vcc, exec, v[2:3], exec ; encoding: [0x05,0x6a,0xe1,0xd1,0x7e,0x04,0xfa,0x01]
 
-v_div_scale_f32 v5, vcc, v1, v255, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, v255, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xff,0x0f,0x04]
+v_div_scale_f64 v[5:6], vcc, flat_scratch, flat_scratch, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, flat_scratch, flat_scratch, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x66,0xcc,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v1, vcc_hi, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, vcc_hi, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xd7,0x0c,0x04]
+v_div_scale_f64 v[5:6], vcc, flat_scratch, v[2:3], flat_scratch
+// CHECK: v_div_scale_f64 v[5:6], vcc, flat_scratch, v[2:3], flat_scratch ; encoding: [0x05,0x6a,0xe1,0xd1,0x66,0x04,0x9a,0x01]
 
-v_div_scale_f32 v5, vcc, v1, vcc_lo, v3
-// CHECK: v_div_scale_f32 v5, vcc, v1, vcc_lo, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x01,0xd5,0x0c,0x04]
+v_div_scale_f64 v[5:6], vcc, s[100:101], s[100:101], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[100:101], s[100:101], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x64,0xc8,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, v255, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, v255, v2, v3   ; encoding: [0x05,0x6a,0xe0,0xd1,0xff,0x05,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[100:101], v[2:3], s[100:101]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[100:101], v[2:3], s[100:101] ; encoding: [0x05,0x6a,0xe1,0xd1,0x64,0x04,0x92,0x01]
 
-v_div_scale_f32 v5, vcc, vcc_hi, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, vcc_hi, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x6b,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[2:3], s[2:3], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[2:3], s[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x02,0x04,0x0c,0x04]
 
-v_div_scale_f32 v5, vcc, vcc_lo, v2, v3
-// CHECK: v_div_scale_f32 v5, vcc, vcc_lo, v2, v3 ; encoding: [0x05,0x6a,0xe0,0xd1,0x6a,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[4:5], s[4:5], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[4:5], s[4:5], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x04,0x08,0x0c,0x04]
 
-v_div_scale_f64 v[254:255], vcc, v[1:2], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[254:255], vcc, v[1:2], v[2:3], v[3:4] ; encoding: [0xfe,0x6a,0xe1,0xd1,0x01,0x05,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[6:7], s[6:7], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[6:7], s[6:7], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x06,0x0c,0x0c,0x04]
 
-v_div_scale_f64 v[5:6], vcc, -1, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, -1, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xc1,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[6:7], v[2:3], s[6:7]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[6:7], v[2:3], s[6:7] ; encoding: [0x05,0x6a,0xe1,0xd1,0x06,0x04,0x1a,0x00]
 
-v_div_scale_f64 v[5:6], vcc, -4.0, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, -4.0, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xf7,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, s[8:9], v[2:3], s[8:9]
+// CHECK: v_div_scale_f64 v[5:6], vcc, s[8:9], v[2:3], s[8:9] ; encoding: [0x05,0x6a,0xe1,0xd1,0x08,0x04,0x22,0x00]
 
-v_div_scale_f64 v[5:6], vcc, 0, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, 0, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x80,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_execz, src_execz, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_execz, src_execz, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfc,0xf8,0x0d,0x04]
 
-v_div_scale_f64 v[5:6], vcc, 0.5, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, 0.5, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xf0,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_execz, v[2:3], src_execz
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_execz, v[2:3], src_execz ; encoding: [0x05,0x6a,0xe1,0xd1,0xfc,0x04,0xf2,0x03]
 
-v_div_scale_f64 v[5:6], vcc, exec, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, exec, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x7e,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_scc, src_scc, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_scc, src_scc, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfd,0xfa,0x0d,0x04]
 
-v_div_scale_f64 v[5:6], vcc, flat_scratch, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, flat_scratch, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x66,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_scc, v[2:3], src_scc
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_scc, v[2:3], src_scc ; encoding: [0x05,0x6a,0xe1,0xd1,0xfd,0x04,0xf6,0x03]
 
-v_div_scale_f64 v[5:6], vcc, s[100:101], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, s[100:101], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x64,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_vccz, src_vccz, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_vccz, src_vccz, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfb,0xf6,0x0d,0x04]
 
-v_div_scale_f64 v[5:6], vcc, s[2:3], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, s[2:3], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x02,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, src_vccz, v[2:3], src_vccz
+// CHECK: v_div_scale_f64 v[5:6], vcc, src_vccz, v[2:3], src_vccz ; encoding: [0x05,0x6a,0xe1,0xd1,0xfb,0x04,0xee,0x03]
 
-v_div_scale_f64 v[5:6], vcc, s[4:5], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, s[4:5], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x04,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, ttmp[14:15], ttmp[14:15], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, ttmp[14:15], ttmp[14:15], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x7a,0xf4,0x0c,0x04]
 
-v_div_scale_f64 v[5:6], vcc, src_execz, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, src_execz, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfc,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, ttmp[14:15], v[2:3], ttmp[14:15]
+// CHECK: v_div_scale_f64 v[5:6], vcc, ttmp[14:15], v[2:3], ttmp[14:15] ; encoding: [0x05,0x6a,0xe1,0xd1,0x7a,0x04,0xea,0x01]
 
-v_div_scale_f64 v[5:6], vcc, src_scc, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, src_scc, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfd,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, v[1:2], v[1:2], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[1:2], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x03,0x0e,0x04]
 
-v_div_scale_f64 v[5:6], vcc, src_vccz, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, src_vccz, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfb,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, v[254:255], v[254:255], v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, v[254:255], v[254:255], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfe,0xfd,0x0f,0x04]
 
-v_div_scale_f64 v[5:6], vcc, ttmp[14:15], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, ttmp[14:15], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x7a,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, v[254:255], v[2:3], v[254:255]
+// CHECK: v_div_scale_f64 v[5:6], vcc, v[254:255], v[2:3], v[254:255] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfe,0x05,0xfa,0x07]
 
-v_div_scale_f64 v[5:6], vcc, v[1:2], -1, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], -1, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x83,0x0d,0x04]
+v_div_scale_f64 v[5:6], vcc, vcc, v[2:3], vcc
+// CHECK: v_div_scale_f64 v[5:6], vcc, vcc, v[2:3], vcc ; encoding: [0x05,0x6a,0xe1,0xd1,0x6a,0x04,0xaa,0x01]
 
-v_div_scale_f64 v[5:6], vcc, v[1:2], -4.0, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], -4.0, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xef,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], 0, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], 0, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x01,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], 0.5, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], 0.5, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xe1,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], exec, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], exec, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xfd,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], flat_scratch, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], flat_scratch, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xcd,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], s[100:101], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], s[100:101], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xc9,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], s[4:5], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], s[4:5], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x09,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], s[6:7], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], s[6:7], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x0d,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], src_execz, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], src_execz, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xf9,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], src_scc, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], src_scc, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xfb,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], src_vccz, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], src_vccz, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xf7,0x0d,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], ttmp[14:15], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], ttmp[14:15], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xf5,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[254:255], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[254:255], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xfd,0x0f,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], -1
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], -1 ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x06,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], -4.0
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], -4.0 ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xde,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], 0
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], 0 ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x02,0x02]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], 0.5
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], 0.5 ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xc2,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], exec
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], exec ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xfa,0x01]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], flat_scratch
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], flat_scratch ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x9a,0x01]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[100:101]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[100:101] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x92,0x01]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[6:7]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[6:7] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x1a,0x00]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[8:9]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], s[8:9] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x22,0x00]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_execz
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_execz ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xf2,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_scc
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_scc ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xf6,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_vccz
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], src_vccz ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xee,0x03]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], ttmp[14:15]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], ttmp[14:15] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xea,0x01]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], v[254:255]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], v[254:255] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xfa,0x07]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0x0e,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], vcc
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], v[2:3], vcc ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0x05,0xaa,0x01]
-
-v_div_scale_f64 v[5:6], vcc, v[1:2], vcc, v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[1:2], vcc, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x01,0xd5,0x0c,0x04]
-
-v_div_scale_f64 v[5:6], vcc, v[254:255], v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, v[254:255], v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0xfe,0x05,0x0e,0x04]
-
-v_div_scale_f64 v[5:6], vcc, vcc, v[2:3], v[3:4]
-// CHECK: v_div_scale_f64 v[5:6], vcc, vcc, v[2:3], v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x6a,0x04,0x0e,0x04]
+v_div_scale_f64 v[5:6], vcc, vcc, vcc, v[3:4]
+// CHECK: v_div_scale_f64 v[5:6], vcc, vcc, vcc, v[3:4] ; encoding: [0x05,0x6a,0xe1,0xd1,0x6a,0xd4,0x0c,0x04]
 
 v_fma_f16 v255, v1, v2, v3
 // CHECK: v_fma_f16 v255, v1, v2, v3              ; encoding: [0xff,0x00,0x06,0xd2,0x01,0x05,0x0e,0x04]

@@ -74,3 +74,12 @@ v_div_scale_f32  v24, vcc, v22, v22, |v20|
 
 v_div_scale_f64  v[24:25], vcc, -|v[22:23]|, v[22:23], v[20:21]
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOP3B instructions
+
+v_div_scale_f32  v24, vcc, v22, v23, v20
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: src0 must be equal to src1 or src2
+
+v_div_scale_f64  v[24:25], vcc, v[22:23], v[26:27], v[20:21]
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: src0 must be equal to src1 or src2
+
+v_div_scale_f32  v24, vcc, 0.5, v22, v20
+// GCN: :[[@LINE-1]]:{{[0-9]+}}: error: src0 must be equal to src1 or src2
