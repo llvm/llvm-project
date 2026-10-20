@@ -88,60 +88,14 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   // A human-friendly name and a compatibility name.
   EXPECT_EQ(IntelGPU::parseArch("xe-pvc"), IntelGPU::GK_XE_PVC);
   EXPECT_EQ(IntelGPU::parseArch("xe-dg2"), IntelGPU::GK_XE_DG2);
-  // Each device has one name; another product on its GPU IP version is named
-  // by its numeric name instead.
+
+  // Each device has one name, so other spellings name no device.
   EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.70"), IntelGPU::GK_XE_MTL_U);
-
-  // A numeric name names the same device the driver would have reported.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.0"), IntelGPU::GK_XE_PVC);
-  // The revision takes no part in the lookup, and may be left out.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7"), IntelGPU::GK_XE_PVC);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60"), IntelGPU::GK_XE_PVC);
-  // A numeric name for a device this build does not know names no device.
-  EXPECT_EQ(IntelGPU::parseArch("xe_40.11.0"), IntelGPU::GK_NONE);
-
-  // Neither an empty name nor a malformed one names a device.
-  EXPECT_EQ(IntelGPU::parseArch(""), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7"), IntelGPU::GK_NONE);
   EXPECT_EQ(IntelGPU::parseArch("pvc"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.pvc"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7.1"), IntelGPU::GK_NONE);
-  // A trailing separator is not an omitted revision.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60."), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12."), IntelGPU::GK_NONE);
-
-  // A field wider than the GPU IP version field it spells describes no GPU
-  // that could ever report it, so it names no device however well the rest of
-  // the name matches a row. The major version holds 10 bits, the minor 8, the
-  // revision 6.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.63"), IntelGPU::GK_XE_PVC);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.64"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.256"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_1024.60"), IntelGPU::GK_NONE);
-  // The widest values that fit name no row either.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.255"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_1023.60"), IntelGPU::GK_NONE);
-  // Truncated to its field, each of these would name xe-pvc.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.316"), IntelGPU::GK_NONE);
-  EXPECT_EQ(IntelGPU::parseArch("xe_1036.60"), IntelGPU::GK_NONE);
-  // Wider than the whole version, so the integer itself does not fit.
-  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_NONE);
-}
-
-TEST(IntelGPUTargetParserTest, IsNumericArchName) {
-  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_12.60.7"));
-  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_12.60"));
-  // A device the table does not know yet is still well-formed.
-  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_40.11.0"));
-  EXPECT_FALSE(IntelGPU::isNumericArchName("xe-pvc"));
-  EXPECT_FALSE(IntelGPU::isNumericArchName("xe_12.60."));
-  EXPECT_FALSE(IntelGPU::isNumericArchName("xe_12.60.64"));
-  EXPECT_FALSE(IntelGPU::isNumericArchName(""));
-  EXPECT_FALSE(IntelGPU::isNumericArchName("xe_40"));
-  EXPECT_FALSE(IntelGPU::isNumericArchName("XE_12.60"));
+  EXPECT_EQ(IntelGPU::parseArch("XE-PVC"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch(""), IntelGPU::GK_NONE);
 }
 
 TEST(IntelGPUTargetParserTest, EveryNameParses) {

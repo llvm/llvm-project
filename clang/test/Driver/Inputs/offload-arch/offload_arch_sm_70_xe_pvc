@@ -1,4 +1,4 @@
 #!/bin/sh
 echo "sm_70"
-echo "xe_12.60.7"
+echo "xe-pvc"
 exit 0
