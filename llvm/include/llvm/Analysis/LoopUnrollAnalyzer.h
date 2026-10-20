@@ -81,7 +81,7 @@ private:
 
   /// Cache of in-loop instructions known to compute the same value on every
   /// iteration (see isInvariantComputation).
-  DenseMap<Instruction *, bool> InvariantInsts;
+  SmallDenseMap<Instruction *, bool> InvariantInsts;
 
   ScalarEvolution &SE;
   const Loop *L;
