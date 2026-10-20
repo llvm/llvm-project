@@ -1693,12 +1693,10 @@ public:
   /// declaration processed in this translation unit.
   void DiagnoseUnusedAPINotesSelectors();
 
-  /// Whether APINotes should be gathered for all applicable Swift language
-  /// versions, without being applied. Leaving clients of the current module
-  /// to select and apply the correct version.
-  bool captureSwiftVersionIndependentAPINotes() {
-    return APINotes.captureVersionIndependentSwift();
-  }
+  /// Whether API notes should be gathered for all applicable Swift language
+  /// versions, without being applied, leaving clients of the current module to
+  /// select and apply the correct version.
+  bool captureSwiftVersionIndependentAPINotes();
   ///@}
 
   //

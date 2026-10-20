@@ -21,6 +21,8 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -1536,4 +1538,9 @@ void Sema::DiagnoseUnusedAPINotesSelectors() {
   if (!Diags.isIgnored(diag::warn_apinotes_message, SourceLocation()))
     APINotesSelectorDiagnostics->diagnoseUnused(*this);
   APINotesSelectorDiagnostics.reset();
+}
+
+bool Sema::captureSwiftVersionIndependentAPINotes() {
+  return getLangOpts().capturesVersionIndependentAPINotes(
+      PP.getPreprocessorOpts().GeneratePreamble);
 }
