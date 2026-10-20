@@ -2193,6 +2193,8 @@ def : Pat<(v8f32 (loongarch_vffint_s_l (v4i64 LASX256:$xj), (v4i64 LASX256:$xk))
 // XVFTINTRZ_{W_S/L_D}
 def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f64:$vj)), (XVFTINTRZ_L_D v4f64:$vj)>;
+def : Pat<(v8i32 (fp_to_sint_sat v8f32:$vj, i32)), (XVFTINTRZ_W_S v8f32:$vj)>;
+def : Pat<(v4i64 (fp_to_sint_sat v4f64:$vj, i64)), (XVFTINTRZ_L_D v4f64:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f32:$vj)),
           (XVFTINTRZL_L_S
               (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216))>;
