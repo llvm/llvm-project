@@ -2383,6 +2383,7 @@ libc_support_library(
         ":__support_alloc_checker",
         ":__support_common",
         ":__support_cpp_new",
+        ":__support_cpp_type_traits",
         ":__support_error_or",
         ":__support_file_file",
         ":__support_libc_errno",
