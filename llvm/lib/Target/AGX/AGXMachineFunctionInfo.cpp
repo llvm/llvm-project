@@ -8,24 +8,57 @@
 
 #include "AGXMachineFunctionInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
+// Whether \p C is used, directly or through constant expressions, by an
+// instruction of \p F
+static bool isUsedIn(const Constant &C, const Function &F) {
+  for (const User *U : C.users()) {
+    if (const auto *I = dyn_cast<Instruction>(U)) {
+      if (I->getFunction() == &F)
+        return true;
+    } else if (const auto *CU = dyn_cast<Constant>(U)) {
+      if (!isa<GlobalValue>(CU) && isUsedIn(*CU, F))
+        return true;
+    }
+  }
+  return false;
+}
+
 unsigned
-AGXMachineFunctionInfo::allocateThreadgroupVariable(const DataLayout &DL,
+AGXMachineFunctionInfo::allocateThreadgroupVariable(const Function &F,
                                                     const GlobalVariable &GV) {
-  auto [It, Inserted] = ThreadgroupOffsets.try_emplace(&GV, 0);
-  if (!Inserted)
-    return It->second;
-  Align A = DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
-  unsigned Offset = alignTo(ThreadgroupSize, A);
-  It->second = Offset;
-  ThreadgroupSize = Offset + DL.getTypeAllocSize(GV.getValueType());
-  return Offset;
+  const DataLayout &DL = F.getDataLayout();
+  auto Allocate = [&](const GlobalVariable &V) {
+    if (ThreadgroupOffsets.count(&V))
+      return;
+    Align A = DL.getValueOrABITypeAlignment(V.getAlign(), V.getValueType());
+    unsigned Offset = alignTo(ThreadgroupSize, A);
+    ThreadgroupOffsets[&V] = Offset;
+    ThreadgroupSize = Offset + DL.getTypeAllocSize(V.getValueType());
+  };
+  if (ThreadgroupOffsets.empty()) {
+    SmallVector<const GlobalVariable *, 4> Dynamic;
+    for (const GlobalVariable &V : F.getParent()->globals()) {
+      if (V.getAddressSpace() != AGX::THREADGROUP_ADDRESS || !isUsedIn(V, F))
+        continue;
+      if (DL.getTypeAllocSize(V.getValueType()) == 0)
+        Dynamic.push_back(&V);
+      else
+        Allocate(V);
+    }
+    for (const GlobalVariable *V : Dynamic)
+      Allocate(*V);
+  }
+  Allocate(GV);
+  return ThreadgroupOffsets[&GV];
 }
 
 bool AGX::isGlobalDataVariable(const GlobalVariable &GV) {

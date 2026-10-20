@@ -485,7 +485,7 @@ SDValue AGXTargetLowering::lowerGlobalAddress(SDValue Op,
   // Threadgroup variables are allocated statically per kernel; their
   // address is a constant offset into threadgroup memory.
   unsigned Offset =
-      MFI->allocateThreadgroupVariable(DAG.getDataLayout(), *GV);
+      MFI->allocateThreadgroupVariable(DAG.getMachineFunction().getFunction(), *GV);
   return DAG.getConstant(Offset + GA->getOffset(), DL, Op.getValueType());
 }
 

@@ -92,8 +92,10 @@ public:
   Register getGlobalDataVReg() const { return GlobalDataVReg; }
   unsigned getGlobalDataHalfIndex() const { return GlobalDataHalfIndex; }
 
-  /// Offset of \p GV in threadgroup memory, allocating it on first use.
-  unsigned allocateThreadgroupVariable(const DataLayout &DL,
+  /// Offset of \p GV in threadgroup memory. The first call lays out every
+  /// threadgroup variable \p F uses, in the order of the module (as PTX
+  /// does), the ones without a size (dynamic shared memory) last.
+  unsigned allocateThreadgroupVariable(const Function &F,
                                        const GlobalVariable &GV);
   unsigned getThreadgroupSize() const { return ThreadgroupSize; }
 };
