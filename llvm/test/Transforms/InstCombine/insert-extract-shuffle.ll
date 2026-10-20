@@ -886,13 +886,68 @@ define <4 x ptr> @insert_into_null_ptr_vector(<4 x ptr> %vec) {
   ret <4 x ptr> %vecins
 }
 
-; Negative Test - Insert into a zero vector with poison in lane 0
-define <4 x i32> @insert_into_integer_zero_vector_poison(<4 x i32> %vec) {
-; CHECK-LABEL: @insert_into_integer_zero_vector_poison(
-; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> [[VEC:%.*]], <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; Treat insert to a zero vector with one poison lane at insert index as insert into a zero vector
+define <4 x float> @insert_into_poison_lane(<4 x float> %vec) {
+; CHECK-LABEL: @insert_into_poison_lane(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[VECINS]]
+;
+  %vecext = extractelement <4 x float> %vec, i32 0
+  %vecins = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %vecext, i32 0
+  ret <4 x float> %vecins
+}
+
+define <4 x i32> @poison_at_different_idx(<4 x i32> %vec) {
+; CHECK-LABEL: @poison_at_different_idx(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> [[VEC:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[VECINS]]
 ;
   %vecext = extractelement <4 x i32> %vec, i32 0
-  %vecins = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 %vecext, i32 0
+  %vecins = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 %vecext, i32 1
   ret <4 x i32> %vecins
+}
+
+; Negative test - We do not treat inserting into the non-poison lane as a insert into zero vector
+define <4 x float> @insert_into_not_poison(<4 x float> %vec) {
+; CHECK-LABEL: @insert_into_not_poison(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float 0.000000e+00>, <4 x float> [[VEC:%.*]], <4 x i32> <i32 0, i32 poison, i32 4, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[VECINS]]
+;
+  %vecext = extractelement <4 x float> %vec, i32 0
+  %vecins = insertelement <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, float %vecext, i32 2
+  ret <4 x float> %vecins
+}
+
+; Negative test - Do not treat insert into a poison lane as insert into zero vector if another poison lane exists
+define <4 x float> @more_than_one_poison(<4 x float> %vec) {
+; CHECK-LABEL: @more_than_one_poison(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 poison, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[VECINS]]
+;
+  %vecext = extractelement <4 x float> %vec, i32 0
+  %vecins = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, float %vecext, i32 0
+  ret <4 x float> %vecins
+}
+
+; Negative test - Do not treat insert into poison lane as zero vector if vector does not contain all zeros
+define <4 x float> @poison_lane_nonzero_vector(<4 x float> %vec) {
+; CHECK-LABEL: @poison_lane_nonzero_vector(
+; CHECK-NEXT:    [[VECINS:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> <float poison, float 0.000000e+00, float 1.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[VECINS]]
+;
+  %vecext = extractelement <4 x float> %vec, i32 0
+  %vecins = insertelement <4 x float> <float poison, float 0.000000e+00, float 1.0, float 0.000000e+00>, float %vecext, i32 0
+  ret <4 x float> %vecins
+}
+
+; Negative test - We do not know if we are inserting into the poison lane. Do not treat as zero vector.
+define <4 x float> @insert_at_variable_index(<4 x float> %x, i32 %idx) {
+; CHECK-LABEL: @insert_at_variable_index(
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <4 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[ELT]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[INS]]
+;
+  %elt = extractelement <4 x float> %x, i32 0
+  %ins = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %elt, i32 %idx
+  ret <4 x float> %ins
 }
