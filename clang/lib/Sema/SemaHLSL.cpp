@@ -2918,6 +2918,13 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
+  PreciseUsed = true;
+  HLSLPreciseAttr *NewAttr = HLSLPreciseAttr::Create(getASTContext(), AL);
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
 static bool isMatrixType(QualType QT) {
   const Type *Ty = QT->getUnqualifiedDesugaredType();
   return Ty->isDependentType() || Ty->isConstantMatrixType();

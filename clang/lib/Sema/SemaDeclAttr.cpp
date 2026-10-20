@@ -8338,7 +8338,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     S.HLSL().handleVkLocationAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLPrecise:
-    handleSimpleAttribute<HLSLPreciseAttr>(S, D, AL);
+    S.HLSL().handlePreciseAttr(D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:
