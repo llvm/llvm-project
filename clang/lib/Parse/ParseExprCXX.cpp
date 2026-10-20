@@ -1939,7 +1939,10 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   if (!getLangOpts().CPlusPlus) {
     if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
       // Accept a C2y declaration, *only* if it's not a simple declaration.
-      WarnOnInit();
+      // Only warn when the declaration is actually permitted here; otherwise
+      // we diagnose an error below.
+      if (InitStmt != nullptr)
+        WarnOnInit();
       DeclGroupPtrTy DG;
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       ParsedAttributes DeclSpecAttrs(AttrFactory);

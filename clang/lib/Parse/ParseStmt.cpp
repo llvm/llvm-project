@@ -1331,10 +1331,18 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
         // C2y only permits expression in the second clause of an if condition.
         Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
             << Cond.get().first->getSourceRange();
-    } else if (Cond.get().first != nullptr)
-      // Handle: if (int decl = 0) {}.
-      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
-          << (CK == Sema::ConditionKind::Switch);
+    } else if (Cond.get().first != nullptr) {
+      if (InitStmt == nullptr)
+        // C2y only permits a declaration in the condition of an 'if' or
+        // 'switch' statement; a 'while' statement still requires an
+        // expression. Handle: while (int decl = 0) {}.
+        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
+            << Cond.get().first->getSourceRange();
+      else
+        // Handle: if (int decl = 0) {}.
+        DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
+            << (CK == Sema::ConditionKind::Switch);
+    }
   }
 
   if (Tok.is(tok::comma)) {

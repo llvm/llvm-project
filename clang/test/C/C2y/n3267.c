@@ -211,3 +211,44 @@ int negative_test_switch() {
   switch (int x, y) {default:} /* expected-error {{multiple declarations are not allowed}}
                                   expected-error {{variable declaration in condition must have an initializer}} */
 }
+
+void negative_test_while() {
+  // N3356 only extends the selection statements ('if' and 'switch'); the
+  // controlling clause of an iteration statement is still an expression.
+  int y = 1;
+  while (int x = 12) {} // expected-error {{expected expression}}
+  while ([[maybe_unused]] int x = 1) {} // expected-error {{expected expression}}
+  while (int x [[maybe_unused]] = 1) {} // expected-error {{expected expression}}
+  while (__extension__ int x = 1) {} // expected-error {{expected expression}}
+  while (auto x = 1) {} // expected-error {{expected expression}}
+  while (auto x = &y) {} // expected-error {{expected expression}}
+  while (static_assert(true); true) {} // expected-error {{expected expression}}
+  while (int a = 1, b = 2) {} /* expected-error {{expected expression}}
+                                 expected-error {{multiple declarations are not allowed}} */
+  while (int x) {} /* expected-error {{variable declaration in condition must have an initializer}}
+                      expected-error {{expected expression}} */
+  do {} while (int x = 1); // expected-error {{expected expression}}
+  for (int i = 0; int j = i;) {} // expected-error {{expected expression}}
+
+  // Declarations in 'if' and 'switch' nested in a loop (and vice versa) are
+  // still fine.
+  while (y) { if (int x = 1) {} }
+  if (int x = 1) { while (x) {} }
+}
+
+void negative_test_while_struct_init_clause() {
+  // Kept separate because error recovery skips the rest of the enclosing
+  // function.
+  while (struct S { int x; } s = {}; s.x) {} /* expected-error {{expected expression}}
+                                                expected-error {{statement requires expression of scalar type ('struct S' invalid)}}
+                                                expected-error {{use of undeclared identifier 's'}} */
+}
+
+void negative_test_while_init_clause() {
+  // Kept separate because recovery from the missing ')' skips the rest of the
+  // enclosing function.
+  while (int x = 12; x) {} /* expected-error {{expected expression}}
+                              expected-error {{expected ')'}}
+                              expected-note {{to match this '('}}
+                              expected-error {{use of undeclared identifier 'x'}} */
+}
