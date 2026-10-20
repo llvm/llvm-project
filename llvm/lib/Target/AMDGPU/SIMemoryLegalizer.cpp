@@ -668,14 +668,8 @@ public:
 /// Issues a diagnostic if an unexpected suffix is observed for the MMRA tag.
 static std::optional<SIAtomicAddrSpace>
 getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
-  const auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
-  auto Diag = [&MI](StringRef S) {
-    const MachineFunction *MF = MI.getMF();
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupported(Fn, S, MI.getDebugLoc(), DS_Warning));
-  };
-  return getSynchronizeAddrSpace(MMRA, Diag);
+  return getSynchronizeAddrSpace(MMRAMetadata(MI.getMMRAMetadata()),
+                                 &MI.getMF()->getFunction(), MI.getDebugLoc());
 }
 
 static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
