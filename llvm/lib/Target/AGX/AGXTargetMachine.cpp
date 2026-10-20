@@ -36,6 +36,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
+  initializeAGXPromoteKernelArgsPass(PR);
   initializeAGXCodeGenPreparePass(PR);
   initializeAGXStrictFPPass(PR);
   initializeAGXLowerFPEnvPass(PR);
@@ -155,6 +156,8 @@ void AGXPassConfig::addIRPasses() {
     addPass(createInferAddressSpacesPass());
     addPass(createSROAPass());
   }
+  // By-reference kernel arguments become uniform register values.
+  addPass(createAGXPromoteKernelArgsPass());
   // Vector arithmetic is scalar code (as in instruction selection), which the
   // software floating point lowerings below then see.
   addPass(createScalarizerPass());

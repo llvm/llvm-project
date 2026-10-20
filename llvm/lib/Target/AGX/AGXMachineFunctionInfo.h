@@ -74,6 +74,9 @@ public:
 
   void setImplicitArgHalfIndex(unsigned I) { ImplicitArgHalfIndex = I; }
   unsigned getImplicitArgHalfIndex() const { return ImplicitArgHalfIndex; }
+  /// The first uniform half of each IR argument (~0u if it has none).
+  SmallVector<unsigned, 8> ArgHalves;
+
   void setUniformHalfCount(unsigned N) { UniformHalfCount = N; }
   unsigned getUniformHalfCount() const { return UniformHalfCount; }
   void setImplicitArgVReg(unsigned Dim, Register R) {

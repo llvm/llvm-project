@@ -215,6 +215,34 @@ the driver must provide::
   // threadgroup memory: 0 bytes
   // stack size: 0 bytes
 
+Arguments passed by reference (``ptr addrspace(4) byref(T)``, as ZLUDA emits
+PTX ``.param`` arguments) whose every use is a load at a constant offset are
+passed by value: their bytes occupy consecutive uniform registers (in 64-bit
+parts and a last 32-bit one) and the loads read the registers. Other
+by-reference arguments, and those beyond 256 bytes per kernel, stay a 64-bit
+pointer to the bytes, which the driver places in memory.
+
+The object also describes each kernel in the ``.agx.kernels`` section, for
+drivers, as a sequence of records of little-endian 32-bit words:
+
+==========================  ==============================================
+Word                        Meaning
+==========================  ==============================================
+0                           size of the record in bytes
+1                           version (1)
+2                           length of the kernel's name
+3 ...                       the name, padded with zeros to 4 bytes
+then                        uniform halves; first half of
+                            ``threadgroups_per_grid``; first half of the
+                            global data buffer address (0xffffffff if
+                            none); general purpose registers; threadgroup
+                            memory bytes; stack bytes per thread
+then                        the number of arguments of the source kernel,
+                            and for each: kind (0 = its bytes are in the
+                            uniforms, 1 = a pointer to them is), size in
+                            bytes, first half (0xffffffff if unused)
+==========================  ==============================================
+
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
 

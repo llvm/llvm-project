@@ -296,6 +296,13 @@ SDValue AGXTargetLowering::LowerFormalArguments(
       continue;
     }
     MCRegister PReg = Allocate(VT);
+    if (In.isOrigArg()) {
+      unsigned Arg = In.getOrigArgIndex();
+      if (MFI->ArgHalves.size() <= Arg)
+        MFI->ArgHalves.resize(Arg + 1, ~0u);
+      if (MFI->ArgHalves[Arg] == ~0u)
+        MFI->ArgHalves[Arg] = Half - VT.getSizeInBits() / 16;
+    }
     if (!PReg) {
       InVals.push_back(DAG.getUNDEF(VT));
       continue;

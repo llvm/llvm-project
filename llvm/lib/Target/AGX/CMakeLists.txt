@@ -29,6 +29,7 @@ add_llvm_target(AGXCodeGen
   AGXLowerControlFlow.cpp
   AGXMachineFunctionInfo.cpp
   AGXMCInstLower.cpp
+  AGXPromoteKernelArgs.cpp
   AGXRegisterInfo.cpp
   AGXSelectionDAGInfo.cpp
   AGXExpandWideAtomics.cpp

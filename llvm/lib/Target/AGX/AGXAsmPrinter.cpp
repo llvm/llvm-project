@@ -44,6 +44,10 @@ namespace {
 
 class AGXAsmPrinter : public AsmPrinter {
   bool ReportedMissingEncoding = false;
+  /// The .agx.kernels record of each kernel, emitted at the end of the file.
+  SmallVector<std::pair<std::string, SmallVector<uint32_t, 16>>, 4> Kernels;
+
+  void recordKernel();
 
 public:
   static char ID;
@@ -114,7 +118,79 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   AsmPrinter::emitGlobalVariable(GV);
 }
 
+/// The .agx.kernels record of the current kernel. Each record is a sequence
+/// of little-endian 32-bit words:
+///
+///   size (of the record in bytes), version (1), name length, the name
+///   (padded with zeros to 4 bytes), uniform halves, first half of
+///   threadgroups_per_grid, first half of the global data buffer address
+///   (0xffffffff if none), general purpose registers, threadgroup memory
+///   bytes, stack bytes per thread, argument count, and for each argument
+///   of the source kernel: kind (0 = its bytes are in the uniforms, 1 = a
+///   64-bit pointer to its bytes is), its size in bytes, and its first half.
+///
+/// Argument values are packed little-endian from their first half in 32-bit
+/// words (16-bit arguments in one half).
+void AGXAsmPrinter::recordKernel() {
+  const Function &F = MF->getFunction();
+  if (F.getCallingConv() != CallingConv::AGX_KERNEL)
+    return;
+  const auto *MFI = MF->getInfo<AGXMachineFunctionInfo>();
+  const DataLayout &DL = F.getDataLayout();
+  SmallVector<uint32_t, 16> R;
+  R.push_back(MFI->getUniformHalfCount());
+  R.push_back(MFI->getImplicitArgHalfIndex());
+  R.push_back(MFI->getGlobalDataVReg() ? MFI->getGlobalDataHalfIndex()
+                                       : ~0u);
+  R.push_back(getGPRCount(*MF));
+  R.push_back(MFI->getThreadgroupSize());
+  R.push_back(AGXFrameLowering::getStackAdjustUnits(*MF) * 4);
+  auto Half = [&](unsigned Arg) {
+    return Arg < MFI->ArgHalves.size() ? MFI->ArgHalves[Arg] : ~0u;
+  };
+  SmallVector<uint32_t, 16> Args;
+  Attribute Desc = F.getFnAttribute("agx-kernel-args");
+  if (Desc.isValid()) {
+    // Written by AGXPromoteKernelArgs: <v|p><bytes>:<first argument>.
+    SmallVector<StringRef, 8> Items;
+    Desc.getValueAsString().split(Items, ',');
+    for (StringRef Item : Items) {
+      auto [Size, First] = Item.drop_front().split(':');
+      unsigned Bytes = 0, Arg = 0;
+      Size.getAsInteger(10, Bytes);
+      First.getAsInteger(10, Arg);
+      Args.append({Item.front() == 'p' ? 1u : 0u, Bytes, Half(Arg)});
+    }
+  } else {
+    for (const Argument &A : F.args()) {
+      Type *T = A.getType()->isPointerTy() ? A.getParamByRefType() : nullptr;
+      Args.append({T ? 1u : 0u,
+                   uint32_t(T ? DL.getTypeAllocSize(T)
+                              : DL.getTypeStoreSize(A.getType())),
+                   Half(A.getArgNo())});
+    }
+  }
+  R.push_back(Args.size() / 3);
+  R.append(Args);
+  Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
+}
+
 void AGXAsmPrinter::emitEndOfAsmFile(Module &M) {
+  if (!Kernels.empty()) {
+    OutStreamer->switchSection(
+        OutContext.getELFSection(".agx.kernels", ELF::SHT_PROGBITS, 0));
+    OutStreamer->emitValueToAlignment(Align(4));
+    for (const auto &[Name, R] : Kernels) {
+      uint32_t NameWords = divideCeil(Name.size(), 4);
+      OutStreamer->emitInt32(4 * (3 + NameWords + R.size()));
+      OutStreamer->emitInt32(1);
+      OutStreamer->emitInt32(Name.size());
+      OutStreamer->emitBytes(Name);
+      OutStreamer->emitZeros(4 * NameWords - Name.size());
+      for (uint32_t W : R)
+        OutStreamer->emitInt32(W);
+    }
+  }
   AGX::GlobalDataLayout Layout = AGX::computeGlobalDataLayout(M);
   if (Layout.empty())
     return;
@@ -144,6 +220,7 @@ void AGXAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void AGXAsmPrinter::emitFunctionBodyEnd() {
+  recordKernel();
   const auto &ST = MF->getSubtarget<AGXSubtarget>();
   if (ST.getEncodingFamily() != AGXSubtarget::AGX2)
     return;
