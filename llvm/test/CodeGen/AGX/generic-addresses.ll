@@ -13,7 +13,8 @@ declare i32 @llvm.agx.thread.position.in.threadgroup.x()
 ; IR: zext i32 %[[OFF]] to i64
 ; IR: or i64 %{{.*}}, -9223372036854775808
 ; IR: lshr i64 %{{.*}}, 32
-; IR: icmp slt i32 %{{.*}}, 0
+; IR: lshr i32 %{{.*}}, 30
+; IR: icmp uge i32 %{{.*}}, 2
 ; IR: load i32, ptr addrspace(3)
 ; IR: load i32, ptr addrspace(1)
 ; IR: phi i32
