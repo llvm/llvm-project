@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InterpBlock.h"
+#include "Block.h"
 #include "Pointer.h"
 
 using namespace clang;
