@@ -1348,12 +1348,13 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       return Def->getOperand(0);
     }
     if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-      if (all_equal(Phi->incoming_values()) ||
-          match(Phi->getOperand(0),
-                m_InsertElement(
-                    m_VPValue(), m_Specific(Phi->getOperand(1)),
-                    m_Sub(m_ZExtOrTruncOrSelf(m_Specific(&Plan.getVF())),
-                          m_One()))))
+      if (match(Phi->getOperand(0),
+                m_CombineOr(
+                    m_Specific(Phi->getOperand(1)),
+                    m_InsertElement(
+                        m_VPValue(), m_Specific(Phi->getOperand(1)),
+                        m_Sub(m_ZExtOrTruncOrSelf(m_Specific(&Plan.getVF())),
+                              m_One())))))
         return Phi->getOperand(0);
     }
     return nullptr;
