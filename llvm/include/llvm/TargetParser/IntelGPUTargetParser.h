@@ -49,13 +49,8 @@ LLVM_ABI StringRef getArchName(GPUKind Kind);
 /// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
-/// \return the device \p Name denotes, or GK_NONE for a name this build does
-/// not know.
-///
-/// \p Name may be a human-friendly name ("xe-pvc"), a compatibility name
-/// ("xe-dg2") or a numeric name ("xe_12.60.7"). The revision of a numeric name
-/// is ignored and may be omitted, so "xe_12.60", "xe_12.60.0" and "xe_12.60.7"
-/// all denote the same device.
+/// \return the device \p Name denotes, e.g. "xe-pvc" or the compatibility name
+/// "xe-dg2", or GK_NONE for a name this build does not know.
 LLVM_ABI GPUKind parseArch(StringRef Name);
 
 } // namespace IntelGPU
