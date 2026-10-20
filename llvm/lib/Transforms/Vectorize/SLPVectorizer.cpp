@@ -14568,15 +14568,15 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
     return;
 
-  SmallVector<Value *> PointerOps = map_to_vector(
-      E.Scalars,
-      [](Value *V) { return cast<LoadInst>(V)->getPointerOperand(); });
+  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
+    return cast<LoadInst>(V)->getPointerOperand();
+  });
 
   Type *ScalarTy = E.getMainOp()->getType();
   Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
   StridedPtrInfo SPtrInfo;
   SmallVector<unsigned> Order;
-  std::optional<int64_t> Diff = PtrsDiffCache.get(
+  std::optional<int64_t> Diff = Cache.getPointersDiff(
       ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
   if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
                                                CommonAlignment, Order, *Diff,
@@ -14586,7 +14586,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   auto *LI0 = cast<LoadInst>(E.Scalars.front());
   std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
       E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-      [](Value *) { return true; }, Opts.slp_revec, PtrsDiffCache);
+      [](Value *) { return true; }, Opts.slp_revec, Cache);
   if (!CompressInfo)
     return;
   InstructionCost CompressedCost =
@@ -14595,10 +14595,10 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   auto *VecTy =
       cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
   FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-  InstructionCost StridedCost =
-      getStridedLoadCost(*TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy,
-                         ScalarTy, LI0->getPointerOperand(), CommonAlignment,
-                         TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
+  InstructionCost StridedCost = getStridedLoadCost(
+      *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
+      LI0->getPointerOperand(), CommonAlignment,
+      TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
   if (StridedCost >= CompressedCost)
     return;
 
@@ -17910,7 +17910,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            PtrsDiffCache);
+            Cache);
         assert(CompressInfo && "Expected compressed load candidate.");
         CompressEntryToData.try_emplace(E, *CompressInfo);
         VecLdCost = getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
