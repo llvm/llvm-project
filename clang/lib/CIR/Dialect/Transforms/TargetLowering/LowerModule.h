@@ -22,6 +22,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace cir {
@@ -46,7 +47,8 @@ public:
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   clang::TargetCXXABI::Kind getCXXABIKind() const {
-    assert(!cir::MissingFeatures::lowerModuleLangOpts());
+    if (langOpts.CXXABI)
+      return *langOpts.CXXABI;
     assert(target &&
            "No C++ ABI kind without a target (missing/unsupported cir.triple)");
     return target->getCXXABI().getKind();
@@ -70,6 +72,9 @@ public:
            "LowerModule has no target (missing/unsupported cir.triple)");
     return *target;
   }
+
+  // FIXME remove this once all ABIs are supported.
+  bool hasCXXABI() const { return abi != nullptr; }
 
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 

@@ -103,30 +103,121 @@ TEST(LlvmLibcRegexMatcherTest, OverlappingPrefixMatch) {
   EXPECT_EQ(match(pool, *pat, "abababab"), MatchResult::NoMatch);
 }
 
+TEST(LlvmLibcRegexMatcherTest, WildcardMatchingAndNewlineFlag) {
+  ExprPool pool;
+  ErrorOr<ExprId> pat = parse_ere("a.c", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(1));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+
+  EXPECT_EQ(match(pool, *pat, "xx abc yy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "a\nc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat,
+                  "a\xff"
+                  "c"),
+            MatchResult::Match);
+  EXPECT_EQ(match(pool, *pat, "ac"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "abbc"), MatchResult::NoMatch);
+
+  const size_t warm_nodes = pool.size();
+  const size_t warm_bytes = pool.allocated_bytes();
+  EXPECT_EQ(match(pool, *pat, "xx abc yy"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+  EXPECT_EQ(pool.allocated_bytes(), warm_bytes);
+
+  // A second '.' wildcard in the same mode shares the existing ByteSet slot.
+  ErrorOr<ExprId> pat2 = parse_ere("a.b.c", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat2.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(1));
+  EXPECT_EQ(match(pool, *pat2, "axbyc"), MatchResult::Match);
+
+  // Under REG_NEWLINE, '.' matches any byte except '\n'.
+  ErrorOr<ExprId> nl_pat = parse_ere("a.c", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(nl_pat.has_value());
+  EXPECT_EQ(pool.num_byte_sets(), size_t(2));
+  EXPECT_EQ(match(pool, *nl_pat, "abc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *nl_pat, "a\nc"), MatchResult::NoMatch);
+}
+
+TEST(LlvmLibcRegexMatcherTest, AnchorMatchingAndFlags) {
+  ExprPool pool;
+  ErrorOr<ExprId> pat = parse_ere("^foo$", REG_EXTENDED, pool);
+  ASSERT_TRUE(pat.has_value());
+  EXPECT_LE(pool.size(), size_t(12));
+  EXPECT_LE(pool.allocated_bytes(), size_t(1024));
+
+  EXPECT_EQ(match(pool, *pat, "foo"), MatchResult::Match);
+  const size_t warm_nodes = pool.size();
+  const size_t warm_bytes = pool.allocated_bytes();
+  EXPECT_EQ(match(pool, *pat, "foo"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+  EXPECT_EQ(pool.allocated_bytes(), warm_bytes);
+
+  // Near-miss negative checks for ^foo$.
+  EXPECT_EQ(match(pool, *pat, "xfoo"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foox"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo\nbar"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, ""), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo", 0, REG_NOTBOL), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "foo", 0, REG_NOTEOL), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *pat, "bar\nfoo\nbaz", REG_NEWLINE, 0),
+            MatchResult::Match);
+
+  // Empty-line and multi-anchor patterns.
+  ErrorOr<ExprId> empty_line = parse_ere("^$", REG_EXTENDED, pool);
+  ErrorOr<ExprId> multi_bol = parse_ere("^^ab$$", REG_EXTENDED, pool);
+  ErrorOr<ExprId> mid_bol = parse_ere("a^b", REG_EXTENDED, pool);
+  ErrorOr<ExprId> nl_bol = parse_ere("\n^b", REG_EXTENDED, pool);
+  ASSERT_TRUE(empty_line.has_value());
+  ASSERT_TRUE(multi_bol.has_value());
+  ASSERT_TRUE(mid_bol.has_value());
+  ASSERT_TRUE(nl_bol.has_value());
+
+  EXPECT_EQ(match(pool, *empty_line, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *empty_line, "a"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *empty_line, "\n"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *empty_line, "a\n\nb", REG_NEWLINE, 0),
+            MatchResult::Match);
+  EXPECT_EQ(match(pool, *empty_line, "a\nb", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+
+  EXPECT_EQ(match(pool, *multi_bol, "ab"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_bol, "xab"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *multi_bol, "abx"), MatchResult::NoMatch);
+
+  EXPECT_EQ(match(pool, *mid_bol, "ab"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *mid_bol, "a^b"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *nl_bol, "\nb"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *nl_bol, "\nb", REG_NEWLINE, 0), MatchResult::Match);
+}
+
 TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   ExprPool pool;
   ErrorOr<ExprId> escaped_dot = parse_ere(R"(a\.b)", REG_EXTENDED, pool);
   ErrorOr<ExprId> escaped_star = parse_ere(R"(a\*b)", REG_EXTENDED, pool);
   ErrorOr<ExprId> escaped_slash = parse_ere(R"(a\\b)", REG_EXTENDED, pool);
+  ErrorOr<ExprId> escaped_anchors = parse_ere(R"(a\^b\$c)", REG_EXTENDED, pool);
   ASSERT_TRUE(escaped_dot.has_value());
   ASSERT_TRUE(escaped_star.has_value());
   ASSERT_TRUE(escaped_slash.has_value());
+  ASSERT_TRUE(escaped_anchors.has_value());
 
   EXPECT_EQ(match(pool, *escaped_dot, "a.b"), MatchResult::Match);
   EXPECT_EQ(match(pool, *escaped_dot, "axb"), MatchResult::NoMatch);
   EXPECT_EQ(match(pool, *escaped_star, "a*b"), MatchResult::Match);
   EXPECT_EQ(match(pool, *escaped_slash, R"(a\b)"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_anchors, "a^b$c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_anchors, "axb$c"), MatchResult::NoMatch);
 
   ErrorOr<ExprId> trailing_escape = parse_ere(R"(abc\)", REG_EXTENDED, pool);
   ASSERT_FALSE(trailing_escape.has_value());
   EXPECT_EQ(trailing_escape.error(), REG_EESCAPE);
 
   const string_view bad_patterns[] = {
-      ".",     "^",     "$",     "*",     "+",     "?",     "(",
-      ")",     "[",     "{",     "|",     R"(\1)", R"(\2)", R"(\3)",
-      R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)", R"(\9)", R"(\b)",
-      R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')",
-      R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
+      "*",     "+",     "?",     "(",     ")",     "[",     "{",     "|",
+      R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
+      R"(\9)", R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)",
+      R"(\')", R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -168,4 +259,12 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
 
   EXPECT_EQ(match(pool, need_bc, "a"), MatchResult::OutOfMemory);
   EXPECT_EQ(match(pool, ab, "a"), MatchResult::OutOfMemory);
+
+  ErrorOr<ExprId> dot_exhausted = parse_ere(".", REG_EXTENDED, pool);
+  ASSERT_FALSE(dot_exhausted.has_value());
+  EXPECT_EQ(dot_exhausted.error(), REG_ESPACE);
+
+  ErrorOr<ExprId> concat_exhausted = parse_ere("ba", REG_EXTENDED, pool);
+  ASSERT_FALSE(concat_exhausted.has_value());
+  EXPECT_EQ(concat_exhausted.error(), REG_ESPACE);
 }

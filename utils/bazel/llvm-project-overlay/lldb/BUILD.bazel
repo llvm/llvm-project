@@ -914,6 +914,22 @@ cc_library(
 )
 
 cc_library(
+    name = "Register",
+    srcs = glob(["source/Register/**/*.cpp"]),
+    hdrs = glob(["source/Register/**/*.h"]),
+    includes = ["source"],
+    deps = [
+        ":CoreHeaders",
+        ":Headers",
+        ":TargetHeaders",
+        ":Utility",
+        ":UtilityPrivateHeaders",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
     name = "Utility",
     srcs = glob(["source/Utility/**/*.cpp"]),
     hdrs = glob(["include/lldb/Utility/**/*.h"]),

@@ -498,6 +498,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  setegid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setegid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getegid
+    libc.src.unistd.getgid
+    libc.src.unistd.setegid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  seteuid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    seteuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.geteuid
+    libc.src.unistd.getuid
+    libc.src.unistd.seteuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   setgid_test
   SUITE
     libc_unistd_unittests

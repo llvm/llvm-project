@@ -2470,9 +2470,9 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+  (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
     (lo16_to_vgpr32 VGPR_16:$src0),
-    (lo16_to_vgpr32 VGPR_16:$src1)), lo16)
+    (lo16_to_vgpr32 VGPR_16:$src1))), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2506,9 +2506,9 @@ def : GCNPat <
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f32:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+  (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
              (lo16_to_vgpr32 $src0),
-             (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
+             (V_LSHRREV_B32_e64 (i32 16), $src1))), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -2520,9 +2520,9 @@ def : GCNPat <
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
-  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+  (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
              (lo16_to_vgpr32 $src0),
-             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1))), lo16)
+             (V_LSHRREV_B32_e64 (i32 16), (i32 (EXTRACT_SUBREG $src1, sub1))))), lo16)
 >;
 }
 } // End foreach fp16vt = [f16, bf16]
@@ -3160,16 +3160,16 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
-  (V_BFE_I32_e64
+  (EXTRACT_SUBREG (i32 (V_BFE_I32_e64
    (lo16_to_vgpr32 VGPR_16:$src),
-   (i32 0), (i32 1))
+   (i32 0), (i32 1))), lo16)
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
-  (V_BFE_I32_e64
+  (EXTRACT_SUBREG (i32 (V_BFE_I32_e64
    (lo16_to_vgpr32 VGPR_16:$src),
-   (i32 0), (i32 8))
+   (i32 0), (i32 8))), lo16)
 >;
 }
 
@@ -3741,12 +3741,14 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
-  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001))), lo16)
+  (EXTRACT_SUBREG (i32 (V_PERM_B32_e64  (i32 0), (lo16_to_vgpr32 VGPR_16:$a),
+                  (S_MOV_B32 (i32 0x0c0c0001)))), lo16)
 >;
 
 def : GCNPat <
   (i32 (zext (bswap i16:$a))),
-  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+  (V_PERM_B32_e64  (i32 0), (lo16_to_vgpr32 VGPR_16:$a),
+            (S_MOV_B32 (i32 0x0c0c0001)))
 >;
 }
 
@@ -4386,7 +4388,7 @@ def : GCNPat<
 // the ignored src1.
 def : GCNPat<
   (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
-  (S_MOV_B32 SReg_32:$src)
+  (S_MOV_B32 (i32 imm:$src))
 >;
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
@@ -4550,7 +4552,8 @@ multiclass Int16Med3Pat<Instruction med3Inst,
   def : GCNPat <
   (min (max i16:$src0, i16:$src1),
        (max (min i16:$src0, i16:$src1), i16:$src2)),
-  (med3Inst SRCMODS.NONE, VSrc_b16:$src0, SRCMODS.NONE, VSrc_b16:$src1, SRCMODS.NONE, VSrc_b16:$src2, DSTCLAMP.NONE)
+  (med3Inst SRCMODS.NONE, outputSrcType:$src0, SRCMODS.NONE, outputSrcType:$src1,
+            SRCMODS.NONE, outputSrcType:$src2, DSTCLAMP.NONE)
 >;
 }
 
