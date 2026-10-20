@@ -226,6 +226,12 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
          SemanticInterpretation::SV}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::Coverage: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Position: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},

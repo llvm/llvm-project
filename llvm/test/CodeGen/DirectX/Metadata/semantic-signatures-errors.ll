@@ -51,6 +51,13 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-MULTI
 ; RUN: cat %t/row-common.ll %t/row-native-width.ll > %t/row-check.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-NATIVE-WIDTH
+; RUN: cat %t/coverage-common.ll %t/coverage-allocated.ll > %t/coverage.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-ALLOCATED
+; RUN: cat %t/coverage-common.ll %t/coverage-signed.ll > %t/coverage.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-SIGNED
+; RUN: cat %t/coverage-common.ll %t/coverage-vector.ll > %t/coverage.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-VECTOR
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage-input.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-INPUT
 
 ;--- triple.ll
 ; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
@@ -424,3 +431,39 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; SHADING-RATE-INTERP: entry 'main' input signature: integer pixel inputs require constant interpolation
 ; A valid scalar U32, but interpolation mode 0 (undefined) is not constant.
 !2 = !{i32 0, !"SV_ShadingRate", i32 5, i32 29, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- coverage-common.ll
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, null, !1}
+!1 = !{!2}
+!3 = !{i32 0}
+
+;--- coverage-allocated.ll
+; COVERAGE-ALLOCATED: entry 'main' output signature: SV_Coverage must not have an allocated location
+; SV_Coverage is a pixel output that is never packed into a register.
+!2 = !{i32 0, !"SV_Coverage", i32 5, i32 14, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- coverage-signed.ll
+; COVERAGE-SIGNED: entry 'main' output signature: SV_Coverage requires a scalar 32-bit unsigned integer
+; Signed I32 is not interchangeable with U32 for this system value.
+!2 = !{i32 0, !"SV_Coverage", i32 4, i32 14, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+
+;--- coverage-vector.ll
+; COVERAGE-VECTOR: entry 'main' output signature: SV_Coverage requires a scalar 32-bit unsigned integer
+; U32 is a valid component type, but two columns make this a vector.
+!2 = !{i32 0, !"SV_Coverage", i32 5, i32 14, !3, i32 0, i32 1, i8 2, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+
+;--- coverage-input.ll
+; COVERAGE-INPUT: entry 'main' input signature: semantic accessed by a dedicated intrinsic must not appear in an input/output signature
+; The input coverage is read with dx.op.coverage rather than the signature.
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_Coverage", i32 5, i32 14, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
