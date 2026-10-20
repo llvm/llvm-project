@@ -1763,8 +1763,9 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // a postinc expansion, it could be reused by a non-postinc user, but only if
   // its insertion point was already at the head of the loop.
   InsertedExpressions[{S, &*CacheAt}] = {V, false};
-  // Also make this expansion available for the canonical SCEV.
-  if (!S.isCanonical())
+  // Also make this expansion available for the canonical SCEV, if it only
+  // differs in the use flags of S.
+  if (S.hasUseFlags() && S.getPointer() == S.getCanonical())
     InsertedExpressions.try_emplace({S.getCanonical(), &*CacheAt}, V, true);
   return V;
 }

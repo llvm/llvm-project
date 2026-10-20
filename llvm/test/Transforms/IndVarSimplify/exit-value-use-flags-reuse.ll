@@ -125,3 +125,58 @@ exit:
   call void @use(i64 %z.lcssa)
   ret void
 }
+
+; The canonical form of %r's exit value folds to %c's, which has a different
+; shape. %c must not re-use the expansion of %r.
+define void @canonical_differs_in_shape(i64 noundef %n, i64 noundef %a, i64 noundef %b, i64 noundef %z, i1 %w) {
+; CHECK-LABEL: define void @canonical_differs_in_shape(
+; CHECK-SAME: i64 noundef [[N:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[Z:%.*]], i1 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[NM1:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[NM1]], [[B]]
+; CHECK-NEXT:    [[E:%.*]] = add i64 [[A]], [[MUL]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[Z]], i64 [[E]])
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[UMAX]] to i1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i1 @llvm.umin.i1(i1 [[W]], i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[UMIN]]
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i1 @llvm.umin.i1(i1 [[TMP1]], i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[W]]
+; CHECK-NEXT:    [[UMIN2:%.*]] = call i1 @llvm.umin.i1(i1 [[TMP2]], i1 [[TMP0]])
+; CHECK-NEXT:    call void @use.i1(i1 [[UMIN1]])
+; CHECK-NEXT:    call void @use.i1(i1 [[UMIN2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nm1 = add i64 %n, -1
+  %mul = mul i64 %nm1, %b
+  %e = add i64 %a, %mul
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %x = phi i64 [ %a, %entry ], [ %x.next, %loop ]
+  %mx = call i64 @llvm.umax.i64(i64 %x, i64 %z)
+  %me = call i64 @llvm.umax.i64(i64 %e, i64 %z)
+  %tx = trunc i64 %mx to i1
+  %te = trunc i64 %me to i1
+  %r.0 = select i1 %tx, i1 %w, i1 false
+  %r = select i1 %r.0, i1 %te, i1 false
+  %c = select i1 %te, i1 %w, i1 false
+  %x.next = add nuw i64 %x, %b
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %r.lcssa = phi i1 [ %r, %loop ]
+  %c.lcssa = phi i1 [ %c, %loop ]
+  call void @use.i1(i1 %r.lcssa)
+  call void @use.i1(i1 %c.lcssa)
+  ret void
+}
+
+declare void @use.i1(i1)
