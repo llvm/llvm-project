@@ -78,7 +78,7 @@ exit:
 define i64 @read_only_early_exit_with_sideeffect() {
 ; CHECK-LABEL: LV: Checking a loop in 'read_only_early_exit_with_sideeffect'
 ; CHECK:       LV: Not vectorizing: Complex writes to memory unsupported in early exit loops.
-; CHECK-NOT:   LV: We can vectorize this loop!
+; CHECK-NOT:   LV: VPlan created successfully. Loop can be vectorized.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
