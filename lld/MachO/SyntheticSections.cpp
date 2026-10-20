@@ -2566,9 +2566,12 @@ void ChainedFixupsSection::finalizeContents() {
   const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
-    fixupSegments.emplace_back(firstLoc.isec->parent->parent);
+    const OutputSegment *oseg = firstLoc.isec->parent->parent;
+    fixupSegments.emplace_back(oseg);
     while (i < count && sameSegment(locations[i], firstLoc)) {
-      uint32_t pageIdx = locations[i].offset / pageSize;
+      uint64_t pageIdx = locations[i].offset / pageSize;
+      if (pageIdx >= UINT16_MAX)
+        fatal("chained fixup too large in segment " + oseg->name + "; use -no_fixup_chains");
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;
