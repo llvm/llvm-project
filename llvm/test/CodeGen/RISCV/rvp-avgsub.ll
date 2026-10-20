@@ -484,8 +484,7 @@ define <4 x i16> @narrow_zero_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV64-LABEL: narrow_zero_bits_ashr:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pasubu.b a0, a0, a1
-; RV64-NEXT:    pncvt.wb a0, a0
-; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    pzext.h.b a0, a0
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    ret
   %a = and <4 x i16> %x, splat (i16 255)
@@ -507,8 +506,7 @@ define <4 x i16> @narrow_sign_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV64-LABEL: narrow_sign_bits_ashr:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pasub.b a0, a0, a1
-; RV64-NEXT:    pncvt.wb a0, a0
-; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    pzext.h.b a0, a0
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    ret
   %a = shl <4 x i16> %x, splat (i16 8)

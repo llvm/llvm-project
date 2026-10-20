@@ -366,6 +366,11 @@ Makes programs 10x faster by doing Special New Thing.
   a data layout, base type and index sequence. The latter API returns an option,
   as it may fail if the indices cannot be converted into ptradd representation.
 
+* The `llcontext` argument of `builder_at`, `builder_before` and
+  `builder_at_end` has been removed. These functions now take only an insertion
+  point, instruction, or block, respectively. The context is implied by the
+  insertion point.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
