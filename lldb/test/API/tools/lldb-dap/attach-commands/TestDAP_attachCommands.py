@@ -125,6 +125,31 @@ class TestDAP_attachCommands(DAPTestCaseBase):
         )
 
     @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfWasm  # the test releases the inferior with an expression
+    def test_program_is_process_name(self):
+        """
+        Tests that "attachCommands" attach when "program" is a process name,
+        which is not a file lldb can create a target from.
+        """
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+
+        process_event = session.attach(
+            AttachArgs(
+                program="no-such-process-name",
+                attachCommands=[
+                    f'target create -d "{program}"',
+                    "process launch --stop-at-user-entry",
+                ],
+                stopOnEntry=True,
+            )
+        )
+        session.verify_stopped_on_entry(after=process_event)
+
+        session.evaluate("`expression is_ready = 1", context="repl")
+        session.continue_to_exit()
+
+    @skipIfNetBSD  # Hangs on NetBSD as well
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
