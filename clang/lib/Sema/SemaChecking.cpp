@@ -12364,62 +12364,42 @@ static bool IsSameFloatAfterCast(const APValue &value,
           IsSameFloatAfterCast(value.getComplexFloatImag(), Src, Tgt));
 }
 
-/// Enclosing conditional operands for an implicit conversion. Keep the path
-/// lazy so that conditions are only evaluated for a candidate diagnostic.
-class clang::ImplicitConversionPath {
-public:
-  /// Both operands share the result, including failed evaluations.
-  class Condition {
-    Expr *Cond;
-    bool InConstantContext;
-    enum class Value { NotEvaluated, Unknown, False, True };
-    Value Result = Value::NotEvaluated;
+ImplicitConversionPath::Condition::Condition(Expr *Cond, bool InConstantContext)
+    : Cond(Cond), InConstantContext(InConstantContext) {}
 
-  public:
-    Condition(Expr *Cond, bool InConstantContext)
-        : Cond(Cond), InConstantContext(InConstantContext) {}
-
-    bool isUnselected(Sema &S, bool IsTrueOperand) {
-      if (Result == Value::NotEvaluated) {
-        Result = Value::Unknown;
-        bool CondValue;
-        if (Cond->EvaluateAsBooleanCondition(CondValue, S.Context,
-                                             InConstantContext)) {
-          bool ConstantCondValue;
-          // A condition can select different operands at runtime and during
-          // constant evaluation. Only rule out an operand if both agree.
-          if (InConstantContext ||
-              (Cond->EvaluateAsBooleanCondition(ConstantCondValue, S.Context,
-                                                /*InConstantContext=*/true) &&
-               ConstantCondValue == CondValue))
-            Result = CondValue ? Value::True : Value::False;
-        }
-      }
-      return Result == (IsTrueOperand ? Value::False : Value::True);
+bool ImplicitConversionPath::Condition::isUnselected(Sema &S,
+                                                     bool IsTrueOperand) {
+  if (Result == Value::NotEvaluated) {
+    Result = Value::Unknown;
+    bool CondValue;
+    if (Cond->EvaluateAsBooleanCondition(CondValue, S.Context,
+                                         InConstantContext)) {
+      bool ConstantCondValue;
+      // A condition can select different operands at runtime and during
+      // constant evaluation. Only rule out an operand if both agree.
+      if (InConstantContext ||
+          (Cond->EvaluateAsBooleanCondition(ConstantCondValue, S.Context,
+                                            /*InConstantContext=*/true) &&
+           ConstantCondValue == CondValue))
+        Result = CondValue ? Value::True : Value::False;
     }
-  };
-
-private:
-  const ImplicitConversionPath *Parent;
-  Condition &Cond;
-  bool IsTrueOperand;
-  mutable std::optional<bool> Unreachable;
-
-public:
-  ImplicitConversionPath(const ImplicitConversionPath *Parent, Condition &Cond,
-                         bool IsTrueOperand)
-      : Parent(Parent), Cond(Cond), IsTrueOperand(IsTrueOperand) {}
-
-  bool isKnownUnreachable(Sema &S) const {
-    if (!Unreachable.has_value()) {
-      // Check the outer operands first. An unselected outer operand makes
-      // evaluating this condition unnecessary, but does not skip other checks.
-      Unreachable = (Parent && Parent->isKnownUnreachable(S)) ||
-                    Cond.isUnselected(S, IsTrueOperand);
-    }
-    return *Unreachable;
   }
-};
+  return Result == (IsTrueOperand ? Value::False : Value::True);
+}
+
+ImplicitConversionPath::ImplicitConversionPath(
+    const ImplicitConversionPath *Parent, Condition &Cond, bool IsTrueOperand)
+    : Parent(Parent), Cond(Cond), IsTrueOperand(IsTrueOperand) {}
+
+bool ImplicitConversionPath::isKnownUnreachable(Sema &S) const {
+  if (!Unreachable.has_value()) {
+    // Check the outer operands first. An unselected outer operand makes
+    // evaluating this condition unnecessary, but does not skip other checks.
+    Unreachable = (Parent && Parent->isKnownUnreachable(S)) ||
+                  Cond.isUnselected(S, IsTrueOperand);
+  }
+  return *Unreachable;
+}
 
 static void
 AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,

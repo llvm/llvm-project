@@ -136,7 +136,6 @@ class DependentDiagnostic;
 class Designation;
 class IdentifierInfo;
 struct ImplicitAllocationArguments;
-class ImplicitConversionPath;
 class ImplicitConversionSequence;
 typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
 class InitializationKind;
@@ -159,6 +158,7 @@ class OverloadCandidateSet;
 class Preprocessor;
 struct APINotesSelectorDiagnosticState;
 struct ResolvedAllocation;
+class Sema;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -212,6 +212,36 @@ class LambdaScopeInfo;
 class SemaPPCallbacks;
 class TemplateDeductionInfo;
 } // namespace sema
+
+/// Enclosing conditional operands for an implicit conversion. Keep the path
+/// lazy so that conditions are only evaluated for a candidate diagnostic.
+class ImplicitConversionPath {
+public:
+  /// Both operands share the result, including failed evaluations.
+  class Condition {
+    Expr *Cond;
+    bool InConstantContext;
+    enum class Value { NotEvaluated, Unknown, False, True };
+    Value Result = Value::NotEvaluated;
+
+  public:
+    Condition(Expr *Cond, bool InConstantContext);
+
+    bool isUnselected(Sema &S, bool IsTrueOperand);
+  };
+
+private:
+  const ImplicitConversionPath *Parent;
+  Condition &Cond;
+  bool IsTrueOperand;
+  mutable std::optional<bool> Unreachable;
+
+public:
+  ImplicitConversionPath(const ImplicitConversionPath *Parent, Condition &Cond,
+                         bool IsTrueOperand);
+
+  bool isKnownUnreachable(Sema &S) const;
+};
 
 // AssignmentAction - This is used by all the assignment diagnostic functions
 // to represent what is actually causing the operation
