@@ -36597,7 +36597,7 @@ unsigned AArch64TargetLowering::getVectorTypeBreakdownForCallingConv(
 
 bool AArch64TargetLowering::hasInlineStackProbe(
     const MachineFunction &MF) const {
-  return !Subtarget->isTargetWindows() &&
+  return !Subtarget->isTargetWindowsOrUEFI() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
 }
 
