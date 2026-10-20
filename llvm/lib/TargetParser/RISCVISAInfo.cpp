@@ -483,10 +483,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   else if (Arch.consume_front("rv64"))
     XLen = 64;
 
-  auto IsBaseISA = [](StringRef Ext) { return Ext == "i" || Ext == "e"; };
-  StringRef BaseISA = Arch.slice(0, 1);
-  if (XLen == 0 || !IsBaseISA(BaseISA))
+  auto IsBaseISA = [](char C) { return C == 'i' || C == 'e'; };
+  if (XLen == 0 || Arch.empty() || !IsBaseISA(Arch[0]))
     return getError("arch string must begin with valid base ISA");
+  char BaseISA = Arch[0];
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
 
@@ -531,16 +531,16 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return getError("failed to parse major version number");
 
-    if (IsBaseISA(ExtName.slice(0, 1))) {
+    if (IsBaseISA(ExtName[0])) {
       if (ExtName.size() > 1)
-        return getError("base ISA '" + ExtName.slice(0, 1) +
+        return getError("base ISA '" + Twine(ExtName[0]) +
                         "' is missing version number");
-      if (ExtName != BaseISA)
-        return getError("conflicting base ISAs '" + BaseISA + "' and '" +
-                        ExtName + "'");
+      if (ExtName[0] != BaseISA)
+        return getError("conflicting base ISAs '" + Twine(BaseISA) +
+                        "' and '" + ExtName + "'");
     } else if (RISCVISAUtils::AllStdExts.contains(ExtName[0]) &&
                ExtName.size() > 1) {
-      return getError("extension '" + ExtName.slice(0, 1) +
+      return getError("extension '" + Twine(ExtName[0]) +
                       "' is missing version number");
     }
 
