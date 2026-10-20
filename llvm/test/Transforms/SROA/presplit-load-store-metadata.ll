@@ -12,8 +12,8 @@ define i32 @presplit_store_then_load(ptr %src) {
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[SRC]], align 4, !llvm.access.group [[ACC_GRP1:![0-9]+]]
 ; CHECK-NEXT:    [[SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[SRC_SROA_IDX]], align 4, !llvm.access.group [[ACC_GRP1]]
-; CHECK-NEXT:    store i32 [[VAL1]], ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP1]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_RES:%.*]] = load i32, ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP2:![0-9]+]]
+; CHECK-NEXT:    store i32 [[VAL1]], ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP2:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_RES:%.*]] = load i32, ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP3:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_RES]]
 ;
 entry:
@@ -36,11 +36,11 @@ define void @presplit_load_then_store(ptr %dst, i32 %val) {
 ; CHECK-NEXT:    store volatile i32 0, ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    store volatile i32 0, ptr [[A_SROA_3]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP1]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_RES1:%.*]] = load i32, ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP3:![0-9]+]]
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_RES2:%.*]] = load i32, ptr [[A_SROA_3]], align 4, !llvm.access.group [[ACC_GRP3]]
-; CHECK-NEXT:    store i32 [[A_SROA_0_0_A_SROA_0_0_RES1]], ptr [[DST]], align 4, !llvm.access.group [[ACC_GRP2]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_RES1:%.*]] = load i32, ptr [[A_SROA_0]], align 4, !llvm.access.group [[ACC_GRP2]]
+; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_RES2:%.*]] = load i32, ptr [[A_SROA_3]], align 4, !llvm.access.group [[ACC_GRP2]]
+; CHECK-NEXT:    store i32 [[A_SROA_0_0_A_SROA_0_0_RES1]], ptr [[DST]], align 4, !llvm.access.group [[ACC_GRP3]]
 ; CHECK-NEXT:    [[DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
-; CHECK-NEXT:    store i32 [[A_SROA_3_0_A_SROA_3_4_RES2]], ptr [[DST_SROA_IDX]], align 4, !llvm.access.group [[ACC_GRP2]]
+; CHECK-NEXT:    store i32 [[A_SROA_3_0_A_SROA_3_4_RES2]], ptr [[DST_SROA_IDX]], align 4, !llvm.access.group [[ACC_GRP3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

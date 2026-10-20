@@ -4947,9 +4947,6 @@ class SliceSplitter {
   IRBuilderTy &IRB;
   const DataLayout &DL;
 
-  /// The instruction that's being split.
-  Instruction *SplitI;
-
   /// The split points that the slice is being split at. There's also an
   /// implicit split point at the start and end of the slice.
   const std::vector<uint64_t> &Splits;
@@ -4958,11 +4955,9 @@ class SliceSplitter {
   unsigned SliceSize;
 
 public:
-  SliceSplitter(IRBuilderTy &IRB, const DataLayout &DL, Instruction *SplitI,
+  SliceSplitter(IRBuilderTy &IRB, const DataLayout &DL,
                 std::vector<uint64_t> &Splits, unsigned SliceSize)
-      : IRB(IRB), DL(DL), SplitI(SplitI), Splits(Splits), SliceSize(SliceSize) {
-
-  }
+      : IRB(IRB), DL(DL), Splits(Splits), SliceSize(SliceSize) {}
 
   /// An iterator which iterates over the sub-slices that we want to split the
   /// slice into.
@@ -4992,7 +4987,7 @@ public:
 
   Iterator end() { return Iterator(*this, true); }
 
-  LoadInst *createLoad(Value *BasePtr, Iterator &It) {
+  LoadInst *createLoad(Value *BasePtr, Iterator &It, Instruction *SplitI) {
     Type *PartTy = Type::getIntNTy(SplitI->getContext(), It.getSize() * 8);
     Type *PartPtrTy = BasePtr->getType();
     unsigned AS = getLoadStoreAddressSpace(SplitI);
@@ -5008,7 +5003,8 @@ public:
     return PLoad;
   }
 
-  StoreInst *createStore(Value *StoreVal, Value *BasePtr, Iterator &It) {
+  StoreInst *createStore(Value *StoreVal, Value *BasePtr, Iterator &It,
+                         Instruction *SplitI) {
     Type *PartPtrTy = BasePtr->getType();
     unsigned AS = getLoadStoreAddressSpace(SplitI);
     StoreInst *PStore = IRB.CreateAlignedStore(
@@ -5353,9 +5349,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
     LLVM_DEBUG(dbgs() << "  Splitting load: " << *LI << "\n");
 
-    SliceSplitter Splitter(IRB, DL, LI, Offsets.Splits, SliceSize);
+    SliceSplitter Splitter(IRB, DL, Offsets.Splits, SliceSize);
     for (auto Part : Splitter) {
-      LoadInst *PLoad = Splitter.createLoad(BasePtr, Part);
+      LoadInst *PLoad = Splitter.createLoad(BasePtr, Part, LI);
 
       // Append this load onto the list of split loads so we can find it later
       // to rewrite the stores.
@@ -5383,10 +5379,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
       LLVM_DEBUG(dbgs() << "    Splitting store of load: " << *SI << "\n");
 
-      SliceSplitter Splitter(IRB, DL, SI, Offsets.Splits, SliceSize);
       for (auto Part : Splitter) {
         LoadInst *PLoad = SplitLoads[Part.Idx];
-        StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part);
+        StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part, SI);
         LLVM_DEBUG(dbgs() << "      +" << Part.getOffset() << ":" << *PStore
                           << "\n");
       }
@@ -5451,7 +5446,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       LLVM_DEBUG(dbgs() << "          of load: " << *LI << "\n");
     }
 
-    SliceSplitter Splitter(IRB, DL, LI, Offsets.Splits, StoreSize);
+    SliceSplitter Splitter(IRB, DL, Offsets.Splits, StoreSize);
     for (auto Part : Splitter) {
       // Either lookup a split load or create one.
       LoadInst *PLoad;
@@ -5459,12 +5454,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         PLoad = (*SplitLoads)[Part.Idx];
       } else {
         IRB.SetInsertPoint(LI);
-        PLoad = Splitter.createLoad(LoadBasePtr, Part);
+        PLoad = Splitter.createLoad(LoadBasePtr, Part, LI);
       }
 
       // And store this partition.
       IRB.SetInsertPoint(SI);
-      StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part);
+      StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part, SI);
 
       // Now build a new slice for the alloca.
       NewSlices.push_back(Splitter.createSlice(PStore, BaseOffset, Part));
