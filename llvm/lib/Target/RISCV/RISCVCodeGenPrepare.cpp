@@ -87,7 +87,7 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
   for (auto &Entry : Extracts) {
     Value *Vec = Entry.first;
     auto *VecTy = cast<FixedVectorType>(Vec->getType());
-    auto *EltTy = dyn_cast<IntegerType>(VecTy->getElementType());
+    auto *EltTy = cast<IntegerType>(VecTy->getElementType());
     unsigned NumElts = VecTy->getNumElements();
     unsigned EltBits = EltTy->getBitWidth();
 
