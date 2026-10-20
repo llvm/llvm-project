@@ -164,12 +164,13 @@ them (similar to Clang's `-verify`):
 ```asm
 .foo # expected-error {{unknown directive}}
 .bar # expected-error-re {{unknown {{directive|instruction}}}}
+.baz # expected-error:1 {{unknown directive}}
 ```
 
 Directives have the form:
 
 ```text
-<prefix>-<kind>[-re][@<offset>] {{<text>}}
+<prefix>-<kind>[-re][@<offset>][:<col>] {{<text>}}
 ```
 
 - `<prefix>`: `expected` by default, or any prefix listed in the
@@ -182,6 +183,8 @@ Directives have the form:
   - `@+N` / `@-N`: `N` lines below or above the directive.
   - `@above` / `@below`: the nearest non-directive line above or below.
   - `@unknown`: a diagnostic with no source location.
+- `:<col>`: the expected 1-based column. (Note that in Clang, `@<file>:<line>`
+  instead refers to a line in another file.)
 
 At most one directive is recognized per line, and each directive matches a
 single diagnostic. {program}`llvm-mc` succeeds if all directives are matched
