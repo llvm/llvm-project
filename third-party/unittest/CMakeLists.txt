@@ -49,6 +49,7 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
+# z/OS requires _OPEN_SYS_FILE_EXT to expose fcntl
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_definitions("-D_OPEN_SYS_FILE_EXT=1")
 endif()
