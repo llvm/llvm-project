@@ -13,6 +13,10 @@
 // axis-info dataflow tracking per-axis `contiguity`, `constancy`, and
 // `divisibility`; the stamped value is the inner-dim `contiguity`.
 //
+// `xegpu.load_matrix` / `xegpu.store_matrix` take one scalar offset per dim, so
+// their contiguity comes from the `mem_desc` memory layout instead. The
+// dataflow only supplies the alignment of the innermost offset.
+//
 // Contiguity is a target-independent property of the offsets.
 //
 // The analysis tracks per-axis information for vectors of integer / index
@@ -165,6 +169,17 @@ static int64_t highestPow2Divisor(int64_t v) {
     return kAxisInfoTop;
   uint64_t u = static_cast<uint64_t>(std::abs(v));
   return static_cast<int64_t>(u & (~u + 1));
+}
+
+/// The shape tracked for a value of type `t`: the vector shape, or `[1]` for an
+/// integer / index scalar such as a matrix op offset. Returns nullopt for any
+/// other type.
+static std::optional<SmallVector<int64_t>> getTrackedShape(Type t) {
+  if (auto vt = dyn_cast<VectorType>(t))
+    return llvm::to_vector(vt.getShape());
+  if (t.isIntOrIndex())
+    return SmallVector<int64_t>{1};
+  return std::nullopt;
 }
 
 /// Initial lattice value for an SSA value when no transfer function applies.
@@ -528,11 +543,13 @@ private:
     return success();
   }
 
+  // Scalars are tracked as shape `[1]`, which keeps the divisibility of an
+  // offset like `%sg * 32 + 16` for the matrix ops.
   template <bool IsSub, typename OpTy>
   LogicalResult visitAddSub(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                             ArrayRef<AxisInfoLattice *> results) {
-    auto vt = dyn_cast<VectorType>(op.getType());
-    if (!vt) {
+    std::optional<SmallVector<int64_t>> shape = getTrackedShape(op.getType());
+    if (!shape) {
       setAllPessimistic(op, results);
       return success();
     }
@@ -542,7 +559,7 @@ private:
       setAllPessimistic(op, results);
       return success();
     }
-    unsigned r = vt.getRank();
+    unsigned r = shape->size();
     AxisInfo v = AxisInfo::getPessimistic(r);
     for (unsigned d = 0; d < r; ++d) {
       int64_t lhsCont = lhs.contiguity[d];
@@ -562,8 +579,8 @@ private:
     // stride flips sign (only useful for the "stride 0" case, which it
     // preserves trivially).
     auto isUniform = [&](const AxisInfo &a) {
-      unsigned inner = vt.getRank() - 1;
-      return a.constancy[inner] >= vt.getShape()[inner];
+      unsigned inner = r - 1;
+      return a.constancy[inner] >= (*shape)[inner];
     };
     if (lhs.innerStride && isUniform(rhs)) {
       v.innerStride = *lhs.innerStride;
@@ -577,8 +594,9 @@ private:
   LogicalResult visitMul(arith::MulIOp op,
                          ArrayRef<const AxisInfoLattice *> operands,
                          ArrayRef<AxisInfoLattice *> results) {
-    auto vt = dyn_cast<VectorType>(op.getType());
-    if (!vt) {
+    std::optional<SmallVector<int64_t>> trackedShape =
+        getTrackedShape(op.getType());
+    if (!trackedShape) {
       setAllPessimistic(op, results);
       return success();
     }
@@ -588,8 +606,8 @@ private:
       setAllPessimistic(op, results);
       return success();
     }
-    unsigned r = vt.getRank();
-    auto shape = vt.getShape();
+    ArrayRef<int64_t> shape = *trackedShape;
+    unsigned r = shape.size();
     AxisInfo v = AxisInfo::getPessimistic(r);
     auto unitConstant = [](const AxisInfo &a, unsigned d, int64_t extent) {
       return a.knownConstant && *a.knownConstant == 1 &&
@@ -608,7 +626,7 @@ private:
         v.contiguity[d] = 1;
     }
     // x * uniform-c: stride scales by c. (Both operands uniform => 0.)
-    unsigned inner = vt.getRank() - 1;
+    unsigned inner = r - 1;
     auto isUniformInner = [&](const AxisInfo &a) {
       return a.constancy[inner] >= shape[inner];
     };
@@ -771,8 +789,9 @@ private:
   template <bool IsLeft, typename OpTy>
   LogicalResult visitShift(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                            ArrayRef<AxisInfoLattice *> results) {
-    auto vt = dyn_cast<VectorType>(op.getType());
-    if (!vt) {
+    std::optional<SmallVector<int64_t>> trackedShape =
+        getTrackedShape(op.getType());
+    if (!trackedShape) {
       setAllPessimistic(op, results);
       return success();
     }
@@ -782,9 +801,9 @@ private:
       setAllPessimistic(op, results);
       return success();
     }
-    unsigned r = vt.getRank();
+    ArrayRef<int64_t> shape = *trackedShape;
+    unsigned r = shape.size();
     unsigned inner = r - 1;
-    auto shape = vt.getShape();
     AxisInfo v = AxisInfo::getPessimistic(r);
 
     if (rhs.constancy[inner] < shape[inner] || !rhs.knownConstant) {
@@ -852,7 +871,7 @@ private:
   LogicalResult visitPassThrough(OpTy op,
                                  ArrayRef<const AxisInfoLattice *> operands,
                                  ArrayRef<AxisInfoLattice *> results) {
-    if (!isa<VectorType>(op.getType())) {
+    if (!getTrackedShape(op.getType())) {
       setAllPessimistic(op, results);
       return success();
     }
@@ -901,6 +920,70 @@ static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
   op.setContiguity(contiguity);
 }
 
+/// The alignment of a matrix op's innermost offset: the value itself when it is
+/// a known constant, otherwise the power-of-two divisor the analysis proved.
+/// Returns 0 for a known zero, which every run length divides.
+static int64_t getOffsetAlignment(OpFoldResult offset, DataFlowSolver &solver) {
+  if (std::optional<int64_t> c = getConstantIntValue(offset))
+    return std::abs(*c);
+  const auto *lat = solver.lookupState<AxisInfoLattice>(cast<Value>(offset));
+  if (!lat || !lat->getValue().isInitialized())
+    return 1;
+  const AxisInfo &info = lat->getValue();
+  if (info.knownConstant)
+    return std::abs(*info.knownConstant);
+  return info.divisibility.front();
+}
+
+/// Stamp a `contiguity` attribute on a `load_matrix` / `store_matrix`. Its
+/// offsets are one scalar per dim (the tile origin), so the contiguity comes
+/// from the `mem_desc` memory layout, not from per-lane offsets. The innermost
+/// data dim maps to the innermost `mem_desc` dim. Along it:
+///   - A stride other than 1 puts neighbours apart in SLM: no attribute.
+///     `mem_desc<32x64xf32, #xegpu.mem_layout<stride = [1, 32]>>`
+///   - Without a block, each row of the tile is one contiguous run, so the
+///     contiguity is the inner extent.
+///     `mem_desc<32x64xf32>` read as `vector<8x32xf32>` -> 32.
+///   - With a block of width B, a run is contiguous only inside one block. A
+///     tile that fits in one block is one run. Otherwise a run must divide B
+///     and the innermost offset, so it never crosses a block edge.
+///     `mem_desc<32x64xf32, #xegpu.mem_layout<block = [8, 16]>>` read at
+///     [0, 0] as `vector<8x32xf32>` -> 16.
+template <typename OpTy>
+static void analyzeAndStampMatrixContiguity(OpTy op, DataFlowSolver &solver) {
+  ArrayRef<int64_t> dataShape = op.getDataShape();
+  if (dataShape.empty() || dataShape.back() < 2)
+    return;
+  // A pre-existing `contiguity` takes precedence, as for gather/scatter.
+  if (op.getContiguity())
+    return;
+  xegpu::MemDescType mdescTy = op.getMemDesc().getType();
+  SmallVector<OpFoldResult> offsets = op.getMixedOffsets();
+  if (offsets.empty())
+    return;
+  unsigned memInner = mdescTy.getRank() - 1;
+  int64_t inner = dataShape.back();
+  if (inner > mdescTy.getShape()[memInner])
+    return;
+  if (cast<IntegerAttr>(mdescTy.getStrideAttr()[memInner]).getInt() != 1)
+    return;
+
+  int64_t contiguity = inner;
+  SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
+  if (!llvm::equal(blockShape, mdescTy.getShape())) {
+    int64_t blockInner = blockShape[memInner];
+    std::optional<int64_t> origin = getConstantIntValue(offsets.back());
+    bool fitsInOneBlock = origin && *origin % blockInner + inner <= blockInner;
+    if (!fitsInOneBlock) {
+      contiguity = std::gcd(inner, blockInner);
+      if (int64_t align = getOffsetAlignment(offsets.back(), solver))
+        contiguity = std::gcd(contiguity, align);
+    }
+  }
+  if (contiguity < 2)
+    return;
+  op.setContiguity(contiguity);
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -915,7 +998,7 @@ void mlir::xegpu::runContiguityAnalysis(Operation *root) {
     return;
 
   // The solver computed AxisInfo for the whole region in the single
-  // `initializeAndRun` above; offsets shared by several gather/scatter ops are
+  // `initializeAndRun` above; offsets shared by several memory ops are
   // analyzed only once. This walk is just per-op point lookups into that
   // result (no re-analysis), turning each cached fact into an attribute.
   root->walk([&](Operation *op) {
@@ -923,5 +1006,9 @@ void mlir::xegpu::runContiguityAnalysis(Operation *root) {
       analyzeAndStampContiguity(load, solver);
     else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
       analyzeAndStampContiguity(store, solver);
+    else if (auto load = dyn_cast<xegpu::LoadMatrixOp>(op))
+      analyzeAndStampMatrixContiguity(load, solver);
+    else if (auto store = dyn_cast<xegpu::StoreMatrixOp>(op))
+      analyzeAndStampMatrixContiguity(store, solver);
   });
 }
