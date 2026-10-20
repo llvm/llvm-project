@@ -1854,10 +1854,11 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
+    unsigned VaListSize;
+    if (ST->isTargetDarwin() || ST->isTargetWindowsOrUEFI())
+      VaListSize = PtrSize;
+    else
+      VaListSize = ST->isTargetILP32() ? 20 : 32;
 
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
