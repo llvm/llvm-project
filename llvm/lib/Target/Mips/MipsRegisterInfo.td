@@ -237,13 +237,16 @@ let Namespace = "Mips" in {
   def FCC#I : MipsReg<I, "fcc"#I>;
 
   // Each COP0 register is identified by its register number and selector.
-  defm COP00  : CP0Registers<0, ["index", "mvpcontrol", "mvpconf0", "mvpconf1"]>;
+  defm COP00  : CP0Registers<0, ["index", "mvpcontrol", "mvpconf0", "mvpconf1",
+                                "vpcontrol"]>;
   defm COP01  : CP0Registers<1, ["random", "vpecontrol", "vpeconf0", "vpeconf1",
-                                "yqmask", "vpeschedule", "vpeschefback"]>;
+                                "yqmask", "vpeschedule", "vpeschefback", "vpeopt"]>;
   defm COP02  : CP0Registers<2, ["entrylo0", "tcstatus", "tcbind", "tcrestart",
                                 "tchalt", "tccontext", "tcschedule", "tcschefback"]>;
-  defm COP03  : CP0Registers<3, ["entrylo1"]>;
-  defm COP04  : CP0Registers<4, ["context", "contextconfig", "userlocal"]>;
+  defm COP03  : CP0Registers<3, ["entrylo1", "globalnumber", "", "", "", "",
+                                "", "tcopt"]>;
+  defm COP04  : CP0Registers<4, ["context", "contextconfig", "userlocal",
+                                "xcontext_config", "debugcontextid", "memorymapid"]>;
   defm COP05  : CP0Registers<5, ["pagemask", "pagegrain", "segctl0", "segctl1",
                                 "segctl2", "pwbase", "pwfield", "pwsize"]>;
   defm COP06  : CP0Registers<6, ["wired", "srsconf0", "srsconf1", "srsconf2",
@@ -254,11 +257,12 @@ let Namespace = "Mips" in {
   defm COP010 : CP0Registers<10, ["entryhi", "", "", "", "guestctl1", "guestctl2",
                                  "guestctl3"]>;
   defm COP011 : CP0Registers<11, ["compare", "", "", "", "guestctl0ext"]>;
-  defm COP012 : CP0Registers<12, ["status", "intctl", "srsctl", "srsmap", "",
-                                 "", "guestctl0", "gtoffset"]>;
-  defm COP013 : CP0Registers<13, ["cause"]>;
-  defm COP014 : CP0Registers<14, ["epc"]>;
-  defm COP015 : CP0Registers<15, ["prid", "ebase", "cdmmbase", "cmgcrbase"]>;
+  defm COP012 : CP0Registers<12, ["status", "intctl", "srsctl", "srsmap", "view_ipl",
+                                 "srsmap2", "guestctl0", "gtoffset"]>;
+  defm COP013 : CP0Registers<13, ["cause", "", "", "", "view_ripl", "nestedexc"]>;
+  defm COP014 : CP0Registers<14, ["epc", "", "nestedepc"]>;
+  defm COP015 : CP0Registers<15, ["prid", "ebase", "cdmmbase", "cmgcrbase",
+                                 "bevva"]>;
   defm COP016 : CP0Registers<16, ["config", "config1", "config2", "config3",
                                  "config4", "config5", "config6", "config7"]>;
   defm COP017 : CP0Registers<17, ["lladdr", "maar", "maari"]>;

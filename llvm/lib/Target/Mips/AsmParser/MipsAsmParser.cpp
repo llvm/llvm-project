@@ -6663,33 +6663,32 @@ ParseStatus MipsAsmParser::parseCOP0Register(OperandVector &Operands) {
     return Res;
   const auto &Op = static_cast<const MipsOperand &>(*RegOperands.back());
   unsigned Encoding;
-  if (Op.isCOP0AsmReg())
+  if (Op.isCOP0AsmReg()) {
     Encoding = Op.getCOP0Encoding();
-  else if (Op.isNumericReg())
-    Encoding = MIPS_MC::encodeCOP0Register(Op.getNumericRegIndex(), 0);
-  else
+    if (getLexer().is(AsmToken::Comma))
+      return Error(getLexer().getLoc(),
+                   "explicit selector is not allowed for named COP0 register");
+  } else if (Op.isNumericReg()) {
+    int64_t Sel = 0;
+    if (getLexer().is(AsmToken::Comma)) {
+      Lex();
+      SMLoc SelLoc = getLexer().getLoc();
+      if (getLexer().is(AsmToken::Dollar))
+        return Error(SelLoc, "expected 3-bit unsigned immediate");
+      const MCExpr *Expr;
+      if (getParser().parseExpression(Expr))
+        return ParseStatus::Failure;
+      if (!Expr->evaluateAsAbsolute(Sel) || !isUInt<3>(Sel))
+        return Error(SelLoc, "expected 3-bit unsigned immediate");
+    }
+    Encoding = MIPS_MC::encodeCOP0Register(Op.getNumericRegIndex(), Sel);
+  } else {
     return Error(S, "invalid operand for instruction");
-
-  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
-  if (getLexer().is(AsmToken::Comma)) {
-    Lex();
-    SMLoc SelLoc = getLexer().getLoc();
-    if (getLexer().is(AsmToken::Dollar))
-      return Error(SelLoc, "expected 3-bit unsigned immediate");
-    const MCExpr *Expr;
-    int64_t Sel;
-    if (getParser().parseExpression(Expr))
-      return ParseStatus::Failure;
-    if (!Expr->evaluateAsAbsolute(Sel) || !isUInt<3>(Sel))
-      return Error(SelLoc, "expected 3-bit unsigned immediate");
-    if (Op.isCOP0AsmReg() && Sel != MIPS_MC::getCOP0Sel(Encoding))
-      return Error(SelLoc, "selector does not match named COP0 register");
-    Encoding =
-        MIPS_MC::encodeCOP0Register(MIPS_MC::getCOP0RegNum(Encoding), Sel);
   }
   if (MIPS_MC::getCOP0Sel(Encoding) != 0 && !hasMips32())
     return Error(S, "selector must be zero for pre-MIPS32 ISAs");
 
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
   Operands.push_back(MipsOperand::createCOP0Reg(Encoding, "", &MRI, S,
                                                 getLexer().getLoc(), *this));
   return ParseStatus::Success;
