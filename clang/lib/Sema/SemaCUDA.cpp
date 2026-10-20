@@ -730,7 +730,8 @@ bool HasAllowedCUDADeviceStaticInitializer(SemaCUDA &S, VarDecl *VD,
                                        VD->getType()->isReferenceType());
   };
   auto HasEmptyDtor = [&](VarDecl *VD) {
-    if (const auto *RD = VD->getType()->getAsCXXRecordDecl())
+    if (const auto *RD =
+            VD->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl())
       return S.isEmptyDestructor(VD->getLocation(), RD->getDestructor());
     return true;
   };

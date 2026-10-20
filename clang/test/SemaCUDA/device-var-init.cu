@@ -103,6 +103,13 @@ __shared__ NED s_ned;
 __constant__ NED c_ned;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 
+__device__ NED d_ned_array[2];
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+__shared__ NED s_ned_array[2];
+// expected-error@-1 {{initialization is not supported for __shared__ variables}}
+__constant__ NED c_ned_array[2];
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
 __device__ NCV d_ncv;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 __shared__ NCV s_ncv;
@@ -323,6 +330,13 @@ __device__ void df_sema() {
   static __constant__ NED c_ned;
   // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 
+  static __device__ NED d_ned_array[2];
+  // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+  static __shared__ NED s_ned_array[2];
+  // expected-error@-1 {{initialization is not supported for __shared__ variables}}
+  static __constant__ NED c_ned_array[2];
+  // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
   static __device__ NCV d_ncv;
   // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
   static __shared__ NCV s_ncv;
@@ -447,6 +461,8 @@ __device__ void df_sema() {
   // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
   static NED l_ned;
   // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static NED l_ned_array[2];
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
   static VD l_vd;
   // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
   static EC_I_EC1 l_ec_i_ec1;
@@ -560,6 +576,20 @@ int h_lambda_called_from_host() {
     return nec.hd_nec;
   };
   return l();
+}
+
+// Empty destructor, with a member so that it can be explicitly initialized.
+struct ED_I {
+  int ed_i;
+  __device__ ~ED_I() {}
+};
+
+// As of CUDA 13.4, nvcc rejects l_ed_i_init but accepts l_ed_i. We accept both:
+// the initializer is constant and the destructor is empty, so neither needs to
+// run.
+__device__ void df_empty_dtor() {
+  static ED_I l_ed_i;
+  static ED_I l_ed_i_init = {1};
 }
 
 
