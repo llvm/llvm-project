@@ -30,42 +30,31 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
   return builder.getBoolArrayAttr(newInBoundsValues);
 }
 
-/// Extend the rank of a vector Value by `addedRanks` by adding outer unit
-/// dimensions.
-static TypedValue<VectorType> extendVectorRank(OpBuilder &builder, Location loc,
-                                               Value vec, int64_t addedRank) {
-  auto originalVecType = cast<VectorType>(vec.getType());
-  SmallVector<int64_t> newShape(addedRank, 1);
-  newShape.append(originalVecType.getShape().begin(),
-                  originalVecType.getShape().end());
-
-  SmallVector<bool> newScalableDims(addedRank, false);
-  newScalableDims.append(originalVecType.getScalableDims().begin(),
-                         originalVecType.getScalableDims().end());
-  VectorType newVecType = VectorType::get(
-      newShape, originalVecType.getElementType(), newScalableDims);
-  return vector::BroadcastOp::create(builder, loc, newVecType, vec);
-}
-
-/// Extend the rank of a mask Value by adding unit dimensions at the positions
-/// `missingInnerDims` of the result. The positions are relative to the first
-/// dim that the transfer accesses, which is dim 0 of the mask.
-static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
-                            ArrayRef<int64_t> missingInnerDims) {
-  TypedValue<VectorType> broadcasted =
-      extendVectorRank(builder, loc, vec, missingInnerDims.size());
+/// Insert unit dims into `vec` so that they are at `unitDimPositions` in the
+/// result.
+static Value insertUnitDims(OpBuilder &builder, Location loc, Value vec,
+                            ArrayRef<int64_t> unitDimPositions) {
+  auto vecType = cast<VectorType>(vec.getType());
+  int64_t numUnitDims = unitDimPositions.size();
+  SmallVector<int64_t> shape(numUnitDims, 1);
+  llvm::append_range(shape, vecType.getShape());
+  SmallVector<bool> scalableDims(numUnitDims, false);
+  llvm::append_range(scalableDims, vecType.getScalableDims());
   // The broadcast puts the unit dims first. `inversePerm[i]` is the position
   // that dim `i` of the broadcast moves to.
-  SmallVector<bool> missing(broadcasted.getType().getRank(), false);
-  SmallVector<int64_t> inversePerm;
-  for (int64_t i : missingInnerDims) {
-    inversePerm.push_back(i);
-    missing[i] = true;
-  }
-  for (auto [i, isMissing] : llvm::enumerate(missing))
-    if (!isMissing)
+  Value broadcast = vector::BroadcastOp::create(
+      builder, loc,
+      VectorType::get(shape, vecType.getElementType(), scalableDims), vec);
+  SmallVector<int64_t> inversePerm(unitDimPositions);
+  SmallVector<bool> isUnitDim(shape.size(), false);
+  for (int64_t pos : unitDimPositions)
+    isUnitDim[pos] = true;
+  for (auto [i, isUnit] : llvm::enumerate(isUnitDim))
+    if (!isUnit)
       inversePerm.push_back(i);
-  return vector::TransposeOp::create(builder, loc, broadcasted,
+  if (isIdentityPermutation(inversePerm))
+    return broadcast;
+  return vector::TransposeOp::create(builder, loc, broadcast,
                                      invertPermutationVector(inversePerm));
 }
 
@@ -302,13 +291,15 @@ struct TransferWriteNonPermutationLowering
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
     // Vector: add unit dims at the beginning of the shape.
-    Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
-                                    missingInnerDim.size());
-    // Mask: add unit dims at the positions of the missing dimensions.
+    Value newVec = insertUnitDims(
+        rewriter, op.getLoc(), op.getVector(),
+        llvm::to_vector(llvm::seq<int64_t>(missingInnerDim.size())));
+    // Mask: add unit dims at the positions of the missing dimensions. Dim 0 of
+    // the mask is the first written dim.
     Value newMask;
     if (op.getMask())
       newMask =
-          extendMaskRank(rewriter, op.getLoc(), op.getMask(), missingInnerDim);
+          insertUnitDims(rewriter, op.getLoc(), op.getMask(), missingInnerDim);
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
