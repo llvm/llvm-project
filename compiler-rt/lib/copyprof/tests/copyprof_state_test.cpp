@@ -8,6 +8,7 @@
 
 #include "copyprof/copyprof_state.h"
 
+#include "copyprof/copyprof_allocator.h"
 #include "copyprof/copyprof_interface_internal.h"
 #include "copyprof/copyprof_shadow.h"
 #include "gtest/gtest.h"
@@ -205,6 +206,202 @@ TEST_F(CopyProfStateTest,
   __copyprof_dtor_exit_callback(temp, sizeof(temp));
   __copyprof_dtor_exit_callback(obj, sizeof(obj));
   EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+}
+
+// Likewise for a temporary that a d'tor move-constructs, e.g. by moving a
+// member out (`std::string tmp = std::move(name_);`). Move c'tors are not
+// instrumented, so there is no c'tor callback. The same happens for c'tors from
+// an uninstrumented library, e.g. `std::string`'s copy c'tor from libstdc++ at
+// -O2 in C++17 mode.
+//
+// DISABLED: known limitation, see
+// TriviallyConstructedTemporaryInDtorDoesNotSuppressReport.
+TEST_F(CopyProfStateTest, DISABLED_MovedTemporaryInDtorDoesNotSuppressReport) {
+  char obj[32] = {0};
+  char source_obj[32] = {0};
+  char temp[32] = {0};
+
+  // `obj` is a copy that owns a buffer allocated by its copy c'tor.
+  __copyprof_copy_ctor_enter_callback(obj, source_obj, sizeof(obj));
+  void* buf = CopyProfMalloc(/*size=*/64);
+  __copyprof_copy_ctor_exit_callback(obj, source_obj, sizeof(obj));
+  ASSERT_NE(buf, nullptr);
+  // Memory occupied by `temp` is not a copy.
+  MarkApplicationMemory(temp, sizeof(temp), /*is_copy=*/false);
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  // Move `buf` from `obj` into `temp`. The move c'tor's stores are ignored in
+  // `DTOR` context, and there is no c'tor callback.
+  __copyprof_store_callback(temp, sizeof(temp));
+  __copyprof_store_callback(obj, sizeof(obj));
+  // Destroying `temp` frees `buf`.
+  __copyprof_dtor_enter_callback(temp, sizeof(temp));
+  CopyProfFree(buf);
+  __copyprof_dtor_exit_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+  EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+}
+
+TEST_F(CopyProfStateTest,
+       DeallocatingUnmodifiedCopyAllocationPreservesTransitiveCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* copy_buf = CopyProfAllocate(/*size=*/32, /*align=*/8);
+  ASSERT_NE(copy_buf, nullptr);
+  EXPECT_TRUE(IsMarkedAsCopy(copy_buf, /*num_bytes=*/32));
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  CopyProfDeallocate(copy_buf, /*size=*/32, /*align=*/8);
+  EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+}
+
+TEST_F(CopyProfStateTest,
+       DeallocatingModifiedCopyAllocationClearsTransitiveCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* modified_buf = CopyProfAllocate(/*size=*/32, /*align=*/8);
+  ASSERT_NE(modified_buf, nullptr);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  __copyprof_store_callback(static_cast<char*>(modified_buf) + 8, /*size=*/1);
+  EXPECT_FALSE(IsMarkedAsCopy(modified_buf, /*num_bytes=*/32));
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  CopyProfDeallocate(modified_buf, /*size=*/32, /*align=*/8);
+  EXPECT_FALSE(__copyprof_state.is_transitive_copy);
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+}
+
+TEST_F(CopyProfStateTest, MallocDuringCopyIsMarkedAsCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* buf = CopyProfMalloc(/*size=*/32);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  ASSERT_NE(buf, nullptr);
+  EXPECT_TRUE(IsMarkedAsCopy(buf, /*num_bytes=*/32));
+  CopyProfFree(buf);
+}
+
+TEST_F(CopyProfStateTest, FreeingModifiedCopyAllocationClearsTransitiveCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* buf = CopyProfMalloc(/*size=*/32);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+  ASSERT_NE(buf, nullptr);
+  // Modifying `buf` marks it as non-copy.
+  __copyprof_store_callback(buf, /*size=*/1);
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  CopyProfFree(buf);
+  EXPECT_FALSE(__copyprof_state.is_transitive_copy);
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+}
+
+// Freeing a temporary allocated by a d'tor must not clear `is_transitive_copy`,
+// regardless of the shadow state that the chunk's previous owner left behind.
+TEST_F(CopyProfStateTest, TemporaryAllocationInDtorPreservesTransitiveCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+  // Free a non-copy chunk so that the temporary below likely reuses it.
+  CopyProfFree(CopyProfMalloc(/*size=*/32));
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  void* temp = CopyProfMalloc(/*size=*/32);
+  ASSERT_NE(temp, nullptr);
+  CopyProfFree(temp);
+  EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+}
+
+// A d'tor (here `donor`'s) may allocate memory and hand it to another live copy
+// (here `holder`). The store into `holder` happens in `DTOR` context and is
+// ignored, and the memory is marked as copy, so `holder` looks unmodified when
+// it is destroyed and is reported as an unnecessary copy.
+//
+// DISABLED: accepted false positive. Marking memory allocated in `DTOR` context
+// as copy keeps temporaries from suppressing reports (see
+// TemporaryAllocationInDtorPreservesTransitiveCopy), which matters far more in
+// practice.
+TEST_F(CopyProfStateTest, DISABLED_CopyModifiedByAnotherDtorIsNotReported) {
+  char holder[32] = {0};
+  char source_holder[32] = {0};
+  char donor[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(holder, source_holder, sizeof(holder));
+  __copyprof_copy_ctor_exit_callback(holder, source_holder, sizeof(holder));
+
+  // `donor`'s d'tor allocates `extra` and stores a pointer to it in `holder`.
+  __copyprof_dtor_enter_callback(donor, sizeof(donor));
+  void* extra = CopyProfMalloc(/*size=*/16);
+  ASSERT_NE(extra, nullptr);
+  __copyprof_store_callback(holder, /*size=*/sizeof(extra));
+  __copyprof_dtor_exit_callback(donor, sizeof(donor));
+
+  // `holder`'s d'tor frees `extra`.
+  __copyprof_dtor_enter_callback(holder, sizeof(holder));
+  CopyProfFree(extra);
+  __copyprof_dtor_exit_callback(holder, sizeof(holder));
+  EXPECT_FALSE(__copyprof_state.is_transitive_copy);
+}
+
+TEST_F(CopyProfStateTest, CallocDuringCopyIsMarkedAsCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* buf = CopyProfCalloc(/*num=*/4, /*size=*/8);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  ASSERT_NE(buf, nullptr);
+  EXPECT_TRUE(IsMarkedAsCopy(buf, /*num_bytes=*/32));
+  CopyProfFree(buf);
+}
+
+TEST_F(CopyProfStateTest, ReallocDuringCopyIsMarkedAsCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+  void* buf = CopyProfMalloc(/*size=*/16);
+  ASSERT_NE(buf, nullptr);
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* resized_buf = CopyProfRealloc(buf, /*size=*/32);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  ASSERT_NE(resized_buf, nullptr);
+  EXPECT_TRUE(IsMarkedAsCopy(resized_buf, /*num_bytes=*/32));
+  CopyProfFree(resized_buf);
+}
+
+// The shadow of reallocated memory follows the SMF context of the `realloc`
+// call; the shadow of the original memory is not carried over.
+TEST_F(CopyProfStateTest, ReallocOutsideCopyIsNotMarkedAsCopy) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* buf = CopyProfMalloc(/*size=*/16);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+  ASSERT_NE(buf, nullptr);
+  ASSERT_TRUE(IsMarkedAsCopy(buf, /*num_bytes=*/16));
+
+  void* resized_buf = CopyProfRealloc(buf, /*size=*/32);
+  ASSERT_NE(resized_buf, nullptr);
+  EXPECT_FALSE(IsMarkedAsCopy(resized_buf, /*num_bytes=*/32));
+  CopyProfFree(resized_buf);
 }
 
 }  // namespace

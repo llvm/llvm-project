@@ -20,6 +20,10 @@
 DECLARE_REAL(void*, memset, void* block, int c, SIZE_T size)
 DECLARE_REAL(void*, memcpy, void* to, const void* from, SIZE_T size)
 
+// Functions whose interception and interceptor are defined in another TU.
+DECLARE_REAL_AND_INTERCEPTOR(void*, malloc, SIZE_T)
+DECLARE_REAL_AND_INTERCEPTOR(void, free, void*)
+
 // The macros below must be defined when using the interceptor infrastructure
 // (i.e. sanitizer_common_interceptors*.inc files).
 #define COPYPROF_INTERCEPT_FUNC(name)                            \

@@ -28,6 +28,10 @@ using __sanitizer::BufferedStackTrace;
 extern bool copyprof_is_initialized;
 extern bool copyprof_init_is_running;
 
+// Initializes interceptors for libc heap functions such as `malloc`, `free`,
+// or similar.
+void InitializeHeapInterceptors();
+
 }  // namespace __copyprof
 
 #endif  // COPYPROF_INTERNAL_H
