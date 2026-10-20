@@ -152,12 +152,12 @@ define float @fdiv_exact_inverse(i1 %c, float %x) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB9_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.25E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB9_1:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.5E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %d = select i1 %c, float 4.0, float 8.0
   %r = fdiv float %x, %d
@@ -170,12 +170,12 @@ define float @fdiv_arcp(i1 %c, float %x) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB10_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [7.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.42857149E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB10_1:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [3.33333343E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %d = select i1 %c, float 3.0, float 7.0
   %r = fdiv arcp float %x, %d
@@ -206,12 +206,12 @@ define float @fdiv_minsize(i1 %c, float %x) minsize {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB12_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.25E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    jmp .LBB12_3
 ; CHECK-NEXT:  .LBB12_1:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.5E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:  .LBB12_3:
-; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %d = select i1 %c, float 4.0, float 8.0
   %r = fdiv float %x, %d

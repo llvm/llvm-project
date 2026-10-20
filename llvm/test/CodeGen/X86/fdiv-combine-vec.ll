@@ -165,16 +165,15 @@ define <4 x float> @fdiv_exact_inverse_vector(<4 x i1> %c, <4 x float> %x) {
 ; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    divps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fdiv_exact_inverse_vector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8.0E+0,8.0E+0,8.0E+0,8.0E+0]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.25E-1,1.25E-1,1.25E-1,1.25E-1]
 ; AVX-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
-; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %d = select <4 x i1> %c, <4 x float> <float 4.0, float 4.0, float 4.0, float 4.0>, <4 x float> <float 8.0, float 8.0, float 8.0, float 8.0>
   %r = fdiv <4 x float> %x, %d
