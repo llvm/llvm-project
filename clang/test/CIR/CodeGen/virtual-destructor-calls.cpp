@@ -28,8 +28,8 @@ B::~B() { }
 
 // Aliases are inserted before the function definitions in LLVM IR
 // FIXME: These should have unnamed_addr set.
-// LLVM: @_ZN1BD1Ev = alias void (ptr), ptr @_ZN1BD2Ev
-// LLVM: @_ZN1CD1Ev = alias void (ptr), ptr @_ZN1CD2Ev
+// LLVM: @_ZN1BD1Ev = dso_local alias void (ptr), ptr @_ZN1BD2Ev
+// LLVM: @_ZN1CD1Ev = dso_local alias void (ptr), ptr @_ZN1CD2Ev
 
 // OGCG: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
 // OGCG: @_ZN1CD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1CD2Ev
