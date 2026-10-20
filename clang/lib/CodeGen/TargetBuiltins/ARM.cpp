@@ -7314,6 +7314,8 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
+    checkPreservedAccessBaseConversions(Arg);
+
     // Enable underlying preserve_*_access_index() generation.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
     IsInPreservedAIRegion = true;

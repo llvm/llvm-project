@@ -75,13 +75,21 @@ static const DIType *stripDITypeAttributes(const DIType *Ty) {
   return Ty;
 }
 
+/// Whether a DI derived type tag becomes a BTF pointer: a pointer, or a C++
+/// reference, which BTF has no kind for.
+static bool isBTFPointerTag(unsigned Tag) {
+  return Tag == dwarf::DW_TAG_pointer_type ||
+         Tag == dwarf::DW_TAG_reference_type ||
+         Tag == dwarf::DW_TAG_rvalue_reference_type;
+}
+
 static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
   SourceTy = stripDITypeAttributes(SourceTy);
 
-  // All pointers are opaque in LLVM IR, so any source-level pointer matches any
-  // IR pointer regardless of pointee type.
+  // All pointers are opaque in LLVM IR, so any source-level pointer or
+  // reference matches any IR pointer regardless of pointee type.
   if (const auto *DTy = dyn_cast<DIDerivedType>(SourceTy))
-    return DTy->getTag() == dwarf::DW_TAG_pointer_type && IRTy->isPointerTy();
+    return isBTFPointerTag(DTy->getTag()) && IRTy->isPointerTy();
 
   if (const auto *BTy = dyn_cast<DIBasicType>(SourceTy)) {
     uint64_t SizeInBits = BTy->getSizeInBits();
@@ -252,22 +260,6 @@ static bool canUseNocallOptimizedSignature(
   return true;
 }
 
-/// Return the name to emit for a named BTF type. Released kernels only accept
-/// identifiers as type names, so a C++ template specialization is named without
-/// its template arguments, as with -gsimple-template-names. Type identity and
-/// fixups keep using the DI name.
-static StringRef getBTFTypeName(StringRef Name) {
-  return Name.take_front(Name.find('<'));
-}
-
-/// Whether a DI derived type tag becomes a BTF pointer: a pointer, or a C++
-/// reference, which BTF has no kind for.
-static bool isBTFPointerTag(unsigned Tag) {
-  return Tag == dwarf::DW_TAG_pointer_type ||
-         Tag == dwarf::DW_TAG_reference_type ||
-         Tag == dwarf::DW_TAG_rvalue_reference_type;
-}
-
 /// Return the BTF members of a record in BTF order: structure members by
 /// offset (BTF requires nondecreasing offsets), stable for equal offsets.
 static SmallVector<const DINode *, 8>
@@ -357,7 +349,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     BTFType.NameOff = 0;
     break;
   default:
-    BTFType.NameOff = BDebug.addString(getBTFTypeName(Name));
+    BTFType.NameOff = BDebug.addString(Name);
     break;
   }
 
@@ -394,7 +386,7 @@ void BTFTypeFwd::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(getBTFTypeName(Name));
+  BTFType.NameOff = BDebug.addString(Name);
 }
 
 void BTFTypeFwd::emitType(MCStreamer &OS) { BTFTypeBase::emitType(OS); }
@@ -453,7 +445,7 @@ void BTFTypeEnum::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(getBTFTypeName(ETy->getName()));
+  BTFType.NameOff = BDebug.addString(ETy->getName());
 
   DINodeArray Elements = ETy->getElements();
   for (const auto Element : Elements) {
@@ -492,7 +484,7 @@ void BTFTypeEnum64::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(getBTFTypeName(ETy->getName()));
+  BTFType.NameOff = BDebug.addString(ETy->getName());
 
   DINodeArray Elements = ETy->getElements();
   for (const auto Element : Elements) {
@@ -568,7 +560,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(getBTFTypeName(STy->getName()));
+  BTFType.NameOff = BDebug.addString(STy->getName());
 
   if (STy->getTag() == dwarf::DW_TAG_variant_part) {
     // Variant parts might have a discriminator, which has its own memory
