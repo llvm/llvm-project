@@ -262,11 +262,11 @@ TEST_F(DeserializationTest, FunctionParameterAttributeUnknownTarget) {
       "expected OpFunctionParameter or OpFunction");
 }
 
-class UnsupportedParameterDecorationTest
+class MultipleParameterDecorationsTest
     : public DeserializationTest,
       public ::testing::WithParamInterface<spirv::Decoration> {};
 
-TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
+TEST_P(MultipleParameterDecorationsTest, RejectCombinedWithOtherDecorations) {
   addHeader();
   auto argID = nextID++;
   SmallVector<uint32_t> operands = {argID, static_cast<uint32_t>(GetParam())};
@@ -301,7 +301,7 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    SPIRV, UnsupportedParameterDecorationTest,
+    SPIRV, MultipleParameterDecorationsTest,
     ::testing::Values(spirv::Decoration::Alignment,
                       spirv::Decoration::FuncParamAttr,
                       spirv::Decoration::Restrict,
