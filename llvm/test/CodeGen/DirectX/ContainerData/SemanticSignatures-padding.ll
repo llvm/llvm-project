@@ -1,16 +1,15 @@
 ; RUN: split-file %s %t
-; RUN: cat %t/shader.ll %t/v16.ll > %t/16.ll
-; RUN: cat %t/shader.ll %t/v17.ll > %t/17.ll
-; RUN: llc -filetype=obj %t/16.ll -o %t/16.dxbc
+; RUN: llc -filetype=obj %t/v16.ll -o %t/16.dxbc
 ; RUN: obj2yaml %t/16.dxbc | FileCheck %s --check-prefixes=CHECK,UNPADDED
-; RUN: llc -filetype=obj %t/17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=CHECK,PADDED
+; RUN: llc -filetype=obj %t/v17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=CHECK,PADDED
 
 ; Round trip the unpadded container through yaml2obj to check that the
 ; explicit (unpadded) part sizes are preserved and that the following,
 ; unaligned, PSV0 part is still readable.
 ; RUN: obj2yaml %t/16.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefixes=CHECK,UNPADDED
 
-; Validator 1.7 pads signature parts to a four-byte boundary but older versions
+; Each case is a complete module that differs only in its validator version.
+; Validator 1.7 pads signature parts to a four-byte boundary; older versions
 ; do not. The differing name lengths leave PSV0 at an unaligned offset when
 ; unpadded.
 ; CHECK: Name: ISG1
@@ -27,7 +26,7 @@
 ; CHECK: SigOutputElements:
 ; CHECK-NEXT: - Name: BB
 
-;--- shader.ll
+;--- v16.ll
 target triple = "dxil-pc-shadermodel6.0-vertex"
 define void @main() #0 {
   %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
@@ -35,17 +34,30 @@ define void @main() #0 {
   ret void
 }
 attributes #0 = { "hlsl.shader"="vertex" }
-!dx.semantic.signatures = !{!0}
-!0 = !{ptr @main, !1, !2}
-!1 = !{!3}
+!dx.valver = !{!0}
+!dx.semantic.signatures = !{!1}
+!0 = !{i32 1, i32 6}
+!1 = !{ptr @main, !2, !3}
 !2 = !{!4}
-!3 = !{i32 0, !"A", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
-!4 = !{i32 0, !"BB", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
-!5 = !{i32 0}
+!3 = !{!5}
+!4 = !{i32 0, !"A", i32 9, i32 0, !6, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
+!5 = !{i32 0, !"BB", i32 9, i32 0, !6, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
+!6 = !{i32 0}
 
-;--- v16.ll
-!dx.valver = !{!99}
-!99 = !{i32 1, i32 6}
 ;--- v17.ll
-!dx.valver = !{!99}
-!99 = !{i32 1, i32 7}
+target triple = "dxil-pc-shadermodel6.0-vertex"
+define void @main() #0 {
+  %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
+  call void @llvm.dx.store.output.f32(i32 0, i32 0, i8 0, float %x)
+  ret void
+}
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.valver = !{!0}
+!dx.semantic.signatures = !{!1}
+!0 = !{i32 1, i32 7}
+!1 = !{ptr @main, !2, !3}
+!2 = !{!4}
+!3 = !{!5}
+!4 = !{i32 0, !"A", i32 9, i32 0, !6, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
+!5 = !{i32 0, !"BB", i32 9, i32 0, !6, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
+!6 = !{i32 0}
