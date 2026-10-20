@@ -9,14 +9,17 @@
 #include "AMDGPUMemoryUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -476,6 +479,72 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");
   return false;
+}
+
+static constexpr SIAtomicAddrSpace LLVMToSIAtomicAddrSpaceMapping[] = {
+    SIAtomicAddrSpace::FLAT,    //< AMDGPUAS::FLAT_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::GLOBAL_ADDRESS
+    SIAtomicAddrSpace::GDS,     //< AMDGPUAS::REGION_ADDRESS
+    SIAtomicAddrSpace::LDS,     //< AMDGPUAS::LOCAL_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS
+    SIAtomicAddrSpace::SCRATCH, //< AMDGPUAS::PRIVATE_ADDRESS
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::CONSTANT_ADDRESS_32BIT
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_FAT_POINTER
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_RESOURCE
+    SIAtomicAddrSpace::GLOBAL,  //< AMDGPUAS::BUFFER_STRIDED_POINTER
+};
+
+SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToSIAtomicAddrSpaceMapping =
+      sizeof(LLVMToSIAtomicAddrSpaceMapping) /
+      sizeof(LLVMToSIAtomicAddrSpaceMapping[0]);
+  if (LLVMAddrSpace > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+    return SIAtomicAddrSpace::GLOBAL;
+  if (LLVMAddrSpace < SizeOfLLVMToSIAtomicAddrSpaceMapping)
+    return LLVMToSIAtomicAddrSpaceMapping[LLVMAddrSpace];
+  return SIAtomicAddrSpace::OTHER;
+}
+
+static const StringMap<SIAtomicAddrSpace> ASNames = {{
+    {"global", SIAtomicAddrSpace::GLOBAL},
+    {"local", SIAtomicAddrSpace::LDS},
+}};
+
+std::optional<SIAtomicAddrSpace>
+getSynchronizeAddrSpace(const MMRAMetadata &MMRA, const Function *DiagFn,
+                        const DebugLoc &DL) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
+
+  if (!MMRA)
+    return std::nullopt;
+
+  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != FenceASPrefix)
+      continue;
+
+    if (auto It = ASNames.find(Suffix); It != ASNames.end()) {
+      Result |= It->second;
+    } else if (DiagFn) {
+      SmallString<128> Str;
+      raw_svector_ostream OS(Str);
+      OS << "unknown address space '" << Suffix << "'; expected one of ";
+      ListSeparator LS;
+      for (const auto &[Name, Val] : ASNames)
+        OS << LS << '\'' << Name << '\'';
+      DiagFn->getContext().diagnose(
+          DiagnosticInfoUnsupported(*DiagFn, Str, DL, DS_Warning));
+    }
+  }
+
+  if (Result == SIAtomicAddrSpace::NONE)
+    return std::nullopt;
+
+  return Result;
+}
+
+std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I) {
+  return getSynchronizeAddrSpace(MMRAMetadata(I));
 }
 
 } // end namespace llvm::AMDGPU
