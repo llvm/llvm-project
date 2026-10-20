@@ -35799,6 +35799,10 @@ AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
   SDValue Val = Op.getOperand(0);
   EVT SrcVT = Val.getValueType();
 
+  // Let common code split the operation.
+  if (!isTypeLegal(SrcVT))
+    return SDValue();
+
   // FIXME: Saturating to smaller type isn't properly supported yet.
   if (VT.bitsLT(SrcVT) && IsSaturating)
     return SDValue();
