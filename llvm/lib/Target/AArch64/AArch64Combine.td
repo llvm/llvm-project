@@ -60,9 +60,8 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
-def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 def simplify_uaddo : GICombineRule<
-  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
   (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
          [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
@@ -309,6 +308,13 @@ def build_vector_to_dup : GICombineRule<
   (apply [{ applyBuildVectorToDup(*${root}, ${matchinfo}, MRI, B); }])
 >;
 
+def build_vector_to_half_dup : GICombineRule<
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+          [{ return matchBuildVectorToHalfDup(*${root}, ${matchinfo}, MRI); }]),
+  (apply [{ applyBuildVectorToHalfDup(*${root}, ${matchinfo}, MRI, B); }])
+>;
+
 def build_vector_to_vector_insert : GICombineRule<
   (defs root:$root),
   (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
@@ -326,6 +332,7 @@ def const_build_vector_to_fneg : GICombineRule<
 
 def build_vector_lowering : GICombineGroup<[const_build_vector_to_fneg,
                                             build_vector_to_dup,
+                                            build_vector_to_half_dup,
                                             build_vector_to_vector_insert]>;
 
 def lower_vector_fcmp : GICombineRule<

@@ -1793,7 +1793,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pm4addsu_i16x4:
   case RISCV::BI__builtin_riscv_pm2addsu_i16x2:
   case RISCV::BI__builtin_riscv_pm2addsu_i16x4:
-  case RISCV::BI__builtin_riscv_pm2addsu_i32x2: {
+  case RISCV::BI__builtin_riscv_pm2addsu_i32x2:
+  // Packed Multiplication with Widening Horizontal Addition
+  case RISCV::BI__builtin_riscv_pm2wadd_i64:
+  case RISCV::BI__builtin_riscv_pm2wadd_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddu_u64:
+  case RISCV::BI__builtin_riscv_pm2wsub_i64:
+  case RISCV::BI__builtin_riscv_pm2wsub_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddsu_i64: {
     switch (BuiltinID) {
     default:
       llvm_unreachable("unexpected builtin ID");
@@ -1859,6 +1866,24 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pm2addsu_i16x4:
     case RISCV::BI__builtin_riscv_pm2addsu_i32x2:
       ID = Intrinsic::riscv_pm2addsu;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wadd_i64:
+      ID = Intrinsic::riscv_pm2wadd;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wadd_x_i64:
+      ID = Intrinsic::riscv_pm2wadd_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddu_u64:
+      ID = Intrinsic::riscv_pm2waddu;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsub_i64:
+      ID = Intrinsic::riscv_pm2wsub;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsub_x_i64:
+      ID = Intrinsic::riscv_pm2wsub_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddsu_i64:
+      ID = Intrinsic::riscv_pm2waddsu;
       break;
     }
 
