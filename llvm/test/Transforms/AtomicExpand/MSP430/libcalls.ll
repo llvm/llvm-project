@@ -6,7 +6,7 @@
 define i8 @load_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @__atomic_load_1(ptr [[P]], i32 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @__atomic_load_1(ptr [[P]], i16 5)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v = load atomic i8, ptr %p seq_cst, align 1
@@ -16,7 +16,7 @@ define i8 @load_i8(ptr %p) {
 define void @store_i16(ptr %p, i16 %v) {
 ; CHECK-LABEL: define void @store_i16(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[V:%.*]]) {
-; CHECK-NEXT:    call void @__atomic_store_2(ptr [[P]], i16 [[V]], i32 3)
+; CHECK-NEXT:    call void @__atomic_store_2(ptr [[P]], i16 [[V]], i16 3)
 ; CHECK-NEXT:    ret void
 ;
   store atomic i16 %v, ptr %p release, align 2
@@ -26,7 +26,7 @@ define void @store_i16(ptr %p, i16 %v) {
 define i16 @rmw_add_i16(ptr %p, i16 %v) {
 ; CHECK-LABEL: define i16 @rmw_add_i16(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @__atomic_fetch_add_2(ptr [[P]], i16 [[V]], i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @__atomic_fetch_add_2(ptr [[P]], i16 [[V]], i16 2)
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
   %r = atomicrmw add ptr %p, i16 %v acquire, align 2
@@ -39,7 +39,7 @@ define { i16, i1 } @cmpxchg_i16(ptr %p, i16 %cmp, i16 %new) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[CMP]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[P]], ptr [[TMP1]], i16 [[NEW]], i32 4, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[P]], ptr [[TMP1]], i16 [[NEW]], i16 4, i16 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP3]], 0
@@ -55,7 +55,7 @@ define i32 @load_i32_unaligned(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 2
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
-; CHECK-NEXT:    call void @__atomic_load(i16 4, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK-NEXT:    call void @__atomic_load(i16 4, ptr [[P]], ptr [[TMP1]], i16 5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
