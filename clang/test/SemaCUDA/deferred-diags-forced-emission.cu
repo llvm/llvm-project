@@ -206,3 +206,44 @@ struct DefaultedOutOfLine {
 inline __host__ __device__ DefaultedOutOfLine::~DefaultedOutOfLine() = default;
 // dev-all-error@-1 {{reference to __host__ function '~HostOnly' in __host__ __device__ function}}
 // dev-cxx17-note@-2 {{in defaulted destructor for 'DefaultedOutOfLine' first required here}}
+
+// Uses of RTTI in device code are diagnosed the same way.
+namespace std {
+class type_info {};
+} // namespace std
+struct Polymorphic {
+  virtual __host__ __device__ ~Polymorphic() {}
+};
+struct DerivedPolymorphic : Polymorphic {};
+
+inline __host__ __device__ __attribute__((used)) void used_rtti(Polymorphic *p) {
+  (void)typeid(*p);
+  // dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+  (void)dynamic_cast<DerivedPolymorphic *>(p);
+  // dev-error@-1 {{cannot use 'dynamic_cast' in __host__ __device__ function as RTTI is not available in device code}}
+}
+
+inline __host__ __device__ void unused_rtti(Polymorphic *p) {
+  (void)typeid(*p);
+  // dev-all-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+}
+
+// A default argument is checked where it is used.
+inline __host__ __device__ void rtti_default_arg(const std::type_info *t = &typeid(int)) {}
+// dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+inline __host__ __device__ __attribute__((used)) void use_rtti_default_arg() {
+  rtti_default_arg();
+  // dev-note@-1 {{default argument used here}}
+}
+
+// So is a default member initializer, here in the implicit constructor called
+// by a forced function.
+struct RTTIMemberInit { // #rtti_member_init
+  const std::type_info *t = &typeid(int);
+  // dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+};
+// dev-note@#rtti_member_init {{default member initializer used here}}
+inline __host__ __device__ __attribute__((used)) void use_rtti_member_init() {
+  RTTIMemberInit m;
+  // dev-note@-1 {{called by 'use_rtti_member_init'}}
+}
