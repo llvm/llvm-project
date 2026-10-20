@@ -65,11 +65,7 @@ def imm_to_i32 : SDNodeXForm<imm, [{
 def : Pat<(i16 imm:$imm), (MOV_IMM16 (imm_to_i32 $imm))>;
 def : Pat<(i32 imm:$imm), (MOV_IMM32 imm:$imm)>;
 
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-  return CurDAG->getTargetConstant(
-      N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
+// bitcast_fpimm_to_i32 comes from TargetSelectionDAG.td.
 def : Pat<(f32 fpimm:$imm), (MOV_IMM32 (bitcast_fpimm_to_i32 $imm))>;
 def : Pat<(f16 fpimm:$imm), (MOV_IMM16 (bitcast_fpimm_to_i32 $imm))>;
 def : Pat<(bf16 fpimm:$imm), (MOV_IMM16 (bitcast_fpimm_to_i32 $imm))>;
@@ -374,11 +370,21 @@ def : Pat<(i16 (srl AGXIntSrc16:$a, AGXIntSrc16:$s)),
 def : Pat<(i16 (sra AGXIntSrc16:$a, AGXIntSrc16:$s)),
           (ASR_I16 0, $a, 0, $s)>;
 
-// Rotates: extr reads the register pair (B:A).
+def AGXImm31 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 31, SDLoc(N), MVT::i32);
+}]>;
+
+// Rotates: extr reads the register pair (B:A). Its shift amount has 7 bits
+// (a shift by 32..63 moves B into the result), while rotr / fshr take the
+// amount modulo 32.
+def : Pat<(i32 (rotr i32:$a, (i32 imm:$s))),
+          (EXTR_I32 0, $a, 0, $a, 0, (i32 (AGXImm31 $s)), 0)>;
 def : Pat<(i32 (rotr i32:$a, AGXIntSrc32:$s)),
-          (EXTR_I32 0, $a, 0, $a, 0, $s, 0)>;
+          (EXTR_I32 0, $a, 0, $a, 0, (BITOP_I32 TT_AND, 0, $s, 0, (i32 31)), 0)>;
+def : Pat<(i32 (fshr i32:$hi, i32:$lo, (i32 imm:$s))),
+          (EXTR_I32 0, $lo, 0, $hi, 0, (i32 (AGXImm31 $s)), 0)>;
 def : Pat<(i32 (fshr i32:$hi, i32:$lo, AGXIntSrc32:$s)),
-          (EXTR_I32 0, $lo, 0, $hi, 0, $s, 0)>;
+          (EXTR_I32 0, $lo, 0, $hi, 0, (BITOP_I32 TT_AND, 0, $s, 0, (i32 31)), 0)>;
 
 def : Pat<(i32 (sext_inreg i32:$a, i8)),
           (ASR_I32 0, (BFI_I32 0, (i32 0), 0, $a, 0, (i32 24), 0), 0, (i32 24))>;
