@@ -68,6 +68,101 @@ define i128 @atomicrmw_xchg_l2_cache_policy_b128(ptr addrspace(1) %p, i128 %v) {
   ret i128 %old
 }
 
+define <4 x float> @atomicrmw_fadd_v4f32_l2_cache_policy(ptr addrspace(1) %p, <4 x float> %v) {
+; CHECK-LABEL: atomicrmw_fadd_v4f32_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.add.L2::cache_hint.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4}, %rd2;
+  %old = atomicrmw elementwise fadd ptr addrspace(1) %p, <4 x float> %v monotonic, align 16, !mem.cache_hint !1
+  ret <4 x float> %old
+}
+
+; IR volatility does not restrict cache policies on PTX atom instructions.
+define <4 x float> @atomicrmw_fadd_v4f32_volatile_l2_cache_policy(ptr addrspace(1) %p, <4 x float> %v) {
+; CHECK-LABEL: atomicrmw_fadd_v4f32_volatile_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.add.L2::cache_hint.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4}, %rd2;
+  %old = atomicrmw volatile elementwise fadd ptr addrspace(1) %p, <4 x float> %v monotonic, align 16, !mem.cache_hint !1
+  ret <4 x float> %old
+}
+
+define <4 x half> @atomicrmw_fmin_v4f16_l2_cache_policy(ptr addrspace(1) %p, <4 x half> %v) {
+; CHECK-LABEL: atomicrmw_fmin_v4f16_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.min.noftz.L2::cache_hint.v2.f16x2 {%r3, %r4}, [%rd1], {%r1, %r2}, %rd2;
+  %old = atomicrmw elementwise fmin ptr addrspace(1) %p, <4 x half> %v monotonic, align 8, !mem.cache_hint !1
+  ret <4 x half> %old
+}
+
+define <2 x bfloat> @atomicrmw_fmax_v2bf16_l2_cache_policy(ptr addrspace(1) %p, <2 x bfloat> %v) {
+; CHECK-LABEL: atomicrmw_fmax_v2bf16_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.max.noftz.L2::cache_hint.v2.bf16 {%rs3, %rs4}, [%rd1], {%rs1, %rs2}, %rd2;
+  %old = atomicrmw elementwise fmax ptr addrspace(1) %p, <2 x bfloat> %v monotonic, align 4, !mem.cache_hint !1
+  ret <2 x bfloat> %old
+}
+
+; Splitting an elementwise atomic preserves the cache policy on each piece.
+define <8 x float> @atomicrmw_fadd_v8f32_l2_cache_policy(ptr addrspace(1) %p, <8 x float> %v) {
+; CHECK-LABEL: atomicrmw_fadd_v8f32_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.add.L2::cache_hint.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r5, %r6, %r7, %r8}, %rd2;
+; CHECK:    atom.relaxed.sys.global.add.L2::cache_hint.v4.f32 {%r13, %r14, %r15, %r16}, [%rd1+16], {%r1, %r2, %r3, %r4}, %rd2;
+  %old = atomicrmw elementwise fadd ptr addrspace(1) %p, <8 x float> %v monotonic, align 32, !mem.cache_hint !1
+  ret <8 x float> %old
+}
+
+; Cmpxchg expansion drops cache policies unsupported by atom.cas.
+define <2 x i32> @atomicrmw_nand_v2i32_l2_cache_policy(ptr addrspace(1) %p, <2 x i32> %v) {
+; CHECK-LABEL: atomicrmw_nand_v2i32_l2_cache_policy(
+; CHECK:    ld.relaxed.sys.global.b64 %rd5, [%rd2];
+; CHECK:    mov.b64 {%r1, %r2}, %rd3;
+; CHECK:    mov.b64 {%r3, %r4}, %rd5;
+; CHECK:    mov.b64 %rd4, {%r8, %r7};
+; CHECK:    atom.relaxed.sys.global.cas.b64 %rd1, [%rd2], %rd5, %rd4;
+; CHECK:    mov.b64 %rd5, %rd1;
+  %old = atomicrmw elementwise nand ptr addrspace(1) %p, <2 x i32> %v monotonic, align 8, !mem.cache_hint !1
+  ret <2 x i32> %old
+}
+
+define i32 @atomicrmw_add_volatile_l2_cache_policy(ptr addrspace(1) %p, i32 %v) {
+; CHECK-LABEL: atomicrmw_add_volatile_l2_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    atom.relaxed.sys.global.add.L2::cache_hint.u32 %r2, [%rd1], %r1, %rd2;
+  %old = atomicrmw volatile add ptr addrspace(1) %p, i32 %v monotonic, align 4, !mem.cache_hint !1
+  ret i32 %old
+}
+
+; Relaxed volatile loads/stores use MMIO forms, which cannot take cache policies.
+define i32 @atomic_load_store_volatile_l2_cache_policy(ptr addrspace(1) %p, i32 %v) {
+; CHECK-LABEL: atomic_load_store_volatile_l2_cache_policy(
+; CHECK:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
+; CHECK:    st.mmio.relaxed.sys.global.b32 [%rd1], %r2;
+  %old = load atomic volatile i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !3
+  store atomic volatile i32 %v, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !2
+  ret i32 %old
+}
+
+; Acquire/release forms drop the PTX volatile modifier and can retain hints.
+define i32 @atomic_load_store_volatile_ordered_cache_policy(ptr addrspace(1) %p, i32 %v) {
+; CHECK-LABEL: atomic_load_store_volatile_ordered_cache_policy(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    ld.acquire.sys.global.L1::evict_first.L2::cache_hint.L2::128B.b32 %r1, [%rd1], %rd2;
+; CHECK:    st.release.sys.global.L2::cache_hint.b32 [%rd1], %r2, %rd2;
+  %old = load atomic volatile i32, ptr addrspace(1) %p acquire, align 4, !mem.cache_hint !3
+  store atomic volatile i32 %v, ptr addrspace(1) %p release, align 4, !mem.cache_hint !2
+  ret i32 %old
+}
+
+; PTX volatile loads support prefetch sizes but not eviction or cache policies.
+define i32 @load_store_volatile_cache_policy(ptr addrspace(1) %p, i32 %v) {
+; CHECK-LABEL: load_store_volatile_cache_policy(
+; CHECK:    ld.volatile.global.L2::128B.b32 %r1, [%rd1];
+; CHECK:    st.volatile.global.b32 [%rd1], %r2;
+  %old = load volatile i32, ptr addrspace(1) %p, align 4, !mem.cache_hint !3
+  store volatile i32 %v, ptr addrspace(1) %p, align 4, !mem.cache_hint !2
+  ret i32 %old
+}
+
 !0 = !{i32 0, !10}
 !1 = !{i32 0, !11}
 !2 = !{i32 1, !11}

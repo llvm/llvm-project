@@ -3,7 +3,7 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-; A <1 x T> elementwise atomicrmw collapses directly to a scalar RMW.
+; Native <1 x T> elementwise atomicrmw is preserved for backend legalization.
 ; Shared-memory f32 atom.add preserves denormals, matching the default mode.
 define <1 x float> @fadd_v1f32_elementwise(ptr addrspace(3) %addr, <1 x float> %val) {
 ; CHECK-LABEL: @fadd_v1f32_elementwise(
@@ -16,7 +16,7 @@ entry:
   ret <1 x float> %old
 }
 
-; A <2 x float> elementwise fadd in shared memory splits into native scalar atomics.
+; Shared-memory fadd splits into one-lane atomics for backend legalization.
 define <2 x float> @fadd_v2f32_elementwise(ptr addrspace(3) %addr, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_v2f32_elementwise(
 ; CHECK-NEXT:  entry:

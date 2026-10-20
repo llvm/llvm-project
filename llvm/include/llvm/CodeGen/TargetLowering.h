@@ -2288,6 +2288,7 @@ public:
   /// the backend. Atomic operations greater than this size (as well
   /// as ones that are not naturally aligned), will be expanded by
   /// AtomicExpandPass into an __atomic_* library call.
+  /// For elementwise RMWs, the limit applies to each lane.
   unsigned getMaxAtomicSizeInBitsSupported() const {
     return MaxAtomicSizeInBitsSupported;
   }

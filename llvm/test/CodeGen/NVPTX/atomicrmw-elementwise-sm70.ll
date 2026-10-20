@@ -16224,17 +16224,14 @@ define <1 x half> @fadd_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 define <2 x half> @fadd_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM70-LABEL: fadd_acq_rel_v2f16_global_cta(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
+; SM70-NEXT:    .reg .b32 %r<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM70-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r2, [%rd1], %r1;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
@@ -16243,19 +16240,17 @@ define <2 x half> @fadd_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 define <4 x half> @fadd_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM70-LABEL: fadd_acq_rel_v4f16_global_cta(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<9>;
+; SM70-NEXT:    .reg .b32 %r<5>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
 ; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    ld.param.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
+; SM70-NEXT:    ld.param.v2.b32 {%r1, %r2}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r3, [%rd1], %r1;
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r4, [%rd1+4], %r2;
 ; SM70-NEXT:    fence.acq_rel.cta;
-; SM70-NEXT:    st.param.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM70-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r4};
 ; SM70-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
@@ -16264,7 +16259,6 @@ define <4 x half> @fadd_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 define <8 x half> @fadd_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM70-LABEL: fadd_acq_rel_v8f16_global_cta(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<17>;
 ; SM70-NEXT:    .reg .b32 %r<9>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
@@ -16272,22 +16266,10 @@ define <8 x half> @fadd_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM70-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
-; SM70-NEXT:    mov.b32 %r5, {%rs9, %rs10};
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
-; SM70-NEXT:    mov.b32 %r6, {%rs11, %rs12};
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
-; SM70-NEXT:    mov.b32 %r7, {%rs13, %rs14};
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
-; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
-; SM70-NEXT:    mov.b32 %r8, {%rs15, %rs16};
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r5, [%rd1], %r1;
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r6, [%rd1+4], %r2;
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r7, [%rd1+8], %r3;
+; SM70-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r8, [%rd1+12], %r4;
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM70-NEXT:    ret;
@@ -16354,74 +16336,54 @@ define <1 x half> @fsub_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM70-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM70-NOFTZ-DISALLOW:       {
-; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<3>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-DISALLOW-EMPTY:
 ; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-NOFTZ-DISALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM70-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r2, %r1;
-; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM70-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM70-NOFTZ-ALLOW:       {
-; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<3>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-ALLOW-EMPTY:
 ; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-NOFTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM70-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r2, %r1;
-; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-ALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM70-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<3>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-FTZ-DISALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r2, %r1;
-; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM70-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM70-FTZ-ALLOW:       {
-; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<3>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-ALLOW-EMPTY:
 ; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM70-FTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r2, %r1;
-; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-ALLOW-NEXT:    st.param.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM70-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM70-FTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
@@ -16430,8 +16392,7 @@ define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM70-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM70-NOFTZ-DISALLOW:       {
-; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-DISALLOW-EMPTY:
 ; SM70-NOFTZ-DISALLOW-NEXT:  // %bb.0:
@@ -16440,20 +16401,15 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM70-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r3, %r2;
 ; SM70-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r4, %r1;
 ; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r5, [%rd1], %r4;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r6, [%rd1+4], %r3;
 ; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM70-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM70-NOFTZ-ALLOW:       {
-; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-ALLOW-EMPTY:
 ; SM70-NOFTZ-ALLOW-NEXT:  // %bb.0:
@@ -16462,20 +16418,15 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM70-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r3, %r2;
 ; SM70-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r4, %r1;
 ; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r5, [%rd1], %r4;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r6, [%rd1+4], %r3;
 ; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-ALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM70-NOFTZ-ALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM70-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-DISALLOW-EMPTY:
 ; SM70-FTZ-DISALLOW-NEXT:  // %bb.0:
@@ -16484,20 +16435,15 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r3, %r2;
 ; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r4, %r1;
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r5, [%rd1], %r4;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r6, [%rd1+4], %r3;
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM70-FTZ-DISALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM70-FTZ-ALLOW:       {
-; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-ALLOW-EMPTY:
 ; SM70-FTZ-ALLOW-NEXT:  // %bb.0:
@@ -16506,14 +16452,10 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r3, %r2;
 ; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r4, %r1;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r5, [%rd1], %r4;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r6, [%rd1+4], %r3;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-ALLOW-NEXT:    st.param.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM70-FTZ-ALLOW-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM70-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
@@ -16522,7 +16464,6 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM70-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM70-NOFTZ-DISALLOW:       {
-; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM70-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-DISALLOW-EMPTY:
@@ -16534,29 +16475,16 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r7, %r2;
 ; SM70-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r8, %r1;
 ; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM70-NOFTZ-DISALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r9, [%rd1], %r8;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r10, [%rd1+4], %r7;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r11, [%rd1+8], %r6;
+; SM70-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r12, [%rd1+12], %r5;
 ; SM70-NOFTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-NOFTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM70-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM70-NOFTZ-ALLOW:       {
-; SM70-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM70-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM70-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NOFTZ-ALLOW-EMPTY:
@@ -16568,29 +16496,16 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r7, %r2;
 ; SM70-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r8, %r1;
 ; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM70-NOFTZ-ALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r9, [%rd1], %r8;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r10, [%rd1+4], %r7;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r11, [%rd1+8], %r6;
+; SM70-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r12, [%rd1+12], %r5;
 ; SM70-NOFTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-NOFTZ-ALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM70-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-DISALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM70-FTZ-DISALLOW:       {
-; SM70-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM70-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-DISALLOW-EMPTY:
@@ -16602,29 +16517,16 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r7, %r2;
 ; SM70-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r8, %r1;
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM70-FTZ-DISALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r9, [%rd1], %r8;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r10, [%rd1+4], %r7;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r11, [%rd1+8], %r6;
+; SM70-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r12, [%rd1+12], %r5;
 ; SM70-FTZ-DISALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-DISALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM70-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM70-FTZ-ALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM70-FTZ-ALLOW:       {
-; SM70-FTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM70-FTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM70-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM70-FTZ-ALLOW-EMPTY:
@@ -16636,22 +16538,10 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r7, %r2;
 ; SM70-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r8, %r1;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM70-FTZ-ALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r9, [%rd1], %r8;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r10, [%rd1+4], %r7;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r11, [%rd1+8], %r6;
+; SM70-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16x2 %r12, [%rd1+12], %r5;
 ; SM70-FTZ-ALLOW-NEXT:    fence.acq_rel.cta;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM70-FTZ-ALLOW-NEXT:    ret;

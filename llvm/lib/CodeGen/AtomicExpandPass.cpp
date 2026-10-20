@@ -214,25 +214,24 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AtomicExpandLegacy, DEBUG_TYPE,
                     "Expand Atomic instructions", false, false)
 
-// Helper functions to retrieve the size of atomic instructions.
-static unsigned getAtomicOpSize(LoadInst *LI) {
-  const DataLayout &DL = LI->getDataLayout();
-  return DL.getTypeStoreSize(LI->getType());
+// Helper functions to retrieve the type accessed by atomic instructions.
+static Type *getAtomicOpType(LoadInst *LI) { return LI->getType(); }
+
+static Type *getAtomicOpType(StoreInst *SI) {
+  return SI->getValueOperand()->getType();
 }
 
-static unsigned getAtomicOpSize(StoreInst *SI) {
-  const DataLayout &DL = SI->getDataLayout();
-  return DL.getTypeStoreSize(SI->getValueOperand()->getType());
+static Type *getAtomicOpType(AtomicRMWInst *RMWI) {
+  return RMWI->getValOperand()->getType();
 }
 
-static unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
-  const DataLayout &DL = RMWI->getDataLayout();
-  return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
+static Type *getAtomicOpType(AtomicCmpXchgInst *CASI) {
+  return CASI->getCompareOperand()->getType();
 }
 
-static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
-  const DataLayout &DL = CASI->getDataLayout();
-  return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
+// The storage size of the full access, including all lanes of a vector.
+template <typename Inst> static unsigned getTypeStoreSize(Inst *I) {
+  return I->getDataLayout().getTypeStoreSize(getAtomicOpType(I));
 }
 
 /// Copy metadata that's safe to preserve when widening atomics.
@@ -262,25 +261,32 @@ static void copyMetadataForAtomic(Instruction &Dest,
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
 
-      // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
-      // uses.
       break;
     }
   }
 }
 
-template <typename Inst>
-static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
-  unsigned Size = getAtomicOpSize(I);
-  Align Alignment = I->getAlign();
+static bool atomicSizeSupported(const TargetLowering *TLI, unsigned Size,
+                                Align Alignment) {
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
   return Size <= MaxSize && TLI->isAtomicAlignmentSupported(Alignment, Size);
 }
 
 template <typename Inst>
+static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
+  Type *Ty = getAtomicOpType(I);
+  // Elementwise RMWs require atomic support for each lane. Expansions that
+  // access the whole vector atomically validate that access separately.
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I); RMWI && RMWI->isElementwise())
+    Ty = Ty->getScalarType();
+  unsigned Size = I->getDataLayout().getTypeStoreSize(Ty);
+  return atomicSizeSupported(TLI, Size, I->getAlign());
+}
+
+template <typename Inst>
 static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
                                              raw_ostream &OS) {
-  unsigned Size = getAtomicOpSize(I);
+  unsigned Size = getTypeStoreSize(I);
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
@@ -931,7 +937,11 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     return false;
   case TargetLoweringBase::AtomicExpansionKind::LLSC: {
     unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
-    unsigned ValueSize = getAtomicOpSize(AI);
+    unsigned ValueSize = getTypeStoreSize(AI);
+    if (!atomicSizeSupported(TLI, ValueSize, AI->getAlign())) {
+      expandAtomicRMWToLibcall(AI);
+      return true;
+    }
     if (ValueSize < MinCASSize) {
       expandPartwordAtomicRMW(AI,
                               TargetLoweringBase::AtomicExpansionKind::LLSC);
@@ -947,7 +957,11 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::CmpXChg: {
     unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
-    unsigned ValueSize = getAtomicOpSize(AI);
+    unsigned ValueSize = getTypeStoreSize(AI);
+    if (!atomicSizeSupported(TLI, ValueSize, AI->getAlign())) {
+      expandAtomicRMWToLibcall(AI);
+      return true;
+    }
     if (ValueSize < MinCASSize) {
       expandPartwordAtomicRMW(AI,
                               TargetLoweringBase::AtomicExpansionKind::CmpXChg);
@@ -970,7 +984,7 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::MaskedIntrinsic: {
     unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
-    unsigned ValueSize = getAtomicOpSize(AI);
+    unsigned ValueSize = getTypeStoreSize(AI);
     if (ValueSize < MinCASSize) {
       AtomicRMWInst::BinOp Op = AI->getOperation();
       // Widen And/Or/Xor and give the target another chance at expanding it.
@@ -2002,7 +2016,7 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
 
 bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
-  unsigned ValueSize = getAtomicOpSize(CI);
+  unsigned ValueSize = getTypeStoreSize(CI);
 
   switch (TLI->shouldExpandAtomicCmpXchgInIR(CI)) {
   default:
@@ -2072,7 +2086,7 @@ void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I) {
   static const RTLIB::Libcall Libcalls[6] = {
       RTLIB::ATOMIC_LOAD,   RTLIB::ATOMIC_LOAD_1, RTLIB::ATOMIC_LOAD_2,
       RTLIB::ATOMIC_LOAD_4, RTLIB::ATOMIC_LOAD_8, RTLIB::ATOMIC_LOAD_16};
-  unsigned Size = getAtomicOpSize(I);
+  unsigned Size = getTypeStoreSize(I);
 
   bool Expanded = expandAtomicOpToLibcall(
       I, Size, I->getAlign(), I->getPointerOperand(), nullptr, nullptr,
@@ -2085,7 +2099,7 @@ void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
   static const RTLIB::Libcall Libcalls[6] = {
       RTLIB::ATOMIC_STORE,   RTLIB::ATOMIC_STORE_1, RTLIB::ATOMIC_STORE_2,
       RTLIB::ATOMIC_STORE_4, RTLIB::ATOMIC_STORE_8, RTLIB::ATOMIC_STORE_16};
-  unsigned Size = getAtomicOpSize(I);
+  unsigned Size = getTypeStoreSize(I);
 
   bool Expanded = expandAtomicOpToLibcall(
       I, Size, I->getAlign(), I->getPointerOperand(), I->getValueOperand(),
@@ -2101,7 +2115,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
       RTLIB::ATOMIC_COMPARE_EXCHANGE,   RTLIB::ATOMIC_COMPARE_EXCHANGE_1,
       RTLIB::ATOMIC_COMPARE_EXCHANGE_2, RTLIB::ATOMIC_COMPARE_EXCHANGE_4,
       RTLIB::ATOMIC_COMPARE_EXCHANGE_8, RTLIB::ATOMIC_COMPARE_EXCHANGE_16};
-  unsigned Size = getAtomicOpSize(I);
+  unsigned Size = getTypeStoreSize(I);
 
   bool Expanded = expandAtomicOpToLibcall(
       I, Size, I->getAlign(), I->getPointerOperand(), I->getNewValOperand(),
@@ -2183,7 +2197,7 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
 void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
   ArrayRef<RTLIB::Libcall> Libcalls = GetRMWLibcall(I->getOperation());
 
-  unsigned Size = getAtomicOpSize(I);
+  unsigned Size = getTypeStoreSize(I);
 
   bool Success = false;
   if (!Libcalls.empty())

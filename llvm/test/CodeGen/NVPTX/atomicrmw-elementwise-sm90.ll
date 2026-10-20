@@ -10235,11 +10235,8 @@ define <2 x float> @fadd_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-NOFTZ-ALLOW-EMPTY:
 ; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v2f32_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fadd_acq_rel_v2f32_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r3, [%rd1], %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r4, [%rd1+4], %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r3, %r4}, [%rd1], {%r1, %r2};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
@@ -10250,11 +10247,8 @@ define <2 x float> @fadd_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v2f32_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fadd_acq_rel_v2f32_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r3, [%rd1], %r1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r4, [%rd1+4], %r2;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r3, %r4}, [%rd1], {%r1, %r2};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
@@ -10265,11 +10259,8 @@ define <2 x float> @fadd_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-FTZ-ALLOW-EMPTY:
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v2f32_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fadd_acq_rel_v2f32_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r3, [%rd1], %r1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r4, [%rd1+4], %r2;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r3, %r4}, [%rd1], {%r1, %r2};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x float> %val syncscope("block") acq_rel
@@ -10348,13 +10339,8 @@ define <4 x float> @fadd_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-NOFTZ-ALLOW-EMPTY:
 ; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v4f32_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v4f32_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r7, [%rd1+8], %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r8, [%rd1+12], %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
@@ -10365,13 +10351,8 @@ define <4 x float> @fadd_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v4f32_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v4f32_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r2;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r7, [%rd1+8], %r3;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r8, [%rd1+12], %r4;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
@@ -10382,13 +10363,8 @@ define <4 x float> @fadd_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-FTZ-ALLOW-EMPTY:
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v4f32_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v4f32_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r2;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r7, [%rd1+8], %r3;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r8, [%rd1+12], %r4;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x float> %val syncscope("block") acq_rel
@@ -10522,14 +10498,8 @@ define <8 x float> @fadd_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f32_global_cta_param_1+16];
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [fadd_acq_rel_v8f32_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r13, [%rd1+16], %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r14, [%rd1+20], %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r15, [%rd1+24], %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r16, [%rd1+28], %r4;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r5, %r6, %r7, %r8};
+; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r13, %r14, %r15, %r16}, [%rd1+16], {%r1, %r2, %r3, %r4};
 ; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r13, %r14, %r15, %r16};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -10545,14 +10515,8 @@ define <8 x float> @fadd_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f32_global_cta_param_1+16];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [fadd_acq_rel_v8f32_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r5;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r6;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r7;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r8;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r13, [%rd1+16], %r1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r14, [%rd1+20], %r2;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r15, [%rd1+24], %r3;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r16, [%rd1+28], %r4;
+; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r5, %r6, %r7, %r8};
+; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r13, %r14, %r15, %r16}, [%rd1+16], {%r1, %r2, %r3, %r4};
 ; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r13, %r14, %r15, %r16};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -10568,14 +10532,8 @@ define <8 x float> @fadd_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f32_global_cta_param_1+16];
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r5, %r6, %r7, %r8}, [fadd_acq_rel_v8f32_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r5;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r6;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r7;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r8;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r13, [%rd1+16], %r1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r14, [%rd1+20], %r2;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r15, [%rd1+24], %r3;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r16, [%rd1+28], %r4;
+; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r5, %r6, %r7, %r8};
+; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r13, %r14, %r15, %r16}, [%rd1+16], {%r1, %r2, %r3, %r4};
 ; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r13, %r14, %r15, %r16};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -10696,10 +10654,7 @@ define <2 x float> @fsub_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v2f32_global_cta_param_1];
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r3, %r2;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r4, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r5, %r6}, [%rd1], {%r4, %r3};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
@@ -10713,10 +10668,7 @@ define <2 x float> @fsub_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v2f32_global_cta_param_1];
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r3, %r2;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r4, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r4;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r3;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r5, %r6}, [%rd1], {%r4, %r3};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
@@ -10730,10 +10682,7 @@ define <2 x float> @fsub_acq_rel_v2f32_global_cta(ptr addrspace(1) %addr, <2 x f
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v2f32_global_cta_param_1];
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r3, %r2;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r4, %r1;
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r5, [%rd1], %r4;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r6, [%rd1+4], %r3;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v2.f32 {%r5, %r6}, [%rd1], {%r4, %r3};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <2 x float> %val syncscope("block") acq_rel
@@ -10817,12 +10766,7 @@ define <4 x float> @fsub_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r6, %r3;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r7, %r2;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r8, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
@@ -10838,12 +10782,7 @@ define <4 x float> @fsub_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r6, %r3;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r7, %r2;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r8, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r8;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r7;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r6;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r5;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
@@ -10859,12 +10798,7 @@ define <4 x float> @fsub_acq_rel_v4f32_global_cta(ptr addrspace(1) %addr, <4 x f
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r6, %r3;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r7, %r2;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r8, %r1;
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r9, [%rd1], %r8;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r10, [%rd1+4], %r7;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r11, [%rd1+8], %r6;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r12, [%rd1+12], %r5;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.v4.f32 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <4 x float> %val syncscope("block") acq_rel
@@ -11014,14 +10948,8 @@ define <8 x float> @fsub_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r15, %r10;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f32 %r16, %r9;
 ; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r17, [%rd1], %r16;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r18, [%rd1+4], %r15;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r19, [%rd1+8], %r14;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r20, [%rd1+12], %r13;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r21, [%rd1+16], %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r22, [%rd1+20], %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r23, [%rd1+24], %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r24, [%rd1+28], %r5;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r17, %r18, %r19, %r20}, [%rd1], {%r16, %r15, %r14, %r13};
+; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r21, %r22, %r23, %r24}, [%rd1+16], {%r8, %r7, %r6, %r5};
 ; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
@@ -11045,14 +10973,8 @@ define <8 x float> @fsub_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r15, %r10;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r16, %r9;
 ; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r17, [%rd1], %r16;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r18, [%rd1+4], %r15;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r19, [%rd1+8], %r14;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r20, [%rd1+12], %r13;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r21, [%rd1+16], %r8;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r22, [%rd1+20], %r7;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r23, [%rd1+24], %r6;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r24, [%rd1+28], %r5;
+; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r17, %r18, %r19, %r20}, [%rd1], {%r16, %r15, %r14, %r13};
+; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r21, %r22, %r23, %r24}, [%rd1+16], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
@@ -11076,14 +10998,8 @@ define <8 x float> @fsub_acq_rel_v8f32_global_cta(ptr addrspace(1) %addr, <8 x f
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r15, %r10;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r16, %r9;
 ; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r17, [%rd1], %r16;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r18, [%rd1+4], %r15;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r19, [%rd1+8], %r14;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r20, [%rd1+12], %r13;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r21, [%rd1+16], %r8;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r22, [%rd1+20], %r7;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r23, [%rd1+24], %r6;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.f32 %r24, [%rd1+28], %r5;
+; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r17, %r18, %r19, %r20}, [%rd1], {%r16, %r15, %r14, %r13};
+; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.v4.f32 {%r21, %r22, %r23, %r24}, [%rd1+16], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
@@ -16416,17 +16332,14 @@ define <1 x half> @fadd_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 define <2 x half> @fadd_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM90-LABEL: fadd_acq_rel_v2f16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<5>;
+; SM90-NEXT:    .reg .b32 %r<3>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v2f16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2f16_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NEXT:    ld.param::func.b32 %r1, [fadd_acq_rel_v2f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r2, [%rd1], %r1;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
@@ -16435,19 +16348,14 @@ define <2 x half> @fadd_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 define <4 x half> @fadd_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM90-LABEL: fadd_acq_rel_v4f16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<9>;
+; SM90-NEXT:    .reg .b32 %r<5>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v4f16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param::func.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4f16_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs5, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs6, [%rd1+2], %rs2;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs4;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fadd_acq_rel_v4f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.f16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
@@ -16456,31 +16364,13 @@ define <4 x half> @fadd_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 define <8 x half> @fadd_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM90-LABEL: fadd_acq_rel_v8f16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<17>;
 ; SM90-NEXT:    .reg .b32 %r<9>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v8f16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8f16_global_cta_param_1];
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs9, [%rd1], %rs7;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs10, [%rd1+2], %rs8;
-; SM90-NEXT:    mov.b32 %r5, {%rs9, %rs10};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+4], %rs5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+6], %rs6;
-; SM90-NEXT:    mov.b32 %r6, {%rs11, %rs12};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs13, [%rd1+8], %rs3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs14, [%rd1+10], %rs4;
-; SM90-NEXT:    mov.b32 %r7, {%rs13, %rs14};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs2;
-; SM90-NEXT:    mov.b32 %r8, {%rs15, %rs16};
-; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.f16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <8 x half> %val syncscope("block") acq_rel
@@ -16546,74 +16436,54 @@ define <1 x half> @fsub_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
 ; SM90-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<3>;
+; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-DISALLOW-EMPTY:
 ; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r2, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<3>;
+; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-ALLOW-EMPTY:
 ; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r2, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-DISALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r2, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-ALLOW-LABEL: fsub_acq_rel_v2f16_global_cta(
 ; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b16 %rs<5>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-ALLOW-EMPTY:
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v2f16_global_cta_param_0];
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_v2f16_global_cta_param_1];
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r2, %r1;
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16x2 %r3, [%rd1], %r2;
+; SM90-FTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
@@ -16622,8 +16492,7 @@ define <2 x half> @fsub_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x ha
 define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
 ; SM90-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-DISALLOW-EMPTY:
 ; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
@@ -16631,21 +16500,13 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4f16_global_cta_param_1];
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r3, %r2;
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r4, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM90-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.f16x2 {%r5, %r6}, [%rd1], {%r4, %r3};
+; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-ALLOW-EMPTY:
 ; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
@@ -16653,21 +16514,13 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4f16_global_cta_param_1];
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r3, %r2;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r4, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.f16x2 {%r5, %r6}, [%rd1], {%r4, %r3};
+; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-DISALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-DISALLOW-EMPTY:
 ; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
@@ -16675,21 +16528,13 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4f16_global_cta_param_1];
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r3, %r2;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r4, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.f16x2 {%r5, %r6}, [%rd1], {%r4, %r3};
+; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-ALLOW-LABEL: fsub_acq_rel_v4f16_global_cta(
 ; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b16 %rs<9>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
 ; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-ALLOW-EMPTY:
 ; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
@@ -16697,15 +16542,8 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4f16_global_cta_param_1];
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r3, %r2;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r4, %r1;
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.f16x2 {%r5, %r6}, [%rd1], {%r4, %r3};
+; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
@@ -16714,7 +16552,6 @@ define <4 x half> @fsub_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
 ; SM90-NOFTZ-DISALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-DISALLOW-EMPTY:
@@ -16725,30 +16562,12 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r6, %r3;
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r7, %r2;
 ; SM90-NOFTZ-DISALLOW-NEXT:    neg.f16x2 %r8, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.f16x2 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NOFTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-NOFTZ-ALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-NOFTZ-ALLOW-EMPTY:
@@ -16759,30 +16578,12 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r6, %r3;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r7, %r2;
 ; SM90-NOFTZ-ALLOW-NEXT:    neg.f16x2 %r8, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.f16x2 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-DISALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-DISALLOW-EMPTY:
@@ -16793,30 +16594,12 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r6, %r3;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r7, %r2;
 ; SM90-FTZ-DISALLOW-NEXT:    neg.ftz.f16x2 %r8, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.f16x2 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM90-FTZ-ALLOW-LABEL: fsub_acq_rel_v8f16_global_cta(
 ; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b16 %rs<17>;
 ; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
 ; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM90-FTZ-ALLOW-EMPTY:
@@ -16827,24 +16610,7 @@ define <8 x half> @fsub_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r6, %r3;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r7, %r2;
 ; SM90-FTZ-ALLOW-NEXT:    neg.ftz.f16x2 %r8, %r1;
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs3, [%rd1], %rs1;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs4, [%rd1+2], %rs2;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs7, [%rd1+4], %rs5;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs8, [%rd1+6], %rs6;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs11, [%rd1+8], %rs9;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs12, [%rd1+10], %rs10;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs15, [%rd1+12], %rs13;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.add.noftz.f16 %rs16, [%rd1+14], %rs14;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r12, {%rs15, %rs16};
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
+; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.f16x2 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <8 x half> %val syncscope("block") acq_rel
@@ -17004,501 +16770,49 @@ define <1 x half> @fmin_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 }
 
 define <2 x half> @fmin_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmin_acq_rel_v2f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b32 %r2, [fmin_acq_rel_v2f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r3, %r4, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB297_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmin_acq_rel_v2f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b32 %r2, [fmin_acq_rel_v2f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r3, %r4, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB297_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmin_acq_rel_v2f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b32 %r2, [fmin_acq_rel_v2f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r3, %r4, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB297_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmin_acq_rel_v2f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b32 %r2, [fmin_acq_rel_v2f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-FTZ-ALLOW-NEXT:  $L__BB297_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r3, %r4, %r2;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB297_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmin_acq_rel_v2f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fmin_acq_rel_v2f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v2.f16 {%rs3, %rs4}, [%rd1], {%rs1, %rs2};
+; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
 }
 
 define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmin_acq_rel_v4f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r3, %r5, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r4, %r6, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB298_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmin_acq_rel_v4f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r3, %r5, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r4, %r6, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB298_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmin_acq_rel_v4f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r3, %r5, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r4, %r6, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB298_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmin_acq_rel_v4f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-FTZ-ALLOW-NEXT:  $L__BB298_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r3, %r5, %r1;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r4, %r6, %r2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB298_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmin_acq_rel_v4f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v2.f16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
 }
 
 define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmin_acq_rel_v8f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    }
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r5, %r9, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r6, %r10, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r7, %r11, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NOFTZ-DISALLOW-NEXT:    min.f16x2 %r8, %r12, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NOFTZ-DISALLOW-NEXT:    {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    }
-; SM90-NOFTZ-DISALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NOFTZ-DISALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB299_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmin_acq_rel_v8f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    }
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r5, %r9, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r6, %r10, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r7, %r11, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    min.f16x2 %r8, %r12, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NOFTZ-ALLOW-NEXT:    {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    }
-; SM90-NOFTZ-ALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NOFTZ-ALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB299_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmin_acq_rel_v8f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r5, %r9, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r6, %r10, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r7, %r11, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    min.ftz.f16x2 %r8, %r12, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
-; SM90-FTZ-DISALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-FTZ-DISALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB299_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmin_acq_rel_v8f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-ALLOW-NEXT:    }
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-FTZ-ALLOW-NEXT:  $L__BB299_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r5, %r9, %r1;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r6, %r10, %r2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r7, %r11, %r3;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-FTZ-ALLOW-NEXT:    min.ftz.f16x2 %r8, %r12, %r4;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-FTZ-ALLOW-NEXT:    {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-FTZ-ALLOW-NEXT:    }
-; SM90-FTZ-ALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-FTZ-ALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB299_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmin_acq_rel_v8f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v4.f16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <8 x half> %val syncscope("block") acq_rel
         ret <8 x half> %retval
 }
@@ -17656,501 +16970,49 @@ define <1 x half> @fmax_acq_rel_v1f16_global_cta(ptr addrspace(1) %addr, <1 x ha
 }
 
 define <2 x half> @fmax_acq_rel_v2f16_global_cta(ptr addrspace(1) %addr, <2 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmax_acq_rel_v2f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b32 %r2, [fmax_acq_rel_v2f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r3, %r4, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB301_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmax_acq_rel_v2f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b32 %r2, [fmax_acq_rel_v2f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r3, %r4, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB301_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmax_acq_rel_v2f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b32 %r2, [fmax_acq_rel_v2f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r3, %r4, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB301_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmax_acq_rel_v2f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b32 %r2, [fmax_acq_rel_v2f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-FTZ-ALLOW-NEXT:  $L__BB301_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r3, %r4, %r2;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-FTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB301_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r1;
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmax_acq_rel_v2f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fmax_acq_rel_v2f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v2.f16 {%rs3, %rs4}, [%rd1], {%rs1, %rs2};
+; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <2 x half> %val syncscope("block") acq_rel
         ret <2 x half> %retval
 }
 
 define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmax_acq_rel_v4f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r3, %r5, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r4, %r6, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB302_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmax_acq_rel_v4f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r3, %r5, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r4, %r6, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB302_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmax_acq_rel_v4f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r3, %r5, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r4, %r6, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB302_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmax_acq_rel_v4f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<7>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<12>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-FTZ-ALLOW-NEXT:  $L__BB302_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r3, %r5, %r1;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r4, %r6, %r2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB302_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmax_acq_rel_v4f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v2.f16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <4 x half> %val syncscope("block") acq_rel
         ret <4 x half> %retval
 }
 
 define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x half> %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fmax_acq_rel_v8f16_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8f16_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8f16_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    }
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NOFTZ-DISALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
-; SM90-NOFTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r5, %r9, %r1;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r6, %r10, %r2;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r7, %r11, %r3;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NOFTZ-DISALLOW-NEXT:    max.f16x2 %r8, %r12, %r4;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NOFTZ-DISALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NOFTZ-DISALLOW-NEXT:    {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NOFTZ-DISALLOW-NEXT:    }
-; SM90-NOFTZ-DISALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NOFTZ-DISALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NOFTZ-DISALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NOFTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NOFTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NOFTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NOFTZ-DISALLOW-NEXT:    @%p1 bra $L__BB303_1;
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fmax_acq_rel_v8f16_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8f16_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8f16_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    }
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NOFTZ-ALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
-; SM90-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r5, %r9, %r1;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r6, %r10, %r2;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r7, %r11, %r3;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NOFTZ-ALLOW-NEXT:    max.f16x2 %r8, %r12, %r4;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NOFTZ-ALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NOFTZ-ALLOW-NEXT:    {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NOFTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NOFTZ-ALLOW-NEXT:    }
-; SM90-NOFTZ-ALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NOFTZ-ALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NOFTZ-ALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NOFTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NOFTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NOFTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB303_1;
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NOFTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fmax_acq_rel_v8f16_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8f16_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8f16_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r5, %r9, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r6, %r10, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r7, %r11, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    max.ftz.f16x2 %r8, %r12, %r4;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-FTZ-DISALLOW-NEXT:    {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-FTZ-DISALLOW-NEXT:    }
-; SM90-FTZ-DISALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-FTZ-DISALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-FTZ-DISALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB303_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fmax_acq_rel_v8f16_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b32 %r<13>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<25>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8f16_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8f16_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-ALLOW-NEXT:    {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 swap, {0, 0};
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-FTZ-ALLOW-NEXT:    }
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-FTZ-ALLOW-NEXT:  $L__BB303_1: // %atomicrmw.start
-; SM90-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r5, %r9, %r1;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r6, %r10, %r2;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r7, %r11, %r3;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-FTZ-ALLOW-NEXT:    max.ftz.f16x2 %r8, %r12, %r4;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-FTZ-ALLOW-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-FTZ-ALLOW-NEXT:    {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-FTZ-ALLOW-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-FTZ-ALLOW-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-FTZ-ALLOW-NEXT:    }
-; SM90-FTZ-ALLOW-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-FTZ-ALLOW-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-FTZ-ALLOW-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-FTZ-ALLOW-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-FTZ-ALLOW-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-FTZ-ALLOW-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB303_1;
-; SM90-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-ALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fmax_acq_rel_v8f16_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8f16_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8f16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v4.f16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
+; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <8 x half> %val syncscope("block") acq_rel
         ret <8 x half> %retval
 }
@@ -19478,17 +18340,14 @@ define <1 x bfloat> @fadd_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM90-LABEL: fadd_acq_rel_v2bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<5>;
+; SM90-NEXT:    .reg .b32 %r<3>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v2bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fadd_acq_rel_v2bf16_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs3, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs4, [%rd1+2], %rs2;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NEXT:    ld.param::func.b32 %r1, [fadd_acq_rel_v2bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.bf16x2 %r2, [%rd1], %r1;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <2 x bfloat> %val syncscope("block") acq_rel
         ret <2 x bfloat> %retval
@@ -19497,19 +18356,14 @@ define <2 x bfloat> @fadd_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM90-LABEL: fadd_acq_rel_v4bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<9>;
+; SM90-NEXT:    .reg .b32 %r<5>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v4bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param::func.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [fadd_acq_rel_v4bf16_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs5, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs6, [%rd1+2], %rs2;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs7, [%rd1+4], %rs3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs8, [%rd1+6], %rs4;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs5, %rs6, %rs7, %rs8};
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fadd_acq_rel_v4bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.bf16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -19518,31 +18372,13 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM90-LABEL: fadd_acq_rel_v8bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<17>;
 ; SM90-NEXT:    .reg .b32 %r<9>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_v8bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_acq_rel_v8bf16_global_cta_param_1];
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs9, [%rd1], %rs7;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs10, [%rd1+2], %rs8;
-; SM90-NEXT:    mov.b32 %r5, {%rs9, %rs10};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs11, [%rd1+4], %rs5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs12, [%rd1+6], %rs6;
-; SM90-NEXT:    mov.b32 %r6, {%rs11, %rs12};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs13, [%rd1+8], %rs3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs14, [%rd1+10], %rs4;
-; SM90-NEXT:    mov.b32 %r7, {%rs13, %rs14};
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs15, [%rd1+12], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs16, [%rd1+14], %rs2;
-; SM90-NEXT:    mov.b32 %r8, {%rs15, %rs16};
-; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.bf16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fadd ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
@@ -19569,20 +18405,15 @@ define <1 x bfloat> @fsub_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM90-LABEL: fsub_acq_rel_v2bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<5>;
-; SM90-NEXT:    .reg .b32 %r<3>;
+; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fsub_acq_rel_v2bf16_global_cta_param_0];
 ; SM90-NEXT:    ld.param::func.b32 %r1, [fsub_acq_rel_v2bf16_global_cta_param_1];
 ; SM90-NEXT:    neg.bf16x2 %r2, %r1;
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs3, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs4, [%rd1+2], %rs2;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.bf16x2 %r3, [%rd1], %r2;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <2 x bfloat> %val syncscope("block") acq_rel
         ret <2 x bfloat> %retval
@@ -19591,8 +18422,7 @@ define <2 x bfloat> @fsub_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM90-LABEL: fsub_acq_rel_v4bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<9>;
-; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b32 %r<7>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
@@ -19600,15 +18430,8 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fsub_acq_rel_v4bf16_global_cta_param_1];
 ; SM90-NEXT:    neg.bf16x2 %r3, %r2;
 ; SM90-NEXT:    neg.bf16x2 %r4, %r1;
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs3, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs4, [%rd1+2], %rs2;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs7, [%rd1+4], %rs5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs8, [%rd1+6], %rs6;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v4.b16 [func_retval0], {%rs3, %rs4, %rs7, %rs8};
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v2.bf16x2 {%r5, %r6}, [%rd1], {%r4, %r3};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -19617,7 +18440,6 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM90-LABEL: fsub_acq_rel_v8bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .b16 %rs<17>;
 ; SM90-NEXT:    .reg .b32 %r<13>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
@@ -19628,24 +18450,7 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM90-NEXT:    neg.bf16x2 %r6, %r3;
 ; SM90-NEXT:    neg.bf16x2 %r7, %r2;
 ; SM90-NEXT:    neg.bf16x2 %r8, %r1;
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs3, [%rd1], %rs1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs4, [%rd1+2], %rs2;
-; SM90-NEXT:    mov.b32 %r9, {%rs3, %rs4};
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r7;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs7, [%rd1+4], %rs5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs8, [%rd1+6], %rs6;
-; SM90-NEXT:    mov.b32 %r10, {%rs7, %rs8};
-; SM90-NEXT:    mov.b32 {%rs9, %rs10}, %r6;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs11, [%rd1+8], %rs9;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs12, [%rd1+10], %rs10;
-; SM90-NEXT:    mov.b32 %r11, {%rs11, %rs12};
-; SM90-NEXT:    mov.b32 {%rs13, %rs14}, %r5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs15, [%rd1+12], %rs13;
-; SM90-NEXT:    atom.relaxed.cta.global.add.noftz.bf16 %rs16, [%rd1+14], %rs14;
-; SM90-NEXT:    mov.b32 %r12, {%rs15, %rs16};
-; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.v4.bf16x2 {%r9, %r10, %r11, %r12}, [%rd1], {%r8, %r7, %r6, %r5};
 ; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fsub ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
@@ -19696,25 +18501,14 @@ define <1 x bfloat> @fmin_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM90-LABEL: fmin_acq_rel_v2bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b16 %rs<5>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.b32 %r2, [fmin_acq_rel_v2bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v2bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NEXT:  $L__BB321_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    min.bf16x2 %r3, %r4, %r2;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NEXT:    mov.b32 %r4, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB321_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.b32 [func_retval0], %r1;
+; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fmin_acq_rel_v2bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v2.bf16 {%rs3, %rs4}, [%rd1], {%rs1, %rs2};
+; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <2 x bfloat> %val syncscope("block") acq_rel
         ret <2 x bfloat> %retval
@@ -19723,37 +18517,14 @@ define <2 x bfloat> @fmin_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM90-LABEL: fmin_acq_rel_v4bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<7>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
+; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v4bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB322_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    min.bf16x2 %r3, %r5, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NEXT:    min.bf16x2 %r4, %r6, %r2;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB322_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmin_acq_rel_v4bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v2.bf16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -19762,66 +18533,14 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM90-LABEL: fmin_acq_rel_v8bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<13>;
-; SM90-NEXT:    .reg .b64 %rd<25>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmin_acq_rel_v8bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NEXT:  $L__BB323_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    min.bf16x2 %r5, %r9, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NEXT:    min.bf16x2 %r6, %r10, %r2;
-; SM90-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NEXT:    min.bf16x2 %r7, %r11, %r3;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NEXT:    min.bf16x2 %r8, %r12, %r4;
-; SM90-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NEXT:    @%p1 bra $L__BB323_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
+; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmin_acq_rel_v8bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.min.noftz.v4.bf16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmin ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
         ret <8 x bfloat> %retval
@@ -19871,25 +18590,14 @@ define <1 x bfloat> @fmax_acq_rel_v1bf16_global_cta(ptr addrspace(1) %addr, <1 x
 define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x bfloat> %val) {
 ; SM90-LABEL: fmax_acq_rel_v2bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b16 %rs<5>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.b32 %r2, [fmax_acq_rel_v2bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v2bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r4, [%rd1];
-; SM90-NEXT:  $L__BB325_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    max.bf16x2 %r3, %r4, %r2;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM90-NEXT:    mov.b32 %r4, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB325_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.b32 [func_retval0], %r1;
+; SM90-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [fmax_acq_rel_v2bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v2.bf16 {%rs3, %rs4}, [%rd1], {%rs1, %rs2};
+; SM90-NEXT:    st.param::func.v2.b16 [func_retval0], {%rs3, %rs4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <2 x bfloat> %val syncscope("block") acq_rel
         ret <2 x bfloat> %retval
@@ -19898,37 +18606,14 @@ define <2 x bfloat> @fmax_acq_rel_v2bf16_global_cta(ptr addrspace(1) %addr, <2 x
 define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x bfloat> %val) {
 ; SM90-LABEL: fmax_acq_rel_v4bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<7>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
+; SM90-NEXT:    .reg .b32 %r<5>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v4bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB326_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    max.bf16x2 %r3, %r5, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r3;
-; SM90-NEXT:    max.bf16x2 %r4, %r6, %r2;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r4;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB326_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r5, %r6};
+; SM90-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [fmax_acq_rel_v4bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v2.bf16x2 {%r3, %r4}, [%rd1], {%r1, %r2};
+; SM90-NEXT:    st.param::func.v2.b32 [func_retval0], {%r3, %r4};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <4 x bfloat> %val syncscope("block") acq_rel
         ret <4 x bfloat> %retval
@@ -19937,66 +18622,14 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x bfloat> %val) {
 ; SM90-LABEL: fmax_acq_rel_v8bf16_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<13>;
-; SM90-NEXT:    .reg .b64 %rd<25>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8bf16_global_cta_param_1];
 ; SM90-NEXT:    ld.param::func.b64 %rd1, [fmax_acq_rel_v8bf16_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {0, 0};
-; SM90-NEXT:    mov.b128 swap, {0, 0};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd2, %rd3}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd3;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd3;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM90-NEXT:  $L__BB327_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    max.bf16x2 %r5, %r9, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r5;
-; SM90-NEXT:    max.bf16x2 %r6, %r10, %r2;
-; SM90-NEXT:    cvt.u64.u32 %rd5, %r6;
-; SM90-NEXT:    shl.b64 %rd6, %rd5, 32;
-; SM90-NEXT:    or.b64 %rd7, %rd4, %rd6;
-; SM90-NEXT:    max.bf16x2 %r7, %r11, %r3;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r7;
-; SM90-NEXT:    max.bf16x2 %r8, %r12, %r4;
-; SM90-NEXT:    cvt.u64.u32 %rd9, %r8;
-; SM90-NEXT:    shl.b64 %rd10, %rd9, 32;
-; SM90-NEXT:    or.b64 %rd11, %rd8, %rd10;
-; SM90-NEXT:    cvt.u64.u32 %rd12, %r9;
-; SM90-NEXT:    cvt.u64.u32 %rd13, %r10;
-; SM90-NEXT:    shl.b64 %rd14, %rd13, 32;
-; SM90-NEXT:    or.b64 %rd15, %rd12, %rd14;
-; SM90-NEXT:    cvt.u64.u32 %rd16, %r11;
-; SM90-NEXT:    cvt.u64.u32 %rd17, %r12;
-; SM90-NEXT:    shl.b64 %rd18, %rd17, 32;
-; SM90-NEXT:    or.b64 %rd19, %rd16, %rd18;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd15, %rd19};
-; SM90-NEXT:    mov.b128 swap, {%rd7, %rd11};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd20, %rd21}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    xor.b64 %rd22, %rd21, %rd19;
-; SM90-NEXT:    xor.b64 %rd23, %rd20, %rd15;
-; SM90-NEXT:    or.b64 %rd24, %rd23, %rd22;
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd21;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd21;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd20;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd20;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd24, 0;
-; SM90-NEXT:    @%p1 bra $L__BB327_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
+; SM90-NEXT:    ld.param::func.v4.b32 {%r1, %r2, %r3, %r4}, [fmax_acq_rel_v8bf16_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.max.noftz.v4.bf16x2 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
+; SM90-NEXT:    st.param::func.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise fmax ptr  addrspace(1) %addr, <8 x bfloat> %val syncscope("block") acq_rel
         ret <8 x bfloat> %retval
