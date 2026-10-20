@@ -3036,6 +3036,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return secondOp;
       return 0;
     case 7: {
+      // Skip the inttoptr/ptrtoint optimization if disabled.
       if (!getIROptions(SrcTy->getContext()).i2p_p2i_opt)
         return 0;
 

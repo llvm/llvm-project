@@ -3069,7 +3069,7 @@ private:
 
 // The options of what has no LLVMContext: a summary index or a detached debug
 // record.
-static const IROptions DefaultOptions{};
+constexpr IROptions DefaultOptions;
 
 static const IROptions &getOptions(const Module *M) {
   return M ? getIROptions(M->getContext()) : DefaultOptions;
