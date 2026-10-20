@@ -291,3 +291,14 @@ TEST_F(SourceMgrDiagnosticVerifierTest, AlreadyMatchedIsNotNearMiss) {
   EXPECT_EQ(StringRef(Output).find("diagnostic emitted when expecting"),
             StringRef::npos);
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, ErrorHighlightsWholeDirective) {
+  addBuffer("op\n# expected-error@-1 {{missing}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_NE(StringRef(Output).find("# expected-error@-1 {{missing}}\n"
+                                   "  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"),
+            StringRef::npos)
+      << Output;
+}
