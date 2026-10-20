@@ -554,8 +554,12 @@ void RewriteMutator::NormalizeAccLoopClauses(
       return;
     }
   }
+  // These executable directives belong to the source program, even when an
+  // ancestor scope was read from a module file for a separate submodule.
   if (seq && independent) {
-    context_.Warn(common::UsageWarning::OpenAccUsage, clauses.source,
+    context_.messages().Warn(/*isInModuleFile=*/false,
+        context_.languageFeatures(), common::UsageWarning::OpenAccUsage,
+        clauses.source,
         "SEQ and INDEPENDENT clauses on the %s directive are ignored because they are mutually exclusive"_warn_en_US,
         parser::ToUpperCaseLetters(
             llvm::acc::getOpenACCDirectiveName(directive).str()));
@@ -568,7 +572,9 @@ void RewriteMutator::NormalizeAccLoopClauses(
   if (seq < 2 && independent < 2) {
     return;
   }
-  context_.Warn(common::UsageWarning::OpenAccUsage, clauses.source,
+  context_.messages().Warn(/*isInModuleFile=*/false,
+      context_.languageFeatures(), common::UsageWarning::OpenAccUsage,
+      clauses.source,
       "Repeated %s clauses on the %s directive are ignored"_warn_en_US,
       seq ? "SEQ" : "INDEPENDENT",
       parser::ToUpperCaseLetters(
