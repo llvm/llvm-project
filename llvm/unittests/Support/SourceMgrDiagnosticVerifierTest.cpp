@@ -258,3 +258,36 @@ TEST_F(SourceMgrDiagnosticVerifierTest, BufferAddedLater) {
   EXPECT_FALSE(Verifier.verify());
   EXPECT_EQ(Output, FirstOutput);
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, PreferUnmatchedDirective) {
+  const MemoryBuffer *Buf =
+      addBuffer("op\n"
+                "# expected-error@-1 {{operand}}\n"
+                "# expected-error@-2 {{invalid operand}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  // Both diagnostics match the first directive, but the second one must be
+  // matched by the second directive.
+  EXPECT_EQ(Verifier.process(getMessage(Buf, SourceMgr::DK_Error, "operand")),
+            MatchResult::Matched);
+  EXPECT_EQ(
+      Verifier.process(getMessage(Buf, SourceMgr::DK_Error, "invalid operand")),
+      MatchResult::Matched);
+  EXPECT_TRUE(Verifier.verify());
+  EXPECT_EQ(Output, "");
+}
+
+TEST_F(SourceMgrDiagnosticVerifierTest, AlreadyMatchedIsNotNearMiss) {
+  const MemoryBuffer *Buf = addBuffer("op\n# expected-error@-1 {{operand}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  EXPECT_EQ(
+      Verifier.process(getMessage(Buf, SourceMgr::DK_Error, "bad operand")),
+      MatchResult::Matched);
+  EXPECT_EQ(
+      Verifier.process(getMessage(Buf, SourceMgr::DK_Note, "note operand")),
+      MatchResult::Unexpected);
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_EQ(StringRef(Output).find("diagnostic emitted when expecting"),
+            StringRef::npos);
+}

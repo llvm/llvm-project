@@ -261,11 +261,13 @@ SourceMgrDiagnosticVerifier::process(SourceMgr::DiagKind kind,
     diags = expectedUnknownLocDiags;
   }
 
-  // Search for a matching expected diagnostic.
+  // Search for a matching expected diagnostic, preferring one that has not
+  // been matched yet so that several directives with overlapping text on the
+  // same line can each match a diagnostic.
   // If we find something that is close then emit a more specific error.
+  ExpectedDiag *alreadyMatched = nullptr;
   ExpectedDiag *nearMiss = nullptr;
 
-  // If this was an expected error, remember that we saw it and return.
   for (auto &e : diags) {
     // File line must match (unless it's an unknown location).
     if (loc && e.lineNo != loc->lineNo)
@@ -276,17 +278,24 @@ SourceMgrDiagnosticVerifier::process(SourceMgr::DiagKind kind,
     // A directive that already matched a diagnostic is used up.
     if (oneDiagPerDirective && e.matched)
       continue;
-    if (e.match(message)) {
-      if (e.kind == kind) {
+    if (!e.match(message))
+      continue;
+    if (e.kind == kind) {
+      if (!e.matched) {
         e.matched = true;
         return MatchResult::Matched;
       }
-
+      alreadyMatched = &e;
+    } else if (!e.matched) {
       // If this only differs based on the diagnostic kind, then consider it
-      // to be a near miss.
+      // to be a near miss. A directive that already matched another
+      // diagnostic is not a near miss.
       nearMiss = &e;
     }
   }
+  // Unless oneDiagPerDirective is set, a directive can match again.
+  if (alreadyMatched)
+    return MatchResult::Matched;
 
   if (!reportUnexpected)
     return MatchResult::Ignored;
