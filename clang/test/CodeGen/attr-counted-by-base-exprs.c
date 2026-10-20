@@ -154,18 +154,27 @@ int test_index_post_inc_base_ptr(int i) {
   return global_p++->buf[i];
 }
 
-// When there's a cast in between, the base can't be shared with the check, so
-// the check is skipped instead of evaluating the base twice.
+// A cast in between doesn't stop the check from reusing the base: it's still
+// checked, and 'get_p()' is still only called once.
 // CHECK-LABEL: define dso_local range(i32 -128, 128) i32 @test_index_side_effect_base_ptr_through_cast(
 // CHECK-SAME: i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @get_p() #[[ATTR9]]
+// CHECK-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr [[CALL]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[I]], [[DOTCOUNTED_BY_LOAD]], !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[DOTCOUNTED_BY_LOAD]], 0, !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]], !nosanitize [[META6]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 18) #[[ATTR10]], !nosanitize [[META6]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META6]]
+// CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[BUF]], align 8, !tbaa [[INTPTR_TBAA9]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA15:![0-9]+]]
-// CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[CHAR_TBAA15:![0-9]+]]
+// CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP4]] to i32
 // CHECK-NEXT:    ret i32 [[CONV]]
 //
 int test_index_side_effect_base_ptr_through_cast(int i) {

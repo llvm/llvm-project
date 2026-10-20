@@ -56,6 +56,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
@@ -5351,32 +5352,24 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     }
 
     // The bounds check locates the count relative to the pointer field's
-    // address. When the base is exactly the field load, emit the field's
-    // l-value once and load the pointer from it, so that the struct base
-    // (which may have side-effects, e.g. 'get()->buf[i]' or 'p++->buf[i]')
-    // isn't evaluated a second time for the check. This mirrors the default
-    // case of EmitPointerWithAlignment. The load goes through EmitLoadOfLValue,
-    // not EmitLoadOfScalar, so that a '__ptrauth'-qualified field is
-    // authenticated before it's used. Bypassing ScalarExprEmitter also skips
-    // the 'align_value' assumption it emits for loads, so emit that here, or
-    // enabling '-fsanitize=array-bounds' would drop it along with its
-    // '-fsanitize=alignment' check.
-    Address CountedByFieldAddr = Address::invalid();
+    // address. Record the field's l-value while the base is emitted, so that
+    // the struct base (which may have side-effects, e.g. 'get()->buf[i]' or
+    // 'p++->buf[i]') isn't evaluated a second time for the check. The base
+    // itself is emitted exactly as it is without the sanitizer, so the load
+    // keeps its debug location, '__ptrauth' authentication, 'align_value'
+    // assumption, and so on.
+    LoadedLValueCapture FieldCapture{CountedByME, std::nullopt};
     Address BaseAddr = Address::invalid();
-    if (CountedByME && E->getBase()->IgnoreParens() == CountedByLoad) {
-      LValue FieldLV = EmitCheckedLValue(CountedByME, TCK_Load);
-      CountedByFieldAddr = FieldLV.getAddress();
-      llvm::Value *Ptr =
-          EmitLoadOfLValue(FieldLV, CountedByME->getExprLoc()).getScalarVal();
-      EmitLValueAlignmentAssumption(CountedByME, Ptr);
-      BaseAddr = makeNaturalAddressForPointer(
-          Ptr, E->getBase()->getType()->getPointeeType(), CharUnits(),
-          /*ForPointeeType=*/true, &EltBaseInfo, &EltTBAAInfo);
-    } else {
+    {
+      llvm::SaveAndRestore SavedCapture(CurLoadedLValueCapture,
+                                        CountedByME ? &FieldCapture : nullptr);
       // The base must be a pointer; emit it with an estimate of its alignment.
       BaseAddr =
           EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     }
+
+    Address CountedByFieldAddr =
+        FieldCapture.LV ? FieldCapture.LV->getAddress() : Address::invalid();
 
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
@@ -5385,11 +5378,11 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
 
-    // Without the field's address (e.g. '((char *)p->buf)[i]'),
-    // EmitCountedByBoundsChecking re-emits the field's l-value. That only
-    // recomputes the field's address, so it's safe unless the struct base has
-    // side-effects. In that case skip the check rather than evaluating the
-    // base twice.
+    // If the field wasn't loaded through ScalarExprEmitter (e.g. it was
+    // constant folded), EmitCountedByBoundsChecking re-emits the field's
+    // l-value. That only recomputes the field's address, so it's safe unless
+    // the struct base has side-effects. In that case skip the check rather
+    // than evaluating the base twice.
     if (CountedByME && (CountedByFieldAddr.isValid() ||
                         !CountedByME->getBase()->HasSideEffects(getContext())))
       EmitCountedByBoundsChecking(CountedByLoad, ptrType, CountedByFieldAddr,

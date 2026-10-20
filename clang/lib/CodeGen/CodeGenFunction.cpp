@@ -2822,41 +2822,6 @@ void CodeGenFunction::emitAlignmentAssumption(llvm::Value *PtrValue,
                           OffsetValue);
 }
 
-void CodeGenFunction::EmitLValueAlignmentAssumption(const Expr *E,
-                                                    llvm::Value *V) {
-  const AlignValueAttr *AVAttr = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-    const ValueDecl *VD = DRE->getDecl();
-
-    if (VD->getType()->isReferenceType()) {
-      if (const auto *TTy =
-              VD->getType().getNonReferenceType()->getAs<TypedefType>())
-        AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
-    } else {
-      // Assumptions for function parameters are emitted at the start of the
-      // function, so there is no need to repeat that here,
-      // unless the alignment-assumption sanitizer is enabled,
-      // then we prefer the assumption over alignment attribute
-      // on IR function param.
-      if (isa<ParmVarDecl>(VD) && !SanOpts.has(SanitizerKind::Alignment))
-        return;
-
-      AVAttr = VD->getAttr<AlignValueAttr>();
-    }
-  }
-
-  if (!AVAttr)
-    if (const auto *TTy = E->getType()->getAs<TypedefType>())
-      AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
-
-  if (!AVAttr)
-    return;
-
-  llvm::Value *AlignmentValue = EmitScalarExpr(AVAttr->getAlignment());
-  llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(AlignmentValue);
-  emitAlignmentAssumption(V, E, AVAttr->getLocation(), AlignmentCI);
-}
-
 llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Function *AnnotationFn,
                                                  llvm::Value *AnnotatedVal,
                                                  StringRef AnnotationStr,

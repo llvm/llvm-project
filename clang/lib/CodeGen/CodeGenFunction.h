@@ -651,6 +651,22 @@ public:
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
 
+  /// Records the l-value that ScalarExprEmitter loads from when it emits a
+  /// specific expression. EmitArraySubscriptExpr sets this while emitting the
+  /// base of a 'counted_by' pointer subscript, so that the bounds check can
+  /// locate the count from the pointer field's address without re-emitting
+  /// (and so re-evaluating) the base. Capturing the l-value, instead of
+  /// emitting the load separately, keeps everything else the scalar load path
+  /// does (debug locations, 'align_value' assumptions, pseudo variables for
+  /// -fdebug-info-for-profiling, etc.).
+  struct LoadedLValueCapture {
+    /// The expression whose l-value is recorded.
+    const Expr *E;
+    /// The recorded l-value, set if \c E was loaded by ScalarExprEmitter.
+    std::optional<LValue> LV;
+  };
+  LoadedLValueCapture *CurLoadedLValueCapture = nullptr;
+
   /// Returns true if a function must make progress, which means the
   /// mustprogress attribute can be added.
   bool checkIfFunctionMustProgress() {
@@ -3692,12 +3708,6 @@ public:
                                SourceLocation AssumptionLoc,
                                llvm::Value *Alignment,
                                llvm::Value *OffsetValue = nullptr);
-
-  /// Emit the alignment assumption implied by an 'align_value' attribute on
-  /// the declaration or typedef of the loaded l-value \p E, whose value is
-  /// \p V. Anything that loads a pointer from an l-value expression without
-  /// going through ScalarExprEmitter must call this to keep the assumption.
-  void EmitLValueAlignmentAssumption(const Expr *E, llvm::Value *V);
 
   //===--------------------------------------------------------------------===//
   //                             Statement Emission

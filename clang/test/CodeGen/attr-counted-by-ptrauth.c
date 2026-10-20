@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm -o - %s | FileCheck %s
 
 // A '__ptrauth'-qualified 'counted_by' pointer must still be authenticated
-// before it's indexed when -fsanitize=array-bounds emits the field's l-value
-// itself to share it with the bounds check.
+// before it's indexed when -fsanitize=array-bounds shares the field's l-value
+// with the bounds check.
 
 struct pa {
   int count;
