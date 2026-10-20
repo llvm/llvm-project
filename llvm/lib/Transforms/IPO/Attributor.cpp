@@ -4032,23 +4032,30 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     AttrOnlyPA.preserve<ShouldNotRunFunctionPassesAnalysis>();
 
     const auto &IRModified = A.getModifiedFunctions();
-    SmallSetVector<Function *, 8> ChangedFunctions(IRModified);
-    ChangedFunctions.insert_range(A.getAttrModifiedFunctions());
-    for (Function *Changed : ChangedFunctions) {
-      FAM.invalidate(*Changed,
-                     IRModified.contains(Changed) ? FuncPA : AttrOnlyPA);
-      // Also invalidate any direct callers of changed functions since analyses
-      // may care about attributes of direct callees. For example, MemorySSA
-      // cares about whether or not a call's callee modifies memory and queries
-      // that through function attributes.
-      for (auto *U : Changed->users()) {
-        if (auto *Call = dyn_cast<CallBase>(U)) {
-          if (Call->getCalledFunction() == Changed &&
-              !IRModified.contains(Call->getFunction())) {
-            FAM.invalidate(*Call->getFunction(), AttrOnlyPA);
-          }
-        }
+
+    // Also invalidate any direct callers of changed functions since analyses
+    // may care about attributes of direct callees. For example, MemorySSA
+    // cares about whether or not a call's callee modifies memory and queries
+    // that through function attributes.
+    auto InvalidateCallers = [&](Function &Changed) {
+      for (auto *U : Changed.users()) {
+        auto *Call = dyn_cast<CallBase>(U);
+        if (Call && Call->getCalledFunction() == &Changed &&
+            !IRModified.contains(Call->getFunction()))
+          FAM.invalidate(*Call->getFunction(), AttrOnlyPA);
       }
+    };
+
+    for (Function *Changed : IRModified) {
+      FAM.invalidate(*Changed, FuncPA);
+      InvalidateCallers(*Changed);
+    }
+
+    for (Function *Changed : A.getAttrModifiedFunctions()) {
+      if (IRModified.contains(Changed))
+        continue;
+      FAM.invalidate(*Changed, AttrOnlyPA);
+      InvalidateCallers(*Changed);
     }
   }
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
