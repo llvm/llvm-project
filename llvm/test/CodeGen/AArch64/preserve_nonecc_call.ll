@@ -523,9 +523,9 @@ define i64 @caller3() {
   ret i64 %ret
 }
 
-; The same register list is used for i32 arguments. The 24th argument lands in
-; w15 except on Windows, where X15 is reserved for stack allocation and the
-; argument is passed on the stack instead.
+;; The same register list is used for i32 arguments. The 24th argument lands in
+;; w15 except on Windows, where X15 is reserved for stack allocation and the
+;; argument is passed on the stack instead.
 declare preserve_nonecc i32 @callee_with_many_param_i32_2(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19, i32 %a20, i32 %a21, i32 %a22, i32 %a23, i32 %a24)
 define preserve_nonecc i32 @callee_with_many_param_i32(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19, i32 %a20, i32 %a21, i32 %a22, i32 %a23, i32 %a24) {
 ; CHECK-LABEL: callee_with_many_param_i32:
