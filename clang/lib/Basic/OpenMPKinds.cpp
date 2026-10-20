@@ -947,7 +947,10 @@ bool clang::isOpenMPOrderConcurrentNestableDirective(
 }
 
 bool clang::isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                        OpenMPBindClauseKind BindKind,
                                         const LangOptions &LangOpts) {
+  if (DKind == OMPD_loop) // binding region undefined: bind(thread)
+    return BindKind == OMPC_BIND_thread;
   // Directives that may be encountered during execution of a simd region are:
   // OpenMP 5.x: ordered simd, simd, scan and atomic
   // OpenMP 6.0: above plus all loop-transformation directives

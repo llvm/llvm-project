@@ -5417,12 +5417,8 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   // encountered during execution of an enclosing simd region.
   if (Stack->isInSimdRegion() &&
       ((OMPVersion <= 45 && CurrentRegion != OMPD_ordered_blockassoc) ||
-       (OMPVersion >= 50 &&
-        !isOpenMPSimdizableDirective(CurrentRegion, SemaRef.LangOpts) &&
-        // The loop construct is simdizable if and only if its binding region
-        // is not defined: no bind clause, or bind(thread).
-        !(CurrentRegion == OMPD_loop &&
-          (BindKind == OMPC_BIND_unknown || BindKind == OMPC_BIND_thread))))) {
+       (OMPVersion >= 50 && !isOpenMPSimdizableDirective(
+                                CurrentRegion, BindKind, SemaRef.LangOpts)))) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside a simd region.
     // OpenMP [2.8.1,simd Construct, Restrictions]
