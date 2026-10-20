@@ -62,6 +62,8 @@ struct ParserOptionsSet {
 };
 
 class RISCVAsmParser : public MCTargetAsmParser {
+  const RISCVMCOptions &CLOpts;
+
   // This tracks the parsing of the 4 optional operands that make up the vtype
   // portion of vset(i)vli instructions which are separated by commas.
   enum class VTypeState {
@@ -320,7 +322,8 @@ public:
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII)
-      : MCTargetAsmParser(STI, MII) {
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(RISCV_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
     MCAsmParserExtension::Initialize(Parser);
 
     Parser.addAliasForDirective(".half", ".2byte");
@@ -332,7 +335,7 @@ public:
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
-    if (RISCVMCOptions::Global.add_build_attributes)
+    if (CLOpts.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 
@@ -1093,9 +1096,10 @@ public:
   }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
-    auto RegName = [](MCRegister Reg) {
+    const RISCVMCOptions &CLOpts = RISCV_MC::getCLOpts(MAI.getTargetOptions());
+    auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return RISCVInstPrinter::getRegisterName(Reg);
+        return RISCVInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
@@ -4395,8 +4399,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       for (unsigned i = 0; i < RegLmul; i++) {
         if ((RegEnc + i) == MaskEnc) {
           SMLoc Loc = Operands[Idx]->getStartLoc();
-          return Error(Loc, Twine("register conflicts with vmask register ") +
-                                RISCVInstPrinter::getRegisterName(MaskReg));
+          return Error(Loc,
+                       Twine("register conflicts with vmask register ") +
+                           RISCVInstPrinter::getRegisterName(CLOpts, MaskReg));
         }
       }
     }

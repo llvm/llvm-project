@@ -239,10 +239,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  assert(!Conf.Options.MCOptions.LibraryOptions &&
+         "set Config::LibraryOptions instead");
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
+  TargetOpts.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,

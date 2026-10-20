@@ -109,9 +109,24 @@ public:
     return *this;
   }
 
+  /// Sets how the usage line describes the positional arguments, e.g.
+  /// "<input-file>". Defaults to "[positional arguments]".
+  OptionParser &setPositionalUsage(std::string_view Usage) {
+    PositionalUsage = Usage;
+    return *this;
+  }
+
+  /// Sets text to print after the options, e.g. to describe the syntax of the
+  /// positional arguments. It is printed as given, after a blank line.
+  OptionParser &setEpilogue(std::string_view Text) {
+    Epilogue = Text;
+    return *this;
+  }
+
   std::string formatHelp(std::string_view ProgramName) const {
     StringOutputStream OS;
-    OS << "Usage: " << ProgramName << " [options] [positional arguments]\n\n";
+    OS << "Usage: " << ProgramName << " [options] " << PositionalUsage
+       << "\n\n";
     OS << "OPTIONS:\n";
 
     bool AnyShortNames =
@@ -146,6 +161,9 @@ public:
 
       OS << ljust(FlagStr, MaxWidth + 2) << Opt.Desc << "\n";
     }
+
+    if (!Epilogue.empty())
+      OS << "\n" << Epilogue;
 
     return std::move(OS).str();
   }
@@ -228,6 +246,8 @@ private:
 
   std::vector<std::string> Positionals;
   std::vector<Option> Opts;
+  std::string PositionalUsage = "[positional arguments]";
+  std::string Epilogue;
 
   const Option *findOpt(std::string_view L) const {
     auto It = std::find_if(Opts.begin(), Opts.end(),

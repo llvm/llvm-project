@@ -85,9 +85,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
     if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -383,7 +380,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
              DeviceInfo::MAX_CLOCK_FREQUENCY);
     Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
              "bits", DeviceInfo::ADDRESS_BITS);
-    Info.add("Local memory size (bytes)", 1, "",
+    // The host has no work group shared memory.
+    Info.add("Local memory size (bytes)", 0, "",
              DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
     Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
     Info.add("Max Memory Allocation Size (bytes)", 1, "",

@@ -2756,9 +2756,9 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
-  if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
+  if (ConstantSDNode *N2C = isConstOrConstSplat(N2)) {
     const APInt &C2 = N2C->getAPIntValue();
-    if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
+    if (ConstantSDNode *N1C = isConstOrConstSplat(N1)) {
       const APInt &C1 = N1C->getAPIntValue();
 
       return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
@@ -3782,6 +3782,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known = KnownBits::avgCeilS(Known, Known2);
+    break;
+  }
+  case ISD::AVGSUBFLOORU:
+  case ISD::AVGSUBFLOORS: {
+    bool IsSigned = Op.getOpcode() == ISD::AVGSUBFLOORS;
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    // Subtract in i[N+1] so the difference can't overflow, then halve.
+    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = KnownBits::sub(Known, Known2);
+    // The shifted in top bit is unknown, but it is truncated away.
+    Known >>= 1;
+    Known = Known.trunc(BitWidth);
     break;
   }
   case ISD::SELECT:
@@ -5371,6 +5385,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
+  case ISD::AVGSUBFLOORS:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1; // Early out.
@@ -6007,6 +6022,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::ABDU:
   case ISD::ABDS:
   case ISD::SMIN:
@@ -7614,6 +7631,10 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::avgCeilS(C1, C2);
   case ISD::AVGCEILU:
     return APIntOps::avgCeilU(C1, C2);
+  case ISD::AVGSUBFLOORS:
+    return APIntOps::avgSubFloorS(C1, C2);
+  case ISD::AVGSUBFLOORU:
+    return APIntOps::avgSubFloorU(C1, C2);
   case ISD::ABDS:
     return APIntOps::abds(C1, C2);
   case ISD::ABDU:
@@ -7803,6 +7824,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return V;
         break;
       case ISD::BITCAST:
+        if (C->isOpaque())
+          break;
         if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
           return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
         if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
@@ -8685,6 +8708,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
@@ -10339,6 +10364,14 @@ SDValue SelectionDAG::getMemcpy(
   return CallResult.second;
 }
 
+static TargetLoweringBase::ArgListEntry
+getAtomicMemOpSizeArg(SelectionDAG *DAG, const SDLoc &dl, SDValue Size) {
+  const Module &M = *DAG->getMachineFunction().getFunction().getParent();
+  Type *SizeTTy = DAG->getLibInfo().getSizeTType(M);
+  return TargetLoweringBase::ArgListEntry(
+      DAG->getZExtOrTrunc(Size, dl, MVT::getVT(SizeTTy)), SizeTTy);
+}
+
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       SDValue Dst, SDValue Src, SDValue Size,
                                       Type *SizeTy, unsigned ElemSz,
@@ -10354,7 +10387,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
   Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, ArgTy);
   Args.emplace_back(Src, ArgTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10471,7 +10504,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
   Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, IntPtrTy);
   Args.emplace_back(Src, IntPtrTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10607,10 +10640,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
   isTailCall &= !hasSwiftErrorArg();
 
   // Emit a library call.
+  MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
-  Args.emplace_back(Value, Type::getInt8Ty(*getContext()));
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAnyExtOrTrunc(Value, dl, IntVT),
+                    Type::getIntNTy(*getContext(), LibInfo->getIntSize()),
+                    LibInfo->getExtAttrForI32Param());
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -14074,12 +14110,6 @@ bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   ConstantSDNode *C =
       isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation=*/true);
   return C && C->getAPIntValue().countTrailingOnes() >= BitWidth;
-}
-
-bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && APInt::isSameValue(C->getAPIntValue(),
-                                 APInt(C->getAPIntValue().getBitWidth(), 1));
 }
 
 bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {

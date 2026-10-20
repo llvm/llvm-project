@@ -680,6 +680,8 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1458,12 +1460,11 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   let summary = "Represents a scope with associated cleanup code";
   let description = [{
     `cir.cleanup.scope` contains a body region and a cleanup region. The body
-    region is executed first, and the cleanup region is executed when the body
-    region is exited, either normally or due to an exception.
+    region runs first, and the cleanup region may run when the body region is
+    exited.
 
-    The cleanup kind attribute specifies when the cleanup region should be
-    executed:
-    - `none`: No cleanup (cleanup region is empty/unused)
+    The cleanup kind attribute specifies which exits from the body region run
+    the cleanup region:
     - `normal`: Cleanup is executed only on normal exit
     - `eh`: Cleanup is executed only on exception unwinding
     - `all`: Cleanup is executed on both normal exit and exception unwinding
@@ -1904,6 +1905,9 @@ def CIR_BrOp : CIR_Op<"br",[
     Note that for source level `goto`'s crossing scope boundaries, those are
     usually represented with the "symbolic" `cir.goto` operation.
 
+    When a loop is flattened, the optional `loop_hints` attribute is placed on
+    the branches that form the loop's back edge (see `cir.brcond`).
+
     Example:
 
     ```
@@ -1922,10 +1926,12 @@ def CIR_BrOp : CIR_Op<"br",[
     }]>
   ];
 
-  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
-    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -2237,6 +2243,10 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
     it branches to 'bb1'.
 
+    The optional `loop_hints` attribute is attached by CFG flattening to
+    branches that target a loop header (i.e. the loop's back edge), carrying
+    the `#cir.loop_hint` of the original loop op.
+
     Example:
 
     ```
@@ -2254,20 +2264,21 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
                CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
                CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
       build($_builder, $_state, cond, destOperandsTrue,
-            destOperandsFalse, destTrue, destFalse);
+            destOperandsFalse, /*loop_hints=*/nullptr, destTrue, destFalse);
     }]>
   ];
 
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
-                       Variadic<CIR_AnyType>:$destOperandsFalse);
+                       Variadic<CIR_AnyType>:$destOperandsFalse,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
     $cond
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
-    attr-dict
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 }
 
@@ -2368,11 +2379,13 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let description = [{
@@ -2448,8 +2461,11 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
+  let arguments = (ins OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
-  let assemblyFormat = " $body `while` $cond attr-dict";
+  let assemblyFormat = [{
+    $body `while` $cond (`loop_hints` $loop_hints^)? attr-dict
+  }];
 
   let extraClassDeclaration = [{
     mlir::Region &getEntry() { return getBody(); }
@@ -2523,7 +2539,8 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
                         MinSizedRegion<1>:$step,
@@ -2533,6 +2550,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `body` $body
     `step` $step
     (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)?
     attr-dict
   }];
 
@@ -2920,12 +2938,12 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
 // DivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
+def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer division";
   let description = [{
     The `cir.div` operation performs division on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     Example:
 
@@ -2933,6 +2951,7 @@ def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
     %0 = cir.div %a, %b : !s32i
     %1 = cir.div %a, %b : !u32i
     %2 = cir.div %va, %vb : !cir.vector<4 x !s32i>
+    %3 = cir.div %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2966,22 +2985,26 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // and result must all be the same floating-point scalar or vector type.
 //
 // The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation.
+// handling of the operation. The optional `fastmath_flags` attribute holds the
+// fast-math flags of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
                      Type type = CIR_AnyFloatOrVecOfFloatType>
     : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
-  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FenvAttr>:$fenv,
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? attr-dict
+    $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let constrainedLLVMIntrinsic = mnemonic;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 }
@@ -3064,12 +3087,12 @@ def CIR_FMulOp : CIR_FPBinaryOp<"fmul", [], CIR_AnyFloatOrVecOrMatrixOfFloatType
 // FDivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
+def CIR_FDivOp : CIR_FPBinaryOp<"fdiv", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point division";
   let description = [{
     The `cir.fdiv` operation performs floating-point division on its operands.
     Both operands and the result must have the same floating-point scalar or
-    vector-of-float type.
+    ector-of-float or matrix-of-float type.
 
     Example:
 
@@ -3077,6 +3100,7 @@ def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
     %0 = cir.fdiv %a, %b : !cir.float
     %1 = cir.fdiv %a, %b : !cir.double
     %2 = cir.fdiv %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fdiv %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -4388,7 +4412,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
-    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable,
+    OptionalAttr<CIR_FramePointerKindAttr>:$frame_pointer
   );
 
   let regions = (region AnyRegion:$body);
@@ -5336,7 +5361,9 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
 
 def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
   Pure, Terminator, HasParent<"AwaitOp">,
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+    "getMutableSuccessorOperands"
+  ]>
 ]> {
   let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
@@ -5354,11 +5381,24 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
     - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
       `cir.coroutine`'s `destroy` region when the coroutine handle is
       destroyed.
+
+    When the optional `cond` operand is present, a `false` value vetoes the
+    suspension and control branches directly to the `resume` region of the
+    enclosing `cir.await`. A `true` value indicates the coroutine actually
+    suspends.
   }];
 
+  let arguments = (ins Optional<CIR_AnyBoolType>:$cond);
+
   let assemblyFormat = [{
-    attr-dict
+    (`(` $cond^ `)`)? attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins), [{
+      /* No operands. */
+    }]>
+  ];
 
   let hasLLVMLowering = false;
 }
@@ -5521,10 +5561,15 @@ def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
     ```
   }];
 
-  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+  let arguments = !con(commonArgs, (ins
+    CIR_AnyFundamentalUIntType:$len,
+    OptionalAttr<I64Attr>:$dst_alignment,
+    OptionalAttr<I64Attr>:$src_alignment
+  ));
 
   let assemblyFormat = [{
-    $len `bytes` `from` $src `to` $dst attr-dict
+    $len `bytes` `from` $src (`align` `(` $src_alignment^ `)`)?
+    `to` $dst (`align` `(` $dst_alignment^ `)`)? attr-dict
     `:` qualified(type($dst)) `,` type($len)
   }];
 
@@ -7281,11 +7326,16 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 
 class CIR_ComplexFPBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexOfFloatType:$lhs, CIR_ComplexOfFloatType:$rhs);
+  let arguments = (ins
+    CIR_ComplexOfFloatType:$lhs,
+    CIR_ComplexOfFloatType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
   let results = (outs CIR_ComplexOfFloatType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `:` qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
   }];
 }
 
@@ -10276,6 +10326,53 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// OffloadPrintfOp
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadPrintfOp : CIR_Op<"offload.printf"> {
+  let summary = "Device-side printf";
+  let description = [{
+    Represents a call to `printf` in device code. The target is responsible for
+    the appropriate lowering.
+
+    `format` is the format string and `args` are the remaining arguments,
+    after the language's default argument promotions. `result` is the value
+    `printf` returns on the target, which follows the target's conventions
+    rather than C's.
+
+    Like the GPU dialect's `gpu.printf`, the op represents a device printf
+    independently of the target, and each target expands it when lowering.
+    Unlike `gpu.printf`, it must represent any call to C `printf`, so:
+
+    - `format` is a value rather than an attribute, as the format string need
+      not be a constant.
+    - `args` may also be pointers, such as strings printed with `%s`,
+      pointers to data members, and vectors.
+    - The op returns the result of `printf`.
+    - The op has no memory effect annotations, as printing may read memory
+      through `format` and `args`.
+
+    Example:
+
+    ```
+    %r = cir.offload.printf(%fmt, %v) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PtrToChar8Type:$format,
+    Variadic<AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
+                        CIR_AnyDataMemberType, CIR_AnyVectorType]>>:$args
+  );
+
+  let results = (outs CIR_SInt32:$result);
+
+  let assemblyFormat = [{
+    `(` $format (`,` $args^)? `)` attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 //===----------------------------------------------------------------------===//

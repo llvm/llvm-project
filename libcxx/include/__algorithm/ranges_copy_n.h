@@ -36,8 +36,7 @@ using copy_n_result = in_out_result<_Ip, _Op>;
 struct __copy_n {
   template <input_iterator _Ip, weakly_incrementable _Op>
     requires indirectly_copyable<_Ip, _Op>
-  _LIBCPP_HIDE_FROM_ABI constexpr copy_n_result<_Ip, _Op>
-  operator()(_Ip __first, iter_difference_t<_Ip> __n, _Op __result) const {
+  constexpr copy_n_result<_Ip, _Op> operator()(_Ip __first, iter_difference_t<_Ip> __n, _Op __result) const {
     return std::__copy_n<_RangeAlgPolicy>(std::move(__first), __n, std::move(__result));
   }
 };
