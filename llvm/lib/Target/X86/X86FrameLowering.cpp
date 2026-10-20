@@ -39,6 +39,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cstdlib>
+#include <optional>
 
 #define DEBUG_TYPE "x86-fl"
 
@@ -2737,7 +2738,7 @@ static MCRegister findDeadScratchReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Terminator,
     const TargetRegisterInfo *TRI, const TargetRegisterClass &RC,
     ArrayRef<MCRegister> ExtraLive,
-    MachineBasicBlock::iterator From = MachineBasicBlock::iterator()) {
+    std::optional<MachineBasicBlock::iterator> From = std::nullopt) {
   MachineFunction &MF = *MBB.getParent();
   LiveRegUnits LRU(*TRI);
   LRU.addLiveOuts(MBB);
@@ -2748,8 +2749,8 @@ static MCRegister findDeadScratchReg(
     if (!LRU.available(R) || MF.getRegInfo().isReserved(R) ||
         TRI->isCalleeSavedPhysReg(R, MF))
       continue;
-    if (From != MachineBasicBlock::iterator() &&
-        any_of(make_range(From, Terminator), [&](const MachineInstr &MI) {
+    if (From &&
+        any_of(make_range(*From, Terminator), [&](const MachineInstr &MI) {
           return MI.readsRegister(R, TRI) || MI.modifiesRegister(R, TRI);
         }))
       continue;
@@ -2817,53 +2818,29 @@ static OldReturnAddressStores detachOldReturnAddressStores(
     // The source must still hold the stored value where the store will go. The
     // callee-saved restores are not a problem: the epilogue is arranged so that
     // they happen after the store.
-    const MachineInstr *Redefinition = nullptr;
+    bool Redefined = false;
     for (MachineInstr &Later :
          make_range(std::next(MachineBasicBlock::iterator(MI)), Terminator))
       if (!Later.getFlag(MachineInstr::FrameDestroy) &&
           Later.modifiesRegister(Src, TRI)) {
-        Redefinition = &Later;
+        Redefined = true;
         break;
       }
-    if (Redefinition) {
+    if (Redefined) {
       // The register allocator can split the live range of the value, so the
       // store still reads the register that the tail call setup then reuses
       // (for example a swiftasync context in r14 that is also passed on the
       // stack). Keep the value in a scratch register from here to the store.
-      unsigned Bits = 0;
-      const TargetRegisterClass *RC = nullptr;
-      if (X86::VR128RegClass.contains(Src)) {
-        RC = &X86::VR128RegClass;
-      } else {
-        if (X86::GR64RegClass.contains(Src))
-          Bits = 64;
-        else if (X86::GR32RegClass.contains(Src))
-          Bits = 32;
-        else if (X86::GR16RegClass.contains(Src))
-          Bits = 16;
-        else if (X86::GR8RegClass.contains(Src))
-          Bits = 8;
-        if (Bits)
-          RC = &X86::GR64RegClass;
-      }
-      MCRegister Tmp;
-      if (RC)
-        Tmp = findDeadScratchReg(MBB, Terminator, TRI, *RC, Result.LiveSources,
-                                 MachineBasicBlock::iterator(MI));
-      if (!Tmp) {
-        std::string Msg;
-        raw_string_ostream OS(Msg);
-        OS << "Can't move the store of a tail call argument that overwrites "
-              "the return address under win64 (in function '"
-           << MF.getName() << "', the source register " << printReg(Src, TRI)
-           << " is redefined before the tail call and there is no scratch "
-              "register)\n  store: "
-           << *MI << "  redefined by: " << *Redefinition << "block:\n";
-        MBB.print(OS);
-        report_fatal_error(Twine(Msg));
-      }
-      if (Bits)
-        Tmp = getX86SubSuperRegister(Tmp, Bits);
+      // The scratch comes from the smallest class containing Src, which for
+      // high-byte registers (ah, ...) keeps the copy and store encodable.
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Src);
+      assert(RC && "Source of a return address store has no register class");
+      MCRegister Tmp =
+          findDeadScratchReg(MBB, Terminator, TRI, *RC, Result.LiveSources,
+                             MachineBasicBlock::iterator(MI));
+      if (!Tmp)
+        report_fatal_error("Can't move the store of a tail call argument that "
+                           "overwrites the return address under win64");
       TII.copyPhysReg(MBB, MachineBasicBlock::iterator(MI), MI->getDebugLoc(),
                       Tmp, Src, /*KillSrc=*/false);
       MI->getOperand(X86::AddrNumOperands).setReg(Tmp);
@@ -2958,7 +2935,7 @@ void X86FrameLowering::emitWin64ReserveExit(
   // A return that pops too many bytes for ret's 16-bit immediate: FPDiff is
   // that number of bytes, and the return address is moved up past them instead.
   const bool IsLargePopReturn =
-      Terminator->getOpcode() == X86::RET && FPDiff != 0;
+      Terminator->getOpcode() == X86::RET && FPDiff > 0;
   const int64_t StackSize = MFI.getStackSize();
   const DebugLoc DL = Terminator->getDebugLoc();
   const Register FramePtr = TRI->getFrameRegister(MF);

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
 
 ; A tail call target held in a stack slot must be loaded in the body: after the
 ; epilogue moves RSP the slot is below it, where Win64 gives no guarantee that

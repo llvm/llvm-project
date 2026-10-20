@@ -1,4 +1,4 @@
-; RUN: sed 's/UNWIND_MODE/2/' %s | not --crash llc -mtriple=x86_64-pc-windows-msvc 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc %s -o - 2>&1 | FileCheck %s
 
 ; The moved return address is only described by classic (V1) unwind info.
 
@@ -9,4 +9,4 @@ define tailcc void @big([9000 x i64] %a) {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"winx64-eh-unwind", i32 UNWIND_MODE}
+!0 = !{i32 1, !"winx64-eh-unwind", i32 2}

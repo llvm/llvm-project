@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc -stop-after=finalize-isel < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=LINUX
+; RUN: llc -mtriple=x86_64-pc-windows-msvc -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=LINUX
 
 ; The call grows the stack-argument area, so an outgoing argument overwrites the
 ; caller's return-address slot. On Win64 the value stored there is kept live in

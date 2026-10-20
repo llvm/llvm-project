@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
 
 ; A frame with a dynamic alloca and an over-aligned object: RSP is not known
 ; statically, but the frame pointer is derived before the stack is realigned, so
