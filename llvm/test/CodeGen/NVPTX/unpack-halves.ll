@@ -284,7 +284,7 @@ define void @unpack_scale_bf16(i32 %word, ptr addrspace(1) %out_lo, ptr addrspac
 ; OLD-LABEL: unpack_scale_bf16(
 ; OLD:       {
 ; OLD-NEXT:    .reg .pred %p<3>;
-; OLD-NEXT:    .reg .b32 %r<18>;
+; OLD-NEXT:    .reg .b32 %r<20>;
 ; OLD-NEXT:    .reg .b64 %rd<3>;
 ; OLD-EMPTY:
 ; OLD-NEXT:  // %bb.0:
@@ -293,24 +293,26 @@ define void @unpack_scale_bf16(i32 %word, ptr addrspace(1) %out_lo, ptr addrspac
 ; OLD-NEXT:    ld.param.b64 %rd2, [unpack_scale_bf16_param_2];
 ; OLD-NEXT:    shl.b32 %r2, %r1, 16;
 ; OLD-NEXT:    mul.rn.f32 %r3, %r2, 0f7E800000;
-; OLD-NEXT:    bfe.u32 %r4, %r3, 16, 1;
-; OLD-NEXT:    add.s32 %r5, %r4, %r3;
-; OLD-NEXT:    add.s32 %r6, %r5, 32767;
+; OLD-NEXT:    shr.u32 %r4, %r3, 16;
+; OLD-NEXT:    and.b32 %r5, %r4, 1;
+; OLD-NEXT:    add.s32 %r6, %r5, %r3;
+; OLD-NEXT:    add.s32 %r7, %r6, 32767;
 ; OLD-NEXT:    setp.nan.f32 %p1, %r3, %r3;
-; OLD-NEXT:    or.b32 %r7, %r3, 4194304;
-; OLD-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; OLD-NEXT:    shr.u32 %r9, %r8, 16;
-; OLD-NEXT:    and.b32 %r10, %r1, -65536;
-; OLD-NEXT:    mul.rn.f32 %r11, %r10, 0f7E800000;
-; OLD-NEXT:    bfe.u32 %r12, %r11, 16, 1;
-; OLD-NEXT:    add.s32 %r13, %r12, %r11;
-; OLD-NEXT:    add.s32 %r14, %r13, 32767;
-; OLD-NEXT:    setp.nan.f32 %p2, %r11, %r11;
-; OLD-NEXT:    or.b32 %r15, %r11, 4194304;
-; OLD-NEXT:    selp.b32 %r16, %r15, %r14, %p2;
-; OLD-NEXT:    shr.u32 %r17, %r16, 16;
-; OLD-NEXT:    st.global.b16 [%rd1], %r9;
-; OLD-NEXT:    st.global.b16 [%rd2], %r17;
+; OLD-NEXT:    or.b32 %r8, %r3, 4194304;
+; OLD-NEXT:    selp.b32 %r9, %r8, %r7, %p1;
+; OLD-NEXT:    shr.u32 %r10, %r9, 16;
+; OLD-NEXT:    and.b32 %r11, %r1, -65536;
+; OLD-NEXT:    mul.rn.f32 %r12, %r11, 0f7E800000;
+; OLD-NEXT:    shr.u32 %r13, %r12, 16;
+; OLD-NEXT:    and.b32 %r14, %r13, 1;
+; OLD-NEXT:    add.s32 %r15, %r14, %r12;
+; OLD-NEXT:    add.s32 %r16, %r15, 32767;
+; OLD-NEXT:    setp.nan.f32 %p2, %r12, %r12;
+; OLD-NEXT:    or.b32 %r17, %r12, 4194304;
+; OLD-NEXT:    selp.b32 %r18, %r17, %r16, %p2;
+; OLD-NEXT:    shr.u32 %r19, %r18, 16;
+; OLD-NEXT:    st.global.b16 [%rd1], %r10;
+; OLD-NEXT:    st.global.b16 [%rd2], %r19;
 ; OLD-NEXT:    ret;
 ;
 ; NEW-LABEL: unpack_scale_bf16(
