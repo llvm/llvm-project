@@ -890,65 +890,60 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       break;
 
     case TargetLowering::Expand: {
+      // Vector extending loads should be handled in LegalizeVectorOps,
+      // except for the special case of f16/bf16 vector extloads.
+      EVT SVT = SrcVT.getScalarType();
+      assert(((SVT.isInteger() && !SrcVT.isVector()) ||
+              ((SVT == MVT::f16 || SVT == MVT::bf16) &&
+               ExtType == ISD::EXTLOAD)) &&
+             "Expanding extending loads only for scalar integers and f16/bf16 "
+             "EXTLOAD");
+
       EVT DestVT = Node->getValueType(0);
       if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
                            ISD::EXTLOAD, false)) {
-        unsigned SrcBits = SrcVT.getSizeInBits();
-        unsigned DestBits = DestVT.getSizeInBits();
+        // If the source type is not legal, see if there is a legal extload to
+        // an intermediate type that we can then extend further.
+        if (SrcVT.isInteger()) {
+          assert(!SrcVT.isVector() &&
+                 "Scalar integer loads guaranteed by assert at top of case");
+          assert(DestVT.isInteger() &&
+                 "Extending load from integer must have integer destination");
+          unsigned SrcBits = SrcVT.getSizeInBits();
+          unsigned DestBits = DestVT.getSizeInBits();
 
-        // Build list of types to try in descending order by size.
-        SmallVector<EVT, 4> TypesToTry;
+          // Try larger integer types in descending order (prefer larger
+          // intermediates to minimize the number of extensions).
+          for (MVT IntVT : reverse(MVT::integer_valuetypes())) {
+            unsigned IntBits = IntVT.getSizeInBits();
+            // Try types between source and destination size.
+            if (IntBits < SrcBits || IntBits >= DestBits)
+              continue;
 
-        // Add standard integer types if source and dest are scalar integers.
-        if (!SrcVT.isVector() && SrcVT.isInteger() && DestVT.isInteger()) {
-          static const MVT IntTypes[] = {MVT::i64, MVT::i32, MVT::i16};
-          for (MVT Ty : IntTypes) {
-            unsigned TyBits = Ty.getSizeInBits();
-            if (TyBits >= SrcBits && TyBits < DestBits)
-              TypesToTry.push_back(Ty);
+            ISD::LoadExtType MidExtType =
+                (IntVT == SrcVT.getSimpleVT()) ? ISD::NON_EXTLOAD : ExtType;
+
+            if (TLI.isLoadLegal(IntVT, SrcVT, LD->getAlign(),
+                                LD->getAddressSpace(), MidExtType, false)) {
+              SDValue Load = DAG.getExtLoad(MidExtType, dl, IntVT, Chain, Ptr,
+                                            SrcVT, LD->getMemOperand());
+              unsigned ExtendOp =
+                  ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
+              Value = DAG.getNode(ExtendOp, dl, DestVT, Load);
+              Chain = Load.getValue(1);
+              break;
+            }
           }
-        }
 
-        // Insert the type chosen by getRegisterType if not already present.
-        EVT RegisterVT =
-            TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
-        if (RegisterVT.isFloatingPoint() == SrcVT.isFloatingPoint() &&
-            !llvm::is_contained(TypesToTry, RegisterVT)) {
-          unsigned RegisterBits = RegisterVT.getSizeInBits();
-          auto It = llvm::find_if(TypesToTry, [&](EVT VT) {
-            return VT.getSizeInBits() < RegisterBits;
-          });
-          TypesToTry.insert(It, RegisterVT);
-        }
-
-        for (EVT LoadVT : TypesToTry) {
-          // If the intermediate type equals the source, use NON_EXTLOAD,
-          // otherwise use the original extending load type.
-          ISD::LoadExtType MidExtType =
-              (LoadVT == SrcVT) ? ISD::NON_EXTLOAD : ExtType;
-
-          if (TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
-                              LD->getAddressSpace(), MidExtType, false)) {
-            SDValue Load = DAG.getExtLoad(MidExtType, dl, LoadVT, Chain, Ptr,
-                                          SrcVT, LD->getMemOperand());
-            unsigned ExtendOp =
-                ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
-            Value = DAG.getNode(ExtendOp, dl, DestVT, Load);
-            Chain = Load.getValue(1);
+          if (Value.getNode())
             break;
-          }
-        }
-
-        if (Value.getNode()) {
-          break;
-        }
-
-        // Handle the special case of fp16 extloads. EXTLOAD doesn't have the
-        // normal undefined upper bits behavior to allow using an in-reg extend
-        // with the illegal FP type, so load as an integer and do the
-        // from-integer conversion.
-        EVT SVT = SrcVT.getScalarType();
-        if (SVT == MVT::f16 || SVT == MVT::bf16) {
+        } else {
+          // Handle the special case of fp16 extloads. EXTLOAD doesn't have the
+          // normal undefined upper bits behavior to allow using an in-reg
+          // extend with the illegal FP type, so load as an integer and do the
+          // from-integer conversion.
+          assert((SVT == MVT::f16 || SVT == MVT::bf16) &&
+                 "Non-integer extending loads must be f16/bf16");
           EVT ISrcVT = SrcVT.changeTypeToInteger();
           EVT IDestVT = DestVT.changeTypeToInteger();
           EVT ILoadVT =
@@ -963,9 +958,6 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
           break;
         }
       }
-
-      assert(!SrcVT.isVector() &&
-             "Vector Loads are handled in LegalizeVectorOps");
 
       // FIXME: This does not work for vectors on most targets.  Sign-
       // and zero-extend operations are currently folded into extending
