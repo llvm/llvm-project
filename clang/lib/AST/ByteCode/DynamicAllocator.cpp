@@ -68,10 +68,9 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     return !Alloc.block()->hasPointers();
   });
 
-  auto Memory = std::make_unique<std::byte[]>(
-      sizeof(Block) + D->getAllocSize() + Block::InlineDescMD);
-  auto *B = new (Memory.get()) Block(EvalID, D, Block::InlineDescMD,
-                                     /*isStatic=*/false);
+  auto Memory =
+      std::make_unique<std::byte[]>(Block::allocSize(D, Block::Local));
+  auto *B = new (Memory.get()) Block(EvalID, D, Block::Local);
   B->invokeCtorNoMemset();
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
   ID->Desc = D;

@@ -56,28 +56,26 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
-  bool canBeInitialized() const { return Pointee && Base > 0; }
+  bool canBeInitialized() const { return Pointee; }
   const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
-  bool isRoot() const { return Base == Pointee->getMetadataSize(); }
+  bool isRoot() const { return Base == 0; }
 
   bool isConst() const {
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   InlineDescriptor *getInlineDesc() const {
-    assert(Base != sizeof(GlobalInlineDescriptor));
     assert(Base <= Pointee->getSize());
-    assert(Base >= sizeof(InlineDescriptor));
+    assert(Base != 0);
     return getDescriptor(Base);
   }
 
   InlineDescriptor *getDescriptor(unsigned Offset) const {
     assert(Offset != 0 && "Not a nested pointer");
-    return reinterpret_cast<InlineDescriptor *>(Pointee->rawData() + Offset) -
-           1;
+    return reinterpret_cast<InlineDescriptor *>(Pointee->data() + Offset) - 1;
   }
 
   const Descriptor *getFieldDesc() const {
@@ -134,9 +132,8 @@ struct PtrView {
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    const Descriptor *Desc = (Next == Pointee->getMetadataSize())
-                                 ? getDeclDesc()
-                                 : getDescriptor(Next)->Desc;
+    const Descriptor *Desc =
+        (Next == 0) ? getDeclDesc() : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
@@ -223,7 +220,7 @@ struct PtrView {
     if (isZero())
       return 0;
     // narrow()ed element in a composite array.
-    if (Base > sizeof(InlineDescriptor) && Base == Offset)
+    if (Base != 0 && Base == Offset)
       return 0;
 
     if (auto ElemSize = elemSize())
@@ -239,7 +236,7 @@ struct PtrView {
 
     // Might be a narrow()'ed element in a composite array.
     // Check the inline descriptor.
-    if (Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+    if (Base != 0 && getInlineDesc()->IsArrayElement)
       return true;
 
     return false;
@@ -250,10 +247,10 @@ struct PtrView {
     assert(Pointee);
 
     if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->rawData() + Base +
+      return *reinterpret_cast<T *>(Pointee->data() + Base +
                                     sizeof(InitMapPtr));
 
-    return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
+    return *reinterpret_cast<T *>(Pointee->data() + Offset);
   }
 
   template <typename T> T &elem(unsigned I) const {
@@ -266,7 +263,7 @@ struct PtrView {
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
     assert(ReadOffset + sizeof(T) <= Pointee->getSize());
 
-    return *reinterpret_cast<T *>(Pointee->rawData() + ReadOffset);
+    return *reinterpret_cast<T *>(Pointee->data() + ReadOffset);
   }
 
   [[nodiscard]] PtrView getBase() const {
@@ -303,13 +300,18 @@ struct PtrView {
   }
 
   bool isInitialized() const {
-
     if (!Pointee->isInitialized())
       return false;
 
-    if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
-      const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
-      return GD.InitState == GlobalInitState::Initialized;
+    if (Offset == 0) {
+      if (Pointee->isGlobal()) {
+        const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
+        return GD.InitState == GlobalInitState::Initialized;
+      }
+      if (Pointee->isLocal()) {
+        const auto &LD = Pointee->getBlockDesc<InlineDescriptor>();
+        return LD.IsInitialized;
+      }
     }
 
     assert(Pointee && "Cannot check if null pointer was initialized");
@@ -321,14 +323,14 @@ struct PtrView {
     if (Base == 0)
       return true;
     // Field has its bit in an inline descriptor.
-    return getInlineDesc()->IsInitialized;
+    return getDescriptor(Offset)->IsInitialized;
   }
 
   void initializeElement(unsigned Index) const;
   bool allElementsInitialized() const;
   bool isElementInitialized(unsigned Index) const;
   InitMapPtr &getInitMap() const {
-    return *reinterpret_cast<InitMapPtr *>(Pointee->rawData() + Base);
+    return *reinterpret_cast<InitMapPtr *>(Pointee->data() + Base);
   }
   void initialize() const;
   void activate() const;
@@ -528,7 +530,7 @@ enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 ///
 /// The Offset field is used to access the actual data. In other words, the
 /// data the pointer decribes can be found at
-/// Pointee->rawData() + Pointer.Offset.
+/// Pointee->data() + Pointer.Offset.
 ///
 /// \verbatim
 /// Pointee                      Offset
@@ -788,7 +790,7 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer() && BS.Base >= sizeof(InlineDescriptor))
+    if (isBlockPointer() && BS.Base != 0)
       return view().inUnion();
     return false;
   };
@@ -828,8 +830,7 @@ public:
   bool canBeInitialized() const {
     if (!isBlockPointer())
       return false;
-
-    return BS.Pointee && BS.Base > 0;
+    return view().canBeInitialized();
   }
 
   [[nodiscard]] const BlockPointer &asBlockPointer() const {
@@ -890,7 +891,7 @@ public:
     if (!isBlockPointer())
       return true;
     assert(BS.Pointee);
-    return BS.Pointee->isStatic();
+    return BS.Pointee->isGlobal();
   }
   /// Checks if the storage is temporary.
   bool isTemporary() const {
@@ -1016,7 +1017,7 @@ public:
           Lit->getBytes().data() + (Offset * Lit->getCharByteWidth()));
     }
     assert(isBlockPointer());
-    return BS.Pointee->rawData() + Offset;
+    return BS.Pointee->data() + Offset;
   }
 
   /// Returns the index into an array.
@@ -1330,9 +1331,8 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(isBlockPointer());
-    assert(BS.Base != sizeof(GlobalInlineDescriptor));
     assert(BS.Base <= BS.Pointee->getSize());
-    assert(BS.Base >= sizeof(InlineDescriptor));
+    assert(BS.Base != 0);
     return getDescriptor(BS.Base);
   }
 
