@@ -473,6 +473,47 @@ define <16 x i32> @gather_v16i32_struct_stride_narrow_index(ptr %base, <16 x i16
   ret <16 x i32> %v
 }
 
+; The same stride at the boundary the combine draws. ComputeNumSignBits adds
+; the significant widths of the two multiply operands, and the constant 12
+; spends one of its five bits on the sign, so a 28-bit index needs 33 and stays
+; a qword. Measuring the stride by its magnitude alone leaves it at four bits,
+; which admits this index and halves the count.
+; SKX-COST-LABEL: 'gather_v16i32_struct_stride_28bit_index'
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_struct_stride_28bit_index:
+; SKX-ASM-COUNT-2: vpgatherqd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_struct_stride_28bit_index'
+; AVX2-COST: cost of 4 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_struct_stride_28bit_index:
+; AVX2-ASM-COUNT-4: vpgatherqd
+; AVX2-ASM-NOT: vpgather
+define <16 x i32> @gather_v16i32_struct_stride_28bit_index(ptr %base, <16 x i64> %idx, <16 x i1> %mask) {
+  %and = and <16 x i64> %idx, splat (i64 134217727)
+  %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <16 x i64> %and, i32 0
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
+; One bit narrower, which is the control: the product needs exactly 32 and the
+; index narrows, so the two cases have to be priced differently.
+; SKX-COST-LABEL: 'gather_v16i32_struct_stride_27bit_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_struct_stride_27bit_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_struct_stride_27bit_index'
+; AVX2-COST: cost of 4 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_struct_stride_27bit_index:
+; AVX2-ASM-COUNT-4: vpgatherqd
+; AVX2-ASM-NOT: vpgather
+define <16 x i32> @gather_v16i32_struct_stride_27bit_index(ptr %base, <16 x i64> %idx, <16 x i1> %mask) {
+  %and = and <16 x i64> %idx, splat (i64 67108863)
+  %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <16 x i64> %and, i32 0
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
 ; The same gather over a four-byte stride, which the scale field does encode,
 ; so the index stays a dword and one instruction covers twice the lanes.
 ; SKX-COST-LABEL: 'gather_v16i32_scaled_stride'
@@ -597,6 +638,28 @@ define <8 x i32> @gather_v8i32_const_index_out_of_range(ptr %base, <8 x i1> %mas
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> <i64 0, i64 2147483648, i64 4294967296, i64 6442450944, i64 8589934592, i64 10737418240, i64 12884901888, i64 15032385536>
   %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> poison)
   ret <8 x i32> %v
+}
+
+; A constant splat added to the index is scaled and folded into the base, so
+; what reaches the instruction is the extension underneath it. Reading the add
+; instead finds 41 significant bits and prices a qword form CodeGen never
+; emits.
+; SKX-COST-LABEL: 'gather_v16i32_splat_addend'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_splat_addend:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_splat_addend'
+; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_splat_addend:
+; AVX2-ASM-COUNT-2: vpgatherdd
+; AVX2-ASM-NOT: vpgather
+define <16 x i32> @gather_v16i32_splat_addend(ptr %base, <16 x i16> %idx, <16 x i1> %mask) {
+  %sext = sext <16 x i16> %idx to <16 x i64>
+  %add = add <16 x i64> %sext, splat (i64 1099511627776)
+  %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %add
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
 }
 
 declare <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i32>)
