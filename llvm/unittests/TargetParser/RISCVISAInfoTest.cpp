@@ -37,12 +37,44 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
   }
 }
 
+TEST(ParseNormalizedArchString, RejectsConflictingBaseISAs) {
+  for (StringRef Input : {"rv32i2p0_e2p0", "rv64i2p1_m2p0_e2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'i' and 'e'");
+  }
+  for (StringRef Input : {"rv32e2p0_i2p0", "rv64e2p0_m2p0_i2p1"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'e' and 'i'");
+  }
+}
+
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
   }
+
+  for (StringRef Input : {"rv32im2p0", "rv32i2p0_im2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'i' is missing version number");
+  }
+
+  for (StringRef Input : {"rv64ea2p0", "rv32i2p0_em2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'e' is missing version number");
+  }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv32i2p0_ma2p0")
+                         .takeError()),
+            "extension 'm' is missing version number");
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv64i2p0_fd2p0")
+                         .takeError()),
+            "extension 'f' is missing version number");
 
   for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0"}) {
     EXPECT_EQ(

@@ -46,6 +46,10 @@ class Decl;
 class IncrementalParser;
 class IncrementalDeviceParser;
 
+/// The device language to offload to. \c Detect selects the vendor of the
+/// device available on the machine.
+enum class OffloadType { Detect, CUDA, HIP };
+
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
   using DriverCompilationFn = llvm::Error(const driver::Compilation &);
@@ -146,6 +150,10 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI,
          std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
+  static llvm::Expected<std::unique_ptr<Interpreter>>
+  createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                   std::unique_ptr<CompilerInstance> DCI,
+                   OffloadType Type = OffloadType::Detect);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);

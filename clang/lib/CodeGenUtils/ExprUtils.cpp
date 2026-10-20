@@ -125,4 +125,37 @@ bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
   return true;
 }
 
+bool isConstantEmittableObjectType(QualType Type) {
+  assert(Type.isCanonical());
+  assert(!Type->isReferenceType());
+
+  // Must be const-qualified but non-volatile.
+  Qualifiers Qs = Type.getLocalQualifiers();
+  if (!Qs.hasConst() || Qs.hasVolatile())
+    return false;
+
+  // Otherwise, all object types satisfy this except C++ classes with
+  // mutable subobjects or non-trivial copy/destroy behavior.
+  if (const auto *RT = dyn_cast<RecordType>(Type))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+      RD = RD->getDefinitionOrSelf();
+      if (RD->hasMutableFields() || !RD->isTrivial())
+        return false;
+    }
+
+  return true;
+}
+
+ConstantEmissionKind checkVarTypeForConstantEmission(QualType Type) {
+  Type = Type.getCanonicalType();
+  if (const auto *Ref = dyn_cast<ReferenceType>(Type)) {
+    if (isConstantEmittableObjectType(Ref->getPointeeType()))
+      return CEK_AsValueOrReference;
+    return CEK_AsReferenceOnly;
+  }
+  if (isConstantEmittableObjectType(Type))
+    return CEK_AsValueOnly;
+  return CEK_None;
+}
+
 } // namespace clang::CodeGenUtils

@@ -56,6 +56,7 @@ DEFAULT_PLUGINS = [
     "ObjCPlusPlusLanguage",
     "ObjectContainerBigArchive",
     "ObjectContainerBSDArchive",
+    "ObjectContainerClangOffloadBundle",
     "ObjectContainerMachOArchive",
     "ObjectContainerMachOFileset",
     "ObjectFileBreakpad",

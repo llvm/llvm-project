@@ -172,6 +172,8 @@ protected:
   TargetMachine &TM;
   CGPassBuilderOption Opt;
   PassInstrumentationCallbacks *PIC;
+  /// Whether no -stop-before/-stop-after option ends the pipeline early.
+  bool CompletesPipeline = true;
 
   CodeGenOptLevel getOptLevel() const { return TM.getOptLevel(); }
 

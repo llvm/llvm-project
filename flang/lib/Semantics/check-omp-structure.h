@@ -58,6 +58,7 @@ struct LoopSequence;
 template <typename ElemTy, typename SetsSetTy> struct AppliedElement {
   parser::omp::WithSource<ElemTy> id;
   SetsSetTy sets;
+  llvm::omp::Version version{};
 };
 
 template <typename ElemTy, typename SetsSetTy> struct AppliedElementInfo {

@@ -150,8 +150,8 @@ Value pass_value(Value v) { return v; }
 // CIR:   %[[HIP:.+]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
 // CIR:   cir.store %arg1, %[[HIP]] : !u64i, !cir.ptr<!u64i>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Value>
-// CIR:   %[[V:.+]] = cir.alloca "v" align(16) init : !cir.ptr<!rec_Value>
 // CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_Value>
+// CIR:   %[[V:.+]] = cir.alloca "v" align(16) init : !cir.ptr<!rec_Value>
 // CIR:   cir.copy %[[VIEW]] align(16) to %[[V]] align(16) : !cir.ptr<!rec_Value>
 // CIR:   cir.copy %[[V]] align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_Value>
 // CIR:   %[[RETVIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_Value> -> !cir.ptr<!rec_anon_struct>

@@ -268,7 +268,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 BlockFrequencyInfo *BFI_,
                                 BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
-  Opts = &ScalarOptions::Global;
+  Opts = &F_.getContext().getLibraryOptions().get<ScalarOptions>();
   F = &F_;
   FAM = FAM_;
   TLI = TLI_;
@@ -338,7 +338,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
         BasicBlock *Succ = BI->getSuccessor();
         if (
             // The terminator must be the only non-phi instruction in BB.
-            BB.getFirstNonPHIOrDbg(true)->isTerminator() &&
+            BB.getFirstNonPHIOrPseudoProbe()->isTerminator() &&
             // Don't alter Loop headers and latches to ensure another pass can
             // detect and transform nested loops later.
             !LoopHeaders.count(&BB) && !LoopHeaders.count(Succ) &&
@@ -2522,7 +2522,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
 bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
-  if (!TI || TI->getNumSuccessors() < 2)
+  if (TI->getNumSuccessors() < 2)
     return false;
 
   return hasValidBranchWeightMD(*TI);

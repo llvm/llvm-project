@@ -474,7 +474,7 @@ static bool isSpvAggrPlaceholder(const Value *V) {
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
   if (isa<PHINode>(I))
-    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(I->getParent()->getFirstNonPHIOrAlloca());
   else
     B.SetInsertPoint(I);
 }
@@ -626,7 +626,7 @@ CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
     B.SetInsertPointPastAllocas(OpA->getParent());
     B.SetCurrentDebugLocation(DebugLoc());
   } else {
-    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+    B.SetInsertPoint(F->getEntryBlock().getFirstNonPHIOrAlloca());
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
@@ -3579,6 +3579,10 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
       continue;
     if (F.isDeclaration()) {
       for (User *U : F.users()) {
+        // SPIR-V has no personality, so it is not a function pointer use.
+        if (auto *UF = dyn_cast<Function>(U);
+            UF && UF->hasPersonalityFn() && UF->getPersonalityFn() == &F)
+          continue;
         CallInst *CI = dyn_cast<CallInst>(U);
         if (!CI || CI->getCalledFunction() != &F) {
           Worklist.push_back(&F);
@@ -3657,7 +3661,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
           B.SetInsertPoint(CI->getParent()
                                ->getParent()
                                ->getEntryBlock()
-                               .getFirstNonPHIOrDbgOrAlloca());
+                               .getFirstNonPHIOrAlloca());
           GR->buildAssignPtr(B, ElemTy, Param);
         }
         CallInst *Ref = dyn_cast<CallInst>(Param);

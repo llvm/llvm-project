@@ -67,18 +67,18 @@ callSites:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp, debug-location !12
-    JAL @foo, csr_o32_fpxx, implicit-def dead $ra, implicit-def $sp, implicit-def $v0, debug-location !12
-    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp, debug-location !12
-    %0:gpr32 = COPY killed $v0, debug-location !12
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead $r29, implicit $r29, debug-location !12
+    JAL @foo, csr_o32_fpxx, implicit-def dead $r31, implicit-def $r29, implicit-def $r2, debug-location !12
+    ADJCALLSTACKUP 16, 0, implicit-def dead $r29, implicit $r29, debug-location !12
+    %0:gpr32 = COPY killed $r2, debug-location !12
     DBG_VALUE 1001, $noreg, !8, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !12
     DBG_VALUE 1002, $noreg, !8, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !12
     DBG_VALUE 222, $noreg, !9, !DIExpression(), debug-location !12
     DBG_VALUE 333, $noreg, !10, !DIExpression(), debug-location !12
     DBG_VALUE 444, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE %0, $noreg, !8, !DIExpression(), debug-location !12
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $v0, 12 /* clobber */, implicit-def dead early-clobber $v1, 12 /* clobber */, implicit-def dead early-clobber $a0, 12 /* clobber */, implicit-def dead early-clobber $a1, 12 /* clobber */, implicit-def dead early-clobber $a2, 12 /* clobber */, implicit-def dead early-clobber $a3, 12 /* clobber */, implicit-def dead early-clobber $t0, 12 /* clobber */, implicit-def dead early-clobber $t1, 12 /* clobber */, implicit-def dead early-clobber $t2, 12 /* clobber */, implicit-def dead early-clobber $t3, 12 /* clobber */, implicit-def dead early-clobber $t4, 12 /* clobber */, implicit-def dead early-clobber $t5, 12 /* clobber */, implicit-def dead early-clobber $t6, 12 /* clobber */, implicit-def dead early-clobber $t7, 12 /* clobber */, implicit-def dead early-clobber $t8, 12 /* clobber */, implicit-def dead early-clobber $t9, 12 /* clobber */, implicit-def dead early-clobber $gp, 12 /* clobber */, implicit-def dead early-clobber $ra, 12 /* clobber */, implicit-def dead early-clobber $s0, 12 /* clobber */, implicit-def dead early-clobber $s1, 12 /* clobber */, implicit-def dead early-clobber $s2, 12 /* clobber */, implicit-def dead early-clobber $s3, 12 /* clobber */, implicit-def dead early-clobber $s4, 12 /* clobber */, implicit-def dead early-clobber $s5, 12 /* clobber */, implicit-def dead early-clobber $s6, 12 /* clobber */, implicit-def dead early-clobber $s7, 12 /* clobber */, implicit-def dead early-clobber $at, !13, debug-location !12
-    $v0 = COPY killed %0, debug-location !12
-    RetRA implicit killed $v0, debug-location !12
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $r2, 12 /* clobber */, implicit-def dead early-clobber $r3, 12 /* clobber */, implicit-def dead early-clobber $r4, 12 /* clobber */, implicit-def dead early-clobber $r5, 12 /* clobber */, implicit-def dead early-clobber $r6, 12 /* clobber */, implicit-def dead early-clobber $r7, 12 /* clobber */, implicit-def dead early-clobber $r8, 12 /* clobber */, implicit-def dead early-clobber $r9, 12 /* clobber */, implicit-def dead early-clobber $r10, 12 /* clobber */, implicit-def dead early-clobber $r11, 12 /* clobber */, implicit-def dead early-clobber $r12, 12 /* clobber */, implicit-def dead early-clobber $r13, 12 /* clobber */, implicit-def dead early-clobber $r14, 12 /* clobber */, implicit-def dead early-clobber $r15, 12 /* clobber */, implicit-def dead early-clobber $r24, 12 /* clobber */, implicit-def dead early-clobber $r25, 12 /* clobber */, implicit-def dead early-clobber $r28, 12 /* clobber */, implicit-def dead early-clobber $r31, 12 /* clobber */, implicit-def dead early-clobber $r16, 12 /* clobber */, implicit-def dead early-clobber $r17, 12 /* clobber */, implicit-def dead early-clobber $r18, 12 /* clobber */, implicit-def dead early-clobber $r19, 12 /* clobber */, implicit-def dead early-clobber $r20, 12 /* clobber */, implicit-def dead early-clobber $r21, 12 /* clobber */, implicit-def dead early-clobber $r22, 12 /* clobber */, implicit-def dead early-clobber $r23, 12 /* clobber */, implicit-def dead early-clobber $r1, !13, debug-location !12
+    $r2 = COPY killed %0, debug-location !12
+    RetRA implicit killed $r2, debug-location !12
 
 ...

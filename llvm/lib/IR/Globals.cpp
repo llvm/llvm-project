@@ -284,6 +284,12 @@ const Comdat *GlobalValue::getComdat() const {
   return cast<GlobalObject>(this)->getComdat();
 }
 
+bool GlobalValue::isComdatLeader() const {
+  if (hasComdat())
+    return getParent()->getComdatSymbolTable().contains(getName());
+  return false;
+}
+
 void GlobalObject::setComdat(Comdat *C) {
   if (ObjComdat)
     ObjComdat->removeUser(this);

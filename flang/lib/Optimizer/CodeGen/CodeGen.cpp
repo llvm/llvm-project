@@ -32,6 +32,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -3875,6 +3876,9 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto tyAttr = convertType(global.getType());
     if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(global.getType()))
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
+    if (!tyAttr)
+      return rewriter.notifyMatchFailure(
+          global, "global type cannot be converted to an LLVM type");
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
@@ -4411,6 +4415,156 @@ struct UnreachableOpConversion
   matchAndRewrite(fir::UnreachableOp unreach, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(unreach);
+    return mlir::success();
+  }
+};
+
+/// Prefer the original source of an inlined operation to its call site.
+static mlir::FileLineColLoc findAssertSourceLocation(mlir::Location loc) {
+  if (auto file = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    return file;
+  if (auto call = mlir::dyn_cast<mlir::CallSiteLoc>(loc)) {
+    if (auto file = findAssertSourceLocation(call.getCallee()))
+      return file;
+    return findAssertSourceLocation(call.getCaller());
+  }
+  if (auto fused = mlir::dyn_cast<mlir::FusedLoc>(loc))
+    for (mlir::Location nested : fused.getLocations())
+      if (auto file = findAssertSourceLocation(nested))
+        return file;
+  if (auto named = mlir::dyn_cast<mlir::NameLoc>(loc))
+    return findAssertSourceLocation(named.getChildLoc());
+  return {};
+}
+
+struct AssertOpConversion : public fir::FIROpConversion<fir::AssertOp> {
+  using FIROpConversion::FIROpConversion;
+
+  static constexpr unsigned maxInlineValues = 4;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssertOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    // A device function's strings and runtime declaration must remain in its
+    // GPU module when host and device modules are subsequently separated.
+    mlir::Operation *scope = mlir::SymbolTable::getNearestSymbolTable(op);
+    auto ptrTy = getLlvmPtrType(op.getContext());
+    auto i64Ty = rewriter.getI64Type();
+    auto countTy = rewriter.getIntegerType(lowerTy().getPointerBitwidth(0));
+    bool useArray = adaptor.getValues().size() > maxInlineValues;
+    llvm::SmallVector<mlir::Type> argumentTypes{ptrTy, ptrTy,
+                                                rewriter.getI32Type()};
+    if (useArray)
+      argumentTypes.append({countTy, ptrTy});
+    else
+      argumentTypes.append(maxInlineValues, i64Ty);
+    auto functionType = mlir::LLVM::LLVMFunctionType::get(
+        mlir::LLVM::LLVMVoidType::get(op.getContext()), argumentTypes);
+    llvm::StringRef runtimeName =
+        useArray ? RTNAME_STRING(ReportFatalUserErrorValueArray)
+                 : RTNAME_STRING(ReportFatalUserErrorValues);
+    mlir::Operation *declaration =
+        mlir::SymbolTable::lookupSymbolIn(scope, runtimeName);
+    if (declaration) {
+      if (auto function = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(declaration)) {
+        if (function.getFunctionType() != functionType)
+          return op.emitOpError("incompatible runtime function declaration");
+        rewriter.modifyOpInPlace(function, [&] { function.setNoreturn(true); });
+      } else if (auto function =
+                     mlir::dyn_cast<mlir::func::FuncOp>(declaration)) {
+        if (function.getNumResults() != 0 ||
+            function.getNumArguments() != functionType.getNumParams())
+          return op.emitOpError("incompatible runtime function declaration");
+        for (auto [input, expected] : llvm::zip_equal(
+                 function.getArgumentTypes(), functionType.getParams()))
+          if (convertType(input) != expected)
+            return op.emitOpError("incompatible runtime function declaration");
+        rewriter.modifyOpInPlace(function, [&] {
+          function->setAttr("llvm.noreturn", rewriter.getUnitAttr());
+        });
+      } else {
+        return op.emitOpError("runtime function name conflicts with a symbol");
+      }
+    } else {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
+      auto function = mlir::LLVM::LLVMFuncOp::create(rewriter, loc, runtimeName,
+                                                     functionType);
+      function.setNoreturn(true);
+    }
+
+    mlir::Block *before = op->getBlock();
+    mlir::Block *continuation =
+        rewriter.splitBlock(before, mlir::Block::iterator(op));
+    mlir::Block *failure = rewriter.createBlock(before->getParent());
+
+    auto stringAddress = [&](llvm::StringRef text) -> mlir::Value {
+      std::string terminated = text.str() + '\0';
+      std::string name = fir::factory::uniqueCGIdent("assert", terminated);
+      unsigned globalAS = getGlobalAddressSpace(rewriter);
+      if (!mlir::SymbolTable::lookupSymbolIn(scope, name)) {
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
+        auto arrayTy = mlir::LLVM::LLVMArrayType::get(rewriter.getI8Type(),
+                                                      terminated.size());
+        mlir::LLVM::GlobalOp::create(rewriter, loc, arrayTy, /*constant=*/true,
+                                     mlir::LLVM::Linkage::Internal, name,
+                                     rewriter.getStringAttr(terminated),
+                                     /*alignment=*/0, globalAS);
+      }
+      return replaceWithAddrOfOrASCast(rewriter, loc, globalAS,
+                                       getProgramAddressSpace(rewriter), name,
+                                       ptrTy);
+    };
+
+    mlir::Value message = stringAddress(op.getMessage());
+    mlir::FileLineColLoc source = findAssertSourceLocation(loc);
+    mlir::Value filename =
+        source ? stringAddress(source.getFilename().getValue())
+               : mlir::LLVM::ZeroOp::create(rewriter, loc, ptrTy);
+    mlir::Value line =
+        genI32Constant(loc, rewriter, source ? source.getLine() : 0);
+    llvm::SmallVector<mlir::Value> arguments{message, filename, line};
+    if (useArray) {
+      // Materialize diagnostic storage only on the failure path. Keep the
+      // values in SSA form until here so they add no memory dependencies to
+      // the high-level assertion.
+      mlir::Value count = fir::genConstantIndex(loc, countTy, rewriter,
+                                                adaptor.getValues().size());
+      auto storagePtrTy =
+          getLlvmPtrType(op.getContext(), getAllocaAddressSpace(rewriter));
+      mlir::Value storage = mlir::LLVM::AllocaOp::create(
+          rewriter, loc, storagePtrTy, i64Ty, count);
+      for (auto [index, value] : llvm::enumerate(adaptor.getValues())) {
+        mlir::Value offset =
+            fir::genConstantIndex(loc, countTy, rewriter, index);
+        mlir::Value address = mlir::LLVM::GEPOp::create(
+            rewriter, loc, storagePtrTy, i64Ty, storage,
+            llvm::ArrayRef<mlir::LLVM::GEPArg>{offset});
+        mlir::LLVM::StoreOp::create(
+            rewriter, loc, integerCast(loc, rewriter, i64Ty, value), address);
+      }
+      if (storagePtrTy != ptrTy)
+        storage =
+            mlir::LLVM::AddrSpaceCastOp::create(rewriter, loc, ptrTy, storage);
+      arguments.append({count, storage});
+    } else {
+      for (mlir::Value value : adaptor.getValues())
+        arguments.push_back(integerCast(loc, rewriter, i64Ty, value));
+      while (arguments.size() < functionType.getNumParams())
+        arguments.push_back(mlir::LLVM::ConstantOp::create(
+            rewriter, loc, i64Ty, rewriter.getI64IntegerAttr(0)));
+    }
+    mlir::LLVM::CallOp::create(rewriter, loc, functionType, runtimeName,
+                               arguments);
+    mlir::LLVM::UnreachableOp::create(rewriter, loc);
+
+    rewriter.setInsertionPointToEnd(before);
+    mlir::LLVM::CondBrOp::create(rewriter, loc, adaptor.getCondition(),
+                                 continuation, mlir::ValueRange{}, failure,
+                                 mlir::ValueRange{}, std::make_pair(2000u, 1u));
+    rewriter.replaceOp(op, adaptor.getGuarded());
     return mlir::success();
   }
 };
@@ -5193,7 +5347,7 @@ void fir::populateFIRToLLVMConversionPatterns(
       StoreOpConversion, StringLitOpConversion, SubcOpConversion,
       TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
       UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-      UseStmtOpConversion, ModuleDebugImportsOpConversion,
+      AssertOpConversion, UseStmtOpConversion, ModuleDebugImportsOpConversion,
       XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
       ZeroOpConversion>(converter, options);
 
