@@ -4,50 +4,16 @@
 ; RUN: opt -S -mtriple=amdgpu12.50-amd-amdhsa -passes='amdgpu-atomic-optimizer,verify<domtree>' %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_kernel void @add_one(ptr addrspace(3) %counter) {
-; GFX12W32-LABEL: define amdgpu_kernel void @add_one(
-; GFX12W32-SAME: ptr addrspace(3) [[COUNTER:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX12W32-NEXT:  [[ENTRY:.*:]]
-; GFX12W32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX12W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP0]], i32 0)
-; GFX12W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX12W32-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
-; GFX12W32-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB6:.*]]
-; GFX12W32:       [[BB4]]:
-; GFX12W32-NEXT:    [[TMP5:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP2]] syncscope("agent") monotonic, align 4
-; GFX12W32-NEXT:    br label %[[BB6]]
-; GFX12W32:       [[BB6]]:
-; GFX12W32-NEXT:    ret void
-;
-; GFX12W64-LABEL: define amdgpu_kernel void @add_one(
-; GFX12W64-SAME: ptr addrspace(3) [[COUNTER:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX12W64-NEXT:  [[ENTRY:.*:]]
-; GFX12W64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; GFX12W64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; GFX12W64-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
-; GFX12W64-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX12W64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
-; GFX12W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; GFX12W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX12W64-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
-; GFX12W64-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
-; GFX12W64:       [[BB8]]:
-; GFX12W64-NEXT:    [[TMP9:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP6]] syncscope("agent") monotonic, align 4
-; GFX12W64-NEXT:    br label %[[BB10]]
-; GFX12W64:       [[BB10]]:
-; GFX12W64-NEXT:    ret void
+; GFX12-LABEL: define amdgpu_kernel void @add_one(
+; GFX12-SAME: ptr addrspace(3) [[COUNTER:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX12-NEXT:  [[ENTRY:.*:]]
+; GFX12-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) [[COUNTER]], i1 false)
+; GFX12-NEXT:    ret void
 ;
 ; GFX1250-LABEL: define amdgpu_kernel void @add_one(
 ; GFX1250-SAME: ptr addrspace(3) [[COUNTER:%.*]]) {
-; GFX1250-NEXT:  [[ENTRY:.*:]]
-; GFX1250-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX1250-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP0]], i32 0)
-; GFX1250-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX1250-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
-; GFX1250-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB6:.*]]
-; GFX1250:       [[BB4]]:
-; GFX1250-NEXT:    [[TMP5:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP2]] syncscope("agent") monotonic, align 4
-; GFX1250-NEXT:    br label %[[BB6]]
-; GFX1250:       [[BB6]]:
+; GFX1250-NEXT:  [[BB6:.*:]]
+; GFX1250-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) [[COUNTER]], i1 false)
 ; GFX1250-NEXT:    ret void
 ;
 entry:
@@ -56,51 +22,18 @@ entry:
 }
 
 define amdgpu_kernel void @add_minus_one_divergent_branch(ptr addrspace(3) %base, i32 %index) {
-; GFX12W32-LABEL: define amdgpu_kernel void @add_minus_one_divergent_branch(
-; GFX12W32-SAME: ptr addrspace(3) [[BASE:%.*]], i32 [[INDEX:%.*]]) #[[ATTR0]] {
-; GFX12W32-NEXT:  [[ENTRY:.*:]]
-; GFX12W32-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX12W32-NEXT:    [[COND:%.*]] = icmp ult i32 [[TID]], 7
-; GFX12W32-NEXT:    br i1 [[COND]], label %[[COUNT:.*]], label %[[EXIT:.*]]
-; GFX12W32:       [[COUNT]]:
-; GFX12W32-NEXT:    [[COUNTER:%.*]] = getelementptr i32, ptr addrspace(3) [[BASE]], i32 [[INDEX]]
-; GFX12W32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX12W32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP0]], i32 0)
-; GFX12W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 -1, i32 1)
-; GFX12W32-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
-; GFX12W32-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB6:.*]]
-; GFX12W32:       [[BB4]]:
-; GFX12W32-NEXT:    [[TMP5:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP2]] syncscope("workgroup") monotonic, align 4
-; GFX12W32-NEXT:    br label %[[BB6]]
-; GFX12W32:       [[BB6]]:
-; GFX12W32-NEXT:    br label %[[EXIT]]
-; GFX12W32:       [[EXIT]]:
-; GFX12W32-NEXT:    ret void
-;
-; GFX12W64-LABEL: define amdgpu_kernel void @add_minus_one_divergent_branch(
-; GFX12W64-SAME: ptr addrspace(3) [[BASE:%.*]], i32 [[INDEX:%.*]]) #[[ATTR0]] {
-; GFX12W64-NEXT:  [[ENTRY:.*:]]
-; GFX12W64-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX12W64-NEXT:    [[COND:%.*]] = icmp ult i32 [[TID]], 7
-; GFX12W64-NEXT:    br i1 [[COND]], label %[[COUNT:.*]], label %[[EXIT:.*]]
-; GFX12W64:       [[COUNT]]:
-; GFX12W64-NEXT:    [[COUNTER:%.*]] = getelementptr i32, ptr addrspace(3) [[BASE]], i32 [[INDEX]]
-; GFX12W64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; GFX12W64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; GFX12W64-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0]], 32
-; GFX12W64-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX12W64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
-; GFX12W64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; GFX12W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 -1, i32 1)
-; GFX12W64-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
-; GFX12W64-NEXT:    br i1 [[TMP7]], label %[[BB8:.*]], label %[[BB10:.*]]
-; GFX12W64:       [[BB8]]:
-; GFX12W64-NEXT:    [[TMP9:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP6]] syncscope("workgroup") monotonic, align 4
-; GFX12W64-NEXT:    br label %[[BB10]]
-; GFX12W64:       [[BB10]]:
-; GFX12W64-NEXT:    br label %[[EXIT]]
-; GFX12W64:       [[EXIT]]:
-; GFX12W64-NEXT:    ret void
+; GFX12-LABEL: define amdgpu_kernel void @add_minus_one_divergent_branch(
+; GFX12-SAME: ptr addrspace(3) [[BASE:%.*]], i32 [[INDEX:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:  [[ENTRY:.*:]]
+; GFX12-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; GFX12-NEXT:    [[COND:%.*]] = icmp ult i32 [[TID]], 7
+; GFX12-NEXT:    br i1 [[COND]], label %[[COUNT:.*]], label %[[EXIT:.*]]
+; GFX12:       [[COUNT]]:
+; GFX12-NEXT:    [[COUNTER:%.*]] = getelementptr i32, ptr addrspace(3) [[BASE]], i32 [[INDEX]]
+; GFX12-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) [[COUNTER]], i1 false)
+; GFX12-NEXT:    br label %[[EXIT]]
+; GFX12:       [[EXIT]]:
+; GFX12-NEXT:    ret void
 ;
 ; GFX1250-LABEL: define amdgpu_kernel void @add_minus_one_divergent_branch(
 ; GFX1250-SAME: ptr addrspace(3) [[BASE:%.*]], i32 [[INDEX:%.*]]) {
@@ -110,15 +43,7 @@ define amdgpu_kernel void @add_minus_one_divergent_branch(ptr addrspace(3) %base
 ; GFX1250-NEXT:    br i1 [[COND]], label %[[COUNT:.*]], label %[[EXIT:.*]]
 ; GFX1250:       [[COUNT]]:
 ; GFX1250-NEXT:    [[COUNTER:%.*]] = getelementptr i32, ptr addrspace(3) [[BASE]], i32 [[INDEX]]
-; GFX1250-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX1250-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP0]], i32 0)
-; GFX1250-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 -1, i32 1)
-; GFX1250-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
-; GFX1250-NEXT:    br i1 [[TMP3]], label %[[BB4:.*]], label %[[BB6:.*]]
-; GFX1250:       [[BB4]]:
-; GFX1250-NEXT:    [[TMP5:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP2]] syncscope("workgroup") monotonic, align 4
-; GFX1250-NEXT:    br label %[[BB6]]
-; GFX1250:       [[BB6]]:
+; GFX1250-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) [[COUNTER]], i1 false)
 ; GFX1250-NEXT:    br label %[[EXIT]]
 ; GFX1250:       [[EXIT]]:
 ; GFX1250-NEXT:    ret void
@@ -138,63 +63,24 @@ exit:
 }
 
 define amdgpu_ps void @pixel_shader(ptr addrspace(3) inreg %counter) {
-; GFX12W32-LABEL: define amdgpu_ps void @pixel_shader(
-; GFX12W32-SAME: ptr addrspace(3) inreg [[COUNTER:%.*]]) #[[ATTR0]] {
-; GFX12W32-NEXT:  [[ENTRY:.*:]]
-; GFX12W32-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.ps.live()
-; GFX12W32-NEXT:    br i1 [[TMP0]], label %[[BB1:.*]], label %[[BB9:.*]]
-; GFX12W32:       [[BB1]]:
-; GFX12W32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX12W32-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
-; GFX12W32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX12W32-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP3]], 0
-; GFX12W32-NEXT:    br i1 [[TMP5]], label %[[BB6:.*]], label %[[BB8:.*]]
-; GFX12W32:       [[BB6]]:
-; GFX12W32-NEXT:    [[TMP7:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP4]] syncscope("agent") monotonic, align 4
-; GFX12W32-NEXT:    br label %[[BB8]]
-; GFX12W32:       [[BB8]]:
-; GFX12W32-NEXT:    br label %[[BB9]]
-; GFX12W32:       [[BB9]]:
-; GFX12W32-NEXT:    ret void
-;
-; GFX12W64-LABEL: define amdgpu_ps void @pixel_shader(
-; GFX12W64-SAME: ptr addrspace(3) inreg [[COUNTER:%.*]]) #[[ATTR0]] {
-; GFX12W64-NEXT:  [[ENTRY:.*:]]
-; GFX12W64-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.ps.live()
-; GFX12W64-NEXT:    br i1 [[TMP0]], label %[[BB1:.*]], label %[[BB13:.*]]
-; GFX12W64:       [[BB1]]:
-; GFX12W64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; GFX12W64-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; GFX12W64-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP2]], 32
-; GFX12W64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
-; GFX12W64-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP3]], i32 0)
-; GFX12W64-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP5]], i32 [[TMP6]])
-; GFX12W64-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX12W64-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP7]], 0
-; GFX12W64-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
-; GFX12W64:       [[BB10]]:
-; GFX12W64-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP8]] syncscope("agent") monotonic, align 4
-; GFX12W64-NEXT:    br label %[[BB12]]
-; GFX12W64:       [[BB12]]:
-; GFX12W64-NEXT:    br label %[[BB13]]
-; GFX12W64:       [[BB13]]:
-; GFX12W64-NEXT:    ret void
+; GFX12-LABEL: define amdgpu_ps void @pixel_shader(
+; GFX12-SAME: ptr addrspace(3) inreg [[COUNTER:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:  [[ENTRY:.*:]]
+; GFX12-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.ps.live()
+; GFX12-NEXT:    br i1 [[TMP0]], label %[[BB1:.*]], label %[[BB3:.*]]
+; GFX12:       [[BB1]]:
+; GFX12-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) [[COUNTER]], i1 false)
+; GFX12-NEXT:    br label %[[BB3]]
+; GFX12:       [[BB3]]:
+; GFX12-NEXT:    ret void
 ;
 ; GFX1250-LABEL: define amdgpu_ps void @pixel_shader(
 ; GFX1250-SAME: ptr addrspace(3) inreg [[COUNTER:%.*]]) {
 ; GFX1250-NEXT:  [[ENTRY:.*:]]
 ; GFX1250-NEXT:    [[TMP0:%.*]] = call i1 @llvm.amdgcn.ps.live()
-; GFX1250-NEXT:    br i1 [[TMP0]], label %[[BB1:.*]], label %[[BB9:.*]]
-; GFX1250:       [[BB1]]:
-; GFX1250-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; GFX1250-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
-; GFX1250-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 1, i32 1)
-; GFX1250-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP3]], 0
-; GFX1250-NEXT:    br i1 [[TMP5]], label %[[BB6:.*]], label %[[BB8:.*]]
-; GFX1250:       [[BB6]]:
-; GFX1250-NEXT:    [[TMP7:%.*]] = atomicrmw add ptr addrspace(3) [[COUNTER]], i32 [[TMP4]] syncscope("agent") monotonic, align 4
-; GFX1250-NEXT:    br label %[[BB8]]
+; GFX1250-NEXT:    br i1 [[TMP0]], label %[[BB8:.*]], label %[[BB9:.*]]
 ; GFX1250:       [[BB8]]:
+; GFX1250-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) [[COUNTER]], i1 false)
 ; GFX1250-NEXT:    br label %[[BB9]]
 ; GFX1250:       [[BB9]]:
 ; GFX1250-NEXT:    ret void
@@ -591,7 +477,7 @@ entry:
 ; Negative: atomic is volatile
 define amdgpu_kernel void @neg_volatile(ptr addrspace(3) %counter) {
 ; GFX12-LABEL: define amdgpu_kernel void @neg_volatile(
-; GFX12-SAME: ptr addrspace(3) [[COUNTER:%.*]]) #[[ATTR0:[0-9]+]] {
+; GFX12-SAME: ptr addrspace(3) [[COUNTER:%.*]]) #[[ATTR0]] {
 ; GFX12-NEXT:  [[ENTRY:.*:]]
 ; GFX12-NEXT:    [[UNUSED:%.*]] = atomicrmw volatile add ptr addrspace(3) [[COUNTER]], i32 1 syncscope("agent") monotonic, align 4
 ; GFX12-NEXT:    ret void
