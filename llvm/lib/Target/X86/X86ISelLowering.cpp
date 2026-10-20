@@ -9492,7 +9492,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
-  if (VT.getVectorElementType() == MVT::bf16)
+  if (VT.getVectorElementType() == MVT::bf16 && Subtarget.hasAVX())
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
