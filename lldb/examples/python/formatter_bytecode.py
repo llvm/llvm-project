@@ -522,6 +522,19 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
 ################################################################################
 
 
+# Tokens of an llvm::formatv format string, as supported by formatter bytecode.
+# Every character of a format string is part of exactly one token.
+_FMT_TOKEN = re.compile(
+    r"""
+      \{\{                              # escaped brace
+    | \{ (?:,[^{}:]*)? (?::[^{}]*)? \}  # replacement, with layout (, prefixed) and options (: prefixed)
+    | \{                                # invalid replacement
+    | [^{]+                             # literal text
+    """,
+    re.VERBOSE,
+)
+
+
 def _parse_fmt(fmt: str) -> list[Union[str, int]]:
     """Parse an llvm::formatv format string into literals (str) and
     replacement indexes (int). Adjacent literals are merged, so two items in a
@@ -537,41 +550,22 @@ def _parse_fmt(fmt: str) -> list[Union[str, int]]:
     items: list[Union[str, int]] = []
     literal = ""
     next_index = 0
-    i = 0
-    while i < len(fmt):
-        if fmt.startswith("{{", i):
+    for match in _FMT_TOKEN.finditer(fmt):
+        token = match.group()
+        if token == "{{":
             literal += "{"
-            i += 2
-        elif fmt[i] == "{":
-            start = i
-            i += 1
-            # Skip the layout, which ends at the options or the closing brace.
-            if i < len(fmt) and fmt[i] == ",":
-                i += 1
-                while i < len(fmt) and fmt[i] not in "{}:":
-                    i += 1
-            # Skip the options, which end at the closing brace.
-            if i < len(fmt) and fmt[i] == ":":
-                i += 1
-                while i < len(fmt) and fmt[i] not in "{}":
-                    i += 1
-            if i == len(fmt) or fmt[i] != "}":
-                raise ValueError(
-                    f"invalid replacement in format string at offset {start}"
-                )
-            i += 1
+        elif token == "{":
+            raise ValueError(
+                f"invalid replacement in format string at offset {match.start()}"
+            )
+        elif token.startswith("{"):
             if literal:
                 items.append(literal)
                 literal = ""
             items.append(next_index)
             next_index += 1
         else:
-            # Consume the text up to the next brace.
-            end = fmt.find("{", i)
-            if end == -1:
-                end = len(fmt)
-            literal += fmt[i:end]
-            i = end
+            literal += token
     if literal:
         items.append(literal)
     return items
