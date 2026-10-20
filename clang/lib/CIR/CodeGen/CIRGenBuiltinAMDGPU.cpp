@@ -822,24 +822,17 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
-    llvm::StringRef intrinsicName;
-    switch (builtinId) {
-    case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-      intrinsicName = "amdgcn.cluster.load.b32";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-      intrinsicName = "amdgcn.cluster.load.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
-      intrinsicName = "amdgcn.cluster.load.b128";
-      break;
-    }
-    return emitBuiltinWithOneOverloadedType<3>(expr, intrinsicName,
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.cluster.load.b32",
                                                convertType(expr->getType()))
         .getValue();
-  }
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.cluster.load.b64",
+                                               convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.cluster.load.b128",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_load_to_lds:
     return emitBuiltinWithOneOverloadedType<5>(
                expr, "amdgcn.load.to.lds",
