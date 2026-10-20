@@ -1507,7 +1507,8 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::Barycentrics:
     assert(Stage == llvm::Triple::Pixel &&
-           "SV_Barycentrics is only available as a pixel shader input");
+           "SV_Barycentrics is in an unavailable stage and should have been "
+           "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV()) {
       using llvm::dxbc::PSV::InterpolationMode;
       // Perspective is encoded by the built-in; only sampling decorations
