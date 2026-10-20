@@ -536,8 +536,8 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
         return getError("base ISA '" + Twine(ExtName[0]) +
                         "' is missing version number");
       if (ExtName[0] != BaseISA)
-        return getError("conflicting base ISAs '" + Twine(BaseISA) +
-                        "' and '" + ExtName + "'");
+        return getError("conflicting base ISAs '" + Twine(BaseISA) + "' and '" +
+                        ExtName + "'");
     } else if (RISCVISAUtils::AllStdExts.contains(ExtName[0]) &&
                ExtName.size() > 1) {
       return getError("extension '" + Twine(ExtName[0]) +
