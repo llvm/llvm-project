@@ -30,10 +30,7 @@ define <vscale x 4 x i32> @w(<vscale x 4 x i32> %a) shadowcallstack {
 ; RV32V-NEXT:    slli a0, a0, 1
 ; RV32V-NEXT:    add sp, sp, a0
 ; RV32V-NEXT:    .cfi_def_cfa sp, 32
-; RV32V-NEXT:    csrr a0, vlenb
-; RV32V-NEXT:    slli a0, a0, 1
-; RV32V-NEXT:    add a0, sp, a0
-; RV32V-NEXT:    lw ra, 28(a0) # 4-byte Folded Reload
+; RV32V-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32V-NEXT:    .cfi_restore ra
 ; RV32V-NEXT:    addi sp, sp, 32
 ; RV32V-NEXT:    .cfi_def_cfa_offset 0
@@ -65,10 +62,7 @@ define <vscale x 4 x i32> @w(<vscale x 4 x i32> %a) shadowcallstack {
 ; RV64V-NEXT:    slli a0, a0, 1
 ; RV64V-NEXT:    add sp, sp, a0
 ; RV64V-NEXT:    .cfi_def_cfa sp, 32
-; RV64V-NEXT:    csrr a0, vlenb
-; RV64V-NEXT:    slli a0, a0, 1
-; RV64V-NEXT:    add a0, sp, a0
-; RV64V-NEXT:    ld ra, 24(a0) # 8-byte Folded Reload
+; RV64V-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64V-NEXT:    .cfi_restore ra
 ; RV64V-NEXT:    addi sp, sp, 32
 ; RV64V-NEXT:    .cfi_def_cfa_offset 0
@@ -102,10 +96,7 @@ define <vscale x 4 x i32> @z(<vscale x 4 x i32> %a) "hw-shadow-stack" {
 ; RV32V-NEXT:    slli a0, a0, 1
 ; RV32V-NEXT:    add sp, sp, a0
 ; RV32V-NEXT:    .cfi_def_cfa sp, 32
-; RV32V-NEXT:    csrr a0, vlenb
-; RV32V-NEXT:    slli a0, a0, 1
-; RV32V-NEXT:    add a0, sp, a0
-; RV32V-NEXT:    lw ra, 28(a0) # 4-byte Folded Reload
+; RV32V-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32V-NEXT:    .cfi_restore ra
 ; RV32V-NEXT:    addi sp, sp, 32
 ; RV32V-NEXT:    .cfi_def_cfa_offset 0
@@ -133,10 +124,7 @@ define <vscale x 4 x i32> @z(<vscale x 4 x i32> %a) "hw-shadow-stack" {
 ; RV64V-NEXT:    slli a0, a0, 1
 ; RV64V-NEXT:    add sp, sp, a0
 ; RV64V-NEXT:    .cfi_def_cfa sp, 32
-; RV64V-NEXT:    csrr a0, vlenb
-; RV64V-NEXT:    slli a0, a0, 1
-; RV64V-NEXT:    add a0, sp, a0
-; RV64V-NEXT:    ld ra, 24(a0) # 8-byte Folded Reload
+; RV64V-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64V-NEXT:    .cfi_restore ra
 ; RV64V-NEXT:    addi sp, sp, 32
 ; RV64V-NEXT:    .cfi_def_cfa_offset 0
