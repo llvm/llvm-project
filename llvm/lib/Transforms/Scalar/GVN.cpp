@@ -3880,7 +3880,6 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   // Do not cleanup DeadBlocks in cleanupGlobalSets() as it's called for each
   // iteration.
   DeadBlocks.clear();
-  EA = nullptr;
 
   if (MSSA && VerifyMemorySSA)
     MSSA->verifyMemorySSA();
