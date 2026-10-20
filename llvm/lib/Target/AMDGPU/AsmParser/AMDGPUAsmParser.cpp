@@ -1645,7 +1645,7 @@ private:
   bool validateBLGP(const MCInst &Inst, const OperandVector &Operands);
   bool validateDS(const MCInst &Inst, const OperandVector &Operands);
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
-  bool validateDivScale(const MCInst &Inst);
+  bool validateDivScale(const MCInst &Inst, const OperandVector &Operands);
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              SMLoc IDLoc);
@@ -4327,7 +4327,26 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
+// Check that two source operands hold the same value: either the same
+// register or the same constant.
+static bool isEqualSrcOperand(const MCOperand &SrcA, const MCOperand &SrcB) {
+  if (SrcA.isReg() && SrcB.isReg())
+    return SrcA.getReg() == SrcB.getReg();
+  if (SrcA.isImm() && SrcB.isImm())
+    return SrcA.getImm() == SrcB.getImm();
+  if (SrcA.isSFPImm() && SrcB.isSFPImm())
+    return SrcA.getSFPImm() == SrcB.getSFPImm();
+  if (SrcA.isDFPImm() && SrcB.isDFPImm())
+    return SrcA.getDFPImm() == SrcB.getDFPImm();
+  // A register can never be equal to a constant.
+  if (SrcA.isReg() != SrcB.isReg())
+    return false;
+  // Conservatively skip anything else (e.g. expressions).
+  return true;
+}
+
+bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst,
+                                       const OperandVector &Operands) {
   switch (Inst.getOpcode()) {
   default:
     return true;
@@ -4340,8 +4359,6 @@ bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
     break;
   }
 
-  // TODO: Check that src0 = src1 or src2.
-
   for (auto Name :
        {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src2_modifiers,
         AMDGPU::OpName::src2_modifiers}) {
@@ -4349,6 +4366,22 @@ bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
             .getImm() &
         SISrcMods::ABS) {
       return false;
+    }
+  }
+
+  // The hardware requires src0 to be equal to src1 or src2. Warn rather than
+  // fail since the encoding is still valid.
+  const unsigned Opc = Inst.getOpcode();
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+  if (Src0Idx != -1 && Src1Idx != -1 && Src2Idx != -1) {
+    const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+    const MCOperand &Src1 = Inst.getOperand(Src1Idx);
+    const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+    if (!isEqualSrcOperand(Src0, Src1) && !isEqualSrcOperand(Src0, Src2)) {
+      Warning(getOperandLoc(Operands, Src0Idx),
+              "src0 should be equal to src1 or src2");
     }
   }
 
@@ -5699,7 +5732,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
 
-  if (!validateDivScale(Inst)) {
+  if (!validateDivScale(Inst, Operands)) {
     Error(IDLoc, "ABS not allowed in VOP3B instructions");
     return false;
   }
