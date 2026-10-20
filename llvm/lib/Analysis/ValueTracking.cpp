@@ -2145,6 +2145,36 @@ static void computeKnownBitsFromOperator(const Operator *I,
       switch (II->getIntrinsicID()) {
       default:
         break;
+      case Intrinsic::udiv_poison: {
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+        KnownBits Known3(BitWidth);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
+        Known =
+            Known.unionWith(KnownBits::udiv(Known2, Known3, /*Exact=*/false));
+        break;
+      }
+      case Intrinsic::sdiv_poison: {
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+        KnownBits Known3(BitWidth);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
+        Known =
+            Known.unionWith(KnownBits::sdiv(Known2, Known3, /*Exact=*/false));
+        break;
+      }
+      case Intrinsic::urem_poison: {
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+        KnownBits Known3(BitWidth);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
+        Known = Known.unionWith(KnownBits::urem(Known2, Known3));
+        break;
+      }
+      case Intrinsic::srem_poison: {
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
+        KnownBits Known3(BitWidth);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
+        Known = Known.unionWith(KnownBits::srem(Known2, Known3));
+        break;
+      }
       case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
@@ -4802,6 +4832,15 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         switch (II->getIntrinsicID()) {
         default:
           break;
+        case Intrinsic::sdiv_poison:
+          Tmp = computeNumSignBitsSDiv(U->getOperand(0), U->getOperand(1),
+                                       DemandedElts, Q, Depth, TyBits);
+          if (Tmp)
+            return Tmp;
+          break;
+        case Intrinsic::srem_poison:
+          return computeNumSignBitsSRem(U->getOperand(0), U->getOperand(1),
+                                        DemandedElts, Q, Depth, TyBits);
         case Intrinsic::abs:
           Tmp =
               ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
