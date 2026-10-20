@@ -30,7 +30,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 template <class T> [[nodiscard]] constexpr T *launder(T *p) {
-  static_assert(__has_builtin(__builtin_launder),
+  static_assert(__has_builtin(__builtin_launder) ||
+                    defined(LIBC_COMPILER_IS_MSVC),
                 "cpp::launder requires __builtin_launder");
   return __builtin_launder(p);
 }

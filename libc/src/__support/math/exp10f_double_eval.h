@@ -19,6 +19,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp10f_utils.h"
@@ -43,7 +44,7 @@ LIBC_INLINE float exp10f_mid(float x) {
   return static_cast<float>(multiply_add(p, lo2 * rr.mh, c0 * rr.mh));
 }
 
-[[gnu::cold, gnu::noinline]] LIBC_INLINE float exp10f_slow(float x) {
+LIBC_COLD LIBC_NOINLINE LIBC_INLINE float exp10f_slow(float x) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 

@@ -127,7 +127,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
-#if __SIZEOF_LONG_DOUBLE__ == 12
+#if defined(__SIZEOF_LONG_DOUBLE__) && (__SIZEOF_LONG_DOUBLE__ == 12)
   using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
 #else
   using StorageType = UInt128;
