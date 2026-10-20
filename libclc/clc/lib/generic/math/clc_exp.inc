@@ -38,12 +38,14 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_exp(__CLC_GENTYPE x) {
   __CLC_GENTYPE y = 1.0f - (((-lo) - MATH_DIVIDE(t * v, 2.0f - v)) - hi);
 
   // Scale by 2^p
-  __CLC_GENTYPE r = __CLC_AS_GENTYPE(__CLC_AS_INTN(y) + (p << 23));
+  __CLC_GENTYPE rs = y * __CLC_AS_GENTYPE((__CLC_UINTN)0x1 << (p + 149));
+  __CLC_GENTYPE rn = __CLC_AS_GENTYPE(__CLC_AS_INTN(y) + (p << 23));
+  __CLC_GENTYPE r = p <= -126 ? rs : rn;
 
   // ln(largest_normal) = 88.72283905206835305366
   const __CLC_GENTYPE ulim = 0x1.62e430p+6f;
-  // ln(smallest_normal) = -87.33654475055310898657
-  const __CLC_GENTYPE llim = -0x1.5d589ep+6f;
+  // ln(smallest_denormal) = -103.278929903431851103
+  const __CLC_GENTYPE llim = -0x1.9d1da0p+6f;
 
   r = x < llim ? 0.0f : r;
   r = x < ulim ? r : __CLC_AS_GENTYPE((__CLC_UINTN)0x7f800000);
