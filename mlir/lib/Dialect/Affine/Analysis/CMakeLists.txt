@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRAffineAnalysis
   AffineAnalysis.cpp
   AffineStructures.cpp
   LoopAnalysis.cpp
+  LoopInvariantConditionOpInterfaceImpl.cpp
   NestedMatcher.cpp
   Utils.cpp
 
@@ -19,7 +20,9 @@ add_mlir_dialect_library(MLIRAffineAnalysis
   MLIRControlFlowInterfaces
   MLIRDialectUtils
   MLIRInferTypeOpInterface
+  MLIRLoopInvariantConditionInterface
   MLIRSideEffectInterfaces
   MLIRPresburger
   MLIRSCFDialect
+  MLIRValueBoundsOpInterface
   )
