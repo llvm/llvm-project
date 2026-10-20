@@ -70,4 +70,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %0 = spirv.FunctionCall @callee() {relaxed_precision} : () -> f32
     spirv.ReturnValue %0 : f32
   }
+  // CHECK-LABEL: spirv.func @call_multi_decorated
+  spirv.func @call_multi_decorated() -> f32 "None" {
+    // CHECK: spirv.FunctionCall @callee() {no_contraction, relaxed_precision} : () -> f32
+    %0 = spirv.FunctionCall @callee() {no_contraction, relaxed_precision} : () -> f32
+    spirv.ReturnValue %0 : f32
+  }
 }
