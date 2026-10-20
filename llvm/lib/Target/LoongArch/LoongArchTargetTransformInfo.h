@@ -52,6 +52,11 @@ public:
 
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override;
+  unsigned getMaxPrefetchIterationsAhead() const override;
   bool enableWritePrefetching() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
