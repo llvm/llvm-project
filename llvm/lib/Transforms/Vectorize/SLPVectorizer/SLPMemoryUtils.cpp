@@ -196,18 +196,19 @@ const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 }
 
 std::optional<int64_t>
-PointersDiffCache::get(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
-                       const DataLayout &DL, ScalarEvolution &SE,
-                       bool StrictCheck, bool CheckType) {
+SLPAnalysisCache::getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
+                                  Value *PtrB, const DataLayout &DL,
+                                  ScalarEvolution &SE, bool StrictCheck,
+                                  bool CheckType) {
   if (PtrA == PtrB)
     return 0;
   unsigned Flags = unsigned(StrictCheck) | (unsigned(CheckType) << 1);
-  KeyT Key(ElemTyA, PtrA, ElemTyB, PtrB, Flags);
-  auto [It, Inserted] = Cache.try_emplace(Key);
+  PtrsDiffKeyT Key(ElemTyA, PtrA, ElemTyB, PtrB, Flags);
+  auto [It, Inserted] = PtrsDiffCache.try_emplace(Key);
   if (!Inserted)
     return It->second;
-  std::optional<int64_t> Diff = getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB,
-                                                DL, SE, StrictCheck, CheckType);
+  std::optional<int64_t> Diff = llvm::getPointersDiff(
+      ElemTyA, PtrA, ElemTyB, PtrB, DL, SE, StrictCheck, CheckType);
   // Set before the reverse insertion below, which may rehash.
   It->second = Diff;
   // The distance is counted in elements of ElemTyA, so querying the pair the
@@ -215,8 +216,17 @@ PointersDiffCache::get(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
   // size. A failed query is recorded for this order only.
   if (Diff && *Diff != std::numeric_limits<int64_t>::min() &&
       DL.getTypeStoreSize(ElemTyA) == DL.getTypeStoreSize(ElemTyB))
-    Cache.try_emplace(KeyT(ElemTyB, PtrB, ElemTyA, PtrA, Flags), -*Diff);
+    PtrsDiffCache.try_emplace(PtrsDiffKeyT(ElemTyB, PtrB, ElemTyA, PtrA, Flags),
+                              -*Diff);
   return Diff;
+}
+
+bool SLPAnalysisCache::isGuaranteedNotToBePoison(const Value *V,
+                                                 AssumptionCache *AC) {
+  auto [It, Inserted] = NotPoisonCache.try_emplace(V, false);
+  if (Inserted)
+    It->second = llvm::isGuaranteedNotToBePoison(V, AC);
+  return It->second;
 }
 
 /// Builds compress-like mask for shuffles for the given \p PointerOps, ordered
@@ -226,7 +236,7 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
                               ArrayRef<unsigned> Order, Type *ScalarTy,
                               const DataLayout &DL, ScalarEvolution &SE,
                               SmallVectorImpl<int> &CompressMask,
-                              PointersDiffCache &Cache) {
+                              SLPAnalysisCache &Cache) {
   const unsigned Sz = PointerOps.size();
   CompressMask.assign(Sz, PoisonMaskElem);
   // The first element always set.
@@ -237,7 +247,7 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
   for (unsigned I : seq<unsigned>(1, Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
     std::optional<int64_t> OptPos =
-        Cache.get(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
     if (!OptPos || OptPos > std::numeric_limits<unsigned>::max())
       return false;
     unsigned Pos = static_cast<unsigned>(*OptPos);
@@ -265,7 +275,7 @@ bool isMaskedLoadCompress(
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
     bool &IsMasked, unsigned &InterleaveFactor,
     SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
-    PointersDiffCache &Cache) {
+    SLPAnalysisCache &Cache) {
   InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
@@ -295,7 +305,7 @@ bool isMaskedLoadCompress(
     PtrN = PointerOps[Order.back()];
   }
   std::optional<int64_t> Diff =
-      Cache.get(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+      Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
   if (!Diff)
     return false;
   const size_t MaxRegSize =
@@ -410,7 +420,7 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    PointersDiffCache &Cache) {
+    SLPAnalysisCache &Cache) {
   bool IsMasked;
   unsigned InterleaveFactor;
   SmallVector<int> CompressMask;
@@ -483,7 +493,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy,
-                           PointersDiffCache &Cache) {
+                           SLPAnalysisCache &Cache) {
   Type *ScalarTy = cast<StoreInst>(VL.front())->getValueOperand()->getType();
   const size_t Sz = VL.size();
   // Only simple scalar element types are supported.
@@ -492,7 +502,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   Value *Ptr0 = Order.empty() ? PointerOps.front() : PointerOps[Order.front()];
   Value *PtrN = Order.empty() ? PointerOps.back() : PointerOps[Order.back()];
   std::optional<int64_t> Diff =
-      Cache.get(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+      Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
   if (!Diff || *Diff <= 0)
     return false;
   // Avoid widened vectors with very large gaps between the stored elements.
@@ -515,7 +525,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   for (unsigned I : seq<unsigned>(Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
     std::optional<int64_t> Off =
-        Cache.get(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
     if (!Off || *Off <= Prev || *Off > *Diff)
       return false;
     ReuseShuffleIndices[*Off] = static_cast<int>(I);
@@ -528,7 +538,7 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
                             SmallVectorImpl<unsigned> &SortedIndices,
-                            PointersDiffCache &Cache) {
+                            SLPAnalysisCache &Cache) {
   assert(
       all_of(VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
       "Expected list of pointer operands.");
@@ -550,7 +560,7 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
     auto Key = std::make_pair(BBs[Cnt + 1], getUnderlyingObject(Ptr, MaxDepth));
     bool Found = any_of(Bases.try_emplace(Key).first->second,
                         [&, &Cnt = Cnt, &Ptr = Ptr](auto &Base) {
-                          std::optional<int64_t> Diff = Cache.get(
+                          std::optional<int64_t> Diff = Cache.getPointersDiff(
                               ElemTy, std::get<0>(Base.front()), ElemTy, Ptr,
                               DL, SE, /*StrictCheck=*/true);
                           if (!Diff)
