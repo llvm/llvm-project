@@ -68,7 +68,8 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
                      RealDesc.getNumOperands() == PseudoDesc.getNumOperands() + 1;
 
   // Atomics whose result is unused write no register.
-  if (MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET)
+  if (MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET ||
+      MI->getOpcode() == AGX::DEVICE_ATOMIC_NORET)
     OutMI.addOperand(MCOperand::createReg(MCRegister()));
 
   unsigned Idx = 0;
@@ -88,7 +89,8 @@ bool AGXMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   // caches.
   if ((MI->getOpcode() == AGX::DEVICE_ATOMIC ||
        MI->getOpcode() == AGX::DEVICE_ATOMIC_CMPXCHG ||
-       MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET) &&
+       MI->getOpcode() == AGX::DEVICE_ATOMIC64_NORET ||
+       MI->getOpcode() == AGX::DEVICE_ATOMIC_NORET) &&
       ST.hasMultiDieCoherency()) {
     int Idx = AGX::getNamedOperandIdx(Opcode, AGX::OpName::coherent);
     OutMI.getOperand(Idx).setImm(OutMI.getOperand(Idx).getImm() | 1);

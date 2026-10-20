@@ -1063,6 +1063,17 @@ def DEVICE_ATOMIC_CMPXCHG : AGXPseudo<(outs GPR32:$R),
   let SchedRW = [WriteAtomic];
 }
 
+// A 32-bit atomic whose old value is unused: no result register, and so no
+// wait (Mesa drops unused atomic results the same way, agx_dce).
+def DEVICE_ATOMIC_NORET : AGXPseudo<(outs),
+                                    (ins i32imm:$op, i32imm:$g, Base64Op:$A,
+                                         IndexOp:$O, i32imm:$sgn, GPR32:$S,
+                                         i32imm:$coherent)> {
+  let G13Real = ATOMIC_g13;
+  let IsAsync = 1;
+  let SchedRW = [WriteAtomic];
+}
+
 // A 64-bit atomic without a result (the hardware returns only a "changed"
 // flag).
 def DEVICE_ATOMIC64_NORET : AGXPseudo<(outs),
@@ -1104,9 +1115,23 @@ class AtomicCmpSwapFrag<list<int> as>
   let AddressSpaces = as;
 }
 
+class AtomicNoRetFrag<SDPatternOperator op, ValueType vt>
+    : PatFrag<(ops node:$ptr, node:$val), (op node:$ptr, node:$val), [{
+  return SDValue(N, 0).use_empty();
+}]> {
+  let IsAtomic = 1;
+  let MemoryVT = vt;
+  let AddressSpaces = DeviceAS;
+}
+
 multiclass AGXAtomicPats<SDPatternOperator node, int op> {
   def _device : AtomicFrag<node, DeviceAS>;
   def _local : AtomicFrag<node, LocalAS>;
+  def _device_noret : AtomicNoRetFrag<node, i32>;
+
+  let AddedComplexity = 10 in
+  def : Pat<(i32 (!cast<PatFrag>(NAME#"_device_noret") i64:$ptr, i32:$val)),
+            (DEVICE_ATOMIC_NORET op, 0, $ptr, (i32 0), 0, $val, 0)>;
 
   // Atomics take the full address in the base register; the element index
   // is always zero.
@@ -1137,6 +1162,9 @@ def agx_atomic_fadd_device
 }
 
 // The float32 add is the sub opcode with bit 45 (the coherent operand) set.
+// The float add keeps its result register even when unused: the form
+// without one (red.add.f32) has not been run on hardware yet
+// (ptx-re-blockers B24).
 let Predicates = [HasDeviceAtomicFAdd] in
 def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
           (DEVICE_ATOMIC AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;

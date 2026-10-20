@@ -1,19 +1,19 @@
 {
  "histogram.ll:histogram:agx-g13g": {
-  "bytes": 126,
-  "cycles": 200.7,
+  "bytes": 124,
+  "cycles": 178.1,
   "gprs": 7,
-  "instructions": 23,
+  "instructions": 22,
   "uniform_halves": 16,
-  "waits": 2
+  "waits": 1
  },
  "histogram.ll:histogram:agx-g14c": {
-  "bytes": 126,
-  "cycles": 200.7,
+  "bytes": 124,
+  "cycles": 178.1,
   "gprs": 7,
-  "instructions": 23,
+  "instructions": 22,
   "uniform_halves": 16,
-  "waits": 2
+  "waits": 1
  },
  "reduce.ll:reduce:agx-g13g": {
   "bytes": 228,

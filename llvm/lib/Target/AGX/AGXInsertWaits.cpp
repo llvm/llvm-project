@@ -95,7 +95,9 @@ bool AGXInsertWaits::runOnMachineFunction(MachineFunction &MF) {
           (Touches(MI) || isBarrier(MI) || MI.isTerminator() ||
            (AGXInstrInfo::isAsync(MI) && NumPending >= MaxPending)))
         Wait(MI.getIterator());
-      if (AGXInstrInfo::isAsync(MI)) {
+      // Asynchronous instructions without a result (atomics whose old value
+      // is unused) leave nothing to wait for, like stores.
+      if (AGXInstrInfo::isAsync(MI) && MI.getNumExplicitDefs()) {
         for (const MachineOperand &MO : MI.defs())
           for (MCRegUnit U : TRI.regunits(MO.getReg().asMCReg()))
             Pending.set(static_cast<unsigned>(U));
