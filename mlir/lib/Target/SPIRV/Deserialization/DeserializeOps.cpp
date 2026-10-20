@@ -705,10 +705,10 @@ LogicalResult Deserializer::processCopyMemoryOp(ArrayRef<uint32_t> words,
     auto memoryAccess = static_cast<spirv::MemoryAccess>(words[wordIndex++]);
     // Other masks require scope or alias-list operands that these ops cannot
     // represent. Do not mistake those operands for a second memory access mask.
-    constexpr auto supported = spirv::MemoryAccess::Volatile |
-                               spirv::MemoryAccess::Aligned |
-                               spirv::MemoryAccess::Nontemporal |
-                               spirv::MemoryAccess::NonPrivatePointer;
+    constexpr spirv::MemoryAccess supported =
+        spirv::MemoryAccess::Volatile | spirv::MemoryAccess::Aligned |
+        spirv::MemoryAccess::Nontemporal |
+        spirv::MemoryAccess::NonPrivatePointer;
     if (static_cast<uint32_t>(memoryAccess) &
         ~static_cast<uint32_t>(supported)) {
       auto mask =

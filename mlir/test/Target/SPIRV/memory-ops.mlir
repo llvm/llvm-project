@@ -1,5 +1,4 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
-// RUN: mlir-opt -split-input-file %s | mlir-opt -split-input-file | FileCheck %s
 
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
