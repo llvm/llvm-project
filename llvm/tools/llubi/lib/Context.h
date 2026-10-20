@@ -420,6 +420,13 @@ public:
                      bool *ContainsUndefinedBits = nullptr);
   /// Convert a value to byte sequence. Padding bits are set to zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
+  /// value of type \p Ty. The bit range must be within \p Src.
+  AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits, Type *Ty);
+  /// Overwrite the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Base
+  /// with \p Val. The bit range must be within \p Base.
+  void insertBits(ByteValue &Base, uint32_t OffsetInBits, const AnyValue &Val,
+                  Type *Ty);
   /// Direct memory load without checks.
   AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                 bool *ContainsUndefinedBits = nullptr);

@@ -13,6 +13,7 @@ add_clang_library(clangCodeGenUtils
   ExprUtils.cpp
   FunctionUtils.cpp
   ItaniumCXXABIUtils.cpp
+  LoopAttributes.cpp
   ModuleUtils.cpp
   RecordLayoutUtils.cpp
   StmtUtils.cpp

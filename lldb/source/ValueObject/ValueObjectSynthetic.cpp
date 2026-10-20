@@ -42,7 +42,8 @@ public:
     return m_backend.GetChildAtIndex(idx);
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return m_backend.GetIndexOfChildWithName(name);
   }
 
