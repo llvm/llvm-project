@@ -33,6 +33,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SmallVector.h"
 #include <variant>
 
 #define GET_TYPEDEF_CLASSES
@@ -139,8 +140,18 @@ mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
 /// associated with the async clauses without an async-value.
 mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
 
+/// The clauses of a construct can be given once per device type. Of the values
+/// that reach a given device type, the ones naming it are the most specific,
+/// then the ones naming every device type, then the ones given before any
+/// device_type clause.
+SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
+
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
+
+/// Used to find out whether `op` is a data entry operation or an
+/// `acc.map_info`. `op` may be null.
+bool isDataEntryOp(mlir::Operation *op);
 
 /// Used to obtain the `dataClause` from a data entry operation.
 /// Returns empty optional if not a data entry operation.
@@ -213,6 +224,13 @@ inline bool isSpecializedAccRoutine(mlir::Operation *op) {
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
+}
+
+/// Name for a unit attribute on a data entry operation stating that nothing in
+/// the region reads the descriptor its variable is reached through, so the
+/// mapping supplies the bounds but needs no device copy of the descriptor.
+static constexpr StringLiteral getNoDeviceDescriptorAttrName() {
+  return StringLiteral("acc.no_device_descriptor");
 }
 
 /// Name for an attribute attached to a loop indicating the number of loops

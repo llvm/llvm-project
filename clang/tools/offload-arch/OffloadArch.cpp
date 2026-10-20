@@ -8,6 +8,7 @@
 
 #include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
@@ -62,8 +63,9 @@ int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "A tool to detect the presence of offloading devices on the system. \n\n"
       "The tool will output each detected GPU architecture separated by a\n"
       "newline character. If multiple GPUs of the same architecture are found\n"
