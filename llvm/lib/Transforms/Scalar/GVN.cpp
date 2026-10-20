@@ -351,22 +351,18 @@ private:
   struct DependencyBlockInfo {
     DependencyBlockInfo() = delete;
     DependencyBlockInfo(const PHITransAddr &Addr, MemoryAccess *ClobberMA)
-        : Addr(Addr), InitialClobberMA(ClobberMA), ClobberMA(ClobberMA),
-          ForceUnknown(false), Visited(false) {}
+        : Addr(Addr), ClobberMA(ClobberMA) {}
     PHITransAddr Addr;
-    MemoryAccess *InitialClobberMA;
     MemoryAccess *ClobberMA;
-    std::optional<ReachingMemVal> MemVal;
-    bool ForceUnknown : 1;
-    bool Visited : 1;
   };
 
   using DependencyBlockSet = DenseMap<BasicBlock *, DependencyBlockInfo>;
 
-  std::optional<GVNPassImpl::ReachingMemVal> scanMemoryAccessesUsers(
-      const MemoryLocation &Loc, bool IsInvariantLoad, BasicBlock *BB,
-      const SmallVectorImpl<MemoryAccess *> &ClobbersList, MemorySSA &MSSA,
-      BatchAAResults &AA, LoadInst *L = nullptr);
+  std::optional<GVNPassImpl::ReachingMemVal>
+  scanBlockMemoryAccesses(const MemoryLocation &Loc, bool IsInvariantLoad,
+                          BasicBlock *BB, MemoryAccess *ClobberMA,
+                          MemorySSA &MSSA, BatchAAResults &AA,
+                          LoadInst *L = nullptr);
 
   std::optional<GVNPassImpl::ReachingMemVal>
   accessMayModifyLocation(MemoryAccess *ClobberMA, const MemoryLocation &Loc,
@@ -376,10 +372,6 @@ private:
   bool collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
                            MemoryAccess *ClobberMA, DependencyBlockSet &Blocks,
                            SmallVectorImpl<BasicBlock *> &Worklist);
-
-  void collectClobberList(SmallVectorImpl<MemoryAccess *> &Clobbers,
-                          BasicBlock *BB, const DependencyBlockInfo &StartInfo,
-                          const DependencyBlockSet &Blocks, MemorySSA &MSSA);
 
   bool findReachingValuesForLoad(LoadInst *Inst,
                                  SmallVectorImpl<ReachingMemVal> &Values,
@@ -2615,79 +2607,69 @@ maybeLoadStoreLocation(Instruction *I, bool AllowStores,
   return std::nullopt;
 }
 
-/// Scan the users of each MemoryAccess in `ClobbersList` that belong to `BB`,
-/// looking for memory reads whose location aliases `Loc` and dominates our
-/// load.
-std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::scanMemoryAccessesUsers(
+/// Scan the MemoryAccesses in `BB` in reverse program order (starting before
+/// `L` if specified, or from the end of `BB` otherwise, and stopping before
+/// `ClobberMA` when `ClobberMA` is an instruction access in `BB`), looking for
+/// a dominating memory read (or store if `IsInvariantLoad`) whose location
+/// aliases `Loc`.
+std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::scanBlockMemoryAccesses(
     const MemoryLocation &Loc, bool IsInvariantLoad, BasicBlock *BB,
-    const SmallVectorImpl<MemoryAccess *> &ClobbersList, MemorySSA &MSSA,
-    BatchAAResults &AA, LoadInst *L) {
+    MemoryAccess *ClobberMA, MemorySSA &MSSA, BatchAAResults &AA, LoadInst *L) {
+  const MemorySSA::AccessList *Accesses = MSSA.getBlockAccesses(BB);
+  if (!Accesses)
+    return std::nullopt;
 
-  // Prefer a candidate that is closer to the load within the same block.
-  auto UpdateChoice = [&](std::optional<ReachingMemVal> &Choice,
-                          AliasResult &AR, Instruction *Candidate) {
-    if (!Choice) {
-      if (AR == AliasResult::PartialAlias)
-        Choice = ReachingMemVal::getClobber(Loc.Ptr, Candidate, AR.getOffset());
-      else
-        Choice = ReachingMemVal::getDef(Loc.Ptr, Candidate);
-      return;
-    }
-    if (!MSSA.locallyDominates(MSSA.getMemoryAccess(Choice->Inst),
-                               MSSA.getMemoryAccess(Candidate)))
-      return;
+  auto It = L ? std::next(MSSA.getMemoryAccess(L)->getReverseIterator())
+              : Accesses->rbegin();
+  auto EndIt = (ClobberMA->getBlock() == BB &&
+                !MSSA.isLiveOnEntryDef(ClobberMA) && !IsInvariantLoad)
+                   ? ClobberMA->getReverseIterator()
+                   : Accesses->rend();
 
-    if (AR == AliasResult::PartialAlias) {
-      Choice->Kind = DepKind::Clobber;
-      Choice->Offset = AR.getOffset();
-    } else {
-      Choice->Kind = DepKind::Def;
-      Choice->Offset = -1;
-    }
-
-    Choice->Inst = Candidate;
-    Choice->Block = Candidate->getParent();
-  };
-
-  std::optional<ReachingMemVal> ReachingVal;
-  for (MemoryAccess *MA : ClobbersList) {
-    unsigned Scanned = 0;
-    for (User *U : MA->users()) {
-      if (++Scanned >= Opts.gvn_scan_users_limit)
-        return ReachingMemVal::getUnknown(BB, Loc.Ptr);
-
-      auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U);
-      if (!UseOrDef || UseOrDef->getBlock() != BB)
-        continue;
-
-      Instruction *MemI = UseOrDef->getMemoryInst();
-      if (MemI == L ||
-          (L && !MSSA.locallyDominates(UseOrDef, MSSA.getMemoryAccess(L))))
-        continue;
-
-      if (auto MaybeLoc = maybeLoadStoreLocation(MemI, IsInvariantLoad, TLI)) {
-        AliasResult AR = AA.alias(*MaybeLoc, Loc);
-        // If the locations do not certainly alias, we cannot possibly infer the
-        // following load loads the same value.
-        if (AR == AliasResult::NoAlias || AR == AliasResult::MayAlias)
-          continue;
-
-        // Locations partially overlap, but neither is a subset of the other, or
-        // the second location is before the first.
-        if (AR == AliasResult::PartialAlias &&
-            (!AR.hasOffset() || AR.getOffset() < 0))
-          continue;
-
-        // Found candidate, the new load memory location and the given location
-        // must alias: precise overlap, or subset with non-negative offset.
-        UpdateChoice(ReachingVal, AR, MemI);
-      }
-    }
-    if (ReachingVal)
+  unsigned Scanned = 0;
+  for (; It != EndIt; ++It) {
+    // Stop if we reach a MemoryPhi at the beginning of the block.
+    auto *UseOrDef = dyn_cast<MemoryUseOrDef>(&*It);
+    if (!UseOrDef)
       break;
+
+    Instruction *MemI = UseOrDef->getMemoryInst();
+    if (MemI == L)
+      continue;
+
+    if (auto MaybeLoc = maybeLoadStoreLocation(MemI, IsInvariantLoad, TLI)) {
+      if (++Scanned >= Opts.gvn_scan_users_limit)
+        return std::nullopt;
+
+      AliasResult AR = AA.alias(*MaybeLoc, Loc);
+      // `MemI` here is either a load (which does not modify memory) or a store
+      // scanned for an `!invariant.load` (whose memory location is invariant),
+      // and all clobbering writes in `BB` up to `ClobberMA` have already been
+      // checked by `accessMayModifyLocation`. If `MemI` does not certainly
+      // alias `Loc`, we cannot forward a value from it, but it does not clobber
+      // `Loc` either, so continue scanning earlier accesses.
+      if (AR == AliasResult::NoAlias || AR == AliasResult::MayAlias)
+        continue;
+
+      // Locations partially overlap, but either the offset is unknown or `Loc`
+      // starts before `*MaybeLoc`, so `MemI` does not cover the leading bytes
+      // of `Loc`. Since `MemI` cannot clobber `Loc`, continue scanning.
+      if (AR == AliasResult::PartialAlias &&
+          (!AR.hasOffset() || AR.getOffset() < 0))
+        continue;
+
+      // Because we walk `BB`'s access list in reverse program order, the first
+      // matching access we encounter is guaranteed to be the closest to `L` (or
+      // to the end of `BB`). A `PartialAlias` with a non-negative offset
+      // indicates a wider access from which `analyzeLoadAvailability` may
+      // extract `Loc`'s bits.
+      if (AR == AliasResult::PartialAlias)
+        return ReachingMemVal::getClobber(Loc.Ptr, MemI, AR.getOffset());
+      return ReachingMemVal::getDef(Loc.Ptr, MemI);
+    }
   }
 
-  return ReachingVal;
+  return std::nullopt;
 }
 
 /// Check if a given MemoryAccess (usually a MemoryDef) actually modifies a
@@ -2851,49 +2833,6 @@ bool GVNPassImpl::collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
   return true;
 }
 
-/// Build a list of MemoryAccesses whose users could potentially alias the
-/// memory location being queried. Starts from StartInfo's initial clobber,
-/// walk the use-def chain to the final clobber. If the chain extends beyond
-/// `BB`, continue into that block but only if it is in the previously collected
-/// set.
-void GVNPassImpl::collectClobberList(SmallVectorImpl<MemoryAccess *> &Clobbers,
-                                     BasicBlock *BB,
-                                     const DependencyBlockInfo &StartInfo,
-                                     const DependencyBlockSet &Blocks,
-                                     MemorySSA &MSSA) {
-  MemoryAccess *MA = StartInfo.InitialClobberMA;
-  MemoryAccess *LastMA = StartInfo.ClobberMA;
-
-  for (;;) {
-    while (MA != LastMA) {
-      Clobbers.push_back(MA);
-      MA = cast<MemoryUseOrDef>(MA)->getDefiningAccess();
-    }
-    Clobbers.push_back(MA);
-
-    if (MSSA.isLiveOnEntryDef(MA) ||
-        (MA->getBlock() == BB && !isa<MemoryPhi>(MA)))
-      break;
-
-    // If the final clobber in the current block is a MemoryPhi, go to the
-    // immediate dominator; otherwise, just get to the block containing the
-    // final clobber.
-    if (MA->getBlock() == BB)
-      BB = DT->getNode(BB)->getIDom()->getBlock();
-    else
-      BB = MA->getBlock();
-
-    auto It = Blocks.find(BB);
-    if (It == Blocks.end())
-      break;
-
-    MA = It->second.InitialClobberMA;
-    LastMA = It->second.ClobberMA;
-    if (MA == Clobbers.back())
-      Clobbers.pop_back();
-  }
-}
-
 /// Entrypoint for the MemorySSA-based redundant load elimination algorithm.
 /// Given as input a load instruction, the function computes the set of reaching
 /// memory values, one per predecessor path, that analyzeLoadAvailability can
@@ -2929,26 +2868,14 @@ bool GVNPassImpl::findReachingValuesForLoad(
   // Phase 1. First off, look for a local dependency to avoid having to
   // disambiguate between before the load and after the load of the starting
   // block (as the load may be visited from a backedge).
-  for (;;) {
-    // Scan users of the clobbering memory access.
-    if (auto RMV = scanMemoryAccessesUsers(
-            Loc, IsInvariantLoad, StartBlock,
-            SmallVector<MemoryAccess *, 1>{ClobberMA}, MSSA, AA, L)) {
-      Values.emplace_back(*RMV);
-      return true;
-    }
-
-    // Exit from here, and proceed visiting predecessors if the clobbering
-    // access is non-local or is a MemoryPhi.
-    if (ClobberMA->getBlock() != StartBlock || isa<MemoryPhi>(ClobberMA))
-      break;
-
+  std::optional<ReachingMemVal> LocalDefRMV;
+  while (ClobberMA->getBlock() == StartBlock && !isa<MemoryPhi>(ClobberMA)) {
     // Check if the clobber actually aliases the load location.
     if (auto RMV =
             accessMayModifyLocation(ClobberMA, Loc, L->getAlign(),
                                     IsInvariantLoad, StartBlock, MSSA, AA)) {
-      Values.emplace_back(*RMV);
-      return true;
+      LocalDefRMV = RMV;
+      break;
     }
 
     // It may happen that the clobbering memory access does not actually
@@ -2956,91 +2883,44 @@ bool GVNPassImpl::findReachingValuesForLoad(
     ClobberMA = cast<MemoryUseOrDef>(ClobberMA)->getDefiningAccess();
   }
 
+  // Scan the memory accesses in `StartBlock` between `ClobberMA` and `L` for a
+  // dominating memory read (or store if `IsInvariantLoad`) that is closer to
+  // `L` than `ClobberMA`.
+  if (auto RMV = scanBlockMemoryAccesses(Loc, IsInvariantLoad, StartBlock,
+                                         ClobberMA, MSSA, AA, L)) {
+    Values.emplace_back(*RMV);
+    return true;
+  }
+
+  // If no reusable read was found after `ClobberMA`, use the local modifying
+  // access if one was found in `StartBlock`.
+  if (LocalDefRMV) {
+    Values.emplace_back(*LocalDefRMV);
+    return true;
+  }
+
   // Non-local speculations are not allowed under ASan.
   if (L->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
       L->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
     return false;
 
-  // Phase 2. Walk backwards through the CFG, collecting all the blocks that
-  // contain an instruction that modifies the load memory location, or that lie
-  // on a path between a clobbering block and our load. Start off by collecting
-  // the predecessors of `StartBlock`. All the visited blocks are stored in a
-  // the set `Blocks`. If possible, the memory address maintained for the block
-  // visited does get phi-translated.
+  // Phase 2. Walk backwards through the CFG to find the reaching memory value
+  // along each predecessor path. Start off by collecting the predecessors of
+  // `StartBlock`. All the visited blocks are recorded in `Blocks` with their
+  // phi-translated memory address and incoming clobbering access.
   DependencyBlockSet Blocks;
-  SmallVector<BasicBlock *, 16> InitialWorklist;
+  SmallVector<BasicBlock *, 16> Worklist;
   const DataLayout &DL = L->getDataLayout();
   if (!collectPredecessors(StartBlock,
                            PHITransAddr(L->getPointerOperand(), DL, AC),
-                           ClobberMA, Blocks, InitialWorklist))
+                           ClobberMA, Blocks, Worklist))
     return false;
 
   // Do a bottom-up DFS.
-  auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
     // Match MemDep's cutoff for expensive non-local queries.
     if (Blocks.size() > Opts.gvn_max_num_reaching_blocks)
       return false;
-    auto *BB = Worklist.pop_back_val();
-    DependencyBlockInfo &Info = Blocks.find(BB)->second;
-
-    // Phi-translation may have failed.
-    if (!Info.Addr.getAddr())
-      continue;
-
-    // If the clobbering memory access is in the current block and it indeed
-    // clobbers our load location, record the dependency and do not visit the
-    // predecessors of this block further, continue with the blocks in the
-    // worklist.
-    if (Info.ClobberMA->getBlock() == BB && !isa<MemoryPhi>(Info.ClobberMA)) {
-      const MemoryLocation BBLoc = Loc.getWithNewPtr(Info.Addr.getAddr());
-      if (auto RMV =
-              accessMayModifyLocation(Info.ClobberMA, BBLoc, L->getAlign(),
-                                      IsInvariantLoad, BB, MSSA, AA)) {
-        Info.MemVal = RMV;
-        continue;
-      }
-      assert(!MSSA.isLiveOnEntryDef(Info.ClobberMA) &&
-             "LiveOnEntry aliases everything");
-
-      // If, however, the clobbering memory access does not actually clobber
-      // our load location, transition to its defining memory access, but
-      // keep examining the same basic block.
-      Info.ClobberMA =
-          cast<MemoryUseOrDef>(Info.ClobberMA)->getDefiningAccess();
-      Worklist.emplace_back(BB);
-      continue;
-    }
-
-    // At this point we know the current block is "transparent", i.e. the memory
-    // location is not modified when execution goes through this block.
-    // Continue to its predecessors, unless a predecessor has already been
-    // visited with a different address. We currently cannot represent such a
-    // dependency.
-    if (BB == StartBlock && Info.Addr.getAddr() != L->getPointerOperand()) {
-      Info.ForceUnknown = true;
-      continue;
-    }
-    if (BB != StartBlock &&
-        !collectPredecessors(BB, Info.Addr, Info.ClobberMA, Blocks, Worklist))
-      Info.ForceUnknown = true;
-  }
-
-  // Phase 3. We have collected all the blocks that either write a value to the
-  // memory location of the load, or there exists a path to the load, along
-  // which the memory location is not modified. Perform a second DFS to find
-  // load-to-load dependencies; namely, look at the dominating memory reads,
-  // that alias our load. These are the MemoryUses that are users of the
-  // MemoryDefs we previously identified. If no memory read is encountered,
-  // either confirm the clobbering write found before or set to unknown.
-  Worklist = InitialWorklist;
-  for (BasicBlock *BB : Worklist) {
-    DependencyBlockInfo &Info = Blocks.find(BB)->second;
-    Info.Visited = true;
-  }
-
-  SmallVector<MemoryAccess *> Clobbers;
-  while (!Worklist.empty()) {
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
@@ -3051,38 +2931,49 @@ bool GVNPassImpl::findReachingValuesForLoad(
       continue;
     }
 
-    Clobbers.clear();
-    collectClobberList(Clobbers, BB, Info, Blocks, MSSA);
-    if (auto RMV =
-            scanMemoryAccessesUsers(Loc.getWithNewPtr(Info.Addr.getAddr()),
-                                    IsInvariantLoad, BB, Clobbers, MSSA, AA)) {
+    // Walk `Info.ClobberMA` backwards within `BB` to find the closest access in
+    // `BB` that may modify `BBLoc`.
+    const MemoryLocation BBLoc = Loc.getWithNewPtr(Info.Addr.getAddr());
+    std::optional<ReachingMemVal> DefRMV;
+    while (Info.ClobberMA->getBlock() == BB &&
+           !isa<MemoryPhi>(Info.ClobberMA)) {
+      if (auto RMV =
+              accessMayModifyLocation(Info.ClobberMA, BBLoc, L->getAlign(),
+                                      IsInvariantLoad, BB, MSSA, AA)) {
+        DefRMV = RMV;
+        break;
+      }
+      assert(!MSSA.isLiveOnEntryDef(Info.ClobberMA) &&
+             "LiveOnEntry aliases everything");
+
+      Info.ClobberMA =
+          cast<MemoryUseOrDef>(Info.ClobberMA)->getDefiningAccess();
+    }
+
+    // Scan `BB`'s memory accesses from the end of `BB` back to `Info.ClobberMA`
+    // for a dominating memory read (or store if `IsInvariantLoad`).
+    if (auto RMV = scanBlockMemoryAccesses(BBLoc, IsInvariantLoad, BB,
+                                           Info.ClobberMA, MSSA, AA)) {
       Values.push_back(*RMV);
       continue;
     }
 
-    // If no reusable memory use was found, and the current block is not
-    // transparent, use the already established memory def.
-    if (Info.MemVal) {
-      Values.push_back(*Info.MemVal);
+    // If no reusable memory read was found after `Info.ClobberMA`, use the
+    // modifying access found in `BB`, if any.
+    if (DefRMV) {
+      Values.push_back(*DefRMV);
       continue;
     }
 
-    if (Info.ForceUnknown) {
+    // At this point we know the current block is "transparent", i.e. the memory
+    // location is not modified or read when execution goes through this block.
+    // Continue to its predecessors, unless we revisited `StartBlock` via a
+    // backedge without finding a reaching value, or a predecessor has already
+    // been visited with a different address (which we currently cannot
+    // represent).
+    if (BB == StartBlock ||
+        !collectPredecessors(BB, Info.Addr, Info.ClobberMA, Blocks, Worklist))
       Values.push_back(ReachingMemVal::getUnknown(BB, Info.Addr.getAddr()));
-      continue;
-    }
-
-    // If the current block is transparent, continue to its predecessors.
-    for (BasicBlock *Pred : predecessors(BB)) {
-      auto It = Blocks.find(Pred);
-      if (It == Blocks.end())
-        continue;
-      DependencyBlockInfo &PredInfo = It->second;
-      if (PredInfo.Visited)
-        continue;
-      PredInfo.Visited = true;
-      Worklist.push_back(Pred);
-    }
   }
 
   return true;
