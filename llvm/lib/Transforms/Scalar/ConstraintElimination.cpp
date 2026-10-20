@@ -1403,9 +1403,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
       StartSCEV = SE->getSCEV(ExtStartValue);
     else if (!StartSCEV)
       StartSCEV = SE->getSCEV(StartValue);
-    if (SE->getEffectiveSCEVType(B->getType()) !=
-        SE->getEffectiveSCEVType(StartSCEV->getType()))
-      return;
     const SCEV *BMinusStart = SE->getMinusSCEV(SE->getSCEV(B), StartSCEV);
     if (isa<SCEVCouldNotCompute>(BMinusStart))
       return;
