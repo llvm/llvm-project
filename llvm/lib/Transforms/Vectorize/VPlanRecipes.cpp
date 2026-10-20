@@ -294,6 +294,10 @@ bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
     case Instruction::Mul:
     case Instruction::GetElementPtr:
       return true;
+    case Instruction::Call:
+    case VPInstruction::Intrinsic:
+      return getCalleeFnAttrs(*cast<VPInstruction>(this))
+          .hasAttribute(Attribute::Speculatable);
     }
   }
   }
