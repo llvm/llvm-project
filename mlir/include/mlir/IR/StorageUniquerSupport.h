@@ -177,7 +177,7 @@ public:
   static ConcreteT get(MLIRContext *ctx, Args &&...args) {
     // Ensure that the invariants are correct for construction.
     assert(succeeded(
-        ConcreteT::verifyInvariants(getDefaultDiagnosticEmitFn(ctx), args...)));
+        verifyWithEmitterRef(getDefaultDiagnosticEmitFn(ctx), args...)));
     return UniquerT::template get<ConcreteT>(ctx, std::forward<Args>(args)...);
   }
 
@@ -238,6 +238,16 @@ protected:
   }
 
 private:
+  /// Calls verifyInvariants with a function_ref emitter, as getChecked does.
+  /// Passed a unique_function, the default verifyInvariants above would bind
+  /// it exactly and win over a type's own verifier when both are in scope.
+  template <typename... Args>
+  static LogicalResult
+  verifyWithEmitterRef(function_ref<InFlightDiagnostic()> emitError,
+                       Args &&...args) {
+    return ConcreteT::verifyInvariants(emitError, args...);
+  }
+
   /// Trait to check if T provides a 'ConcreteEntity' type alias.
   template <typename T>
   using has_concrete_entity_t = typename T::ConcreteEntity;

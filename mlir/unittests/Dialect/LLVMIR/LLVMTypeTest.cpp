@@ -17,3 +17,13 @@ TEST_F(LLVMIRTest, IsStructTypeMutable) {
   ASSERT_TRUE(bool(structTy));
   ASSERT_TRUE(structTy.hasTrait<TypeTrait::IsMutable>());
 }
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+// LLVMStructType pulls in the default verifyInvariants next to its own; get()
+// must still pick its own.
+TEST_F(LLVMIRTest, StructGetVerifies) {
+  EXPECT_DEATH(
+      LLVMStructType::getLiteral(&context, {LLVMVoidType::get(&context)}),
+      "invalid LLVM structure element type");
+}
+#endif
