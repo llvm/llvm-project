@@ -21,9 +21,6 @@
 
 namespace Fortran::runtime::cuda {
 
-// The compiler models the cuf.device_is_active query this backs as a read of
-// the context state and may erase an unused query, so this probe must stay
-// free of observable effects.
 static bool deviceContextTornDown() {
   // Keep cudaGetLastError transparent: consume probe-only sticky errors when
   // the slot started clean, never discarding a pre-existing user error.

@@ -26,6 +26,11 @@ include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+// The state of the CUDA device context, read by cuf.device_is_active. No
+// operation writes it: the context is torn down by a user call such as
+// cudaDeviceReset, which is an ordinary call with unknown effects.
+def CUFDeviceContextResource : Resource<"::cuf::DeviceContextResource">;
+
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
@@ -439,7 +444,7 @@ def cuf_OnDeviceOp : cuf_Op<"on_device", [Pure]> {
 }
 
 def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active",
-    [MemoryEffects<[MemRead]>]> {
+    [MemoryEffects<[MemRead<CUFDeviceContextResource>]>]> {
   let summary = "Query whether the CUDA device context is still active";
 
   let description = [{
@@ -449,13 +454,6 @@ def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active",
     Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
     to `false` in device code, so host-only cleanup is DCE'd from GPU
     functions.
-
-    The query is modeled as a read of the context state: it has no other
-    effect, so a `cuf.device_is_active` whose result is unused, for instance
-    once the cleanup it guarded has been removed, is dead and erased by
-    canonicalization while it is still an operation, before its conversion to
-    the runtime call. The runtime query it lowers to must stay free of
-    observable effects for this to hold.
   }];
 
   let results = (outs I1:$res);
