@@ -2270,10 +2270,8 @@ define i128 @unordered_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2290,10 +2288,8 @@ define i128 @unordered_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2310,10 +2306,8 @@ define i128 @unordered_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2330,10 +2324,8 @@ define i128 @unordered_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2350,10 +2342,8 @@ define i128 @unordered_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2370,10 +2360,8 @@ define i128 @unordered_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2390,10 +2378,8 @@ define i128 @unordered_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -2410,10 +2396,8 @@ define i128 @unordered_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3406,10 +3390,8 @@ define i128 @unordered_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3426,10 +3408,8 @@ define i128 @unordered_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3446,10 +3426,8 @@ define i128 @unordered_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3466,10 +3444,8 @@ define i128 @unordered_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3486,10 +3462,8 @@ define i128 @unordered_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3506,10 +3480,8 @@ define i128 @unordered_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3526,10 +3498,8 @@ define i128 @unordered_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -3546,10 +3516,8 @@ define i128 @unordered_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4542,10 +4510,8 @@ define i128 @unordered_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4562,10 +4528,8 @@ define i128 @unordered_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4582,10 +4546,8 @@ define i128 @unordered_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4602,10 +4564,8 @@ define i128 @unordered_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4622,10 +4582,8 @@ define i128 @unordered_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4642,10 +4600,8 @@ define i128 @unordered_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4662,10 +4618,8 @@ define i128 @unordered_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -4682,10 +4636,8 @@ define i128 @unordered_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7422,10 +7374,8 @@ define i128 @monotonic_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7442,10 +7392,8 @@ define i128 @monotonic_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7462,10 +7410,8 @@ define i128 @monotonic_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7482,10 +7428,8 @@ define i128 @monotonic_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7502,10 +7446,8 @@ define i128 @monotonic_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7522,10 +7464,8 @@ define i128 @monotonic_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7542,10 +7482,8 @@ define i128 @monotonic_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -7562,10 +7500,8 @@ define i128 @monotonic_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8558,10 +8494,8 @@ define i128 @monotonic_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8578,10 +8512,8 @@ define i128 @monotonic_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8598,10 +8530,8 @@ define i128 @monotonic_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8618,10 +8548,8 @@ define i128 @monotonic_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8638,10 +8566,8 @@ define i128 @monotonic_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8658,10 +8584,8 @@ define i128 @monotonic_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8678,10 +8602,8 @@ define i128 @monotonic_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -8698,10 +8620,8 @@ define i128 @monotonic_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9694,10 +9614,8 @@ define i128 @monotonic_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9714,10 +9632,8 @@ define i128 @monotonic_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cta.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9734,10 +9650,8 @@ define i128 @monotonic_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.cluster.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9754,10 +9668,8 @@ define i128 @monotonic_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.relaxed.gpu.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9774,10 +9686,8 @@ define i128 @monotonic_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9794,10 +9704,8 @@ define i128 @monotonic_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9814,10 +9722,8 @@ define i128 @monotonic_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -9834,10 +9740,8 @@ define i128 @monotonic_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.volatile.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12574,10 +12478,8 @@ define i128 @acquire_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12594,10 +12496,8 @@ define i128 @acquire_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12614,10 +12514,8 @@ define i128 @acquire_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12634,10 +12532,8 @@ define i128 @acquire_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12654,10 +12550,8 @@ define i128 @acquire_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12674,10 +12568,8 @@ define i128 @acquire_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12694,10 +12586,8 @@ define i128 @acquire_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -12714,10 +12604,8 @@ define i128 @acquire_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13710,10 +13598,8 @@ define i128 @acquire_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13730,10 +13616,8 @@ define i128 @acquire_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13750,10 +13634,8 @@ define i128 @acquire_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13770,10 +13652,8 @@ define i128 @acquire_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13790,10 +13670,8 @@ define i128 @acquire_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13810,10 +13688,8 @@ define i128 @acquire_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13830,10 +13706,8 @@ define i128 @acquire_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -13850,10 +13724,8 @@ define i128 @acquire_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14846,10 +14718,8 @@ define i128 @acquire_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_sys_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14866,10 +14736,8 @@ define i128 @acquire_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cta_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14886,10 +14754,8 @@ define i128 @acquire_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14906,10 +14772,8 @@ define i128 @acquire_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14926,10 +14790,8 @@ define i128 @acquire_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14946,10 +14808,8 @@ define i128 @acquire_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14966,10 +14826,8 @@ define i128 @acquire_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -14986,10 +14844,8 @@ define i128 @acquire_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17759,10 +17615,8 @@ define i128 @seq_cst_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17780,10 +17634,8 @@ define i128 @seq_cst_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17801,10 +17653,8 @@ define i128 @seq_cst_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17822,10 +17672,8 @@ define i128 @seq_cst_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17843,10 +17691,8 @@ define i128 @seq_cst_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17864,10 +17710,8 @@ define i128 @seq_cst_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17885,10 +17729,8 @@ define i128 @seq_cst_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -17906,10 +17748,8 @@ define i128 @seq_cst_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -18967,10 +18807,8 @@ define i128 @seq_cst_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -18988,10 +18826,8 @@ define i128 @seq_cst_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19009,10 +18845,8 @@ define i128 @seq_cst_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19030,10 +18864,8 @@ define i128 @seq_cst_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19051,10 +18883,8 @@ define i128 @seq_cst_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19072,10 +18902,8 @@ define i128 @seq_cst_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19093,10 +18921,8 @@ define i128 @seq_cst_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -19114,10 +18940,8 @@ define i128 @seq_cst_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.global.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20175,10 +19999,8 @@ define i128 @seq_cst_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20196,10 +20018,8 @@ define i128 @seq_cst_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cta.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20217,10 +20037,8 @@ define i128 @seq_cst_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.cluster.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20238,10 +20056,8 @@ define i128 @seq_cst_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.gpu.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20259,10 +20075,8 @@ define i128 @seq_cst_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20280,10 +20094,8 @@ define i128 @seq_cst_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20301,10 +20113,8 @@ define i128 @seq_cst_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
@@ -20322,10 +20132,8 @@ define i128 @seq_cst_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {0, 0};
-; CHECK-NEXT:    mov.b128 swap, {0, 0};
-; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
+; CHECK-NEXT:    .reg .b128 dst;
+; CHECK-NEXT:    ld.acquire.sys.shared.b128 dst, [%rd1];
 ; CHECK-NEXT:    mov.b128 {%rd2, %rd3}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
