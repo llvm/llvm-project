@@ -3,51 +3,51 @@
 ; RUN: cat %t/common.ll %t/native.ll > %t/native-input.ll
 ; RUN: llc -filetype=obj %t/min-input.ll -o %t/min.dxbc
 ; RUN: llc -filetype=obj %t/native-input.ll -o %t/native.dxbc
-; RUN: obj2yaml %t/min.dxbc | FileCheck %s --check-prefixes=PARTS,MIN
-; RUN: obj2yaml %t/native.dxbc | FileCheck %s --check-prefixes=PARTS,NATIVE
+; RUN: obj2yaml %t/min.dxbc | FileCheck %s --check-prefixes=CHECK-YAML,CHECK-YAML-MIN
+; RUN: obj2yaml %t/native.dxbc | FileCheck %s --check-prefixes=CHECK-YAML,CHECK-YAML-NATIVE
 ; RUN: llvm-objcopy --dump-section=DXIL=%t/min.bc %t/min.dxbc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t/native.bc %t/native.dxbc
-; RUN: llvm-dis %t/min.bc -o - | FileCheck %s --check-prefixes=DXIL,MIN-MD
-; RUN: llvm-dis %t/native.bc -o - | FileCheck %s --check-prefixes=DXIL,NATIVE-MD
+; RUN: llvm-dis %t/min.bc -o - | FileCheck %s --check-prefixes=CHECK-DXIL,CHECK-DXIL-MIN
+; RUN: llvm-dis %t/native.bc -o - | FileCheck %s --check-prefixes=CHECK-DXIL,CHECK-DXIL-NATIVE
 
 ; Each interpolation is tested in its own valid single-declaration signature.
 ; F16 remains an ordinary loadInput overload in both precision modes. Its
 ; unallocated location must not change component-relative masks or consume rows.
-; MIN: MinimumPrecision: true
-; MIN: NativeLowPrecision: false
-; NATIVE: MinimumPrecision: false
-; NATIVE: NativeLowPrecision: true
-; PARTS: Name: ISG1
-; PARTS: Name: SV_Barycentrics
-; PARTS-NEXT: Index: 0
-; PARTS-NEXT: SystemValue: Barycentrics
-; PARTS-NEXT: CompType: Float16
-; PARTS-NEXT: Register: 4294967295
-; PARTS-NEXT: Mask: 7
-; PARTS-NEXT: ExclusiveMask: 4
-; MIN-NEXT: MinPrecision: Float16
-; NATIVE-NEXT: MinPrecision: Default
-; PARTS: Name: PSV0
-; MIN: SampleFrequency: 1
-; NATIVE: SampleFrequency: 0
-; PARTS: SigInputVectors: 0
-; PARTS: SigOutputVectors: [ 1, 0, 0, 0 ]
-; PARTS: SigInputElements:
-; PARTS: Indices: [ 0 ]
-; PARTS-NEXT: StartRow: 0
-; PARTS-NEXT: Cols: 3
-; PARTS-NEXT: StartCol: 0
-; PARTS-NEXT: Allocated: false
-; PARTS-NEXT: Kind: Barycentrics
-; MIN: Interpolation: LinearSample
-; NATIVE: Interpolation: LinearNoperspectiveCentroid
-; PARTS: InputOutputMap:
-; PARTS-NEXT: - [  ]
+; CHECK-YAML-MIN: MinimumPrecision: true
+; CHECK-YAML-MIN: NativeLowPrecision: false
+; CHECK-YAML-NATIVE: MinimumPrecision: false
+; CHECK-YAML-NATIVE: NativeLowPrecision: true
+; CHECK-YAML: Name: ISG1
+; CHECK-YAML: Name: SV_Barycentrics
+; CHECK-YAML-NEXT: Index: 0
+; CHECK-YAML-NEXT: SystemValue: Barycentrics
+; CHECK-YAML-NEXT: CompType: Float16
+; CHECK-YAML-NEXT: Register: 4294967295
+; CHECK-YAML-NEXT: Mask: 7
+; CHECK-YAML-NEXT: ExclusiveMask: 4
+; CHECK-YAML-MIN-NEXT: MinPrecision: Float16
+; CHECK-YAML-NATIVE-NEXT: MinPrecision: Default
+; CHECK-YAML: Name: PSV0
+; CHECK-YAML-MIN: SampleFrequency: 1
+; CHECK-YAML-NATIVE: SampleFrequency: 0
+; CHECK-YAML: SigInputVectors: 0
+; CHECK-YAML: SigOutputVectors: [ 1, 0, 0, 0 ]
+; CHECK-YAML: SigInputElements:
+; CHECK-YAML: Indices: [ 0 ]
+; CHECK-YAML-NEXT: StartRow: 0
+; CHECK-YAML-NEXT: Cols: 3
+; CHECK-YAML-NEXT: StartCol: 0
+; CHECK-YAML-NEXT: Allocated: false
+; CHECK-YAML-NEXT: Kind: Barycentrics
+; CHECK-YAML-MIN: Interpolation: LinearSample
+; CHECK-YAML-NATIVE: Interpolation: LinearNoperspectiveCentroid
+; CHECK-YAML: InputOutputMap:
+; CHECK-YAML-NEXT: - [  ]
 
-; DXIL: call half @dx.op.loadInput.f16(i32 4, i32 0, i32 0, i8 2, i32 {{.*}})
-; MIN-MD: !{i32 0, !"SV_Barycentrics", i8 8, i8 28, !{{[0-9]+}}, i8 6, i32 1, i8 3, i32 -1, i8 -1, ![[MASK:[0-9]+]]}
-; NATIVE-MD: !{i32 0, !"SV_Barycentrics", i8 8, i8 28, !{{[0-9]+}}, i8 5, i32 1, i8 3, i32 -1, i8 -1, ![[MASK:[0-9]+]]}
-; DXIL: ![[MASK]] = !{i32 3, i32 4}
+; CHECK-DXIL: call half @dx.op.loadInput.f16(i32 4, i32 0, i32 0, i8 2, i32 {{.*}})
+; CHECK-DXIL-MIN: !{i32 0, !"SV_Barycentrics", i8 8, i8 28, !{{[0-9]+}}, i8 6, i32 1, i8 3, i32 -1, i8 -1, ![[MASK:[0-9]+]]}
+; CHECK-DXIL-NATIVE: !{i32 0, !"SV_Barycentrics", i8 8, i8 28, !{{[0-9]+}}, i8 5, i32 1, i8 3, i32 -1, i8 -1, ![[MASK:[0-9]+]]}
+; CHECK-DXIL: ![[MASK]] = !{i32 3, i32 4}
 
 ;--- common.ll
 target triple = "dxil-pc-shadermodel6.2-pixel"
