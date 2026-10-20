@@ -391,28 +391,32 @@ computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
 }
 
 // Whether D would need to become a forwarded parameter of the extracted
-// function if referenced from inside the extraction zone: a parameter or
-// local variable of the enclosing function. A static/extern/thread-local
-// variable doesn't need forwarding -- it's already visible wherever the
-// extracted function ends up, same as a global.
+// function if referenced from inside the extraction zone: a name (a
+// parameter, local variable, or structured-binding) declared inside the
+// enclosing function. Such a name is only visible within that function,
+// regardless of storage duration -- unlike hasLocalStorage(), this is
+// also true of a function-scope `static` or `thread_local` variable,
+// which (unlike a namespace-scope global or a static data member, both
+// reachable via a qualified name from anywhere) isn't visible wherever
+// the extracted function ends up.
 bool mustBeForwarded(const Decl *D) {
-  if (isa<ParmVarDecl>(D))
-    return true;
-  if (const auto *VD = dyn_cast<VarDecl>(D))
-    return VD->hasLocalStorage();
-  return false;
+  if (!isa<VarDecl, BindingDecl>(D))
+    return false;
+  return D->getDeclContext()->isFunctionOrMethod();
 }
 
 // Whether E, as an operand of a call being considered by isTrivialExtraction,
-// demonstrates no abstraction of its own: a bare (parenthesized/implicitly
-// cast) reference to a Decl that would need to become a parameter, forwarded
-// unchanged. Anything else -- a literal, a reference to an already-visible
-// global, or any non-bare expression -- means this operand alone justifies
-// offering the extraction (it hardcodes or computes something a plain
-// rename wouldn't), so it's not "bare forwarding".
-bool isBareForwardedOperand(const Expr *E) {
+// is a bare (parenthesized/implicitly cast) reference to a Decl that would
+// need to become a parameter, forwarded unchanged -- and if so, that Decl.
+// Returns null otherwise: a literal, a reference to an already-visible
+// global, or any non-bare expression all mean this operand alone justifies
+// offering the extraction, since it hardcodes or computes something a
+// plain rename wouldn't.
+const Decl *bareForwardedDecl(const Expr *E) {
   const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
-  return DRE && mustBeForwarded(DRE->getDecl());
+  if (!DRE || !mustBeForwarded(DRE->getDecl()))
+    return nullptr;
+  return DRE->getDecl();
 }
 
 // The operands of Call relevant to isTrivialExtraction: the receiver of
@@ -425,14 +429,42 @@ bool isBareForwardedOperand(const Expr *E) {
 llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
   llvm::SmallVector<const Expr *, 4> Operands;
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    Operands.push_back(MCE->getImplicitObjectArgument());
+    // getImplicitObjectArgument() can itself be null (its FIXME notes
+    // this isn't fully handled for all cases); other clang analyses
+    // (e.g. LiveVariables, dataflow's Environment::pushCall) guard it
+    // the same way rather than assume it's always present.
+    if (const Expr *ImplicitObject = MCE->getImplicitObjectArgument()) {
+      // `this` (implicit or explicit) always refers to the same object
+      // -- the extracted function becomes a sibling member itself, so
+      // `this` stays implicit there too, never becoming a parameter --
+      // so, like an ordinary function name, it's excluded rather than
+      // required to be "bare".
+      if (!isa<CXXThisExpr>(ImplicitObject->IgnoreParenImpCasts()))
+        Operands.push_back(ImplicitObject);
+    }
+    // A pointer-to-member call (`(s.*pmf)(x)`) has no statically known
+    // method to exclude the way an ordinary method call's name is
+    // excluded below: which member is invoked is itself a real,
+    // customizable operand here (e.g. the `pmf` it's called through),
+    // not inherent to what the wrapper does.
+    if (!MCE->getMethodDecl())
+      Operands.push_back(MCE->getCallee());
   } else if (!isa<CXXOperatorCallExpr>(Call)) {
     const Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
     if (!(isa<DeclRefExpr>(Callee) &&
           isa<FunctionDecl>(cast<DeclRefExpr>(Callee)->getDecl())))
       Operands.push_back(Call->getCallee());
   }
-  Operands.append(Call->arg_begin(), Call->arg_end());
+  // An omitted argument filled in from the callee's own default isn't
+  // something this call site wrote or hardcoded: it's inherent to
+  // calling the function at all, same as the function's name, so it's
+  // excluded rather than required to be "bare". Default arguments are
+  // always trailing, so the first one found marks the end of the
+  // explicitly-written ones.
+  auto Args = Call->arguments();
+  auto FirstDefault = llvm::find_if(
+      Args, [](const Expr *Arg) { return isa<CXXDefaultArgExpr>(Arg); });
+  Operands.append(Args.begin(), FirstDefault);
   return Operands;
 }
 
@@ -447,20 +479,33 @@ llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
 //   just rename the call; `foo(100)`, `foo(globalVar)`, or `foo(x + y)`
 //   would not, since each does something a plain rename wouldn't
 //   (hardcode a value/global, or compute one). For the return case, the
-//   returned value may need an implicit conversion to the enclosing
-//   function's own return type (e.g. foo returns int, the enclosing
-//   function long); IgnoreImplicit() looks through that -- the
-//   conversion doesn't change the verdict, since the extracted function
-//   would perform the exact same conversion internally.
+//   returned value may be parenthesized and/or need an implicit
+//   conversion to the enclosing function's own return type (e.g. foo
+//   returns int, the enclosing function long); IgnoreParenImpCasts()
+//   looks through both -- neither changes the verdict, since the
+//   extracted function would perform the exact same conversion
+//   internally.
+// - Using the same captured Decl in more than one operand (e.g.
+//   `foo(A, A)`) is, despite every individual operand being bare,
+//   *not* pure forwarding: it constrains a relationship (both slots
+//   must hold the same value) that a plain rename wouldn't, the same
+//   kind of real specialization as hardcoding a literal.
 bool isTrivialExtraction(const Stmt *S) {
   if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
     if (!RS->getRetValue())
       return true;
-    S = RS->getRetValue()->IgnoreImplicit();
+    S = RS->getRetValue()->IgnoreParenImpCasts();
   }
   const auto *Call = dyn_cast<CallExpr>(S);
-  return Call &&
-         llvm::all_of(relevantCallOperands(Call), isBareForwardedOperand);
+  if (!Call)
+    return false;
+  llvm::SmallPtrSet<const Decl *, 4> SeenDecls;
+  for (const Expr *Operand : relevantCallOperands(Call)) {
+    const Decl *D = bareForwardedDecl(Operand);
+    if (!D || !SeenDecls.insert(D).second)
+      return false;
+  }
+  return true;
 }
 
 // returns true if Child can be a single RootStmt being extracted from

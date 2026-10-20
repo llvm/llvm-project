@@ -1460,6 +1460,148 @@ TEST_F(ExtractFunctionTest, RejectBareReturnStmt) {
   EXPECT_EQ(apply("void f() { [[return;]] }"), "unavailable");
 }
 
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_PointerToMemberCallee) {
+  Context = File;
+  // Unlike an ordinary method call, a pointer-to-member call has no
+  // statically known method (getMethodDecl() is null): which member is
+  // invoked is itself computed here (table[I]), not inherent to what the
+  // wrapper does, so it must be checked like any other operand.
+  EXPECT_THAT(apply(R"cpp(
+    struct St {};
+    void f(St S, void (St::*table[2])(int), int I, int A) {
+      [[(S.*table[I])(A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingImplicitThis) {
+  Context = File;
+  // An implicit `this` receiver always refers to the same object -- the
+  // extracted function becomes a sibling member itself, so `this` stays
+  // implicit there too -- same as an ordinary function name, it must not
+  // disqualify suppression just for not being a "bare" reference.
+  EXPECT_EQ(apply(R"cpp(
+    struct S {
+       void foo(int);
+       void bar(int A) {
+         [[foo(A);]]
+       }
+    };)cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingDefaultArg) {
+  Context = File;
+  // An argument filled in from the callee's own default (as opposed to
+  // one actually written at this call site) isn't something to hardcode
+  // a judgement about: it must not disqualify suppression.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int A, int B = 0);
+    void bar(int A) {
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingParenthesizedReturn) {
+  Context = File;
+  // Parentheses around the returned call must be looked through, same as
+  // an implicit conversion.
+  EXPECT_EQ(apply(R"cpp(
+    int foo(int);
+    int bar(int A) {
+      [[return (foo(A));]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_RepeatedArg) {
+  Context = File;
+  // Using the same captured local for more than one argument constrains a
+  // relationship (both slots must hold the same value) that a plain
+  // rename wouldn't: the same kind of real specialization as hardcoding
+  // a literal, even though each individual operand is bare.
+  EXPECT_THAT(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(A, A);]]
+    })cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingReorderedArgs) {
+  Context = File;
+  // Passing several distinct locals in a different order than they're
+  // declared doesn't change the verdict: every argument is still
+  // independently a bare forwarded local, used exactly once each, so
+  // this is still just a rename.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int A, int B);
+    void bar(int A, int B) {
+      [[foo(B, A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingFunctionScopeStatic) {
+  Context = File;
+  // A function-scope static variable's name, unlike a namespace-scope
+  // global's, isn't visible wherever the extracted function ends up: it
+  // does need forwarding, same as an ordinary local variable, so this is
+  // still just a rename.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    void bar() {
+      static int A;
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingFunctionScopeThreadLocal) {
+  Context = File;
+  // Same as the static case: thread_local doesn't change the variable's
+  // name visibility, only its storage.
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    void bar() {
+      thread_local int A;
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, OfferDespitePureForwarding_NamespaceScopeStatic) {
+  Context = File;
+  // Unlike a function-scope static, a namespace-scope one (internal
+  // linkage notwithstanding) is visible wherever the extracted function
+  // ends up, same as an ordinary global: hardcoding it is a real
+  // specialization.
+  EXPECT_THAT(apply(R"cpp(
+    static int A;
+    void foo(int);
+    void bar() { [[foo(A);]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingStructuredBinding) {
+  Context = File;
+  // A structured-binding name is declared by a BindingDecl, not a
+  // VarDecl, but is just as function-local and needs forwarding the
+  // same way.
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_EQ(apply(R"cpp(
+    void foo(int);
+    struct Pair { int A, B; };
+    Pair make();
+    void bar() {
+      auto [A, B] = make();
+      [[foo(A);]]
+    })cpp"),
+            "unavailable");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
