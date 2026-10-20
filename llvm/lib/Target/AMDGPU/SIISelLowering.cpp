@@ -13604,23 +13604,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
 
-  // Handle i8/i16 -> i64 extending loads by using i32 as intermediate type.
-  if (ExtType != ISD::NON_EXTLOAD && Load->getValueType(0) == MVT::i64 &&
-      (MemVT == MVT::i8 || MemVT == MVT::i16)) {
-    SDValue Chain = Load->getChain();
-    SDValue Ptr = Load->getBasePtr();
-
-    // Load to i32
-    SDValue NewLoad =
-        DAG.getExtLoad(ExtType, DL, MVT::i32, Chain, Ptr, MemVT, MMO);
-
-    // Extend i32 to i64
-    unsigned ExtOp = ISD::getExtForLoadExtType(false, ExtType);
-    SDValue Ext = DAG.getNode(ExtOp, DL, MVT::i64, NewLoad);
-
-    return DAG.getMergeValues({Ext, NewLoad.getValue(1)}, DL);
-  }
-
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.

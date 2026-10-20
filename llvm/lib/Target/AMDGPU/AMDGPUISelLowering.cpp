@@ -169,11 +169,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
                    MVT::i16, Legal);
 
-  // For i64 destinations, use Custom to emit the intermediate i32 load.
+  // For i64 destinations, Expand will find i32 as the intermediate type.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
-                   MVT::i8, Custom);
+                   MVT::i8, Expand);
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
-                   MVT::i16, Custom);
+                   MVT::i16, Expand);
 
   for (MVT VT : MVT::integer_valuetypes()) {
     if (VT == MVT::i64)

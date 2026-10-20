@@ -893,25 +893,53 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       EVT DestVT = Node->getValueType(0);
       if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
                            ISD::EXTLOAD, false)) {
-        // If the source type is not legal, see if there is a legal extload to
-        // an intermediate type that we can then extend further.
-        EVT LoadVT =
+        unsigned SrcBits = SrcVT.getSizeInBits();
+        unsigned DestBits = DestVT.getSizeInBits();
+
+        // Build list of types to try in descending order by size.
+        SmallVector<EVT, 4> TypesToTry;
+
+        // Add standard integer types if source and dest are scalar integers.
+        if (!SrcVT.isVector() && SrcVT.isInteger() && DestVT.isInteger()) {
+          static const MVT IntTypes[] = {MVT::i64, MVT::i32, MVT::i16};
+          for (MVT Ty : IntTypes) {
+            unsigned TyBits = Ty.getSizeInBits();
+            if (TyBits >= SrcBits && TyBits < DestBits)
+              TypesToTry.push_back(Ty);
+          }
+        }
+
+        // Insert the type chosen by getRegisterType if not already present.
+        EVT RegisterVT =
             TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
-        if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
-            (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
-             TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
-                             LD->getAddressSpace(), ExtType, false))) {
-          // If we are loading a legal type, this is a non-extload followed by a
-          // full extend.
+        if (RegisterVT.isFloatingPoint() == SrcVT.isFloatingPoint() &&
+            !llvm::is_contained(TypesToTry, RegisterVT)) {
+          unsigned RegisterBits = RegisterVT.getSizeInBits();
+          auto It = llvm::find_if(TypesToTry, [&](EVT VT) {
+            return VT.getSizeInBits() < RegisterBits;
+          });
+          TypesToTry.insert(It, RegisterVT);
+        }
+
+        for (EVT LoadVT : TypesToTry) {
+          // If the intermediate type equals the source, use NON_EXTLOAD,
+          // otherwise use the original extending load type.
           ISD::LoadExtType MidExtType =
               (LoadVT == SrcVT) ? ISD::NON_EXTLOAD : ExtType;
 
-          SDValue Load = DAG.getExtLoad(MidExtType, dl, LoadVT, Chain, Ptr,
-                                        SrcVT, LD->getMemOperand());
-          unsigned ExtendOp =
-              ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
-          Value = DAG.getNode(ExtendOp, dl, Node->getValueType(0), Load);
-          Chain = Load.getValue(1);
+          if (TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
+                              LD->getAddressSpace(), MidExtType, false)) {
+            SDValue Load = DAG.getExtLoad(MidExtType, dl, LoadVT, Chain, Ptr,
+                                          SrcVT, LD->getMemOperand());
+            unsigned ExtendOp =
+                ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
+            Value = DAG.getNode(ExtendOp, dl, DestVT, Load);
+            Chain = Load.getValue(1);
+            break;
+          }
+        }
+
+        if (Value.getNode()) {
           break;
         }
 
