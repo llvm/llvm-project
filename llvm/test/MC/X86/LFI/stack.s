@@ -63,12 +63,6 @@ andq (%rsp), %rsp
 // CHECK-NEXT: leaq (%rsp,%r14), %rsp
 // CHECK-NEXT: .bundle_unlock
 
-movl %eax, %esp
-// CHECK:      .bundle_lock
-// CHECK-NEXT: movl %eax, %esp
-// CHECK-NEXT: leaq (%rsp,%r14), %rsp
-// CHECK-NEXT: .bundle_unlock
-
 popq %rsp
 // CHECK:      popq %r11
 // CHECK-NEXT: .bundle_lock
@@ -91,3 +85,9 @@ popq %rax
 
 pushq %rsp
 // CHECK: pushq %rsp
+
+enter $16, $0
+// CHECK: enter $16, $0
+
+enter $16, $1
+// CHECK: enter $16, $1

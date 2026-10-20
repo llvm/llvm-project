@@ -38,8 +38,20 @@ static constexpr MCRegister LFIBaseSeg = X86::GS;
 static constexpr int TPOffset = 16;
 
 static bool isPrefix(const MCInst &Inst, const MCInstrInfo &InstInfo) {
-  return (InstInfo.get(Inst.getOpcode()).TSFlags & X86II::FormMask) ==
-         X86II::PrefixByte;
+  return X86II::isPrefix(InstInfo.get(Inst.getOpcode()).TSFlags);
+}
+
+// Return true if Inst is an unsupported stand-alone prefix.
+static bool isUnsupportedPrefix(const MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  case X86::FS_PREFIX:
+  case X86::GS_PREFIX:
+  case X86::ADDR16_PREFIX:
+  case X86::ADDR32_PREFIX:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static bool isSyscall(const MCInst &Inst) {
@@ -216,6 +228,8 @@ void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
 void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
                                                   MCStreamer &Out,
                                                   const MCSubtargetInfo &STI) {
+  discardPrefixes();
+
   MCRegister Target;
   int MemIdx = X86II::getMemoryOperandIdx(InstInfo->get(Inst.getOpcode()));
   if (MemIdx >= 0) {
@@ -284,6 +298,8 @@ void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
   if (Inst.getOpcode() != X86::RET64 && Inst.getOpcode() != X86::RETI64)
     return error(Inst, "unsupported return instruction");
 
+  discardPrefixes();
+
   Out.emitInstruction(MCInstBuilder(X86::POP64r).addReg(LFIScratchReg), STI);
 
   if (Inst.getOpcode() == X86::RETI64) {
@@ -345,7 +361,7 @@ bool X86::X86MCLFIRewriter::isFSAccess(const MCInst &Inst) {
 void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
                                             const MCSubtargetInfo &STI) {
   int MemIdx = findFSMemOperand(Inst, *InstInfo);
-  assert(MemIdx >= 0);
+  assert(MemIdx >= 0 && "expected an %fs memory operand");
 
   MCRegister BaseReg = Inst.getOperand(MemIdx + X86::AddrBaseReg).getReg();
   MCRegister IndexReg = Inst.getOperand(MemIdx + X86::AddrIndexReg).getReg();
@@ -425,9 +441,9 @@ static bool isSandboxBaseReg(MCRegister Reg) {
   return Reg == LFIBaseReg || Reg == X86::RSP || Reg == X86::RIP;
 }
 
-// Return true if Inst reads or writes memory through an implicit pointer
-// register instead of an addressing mode, and so cannot be sandboxed by
-// rewriting its operands.
+// Return true if Inst reads or writes memory through a pointer register
+// instead of an addressing mode, and so cannot be sandboxed by rewriting its
+// operands.
 static bool hasImplicitMemPointer(unsigned Opcode) {
   switch (Opcode) {
   // xlat loads from (%rbx,%al).
@@ -439,6 +455,22 @@ static bool hasImplicitMemPointer(unsigned Opcode) {
   case X86::VMASKMOVDQU64:
   case X86::MMX_MASKMOVQ:
   case X86::MMX_MASKMOVQ64:
+  // clzero zeroes the cache line at (%rax).
+  case X86::CLZERO32r:
+  case X86::CLZERO64r:
+  // movdir64b and enqcmd store to the address in their register operand.
+  case X86::MOVDIR64B32:
+  case X86::MOVDIR64B64:
+  case X86::MOVDIR64B32_EVEX:
+  case X86::MOVDIR64B64_EVEX:
+  case X86::ENQCMD32:
+  case X86::ENQCMD64:
+  case X86::ENQCMD32_EVEX:
+  case X86::ENQCMD64_EVEX:
+  case X86::ENQCMDS32:
+  case X86::ENQCMDS64:
+  case X86::ENQCMDS32_EVEX:
+  case X86::ENQCMDS64_EVEX:
     return true;
   default:
     return false;
@@ -465,8 +497,17 @@ static bool ignoresMemOperand(unsigned Opcode) {
 // general-purpose register, and so can be truncated along with the base.
 static bool hasGPRIndex(const MCInst &Inst, int MemIdx) {
   MCRegister Index = Inst.getOperand(MemIdx + X86::AddrIndexReg).getReg();
-  return Index && (getX86MCRegisterClass(X86::GR64RegClassID).contains(Index) ||
-                   getX86MCRegisterClass(X86::GR32RegClassID).contains(Index));
+  return Index && getX86MCRegisterClass(X86::GR64RegClassID).contains(Index);
+}
+
+// Return true if the memory operand at MemIdx uses a 32-bit address size,
+// which is selected by a 32-bit base or index register.
+static bool has32BitAddress(const MCInst &Inst, int MemIdx) {
+  MCRegister Base = Inst.getOperand(MemIdx + X86::AddrBaseReg).getReg();
+  MCRegister Index = Inst.getOperand(MemIdx + X86::AddrIndexReg).getReg();
+  const MCRegisterClass &GR32 = getX86MCRegisterClass(X86::GR32RegClassID);
+  return Base == X86::EIP || GR32.contains(Base) || Index == X86::EIZ ||
+         GR32.contains(Index);
 }
 
 // Rewrite the addressing mode of the memory operand at MemIdx so that the
@@ -477,8 +518,16 @@ static bool hasGPRIndex(const MCInst &Inst, int MemIdx) {
 // movq %gs:8(%eax,%ecx,4), %rdi
 void X86::X86MCLFIRewriter::sandboxMemOperand(MCInst &Inst, int MemIdx) const {
   MCOperand &Base = Inst.getOperand(MemIdx + X86::AddrBaseReg);
+  MCOperand &Scale = Inst.getOperand(MemIdx + X86::AddrScaleAmt);
   MCOperand &Index = Inst.getOperand(MemIdx + X86::AddrIndexReg);
   MCOperand &Segment = Inst.getOperand(MemIdx + X86::AddrSegmentReg);
+
+  // %riz only encodes the absence of an index register, so drop it and handle
+  // the access as one without an index.
+  if (Index.getReg() == X86::RIZ) {
+    Index.setReg(X86::NoRegister);
+    Scale.setImm(1);
+  }
 
   // A base register that always points into the sandbox needs no rewriting, as
   // long as there is no index register.
@@ -603,7 +652,18 @@ void X86::X86MCLFIRewriter::rewriteStringOperation(const MCInst &Inst,
                                                    MCStreamer &Out,
                                                    const MCSubtargetInfo &STI) {
   std::optional<StringOpPointers> Ptrs = getStringOpPointers(Inst.getOpcode());
-  assert(Ptrs);
+  assert(Ptrs && "expected a string instruction");
+
+  // The guards below sandbox the full 64-bit %rdi and %rsi, so the access must
+  // use them with a 64-bit address size and no %fs segment override.
+  for (const MCOperand &Op : Inst) {
+    if (!Op.isReg())
+      continue;
+    if (Op.getReg() == X86::EDI || Op.getReg() == X86::ESI)
+      return error(Inst, "unsupported address size for string instruction");
+    if (Op.getReg() == X86::FS)
+      return error(Inst, "unsupported segment override for string instruction");
+  }
 
   Out.emitBundleLock(/*AlignToEnd=*/false, STI);
 
@@ -714,8 +774,10 @@ static void emitStackFixup(MCStreamer &Out, const MCSubtargetInfo &STI) {
 void X86::X86MCLFIRewriter::rewriteStackModification(
     MCRegister StackReg, const MCInst &Inst, MCStreamer &Out,
     const MCSubtargetInfo &STI) {
-  if (StackReg != X86::RSP && StackReg != X86::ESP)
+  if (StackReg != X86::RSP)
     return error(Inst, "unsupported modification of the stack pointer");
+
+  discardPrefixes();
 
   // popq %rsp loads through the stack pointer that it overwrites, so it cannot
   // simply be demoted. Pop into the scratch register instead, and move the
@@ -759,23 +821,22 @@ void X86::X86MCLFIRewriter::rewriteStackModification(
     return doRewriteInst(RegForm, Out, STI);
   }
 
-  MCInst Modified(Inst);
-  if (StackReg == X86::RSP) {
-    unsigned Opcode = demote64BitOpcode(Inst.getOpcode());
-    if (!Opcode)
-      return error(Inst, "unsupported modification of the stack pointer");
-    Modified.setOpcode(Opcode);
+  unsigned Opcode = demote64BitOpcode(Inst.getOpcode());
+  if (!Opcode)
+    return error(Inst, "unsupported modification of the stack pointer");
 
-    ArrayRef<MCOperandInfo> OpInfo = InstInfo->get(Opcode).operands();
-    for (unsigned I = 0, E = std::min<unsigned>(OpInfo.size(),
-                                                Modified.getNumOperands());
-         I < E; ++I) {
-      MCOperand &Op = Modified.getOperand(I);
-      if (OpInfo[I].OperandType != MCOI::OPERAND_REGISTER || !Op.isReg())
-        continue;
-      if (getX86MCRegisterClass(X86::GR64RegClassID).contains(Op.getReg()))
-        Op.setReg(RegInfo->getSubReg(Op.getReg(), X86::sub_32bit));
-    }
+  MCInst Modified(Inst);
+  Modified.setOpcode(Opcode);
+
+  ArrayRef<MCOperandInfo> OpInfo = InstInfo->get(Opcode).operands();
+  for (unsigned I = 0, E = std::min<unsigned>(OpInfo.size(),
+                                              Modified.getNumOperands());
+       I < E; ++I) {
+    MCOperand &Op = Modified.getOperand(I);
+    if (OpInfo[I].OperandType != MCOI::OPERAND_REGISTER || !Op.isReg())
+      continue;
+    if (getX86MCRegisterClass(X86::GR64RegClassID).contains(Op.getReg()))
+      Op.setReg(RegInfo->getSubReg(Op.getReg(), X86::sub_32bit));
   }
 
   sandboxMemAccess(Modified);
@@ -811,9 +872,16 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   // Hold a stand-alone prefix back, so it can be applied to the rewritten
   // instruction.
   if (isPrefix(Inst, *InstInfo)) {
+    if (isUnsupportedPrefix(Inst))
+      return error(Inst, "unsupported instruction prefix");
     Prefixes.push_back(Inst);
     return;
   }
+
+  // A lock prefix is only valid on an instruction that writes memory, and
+  // would otherwise be dropped by the rewrites below.
+  if ((Inst.getFlags() & X86::IP_HAS_LOCK) && !mayStore(Inst))
+    return error(Inst, "unsupported lock prefix");
 
   if (mayModifyRegister(Inst, LFIBaseReg) ||
       mayModifyRegister(Inst, LFITPReg) || mayModifyRegister(Inst, LFIBaseSeg))
@@ -848,11 +916,22 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (isFSAccess(Inst))
     return rewriteFSAccess(Inst, Out, STI);
 
+  // The compiler never generates 32-bit addressing in 64-bit mode.
+  int MemIdx = X86II::getMemoryOperandIdx(InstInfo->get(Inst.getOpcode()));
+  if (MemIdx >= 0 && !ignoresMemOperand(Inst.getOpcode()) &&
+      has32BitAddress(Inst, MemIdx))
+    return error(Inst, "unsupported 32-bit address size");
+
   if (getStringOpPointers(Inst.getOpcode()))
     return rewriteStringOperation(Inst, Out, STI);
 
   if (Inst.getOpcode() == X86::LEAVE64)
     return rewriteLeave(Inst, Out, STI);
+
+  if (Inst.getOpcode() == X86::ENTER &&
+      (!Inst.getOperand(1).isImm() ||
+       static_cast<uint64_t>(Inst.getOperand(1).getImm()) > 1))
+    return error(Inst, "unsupported nesting level for enter");
 
   if (MCRegister StackReg = getWrittenStackReg(Inst))
     return rewriteStackModification(StackReg, Inst, Out, STI);

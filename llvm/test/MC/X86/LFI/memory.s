@@ -33,11 +33,6 @@ movb (%rax), %dil
 movb (%rax), %ah
 // CHECK: movb %gs:(%eax), %ah
 
-// An address that is already 32-bit keeps its registers.
-
-movl (%edi), %eax
-// CHECK: movl %gs:(%edi), %eax
-
 addq $1, (%rax)
 // CHECK: addq $1, %gs:(%eax)
 
@@ -95,10 +90,13 @@ tileloaddrs 291(%rbp,%rax,4), %tmm3
 // CHECK: tileloaddrs %gs:291(%ebp,%eax,4), %tmm3
 
 movq (%rax,%riz,1), %rbx
-// CHECK: movq %gs:(%eax,%riz), %rbx
+// CHECK: movq %gs:(%eax), %rbx
 
 movq (,%riz,1), %rbx
-// CHECK: movq %gs:(%r14d,%riz), %rbx
+// CHECK: movq (%r14), %rbx
+
+movq 8(%rsp,%riz,8), %rbx
+// CHECK: movq 8(%rsp), %rbx
 
 leaq (%rax), %rdi
 // CHECK: leaq (%rax), %rdi
