@@ -49,6 +49,9 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
+  /// Whether this \c UnwrappedLine is part of the first pass of a multi-pass
+  /// macro expansion run.
+  bool InMacroExpansion = false;
 
   /// Nesting level of unbraced body of a control statement.
   unsigned UnbracedBodyLevel = 0;
