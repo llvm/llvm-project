@@ -3,9 +3,10 @@
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
 # The generic GlobalISel constant-folding rules obtain their denormal mode from
-# the MachineFunction.  A minimum f32 subnormal is therefore zero here. This
+# the MachineFunction. A minimum subnormal is therefore zero in FTZ mode. This
 # covers every G_F* binary operation, G_FMA, and G_FCMP routed through
 # CombinerHelper.
+# The f16/f64 cases use the default denormal mode, independently of float:.
 
 --- |
   define void @fbinops() denormal_fpenv(float: preservesign) {
@@ -35,6 +36,18 @@
   define void @minmax() denormal_fpenv(float: preservesign) { ret void }
 
   define void @minmax_dynamic() denormal_fpenv(float: dynamic) { ret void }
+
+  define void @f16_ftz() denormal_fpenv(preservesign, float: ieee) { ret void }
+
+  define void @f16_dynamic() denormal_fpenv(dynamic, float: ieee) { ret void }
+
+  define void @f16_ieee() denormal_fpenv(float: preservesign) { ret void }
+
+  define void @f64_ftz() denormal_fpenv(preservesign, float: ieee) { ret void }
+
+  define void @f64_dynamic() denormal_fpenv(dynamic, float: ieee) { ret void }
+
+  define void @f64_ieee() denormal_fpenv(float: preservesign) { ret void }
 
 ...
 
@@ -195,4 +208,258 @@ body: |
     %one:_(f32) = G_FCONSTANT float 1.000000e+00
     %result:_(f32) = G_FMINNUM %denorm, %one
     $vgpr0 = COPY %result
+...
+
+---
+name: f16_ftz
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f16_ftz
+    ; CHECK: %zero:_(f16) = G_FCONSTANT half 0.000000e+00
+    ; CHECK-NEXT: %extended:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: $vgpr0 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr1 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr2 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr3 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr4 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr5 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr6 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr7 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr8 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr9 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr10 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr11 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr12 = COPY %zero(f16)
+    ; CHECK-NEXT: $vgpr13 = COPY %extended(i32)
+    ; CHECK-NEXT: $vgpr14 = COPY %zero(f16)
+    %denorm:_(f16) = G_FCONSTANT half f0x0001
+    %zero:_(f16) = G_FCONSTANT half 0.000000e+00
+    %negdenorm:_(f16) = G_FCONSTANT half f0x8001
+    %one:_(f16) = G_FCONSTANT half 1.000000e+00
+    %two:_(f16) = G_FCONSTANT half 2.000000e+00
+    %half:_(f16) = G_FCONSTANT half 5.000000e-01
+    %add:_(f16) = G_FADD %denorm, %denorm
+    %sub:_(f16) = G_FSUB %denorm, %negdenorm
+    %mul:_(f16) = G_FMUL %denorm, %two
+    %div:_(f16) = G_FDIV %denorm, %half
+    %rem:_(f16) = G_FREM %denorm, %two
+    %fma:_(f16) = G_FMA %denorm, %one, %zero
+    %ceil:_(f16) = G_FCEIL %denorm
+    %minnum:_(f16) = G_FMINNUM %denorm, %one
+    %maxnum:_(f16) = G_FMAXNUM %denorm, %zero
+    %minimum:_(f16) = G_FMINIMUM %denorm, %one
+    %maximum:_(f16) = G_FMAXIMUM %denorm, %zero
+    %minimumnum:_(f16) = G_FMINIMUMNUM %denorm, %one
+    %maximumnum:_(f16) = G_FMAXIMUMNUM %denorm, %zero
+    %minnormal:_(f16) = G_FCONSTANT half f0x0400
+    %output_mul:_(f16) = G_FMUL %minnormal, %half
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0 = COPY %add
+    $vgpr1 = COPY %sub
+    $vgpr2 = COPY %mul
+    $vgpr3 = COPY %div
+    $vgpr4 = COPY %rem
+    $vgpr5 = COPY %fma
+    $vgpr6 = COPY %ceil
+    $vgpr7 = COPY %minnum
+    $vgpr8 = COPY %maxnum
+    $vgpr9 = COPY %minimum
+    $vgpr10 = COPY %maximum
+    $vgpr11 = COPY %minimumnum
+    $vgpr12 = COPY %maximumnum
+    $vgpr13 = COPY %extended
+    $vgpr14 = COPY %output_mul
+...
+
+---
+name: f16_dynamic
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f16_dynamic
+    ; CHECK: %denorm:_(f16) = G_FCONSTANT half 5.960460e-08
+    ; CHECK-NEXT: %zero:_(f16) = G_FCONSTANT half 0.000000e+00
+    ; CHECK-NEXT: %one:_(f16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: %add:_(f16) = G_FADD %denorm, %denorm
+    ; CHECK-NEXT: %fma:_(f16) = G_FMA %denorm, %one, %zero
+    ; CHECK-NEXT: %ceil:_(f16) = G_FCEIL %denorm
+    ; CHECK-NEXT: %minnum:_(f16) = G_FMINNUM %denorm, %one
+    ; CHECK-NEXT: %minnormal:_(f16) = G_FCONSTANT half 6.103520e-05
+    ; CHECK-NEXT: %half:_(f16) = G_FCONSTANT half 5.000000e-01
+    ; CHECK-NEXT: %output_mul:_(f16) = G_FMUL %minnormal, %half
+    ; CHECK-NEXT: %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm(f16), %zero
+    ; CHECK-NEXT: %extended:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $vgpr0 = COPY %add(f16)
+    ; CHECK-NEXT: $vgpr1 = COPY %fma(f16)
+    ; CHECK-NEXT: $vgpr2 = COPY %ceil(f16)
+    ; CHECK-NEXT: $vgpr3 = COPY %minnum(f16)
+    ; CHECK-NEXT: $vgpr4 = COPY %extended(i32)
+    ; CHECK-NEXT: $vgpr5 = COPY %output_mul(f16)
+    %denorm:_(f16) = G_FCONSTANT half f0x0001
+    %zero:_(f16) = G_FCONSTANT half 0.000000e+00
+    %one:_(f16) = G_FCONSTANT half 1.000000e+00
+    %add:_(f16) = G_FADD %denorm, %denorm
+    %fma:_(f16) = G_FMA %denorm, %one, %zero
+    %ceil:_(f16) = G_FCEIL %denorm
+    %minnum:_(f16) = G_FMINNUM %denorm, %one
+    %minnormal:_(f16) = G_FCONSTANT half f0x0400
+    %half:_(f16) = G_FCONSTANT half 5.000000e-01
+    %output_mul:_(f16) = G_FMUL %minnormal, %half
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0 = COPY %add
+    $vgpr1 = COPY %fma
+    $vgpr2 = COPY %ceil
+    $vgpr3 = COPY %minnum
+    $vgpr4 = COPY %extended
+    $vgpr5 = COPY %output_mul
+...
+
+---
+name: f16_ieee
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f16_ieee
+    ; CHECK: %add:_(f16) = G_FCONSTANT half 1.192090e-07
+    ; CHECK-NEXT: %ceil:_(f16) = G_FCONSTANT half 1.000000e+00
+    ; CHECK-NEXT: %extended:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $vgpr0 = COPY %add(f16)
+    ; CHECK-NEXT: $vgpr1 = COPY %ceil(f16)
+    ; CHECK-NEXT: $vgpr2 = COPY %extended(i32)
+    %denorm:_(f16) = G_FCONSTANT half f0x0001
+    %zero:_(f16) = G_FCONSTANT half 0.000000e+00
+    %add:_(f16) = G_FADD %denorm, %denorm
+    %ceil:_(f16) = G_FCEIL %denorm
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0 = COPY %add
+    $vgpr1 = COPY %ceil
+    $vgpr2 = COPY %extended
+...
+
+---
+name: f64_ftz
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f64_ftz
+    ; CHECK: %zero:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %extended:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr2_vgpr3 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr6_vgpr7 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr8_vgpr9 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr10_vgpr11 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr12_vgpr13 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr14_vgpr15 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr16_vgpr17 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr18_vgpr19 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr20_vgpr21 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr22_vgpr23 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr24_vgpr25 = COPY %zero(f64)
+    ; CHECK-NEXT: $vgpr26 = COPY %extended(i32)
+    ; CHECK-NEXT: $vgpr28_vgpr29 = COPY %zero(f64)
+    %denorm:_(f64) = G_FCONSTANT double f0x0000000000000001
+    %zero:_(f64) = G_FCONSTANT double 0.000000e+00
+    %negdenorm:_(f64) = G_FCONSTANT double f0x8000000000000001
+    %one:_(f64) = G_FCONSTANT double 1.000000e+00
+    %two:_(f64) = G_FCONSTANT double 2.000000e+00
+    %half:_(f64) = G_FCONSTANT double 5.000000e-01
+    %add:_(f64) = G_FADD %denorm, %denorm
+    %sub:_(f64) = G_FSUB %denorm, %negdenorm
+    %mul:_(f64) = G_FMUL %denorm, %two
+    %div:_(f64) = G_FDIV %denorm, %half
+    %rem:_(f64) = G_FREM %denorm, %two
+    %fma:_(f64) = G_FMA %denorm, %one, %zero
+    %ceil:_(f64) = G_FCEIL %denorm
+    %minnum:_(f64) = G_FMINNUM %denorm, %one
+    %maxnum:_(f64) = G_FMAXNUM %denorm, %zero
+    %minimum:_(f64) = G_FMINIMUM %denorm, %one
+    %maximum:_(f64) = G_FMAXIMUM %denorm, %zero
+    %minimumnum:_(f64) = G_FMINIMUMNUM %denorm, %one
+    %maximumnum:_(f64) = G_FMAXIMUMNUM %denorm, %zero
+    %minnormal:_(f64) = G_FCONSTANT double f0x0010000000000000
+    %output_mul:_(f64) = G_FMUL %minnormal, %half
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0_vgpr1 = COPY %add
+    $vgpr2_vgpr3 = COPY %sub
+    $vgpr4_vgpr5 = COPY %mul
+    $vgpr6_vgpr7 = COPY %div
+    $vgpr8_vgpr9 = COPY %rem
+    $vgpr10_vgpr11 = COPY %fma
+    $vgpr12_vgpr13 = COPY %ceil
+    $vgpr14_vgpr15 = COPY %minnum
+    $vgpr16_vgpr17 = COPY %maxnum
+    $vgpr18_vgpr19 = COPY %minimum
+    $vgpr20_vgpr21 = COPY %maximum
+    $vgpr22_vgpr23 = COPY %minimumnum
+    $vgpr24_vgpr25 = COPY %maximumnum
+    $vgpr26 = COPY %extended
+    $vgpr28_vgpr29 = COPY %output_mul
+...
+
+---
+name: f64_dynamic
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f64_dynamic
+    ; CHECK: %denorm:_(f64) = G_FCONSTANT double 4.940660e-324
+    ; CHECK-NEXT: %zero:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: %one:_(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK-NEXT: %add:_(f64) = G_FADD %denorm, %denorm
+    ; CHECK-NEXT: %fma:_(f64) = G_FMA %denorm, %one, %zero
+    ; CHECK-NEXT: %ceil:_(f64) = G_FCEIL %denorm
+    ; CHECK-NEXT: %minnum:_(f64) = G_FMINNUM %denorm, %one
+    ; CHECK-NEXT: %minnormal:_(f64) = G_FCONSTANT double f0x0010000000000000
+    ; CHECK-NEXT: %half:_(f64) = G_FCONSTANT double 5.000000e-01
+    ; CHECK-NEXT: %output_mul:_(f64) = G_FMUL %minnormal, %half
+    ; CHECK-NEXT: %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm(f64), %zero
+    ; CHECK-NEXT: %extended:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %add(f64)
+    ; CHECK-NEXT: $vgpr2_vgpr3 = COPY %fma(f64)
+    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY %ceil(f64)
+    ; CHECK-NEXT: $vgpr6_vgpr7 = COPY %minnum(f64)
+    ; CHECK-NEXT: $vgpr8 = COPY %extended(i32)
+    ; CHECK-NEXT: $vgpr10_vgpr11 = COPY %output_mul(f64)
+    %denorm:_(f64) = G_FCONSTANT double f0x0000000000000001
+    %zero:_(f64) = G_FCONSTANT double 0.000000e+00
+    %one:_(f64) = G_FCONSTANT double 1.000000e+00
+    %add:_(f64) = G_FADD %denorm, %denorm
+    %fma:_(f64) = G_FMA %denorm, %one, %zero
+    %ceil:_(f64) = G_FCEIL %denorm
+    %minnum:_(f64) = G_FMINNUM %denorm, %one
+    %minnormal:_(f64) = G_FCONSTANT double f0x0010000000000000
+    %half:_(f64) = G_FCONSTANT double 5.000000e-01
+    %output_mul:_(f64) = G_FMUL %minnormal, %half
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0_vgpr1 = COPY %add
+    $vgpr2_vgpr3 = COPY %fma
+    $vgpr4_vgpr5 = COPY %ceil
+    $vgpr6_vgpr7 = COPY %minnum
+    $vgpr8 = COPY %extended
+    $vgpr10_vgpr11 = COPY %output_mul
+...
+
+---
+name: f64_ieee
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: f64_ieee
+    ; CHECK: %add:_(f64) = G_FCONSTANT double 9.881310e-324
+    ; CHECK-NEXT: %ceil:_(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK-NEXT: %extended:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %add(f64)
+    ; CHECK-NEXT: $vgpr2_vgpr3 = COPY %ceil(f64)
+    ; CHECK-NEXT: $vgpr4 = COPY %extended(i32)
+    %denorm:_(f64) = G_FCONSTANT double f0x0000000000000001
+    %zero:_(f64) = G_FCONSTANT double 0.000000e+00
+    %add:_(f64) = G_FADD %denorm, %denorm
+    %ceil:_(f64) = G_FCEIL %denorm
+    %cmp:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %cmp
+    $vgpr0_vgpr1 = COPY %add
+    $vgpr2_vgpr3 = COPY %ceil
+    $vgpr4 = COPY %extended
 ...
