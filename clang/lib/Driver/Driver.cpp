@@ -3899,14 +3899,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP,
-/// CUDA or Intel GPU architecture.
+/// Returns the canonical name for the offloading architecture when using a HIP
+/// or CUDA architecture.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
                                         const llvm::Triple &Triple) {
-  // Look up the architecture. Only report an error if the triple expects an
-  // NVPTX or AMDGPU one.
+  // Lookup the CUDA / HIP architecture string. Only report an error if we were
+  // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
@@ -3931,9 +3931,7 @@ static StringRef getCanonicalArchString(Compilation &C,
     }
   }
 
-  // Several spellings of one device must be one architecture, e.g. "xe-pvc" and
-  // "xe_12.60.7".
-  if (Arch.isNVPTX() || Arch.isIntelGPU())
+  if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   // AMDGCN target IDs carry a processor and xnack/sramecc modifiers to

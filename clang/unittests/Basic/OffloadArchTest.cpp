@@ -41,7 +41,6 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_FALSE(IntelGPU.isIntelCPU());
   EXPECT_TRUE(IntelGPU.isIntelGPU());
   EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
-  EXPECT_TRUE(parse("xe_12.60.7").isIntelGPU());
 
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
@@ -66,19 +65,10 @@ TEST(OffloadArchTest, RoundTrip) {
   }
 }
 
-// A numeric name denotes the device, and canonicalizes to the device name.
-TEST(OffloadArchTest, IntelGPUNumericNames) {
-  // The revision takes no part in the lookup.
-  EXPECT_EQ(parse("xe_12.60.0"), parse("xe-pvc"));
-  EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
-  EXPECT_EQ(parse("xe_12.60"), parse("xe-pvc"));
-  EXPECT_STREQ(OffloadArchToString(parse("xe_12.60.7")), "xe-pvc");
-
-  // A well-formed numeric name for a device this build does not know is as
-  // unknown as any other unknown name.
-  EXPECT_TRUE(parse("xe_99.99.0").isUnknown());
-  // So is the spelling clang accepted before the Intel GPU list existed.
+// Each Intel GPU has one name, so other spellings are unknown.
+TEST(OffloadArchTest, IntelGPUOtherSpellings) {
   EXPECT_TRUE(parse("bmg_g21").isUnknown());
+  EXPECT_TRUE(parse("xe_12.60.7").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {
