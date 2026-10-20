@@ -1083,6 +1083,8 @@ bool PPCMIPeephole::simplifyCode() {
           // chain used to deduce sign extension to eliminate the 'extsw' will
           // need to be promoted to 64-bit pseudo instructions when the 'extsw'
           // is eliminated.
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
+
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
 
           unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
@@ -1094,10 +1096,7 @@ bool PPCMIPeephole::simplifyCode() {
             BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
                     MI.getOperand(0).getReg())
                 .addReg(NarrowReg);
-            addRegToUpdate(NarrowReg);
           } else {
-            TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
-
             Register TmpReg =
                 MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
             BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
@@ -1107,6 +1106,7 @@ bool PPCMIPeephole::simplifyCode() {
                 .addReg(TmpReg)
                 .addReg(NarrowReg)
                 .addImm(PPC::sub_32);
+            addRegToUpdate(NarrowReg);
           }
           ToErase = &MI;
           Simplified = true;
