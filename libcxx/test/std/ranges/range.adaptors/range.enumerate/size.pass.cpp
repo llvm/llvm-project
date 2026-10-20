@@ -39,10 +39,10 @@ static_assert(!HasMemberSize<std::ranges::enumerate_view<NonSizedRangeView>>);
 static_assert(!HasMemberSize<const std::ranges::enumerate_view<NonSizedRangeView>>);
 
 struct NonConstSizedView : std::ranges::view_base {
-    using iterator = forward_iterator<int*>;
-    iterator begin() const;
-    iterator end() const;
-    std::size_t size();
+  using iterator = forward_iterator<int*>;
+  iterator begin() const;
+  iterator end() const;
+  std::size_t size();
 };
 
 // Test the pathological type where it is sized if it's const but not sized if it's const.
