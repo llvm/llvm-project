@@ -1,53 +1,69 @@
-'''Generates the UnicodeCharSetsGenerated.cpp/.h files.
+"""Generates the UnicodeCharSetsGenerated.cpp/.h files.
 
 Given the Unicode character database in xml form (ucd.all.flat.xml), this
-script generates the UnicodeCharSetsGenerated.cpp/.h files from it.'''
+script generates the UnicodeCharSetsGenerated.cpp/.h files from it."""
 
 import argparse
 import os
 import xml.etree.ElementTree as ET
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--database', default='ucd.all.flat.xml', help='the database to convert (default ucd.all.flat.xml)')
+    parser.add_argument(
+        "--database",
+        default="ucd.all.flat.xml",
+        help="the database to convert (default ucd.all.flat.xml)",
+    )
     config = parser.parse_args()
 
     tree = ET.parse(config.database)
     root = tree.getroot()
-    description = root.find('{http://www.unicode.org/ns/2003/ucd/1.0}description').text
+    description = root.find("{http://www.unicode.org/ns/2003/ucd/1.0}description").text
     repertoire = [None] * 0x110000
-    for elem in root.find('{http://www.unicode.org/ns/2003/ucd/1.0}repertoire').findall('*'):
+    for elem in root.find("{http://www.unicode.org/ns/2003/ucd/1.0}repertoire").findall(
+        "*"
+    ):
         attrib = elem.attrib
         props = (
-            attrib['gc'],
-            attrib['ea'],
-            attrib['XIDS'] == 'Y',
-            attrib['XIDC'] == 'Y',
-            attrib['ID_Compat_Math_Start'] == 'Y',
-            attrib['ID_Compat_Math_Continue'] == 'Y',
+            attrib["gc"],
+            attrib["ea"],
+            attrib["XIDS"] == "Y",
+            attrib["XIDC"] == "Y",
+            attrib["ID_Compat_Math_Start"] == "Y",
+            attrib["ID_Compat_Math_Continue"] == "Y",
         )
-        if 'cp' in attrib:
-            repertoire[int(attrib['cp'], 16)] = props
+        if "cp" in attrib:
+            repertoire[int(attrib["cp"], 16)] = props
         else:
-            for cp in range(int(attrib['first-cp'], 16), int(attrib['last-cp'], 16) + 1):
+            for cp in range(
+                int(attrib["first-cp"], 16), int(attrib["last-cp"], 16) + 1
+            ):
                 repertoire[cp] = props
 
     def make_lookup_table(table, n):
         lookup_table = ([], {})
         for i in range(0, len(table), n):
-            lookup_table[0].append(lookup_table[1].setdefault(tuple(table[i:i+n]), len(lookup_table[1])))
+            lookup_table[0].append(
+                lookup_table[1].setdefault(
+                    tuple(table[i : i + n]), len(lookup_table[1])
+                )
+            )
         return (lookup_table[0], list(lookup_table[1].keys()))
 
-    (n1, n2, n3, n4) = (4, 4, 16, 16)
+    n1, n2, n3, n4 = (4, 4, 16, 16)
     lookup_table_1 = make_lookup_table(repertoire, 1)
     lookup_table_2 = make_lookup_table(lookup_table_1[0], n1)
     lookup_table_3 = make_lookup_table(lookup_table_2[0], n2)
     lookup_table_4 = make_lookup_table(lookup_table_3[0], n3)
     lookup_table_5 = make_lookup_table(lookup_table_4[0], n4)
 
-    dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'Support')
-    for (header, file) in ((False, 'UnicodeCharSetsGenerated.cpp'), (True, 'UnicodeCharSetsGenerated.h')):
-        with open(os.path.join(dir, file), 'w') as f:
+    dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "lib", "Support")
+    for header, file in (
+        (False, "UnicodeCharSetsGenerated.cpp"),
+        (True, "UnicodeCharSetsGenerated.h"),
+    ):
+        with open(os.path.join(dir, file), "w") as f:
             b = ("false", "true")
             f.write(f'''\
 //===----------------------------------------------------------------------===//
@@ -99,5 +115,6 @@ extern const CharProperties Lookup6[{len(lookup_table_1[1])}]{'' if header else 
 }} // namespace llvm::sys::unicode::CharPropertyTables
 ''')
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
