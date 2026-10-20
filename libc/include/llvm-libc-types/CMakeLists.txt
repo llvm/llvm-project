@@ -186,6 +186,7 @@ add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
+add_header(struct_FTW HDR struct_FTW.h)
 add_header(
   struct_ipc_perm
   HDR struct_ipc_perm.h
@@ -245,6 +246,8 @@ add_header(tm_gmtoff_t HDR tm_gmtoff_t.h)
 add_header(tss_t HDR tss_t.h)
 add_header(tss_dtor_t HDR tss_dtor_t.h)
 add_header(__atexithandler_t HDR __atexithandler_t.h)
+add_header(__ftw_func_t HDR __ftw_func_t.h DEPENDS .struct_stat)
+add_header(__nftw_func_t HDR __nftw_func_t.h DEPENDS .struct_stat .struct_FTW)
 add_header(speed_t HDR speed_t.h)
 add_header(tcflag_t HDR tcflag_t.h)
 add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t libc.include.llvm-libc-macros.termios_macros)

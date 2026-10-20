@@ -1,0 +1,73 @@
+header: ftw.h
+standards:
+  - posix
+macros:
+  - macro_name: S_IFMT
+    macro_header: sys-stat-macros.h
+  - macro_name: FTW_F
+    macro_header: ftw-macros.h
+  - macro_name: FTW_D
+    macro_header: ftw-macros.h
+  - macro_name: FTW_DNR
+    macro_header: ftw-macros.h
+  - macro_name: FTW_NS
+    macro_header: ftw-macros.h
+  - macro_name: FTW_SL
+    macro_header: ftw-macros.h
+  - macro_name: FTW_DP
+    macro_header: ftw-macros.h
+  - macro_name: FTW_SLN
+    macro_header: ftw-macros.h
+  - macro_name: FTW_PHYS
+    macro_header: ftw-macros.h
+  - macro_name: FTW_MOUNT
+    macro_header: ftw-macros.h
+  - macro_name: FTW_CHDIR
+    macro_header: ftw-macros.h
+  - macro_name: FTW_DEPTH
+    macro_header: ftw-macros.h
+  - macro_name: FTW_ACTIONRETVAL
+    standards:
+      - gnu
+    macro_header: ftw-macros.h
+  - macro_name: FTW_CONTINUE
+    standards:
+      - gnu
+    macro_header: ftw-macros.h
+  - macro_name: FTW_STOP
+    standards:
+      - gnu
+    macro_header: ftw-macros.h
+  - macro_name: FTW_SKIP_SUBTREE
+    standards:
+      - gnu
+    macro_header: ftw-macros.h
+  - macro_name: FTW_SKIP_SIBLINGS
+    standards:
+      - gnu
+    macro_header: ftw-macros.h
+types:
+  - type_name: struct_FTW
+  - type_name: struct_stat
+  - type_name: __ftw_func_t
+  - type_name: __nftw_func_t
+enums: []
+objects: []
+functions:
+  - name: ftw
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: __ftw_func_t
+      - type: int
+  - name: nftw
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: __nftw_func_t
+      - type: int
+      - type: int
