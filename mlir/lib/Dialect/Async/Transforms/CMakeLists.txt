@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   MLIRAsyncPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRFuncDialect

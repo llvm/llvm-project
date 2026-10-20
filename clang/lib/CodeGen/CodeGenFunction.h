@@ -35,6 +35,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -3504,9 +3505,6 @@ public:
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
-  /// Get the record field index as represented in debug info.
-  unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
-
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission
   //===--------------------------------------------------------------------===//
@@ -5653,14 +5651,7 @@ private:
                                                          const VarDecl &D);
 
 public:
-  enum class EvaluationOrder {
-    ///! No language constraints on evaluation order.
-    Default,
-    ///! Language semantics require left-to-right evaluation.
-    ForceLeftToRight,
-    ///! Language semantics require right-to-left evaluation.
-    ForceRightToLeft
-  };
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.

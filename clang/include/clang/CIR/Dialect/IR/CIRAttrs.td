@@ -954,6 +954,140 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_FlagParam
+//===----------------------------------------------------------------------===//
+
+/// A simple UnitAttr wrapper so that an attributes parameter can print JUST its
+/// name and be used with the ($keyword^)? syntax in assemblyFormat.
+class CIR_FlagParam<string keyword> : OptionalParameter<"mlir::UnitAttr"> {
+  let printer = "$_printer << \"" # keyword # "\"";
+  let parser = "[&]() -> ::mlir::FailureOr<::mlir::UnitAttr> {\n"
+               "  if (::mlir::succeeded($_parser.parseOptionalKeyword(\""
+               # keyword # "\")))\n"
+               "    return ::mlir::UnitAttr::get($_ctxt);\n"
+               "  return ::mlir::UnitAttr();\n"
+               "}()";
+}
+
+//===----------------------------------------------------------------------===//
+// LoopUnrollMode
+//===----------------------------------------------------------------------===//
+
+def CIR_LoopUnrollMode : CIR_I32Enum<
+    "LoopUnrollMode", "loop unrolling mode", [
+  I32EnumCase<"Enable", 0, "enable">,
+  I32EnumCase<"Disable", 1, "disable">,
+  I32EnumCase<"Full", 2, "full">
+]> {
+  let description = [{
+    How a loop is unrolled (or unrolled and jammed): `enable` asks for the
+    optimizer to unroll the loop, `disable` forbids it, and `full` asks for it
+    to be unrolled completely.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LoopHintAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
+  let summary = "Optimizer hints and guarantees attached to a loop";
+  let description = [{
+    The `#cir.loop_hint` attribute carries per-loop information for the
+    optimizer: the forward-progress guarantee and the hints from
+    `#pragma clang loop`, `#pragma unroll`, `[[clang::code_align]]` and their
+    OpenCL and HLSL spellings. It is attached to the loop operations
+    (`cir.for`, `cir.while`, `cir.do`).
+
+    - `must_progress`: the loop must eventually terminate or have an
+      observable side effect (the forward-progress guarantee of C++11 and
+      later, and C11 loops with a non-constant condition).
+    - `vectorize_enable`: force vectorization on.
+    - `vectorize_width`: the vectorization factor. A width of 1 disables
+      vectorization.
+    - `vectorize_scalable`: whether the vectorization factor is
+      scalable, or explicitly fixed.
+    - `vectorize_predicate`: enable or disable predicated vectorization.
+    - `interleave_count`: the interleave count. A count of 1 disables
+      interleaving.
+    - `unroll`: The unrolling mode: enable, disable, or full.
+    - `unroll_count`: the unroll factor.
+    - `unroll_and_jam`: the unroll-and-jam mode: enable, disable, or full.
+    - `distribute`: enable or disable loop distribution.
+    - `pipeline_disabled`: disable software pipelining.
+    - `pipeline_initiation_interval`: the pipelining initiation interval.
+    - `licm_disabled`: disable loop-invariant code motion.
+    - `parallel`: the loop's iterations are independent, so its memory
+      accesses are parallel accesses.
+    - `code_align`: the alignment of the loop, in bytes.
+
+    Example:
+    ```
+    #cir.loop_hint<>
+    #cir.loop_hint< must_progress>
+    #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
+                    unroll_count = 4>
+    ```
+  }];
+
+  let parameters = (ins
+    CIR_FlagParam<"must_progress">:$must_progress,
+    CIR_FlagParam<"vectorize_enable">:$vectorize_enable,
+    OptionalParameter<"uint32_t">:$vectorize_width,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_scalable,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_predicate,
+    OptionalParameter<"uint32_t">:$interleave_count,
+    OptionalParameter<"std::optional<cir::LoopUnrollMode>">:$unroll,
+    OptionalParameter<"uint32_t">:$unroll_count,
+    OptionalParameter<"std::optional<cir::LoopUnrollMode>">:$unroll_and_jam,
+    OptionalParameter<"uint32_t">:$unroll_and_jam_count,
+    OptionalParameter<"mlir::BoolAttr">:$distribute,
+    CIR_FlagParam<"pipeline_disabled">:$pipeline_disabled,
+    OptionalParameter<"uint32_t">:$pipeline_initiation_interval,
+    CIR_FlagParam<"licm_disabled">:$licm_disabled,
+    CIR_FlagParam<"parallel">:$parallel,
+    OptionalParameter<"uint32_t">:$code_align);
+
+  let assemblyFormat = [{
+    `<`
+      (` ` $must_progress^)?
+      (` ` $vectorize_enable^)?
+      (` ` `vectorize_width` `=` $vectorize_width^)?
+      (` ` `vectorize_scalable` `=` $vectorize_scalable^)?
+      (` ` `vectorize_predicate` `=` $vectorize_predicate^)?
+      (` ` `interleave_count` `=` $interleave_count^)?
+      (` ` `unroll` `=` $unroll^)?
+      (` ` `unroll_count` `=` $unroll_count^)?
+      (` ` `unroll_and_jam` `=` $unroll_and_jam^)?
+      (` ` `unroll_and_jam_count` `=` $unroll_and_jam_count^)?
+      (` ` `distribute` `=` $distribute^)?
+      (` ` $pipeline_disabled^)?
+      (` ` `pipeline_initiation_interval` `=` $pipeline_initiation_interval^)?
+      (` ` $licm_disabled^)?
+      (` ` $parallel^)?
+      (` ` `code_align` `=` $code_align^)?
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if no hint is set, in which case the attribute has no
+    /// information and there is no reason to use it. Every parameter is
+    /// unset when it is null, empty or 0, so this must name all of them.
+    bool isEmpty() const {
+      return !getMustProgress() && !getVectorizeEnable() &&
+             !getVectorizeWidth() && !getVectorizeScalable() &&
+             !getVectorizePredicate() && !getInterleaveCount() &&
+             !getUnroll() && !getUnrollCount() && !getUnrollAndJam() &&
+             !getUnrollAndJamCount() && !getDistribute() &&
+             !getPipelineDisabled() && !getPipelineInitiationInterval() &&
+             !getLicmDisabled() && !getParallel() && !getCodeAlign();
+    }
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FastMathFlagsAttr
 //===----------------------------------------------------------------------===//
 
