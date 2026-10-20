@@ -2189,11 +2189,8 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
       Skip = IsDevice;
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
       StringRef Val = A->getValue();
-      // An Intel GPU has several spellings, so -Xarch_ may name it by another.
-      NeedTrans =
-          Val == getArchName() || (BA && Val == BA.ArchName) ||
-          (BA && BA.Arch.isIntelGPU() && StringToOffloadArch(Val) == BA.Arch) ||
-          isXArchCompatibleTripleArch(Triple, Val);
+      NeedTrans = Val == getArchName() || (BA && Val == BA.ArchName) ||
+                  isXArchCompatibleTripleArch(Triple, Val);
       Skip = !NeedTrans;
     }
     if (NeedTrans || Skip)
