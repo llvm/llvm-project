@@ -2142,8 +2142,8 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   // tmp = V2I64toI128 {lo, hi};
   // CopyToReg Dst, tmp;
   SDValue Dst = N->getOperand(1);
-  SDValue Lo = N->getOperand(2);
-  SDValue Hi = N->getOperand(3);
+  SDValue Lo = selectPossiblyImm(N->getOperand(2));
+  SDValue Hi = selectPossiblyImm(N->getOperand(3));
 
   SDLoc DL(N);
   SDNode *Mov =
@@ -2418,7 +2418,8 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   const SDValue Chain = N->getOperand(0);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SmallVector<SDValue, 10> Ops{Base, Offset};
-  Ops.append(N->op_begin() + 2, N->op_end());
+  for (const SDValue &Operand : drop_begin(N->op_values(), 2))
+    Ops.push_back(selectPossiblyImm(Operand));
   Ops.append({getI32Imm(getMemOrder(AN), dl), getI32Imm(getAtomicScope(AN), dl),
               getI32Imm(getAddrSpace(AN), dl)});
 
