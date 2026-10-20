@@ -8041,7 +8041,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
       Value *Arg = I.getArgOperand(0);
-      Args.emplace_back(Arg, getValue(Arg));
+      Args.emplace_back(Arg, getValue(Arg),
+                        LibInfo->getExtAttrForI8Param(/*Signed=*/false));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);

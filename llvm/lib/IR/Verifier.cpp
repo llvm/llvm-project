@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Verifier.h"
+#include "IROptions.h"
 #include "VerifierInternal.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -120,7 +121,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -141,11 +141,6 @@
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<bool> VerifyNoAliasScopeDomination(
-    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
-    cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
-             "scopes are not dominating"));
 
 namespace {
 
@@ -7978,7 +7973,7 @@ void Verifier::verifyNoAliasScopeDecl() {
 
   // Only check the domination rule when requested. Once all passes have been
   // adapted this option can go away.
-  if (!VerifyNoAliasScopeDomination)
+  if (!getIROptions(M.getContext()).verify_noalias_scope_decl_dom)
     return;
 
   // Now sort the intrinsics based on the scope MDNode so that declarations of
