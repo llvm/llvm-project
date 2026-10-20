@@ -24,7 +24,7 @@ define i32 @zext_i8_mul_i12_zext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[WIDE_LOAD1]] to <8 x i12>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i12> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i12> [[TMP5]] to <8 x i32>
-; CHECK-NEXT:    [[TMP7]] = add <8 x i32> [[VEC_PHI]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -78,7 +78,7 @@ define i32 @sext_i8_mul_i12_sext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[WIDE_LOAD1]] to <8 x i12>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i12> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i12> [[TMP5]] to <8 x i32>
-; CHECK-NEXT:    [[TMP7]] = add <8 x i32> [[VEC_PHI]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -129,7 +129,7 @@ define i32 @zext_i8_square_i12_zext_i32(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i12>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <16 x i12> [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i12> [[TMP3]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP6]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -180,7 +180,7 @@ define i32 @sext_i8_mul_nuw_i12_sext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[WIDE_LOAD1]] to <8 x i12>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw <8 x i12> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i12> [[TMP5]] to <8 x i32>
-; CHECK-NEXT:    [[TMP7]] = add <8 x i32> [[VEC_PHI]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -393,7 +393,7 @@ define i32 @sext_i8_mul_i15_sext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[WIDE_LOAD1]] to <8 x i15>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i15> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i15> [[TMP5]] to <8 x i32>
-; CHECK-NEXT:    [[TMP7]] = add <8 x i32> [[VEC_PHI]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7]] = call <8 x i32> @llvm.vector.partial.reduce.add.v8i32.v8i32(<8 x i32> [[VEC_PHI]], <8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -544,7 +544,7 @@ define i32 @zext_i8_mul_const_i12_zext_i32(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i12>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <16 x i12> [[TMP2]], splat (i12 255)
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i12> [[TMP3]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
