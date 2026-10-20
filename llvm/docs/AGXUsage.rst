@@ -75,6 +75,49 @@ Use ``-mcpu`` (or the ``target-cpu`` function attribute) to select the GPU.
 
 G15 support assumes the G14 encoding; it has not been validated on hardware.
 
+M2 Max (``agx-g14c``)
+---------------------
+
+The M2 Max is the reference G14 target. The values below were measured on an
+M2 Max (driver-reported G14C B1) under Asahi Linux by the AGX Performance
+Simulator project, and are the ones its cost and dispatch models use. A
+runtime should query the core count and the clock rather than assume them:
+binned parts have fewer cores.
+
+.. table:: M2 Max (G14C) execution resources
+   :name: agx-g14c-table
+
+   ============================== ==============================================
+   Resource                       Value
+   ============================== ==============================================
+   GPU cores                      38 on the full part, in 4 clusters of
+                                  10, 9, 9 and 10 cores
+   SIMD-group width               32 threads
+   Resident SIMD-groups per core  ``min(96, 2 * floor(3328 / (2 * H)))``, where
+                                  ``H`` is the number of 16-bit register halves
+                                  the kernel declares (minimum 8); whole
+                                  workgroups only
+   Threadgroup memory per core    64 KiB; ``floor(65536 / bytes)`` workgroups
+                                  fit, by threadgroup memory alone
+   Threadgroup memory banks       32 banks of 4 bytes
+   Threads per workgroup          1 to 1024
+   Cache line                     64 bytes (L1 and L2)
+   L1 data cache                  8 KiB per core
+   L2 cache                       256 KiB per core
+   DRAM bandwidth                 about 410 GB/s peak, 360 GB/s for a whole
+                                  dispatch
+   Top GPU clock                  1398 MHz (the clock ramps up over about
+                                  15 ms after the GPU wakes)
+   Concurrent compute commands    at most 4 GPU-wide
+   Kernel launch                  about 55 us warm, 0.4-0.7 ms after wake-up
+   ============================== ==============================================
+
+Occupancy is limited by whichever of the register and threadgroup memory
+limits is lower, in whole workgroups: for example, with 32-thread workgroups
+the limit is near 55 SIMD-groups per core, and with 64-thread workgroups near
+84. The ``max-gprs-128`` and ``max-gprs-64`` features trade registers for
+occupancy along this curve.
+
 Target features
 ===============
 
