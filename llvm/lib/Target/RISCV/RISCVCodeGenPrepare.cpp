@@ -70,7 +70,7 @@ public:
 /// model based decision.
 /// TODO: Support insertvector instructions.
 bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
-  if (!ST->hasVInstructions())
+  if (!ST->hasVInstructions() || !ST->isLittleEndian())
     return false;
 
   SmallDenseMap<Value *, SmallVector<ExtractElementInst *, 8>> ExtractsPerVec;
