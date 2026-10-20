@@ -117,9 +117,12 @@
   !13 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
   !14 = !DILocation(line: 0, scope: !11)
 ...
-# The SlotIndex of a DBG_LABEL is recorded in UserLabel::loc, and the
-# instruction it names is erased. loc is repaired to the closest preceding live
-# instruction, and insertDebugLabel inserts the DBG_LABEL after it.
+# The DBG_LABEL in bb.0.entry. UserLabel::loc records the index of the
+# instruction before it, which after coalescing is the MOV32r0 defining %11.
+# Greedy rematerializes the MOV32r0 next to the CALL64r in bb.3.if.then10 and
+# erases the original. Check that loc is canonicalized to the COPY of $rdi
+# before it, so that the DBG_LABEL is still emitted between that COPY and the
+# MOVZX32rr16.
 #
 # Reduced from MultiSource/Benchmarks/Prolangs-C/cdecl built at -O2 -g.
 
@@ -218,12 +221,13 @@ body:             |
     $eax = MOV32r0 implicit-def dead $eflags
     RET 0, $eax
 ...
-# In instruction referencing mode, debug instructions are unlinked during
-# register allocation and the SlotIndex to put them back at is recorded in
-# StashedDebugInstrs. Here that index names the load of %26, which
-# InlineSpiller erases after rematerializing it in the loop. It is repaired to
-# the closest preceding live instruction, and emitDebugValues re-inserts the
-# DBG_VALUE after it.
+# The DBG_VALUE in bb.0.entry. In instruction referencing mode it is unlinked
+# during register allocation, and StashedDebugInstrs records the index of the
+# instruction before it, the load of %26, to re-insert it after. Greedy
+# rematerializes that load next to its use, the ADDSSrm in bb.1.for.body, and
+# erases the original. Check that the index is canonicalized to the load of %27
+# before it, so that the DBG_VALUE is still emitted between that load and the
+# MOVSX64rr32.
 #
 # Reduced from MultiSource/Applications/oggenc built at -O2 -g.
 

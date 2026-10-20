@@ -124,12 +124,13 @@
   !28 = !DILocation(line: 509, column: 17, scope: !14)
   !29 = !DILocation(line: 748, column: 17, scope: !19, inlinedAt: !24)
 ...
-# Splitting the register holding %pw around its spill leaves two intervals in
-# UserValue::locInts, one in $x1 and one on the stack, with the boundary between
-# them at the spill. HoistSpillHelper::hoistAllSpills hoists the spill into the
-# entry block, erasing the original. That boundary resolves to the start of
-# loop.outer, which empties the $x1 interval, so only the stack location is
-# emitted.
+# The DBG_VALUE of %1 at the start of bb.1.loop.outer. Greedy splits %1 at the
+# top of bb.1 and spills the part after the split, so the DBG_VALUE gets two
+# intervals in locInts: in $x1 up to the spill, and in %stack.0 after it.
+# HoistSpillHelper::hoistAllSpills then erases that spill in favour of one in
+# bb.0.entry. Check that the boundary between the intervals is canonicalized to
+# the start of bb.1, leaving the $x1 interval empty, so that a single DBG_VALUE
+# of %stack.0 is emitted at the start of bb.1.
 #
 # Reduced from MultiSource/Benchmarks/7zip 7zUpdate.cpp built at -O2 -g.
 
@@ -231,11 +232,14 @@ body:             |
     STRWui %12, %13, 0 :: (volatile store (s32) into `ptr null`)
     B %bb.1
 ...
-# UserValue::trimmedDefs records interval start indexes that computeIntervals
-# trimmed to a lexical scope, and emitDebugValues matches them against the
-# starts in locInts to decide whether to step a DBG_VALUE back one index. Here
-# both a trimmed start and the locInts start it belongs to name an erased
-# instruction, so they have to be repaired consistently to keep matching.
+# The DBG_VALUE of %3 in bb.0.entry. The variable's lexical scope covers only
+# the ADDXri, so computeIntervals trims the start of its interval to the ADDXri
+# and records that in trimmedDefs, which tells emitDebugValues to insert the
+# DBG_VALUE before the start rather than after it. Greedy rematerializes the
+# ADDXri next to its use in bb.2.lower_bound.exit and erases the original.
+# Check that the interval start and the trimmed def are both canonicalized to
+# the instruction before the ADDXri, which by then is the SUBXrr, and still
+# match, so that the DBG_VALUE is inserted before the SUBXrr.
 #
 # Reduced from MultiSource/Benchmarks/DOE-ProxyApps-C++/PENNANT built at -O2 -g.
 
