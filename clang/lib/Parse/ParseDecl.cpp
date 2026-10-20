@@ -4949,7 +4949,7 @@ void Parser::CompleteLateParsedTypeAttributes(
   for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
     std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
 
-    BoundsAttributedType *BATy = LTA->TypeToComplete;
+    BoundsAttributedType *BATy = LTA->Info.TypeToComplete;
     if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
       continue;
 
@@ -4979,16 +4979,6 @@ void Parser::CompleteLateParsedTypeAttributes(
       Attrs[0].setInvalid();
   }
   LateTypeAttrs.clear();
-}
-
-BoundsAttributedType **Parser::GetLateParsedTypeAttrCallback(
-    LateParsedAttribute *LA, ParsedAttr::Kind &Kind, SourceLocation &Loc) {
-  auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA);
-  if (!LTA)
-    return nullptr;
-  Kind = LTA->AttrKind;
-  Loc = LTA->AttrNameLoc;
-  return &LTA->TypeToComplete;
 }
 
 void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {

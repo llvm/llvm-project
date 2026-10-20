@@ -1382,20 +1382,6 @@ public:
     OpaqueParser = P;
   }
 
-  /// Callback into the parser for the fields of a late-parsed type attribute,
-  /// which Sema cannot see. Returns the slot holding the type built for \p LA
-  /// and sets \p Kind and \p Loc, or returns null if \p LA is not a type
-  /// attribute.
-  typedef BoundsAttributedType **
-  GetLateParsedTypeAttrCB(LateParsedAttribute *LA, ParsedAttr::Kind &Kind,
-                          SourceLocation &Loc);
-  GetLateParsedTypeAttrCB *GetLateParsedTypeAttrCallback = nullptr;
-
-  /// Validate the late-parsed type attribute \p LA and wrap \p type in a
-  /// CountAttributedType with no count yet, recorded on \p LA for later
-  /// completion. Ignores other attributes. Returns false if \p LA is invalid.
-  bool ProcessLateParsedTypeAttr(LateParsedAttribute *LA, QualType &type);
-
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
       ParseTypeFromStringCallback;
@@ -2614,6 +2600,11 @@ public:
   bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
     return RejectedLateParsedBoundsTypes.contains(BATy);
   }
+
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
 
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
   /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
