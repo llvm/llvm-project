@@ -38,11 +38,11 @@ class MemReverse8Template : Template<
     ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
     ["u8",      "u16",      "u32",      "u64"]>;
 
-class Load8UnsignedTemplate : Template<
+class Load8Store8UnsignedTemplate : Template<
     ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
     ["8",             "16",             "32",             "64"]>;
 
-class Load8SignedTemplate : Template<
+class Load8Store8SignedTemplate : Template<
     ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
     ["8",            "16",            "32",            "64"]>;
 
@@ -1016,36 +1016,74 @@ class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
   let Prototype = "T(const unsigned char*)";
 }
 
-def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
+def StdcLoad8LeU : Load8Common, Load8Store8UnsignedTemplate {
   let Spellings = ["stdc_load8_leu"];
 }
 
-def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
+def StdcLoad8BeU : Load8Common, Load8Store8UnsignedTemplate {
   let Spellings = ["stdc_load8_beu"];
 }
 
-def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
+def StdcLoad8AlignedLeU : Load8Common, Load8Store8UnsignedTemplate {
   let Spellings = ["stdc_load8_aligned_leu"];
 }
 
-def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
+def StdcLoad8AlignedBeU : Load8Common, Load8Store8UnsignedTemplate {
   let Spellings = ["stdc_load8_aligned_beu"];
 }
 
-def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
+def StdcLoad8LeS : Load8Common, Load8Store8SignedTemplate {
   let Spellings = ["stdc_load8_les"];
 }
 
-def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
+def StdcLoad8BeS : Load8Common, Load8Store8SignedTemplate {
   let Spellings = ["stdc_load8_bes"];
 }
 
-def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
+def StdcLoad8AlignedLeS : Load8Common, Load8Store8SignedTemplate {
   let Spellings = ["stdc_load8_aligned_les"];
 }
 
-def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
+def StdcLoad8AlignedBeS : Load8Common, Load8Store8SignedTemplate {
   let Spellings = ["stdc_load8_aligned_bes"];
+}
+
+class Store8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Constexpr, NonNull<NonOptimizing, [1]>];
+  let Prototype = "void(T, unsigned char*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def StdcStore8LeU : Store8Common, Load8Store8UnsignedTemplate {
+  let Spellings = ["stdc_store8_leu"];
+}
+
+def StdcStore8BeU : Store8Common, Load8Store8UnsignedTemplate {
+  let Spellings = ["stdc_store8_beu"];
+}
+
+def StdcStore8AlignedLeU : Store8Common, Load8Store8UnsignedTemplate {
+  let Spellings = ["stdc_store8_aligned_leu"];
+}
+
+def StdcStore8AlignedBeU : Store8Common, Load8Store8UnsignedTemplate {
+  let Spellings = ["stdc_store8_aligned_beu"];
+}
+
+def StdcStore8LeS : Store8Common, Load8Store8SignedTemplate {
+  let Spellings = ["stdc_store8_les"];
+}
+
+def StdcStore8BeS : Store8Common, Load8Store8SignedTemplate {
+  let Spellings = ["stdc_store8_bes"];
+}
+
+def StdcStore8AlignedLeS : Store8Common, Load8Store8SignedTemplate {
+  let Spellings = ["stdc_store8_aligned_les"];
+}
+
+def StdcStore8AlignedBeS : Store8Common, Load8Store8SignedTemplate {
+  let Spellings = ["stdc_store8_aligned_bes"];
 }
 
 
