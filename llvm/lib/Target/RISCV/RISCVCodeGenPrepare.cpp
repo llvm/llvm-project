@@ -62,14 +62,18 @@ public:
 };
 } // namespace
 
-// Combine extraction of every element of an integer vector whose total size
-// is XLEN. This lets instruction selection move the whole vector to a scalar
-// register once and extract the individual elements with scalar operations.
+/// Combine extraction of every element of an integer vector whose total size
+/// is XLEN. This lets instruction selection move the whole vector to a scalar
+/// register once and extract the individual elements with scalar operations.
+/// TODO: Currently limited to vectors that can be moved in full XLEN chunks,
+/// eventually need to support < XLEN chunks and potentially move to a cost
+/// model based decision.
+/// TODO: Support insertvector instructions.
 bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
   if (!ST->hasVInstructions())
     return false;
 
-  DenseMap<Value *, SmallVector<ExtractElementInst *, 8>> Extracts;
+  DenseMap<Value *, SmallVector<ExtractElementInst *, 8>> ExtractsPerVec;
   for (Instruction &I : BB) {
     auto *Extract = dyn_cast<ExtractElementInst>(&I);
     if (!Extract)
@@ -79,57 +83,63 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
     if (!VecTy || !VecTy->getElementType()->isIntegerTy())
       continue;
 
-    Extracts[Extract->getVectorOperand()].push_back(Extract);
+    ExtractsPerVec[Extract->getVectorOperand()].push_back(Extract);
   }
 
   bool Changed = false;
   unsigned XLen = ST->getXLen();
-  for (auto &Entry : Extracts) {
-    Value *Vec = Entry.first;
-    auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  for (auto &Entry : ExtractsPerVec) {
+    Value *ExtractedVec = Entry.first;
+    SmallVector<ExtractElementInst *, 8> &Extracts = Entry.second;
+    auto *VecTy = cast<FixedVectorType>(ExtractedVec->getType());
     auto *EltTy = cast<IntegerType>(VecTy->getElementType());
     unsigned NumElts = VecTy->getNumElements();
     unsigned EltBits = EltTy->getBitWidth();
 
     if (EltBits == 1 || EltBits >= XLen || NumElts * EltBits != XLen ||
-        Entry.second.size() != NumElts)
+        Extracts.size() != NumElts)
       continue;
 
-    SmallVector<ExtractElementInst *, 8> ByIndex(NumElts);
+    SmallVector<ExtractElementInst *, 8> ExtractPerLane(NumElts);
     bool Complete = true;
-    for (ExtractElementInst *Extract : Entry.second) {
-      auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand());
-      if (!Index || Index->getValue().uge(NumElts) ||
-          ByIndex[Index->getZExtValue()]) {
+    for (ExtractElementInst *Extract : Extracts) {
+      auto *Lane = dyn_cast<ConstantInt>(Extract->getIndexOperand());
+      if (!Lane || Lane->getValue().uge(NumElts) ||
+          ExtractPerLane[Lane->getZExtValue()]) {
         Complete = false;
         break;
       }
-      ByIndex[Index->getZExtValue()] = Extract;
+      ExtractPerLane[Lane->getZExtValue()] = Extract;
     }
     if (!Complete)
       continue;
 
+    // Find the first occuring extract instruction to use as the location
+    // to create the new sequences. This ensures that the new "extracts"
+    // dominate their old counterparts (and by extension their users since
+    // everything is constrained to a single basic block).
     Instruction *FirstExt =
-      *std::min_element(ByIndex.begin(), ByIndex.end(),
-                        [](Instruction *X, Instruction *Y) {
-                          return X->comesBefore(Y);
-                        });
+        *std::min_element(Extracts.begin(), Extracts.end(),
+                          [](ExtractElementInst *E0, ExtractElementInst *E1) {
+                            return E0->comesBefore(E1);
+                          });
     IRBuilder<> Builder(FirstExt);
     auto *PackedTy =
         FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
-    Value *Packed = Builder.CreateBitCast(Vec, PackedTy, "packed");
-    Value *Word = Builder.CreateExtractElement(Packed, (uint64_t)0, "word");
+    Value *Packed = Builder.CreateBitCast(ExtractedVec, PackedTy, "packed");
+    Value *Word =
+        Builder.CreateExtractElement(Packed, (uint64_t)0, "packed.extract");
 
-    for (unsigned Index = 0; Index < NumElts; ++Index) {
+    for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
       Value *LaneWord = Word;
-      if (Index != 0)
+      if (Lane != 0)
         LaneWord = Builder.CreateLShr(
-            Word, ConstantInt::get(Word->getType(), Index * EltBits));
-      Value *Lane = Builder.CreateTrunc(LaneWord, EltTy, "lane");
-      ByIndex[Index]->replaceAllUsesWith(Lane);
+            Word, ConstantInt::get(Word->getType(), Lane * EltBits));
+      Value *NewExtract = Builder.CreateTrunc(LaneWord, EltTy, "extract.lane");
+      ExtractPerLane[Lane]->replaceAllUsesWith(NewExtract);
     }
 
-    for (ExtractElementInst *Extract : ByIndex)
+    for (ExtractElementInst *Extract : Extracts)
       Extract->eraseFromParent();
     ++NumFullWidthExtracts;
     Changed = true;
