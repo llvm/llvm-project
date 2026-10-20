@@ -48,6 +48,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__split_buffer>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
@@ -59,6 +60,7 @@
 #include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/assume.h>
@@ -796,8 +798,8 @@ private:
     __annotate_contiguous_container(data() + size(), data() + capacity());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
-    __annotate_contiguous_container(data() + size(), data() + size() + __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_set_size(size_type __n) const _NOEXCEPT {
+    __annotate_contiguous_container(data() + size(), data() + __n);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
@@ -807,7 +809,7 @@ private:
   struct _ConstructTransaction {
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector& __v, size_type __n)
         : __v_(__v), __pos_(__v.__layout_.__end_ptr()), __new_end_(__pos_ + __n) {
-      __v_.__annotate_increase(__n);
+      __v_.__annotate_set_size(__v.size() + __n);
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
@@ -968,6 +970,27 @@ template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
+
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (is_same<value_type, __policy_value_type<_AlgPolicy, _Iterator>>::value &&
+                __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                __allocator_has_trivial_destroy_v<allocator_type, value_type> &&
+                is_trivially_copyable<value_type>::value && __libcpp_is_contiguous_iterator<_Iterator>::value) {
+    if (!__libcpp_is_constant_evaluated()) {
+      if (__new_size > capacity()) {
+        __vdeallocate();
+        __vallocate(__recommend(__new_size));
+      }
+      __annotate_set_size(__new_size);
+
+      std::__constexpr_memmove(
+          std::__to_address(__layout_.__begin_ptr()), std::__to_address(__first), __element_count(__new_size));
+      __layout_.__set_bound_using_pointer(__layout_.__begin_ptr() + __new_size);
+      return;
+    }
+  }
+#endif
+
   if (__new_size <= capacity()) {
     auto const __size = size();
     if (__new_size > __size) {
