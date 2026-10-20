@@ -640,14 +640,29 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   return res;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *e) {
-  if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
-    if (const auto *proto =
-            ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
-          proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
+static bool functionCanThrow(const FunctionDecl *d) {
+  const auto *proto = d->getType()->getAs<FunctionProtoType>();
+  if (!proto)
+    return true;
+  return !isNoexceptExceptionSpec(proto->getExceptionSpecType()) ||
+         proto->canThrow() != CT_Cannot;
+}
+
+static bool stmtCanThrow(const Stmt *s) {
+  if (const auto *ce = dyn_cast<CallExpr>(s)) {
+    const FunctionDecl *callee = ce->getDirectCallee();
+    if (!callee || functionCanThrow(callee))
+      return true;
+  }
+
+  // The destructor call of a bound temporary is not among the children.
+  if (const auto *te = dyn_cast<CXXBindTemporaryExpr>(s))
+    if (functionCanThrow(te->getTemporary()->getDestructor()))
+      return true;
+
+  return llvm::any_of(s->children(), [](const Stmt *child) {
+    return child && stmtCanThrow(child);
+  });
 }
 
 // Given a suspend expression which roughly looks like:
@@ -673,6 +688,12 @@ struct LValueOrRValue {
 };
 } // namespace
 
+static bool isResumeExprInTryCatch(const CGCoroData &coro, cir::AwaitKind kind,
+                                   const CoroutineSuspendExpr &s) {
+  return coro.exceptionHandler && kind == cir::AwaitKind::Init &&
+         stmtCanThrow(s.getResumeExpr());
+}
+
 static LValueOrRValue
 emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                       CoroutineSuspendExpr const &s, cir::AwaitKind kind,
@@ -687,10 +708,9 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // Exception handling requires additional IR. We avoid generating it when
-  // the resume expression is a direct call to a 'noexcept' member function.
-  const bool resumeInTry = coro.exceptionHandler &&
-                           kind == cir::AwaitKind::Init &&
-                           memberCallExpressionCanThrow(s.getResumeExpr());
+  // neither the await_resume() call nor the destruction of its result can
+  // throw.
+  const bool resumeInTry = isResumeExprInTryCatch(coro, kind, s);
 
   // If the await_resume() result needs a destructor, take over its
   // destruction, unless the destination owns it. The try/catch path destroys
@@ -723,16 +743,24 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
-        // A invalid suspendRet indicates "void returning await_suspend"
-        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
-
-        // Veto suspension if requested by bool returning await_suspend.
-        if (suspendRet) {
-          cgf.cgm.errorNYI("Veto await_suspend");
+        switch (s.getSuspendReturnType()) {
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
+          mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
+          // Veto suspension if requested by bool returning await_suspend.
+          cir::CoroSuspendPoint::create(builder, loc, suspendRet);
+          break;
         }
-
-        // Signals the parent that execution flows to next region.
-        cir::CoroSuspendPoint::create(builder, loc);
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+          cgf.emitScalarExpr(s.getSuspendExpr());
+          // Signals the parent that execution flows to next region.
+          cir::CoroSuspendPoint::create(builder, loc);
+          break;
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
+          cgf.cgm.errorNYI(s.getSourceRange(),
+                           "await_suspend returning handle");
+          cir::CoroSuspendPoint::create(builder, loc);
+          break;
+        }
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -774,8 +802,10 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                   resumeEHVar(resumeEHVar.getPointer()) {}
 
             mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
+              CIRGenFunction::RunCleanupsScope resumeCleanups(cgf);
               mlir::LogicalResult res =
                   cgf.emitStmt(tryStmt.getTryBlock(), /*useCurrentScope=*/true);
+              resumeCleanups.forceCleanup();
               cgf.getBuilder().createFlagStore(loc, true, resumeEHVar);
               return res;
             }
@@ -788,9 +818,15 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           // await_resume().
           awaitRes.rv = RValue::getIgnored();
         } else if (forLValue) {
-          // FIXME(cir): the alloca for the resume expr should be placed in the
-          // enclosing cir.scope instead.
           awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
+          assert(awaitRes.lv.isSimple() &&
+                 "expected simple lvalue for coroutine resume");
+          mlir::Value ptr = awaitRes.lv.getPointer();
+          llvm::StringRef tmpName = "__coyield_resume_lval";
+          tmpResumeRValAddr = cgf.emitAlloca(
+              tmpName, ptr.getType(), loc, cgf.getPointerAlign(),
+              builder.getBestAllocaInsertPoint(scopeParentBlock));
+          builder.CIRBaseBuilderTy::createStore(loc, ptr, tmpResumeRValAddr);
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
@@ -880,6 +916,39 @@ RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
                                        bool ignoreResult) {
   return emitSuspendExpr(*this, e, cir::AwaitKind::Yield, aggSlot,
                          ignoreResult);
+}
+
+#ifndef NDEBUG
+static QualType
+getCoroutineSuspendExprReturnType(const ASTContext &ctx,
+                                  const CoroutineSuspendExpr *e) {
+  const auto *re = e->getResumeExpr();
+  assert(isa<CallExpr>(re) && "unexpected suspend expression type");
+  return cast<CallExpr>(re)->getCallReturnType(ctx);
+}
+#endif
+
+LValue CIRGenFunction::emitCoyieldLValue(const CoyieldExpr *e) {
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
+  mlir::Location scopeLoc = getLoc(e->getSourceRange());
+  mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
+  mlir::Value tmpResumeLValAddr;
+  LValue lv =
+      emitSuspendExpression(*this, *curCoro.data, *e, cir::AwaitKind::Yield,
+                            AggValueSlot::ignored(),
+                            /*ignoreResult=*/false, currEntryBlock,
+                            tmpResumeLValAddr, /*forLValue=*/true)
+          .lv;
+  if (tmpResumeLValAddr) {
+    Address addr = lv.getAddress();
+    mlir::Value loadedPtr = cir::LoadOp::create(
+        getBuilder(), scopeLoc, addr.getPointer().getType(), tmpResumeLValAddr);
+    lv.setAddress(addr.withPointer(loadedPtr));
+  }
+  return lv;
 }
 
 mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {

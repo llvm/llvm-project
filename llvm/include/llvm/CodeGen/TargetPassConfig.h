@@ -24,6 +24,7 @@ namespace llvm {
 
 class TargetMachine;
 class PassConfigImpl;
+struct CodeGenOptions;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -84,6 +85,7 @@ public:
 class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
+  const CodeGenOptions &Opts;
   AnalysisID StartBefore = nullptr;
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
@@ -154,8 +156,6 @@ protected:
 
 public:
   TargetPassConfig(TargetMachine &TM, PassManagerBase &PM);
-  // Dummy constructor.
-  TargetPassConfig();
 
   ~TargetPassConfig() override;
 
@@ -173,16 +173,16 @@ public:
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
-  static bool hasLimitedCodeGenPipeline();
+  bool hasLimitedCodeGenPipeline() const;
 
   /// Returns true if none of the `-stop-before` and `-stop-after` options is
   /// set.
-  static bool willCompleteCodeGenPipeline();
+  bool willCompleteCodeGenPipeline() const;
 
   /// If hasLimitedCodeGenPipeline is true, this method returns
   /// a string with the name of the options that caused this
   /// pipeline to be limited.
-  static std::string getLimitedCodeGenPipelineReason();
+  std::string getLimitedCodeGenPipelineReason() const;
 
   struct StartStopInfo {
     bool StartAfter;
@@ -191,12 +191,18 @@ public:
     unsigned StopInstanceNum;
     StringRef StartPass;
     StringRef StopPass;
+
+    /// Returns true if a start or stop pass is set.
+    bool isLimited() const { return !StartPass.empty() || !StopPass.empty(); }
+
+    /// Returns the names of the options that set the start and stop passes.
+    LLVM_ABI std::string getLimitReason() const;
   };
 
   /// Returns pass name in `-stop-before` or `-stop-after`
   /// NOTE: New pass manager migration only
   static Expected<StartStopInfo>
-  getStartStopInfo(PassInstrumentationCallbacks &PIC);
+  getStartStopInfo(const TargetMachine &TM, PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 
@@ -486,6 +492,9 @@ protected:
   virtual bool addRegAssignAndRewriteFast();
   virtual bool addRegAssignAndRewriteOptimized();
 };
+
+/// TargetPassConfig needs a TargetMachine; the pass registry cannot create one.
+template <> LLVM_ABI Pass *callDefaultCtor<TargetPassConfig>();
 
 LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                       TargetMachine &);
