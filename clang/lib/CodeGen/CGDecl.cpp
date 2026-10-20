@@ -381,17 +381,16 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
       // be constant.
       GV->setConstant(false);
 
-#ifndef NDEBUG
       // Constant emission failed, so in device code Sema can only have accepted
       // this via its "empty constructor" rule.
       if (SkipCUDADeviceInit) {
         const auto *CE = dyn_cast<CXXConstructExpr>(D.getInit());
-        const CXXConstructorDecl *Ctor = CE ? CE->getConstructor() : nullptr;
+        [[maybe_unused]] const CXXConstructorDecl *Ctor =
+            CE ? CE->getConstructor() : nullptr;
         assert(Ctor && Ctor->hasTrivialBody() && Ctor->getNumParams() == 0 &&
                "non-empty initializer for a device-side static should have "
                "been diagnosed by Sema");
       }
-#endif
 
       if (!SkipCUDADeviceInit)
         EmitCXXGuardedInit(D, GV, /*PerformInit*/ true);
@@ -418,16 +417,15 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
 
   emitter.finalize(GV);
 
-#ifndef NDEBUG
   if (SkipCUDADeviceInit && NeedsDtor) {
     const auto *RD =
         D.getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
-    const CXXDestructorDecl *Dtor = RD ? RD->getDestructor() : nullptr;
+    [[maybe_unused]] const CXXDestructorDecl *Dtor =
+        RD ? RD->getDestructor() : nullptr;
     assert(Dtor && Dtor->hasTrivialBody() &&
            "non-empty destructor for a device-side static should have been "
            "diagnosed by Sema");
   }
-#endif
 
   // We have a constant initializer, but a nontrivial destructor. We still need
   // to perform a guarded "initialization" in order to register the destructor.
