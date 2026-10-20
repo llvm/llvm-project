@@ -64,6 +64,10 @@ private:
   void emitBareKernelEnvironment(const OMPExecutableDirective &D,
                                  CodeGenFunction &CGF);
 
+  /// Set NoLoopDirective or GridStrideLoopDirective to the loop the SPMD target
+  /// directive \a D can be promoted for, resetting both first.
+  void checkAndSetPromotableLoopDirective(const OMPExecutableDirective &D);
+
   /// Helper for target directive initialization.
   void emitKernelInit(const OMPExecutableDirective &D, CodeGenFunction &CGF,
                       EntryFunctionState &EST, bool IsSPMD);
@@ -151,6 +155,12 @@ public:
   /// mirroring Flang's MLIR promotion path.
   bool canPromoteToNoLoop(const OMPLoopDirective &S) const override {
     return &S == NoLoopDirective;
+  }
+
+  /// Check whether \a S is the loop the target kernel being emitted was
+  /// promoted for, to complete the promotion to a grid-stride loop SPMD kernel.
+  bool canPromoteToGridStrideLoop(const OMPLoopDirective &S) const override {
+    return &S == GridStrideLoopDirective;
   }
 
   /// Get call to __kmpc_alloc_shared
@@ -388,6 +398,10 @@ private:
   /// The loop the target region being emitted was promoted to no-loop for, set
   /// by the kernel prologue and read back while the region's body is emitted.
   const OMPLoopDirective *NoLoopDirective = nullptr;
+
+  /// The loop the target region being emitted was promoted to a grid-stride
+  /// loop for, set and read like NoLoopDirective.
+  const OMPLoopDirective *GridStrideLoopDirective = nullptr;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;

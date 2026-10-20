@@ -30,7 +30,7 @@ int main(void) {
     array[i] = i + 1;
   errors += check_errors(array);
 
-  // SPMD kernel (num_teams clause blocks promotion to no-loop)
+  // Grid-stride loop kernel (num_teams clause blocks promotion to no-loop)
   for (int i = 0; i < 1024; ++i)
     array[i] = 1;
 #pragma omp target teams distribute parallel for num_teams(3)
@@ -114,13 +114,26 @@ int main(void) {
     ++errors;
 #endif
 
+  // Grid-stride loop kernel with a lastprivate variable
+  for (int i = 0; i < 1024; ++i)
+    array[i] = 1;
+  int grid_stride_last = -1;
+#pragma omp target teams distribute parallel for num_teams(3) lastprivate(grid_stride_last) map(tofrom : grid_stride_last)
+  for (int i = 0; i < 1024; ++i) {
+    array[i] = i + 1;
+    grid_stride_last = i;
+  }
+  errors += check_errors(array);
+  if (grid_stride_last != 1023)
+    ++errors;
+
   printf("number of errors: %d\n", errors);
   return 0;
 }
 
 // CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 // CHECK:  info: #Args: 2 Teams x Thrds:   64x  16
-// CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-Grid-Stride-Loop mode
 // CHECK:  info: #Args: 2 Teams x Thrds:   3x  16 {{.*}}
 // CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 // CHECK:  info: #Args: 2 Teams x Thrds:   64x  16 {{.*}}
@@ -136,4 +149,6 @@ int main(void) {
 // CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
 // CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 // CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
+// CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-Grid-Stride-Loop mode
+// CHECK:  info: #Args: 3 Teams x Thrds:    3x  16 {{.*}}
 // CHECK:  number of errors: 0
