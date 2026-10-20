@@ -3,11 +3,17 @@
 # RUN: llvm-objdump -s %t.wasm | FileCheck %s
 # RUN: wasm-ld --no-entry --no-gc-sections --relocatable -o %t.rel.o %t.o
 # RUN: llvm-objdump -s %t.rel.o | FileCheck %s --check-prefix=RELOC
+# RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown %s -o %t64.o
+# RUN: wasm-ld -mwasm64 --no-entry --no-gc-sections -o %t64.wasm %t64.o
+# RUN: llvm-objdump -s %t64.wasm | FileCheck %s
+# RUN: wasm-ld -mwasm64 --no-entry --no-gc-sections --relocatable -o %t64.rel.o %t64.o
+# RUN: llvm-objdump -s %t64.rel.o | FileCheck %s --check-prefix=RELOC
 
 # The linker synthesizes a "memtag.globals" custom section describing the
 # address and size of every live data symbol carrying the memtag flag.
 # The payload is: ULEB version (1), ULEB count, then (ULEB address,
 # ULEB size) pairs sorted by address. Untagged symbols are not listed.
+# The encoding is identical for wasm64 since addresses are ULEB-encoded.
 
         .memtag tagged16b
         .globl  tagged16b
