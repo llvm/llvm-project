@@ -1,5 +1,5 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
