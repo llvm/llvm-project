@@ -824,17 +824,32 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    llvm::StringRef intrinsicName;
+    switch (builtinId) {
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+      intrinsicName = "amdgcn.cluster.load.b32";
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+      intrinsicName = "amdgcn.cluster.load.b64";
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
+      intrinsicName = "amdgcn.cluster.load.b128";
+      break;
+    }
+    return emitBuiltinWithOneOverloadedType<3>(expr, intrinsicName,
+                                               convertType(expr->getType()))
+        .getValue();
   }
-  case AMDGPU::BI__builtin_amdgcn_load_to_lds: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_load_to_lds:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.load.to.lds",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_load_async_to_lds:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.load.async.to.lds",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
