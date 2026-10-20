@@ -7,13 +7,13 @@
 ## when using dwarf-5.
 
 # CHECK:      error: duplicate symbol: _f
-# CHECK-NEXT: >>> defined in v.c:3 (./v.c:3)
+# CHECK-NEXT: >>> defined in v.c:3 (.{{[/\\]}}v.c:3)
 # CHECK-NEXT: >>>            [[FILE_1]]
-# CHECK-NEXT: >>> defined in v.c:3 (./v.c:3)
+# CHECK-NEXT: >>> defined in v.c:3 (.{{[/\\]}}v.c:3)
 # CHECK-NEXT: >>>            [[FILE_2]]
 
 # CHECK:      error: duplicate symbol: _x
-# CHECK-NEXT: >>> defined in v.c:1 (./v.c:1)
+# CHECK-NEXT: >>> defined in v.c:1 (.{{[/\\]}}v.c:1)
 # CHECK-NEXT: >>>            [[FILE_1]]
 
 ## Everything below is the unmodified output of
