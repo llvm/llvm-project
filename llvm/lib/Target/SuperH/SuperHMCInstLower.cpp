@@ -71,32 +71,38 @@ void SuperHMCInstLower::lowerInstruction(const MachineInstr &MI,
     case MachineOperand::MO_Immediate:
       MCOp = MCOperand::createImm(MO.getImm());
       break;
-    case MachineOperand::MO_GlobalAddress:
-      MCOp =
-          lowerSymbolOperand(MO, Printer.getSymbol(MO.getGlobal()), Subtarget);
+    case MachineOperand::MO_GlobalAddress: {
+      auto *Sym = Printer.getSymbol(MO.getGlobal());
+      MCOp = lowerSymbolOperand(MO, Sym, Subtarget);
       break;
-    case MachineOperand::MO_ExternalSymbol:
-      MCOp = lowerSymbolOperand(
-          MO, Printer.GetExternalSymbolSymbol(MO.getSymbolName()), Subtarget);
+    }
+    case MachineOperand::MO_ExternalSymbol: {
+      auto *Sym = Printer.GetExternalSymbolSymbol(MO.getSymbolName());
+      MCOp = lowerSymbolOperand(MO, Sym, Subtarget);
       break;
-    case MachineOperand::MO_MachineBasicBlock:
-      MCOp = MCOperand::createExpr(
-          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+    }
+    case MachineOperand::MO_MachineBasicBlock: {
+      auto *Sym = MO.getMBB()->getSymbol();
+      MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(Sym, Ctx));
       break;
+    }
     case MachineOperand::MO_RegisterMask:
       continue;
-    case MachineOperand::MO_BlockAddress:
-      MCOp = lowerSymbolOperand(
-          MO, Printer.GetBlockAddressSymbol(MO.getBlockAddress()), Subtarget);
+    case MachineOperand::MO_BlockAddress: {
+      auto *Sym = Printer.GetBlockAddressSymbol(MO.getBlockAddress());
+      MCOp = lowerSymbolOperand(MO, Sym, Subtarget);
       break;
-    case MachineOperand::MO_JumpTableIndex:
-      MCOp = lowerSymbolOperand(MO, Printer.GetJTISymbol(MO.getIndex()),
-                                Subtarget);
+    }
+    case MachineOperand::MO_JumpTableIndex: {
+      auto *Sym = Printer.GetJTISymbol(MO.getIndex());
+      MCOp = lowerSymbolOperand(MO, Sym, Subtarget);
       break;
-    case MachineOperand::MO_ConstantPoolIndex:
-      MCOp = lowerSymbolOperand(MO, Printer.GetCPISymbol(MO.getIndex()),
-                                Subtarget);
+    }
+    case MachineOperand::MO_ConstantPoolIndex: {
+      auto *Sym = Printer.GetCPISymbol(MO.getIndex());
+      MCOp = lowerSymbolOperand(MO, Sym, Subtarget);
       break;
+    }
     }
 
     OutMI.addOperand(MCOp);

@@ -238,21 +238,21 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Load from MACL
   if (SrcReg == SH::MACLO && SH::GPRRegClass.contains(DestReg)) {
     BuildMI(MBB, MI, DL, get(SH::STSMACL), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   // Store to MACL
   if (SH::GPRRegClass.contains(SrcReg) && DestReg == SH::MACLO) {
     BuildMI(MBB, MI, DL, get(SH::LDSMACL), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   // If the targets are GPR registers, use MOV Rm, Rn.
   if (SH::GPRRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MI, DL, get(SH::MOV), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   };
 
@@ -261,7 +261,7 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       SH::FR32RegClass.contains(DestReg)) {
 
     BuildMI(MBB, MI, DL, get(SH::LDSFPUL))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     BuildMI(MBB, MI, DL, get(SH::FSTS), DestReg);
     return;
   }
@@ -271,7 +271,7 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       SH::GPRRegClass.contains(DestReg)) {
     
     BuildMI(MBB, MI, DL, get(SH::FLDS))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     BuildMI(MBB, MI, DL, get(SH::STSFPUL), DestReg);
     return;
   }
@@ -279,7 +279,7 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // FR32 -> FR32
   if (SH::FR32RegClass.contains(SrcReg, DestReg)) {
     BuildMI(MBB, MI, DL, get(SH::FMOV), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -341,7 +341,8 @@ void SuperHInstrInfo::storeRegToStackSlot(
   BuildMI(MBB, II, DebugLoc(), get(Opc))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
-      .addImm(0);
+      .addImm(0)
+      .setMIFlags(Flags);
 }
 
 Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
@@ -393,7 +394,8 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   BuildMI(MBB, II, DebugLoc(), get(Opc), DestReg)
       .addFrameIndex(FrameIndex)
-      .addImm(0);
+      .addImm(0)
+      .setMIFlags(Flags);
 }
 
 
@@ -408,6 +410,118 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&FBB,
                                     SmallVectorImpl<MachineOperand> &Cond,
                                     bool AllowModify) const {
+  // Start from the bottom of the block and work up, examining the
+  // terminator instructions.
+  MachineBasicBlock::iterator I = MBB.end();
+  MachineBasicBlock::iterator UnCondBrIter = MBB.end();
+
+  while (I != MBB.begin()) {
+    --I;
+    if (I->isDebugInstr() || I->getOpcode() == SH::NOP) {
+      continue;
+    }
+
+    // Working from the bottom, when we see a non-terminator
+    // instruction, we're done.
+    if (!isUnpredicatedTerminator(*I)) {
+      break;
+    }
+
+    // A terminator that isn't a branch can't easily be handled
+    // by this analysis.
+    if (!I->getDesc().isBranch()) {
+      return true;
+    }
+
+    switch(I->getOpcode()) {
+    default: break;
+    case SH::BR:
+    case SH::BRA:
+      UnCondBrIter = I;
+
+      if (!AllowModify) {
+        TBB = I->getOperand(0).getMBB();
+        continue;
+      }
+
+      // If the block has any instructions after a JMP, delete them.
+      MBB.erase(std::next(I), MBB.end());
+
+      Cond.clear();
+      FBB = nullptr;
+
+      // Delete the JMP if it's equivalent to a fall-through.
+      if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
+        TBB = nullptr;
+        I->eraseFromParent();
+        I = MBB.end();
+        UnCondBrIter = MBB.end();
+        continue;
+      }
+
+      // TBB is used to indicate the unconditinal destination.
+      TBB = I->getOperand(0).getMBB();
+      continue;
+    }
+
+    // Handle conditional branches.
+    SHCC::CondCode BranchCode = getCondFromBranchOp(I->getOpcode());
+    if (BranchCode == SHCC::COND_INVALID) {
+      return true; // Can't handle indirect branch.
+    }
+
+    // Working from the bottom, handle the first conditional branch.
+    if (Cond.empty()) {
+      MachineBasicBlock *TargetBB = I->getOperand(0).getMBB();
+      if (AllowModify && UnCondBrIter != MBB.end() &&
+          MBB.isLayoutSuccessor(TargetBB)) {
+
+        BranchCode = getOppositeCondCode(BranchCode);
+        auto JNCC = getBrCond(BranchCode, false);
+        MachineBasicBlock::iterator OldInst = I;
+
+        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), JNCC)
+            .addMBB(UnCondBrIter->getOperand(0).getMBB());
+        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(SH::BR))
+            .addMBB(TargetBB);
+
+        OldInst->eraseFromParent();
+        UnCondBrIter->eraseFromParent();
+
+        // Restart the analysis.
+        UnCondBrIter = MBB.end();
+        I = MBB.end();
+        continue;
+      }
+
+      FBB = TBB;
+      TBB = I->getOperand(0).getMBB();
+      Cond.push_back(MachineOperand::CreateImm(BranchCode));
+      continue;
+    }
+
+    // Handle subsequent conditional branches. Only handle the case where all
+    // conditional branches branch to the same destination.
+    assert(Cond.size() == 1);
+    assert(TBB);
+
+    // Only handle the case where all conditional branches branch to
+    // the same destination.
+    if (TBB != I->getOperand(0).getMBB()) {
+      return true;
+    }
+
+    SHCC::CondCode OldBranchCode = (SHCC::CondCode)Cond[0].getImm();
+
+    // If the conditions are the same, we can leave them alone.
+    if (OldBranchCode == BranchCode) {
+      continue;
+    }
+
+    return true;
+  }
+
+  // Don't know how to handle this.
   return false;
 }
 
@@ -416,6 +530,8 @@ unsigned SuperHInstrInfo::insertBranch(
     ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   if (BytesAdded)
     *BytesAdded = 0;
+
+  LLVM_DEBUG(dbgs() << "insertBranch" << "\n");
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
@@ -444,7 +560,7 @@ unsigned SuperHInstrInfo::insertBranch(
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
-    auto &MI = *BuildMI(&MBB, DL, get(SH::BRA))
+    auto &MI = *BuildMI(&MBB, DL, get(SH::BR))
       .addMBB(FBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
@@ -459,6 +575,8 @@ unsigned SuperHInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (BytesRemoved)
     *BytesRemoved = 0;
 
+  LLVM_DEBUG(dbgs() << "removeBranch" << "\n");
+
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
 
@@ -468,7 +586,7 @@ unsigned SuperHInstrInfo::removeBranch(MachineBasicBlock &MBB,
       continue;
 
     unsigned Opcode = I->getOpcode();
-    if (Opcode != SH::BRA && Opcode != SH::NOP &&
+    if (Opcode != SH::BR && Opcode != SH::NOP &&
         getCondFromBranchOp(Opcode) == SHCC::COND_INVALID)
       break;
 
@@ -487,7 +605,8 @@ bool SuperHInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid SH branch condition!");
 
-  LLVM_DEBUG(dbgs() << "Reversed branch condition...\n");
+  LLVM_DEBUG(dbgs() << "reverseBranchCondition" << "\n");
+
   SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
   Cond[0].setImm(getOppositeCondCode(CC));
   return false;
@@ -495,6 +614,8 @@ bool SuperHInstrInfo::reverseBranchCondition(
 
 MachineBasicBlock *
 SuperHInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
+  LLVM_DEBUG(dbgs() << "getBranchDestBlock" << "\n");
+
   if (MI.isBranch())
     return MI.getOperand(0).getMBB();
 
@@ -523,11 +644,14 @@ bool SuperHInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("unexpected opcode!");
+  case SH::BRCC:
+  case SH::BRSCC:
   case SH::BF:
   case SH::BT:
   case SH::BFS:
   case SH::BTS:
     return isIntN(8, BrOffset);
+  case SH::BR:
   case SH::BRA:
   case SH::BSR:
     return isIntN(12, BrOffset) && (BrOffset % 2 == 0); 

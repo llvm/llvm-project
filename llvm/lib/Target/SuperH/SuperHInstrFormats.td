@@ -90,13 +90,11 @@ class SHSelectPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 class SHLoadPseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
   let mayLoad = 1;
-  let Size = 6;
 }
 
 class SHStorePseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
   let mayStore = 1;
-  let Size = 6;
 }
 
 

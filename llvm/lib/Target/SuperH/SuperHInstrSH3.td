@@ -22,19 +22,19 @@ let Predicates = [IsSH3] in {
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
-let hasSideEffects = 0, Constraints = "$src = $Rn" in {
+let hasSideEffects = 0 in {
 
   // shad Rm,Rn
   let Defs = [SR] in
   def SHAD          : InstRmRn<0b0100000000001100, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm),
                               "shad $Rm,$Rn",
                               []>;
 
   // shld Rm,Rn
   let Defs = [SR] in
   def SHLD          : InstRmRn<0b0100000000001101, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs GPR:$Rn), (ins GPR:$Rm),
                               "shld $Rm,$Rn",
                               []>;
 

@@ -249,7 +249,7 @@ def anyimm32 : ComplexPattern<i32, 1, "SelectImm", [imm]>;
 def anyimmf32 : ComplexPattern<f32, 1, "SelectImm", [imm]>;
 
 // Pseudo Instruction Immediates.
-def pimm : ComplexPattern<i32, 1, "SelectPImm", [imm]>;
+def pimm : ComplexPattern<i32, 1, "SelectPImm", [imm, timm]>;
 }
 
 
@@ -298,21 +298,21 @@ def MOVI          : InstRnI8<0b1110000000000000,
                             []>;
 
 // mova @(disp, PC), R0
-let hasSideEffects = 0, mayLoad = 1, Uses = [PC], Defs = [R0], isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, Defs = [R0], isDelayIllegal = 1 in
 def MOVA          : InstD8<0b1100011100000000,
                           (outs), (ins pcrel8x4:$disp),
                           "mova $disp,r0",
                           []>;
 
 // mov.w @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1, Uses = [PC], isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVWI         : InstRnD8<0b1001000000000000,
                             (outs GPR:$Rn), (ins pcrel8x2:$disp),
                             "mov.w $disp,$Rn",
                             [(set i32:$Rn, (sextloadi16 constpool:$disp))]>;
 
 // mov.l @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1, Uses = [PC], isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
 def MOVLI         : InstRnD8<0b1101000000000000,
                             (outs GPR:$Rn), (ins pcrel8x4:$disp),
                             "mov.l $disp,$Rn",
@@ -648,14 +648,14 @@ let hasSideEffects = 0 in {
   def NEG           : InstRmRn<0b0110000000001011,
                               (outs GPR:$Rn), (ins GPR:$Rm),
                               "neg $Rm,$Rn",
-                              [(set i32:$Rn, (ineg i32:$Rm))]>;
+                              []>;
 
   // negc Rm, Rn
   let Defs = [SR], Uses = [SR] in
   def NEGC          : InstRmRn<0b0110000000001010,
                               (outs GPR:$Rn), (ins GPR:$Rm),
                               "negc $Rm,$Rn",
-                              [(set i32:$Rn, (ineg i32:$Rm))]>;
+                              []>;
 
 }
 
@@ -861,7 +861,7 @@ def CMPSTR          : InstRmRn<0b0010000000001100,
 //===--------------------------------------------------------------------------===//
 
 // and Rm,Rn
-let Constraints = "$dst = $Rn" in
+let Constraints = "$Rn = $dst" in
 def AND             : InstRmRn<0b0010000000001001, 
                             (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "and $Rm,$Rn",
@@ -887,7 +887,7 @@ def NOT           : InstRmRn<0b0110000000000111,
                             []>;
 
 // or Rm,Rn
-let Constraints = "$dst = $Rn" in
+let Constraints = "$Rn = $dst" in
 def OR            : InstRmRn<0b0010000000001011, 
                             (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "or $Rm,$Rn",
@@ -907,7 +907,7 @@ def ORM             : InstI8<0b1100111100000000,
                             []>;
 
 // xor Rm,Rn
-let Constraints = "$dst = $Rn" in
+let Constraints = "$Rn = $dst" in
 def XOR           : InstRmRn<0b0010000000001010, 
                             (outs GPR:$Rn), (ins GPR:$Rm, GPR:$dst),
                             "xor $Rm,$Rn",
@@ -1130,8 +1130,7 @@ let isTerminator = 1 in {
 // Call Instructions
 //===--------------------------------------------------------------------------===//
 
-let isCall = 1, isBarrier = 1, isTerminator = 1, hasDelaySlot = 1 in {
-  let Uses = [PR, PC] in
+let isCall = 1, isBarrier = 1, hasDelaySlot = 1 in {
   def JSR             : InstRm<0b0100000000001011,
                               (outs), (ins IGPR:$Rm),
                               "jsr $Rm",
@@ -1146,7 +1145,7 @@ let isCall = 1, isBarrier = 1, isTerminator = 1, hasDelaySlot = 1 in {
 // Return Instructions
 //===--------------------------------------------------------------------------===//
 
-let isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1 in {
+let isTerminator = 1, isReturn = 1, hasDelaySlot = 1 in {
   def RTS               : Inst<0b0000000000001011,
                               (outs), (ins),
                               "rts",
@@ -1254,7 +1253,7 @@ def LDSMPR            : InstRm<0b0100000000100110,
                               []>;
 
 // nop
-let hasSideEffects = 1, isTerminator = 1 in
+let hasSideEffects = 1 in
 def NOP                 : Inst<0b0000000000001001, (outs), (ins), "nop", []>;
 
 // rte
@@ -1340,14 +1339,12 @@ def STSMMACL          : InstRn<0b0100000000010010,
                               []>;
 
 // sts PR,Rn
-let Uses = [PR] in
 def STSPR             : InstRn<0b0000000000101010, 
                               (outs GPR:$Rn), (ins), 
                               "sts pr,$Rn",
                               []>;
 
 // sts.l PR,@-Rn
-let Uses = [PR] in
 def STSMPR            : InstRn<0b0100000000100010, 
                               (outs IGPRDec:$Rn), (ins), 
                               "sts.l pr,$Rn",
@@ -1391,19 +1388,19 @@ include "SuperHInstrSH4.td"
 //        handling.
 //===--------------------------------------------------------------------------===//
 
-let isBranch = 1, isTerminator = 1 in {
+let isBranch = 1 in {
 
 let Uses = [SR] in
 def BRCC        : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
                           "! BRCC $bb, $cc",
                           []>;
 
-let Uses = [SR], hasDelaySlot = 1 in
+let Uses = [SR] in
 def BRSCC       : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
                           "! BRCC/s $bb, $cc",
                           []>;
 
-let hasDelaySlot = 1 in
+let isTerminator = 1, isBarrier = 1 in
 def BR          : SHPseudo<(outs), (ins brtarget:$bb),
                           "! BR $bb",
                           [(br bb:$bb)]>;
@@ -1536,31 +1533,31 @@ def MOVIL         : SHPseudo<(outs GPR:$dst), (ins i32imm:$src),
 //===--------------------------------------------------------------------------===//
 
 // Shift by immediate
-let Defs = [SR], Constraints = "$src = $dst" in {
-def SHLri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
-                          "! SHLri $src, $shift",
+let Defs = [SR] in {
+def SHLri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
+                          "! SHLri $shift, $dst",
                           []>;
 
-def SHRri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
-                          "! SHRri $src, $shift",
+def SHRri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
+                          "! SHRri $shift, $dst",
                           []>;
 
-def SRAri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
-                          "! SRAri $src, $shift",
+def SRAri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
+                          "! SRAri $shift, $dst",
                           []>;
 
-def RTLri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
-                          "! RTLri $src, $shift",
+def RTLri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
+                          "! RTLri $shift, $dst",
                           []>;
 
-def RTRri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
-                          "! RTRri $src, $shift",
+def RTRri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
+                          "! RTRri $shift, $dst",
                           []>;
 
 }
 
 // Shift by register
-let Defs = [SR], Constraints = "$src1 = $dst" in {
+let Defs = [SR], Constraints = "$dst = $src2" in {
 def SHLrr       : SHPseudo<(outs GPR:$dst), (ins GPR:$src1, GPR:$src2),
                           "! SHLrr $src1, $src2",
                           []>;
@@ -1646,41 +1643,6 @@ def : Pat<(i32 (zext   i16:$src)),    (EXTUW i16:$src)>;
 def : Pat<(i8  (trunc  i32:$src)),    (EXTUB i32:$src)>;
 def : Pat<(i16 (trunc  i32:$src)),    (EXTUW i32:$src)>;
 
-//===--------------------------------------------------------------------------===//
-// Shifts
-//===--------------------------------------------------------------------------===//
-def : Pat<(i32 (shl   i32:$src1,  i32:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (srl   i32:$src1,  i32:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (sra   i32:$src1,  i32:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotl  i32:$src1,  i32:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i32 (rotr  i32:$src1,  i32:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (shl   i16:$src1,  i16:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (srl   i16:$src1,  i16:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (sra   i16:$src1,  i16:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (rotl  i16:$src1,  i16:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i16 (rotr  i16:$src1,  i16:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (shl    i8:$src1,   i8:$src2)),        (SHLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (srl    i8:$src1,   i8:$src2)),        (SHRrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (sra    i8:$src1,   i8:$src2)),        (SRArr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (rotl   i8:$src1,   i8:$src2)),        (RTLrr GPR:$src1,    GPR:$src2)>;
-def : Pat<(i8  (rotr   i8:$src1,   i8:$src2)),        (RTRrr GPR:$src1,    GPR:$src2)>;
-
-def : Pat<(i32 (shl   i32:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (srl   i32:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (sra   i32:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (rotl  i32:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i32 (rotr  i32:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (shl   i16:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (srl   i16:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (sra   i16:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (rotl  i16:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i16 (rotr  i16:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (shl    i8:$src, pimm:$shift)),        (SHLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (srl    i8:$src, pimm:$shift)),        (SHRri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (sra    i8:$src, pimm:$shift)),        (SRAri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (rotl   i8:$src, pimm:$shift)),        (RTLri GPR:$src,  i32imm:$shift)>;
-def : Pat<(i8  (rotr   i8:$src, pimm:$shift)),        (RTRri GPR:$src,  i32imm:$shift)>;
-
 
 //===--------------------------------------------------------------------------===//
 // Bit Manipulation
@@ -1712,9 +1674,9 @@ def : Pat<(i32 (seteq  i8:$src, 0)),       (LNOT GPR:$src)>;
 //===--------------------------------------------------------------------------===//
 // Arithmetic
 //===--------------------------------------------------------------------------===//
-def : Pat<(i32 (add i32:$dst, i32:$src)),   (ADD GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (add i16:$dst, i16:$src)),   (EXTSW (ADD GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (add  i8:$dst,  i8:$src)),   (EXTSB (ADD GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (add i32:$src, i32:$dst)),   (ADD GPR:$dst, GPR:$src)>;
+def : Pat<(i16 (add i16:$src, i16:$dst)),   (EXTSW (ADD GPR:$dst, GPR:$src))>;
+def : Pat<(i8  (add  i8:$src,  i8:$dst)),   (EXTSB (ADD GPR:$dst, GPR:$src))>;
 
 def : Pat<(i32 (adde i32:$dst, i32:$src)),  (ADDC GPR:$src, GPR:$dst)>;
 def : Pat<(i16 (adde i16:$dst, i16:$src)),  (ADDC GPR:$src, GPR:$dst)>;
@@ -1771,12 +1733,12 @@ def : Pat<(i32 (zextloadi16   addr:$src)),        (EXTUW (MOVWLP   addr:$src))>;
 // Frame Address
 def : Pat<(i8  (load        fraddr:$src)),               (MOVBLF fraddr:$src)>;
 def : Pat<(i16 (load        fraddr:$src)),               (MOVWLF fraddr:$src)>;
-def : Pat<(i16 (extloadi1   fraddr:$src)),               (MOVBLP fraddr:$src)>;
-def : Pat<(i16 (extloadi8   fraddr:$src)),               (MOVBLP fraddr:$src)>;
-def : Pat<(i16 (sextloadi1  fraddr:$src)),               (MOVBLP fraddr:$src)>;
-def : Pat<(i16 (sextloadi8  fraddr:$src)),               (MOVBLP fraddr:$src)>;
-def : Pat<(i16 (zextloadi1  fraddr:$src)),        (EXTUB (MOVBLP fraddr:$src))>;
-def : Pat<(i16 (zextloadi8  fraddr:$src)),        (EXTUB (MOVBLP fraddr:$src))>;
+def : Pat<(i16 (extloadi1   fraddr:$src)),               (MOVBLF fraddr:$src)>;
+def : Pat<(i16 (extloadi8   fraddr:$src)),               (MOVBLF fraddr:$src)>;
+def : Pat<(i16 (sextloadi1  fraddr:$src)),               (MOVBLF fraddr:$src)>;
+def : Pat<(i16 (sextloadi8  fraddr:$src)),               (MOVBLF fraddr:$src)>;
+def : Pat<(i16 (zextloadi1  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
+def : Pat<(i16 (zextloadi8  fraddr:$src)),        (EXTUB (MOVBLF fraddr:$src))>;
 def : Pat<(i32 (load        fraddr:$src)),               (MOVLLF fraddr:$src)>;
 def : Pat<(i32 (extloadi1   fraddr:$src)),               (MOVBLF fraddr:$src)>;
 def : Pat<(i32 (extloadi8   fraddr:$src)),               (MOVBLF fraddr:$src)>;

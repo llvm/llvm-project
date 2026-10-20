@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -51,18 +52,32 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i16, &SH::GPRRegClass);
   addRegisterClass(MVT::i32, &SH::GPRRegClass);
 
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i8, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
+
   // Division and remainders are multi-instruction sequences
   // on SuperH. Use a custom pass to lower those.
   for (MVT VT : {MVT::i8, MVT::i16, MVT::i32}) {
+
+    // TODO: Could these also just be LibCall?
     setOperationAction(ISD::UDIV, VT, Custom);
-    setOperationAction(ISD::UREM, VT, Custom);
     setOperationAction(ISD::SDIV, VT, Custom);
-    setOperationAction(ISD::SREM, VT, Custom);
+
+    setOperationAction(ISD::UREM, VT, LibCall);
+    setOperationAction(ISD::SREM, VT, LibCall);
   }
 
-  // Multiplies have multiple lowerings depending on size.
   for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+
+    // Multiplies have multiple lowerings depending on size.
     setOperationAction(ISD::MUL, VT, Custom);
+    
+    setOperationAction(ISD::SHL, VT, Custom);
+    setOperationAction(ISD::SRL, VT, Custom);
+    setOperationAction(ISD::SRA, VT, Custom);
+    setOperationAction(ISD::ROTL, VT, Custom);
+    setOperationAction(ISD::ROTR, VT, Custom);
   }
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
@@ -76,6 +91,8 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
+  setOperationAction(ISD::SELECT_CC, MVT::i8, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
   setOperationAction(ISD::SETCC, MVT::i8, Custom);
@@ -908,7 +925,98 @@ SDValue SuperHTargetLowering::LowerCallResult(
 
 
 //===----------------------------------------------------------------------===//
-//                              DIVISION LOWERING
+//                             Bit-shift Lowerings
+//===----------------------------------------------------------------------===//
+
+// NOTE:  The constant shift amount's operand location depends on
+//        whether the operation is a rotating or non-rotating shift
+//        This helper makes that check cleaner. 
+static std::optional<int64_t> getConstShiftAmt(SDValue N) {
+  if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(0)))
+    return std::abs(C->getSExtValue());
+
+  if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+    return std::abs(C->getSExtValue());
+
+  return std::nullopt;
+}
+
+SDValue SuperHTargetLowering::LowerShift(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op->getValueType(0);
+  auto DL = SDLoc(Op);
+
+
+  // NOTE:  The constant rotation is *negative* for left rotations,
+  //        We fix that here by creating a new zero-extended target
+  //        constant from the constant operand.
+  //        if there's no constant operand, the count will not be
+  //        generated.
+  SDValue Count;
+  auto ConstShift = getConstShiftAmt(Op);
+  if (ConstShift)
+    Count = DAG.getTargetConstant(ConstShift.value(), DL, VT);
+
+  SDValue Result;
+  switch(Op->getOpcode()) {
+
+  case ISD::SHL:
+    if (ConstShift) {
+      Result = SDValue(DAG.getMachineNode(SH::SHLri, DL, VT, 
+        Count, Op->getOperand(0)), 0);
+    } else {
+      Result = SDValue(DAG.getMachineNode(SH::SHLrr, DL, VT, 
+        Op->getOperand(1), Op->getOperand(0)), 0);
+    }
+    break;
+
+  case ISD::SRL:
+    if (ConstShift) {
+      Result = SDValue(DAG.getMachineNode(SH::SHRri, DL, VT, 
+        Count, Op->getOperand(0)), 0);
+    } else {
+      Result = SDValue(DAG.getMachineNode(SH::SHRrr, DL, VT, 
+        Op->getOperand(1), Op->getOperand(0)), 0);
+    }
+    break;
+
+  case ISD::SRA:
+    if (ConstShift) {
+      Result = SDValue(DAG.getMachineNode(SH::SRAri, DL, VT, 
+        Count, Op->getOperand(0)), 0);
+    } else {
+      Result = SDValue(DAG.getMachineNode(SH::SRArr, DL, VT, 
+        Op->getOperand(1), Op->getOperand(0)), 0);
+    }
+    break;
+
+  case ISD::ROTL:
+    if (ConstShift) {
+      Result = SDValue(DAG.getMachineNode(SH::RTLri, DL, VT, 
+        Count, Op->getOperand(0)), 0);
+    } else {
+      Result = SDValue(DAG.getMachineNode(SH::RTLrr, DL, VT, 
+        Op->getOperand(0), Op->getOperand(1)), 0);
+    }
+    break;
+
+  case ISD::ROTR:
+    if (ConstShift) {
+      Result = SDValue(DAG.getMachineNode(SH::RTRri, DL, VT, 
+        Count, Op->getOperand(0)), 0);
+    } else {
+      Result = SDValue(DAG.getMachineNode(SH::RTRrr, DL, VT, 
+        Op->getOperand(0), Op->getOperand(1)), 0);
+    }
+    break;
+  }
+
+  return Result;
+}
+
+
+
+//===----------------------------------------------------------------------===//
+//                                DIV Lowering
 //===----------------------------------------------------------------------===//
 
 SDValue SuperHTargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
@@ -981,8 +1089,6 @@ SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   EVT VT = Op->getValueType(0);
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-
   switch (VT.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Unexpected type for ");
@@ -1024,6 +1130,7 @@ SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
     SDValue Callee =
         DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
+    Type *Ty = VT.getTypeForEVT(*DAG.getContext());
     Type *RetTy = (Type *)StructType::get(Ty, Ty);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -1052,6 +1159,12 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
   case ISD::SDIV:
     return LowerDIV(Op, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:
+  case ISD::SRL:
+  case ISD::SHL:
+  case ISD::SRA:
+    return LowerShift(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::Constant:
