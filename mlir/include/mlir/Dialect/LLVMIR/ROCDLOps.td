@@ -813,7 +813,7 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
   }];
 }
 
-def ROCDL_ScheduleBankOp : ROCDL_IntrOp<"schedule.bank", [], [0],
+def ROCDL_SchedBankOp : ROCDL_IntrOp<"sched.bank", [], [0],
     [AllTypesMatch<["res", "value"]>], 1, 0, 0, 0, [], []>,
   Arguments<(ins LLVM_Type:$value, I32Attr:$bank,
              OptionalAttr<UnitAttr>:$soft)> {
@@ -822,16 +822,16 @@ def ROCDL_ScheduleBankOp : ROCDL_IntrOp<"schedule.bank", [], [0],
     $value `,` $bank (`soft` $soft^)? attr-dict `:` type($value)
   }];
   string llvmBuilder = [{
-    auto schedOp = cast<ROCDL::ScheduleBankOp>(opInst);
+    auto schedOp = cast<ROCDL::SchedBankOp>(opInst);
     auto *value = moduleTranslation.lookupValue(schedOp.getValue());
     int32_t bank = schedOp.getBank();
-    int32_t encodedBank = schedOp.getSoftAttr() ? bank : (bank | 4);
+    bool strict = !schedOp.getSoftAttr();
     auto *fn = llvm::Intrinsic::getOrInsertDeclaration(
         moduleTranslation.getLLVMModule(),
-        llvm::Intrinsic::amdgcn_schedule_bank,
+        llvm::Intrinsic::amdgcn_sched_bank,
         {value->getType()});
     auto *inst = builder.CreateCall(fn,
-        {value, builder.getInt32(encodedBank)});
+        {value, builder.getInt32(bank), builder.getInt1(strict)});
     moduleTranslation.mapValue(opInst.getResult(0), inst);
   }];
   let description = [{
@@ -843,8 +843,8 @@ def ROCDL_ScheduleBankOp : ROCDL_IntrOp<"schedule.bank", [], [0],
 
     Example:
     ```mlir
-    %0 = rocdl.schedule.bank %val, 2 : f32        // strict bank 2 (default)
-    %1 = rocdl.schedule.bank %val, 1 soft : f32   // soft bank 1
+    %0 = rocdl.sched.bank %val, 2 : f32        // strict bank 2 (default)
+    %1 = rocdl.sched.bank %val, 1 soft : f32   // soft bank 1
     ```
   }];
 }

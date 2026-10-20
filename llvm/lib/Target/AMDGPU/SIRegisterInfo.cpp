@@ -57,7 +57,7 @@ static cl::opt<unsigned> StressSGPRLimit(
 
 static cl::opt<bool> StrictVGPRBankHints(
     "amdgpu-strict-vgpr-bank-hints",
-    cl::desc("Restrict schedule.bank values to the requested VGPR bank"),
+    cl::desc("Restrict sched.bank values to the requested VGPR bank"),
     cl::Hidden, cl::init(false));
 
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
@@ -4334,42 +4334,9 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     return false;
   }
-  case AMDGPURI::SameBank: {
-    const auto *HintInfo = MRI.getRegAllocationHints(VirtReg);
-    if (!HintInfo || !VRM)
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
-
-    // Determine the target bank from any already-assigned hint register.
-    int TargetBank = -1;
-    for (Register HintReg : HintInfo->second) {
-      MCPhysReg PhysHint = 0;
-      if (HintReg.isPhysical())
-        PhysHint = HintReg;
-      else if (VRM->hasPhys(HintReg))
-        PhysHint = VRM->getPhys(HintReg);
-      if (PhysHint) {
-        TargetBank = static_cast<int>(getHWRegIndex(PhysHint) >> 8);
-        break;
-      }
-    }
-
-    if (TargetBank < 0)
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
-
-    for (MCPhysReg PhysReg : Order) {
-      if (MRI.isReserved(PhysReg))
-        continue;
-      unsigned RegBank = getHWRegIndex(PhysReg) >> 8;
-      if (static_cast<int>(RegBank) == TargetBank)
-        Hints.push_back(PhysReg);
-    }
-    return false;
-  }
   case AMDGPURI::BankHint:
   case AMDGPURI::StrictBankHint: {
-    // Absolute bank preference from llvm.amdgcn.schedule.bank. The bank number
+    // Absolute bank preference from llvm.amdgcn.sched.bank. The bank number
     // (0-3) is carried in Hint.second. Prefer physregs whose HW index falls in
     // the requested 256-register bank. Advisory only: we return false so the
     // default order still applies when the bank is full.
@@ -4383,7 +4350,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
         continue;
       unsigned HWIdx = getHWRegIndex(PhysReg);
       if (HWIdx >= BankStart && HWIdx < BankEnd)
-        Hints.push_back(PhysReg);
+        Hints.insert(PhysReg);
     }
     return StrictVGPRBankHints || Hint.first == AMDGPURI::StrictBankHint;
   }

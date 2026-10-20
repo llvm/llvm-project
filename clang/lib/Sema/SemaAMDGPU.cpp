@@ -465,7 +465,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
                                            /*High=*/0) ||
            SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
                                            /*High=*/0);
-  case AMDGPU::BI__builtin_amdgcn_schedule_bank: {
+  case AMDGPU::BI__builtin_amdgcn_sched_bank: {
     if (SemaRef.checkArgCountRange(TheCall, 2, 3))
       return true;
     Expr *DataArg = TheCall->getArg(0);

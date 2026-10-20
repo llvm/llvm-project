@@ -168,11 +168,11 @@ func.func @rocdl_iglp_opt() {
   llvm.return
 }
 
-func.func @rocdl_schedule_bank(%val : f32, %ival : i32) -> f32 {
-  // CHECK: rocdl.schedule.bank %{{.*}}, 2 : f32
-  %0 = rocdl.schedule.bank %val, 2 : f32
-  // CHECK: rocdl.schedule.bank %{{.*}}, 1 soft : i32
-  %1 = rocdl.schedule.bank %ival, 1 soft : i32
+func.func @rocdl_sched_bank(%val : f32, %ival : i32) -> f32 {
+  // CHECK: rocdl.sched.bank %{{.*}}, 2 : f32
+  %0 = rocdl.sched.bank %val, 2 : f32
+  // CHECK: rocdl.sched.bank %{{.*}}, 1 soft : i32
+  %1 = rocdl.sched.bank %ival, 1 soft : i32
   llvm.return %0 : f32
 }
 

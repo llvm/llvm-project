@@ -451,14 +451,14 @@ llvm.func @rocdl.iglp.opt() {
   llvm.return
 }
 
-llvm.func @rocdl.schedule.bank(%val : f32, %ival : i32) -> f32 {
-  // CHECK-LABEL: rocdl.schedule.bank
-  // strict (default): bank 2 → encoded as 6 (2 | 4)
-  // CHECK: call float @llvm.amdgcn.schedule.bank.f32(float %{{.*}}, i32 6)
-  %0 = rocdl.schedule.bank %val, 2 : f32
-  // soft: bank 1 → encoded as 1
-  // CHECK: call i32 @llvm.amdgcn.schedule.bank.i32(i32 %{{.*}}, i32 1)
-  %1 = rocdl.schedule.bank %ival, 1 soft : i32
+llvm.func @rocdl.sched.bank(%val : f32, %ival : i32) -> f32 {
+  // CHECK-LABEL: rocdl.sched.bank
+  // strict (default): bank 2, strict true
+  // CHECK: call float @llvm.amdgcn.sched.bank.f32(float %{{.*}}, i32 2, i1 true)
+  %0 = rocdl.sched.bank %val, 2 : f32
+  // soft: bank 1, strict false
+  // CHECK: call i32 @llvm.amdgcn.sched.bank.i32(i32 %{{.*}}, i32 1, i1 false)
+  %1 = rocdl.sched.bank %ival, 1 soft : i32
   llvm.return %0 : f32
 }
 

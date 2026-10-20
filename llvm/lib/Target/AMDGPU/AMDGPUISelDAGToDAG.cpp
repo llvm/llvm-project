@@ -3353,27 +3353,28 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
-  case Intrinsic::amdgcn_schedule_bank: {
+  case Intrinsic::amdgcn_sched_bank: {
     SDValue Src = N->getOperand(1);
     auto *BankC = dyn_cast<ConstantSDNode>(N->getOperand(2));
-    // Bank must be a constant; fall back (and error) otherwise.
-    if (!BankC) {
+    auto *StrictC = dyn_cast<ConstantSDNode>(N->getOperand(3));
+    // Bank and strict must be constants; fall back (and error) otherwise.
+    if (!BankC || !StrictC) {
       SelectCode(N);
       return;
     }
     unsigned PseudoOpc;
     switch (N->getValueType(0).getSizeInBits()) {
     case 32:
-      PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B32;
+      PseudoOpc = AMDGPU::V_SCHED_BANK_B32;
       break;
     case 64:
-      PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B64;
+      PseudoOpc = AMDGPU::V_SCHED_BANK_B64;
       break;
     case 128:
-      PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B128;
+      PseudoOpc = AMDGPU::V_SCHED_BANK_B128;
       break;
     case 256:
-      PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B256;
+      PseudoOpc = AMDGPU::V_SCHED_BANK_B256;
       break;
     default:
       // Unsupported width: drop the hint, forward the value unchanged.
@@ -3383,7 +3384,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     }
     SDValue BankImm =
         CurDAG->getTargetConstant(BankC->getZExtValue(), SDLoc(N), MVT::i32);
-    CurDAG->SelectNodeTo(N, PseudoOpc, N->getVTList(), {Src, BankImm});
+    SDValue StrictImm =
+        CurDAG->getTargetConstant(StrictC->getZExtValue(), SDLoc(N), MVT::i1);
+    CurDAG->SelectNodeTo(N, PseudoOpc, N->getVTList(),
+                         {Src, BankImm, StrictImm});
     return;
   }
   case Intrinsic::amdgcn_permlane16_swap:

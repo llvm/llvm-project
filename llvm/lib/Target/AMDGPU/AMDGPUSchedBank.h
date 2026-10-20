@@ -1,4 +1,4 @@
-//===- AMDGPUScheduleBank.h -------------------------------------*- C++- *-===//
+//===- AMDGPUSchedBank.h -------------------------------------*- C++- *-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDULEBANK_H
-#define LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDULEBANK_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDBANK_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDBANK_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class AMDGPUScheduleBankPass
-    : public OptionalPassInfoMixin<AMDGPUScheduleBankPass> {
+class AMDGPUSchedBankPass : public OptionalPassInfoMixin<AMDGPUSchedBankPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDULEBANK_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUSCHEDBANK_H

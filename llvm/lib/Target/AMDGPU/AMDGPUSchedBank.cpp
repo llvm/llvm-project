@@ -1,4 +1,4 @@
-//===-- AMDGPUScheduleBank.cpp --------------------------------------------===//
+//===-- AMDGPUSchedBank.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lower the V_SCHEDULE_BANK_B* pseudos produced from
-/// llvm.amdgcn.schedule.bank. For each pseudo this pass:
+/// Lower the V_SCHED_BANK_B* pseudos produced from
+/// llvm.amdgcn.sched.bank. For each pseudo this pass:
 ///   1. reads the requested bank (0-3) from the immediate operand,
 ///   2. attaches an AMDGPURI::BankHint register allocation hint to the
 ///      destination (and source) vreg so the allocator prefers that
@@ -23,7 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUScheduleBank.h"
+#include "AMDGPUSchedBank.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
@@ -36,14 +36,14 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "amdgpu-schedule-bank"
+#define DEBUG_TYPE "amdgpu-sched-bank"
 
-static bool isScheduleBankPseudo(unsigned Opcode) {
+static bool isSchedBankPseudo(unsigned Opcode) {
   switch (Opcode) {
-  case AMDGPU::V_SCHEDULE_BANK_B32:
-  case AMDGPU::V_SCHEDULE_BANK_B64:
-  case AMDGPU::V_SCHEDULE_BANK_B128:
-  case AMDGPU::V_SCHEDULE_BANK_B256:
+  case AMDGPU::V_SCHED_BANK_B32:
+  case AMDGPU::V_SCHED_BANK_B64:
+  case AMDGPU::V_SCHED_BANK_B128:
+  case AMDGPU::V_SCHED_BANK_B256:
     return true;
   default:
     return false;
@@ -86,7 +86,7 @@ static void propagateBankHint(MachineRegisterInfo &MRI, Register Reg,
 }
 
 // Shared implementation used by both the legacy and new-PM passes.
-static bool runScheduleBank(MachineFunction &MF) {
+static bool runSchedBank(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.has1024AddressableVGPRs())
     return false;
@@ -99,25 +99,21 @@ static bool runScheduleBank(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isScheduleBankPseudo(MI.getOpcode()))
+      if (!isSchedBankPseudo(MI.getOpcode()))
         continue;
 
       Register DstReg = MI.getOperand(0).getReg();
       const MachineOperand &SrcMO = MI.getOperand(1);
       Register SrcReg = SrcMO.getReg();
-      unsigned EncodedBank = MI.getOperand(2).getImm();
-      bool Strict = EncodedBank & 0x4;
-      unsigned Bank = EncodedBank & 0x3;
+      unsigned Bank = MI.getOperand(2).getImm();
+      bool Strict = MI.getOperand(3).getImm() != 0;
       unsigned HintKind =
           Strict ? AMDGPURI::StrictBankHint : AMDGPURI::BankHint;
 
-      // Bits 0..1 select bank; bit 2 requests strict allocation.
-      if (EncodedBank > 7) {
+      if (Bank > 3)
         Bank = 0;
-        Strict = false;
-      }
 
-      LLVM_DEBUG(dbgs() << "  schedule.bank: " << printReg(DstReg) << " <- "
+      LLVM_DEBUG(dbgs() << "  sched.bank: " << printReg(DstReg) << " <- "
                         << printReg(SrcReg) << " bank " << Bank << " strict "
                         << Strict << '\n');
 
@@ -153,17 +149,17 @@ static bool runScheduleBank(MachineFunction &MF) {
 
 namespace {
 
-class AMDGPUScheduleBank : public MachineFunctionPass {
+class AMDGPUSchedBank : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUScheduleBank() : MachineFunctionPass(ID) {}
+  AMDGPUSchedBank() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return runScheduleBank(MF);
+    return runSchedBank(MF);
   }
 
-  StringRef getPassName() const override { return "AMDGPU Schedule Bank"; }
+  StringRef getPassName() const override { return "AMDGPU Sched Bank"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -173,17 +169,16 @@ public:
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AMDGPUScheduleBank, DEBUG_TYPE, "AMDGPU Schedule Bank", false,
-                false)
+INITIALIZE_PASS(AMDGPUSchedBank, DEBUG_TYPE, "AMDGPU Sched Bank", false, false)
 
-char AMDGPUScheduleBank::ID = 0;
+char AMDGPUSchedBank::ID = 0;
 
-char &llvm::AMDGPUScheduleBankID = AMDGPUScheduleBank::ID;
+char &llvm::AMDGPUSchedBankID = AMDGPUSchedBank::ID;
 
 PreservedAnalyses
-AMDGPUScheduleBankPass::run(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM) {
-  if (!runScheduleBank(MF))
+AMDGPUSchedBankPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  if (!runSchedBank(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();

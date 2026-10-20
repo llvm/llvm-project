@@ -2283,21 +2283,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_permlane_xor:
     return emitBuiltinWithOneOverloadedType<3>(*this, E,
                                                Intrinsic::amdgcn_permlane_xor);
-  case AMDGPU::BI__builtin_amdgcn_schedule_bank: {
+  case AMDGPU::BI__builtin_amdgcn_sched_bank: {
     llvm::Value *Val = EmitScalarExpr(E->getArg(0));
     llvm::Value *Bank = EmitScalarExpr(E->getArg(1));
-    llvm::Value *EncodedBank;
+    llvm::Value *Strict;
     if (E->getNumArgs() > 2) {
-      llvm::Value *Strict = EmitScalarExpr(E->getArg(2));
-      Strict = Builder.CreateZExt(Strict, Bank->getType());
-      EncodedBank = Builder.CreateOr(Bank, Builder.CreateShl(Strict, 2));
+      Strict = EmitScalarExpr(E->getArg(2));
     } else {
-      // Default: strict (bank | 4)
-      EncodedBank = Builder.CreateOr(Bank, Builder.getInt32(4));
+      // Default: strict
+      Strict = Builder.getInt1(true);
     }
     llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_schedule_bank, Val->getType());
-    return Builder.CreateCall(F, {Val, EncodedBank});
+        CGM.getIntrinsic(Intrinsic::amdgcn_sched_bank, Val->getType());
+    return Builder.CreateCall(F, {Val, Bank, Strict});
   }
   default:
     return nullptr;
