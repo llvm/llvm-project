@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "copyprof_allocator.h"
 #include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
 #include "copyprof_reporting.h"
@@ -52,6 +53,7 @@ static void Initialize() {
   InitializeCommonFlags();
   InitializeInterceptors();
   InitializeShadowMemory();
+  InitializeCopyProfAllocator();
   copyprof_init_is_running = false;
   copyprof_is_initialized = true;
 }
