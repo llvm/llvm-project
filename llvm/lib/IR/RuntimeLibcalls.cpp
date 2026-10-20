@@ -233,6 +233,12 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
   llvm_unreachable("unhandled long double format");
 }
 
+static Type *getInt128Type(LLVMContext &Ctx, const Triple &TT) {
+  if (TT.isOSWindowsOrUEFI() && TT.isX86_64())
+    return FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  return Type::getInt128Ty(Ctx);
+}
+
 static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
                              const Triple &TT, const DataLayout &DL,
                              LongDoubleFormat LdblFormat) {
@@ -268,7 +274,7 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     return IntegerType::get(Ctx, 64);
   case Int128:
   case UInt128:
-    return IntegerType::get(Ctx, 128);
+    return getInt128Type(Ctx, TT);
   case SizeT:
   case SSizeT:
     return getSizeTType(Ctx, DL);
@@ -372,7 +378,7 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
     return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
 
   std::optional<bool> Signed = isSignedIntArgType(ID);
-  if (!Signed)
+  if (!Signed || !Ty->isIntegerTy())
     return Attribute::None;
 
   // All targets currently extend types narrower than int according to their
