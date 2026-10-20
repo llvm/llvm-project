@@ -95,9 +95,9 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   MachineBasicBlock *PrologueBlock = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      // Resuming from transformed MIR must not insert a second set of ranges.
       if (MI.getOpcode() == AArch64::SEH_StartProc)
-        return false;
+        reportFatalInternalError(
+            "AArch64 Windows unwind range insertion cannot be run twice");
       if (MI.getOpcode() == AArch64::SEH_PrologEnd)
         PrologueBlock = &MBB;
     }
@@ -130,6 +130,8 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   // Track whether the real prologue has completed without a completed epilogue
   // undoing its effects. On entry, a block inherits this state from its CFG
   // predecessors; this does not say whether the block contains a prologue.
+  // FP-based recipes recover SP regardless of dynamic allocations, so those
+  // allocations do not change this state.
   // Function entry starts with no prologue in effect. Analyze before inserting
   // phantom markers so only real prologue and epilogue transitions count.
   DenseMap<const MachineBasicBlock *, bool> PrologueInEffectOnEntry;
