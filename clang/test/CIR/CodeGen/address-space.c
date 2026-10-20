@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -triple avr -fclangir -emit-llvm %s -o %t-avr.ll
+// RUN: FileCheck --input-file=%t-avr.ll %s -check-prefix=AVR
 
 // Test global variable with address space
 // CIR: cir.global external @gvar = #cir.ptr<null> : !cir.ptr<!s32i, target_address_space(1)>
@@ -58,3 +60,8 @@ struct S { int a[4]; };
 void copy_to_as(struct S __attribute__((address_space(1))) *p, struct S *q) {
   *p = *q;
 }
+
+// A function pointer in the program address space cast to an object pointer.
+// AVR-LABEL: define{{.*}} ptr @fn_to_void_ptr
+// AVR: store ptr addrspacecast (ptr addrspace(1) @copy_to_as to ptr), ptr
+void *fn_to_void_ptr(void) { return (void *)copy_to_as; }

@@ -2653,7 +2653,15 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::Value src = Visit(const_cast<Expr *>(subExpr));
     mlir::Type dstTy = cgf.convertType(destTy);
 
-    assert(!cir::MissingFeatures::addressSpace());
+    // Function pointers use the program address space and object pointers the
+    // default one, so a bitcast between them may change the address space.
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(src.getType());
+    auto dstPtrTy = mlir::dyn_cast<cir::PointerType>(dstTy);
+    if (srcPtrTy && dstPtrTy &&
+        srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace())
+      src = cgf.performAddrSpaceCast(
+          src, cir::PointerType::get(srcPtrTy.getPointee(),
+                                     dstPtrTy.getAddrSpace()));
 
     if (cgf.sanOpts.has(SanitizerKind::CFIUnrelatedCast))
       cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
