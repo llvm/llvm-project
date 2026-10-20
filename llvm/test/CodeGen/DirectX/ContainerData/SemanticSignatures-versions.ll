@@ -1,22 +1,29 @@
 ; RUN: split-file %s %t
 ; RUN: cat %t/shader.ll %t/v10.ll > %t/10.ll
 ; RUN: cat %t/shader.ll %t/v14.ll > %t/14.ll
-; RUN: cat %t/shader.ll %t/v16.ll > %t/16.ll
 ; RUN: cat %t/shader.ll %t/v17.ll > %t/17.ll
-; RUN: llc -filetype=obj %t/10.ll -o - | obj2yaml | FileCheck %s --check-prefixes=PARTS,LEGACY,PSV0
-; RUN: llc -filetype=obj %t/14.ll -o - | obj2yaml | FileCheck %s --check-prefixes=PARTS,LEGACY,PSV1
-; RUN: llc -filetype=obj %t/16.ll -o - | obj2yaml | FileCheck %s --check-prefixes=PARTS,MODERN,PSV2
-; RUN: llc -filetype=obj %t/17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=PARTS,MODERN,PSV2
+; RUN: opt -S -dxil-translate-metadata %t/10.ll | FileCheck %s --check-prefix=MD10
+; RUN: opt -S -dxil-translate-metadata %t/14.ll | FileCheck %s --check-prefix=MD14
+; RUN: llc -filetype=obj %t/10.ll -o - | obj2yaml | FileCheck %s --check-prefixes=LEGACY,PSV0
+; RUN: llc -filetype=obj %t/14.ll -o - | obj2yaml | FileCheck %s --check-prefixes=LEGACY,PSV1
+; RUN: llc -filetype=obj %t/17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=MODERN,PSV2
 
-; Check validator-version-dependent signature masks and PSV records.
-; Metadata translation and signature padding are tested separately in
-; SemanticSignatures-metadata-versions.ll and SemanticSignatures-padding.ll.
+; MD10-NOT: !dx.viewIdState
+; MD10-NOT: !dx.semantic.signatures
+; MD10: !dx.entryPoints =
+; MD10-NOT: !dx.viewIdState
+; MD10-NOT: !dx.semantic.signatures
+; MD14: !dx.viewIdState =
+; MD14: !{i32 0, !"A", i8 9, i8 0, !{{[0-9]+}}, i8 0, i32 1, i8 1, i32 0, i8 0, null}
+; MD14: !{i32 0, !"B", i8 9, i8 0, !{{[0-9]+}}, i8 0, i32 1, i8 1, i32 0, i8 0, null}
 
-; PARTS: Name: ISG1
+; LEGACY: Name: ISG1
 ; LEGACY: ExclusiveMask: 0
-; MODERN: ExclusiveMask: 1
-; PARTS: Name: OSG1
+; LEGACY: Name: OSG1
 ; LEGACY: ExclusiveMask: 254
+; MODERN: Name: ISG1
+; MODERN: ExclusiveMask: 1
+; MODERN: Name: OSG1
 ; MODERN: ExclusiveMask: 14
 ; PSV0: Name: PSV0
 ; PSV0: Version: 0
@@ -57,9 +64,6 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ;--- v14.ll
 !dx.valver = !{!99}
 !99 = !{i32 1, i32 4}
-;--- v16.ll
-!dx.valver = !{!99}
-!99 = !{i32 1, i32 6}
 ;--- v17.ll
 !dx.valver = !{!99}
 !99 = !{i32 1, i32 7}
