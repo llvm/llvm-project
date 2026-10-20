@@ -271,6 +271,12 @@ Makes programs 10x faster by doing Special New Thing.
   attribute perform a load from the return address before returning, reducing the
   cache side channel used to guess pointer authentication codes.
 
+* The SelectionDAG Darwin ABI lowering of function arguments which are
+  aggregates passed by value containing small integers less than 32 bits in
+  size has been made consistent with the GlobalISel lowering of such arguments.
+  This is an ABI-breaking change but is unlikely to have any observable effect
+  from higher-level languages compiled through clang.
+
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.
 
