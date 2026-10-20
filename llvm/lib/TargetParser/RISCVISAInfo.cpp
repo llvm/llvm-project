@@ -559,7 +559,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   }
   // Plain 'y' always implies 'i' (which is omitted in the normalized arch
   // string). Y+E requires a long base name arch string.
-  if (BaseISA == "y")
+  if (BaseISA == 'y')
     ISAInfo->Exts["i"] = *findDefaultVersion("i");
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
