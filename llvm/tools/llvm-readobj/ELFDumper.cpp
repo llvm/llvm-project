@@ -8650,6 +8650,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
+      if (PAM.FeatEnable.FuncGUID)
+        W.printHex("GUID", AM.FuncGUID);
       {
         ListScope BBRL(W, "BB Ranges");
         for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
