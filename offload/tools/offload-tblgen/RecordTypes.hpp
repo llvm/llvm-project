@@ -201,6 +201,13 @@ public:
   std::vector<StringRef> getConditions() const {
     return rec->getValueAsListOfStrings("conditions");
   }
+  // A condition that is a single backticked C++ expression is a validation
+  // check. Prose with several backticked spans is documentation only.
+  static bool isValidationCondition(StringRef Condition) {
+    return Condition.size() >= 2 && Condition.starts_with("`") &&
+           Condition.ends_with("`") &&
+           !Condition.drop_front().drop_back().contains('`');
+  }
 
 private:
   const Record *rec;

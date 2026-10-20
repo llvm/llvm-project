@@ -13,6 +13,7 @@
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -1373,6 +1374,16 @@ void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
 
 LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
                                         const BytecodeWriterConfig &config) {
+  // Validate before numbering the IR, which may invoke dialect writers.
+  for (const auto &entry : config.getDialectVersionMap()) {
+    Dialect *dialect = op->getContext()->getLoadedDialect(entry.getKey());
+    if (!dialect)
+      continue;
+    auto *interface =
+        dialect->getRegisteredInterface<BytecodeDialectInterface>();
+    if (interface && failed(interface->verifyVersion(op, *entry.getValue())))
+      return failure();
+  }
   BytecodeWriter writer(op, config);
   return writer.write(op, os);
 }

@@ -498,6 +498,168 @@ func.func @muli_mixed_ext_i8(%lhs: i8, %rhs: i8) -> i32 {
   return %r : i32
 }
 
+//===----------------------------------------------------------------------===//
+// Overflow flags must be valid at the narrowed width.
+//===----------------------------------------------------------------------===//
+
+// For x = 127, i16 127 + 1 = 128 is defined. Keeping nsw on the i8 addition
+// would produce poison, even though the result fits unsigned i8.
+// CHECK-LABEL: func.func @addi_narrow_drop_nsw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i8
+// CHECK-DAG: %[[C130:.+]] = arith.constant -126 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.minui %[[ARG]], %[[C130]] : i8
+// CHECK-NEXT: %[[SUM:.+]] = arith.addi %[[BOUNDED]], %[[C1]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[SUM]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @addi_narrow_drop_nsw(%x: i8) -> i16 {
+  %wide = arith.extui %x : i8 to i16
+  %c130 = arith.constant 130 : i16
+  %bounded = arith.minui %wide, %c130 : i16
+  %c1 = arith.constant 1 : i16
+  %sum = arith.addi %bounded, %c1 overflow<nsw> : i16
+  return %sum : i16
+}
+
+// For x = 128, i16 128 - 1 = 127 is defined, but signed i8 -128 - 1
+// overflows. Drop nsw while retaining the valid nuw flag.
+// CHECK-LABEL: func.func @subi_narrow_drop_nsw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i8
+// CHECK-DAG: %[[C128:.+]] = arith.constant -128 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.maxui %[[ARG]], %[[C128]] : i8
+// CHECK-NEXT: %[[DIFF:.+]] = arith.subi %[[BOUNDED]], %[[C1]] overflow<nuw> : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[DIFF]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @subi_narrow_drop_nsw(%x: i8) -> i16 {
+  %wide = arith.extui %x : i8 to i16
+  %c128 = arith.constant 128 : i16
+  %bounded = arith.maxui %wide, %c128 : i16
+  %c1 = arith.constant 1 : i16
+  %diff = arith.subi %bounded, %c1 overflow<nsw, nuw> : i16
+  return %diff : i16
+}
+
+// For x = 64, i16 64 * 2 = 128 is defined. Keeping nsw on the i8
+// multiplication would produce poison.
+// CHECK-LABEL: func.func @muli_narrow_drop_nsw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C2:.+]] = arith.constant 2 : i8
+// CHECK-DAG: %[[C127:.+]] = arith.constant 127 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.minui %[[ARG]], %[[C127]] : i8
+// CHECK-NEXT: %[[PRODUCT:.+]] = arith.muli %[[BOUNDED]], %[[C2]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[PRODUCT]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @muli_narrow_drop_nsw(%x: i8) -> i16 {
+  %wide = arith.extui %x : i8 to i16
+  %c127 = arith.constant 127 : i16
+  %bounded = arith.minui %wide, %c127 : i16
+  %c2 = arith.constant 2 : i16
+  %product = arith.muli %bounded, %c2 overflow<nsw> : i16
+  return %product : i16
+}
+
+// For x = 64, i16 64 << 1 = 128 is defined, but the i8 shift overflows
+// signed arithmetic. Drop nsw while retaining the valid nuw flag.
+// CHECK-LABEL: func.func @shli_narrow_drop_nsw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i8
+// CHECK-DAG: %[[C127:.+]] = arith.constant 127 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.minui %[[ARG]], %[[C127]] : i8
+// CHECK-NEXT: %[[SHIFT:.+]] = arith.shli %[[BOUNDED]], %[[C1]] overflow<nuw> : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[SHIFT]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @shli_narrow_drop_nsw(%x: i8) -> i16 {
+  %wide = arith.extui %x : i8 to i16
+  %c127 = arith.constant 127 : i16
+  %bounded = arith.minui %wide, %c127 : i16
+  %c1 = arith.constant 1 : i16
+  %shift = arith.shli %bounded, %c1 overflow<nsw, nuw> : i16
+  return %shift : i16
+}
+
+// For x = 22, i9 22 * 23 = 506 (signed -6) is defined with nuw. The result
+// fits signed i8, but keeping nuw on i8 22 * 23 would produce poison.
+// CHECK-LABEL: func.func @muli_narrow_drop_nuw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C21:.+]] = arith.constant 21 : i8
+// CHECK-DAG: %[[C22:.+]] = arith.constant 22 : i8
+// CHECK-DAG: %[[C23:.+]] = arith.constant 23 : i8
+// CHECK: %[[LOWER:.+]] = arith.maxui %[[ARG]], %[[C21]] : i8
+// CHECK-NEXT: %[[BOUNDED:.+]] = arith.minui %[[LOWER]], %[[C22]] : i8
+// CHECK-NEXT: %[[PRODUCT:.+]] = arith.muli %[[BOUNDED]], %[[C23]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extsi %[[PRODUCT]] : i8 to i9
+// CHECK-NEXT: return %[[RESULT]] : i9
+func.func @muli_narrow_drop_nuw(%x: i8) -> i9 {
+  %c21 = arith.constant 21 : i8
+  %c22 = arith.constant 22 : i8
+  %lower = arith.maxui %x, %c21 : i8
+  %bounded = arith.minui %lower, %c22 : i8
+  %wide = arith.extui %bounded : i8 to i9
+  %c23 = arith.constant 23 : i9
+  %product = arith.muli %wide, %c23 overflow<nuw> : i9
+  return %product : i9
+}
+
+// For x = 63, i9 63 << 3 = 504 (signed -8) is defined with nuw. The result
+// fits signed i8, but keeping nuw on i8 63 << 3 would produce poison.
+// CHECK-LABEL: func.func @shli_narrow_drop_nuw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C3:.+]] = arith.constant 3 : i8
+// CHECK-DAG: %[[C60:.+]] = arith.constant 60 : i8
+// CHECK-DAG: %[[C63:.+]] = arith.constant 63 : i8
+// CHECK: %[[LOWER:.+]] = arith.maxui %[[ARG]], %[[C60]] : i8
+// CHECK-NEXT: %[[BOUNDED:.+]] = arith.minui %[[LOWER]], %[[C63]] : i8
+// CHECK-NEXT: %[[SHIFT:.+]] = arith.shli %[[BOUNDED]], %[[C3]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extsi %[[SHIFT]] : i8 to i9
+// CHECK-NEXT: return %[[RESULT]] : i9
+func.func @shli_narrow_drop_nuw(%x: i8) -> i9 {
+  %c60 = arith.constant 60 : i8
+  %c63 = arith.constant 63 : i8
+  %lower = arith.maxui %x, %c60 : i8
+  %bounded = arith.minui %lower, %c63 : i8
+  %wide = arith.extui %bounded : i8 to i9
+  %c3 = arith.constant 3 : i9
+  %shift = arith.shli %wide, %c3 overflow<nuw> : i9
+  return %shift : i9
+}
+
+// Signed narrowing preserves nsw when the operands and result fit signed i8.
+// CHECK-LABEL: func.func @addi_narrow_preserve_nsw
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i8
+// CHECK-DAG: %[[CM1:.+]] = arith.constant -1 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.minsi %[[ARG]], %[[CM1]] : i8
+// CHECK-NEXT: %[[SUM:.+]] = arith.addi %[[BOUNDED]], %[[C1]] overflow<nsw> : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extsi %[[SUM]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @addi_narrow_preserve_nsw(%x: i8) -> i16 {
+  %wide = arith.extsi %x : i8 to i16
+  %cm1 = arith.constant -1 : i16
+  %bounded = arith.minsi %wide, %cm1 : i16
+  %c1 = arith.constant 1 : i16
+  %sum = arith.addi %bounded, %c1 overflow<nsw> : i16
+  return %sum : i16
+}
+
+// Both flags remain valid when both signed and unsigned values are preserved.
+// CHECK-LABEL: func.func @addi_narrow_preserve_both
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i8
+// CHECK-DAG: %[[C63:.+]] = arith.constant 63 : i8
+// CHECK: %[[BOUNDED:.+]] = arith.minui %[[ARG]], %[[C63]] : i8
+// CHECK-NEXT: %[[SUM:.+]] = arith.addi %[[BOUNDED]], %[[C1]] overflow<nsw, nuw> : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[SUM]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @addi_narrow_preserve_both(%x: i8) -> i16 {
+  %wide = arith.extui %x : i8 to i16
+  %c63 = arith.constant 63 : i16
+  %bounded = arith.minui %wide, %c63 : i16
+  %c1 = arith.constant 1 : i16
+  %sum = arith.addi %bounded, %c1 overflow<nsw, nuw> : i16
+  return %sum : i16
+}
+
 // Can't reduce width here since we need the extra bits
 // CHECK-LABEL: func.func @i32_overflows_to_index
 // CHECK-SAME: (%[[ARG0:.+]]: i32)
