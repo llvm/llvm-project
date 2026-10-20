@@ -3573,7 +3573,8 @@ static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
 
 static bool isNonDerivedNonPointer(const mlir::Value &variable) {
   return !fir::isAllocatableType(variable.getType()) &&
-         !fir::isa_derived(fir::getFortranElementType(variable.getType()));
+         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
+         !fir::isPointerType(variable.getType());
 }
 
 static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
