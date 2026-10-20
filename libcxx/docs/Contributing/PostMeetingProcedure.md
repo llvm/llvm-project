@@ -84,8 +84,9 @@ libcxx/utils/conformance github create libcxx/docs/Status/Cxx<NN>Issues.csv \
    --labels=lwg-issue --labels=c++<NN>
 ```
 
-The CSV `Notes` column is written to the issue body between `BEGIN-RST-NOTES`/`END-RST-NOTES`
-markers so that `csv synchronize` can round-trip it back into the CSV.
+The CSV `Notes` column is written to the issue body between `BEGIN-MARKDOWN-NOTES`/`END-MARKDOWN-NOTES`
+markers so that `csv synchronize` can round-trip it back into the CSV. Notes use Markdown;
+legacy `BEGIN-RST-NOTES`/`END-RST-NOTES` blocks are converted on a best-effort basis.
 
 Once the issues have been created, populate the `GitHub issue` column of each CSV row:
 
