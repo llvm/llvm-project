@@ -626,10 +626,9 @@ void GenericDeviceTy::recordAllocation(void *DevicePtr, void *HostPtr,
   MapATI = ATI;
 }
 
-void GenericDeviceTy::recordDeallocation(void *DevicePtr,
-                                         ol_alloc_type_t Kind) {
+Error GenericDeviceTy::recordDeallocation(void *DevicePtr, ol_alloc_type_t Kind) {
   if (!OMPX_TrackAllocationTraces)
-    return;
+    return Plugin::success();
 
   AllocationTraceInfoTy *ATI = nullptr;
   {
@@ -641,21 +640,37 @@ void GenericDeviceTy::recordDeallocation(void *DevicePtr,
   llvm::raw_string_ostream OS(StackTrace);
   llvm::sys::PrintStackTrace(OS);
 
-  if (!ATI)
-    ErrorReporter::reportDeallocationOfNonAllocatedPtr(DevicePtr, Kind, ATI,
-                                                       StackTrace);
+  // The reporting functions below only return if the diagnostic handler
+  // decided that the problem should not end the execution. There is no
+  // sensible way to carry out any of these deallocations, so the call fails
+  // instead.
+  if (!ATI) {
+    ErrorReporter::reportDeallocationOfNonAllocatedPtr(*this, DevicePtr, Kind,
+                                                       ATI, StackTrace);
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "deallocation of non-allocated pointer %p", DevicePtr);
+  }
 
   // ATI is not null, thus we can lock it to inspect and modify it further.
   std::lock_guard<std::mutex> LG(ATI->Lock);
-  if (!ATI->DeallocationTrace.empty())
-    ErrorReporter::reportDeallocationOfDeallocatedPtr(DevicePtr, Kind, ATI,
-                                                      StackTrace);
+  if (!ATI->DeallocationTrace.empty()) {
+    ErrorReporter::reportDeallocationOfDeallocatedPtr(*this, DevicePtr, Kind,
+                                                      ATI, StackTrace);
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "double-free of pointer %p", DevicePtr);
+  }
 
-  if (ATI->Kind != Kind)
-    ErrorReporter::reportDeallocationOfWrongPtrKind(DevicePtr, Kind, ATI,
+  if (ATI->Kind != Kind) {
+    ErrorReporter::reportDeallocationOfWrongPtrKind(*this, DevicePtr, Kind, ATI,
                                                     StackTrace);
+    return Plugin::error(
+        ErrorCode::INVALID_ARGUMENT,
+        "deallocation of pointer %p with a different allocation kind",
+        DevicePtr);
+  }
 
   ATI->DeallocationTrace = StackTrace;
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, ol_alloc_type_t Kind,
@@ -875,7 +890,8 @@ Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
 Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
                                   ol_alloc_type_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
-  Device.recordDeallocation(Ptr, Kind);
+  if (auto Err = Device.recordDeallocation(Ptr, Kind))
+    return Err;
   untrackAllocation(Ptr);
 
   if (MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind))

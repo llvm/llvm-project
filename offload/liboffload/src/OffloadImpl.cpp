@@ -737,6 +737,12 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
+Error olSetDeviceDiagnosticHandler_impl(
+    ol_device_handle_t Device, const ol_diagnostic_handler_t *Handler) {
+  Device->Device->setDiagnosticHandler(Handler);
+  return Error::success();
+}
+
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
     auto DevicesOrErr = Platform->getDevices();

@@ -172,6 +172,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} par
     OS << formatv(TAB_1 "os << \".{0} = \";\n", Member.getName());
     if (Member.isPointerType() || Member.isHandleType()) {
       OS << formatv(TAB_1 "printPtr(os, params.{0});\n", Member.getName());
+    } else if (Member.isFptrType()) {
+      OS << formatv(TAB_1 "os << reinterpret_cast<void*>(params.{0});\n",
+                    Member.getName());
     } else {
       OS << formatv(TAB_1 "os << params.{0};\n", Member.getName());
     }

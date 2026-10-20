@@ -12,6 +12,7 @@ include "APIDefs.td"
 // Add API definition files here
 include "Common.td"
 include "Platform.td"
+include "Diagnostic.td"
 include "Device.td"
 include "Context.td"
 include "Memory.td"

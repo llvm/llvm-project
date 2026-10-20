@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -23,6 +24,7 @@
 #include <vector>
 
 #include "ExclusiveAccess.h"
+#include "OffloadAPI.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -954,7 +956,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Record the deallocation of \p Kind memory at \p DevicePtr, and report it
   /// if the allocation it refers to was never made, is already deallocated, or
   /// was of another kind. Does nothing if allocation traces are not tracked.
-  void recordDeallocation(void *DevicePtr, ol_alloc_type_t Kind);
+  Error recordDeallocation(void *DevicePtr, ol_alloc_type_t Kind);
 
   /// Pin or register host memory to optimize transfers and return the device
   /// accessible pointer that devices should use for memory transfers involving
@@ -1234,8 +1236,21 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return ATI;
   }
 
+  /// Set the handler used to report problems detected on this device.
+  void setDiagnosticHandler(const ol_diagnostic_handler_t *Handler) {
+    DiagnosticHandler.store(Handler, std::memory_order_release);
+  }
+
+  /// Return the handler for problems detected on this device.
+  const ol_diagnostic_handler_t *getDiagnosticHandler() const {
+    return DiagnosticHandler.load(std::memory_order_acquire);
+  }
+
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
+
+  /// Handler for problems detected on this device.
+  std::atomic<const ol_diagnostic_handler_t *> DiagnosticHandler{nullptr};
 
   /// Environment variable to determine if stack traces for kernel launches are
   /// tracked.
