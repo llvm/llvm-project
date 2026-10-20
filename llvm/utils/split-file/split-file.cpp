@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
     fatal("", "too many positional arguments");
   StringRef input = positional[0], output = positional[1];
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(input, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(input, sys::fs::OF_TextWithCRLF);
   if (std::error_code ec = bufferOrErr.getError())
     fatal(input, ec.message());
 

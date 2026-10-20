@@ -107,7 +107,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   }
 
   const std::unique_ptr<MemoryBuffer> Buffer =
-      std::move(*MemoryBuffer::getFile(Filename));
+      std::move(*MemoryBuffer::getFile(Filename, llvm::sys::fs::OF_Text));
 
   {
     // Read Triples/Cpu only.

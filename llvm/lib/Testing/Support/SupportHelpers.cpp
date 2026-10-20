@@ -39,7 +39,7 @@ SmallString<128> llvm::unittest::getInputFileDirectory(const char *Argv0) {
 
   EXPECT_TRUE(Found) << "Unit test source directory file does not exist.";
 
-  auto File = MemoryBuffer::getFile(InputFilePath, /*IsText=*/true);
+  auto File = MemoryBuffer::getFile(InputFilePath, sys::fs::OF_TextWithCRLF);
 
   EXPECT_TRUE(static_cast<bool>(File))
       << "Could not open unit test source directory file.";

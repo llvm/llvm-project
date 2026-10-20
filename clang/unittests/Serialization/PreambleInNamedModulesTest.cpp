@@ -93,7 +93,7 @@ export using ::E;
   ASSERT_TRUE(Invocation);
 
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> ContentsBuffer =
-      llvm::MemoryBuffer::getFile(MainFilePath, /*IsText=*/true);
+      llvm::MemoryBuffer::getFile(MainFilePath, sys::fs::OF_TextWithCRLF);
   EXPECT_TRUE(ContentsBuffer);
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*ContentsBuffer);
 

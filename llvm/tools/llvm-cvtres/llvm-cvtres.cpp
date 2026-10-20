@@ -160,7 +160,7 @@ int main(int Argc, const char **Argv) {
 
   for (const auto &File : InputFiles) {
     std::unique_ptr<MemoryBuffer> Buffer = error(
-        File, MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
+        File, MemoryBuffer::getFileOrSTDIN(File, sys::fs::OF_None,
                                            /*RequiresNullTerminator=*/false));
     file_magic Type = identify_magic(Buffer->getMemBufferRef().getBuffer());
     if (Type != file_magic::windows_resource)
@@ -207,7 +207,7 @@ int main(int Argc, const char **Argv) {
   if (Verbose) {
     std::unique_ptr<MemoryBuffer> Buffer =
         error(OutputFile,
-              MemoryBuffer::getFileOrSTDIN(OutputFile, /*IsText=*/false,
+              MemoryBuffer::getFileOrSTDIN(OutputFile, sys::fs::OF_None,
                                            /*RequiresNullTerminator=*/false));
 
     ScopedPrinter W(errs());
