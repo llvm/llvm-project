@@ -29,7 +29,7 @@ func.func @sections_effects() {
 }
 
 func.func @sections_nowait_effects() {
-  // Without a reduction clause, nowait removes the implicit barrier effects.
+  // Nowait removes the implicit barrier effects.
   // expected-remark@+1 {{operation has no memory effects}}
   omp.sections nowait {
     omp.terminator
@@ -47,7 +47,7 @@ omp.private {type = firstprivate} @private_i32 : memref<i32> copy {
 }
 omp.private {type = private} @private_ptr : !llvm.ptr
 
-func.func @sections_private_effects(%x: memref<i32>, %y: !llvm.ptr) {
+func.func @sections_bounded_private_effects(%x: memref<i32>, %y: !llvm.ptr) {
   // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
@@ -89,7 +89,7 @@ combiner {
   omp.yield(%sum : f32)
 }
 
-func.func @sections_reduction_effects(%x: memref<f32>) {
+func.func @sections_bounded_reduction_effects(%x: memref<f32>) {
   // TODO: nowait does not currently eliminate the barrier with reductions.
   // The first two effects come from the implicit barrier.
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
