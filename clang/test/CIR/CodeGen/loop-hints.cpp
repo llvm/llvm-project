@@ -41,7 +41,7 @@ void must_progress_for(int n) {
   // AFTER-NEXT: cir.load
   // AFTER-NEXT: cir.inc
   // AFTER-NEXT: cir.store
-  // AFTER-NEXT: cir.br ^[[COND]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.br ^[[COND]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[END]]:
   // Note: There is a dead-branch here happening too, omitted for brevity.
@@ -74,7 +74,7 @@ void must_progress_while(int n) {
   // AFTER: ^[[BODY]]:
   // AFTER-NEXT: cir.load
   // AFTER-NEXT: cir.call @_Z3usei
-  // AFTER-NEXT: cir.br ^[[COND]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.br ^[[COND]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[END]]:
   // Note: There is a dead-branch here happening too, omitted for brevity.
@@ -102,7 +102,7 @@ void must_progress_do_while(int n) {
   // AFTER-NEXT: cir.load
   // AFTER-NEXT: cir.const #cir.int<0> : !s32i
   // AFTER-NEXT: %[[CMP:.*]] = cir.cmp
-  // AFTER-NEXT: cir.brcond %[[CMP]] ^[[NEXT_ITR:.*]], ^[[END:.*]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.brcond %[[CMP]] ^[[NEXT_ITR:.*]], ^[[END:.*]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[NEXT_ITR]]:
   // AFTER-NEXT: cir.br ^[[BODY:.*]]{{$}}
@@ -272,7 +272,7 @@ void continue_break_in_for(int n) {
   // AFTER-NEXT: cir.load
   // AFTER-NEXT: cir.inc
   // AFTER-NEXT: cir.store
-  // AFTER-NEXT: cir.br ^[[COND]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.br ^[[COND]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[END]]:
   // Note: There is a dead-branch here happening too, omitted for brevity.
@@ -323,7 +323,7 @@ void continue_in_while(int n) {
   // AFTER-NEXT: cir.brcond %[[AND]] ^[[CONTINUE:.*]], ^[[NO_CONTINUE:.*]]{{$}}
 
   // AFTER: ^[[CONTINUE]]:
-  // AFTER-NEXT: cir.br ^[[COND]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.br ^[[COND]] loop_id distinct{{\[}}[[LOOP_ID:[0-9]+]]{{\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[NO_CONTINUE]]:
   // AFTER-NEXT: cir.br ^[[BODY_REST:.*]]{{$}}
@@ -334,7 +334,7 @@ void continue_in_while(int n) {
   // AFTER-NEXT: cir.br ^[[NEXT_ITR:.*]]{{$}}
 
   // AFTER: ^[[NEXT_ITR]]:
-  // AFTER-NEXT: cir.br ^[[COND]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.br ^[[COND]] loop_id distinct{{\[}}[[LOOP_ID]]{{\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[END]]:
   // Note: There is a dead-branch here happening too, omitted for brevity.
@@ -365,7 +365,7 @@ void continue_in_do_while(int n) {
   // AFTER-NEXT: cir.dec nsw
   // AFTER-NEXT: cir.store
   // AFTER-NEXT: %[[AFTER_DEC:.*]] = cir.cast int_to_bool
-  // AFTER-NEXT: cir.brcond %[[AFTER_DEC]] ^[[BODY_START:.*]], ^[[END:.*]] loop_hints < must_progress>
+  // AFTER-NEXT: cir.brcond %[[AFTER_DEC]] ^[[BODY_START:.*]], ^[[END:.*]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // AFTER: ^[[BODY_START]]:
   // AFTER-NEXT: cir.br ^[[BODY_START_2:.*]]{{$}}
@@ -407,127 +407,127 @@ void pragmas(int n) {
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4 code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4>
 #pragma nounroll
   while (n)
     --n;
 // BEFORE-NOOPT: } loop_hints < must_progress unroll = disable>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll = disable>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable>
 #pragma unroll
   do {
     --n;
   } while (n > 0);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll = enable>
 // BEFORE-OPT: } loop_hints < must_progress unroll = enable code_align = 32>
-// AFTER: cir.brcond %{{.*}} ^{{.*}}, ^{{.*}} loop_hints < must_progress unroll = enable>
+// AFTER: cir.brcond %{{.*}} ^{{.*}}, ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = enable>
 #pragma unroll 8
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll_count = 8>
 // BEFORE-OPT: } loop_hints < must_progress unroll_count = 8 code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll_count = 8>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_count = 8>
 #pragma clang loop unroll(full)
   for (int i = 0; i < 4; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll = full>
 // BEFORE-OPT: } loop_hints < must_progress unroll = full code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll = full>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = full>
 #pragma clang loop vectorize(disable) interleave(disable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_width = 1 vectorize_scalable = false interleave_count = 1>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_width = 1 vectorize_scalable = false interleave_count = 1 unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_width = 1 vectorize_scalable = false interleave_count = 1>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_width = 1 vectorize_scalable = false interleave_count = 1>
 #pragma clang loop vectorize_width(8)
   for (int x : arr)
     use(x);
 // BEFORE-NOOPT: } loop_hints < vectorize_width = 8 vectorize_scalable = false>
 // BEFORE-OPT: } loop_hints < vectorize_width = 8 vectorize_scalable = false unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < vectorize_width = 8 vectorize_scalable = false>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_width = 8 vectorize_scalable = false>
 #pragma clang loop vectorize_width(4, scalable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_width = 4 vectorize_scalable = true>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_width = 4 vectorize_scalable = true unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_width = 4 vectorize_scalable = true>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_width = 4 vectorize_scalable = true>
 #pragma clang loop vectorize_width(4, fixed)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_width = 4 vectorize_scalable = false>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_width = 4 vectorize_scalable = false unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_width = 4 vectorize_scalable = false>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_width = 4 vectorize_scalable = false>
 #pragma clang loop vectorize(assume_safety)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_enable parallel>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_enable unroll = disable parallel code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_enable parallel>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable parallel>
 #pragma clang loop vectorize_predicate(enable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_predicate = true>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_predicate = true unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_predicate = true>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_predicate = true>
 #pragma clang loop vectorize_predicate(disable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress vectorize_predicate = false>
 // BEFORE-OPT: } loop_hints < must_progress vectorize_predicate = false unroll = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress vectorize_predicate = false>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_predicate = false>
 #pragma clang loop distribute(enable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress distribute = true>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable distribute = true code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress distribute = true>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress distribute = true>
 #pragma clang loop distribute(disable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress distribute = false>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable distribute = false code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress distribute = false>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress distribute = false>
 #pragma unroll_and_jam
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll_and_jam = enable>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable unroll_and_jam = enable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll_and_jam = enable>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = enable>
 #pragma nounroll_and_jam
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll_and_jam = disable>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable unroll_and_jam = disable code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll_and_jam = disable>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam = disable>
 #pragma unroll_and_jam(4)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress unroll_and_jam_count = 4>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable unroll_and_jam_count = 4 code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress unroll_and_jam_count = 4>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 4>
 #pragma clang loop pipeline(disable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress pipeline_disabled>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable pipeline_disabled code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress pipeline_disabled>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress pipeline_disabled>
 #pragma clang loop pipeline_initiation_interval(3)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress pipeline_initiation_interval = 3>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable pipeline_initiation_interval = 3 code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress pipeline_initiation_interval = 3>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress pipeline_initiation_interval = 3>
 #pragma clang loop licm(disable)
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress licm_disabled>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable licm_disabled code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress licm_disabled>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress licm_disabled>
   [[clang::code_align(16)]]
   for (int i = 0; i < n; ++i)
     use(i);
 // BEFORE-NOOPT: } loop_hints < must_progress code_align = 16>
 // BEFORE-OPT: } loop_hints < must_progress unroll = disable code_align = 16>
-// AFTER: cir.br ^{{.*}} loop_hints < must_progress code_align = 16>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress code_align = 16>
 }
 

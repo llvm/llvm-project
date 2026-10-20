@@ -172,6 +172,14 @@ class HasAtMostOneOfAttrs<list<string> names> : PredOpTrait<
   HasAtMostOneOfAttrsPred<!foreach(name, names, "$" # name)>
 >;
 
+// Loop hints require the branches created in FlattenCFG also create a loop-id
+// so it can properly 'distinct' them. Make sure if there is a 'loop_hints'
+// there is also a 'loop_id'.
+def LoopHintsRequireLoopId : PredOpTrait<
+  "'loop_hints' requires a 'loop_id'",
+  CPred<"!$loop_hints || $loop_id">
+>;
+
 // Like `SameTypeOperands`, but the operands are pointers that are only required
 // to share the same pointee type; they may still differ in address space (e.g.
 // a `cir.copy` that assigns through an address-space-qualified pointer).
@@ -1895,7 +1903,7 @@ def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
 
 def CIR_BrOp : CIR_Op<"br",[
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator
+  Pure, Terminator, LoopHintsRequireLoopId
 ]> {
   let summary = "Unconditional branch";
   let description = [{
@@ -1905,8 +1913,9 @@ def CIR_BrOp : CIR_Op<"br",[
     Note that for source level `goto`'s crossing scope boundaries, those are
     usually represented with the "symbolic" `cir.goto` operation.
 
-    When a loop is flattened, the optional `loop_hints` attribute is placed on
-    the branches that form the loop's back edge (see `cir.brcond`).
+    When a loop is flattened, the optional `loop_id` and `loop_hints`
+    attributes are placed on the branches that form the loop's back edge (see
+    `cir.brcond`).
 
     Example:
 
@@ -1927,11 +1936,12 @@ def CIR_BrOp : CIR_Op<"br",[
   ];
 
   let arguments = (ins Variadic<CIR_AnyType>:$destOperands,
+                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
-    (`loop_hints` $loop_hints^)? attr-dict
+    (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -2235,7 +2245,7 @@ def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
 
 def CIR_BrCondOp : CIR_Op<"brcond", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator, AttrSizedOperandSegments
+  Pure, Terminator, AttrSizedOperandSegments, LoopHintsRequireLoopId
 ]> {
   let summary = "Conditional branch";
   let description = [{
@@ -2243,9 +2253,12 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
     it branches to 'bb1'.
 
-    The optional `loop_hints` attribute is attached by CFG flattening to
-    branches that target a loop header (i.e. the loop's back edge), carrying
-    the `#cir.loop_hint` of the original loop op.
+    The optional `loop_hints` and `loop_id` attributes are attached by CFG
+    flattening to branches that target a loop header (i.e. the loop's back
+    edge).  The `loop_hints` is taken from the original loop.  The `loop_id` is
+    distinct per-loop so that we can identify branches that are related to each
+    other. At the moment, this is only used to make sure we properly distinct
+    our loop annotation attributes.
 
     Example:
 
@@ -2264,13 +2277,15 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
                CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
                CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
       build($_builder, $_state, cond, destOperandsTrue,
-            destOperandsFalse, /*loop_hints=*/nullptr, destTrue, destFalse);
+            destOperandsFalse, /*loop_id=*/nullptr, /*loop_hints=*/nullptr,
+            destTrue, destFalse);
     }]>
   ];
 
   let arguments = (ins CIR_BoolType:$cond,
                        Variadic<CIR_AnyType>:$destOperandsTrue,
                        Variadic<CIR_AnyType>:$destOperandsFalse,
+                       OptionalAttr<CIR_AnyDistinctAttr>:$loop_id,
                        OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
   let assemblyFormat = [{
@@ -2278,7 +2293,7 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
     $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
-    (`loop_hints` $loop_hints^)? attr-dict
+    (`loop_id` $loop_id^)? (`loop_hints` $loop_hints^)? attr-dict
   }];
 }
 

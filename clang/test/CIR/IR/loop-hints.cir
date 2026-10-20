@@ -38,3 +38,19 @@ cir.func @loops(%c: !cir.bool) {
   } loop_hints < unroll = disable unroll_and_jam = full unroll_and_jam_count = 2 pipeline_disabled pipeline_initiation_interval = 3 licm_disabled parallel code_align = 64>
   cir.return
 }
+
+cir.func @branches(%c: !cir.bool) {
+  // CHECK: cir.br ^bb1 loop_id distinct[[[ID0:[0-9]+]]]<> loop_hints < must_progress unroll_count = 4>
+  cir.br ^bb1 loop_id distinct[0]<> loop_hints < must_progress unroll_count = 4>
+^bb1:
+  // CHECK: cir.brcond %{{.*}} ^bb1, ^bb2 loop_id distinct[[[ID0]]]<> loop_hints < must_progress unroll_count = 4>
+  cir.brcond %c ^bb1, ^bb2 loop_id distinct[0]<> loop_hints < must_progress unroll_count = 4>
+^bb2:
+  // CHECK: cir.br ^bb3 loop_id distinct[[[ID1:[0-9]+]]]<>{{$}}
+  cir.br ^bb3 loop_id distinct[1]<>
+^bb3:
+  // CHECK: cir.brcond %{{.*}} ^bb3, ^bb4 loop_id distinct[[[ID1]]]<>{{$}}
+  cir.brcond %c ^bb3, ^bb4 loop_id distinct[1]<>
+^bb4:
+  cir.return
+}

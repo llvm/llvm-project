@@ -71,3 +71,21 @@ cir.func @repeated(%c: !cir.bool) {
   } loop_hints < must_progress must_progress>
   cir.return
 }
+
+// -----
+
+cir.func @br_hints_without_id() {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.br ^bb1 loop_hints < must_progress>
+^bb1:
+  cir.return
+}
+
+// -----
+
+cir.func @brcond_hints_without_id(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.brcond %c ^bb1, ^bb1 loop_hints < must_progress>
+^bb1:
+  cir.return
+}
