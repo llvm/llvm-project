@@ -6518,13 +6518,13 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
       // Emit helper vars inits.
 
       LValue LB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>((isOpenMPLoopBoundSharingDirective(EKind)
-                                        ? S.getCombinedLowerBoundVariable()
-                                        : S.getLowerBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedLowerBoundVariable()
+                                       : S.getLowerBoundVariable()));
       LValue UB = EmitOMPHelperVar(
-          *this, cast<DeclRefExpr>((isOpenMPLoopBoundSharingDirective(EKind)
-                                        ? S.getCombinedUpperBoundVariable()
-                                        : S.getUpperBoundVariable())));
+          *this, cast<DeclRefExpr>(isOpenMPLoopBoundSharingDirective(EKind)
+                                       ? S.getCombinedUpperBoundVariable()
+                                       : S.getUpperBoundVariable()));
       LValue ST =
           EmitOMPHelperVar(*this, cast<DeclRefExpr>(S.getStrideVariable()));
       LValue IL =
