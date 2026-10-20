@@ -51,6 +51,12 @@
 #define LIBC_COLD
 #endif // __has_attribute(cold)
 
+#if __has_attribute(flatten)
+#define LIBC_FLATTEN __attribute__((flatten))
+#else
+#define LIBC_FLATTEN
+#endif // __has_attribute(flatten)
+
 #if __has_attribute(may_alias)
 #define LIBC_MAY_ALIAS __attribute__((may_alias))
 #else
