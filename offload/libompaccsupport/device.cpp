@@ -251,36 +251,13 @@ llvm::Error DeviceTy::deinit() {
   return llvm::Error::success();
 }
 
-llvm::Expected<void *>
-DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
-                                    size_t ExpectedSize) {
-  size_t Size = 0;
-  auto AddrOrErr = Program.getGlobalAddress(Name, &Size);
-  if (!AddrOrErr)
-    return AddrOrErr;
-  // Some backends return size 0 if the size is unknown.
-  // Only check the size if it is non-zero.
-  if (Size && Size != ExpectedSize)
-    return createError(ErrorCode::InvalidBinary,
-                       "size of global symbol %s does not match expected size "
-                       "(expected %zu, got %zu)",
-                       Name, ExpectedSize, Size);
-
-  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
-  if (RecordReplay && RecordReplay->isRecording())
-    RecordReplay->addGlobal(Name, Size, *AddrOrErr);
-
-  return AddrOrErr;
-}
-
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
 // offloading entries generated for them which map the host's function pointer
 // to a global containing the corresponding function pointer on the device.
 static llvm::Expected<std::pair<void *, uint64_t>>
 setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
-                       const ProgramTy &Program) {
+                       __tgt_device_binary Binary) {
   AsyncInfoTy AsyncInfo(Device);
   llvm::ArrayRef<llvm::offloading::EntryTy> Entries(Image->EntriesBegin,
                                                     Image->EntriesEnd);
@@ -298,12 +275,11 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // VTable and Entry.Size is the total size of the VTable. Unlike the
       // indirect function case below, the Global is not of size Entry.Size and
       // is instead of size PtrSize (sizeof(void*)).
+      void *Vtable;
       void *res;
-      auto VtableOrErr =
-          Device.getAndRecordGlobalAddress(Program, Entry.SymbolName, PtrSize);
-      if (!VtableOrErr)
-        return VtableOrErr.takeError();
-      void *Vtable = *VtableOrErr;
+      if (Device.RTL->get_global(Binary, PtrSize, Entry.SymbolName, &Vtable))
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       // HstPtr = Entry.Address;
       if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
@@ -326,11 +302,10 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       // dealing with a single function pointer (not a VTable)
       assert(Entry.Size == PtrSize && "Global not a function pointer?");
       auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
-      auto PtrOrErr = Device.getAndRecordGlobalAddress(
-          Program, Entry.SymbolName, Entry.Size);
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      void *Ptr = *PtrOrErr;
+      void *Ptr;
+      if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       HstPtr = Entry.Address;
       if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
@@ -367,24 +342,21 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
 
-namespace llvm::offload::tmp {
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-} // namespace llvm::offload::tmp
-
 // Load binary to device and perform global initialization if needed.
-llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
-  auto ProgramOrErr = ProgramTy::create(Context, DeviceHandle, Img);
-  if (!ProgramOrErr)
-    return ProgramOrErr.takeError();
-  ProgramTy Program = std::move(*ProgramOrErr);
+llvm::Expected<__tgt_device_binary>
+DeviceTy::loadBinary(__tgt_device_image *Img) {
+  __tgt_device_binary Binary;
+
+  if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
+    return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
+                       Img);
 
   // Dispatch this before the fast-reduction probe below: that probe is a
   // downstream addition and its device-to-host read would otherwise be
   // reported to the tool ahead of the load of the image it reads from.
   OMPT_IF_BUILT_AND_INITIALIZED({
-    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-        Program.getHandle());
+    auto &Image = *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
+        Binary.handle);
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
                         Image.getSize(), const_cast<void *>(Image.getStart()),
@@ -406,16 +378,13 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   }
 
   // This symbol is optional.
-  auto DeviceEnvironmentPtrOrErr = getAndRecordGlobalAddress(
-      Program, "__omp_rtl_device_environment", sizeof(DeviceEnvironmentTy));
-  if (!DeviceEnvironmentPtrOrErr) {
-    llvm::consumeError(DeviceEnvironmentPtrOrErr.takeError());
-    return Program;
-  }
-  void *DeviceEnvironmentPtr = *DeviceEnvironmentPtrOrErr;
+  void *DeviceEnvironmentPtr;
+  if (RTL->get_global(Binary, sizeof(DeviceEnvironmentTy),
+                      "__omp_rtl_device_environment", &DeviceEnvironmentPtr))
+    return Binary;
 
   // Obtain a table mapping host function pointers to device function pointers.
-  auto CallTablePairOrErr = setupIndirectCallTable(*this, Img, Program);
+  auto CallTablePairOrErr = setupIndirectCallTable(*this, Img, Binary);
   if (!CallTablePairOrErr)
     return CallTablePairOrErr.takeError();
 
@@ -442,7 +411,7 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
                  /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
-  return Program;
+  return Binary;
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
