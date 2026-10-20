@@ -289,6 +289,64 @@ BB:
   ret void
 }
 
+;; Fold a disjoint or like an add.
+define void @or_disjoint(i1 %cond, ptr %base, i64 %i) {
+; CHECK-LABEL: @or_disjoint
+; CHECK:       getelementptr i8, ptr %base, i64 %i
+; CHECK-NEXT:  getelementptr i8, ptr {{.+}}, i64 8
+entry:
+  %o = or disjoint i64 %i, 8
+  %addr = getelementptr i8, ptr %base, i64 %o
+  br i1 %cond, label %if.then, label %fallthrough
+
+if.then:
+  %v = load i32, ptr %addr, align 4
+  br label %fallthrough
+
+fallthrough:
+  ret void
+}
+
+;; A multi-use disjoint or is folded only if all its users can fold it.
+define void @or_disjoint_multi_use(i1 %cond, ptr %p, ptr %q, i64 %i) {
+; CHECK-LABEL: @or_disjoint_multi_use
+; CHECK:       getelementptr i8, ptr %p, i64 %i
+; CHECK-NEXT:  getelementptr i8, ptr {{.+}}, i64 8
+; CHECK:       getelementptr i8, ptr %q, i64 %i
+; CHECK-NEXT:  getelementptr i8, ptr {{.+}}, i64 8
+entry:
+  %o = or disjoint i64 %i, 8
+  %a1 = getelementptr i8, ptr %p, i64 %o
+  %a2 = getelementptr i8, ptr %q, i64 %o
+  br i1 %cond, label %if.then, label %fallthrough
+
+if.then:
+  %v1 = load i32, ptr %a1, align 4
+  %v2 = load i32, ptr %a2, align 4
+  br label %fallthrough
+
+fallthrough:
+  ret void
+}
+
+;; A plain or may not be an add.
+define void @or(i1 %cond, ptr %base, i64 %i) {
+; CHECK-LABEL: @or(
+; CHECK:       if.then:
+; CHECK-NEXT:  getelementptr i8, ptr %base, i64 %o
+entry:
+  %o = or i64 %i, 8
+  %addr = getelementptr i8, ptr %base, i64 %o
+  br i1 %cond, label %if.then, label %fallthrough
+
+if.then:
+  %v = load i32, ptr %addr, align 4
+  br label %fallthrough
+
+fallthrough:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
