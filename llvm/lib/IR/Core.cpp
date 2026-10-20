@@ -33,6 +33,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -138,6 +139,19 @@ LLVMBool LLVMContextShouldDiscardValueNames(LLVMContextRef C) {
 
 void LLVMContextSetDiscardValueNames(LLVMContextRef C, LLVMBool Discard) {
   unwrap(C)->setDiscardValueNames(Discard);
+}
+
+LLVMBool LLVMContextParseCommandLineOptions(LLVMContextRef C, int argc,
+                                            const char *const *argv,
+                                            const char *Overview,
+                                            char **ErrorMessage) {
+  std::string Err;
+  raw_string_ostream OS(Err);
+  if (cl::parseCommandLineOptions(unwrap(C)->getLibraryOptions(),
+                                  ArrayRef(argv, argc), Overview, &OS))
+    return false;
+  *ErrorMessage = LLVMCreateMessage(Err.c_str());
+  return true;
 }
 
 void LLVMContextDispose(LLVMContextRef C) {

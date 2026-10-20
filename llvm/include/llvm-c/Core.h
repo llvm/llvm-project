@@ -655,6 +655,19 @@ LLVM_C_ABI void LLVMContextSetDiscardValueNames(LLVMContextRef C,
                                                 LLVMBool Discard);
 
 /**
+ * Parses the given arguments using the LLVM command line parser. Library
+ * options, which passes read from their context, are set in C, and other
+ * options are set globally. A target machine created through the C API does
+ * not read C's library options. The ErrorMessage needs to be disposed with
+ * LLVMDisposeMessage. Returns 0 on success, 1 otherwise.
+ */
+LLVM_C_ABI LLVMBool LLVMContextParseCommandLineOptions(LLVMContextRef C,
+                                                       int argc,
+                                                       const char *const *argv,
+                                                       const char *Overview,
+                                                       char **ErrorMessage);
+
+/**
  * Destroy a context instance.
  *
  * This should be called for every call to LLVMContextCreate() or memory

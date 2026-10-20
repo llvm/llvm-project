@@ -389,6 +389,9 @@ Makes programs 10x faster by doing Special New Thing.
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
 
+* Added `LLVMContextParseCommandLineOptions()` to set library options in a context.
+  Passes read library options from their context, so `LLVMParseCommandLineOptions()` no longer affects them.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash

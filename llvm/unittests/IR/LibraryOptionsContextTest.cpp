@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -32,4 +33,19 @@ TEST(LibraryOptionsContextTest, IR) {
       cl::parseCommandLineOptions(C2.getLibraryOptions(), Args, "", &nulls()));
   EXPECT_EQ(printRet(C1), "  ret void");
   EXPECT_NE(printRet(C2).find("ret void ; 0x"), std::string::npos);
+}
+
+TEST(LibraryOptionsContextTest, CAPI) {
+  LLVMContext C;
+  char *Err = nullptr;
+  const char *Args[] = {"prog", "-print-inst-addrs"};
+  EXPECT_FALSE(LLVMContextParseCommandLineOptions(wrap(&C), std::size(Args),
+                                                  Args, "", &Err));
+  EXPECT_NE(printRet(C).find("ret void ; 0x"), std::string::npos);
+
+  const char *Bad[] = {"prog", "-print-inst-addrs=x"};
+  ASSERT_TRUE(LLVMContextParseCommandLineOptions(wrap(&C), std::size(Bad), Bad,
+                                                 "", &Err));
+  EXPECT_NE(StringRef(Err).find("print-inst-addrs"), StringRef::npos);
+  LLVMDisposeMessage(Err);
 }
