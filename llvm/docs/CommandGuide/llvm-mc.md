@@ -157,6 +157,33 @@ prints in Intel/MASM syntax.
 Choose DWARF debug sections compression.
 :::
 
+:::{option} --verify[=<prefixes>]
+Check diagnostics against directives in comments of the input instead of
+printing them, similar to Clang's `-verify`. `<prefixes>` is a comma-separated
+list of directive prefixes (default: `expected`). A directive has the form
+
+```text
+<prefix>-<kind>[-re][@<offset>] {{<text>}}
+```
+
+where `<kind>` is `error`, `warning`, `note` or `remark`, and `<text>` must be
+a substring of the diagnostic message (with `-re`, `{{...}}` blocks inside
+`<text>` are regular expressions). Without `@<offset>`, the directive applies
+to its own line; `@+N` and `@-N` refer to the line `N` lines below or above,
+`@above` and `@below` to the nearest non-directive line, and `@unknown` to
+diagnostics without a location. For example:
+
+```asm
+.foo # expected-error {{unknown directive}}
+```
+
+Directives are only recognized in single-line comments, at most one per line.
+Each directive matches exactly one diagnostic, so a diagnostic that is reported
+twice needs two directives. The exit status is 0 if every diagnostic matches a
+directive and every directive matches a diagnostic. Unlike Clang, directives
+take no count and `expected-no-diagnostics` is not needed.
+:::
+
 ## EXIT STATUS
 
 If {program}`llvm-mc` succeeds, it will exit with 0. Otherwise, if an error
