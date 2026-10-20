@@ -408,15 +408,44 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
+InstructionCost WebAssemblyTTIImpl::getScalarizationOverhead(
+    VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
+  if (!isa<FixedVectorType>(InTy))
+    return InstructionCost::getInvalid();
+
+  InstructionCost Cost = BaseT::getScalarizationOverhead(
+      InTy, DemandedElts, Insert, Extract, CostKind, ForPoisonSrc, VL, VIC);
+
+  // Building a vector is more costly than the sum of the individual lane
+  // operations as we will group these together which can induce stalls, even
+  // if the runtime supports instruction scheduling.
+  if ((Insert && VIC == TTI::VectorInstrContext::Load) ||
+      (Extract && VIC == TTI::VectorInstrContext::Store)) {
+    auto *Ty = cast<FixedVectorType>(InTy);
+    Cost += Ty->getNumElements() / 2;
+  }
+  return Cost;
+}
+
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
-  InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Op0, Op1, VIC);
-
   // SIMD128's insert/extract currently only take constant indices.
-  if (Index == -1u)
-    return Cost + 25 * TargetTransformInfo::TCC_Expensive;
+  InstructionCost Cost = Index == -1u ? 25 * TargetTransformInfo::TCC_Expensive
+                                      : TargetTransformInfo::TCC_Free;
+
+  // For code_size, the cost is free because we can use load_lane and
+  // store_lane, but keep a basic cost for throughput.
+  if ((Opcode == Instruction::InsertElement && VIC == VectorInstrContext::Load))
+    return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
+  else if (Opcode == Instruction::ExtractElement &&
+           VIC == VectorInstrContext::Store)
+    return CostKind == TTI::TCK_CodeSize ? Cost : Cost + TTI::TCC_Basic;
+  else
+    Cost += BasicTTIImplBase::getVectorInstrCost(Opcode, Val, CostKind, Index,
+                                                 Op0, Op1, VIC);
 
   return Cost;
 }
