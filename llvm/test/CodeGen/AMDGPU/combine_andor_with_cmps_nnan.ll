@@ -521,11 +521,11 @@ define <2 x i1> @test85(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
-; GCN-TRUE16-NEXT:    v_pk_min_f16 v1, v0, v1
-; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v1.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v1.h, v2.h
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_pk_min_f16 v0, v0, v1
+; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v2.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.h, v2.h
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test85:
@@ -555,11 +555,11 @@ define <2 x i1> @test86(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
-; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v0, v1
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.h, v2.h
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v1
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v2.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.h, v2.h
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test86:
@@ -613,11 +613,11 @@ define <2 x i1> @test88(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
-; GCN-TRUE16-NEXT:    v_pk_min_f16 v1, v0, v1
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.h, v2.h
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_pk_min_f16 v0, v0, v1
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v2.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.h, v2.h
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test88:
@@ -695,11 +695,11 @@ define <2 x i1> @test91(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
-; GCN-TRUE16-NEXT:    v_pk_max_f16 v1, v0, v1
-; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v1.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v1.h, v2.h
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v1
+; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v2.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.h, v2.h
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test91:
@@ -958,15 +958,16 @@ define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GCN-LABEL: test117:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_min3_f32 v4, v4, v5, v6
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_min3_f32 v1, v8, v9, v10
-; GCN-NEXT:    v_min_f32_e32 v2, v2, v3
-; GCN-NEXT:    v_min_f32_e32 v3, v4, v7
+; GCN-NEXT:    v_min3_f32 v1, v4, v5, v6
+; GCN-NEXT:    v_max_f32_e32 v4, v7, v7
+; GCN-NEXT:    v_min3_f32 v5, v8, v9, v10
+; GCN-NEXT:    v_max_f32_e32 v6, v11, v11
+; GCN-NEXT:    v_dual_min_f32 v2, v2, v3 :: v_dual_min_f32 v1, v1, v4
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v12
-; GCN-NEXT:    v_min_f32_e32 v0, v1, v11
+; GCN-NEXT:    v_min_f32_e32 v0, v5, v6
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v2, v13
-; GCN-NEXT:    v_cmp_lt_f32_e64 s1, v3, v13
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, v1, v13
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s2, v0, v12
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s0, s0, s1

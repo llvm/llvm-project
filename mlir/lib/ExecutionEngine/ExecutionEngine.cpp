@@ -28,6 +28,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -243,6 +244,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   }
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
+  if (options.libraryOptions)
+    ctx->getLibraryOptions().assign(*options.libraryOptions);
   auto llvmModule = options.llvmModuleBuilder
                         ? options.llvmModuleBuilder(m, *ctx)
                         : translateModuleToLLVMIR(m, *ctx);
@@ -256,6 +259,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     if (!tmBuilderOrError)
       return tmBuilderOrError.takeError();
 
+    tmBuilderOrError->getOptions().MCOptions.LibraryOptions =
+        options.libraryOptions;
     auto tmOrError = tmBuilderOrError->createTargetMachine();
     if (!tmOrError)
       return tmOrError.takeError();

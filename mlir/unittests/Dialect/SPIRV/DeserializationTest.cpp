@@ -262,11 +262,11 @@ TEST_F(DeserializationTest, FunctionParameterAttributeUnknownTarget) {
       "expected OpFunctionParameter or OpFunction");
 }
 
-class UnsupportedParameterDecorationTest
+class MultipleParameterDecorationsTest
     : public DeserializationTest,
       public ::testing::WithParamInterface<spirv::Decoration> {};
 
-TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
+TEST_P(MultipleParameterDecorationsTest, RejectCombinedWithOtherDecorations) {
   addHeader();
   auto argID = nextID++;
   SmallVector<uint32_t> operands = {argID, static_cast<uint32_t>(GetParam())};
@@ -278,6 +278,8 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
   addInstruction(spirv::Opcode::OpDecorate, operands);
   addInstruction(spirv::Opcode::OpDecorate,
                  {argID, static_cast<uint32_t>(spirv::Decoration::Constant)});
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {argID, static_cast<uint32_t>(spirv::Decoration::Volatile)});
 
   auto voidType = addVoidType();
   auto intType = addIntType(32);
@@ -294,16 +296,37 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
   addFunctionEnd();
 
   ASSERT_FALSE(deserialize());
-  expectDiagnostic("unhandled decoration 'constant' on function argument with "
-                   "result <id> 1");
+  expectDiagnostic(
+      "already found a decoration for function argument with result <id> 1");
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    SPIRV, UnsupportedParameterDecorationTest,
+    SPIRV, MultipleParameterDecorationsTest,
     ::testing::Values(spirv::Decoration::Alignment,
                       spirv::Decoration::FuncParamAttr,
                       spirv::Decoration::Restrict,
                       spirv::Decoration::RelaxedPrecision));
+
+TEST_F(DeserializationTest, NonUnitParameterDecoration) {
+  addHeader();
+  auto argID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {argID, static_cast<uint32_t>(spirv::Decoration::Location), 0});
+
+  auto voidType = addVoidType();
+  auto intType = addIntType(32);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, argID});
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unhandled decoration 'location' on function argument with "
+                   "result <id> 1");
+}
 
 TEST_F(DeserializationTest, AlignmentMissingOperand) {
   addHeader();
