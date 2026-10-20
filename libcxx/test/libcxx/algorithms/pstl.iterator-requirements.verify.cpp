@@ -153,6 +153,12 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::includes(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: includes}}
+    (void)std::includes(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: includes}}
+  }
+
+  {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
   }

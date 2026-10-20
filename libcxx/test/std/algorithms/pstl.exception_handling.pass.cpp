@@ -595,6 +595,21 @@ int main(int, char**) {
           (void)std::swap_ranges(policy, std::move(first1), std::move(last1), std::move(first2));
         });
       }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // includes(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::includes(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // includes(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::includes(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
     }
   });
 

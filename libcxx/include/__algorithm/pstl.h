@@ -1210,6 +1210,54 @@ is_sorted_until(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardI
       std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__comp));
 }
 
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] bool
+includes(_ExecutionPolicy&& __policy,
+         _ForwardIterator1 __first1,
+         _ForwardIterator1 __last1,
+         _ForwardIterator2 __first2,
+         _ForwardIterator2 __last2) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "includes requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "includes requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__includes, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _Compare,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] bool
+includes(_ExecutionPolicy&& __policy,
+         _ForwardIterator1 __first1,
+         _ForwardIterator1 __last1,
+         _ForwardIterator2 __first2,
+         _ForwardIterator2 __last2,
+         _Compare __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "includes requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "includes requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__includes, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__comp));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17

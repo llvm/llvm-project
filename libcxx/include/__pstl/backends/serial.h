@@ -13,6 +13,7 @@
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
+#include <__algorithm/includes.h>
 #include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
 #include <__algorithm/min_element.h>
@@ -310,6 +311,21 @@ struct __uninitialized_move<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
     return std::uninitialized_move(std::move(__first), std::move(__last), std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __includes<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Compare>
+  optional<bool>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Compare __comp) const noexcept {
+    return std::includes(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__comp));
   }
 };
 
