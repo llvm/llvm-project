@@ -12,7 +12,7 @@
 
 // <algorithm>
 
-// template<class ExecutionPolicy, class ForwardIterator1, ForwardIterator2, class Comp>
+// template<class ExecutionPolicy, class ForwardIterator1, class ForwardIterator2, class Comp>
 //   bool
 //   includes(ExecutionPolicy&& exec,
 //            ForwardIterator1 first1,

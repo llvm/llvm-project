@@ -610,6 +610,28 @@ int main(int, char**) {
               policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
         });
       }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // set_union(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_union(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_union(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_union(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
     }
   });
 

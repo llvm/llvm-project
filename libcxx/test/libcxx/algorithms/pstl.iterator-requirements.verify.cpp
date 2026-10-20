@@ -276,6 +276,21 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_union}}
+
+    (void)std::set_union(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_union}}
+    (void)std::set_union(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_union}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }

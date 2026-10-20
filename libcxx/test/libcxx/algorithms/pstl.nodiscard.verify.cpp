@@ -119,4 +119,8 @@ void test() {
   std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1, pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_union(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_union(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
 }
