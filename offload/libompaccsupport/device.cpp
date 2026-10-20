@@ -314,8 +314,7 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   // The IndirectCallTable is on the stack, so the copy must be synchronous to
   // ensure the data is copied before we return.
-  if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(),
-                            TableSize,
+  if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(), TableSize,
                             /*Entry=*/nullptr,
                             /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
                             /*Name=*/"IndirectCallTable"))
@@ -491,20 +490,19 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 }
 
 // Retrieve data from device synchronously
-int32_t
-DeviceTy::retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
-                           HostDataToTargetTy *Entry,
-                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
-                           const ident_t *Loc) {
+int32_t DeviceTy::retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
   return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, /*Queue=*/nullptr,
                           Entry, HDTTMapPtr, Loc);
 }
 
-int32_t
-DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
-                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
-                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
-                           const ident_t *Loc) {
+int32_t DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin,
+                                   int64_t Size, ol_queue_handle_t Queue,
+                                   HostDataToTargetTy *Entry,
+                                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                   const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
                               Entry, HDTTMapPtr, Loc);

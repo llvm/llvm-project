@@ -19,13 +19,9 @@
 #include "Shared/Profile.h"
 #include "device.h"
 
-#include "Utils/ELF.h"
-
 #include "llvm/ADT/SmallString.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <memory>
 #include <string>

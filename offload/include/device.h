@@ -185,11 +185,11 @@ struct DeviceTy {
                        const ident_t *Loc = nullptr);
 
   // Copy data from host to device synchronously
-  int32_t
-  submitDataSync(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                 HostDataToTargetTy *Entry = nullptr,
-                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
-                 const ident_t *Loc = nullptr, const char *Name = nullptr);
+  int32_t submitDataSync(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         HostDataToTargetTy *Entry = nullptr,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                         const ident_t *Loc = nullptr,
+                         const char *Name = nullptr);
 
   // Copy data from device back to host synchronously
   int32_t
@@ -351,8 +351,7 @@ private:
   /// Copy data from device back to host. A null \p Queue means the transfer is
   /// performed synchronously.
   int32_t retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
-                           ol_queue_handle_t Queue,
-                           HostDataToTargetTy *Entry,
+                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
                            MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                            const ident_t *Loc);
 
