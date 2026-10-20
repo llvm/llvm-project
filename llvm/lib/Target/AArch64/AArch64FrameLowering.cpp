@@ -1663,6 +1663,11 @@ struct RegGroupInfo {
     return seq(FrameIdx, FrameIdx + int(getNumRegs()));
   }
 
+  Register getAsMultiVectorRegister() const {
+    return (isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
+           (Reg2 - AArch64::Z0);
+  }
+
   void dump(const TargetRegisterInfo *TRI) const {
     dbgs() << "(";
     interleaveComma(getRegisters(), dbgs(),
@@ -1870,7 +1875,7 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
             return std::nullopt;
 
           // Check there's enough registers for the tuple.
-          if (i + RegInc * (NumRegs - 1) >= Count)
+          if (i + RegInc * NumRegs > Count)
             return std::nullopt;
 
           for (unsigned Idx = 1; Idx < NumRegs; ++Idx) {
@@ -1885,15 +1890,13 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
 
         for (unsigned TupleSize : {4, 2}) {
           if (auto LowReg = GetZPRTupleLowestReg(TupleSize)) {
+            // Note: ST1B has the same offset constraints .
             unsigned Opcode =
                 TupleSize == 4 ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM;
             const int Offset =
                 (ScalableByteOffset + StackFillDir * TupleSize * Scale);
-            // Note: ST1B has the same offset constraints.
-            if (!isValidMemOpOffset(TII, Opcode, Offset))
-              continue;
-
-            RGI.Reg2 = *LowReg;
+            if (isValidMemOpOffset(TII, Opcode, Offset))
+              RGI.Reg2 = *LowReg;
             break;
           }
         }
@@ -2208,8 +2211,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 #endif
 
       assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
-      MIB.addReg((RGI.isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
-                 (RGI.Reg2 - AArch64::Z0));
+      MIB.addReg(RGI.getAsMultiVectorRegister());
 
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
@@ -2352,9 +2354,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
              "Expected callee save predicate to be handled first");
 #endif
       assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
-      MIB.addReg((RGI.isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
-                     (RGI.Reg2 - AArch64::Z0),
-                 getDefRegState(true));
+      MIB.addReg(RGI.getAsMultiVectorRegister(), getDefRegState(true));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
           .addImm(RGI.Offset /
