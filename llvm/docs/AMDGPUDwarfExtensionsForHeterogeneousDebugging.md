@@ -631,7 +631,7 @@ processed elements are held in registers, whereas the remainder of the array
 remains in memory. Consider the loop in this C function, for example:
 
 ```{code}
-:number-lines: true
+:number-lines:
 
 extern void foo(uint32_t dst[], uint32_t src[], int len) {
   for (int i = 0; i < len; ++i)
@@ -650,7 +650,7 @@ register `R1` contain `i`, and register `R2` contain the registerized
 with a register location overlaid at a runtime offset involving `i`:
 
 ```{code}
-:number-lines: true
+:number-lines:
 
 // 1. Memory location description of dst elements located in memory:
 DW_OP_breg0 0
@@ -1486,7 +1486,7 @@ expression.
    :::
 
    *Operand interpretation of* `DW_OP_call2`*,* `DW_OP_call4`*, and*
-   `DW_OP_call_ref` *is exactly like that for* `DW_FORM_ref2`*,
+   `DW_OP_call_ref` *is exactly like that for* `DW_FORM_ref2`*,*
    `DW_FORM_ref4`*, and* `DW_FORM_ref_addr`*, respectively.*
 
    The call operation is evaluated by:
@@ -2130,9 +2130,9 @@ This section replaces part of DWARF Version 5 section 2.5.1.3.
    (see {ref}`amdgpu-dwarf-call-frame-information`).
 
    *If there is no call frame information defined, then the default rules for
-   the target architecture are used. If the register rule is* undefined*, then
+   the target architecture are used. If the register rule is* undefined, *then
    the undefined location description is pushed. If the register rule is* same
-   value*, then a register location description for R is pushed.*
+   value, *then a register location description for R is pushed.*
 
 ```{eval-rst}
 .. _amdgpu-dwarf-undefined-location-description-operations:
@@ -5029,7 +5029,7 @@ This modifies the corresponding DWARF Version 5 Appendix D examples.
 Figure D.4: Fortran array example: DWARF description
 
 ```{code}
-:number-lines: true
+:number-lines:
 
 -------------------------------------------------------------------------------
 ! Description for type of 'ap'
@@ -5125,7 +5125,7 @@ Figure D.4: Fortran array example: DWARF description
 Figure D.13: Sample DWARF for the array descriptor in Figure D.12
 
 ```{code}
-:number-lines: true
+:number-lines:
 
 ----------------------------------------------------------------------------
 10$:  DW_TAG_array_type
@@ -5189,7 +5189,7 @@ attribute definition should be updated to state this.
 Figure D.20: Ada example: DWARF description
 
 ```{code}
-:number-lines: true
+:number-lines:
 
 ----------------------------------------------------------------------------
 11$:  DW_TAG_variable

@@ -15,11 +15,7 @@ except that instead of real operands and modifiers, it uses references to their 
 
 This is the notation used to describe AMDGPU instructions:
 
-```{eval-rst}
-  | ``<``\ :ref:`opcode description<amdgpu_syn_opcode_notation>`\ ``>
-      <``\ :ref:`operands description<amdgpu_syn_instruction_operands_notation>`\ ``>
-      <``\ :ref:`modifiers description<amdgpu_syn_instruction_modifiers_notation>`\ ``>``
-```
+\<{ref}`opcode description <amdgpu_syn_opcode_notation>`\> \<{ref}`operands description <amdgpu_syn_instruction_operands_notation>`\> \<{ref}`modifiers description <amdgpu_syn_instruction_modifiers_notation>`\>
 
 (amdgpu_syn_opcode_notation)=
 
@@ -35,10 +31,7 @@ TBD
 
 An instruction may have zero or more *operands*. They are comma-separated in the description:
 
-```{eval-rst}
-  | ``<``\ :ref:`description of operand 0<amdgpu_syn_instruction_operand_notation>`\ ``>,
-      <``\ :ref:`description of operand 1<amdgpu_syn_instruction_operand_notation>`\ ``>, ...``
-```
+\<{ref}`description of operand 0 <amdgpu_syn_instruction_operand_notation>`\>, \<{ref}`description of operand 1 <amdgpu_syn_instruction_operand_notation>`\>, `...`
 
 The order of *operands* is fixed. *Operands* cannot be omitted
 except for special cases described below.
@@ -104,10 +97,7 @@ vdst:u32           // vdst operand has u32 type
 
 An instruction may have zero or more optional *modifiers*. They are space-separated in the description:
 
-```{eval-rst}
-  | ``<``\ :ref:`description of modifier 0<amdgpu_syn_instruction_modifier_notation>`\ ``>
-      <``\ :ref:`description of modifier 1<amdgpu_syn_instruction_modifier_notation>`\ ``> ...``
-```
+\<{ref}`description of modifier 0 <amdgpu_syn_instruction_modifier_notation>`\> \<{ref}`description of modifier 1 <amdgpu_syn_instruction_modifier_notation>`\> `...`
 
 The order of *modifiers* is fixed.
 
