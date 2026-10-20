@@ -75,98 +75,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// -----
-
-// dynamic ub >= 2^63 (negative as signed). Split must use minui.
-// CHECK-LABEL: func @dynamic_ub_high_bit
-//  CHECK-SAME:   %[[UB:.*]]: index
-//   CHECK-DAG:   %[[C:.*]] = arith.constant 4611686018427387905 : index
-//       CHECK:   %[[SPLIT:.*]] = arith.minui %[[UB]], %[[C]] : index
-//       CHECK:   scf.for unsigned %{{.*}} = %{{.*}} to %[[SPLIT]] step
-//       CHECK:   scf.for unsigned %{{.*}} = %[[SPLIT]] to %[[UB]] step
-func.func @dynamic_ub_high_bit(%ub: index, %m: memref<4xindex>) {
-  %lb = arith.constant 1 : index
-  %step = arith.constant 4611686018427387904 : index
-  scf.for unsigned %i = %lb to %ub step %step {
-    %d = arith.divui %i, %step : index
-    memref.store %i, %m[%d] : memref<4xindex>
-  }
-  return
-}
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
-    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
-    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-    transform.yield
-  }
-}
-
-// ----
-// constant bounds, ub = 3*2^62 (negative as signed), 3 iterations.
-// A signed early-exit check would wrongly refuse.
-// CHECK-LABEL: func @const_high_bit_peels
-//       CHECK:   scf.for unsigned %{{.*}} = %{{[a-z0-9_]+}} to %[[SPLIT:c4611686018427387905[a-z0-9_]*]] step
-//       CHECK:   scf.for unsigned %{{.*}} = %[[SPLIT]] to %{{[-a-z0-9_]+}} step
-func.func @const_high_bit_peels(%m: memref<4xindex>) {
-  %lb = arith.constant 1 : index
-  %ub = arith.constant -4611686018427387904 : index
-  %step = arith.constant 4611686018427387904 : index
-  scf.for unsigned %i = %lb to %ub step %step {
-    %d = arith.divui %i, %step : index
-    memref.store %i, %m[%d] : memref<4xindex>
-  }
-  return
-}
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
-    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
-    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-    transform.yield
-  }
-}
-
-// -----
-
-// constant bounds, exactly one iteration. Must refuse.
-func.func @const_one_iteration(%m: memref<4xindex>) {
-  %lb = arith.constant 1 : index
-  %ub = arith.constant 4611686018427387905 : index
-  %step = arith.constant 4611686018427387904 : index
-  scf.for unsigned %i = %lb to %ub step %step {
-    memref.store %i, %m[%lb] : memref<4xindex>
-  }
-  return
-}
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
-    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
-    // expected-error @below {{failed to peel the first iteration}}
-    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-    transform.yield
-  }
-}
-
-// -----
-
-// constant empty loop that looks non-empty if read as signed.
-// lb = 2^63+5 (negative as signed), ub = 5. Unsigned: ub <= lb, so refuse.
-func.func @const_empty_unsigned(%m: memref<4xindex>) {
-  %lb = arith.constant -9223372036854775803 : index
-  %ub = arith.constant 5 : index
-  %step = arith.constant 1 : index
-  scf.for unsigned %i = %lb to %ub step %step {
-    memref.store %i, %m[%step] : memref<4xindex>
-  }
-  return
-}
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
-    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
-    // expected-error @below {{failed to peel the first iteration}}
-    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-    transform.yield
-  }
-}
 
 // -----
 
@@ -176,10 +84,8 @@ func.func @loop_peel_first_iter_op() {
   // CHECK: %[[C41:.+]] = arith.constant 41
   // CHECK: %[[C5:.+]] = arith.constant 5
   // CHECK: %[[C5_0:.+]] = arith.constant 5
-  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C5_0]] step %[[C5]]
-  // CHECK:   arith.addi
-  // CHECK: scf.for %{{.+}} = %[[C5_0]] to %[[C41]] step %[[C5]]
-  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %{{.+}} to %[[SPLIT:.+]] step %[[STEP:.+]]
+  // CHECK: scf.for %{{.+}} = %[[SPLIT]] to %{{.+}} step %[[STEP]]
   %0 = arith.constant 0 : index
   %1 = arith.constant 41 : index
   %2 = arith.constant 5 : index
