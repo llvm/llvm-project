@@ -16,8 +16,8 @@ using namespace llvm;
 
 SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
     const SourceMgr &mgr, raw_ostream &os, ArrayRef<StringRef> prefixes,
-    ArrayRef<StringRef> commentPrefixes)
-    : mgr(mgr), os(os) {
+    ArrayRef<StringRef> commentPrefixes, bool oneDiagPerDirective)
+    : mgr(mgr), os(os), oneDiagPerDirective(oneDiagPerDirective) {
   assert(!prefixes.empty() && "must have at least one prefix");
   std::string prefixAlt;
   raw_string_ostream prefixOs(prefixAlt);
@@ -239,6 +239,9 @@ SourceMgrDiagnosticVerifier::process(SourceMgr::DiagKind kind,
   for (auto &e : diags) {
     // File line must match (unless it's an unknown location).
     if (loc && e.lineNo != loc->lineNo)
+      continue;
+    // A directive that already matched a diagnostic is used up.
+    if (oneDiagPerDirective && e.matched)
       continue;
     if (e.match(message)) {
       if (e.kind == kind) {
