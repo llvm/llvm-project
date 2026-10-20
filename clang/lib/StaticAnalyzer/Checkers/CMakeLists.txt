@@ -31,7 +31,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
   CXXSelfAssignmentChecker.cpp
-  DanglingPtrDeref.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DebugContainerModeling.cpp
@@ -106,6 +105,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   SmartPtrChecker.cpp
   SmartPtrModeling.cpp
   StackAddrEscapeChecker.cpp
+  StackUseAfterScope.cpp
   StoreToImmutableChecker.cpp
   StdLibraryFunctionsChecker.cpp
   StdVariantChecker.cpp
