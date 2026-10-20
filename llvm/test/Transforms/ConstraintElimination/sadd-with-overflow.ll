@@ -526,3 +526,44 @@ loop:
 exit:
   ret void
 }
+
+; The result is used in a fact before the overflow check.
+define void @sadd_result_fact_before_guard(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define void @sadd_result_fact_before_guard(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[B_NN:%.*]] = icmp sge i8 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NN]])
+; CHECK-NEXT:    [[WO:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { i8, i1 } [[WO]], 0
+; CHECK-NEXT:    [[C0:%.*]] = icmp sle i8 [[S]], [[N]]
+; CHECK-NEXT:    br i1 [[C0]], label %[[GUARD:.*]], label %[[EXIT:.*]]
+; CHECK:       [[GUARD]]:
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label %[[EXIT]], label %[[NOOV:.*]]
+; CHECK:       [[NOOV]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b.nn = icmp sge i8 %b, 0
+  call void @llvm.assume(i1 %b.nn)
+  %wo = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %s = extractvalue { i8, i1 } %wo, 0
+  %c0 = icmp sle i8 %s, %n
+  br i1 %c0, label %guard, label %exit
+
+guard:
+  %ov = extractvalue { i8, i1 } %wo, 1
+  br i1 %ov, label %exit, label %noov
+
+noov:
+  %c = icmp sle i8 %a, %n
+  call void @use(i1 %c)
+  ret void
+
+exit:
+  ret void
+}

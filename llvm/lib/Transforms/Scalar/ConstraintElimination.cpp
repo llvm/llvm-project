@@ -255,16 +255,11 @@ struct StackEntry {
   /// Variables that can be removed from the system once the stack entry gets
   /// removed.
   SmallVector<Value *, 2> ValuesToRelease;
-  /// If set, the entry adds no constraint: it records that this overflow
-  /// intrinsic does not overflow while the entry is on the stack.
-  const WithOverflowInst *NoOverflow = nullptr;
 
   StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
       : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
         ValuesToRelease(std::move(ValuesToRelease)) {}
-  StackEntry(unsigned NumIn, unsigned NumOut, const WithOverflowInst *WO)
-      : NumIn(NumIn), NumOut(NumOut), NoOverflow(WO) {}
 };
 
 struct ConstraintTy {
@@ -375,9 +370,12 @@ class ConstraintInfo {
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
 
-  /// Overflow intrinsics known not to overflow at the current point, in the
-  /// order their stack entries were pushed.
-  SmallVector<const WithOverflowInst *> NoOverflow;
+  /// Turn \p ADec <= \p BDec into a constraint for the signed or unsigned
+  /// system, depending on \p IsSigned.
+  ConstraintTy getConstraint(const Decomposition &ADec,
+                             const Decomposition &BDec, bool IsSigned,
+                             bool IsEq, bool IsNe,
+                             SmallVectorImpl<Value *> &NewVariables);
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
@@ -399,15 +397,6 @@ public:
   }
   const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
     return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
-  }
-
-  void pushNoOverflow(const WithOverflowInst *WO) {
-    NoOverflow.push_back(WO);
-    DecomposeCache.clear();
-  }
-  void popNoOverflow() { NoOverflow.pop_back(); }
-  bool isNoOverflow(const WithOverflowInst *WO) const {
-    return is_contained(NoOverflow, WO);
   }
 
   ConstraintSystem &getCS(bool Signed) {
@@ -446,6 +435,21 @@ public:
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables,
                              bool ForceSignedSystem = false);
+
+  /// Turn \p ADec == \p BDec into a constraint for the signed or unsigned
+  /// system, depending on \p IsSigned.
+  ConstraintTy getEqConstraint(const Decomposition &ADec,
+                               const Decomposition &BDec, bool IsSigned,
+                               SmallVectorImpl<Value *> &NewVariables) {
+    return getConstraint(ADec, BDec, IsSigned, /*IsEq=*/true, /*IsNe=*/false,
+                         NewVariables);
+  }
+
+  /// Add \p R with its \p NewVariables to the system and push its entries
+  /// on \p DFSInStack.
+  void addConstraint(ConstraintTy &R, ArrayRef<Value *> NewVariables,
+                     unsigned NumIn, unsigned NumOut,
+                     SmallVectorImpl<StackEntry> &DFSInStack);
 
   /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints using getConstraint. Returns an empty constraint if the result
@@ -699,7 +703,6 @@ static bool mayLookThrough(Value *V) {
   case Instruction::Trunc:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::ExtractValue:
     return true;
   default:
     return false;
@@ -778,23 +781,6 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
         isKnownNoWrap(Trunc, Info, IsSigned))
       V = Trunc->getOperand(0);
-  }
-
-  // The result of an add/sub.with.overflow known not to overflow at this point
-  // equals the non-wrapping operation.
-  WithOverflowInst *WO;
-  if (match(V, m_ExtractValue<0>(m_WithOverflowInst(WO))) &&
-      (WO->getBinaryOp() == Instruction::Add ||
-       WO->getBinaryOp() == Instruction::Sub)) {
-    if (!Info.isNoOverflow(WO) ||
-        !isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
-                       WO->getNoWrapKind(), Info, IsSigned))
-      return V;
-    auto ResA = decompose(WO->getLHS(), Info, IsSigned, DL);
-    auto ResB = decompose(WO->getRHS(), Info, IsSigned, DL);
-    bool Overflow =
-        WO->getBinaryOp() == Instruction::Add ? ResA.add(ResB) : ResA.sub(ResB);
-    return Overflow ? Decomposition(V) : ResA;
   }
 
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
@@ -956,18 +942,26 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     return {};
 
   bool IsSigned = ForceSignedSystem || CmpInst::isSigned(Pred);
-  auto &Value2Index = getValue2Index(IsSigned);
   auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(), *this,
                         IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
                         IsSigned, DL);
+  ConstraintTy R =
+      getConstraint(ADec, BDec, IsSigned, IsEq, IsNe, NewVariables);
+  if (!R.empty() && (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT))
+    if (AddOverflow(R.Coefficients[0].Coefficient, int64_t(-1),
+                    R.Coefficients[0].Coefficient))
+      return {};
+  return R;
+}
+
+ConstraintTy ConstraintInfo::getConstraint(
+    const Decomposition &ADec, const Decomposition &BDec, bool IsSigned,
+    bool IsEq, bool IsNe, SmallVectorImpl<Value *> &NewVariables) {
+  auto &Value2Index = getValue2Index(IsSigned);
   RowTy R = getRowForLessEqual(ADec, BDec, Value2Index, NewVariables);
   if (R.empty())
     return {};
-
-  if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
-    if (AddOverflow(R[0].Coefficient, int64_t(-1), R[0].Coefficient))
-      return {};
 
   // Remove any new variable without a coefficient in the row.
   unsigned NumV2I = Value2Index.size();
@@ -2188,10 +2182,7 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
                      SmallVectorImpl<StackEntry> &DFSInStack) {
   Info.getDecomposeCache().clear();
-  if (E.NoOverflow)
-    Info.popNoOverflow();
-  else
-    Info.popLastConstraint(E.IsSigned);
+  Info.popLastConstraint(E.IsSigned);
   // Remove variables in the system that went out of scope.
   auto &Mapping = Info.getValue2Index(E.IsSigned);
   for (Value *V : E.ValuesToRelease)
@@ -2348,6 +2339,14 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   }
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
+  addConstraint(R, NewVariables, NumIn, NumOut, DFSInStack);
+}
+
+void ConstraintInfo::addConstraint(ConstraintTy &R,
+                                   ArrayRef<Value *> NewVariables,
+                                   unsigned NumIn, unsigned NumOut,
+                                   SmallVectorImpl<StackEntry> &DFSInStack) {
+  auto &CSToUse = getCS(R.IsSigned);
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
   if (!Added)
     return;
@@ -2391,6 +2390,37 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                             SmallVector<Value *, 2>());
+  }
+}
+
+/// Add Result == LHS op RHS for the result of an add/sub.with.overflow \p WO
+/// that does not overflow, in each system where the operation does not wrap.
+static void addNoOverflowFacts(WithOverflowInst *WO, ConstraintInfo &Info,
+                               const ScalarOptions &Opts, unsigned NumIn,
+                               unsigned NumOut,
+                               SmallVectorImpl<StackEntry> &DFSInStack) {
+  Instruction::BinaryOps Opc = WO->getBinaryOp();
+  if (Opc != Instruction::Add && Opc != Instruction::Sub)
+    return;
+  const DataLayout &DL = WO->getDataLayout();
+  for (User *U : WO->users()) {
+    if (!match(U, m_ExtractValue<0>(m_Value())))
+      continue;
+    for (bool IsSigned : {false, true}) {
+      if (Info.getCS(IsSigned).size() > Opts.constraint_elimination_max_rows ||
+          !isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
+                         Info, IsSigned))
+        continue;
+      Decomposition D = decompose(WO->getLHS(), Info, IsSigned, DL);
+      Decomposition RHS = decompose(WO->getRHS(), Info, IsSigned, DL);
+      if (Opc == Instruction::Add ? D.add(RHS) : D.sub(RHS))
+        continue;
+      SmallVector<Value *> NewVariables;
+      ConstraintTy R =
+          Info.getEqConstraint(Decomposition(U), D, IsSigned, NewVariables);
+      if (!R.empty())
+        Info.addConstraint(R, NewVariables, NumIn, NumOut, DFSInStack);
+    }
   }
 }
 
@@ -2522,11 +2552,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         break;
       LLVM_DEBUG({
         dbgs() << "Removing ";
-        if (E.NoOverflow)
-          dbgs() << "no-overflow fact for " << *E.NoOverflow;
-        else
-          dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
-                         Info.getValue2Index(E.IsSigned));
+        dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
+                       Info.getValue2Index(E.IsSigned));
         dbgs() << "\n";
       });
       removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
@@ -2534,12 +2561,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     }
 
     if (CB.Ty == FactOrCheck::EntryTy::NoOverflowFact) {
-      auto *WO = cast<WithOverflowInst>(CB.Inst);
-      Info.pushNoOverflow(WO);
-      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, WO);
+      addNoOverflowFacts(cast<WithOverflowInst>(CB.Inst), Info, Opts, CB.NumIn,
+                         CB.NumOut, DFSInStack);
+      // Keep the reproducer stack in sync with DFSInStack.
       if (ReproducerModule)
-        ReproducerCondStack.emplace_back(ICmpInst::BAD_ICMP_PREDICATE, nullptr,
-                                         nullptr);
+        while (ReproducerCondStack.size() < DFSInStack.size())
+          ReproducerCondStack.emplace_back(ICmpInst::BAD_ICMP_PREDICATE,
+                                           nullptr, nullptr);
       continue;
     }
 
@@ -2789,10 +2817,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
 #ifndef NDEBUG
   unsigned SignedEntries =
       count_if(DFSInStack, [](const StackEntry &E) { return E.IsSigned; });
-  unsigned NoOverflowEntries =
-      count_if(DFSInStack, [](const StackEntry &E) { return E.NoOverflow; });
   assert(Info.getCS(false).size() - FunctionArgs.size() ==
-             DFSInStack.size() - SignedEntries - NoOverflowEntries &&
+             DFSInStack.size() - SignedEntries &&
          "updates to CS and DFSInStack are out of sync");
   assert(Info.getCS(true).size() == SignedEntries &&
          "updates to CS and DFSInStack are out of sync");
