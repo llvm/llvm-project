@@ -790,110 +790,6 @@ define i32 @negative_udiv_minsize(i1 %c, i32 %x) minsize {
   ret i32 %r
 }
 
-define float @fdiv_exact_inverse(i1 %c, float %x) {
-; CHECK-X64-V3-LABEL: fdiv_exact_inverse:
-; CHECK-X64-V3:       # %bb.0:
-; CHECK-X64-V3-NEXT:    testb $1, %dil
-; CHECK-X64-V3-NEXT:    jne .LBB18_1
-; CHECK-X64-V3-NEXT:  # %bb.2:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [1.25E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-; CHECK-X64-V3-NEXT:  .LBB18_1:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [2.5E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-;
-; CHECK-X64-V4-LABEL: fdiv_exact_inverse:
-; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    kmovd %edi, %k1
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 = [1.25E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 {%k1} = [2.5E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    retq
-  %d = select i1 %c, float 4.0, float 8.0
-  %r = fdiv float %x, %d
-  ret float %r
-}
-
-define float @fdiv_arcp(i1 %c, float %x) {
-; CHECK-X64-V3-LABEL: fdiv_arcp:
-; CHECK-X64-V3:       # %bb.0:
-; CHECK-X64-V3-NEXT:    testb $1, %dil
-; CHECK-X64-V3-NEXT:    jne .LBB19_1
-; CHECK-X64-V3-NEXT:  # %bb.2:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [1.42857149E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-; CHECK-X64-V3-NEXT:  .LBB19_1:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [3.33333343E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-;
-; CHECK-X64-V4-LABEL: fdiv_arcp:
-; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    kmovd %edi, %k1
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 = [1.42857149E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 {%k1} = [3.33333343E-1,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    retq
-  %d = select i1 %c, float 3.0, float 7.0
-  %r = fdiv arcp float %x, %d
-  ret float %r
-}
-
-define float @negative_fdiv_no_arcp(i1 %c, float %x) {
-; CHECK-X64-V3-LABEL: negative_fdiv_no_arcp:
-; CHECK-X64-V3:       # %bb.0:
-; CHECK-X64-V3-NEXT:    testb $1, %dil
-; CHECK-X64-V3-NEXT:    jne .LBB20_1
-; CHECK-X64-V3-NEXT:  # %bb.2:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [7.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-; CHECK-X64-V3-NEXT:  .LBB20_1:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-;
-; CHECK-X64-V4-LABEL: negative_fdiv_no_arcp:
-; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    kmovd %edi, %k1
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 = [7.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 {%k1} = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    retq
-  %d = select i1 %c, float 3.0, float 7.0
-  %r = fdiv float %x, %d
-  ret float %r
-}
-
-define float @negative_fdiv_minsize(i1 %c, float %x) minsize {
-; CHECK-X64-V3-LABEL: negative_fdiv_minsize:
-; CHECK-X64-V3:       # %bb.0:
-; CHECK-X64-V3-NEXT:    testb $1, %dil
-; CHECK-X64-V3-NEXT:    jne .LBB21_1
-; CHECK-X64-V3-NEXT:  # %bb.2:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:    jmp .LBB21_3
-; CHECK-X64-V3-NEXT:  .LBB21_1:
-; CHECK-X64-V3-NEXT:    vmovss {{.*#+}} xmm1 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V3-NEXT:  .LBB21_3:
-; CHECK-X64-V3-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-;
-; CHECK-X64-V4-LABEL: negative_fdiv_minsize:
-; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    kmovd %edi, %k1
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 = [8.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vmovss {{.*#+}} xmm1 {%k1} = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-X64-V4-NEXT:    vdivss %xmm1, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    retq
-  %d = select i1 %c, float 4.0, float 8.0
-  %r = fdiv float %x, %d
-  ret float %r
-}
-
 define i32 @srem_scalar_const(i1 %c, i32 %x) {
 ; CHECK-X64-LABEL: srem_scalar_const:
 ; CHECK-X64:       # %bb.0:
@@ -922,30 +818,6 @@ define i32 @srem_scalar_const(i1 %c, i32 %x) {
   ret i32 %r
 }
 
-define <4 x float> @fdiv_exact_inverse_vector(<4 x i1> %c, <4 x float> %x) {
-; CHECK-X64-V3-LABEL: fdiv_exact_inverse_vector:
-; CHECK-X64-V3:       # %bb.0:
-; CHECK-X64-V3-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-X64-V3-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2.5E-1,2.5E-1,2.5E-1,2.5E-1]
-; CHECK-X64-V3-NEXT:    vmulps %xmm2, %xmm1, %xmm2
-; CHECK-X64-V3-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1.25E-1,1.25E-1,1.25E-1,1.25E-1]
-; CHECK-X64-V3-NEXT:    vmulps %xmm3, %xmm1, %xmm1
-; CHECK-X64-V3-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
-; CHECK-X64-V3-NEXT:    retq
-;
-; CHECK-X64-V4-LABEL: fdiv_exact_inverse_vector:
-; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    vpmovd2m %xmm0, %k1
-; CHECK-X64-V4-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
-; CHECK-X64-V4-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0 {%k1}
-; CHECK-X64-V4-NEXT:    retq
-  %d = select <4 x i1> %c, <4 x float> <float 4.0, float 4.0, float 4.0, float 4.0>, <4 x float> <float 8.0, float 8.0, float 8.0, float 8.0>
-  %r = fdiv <4 x float> %x, %d
-  ret <4 x float> %r
-}
-
-
 ; FIXME: CodeGenPrepare splits the slow 64-bit divide across basic blocks
 ; first, so the DAG no longer sees a select as the divisor.
 define i64 @udiv_scalar_const_i64(i1 %c, i64 %x) {
@@ -958,12 +830,12 @@ define i64 @udiv_scalar_const_i64(i1 %c, i64 %x) {
 ; CHECK-X64-NEXT:    cmovneq %rdx, %rcx
 ; CHECK-X64-NEXT:    movq %rsi, %rdx
 ; CHECK-X64-NEXT:    shrq $32, %rdx
-; CHECK-X64-NEXT:    je .LBB24_1
+; CHECK-X64-NEXT:    je .LBB19_1
 ; CHECK-X64-NEXT:  # %bb.2:
 ; CHECK-X64-NEXT:    xorl %edx, %edx
 ; CHECK-X64-NEXT:    divq %rcx
 ; CHECK-X64-NEXT:    retq
-; CHECK-X64-NEXT:  .LBB24_1:
+; CHECK-X64-NEXT:  .LBB19_1:
 ; CHECK-X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-X64-NEXT:    xorl %edx, %edx
 ; CHECK-X64-NEXT:    divl %ecx
