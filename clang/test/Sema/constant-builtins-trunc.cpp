@@ -56,8 +56,10 @@ static_assert(__builtin_truncf128(+2.7f) == 2.0f);
 
 
 LIST_TRUNC_TESTS(float, __builtin_trunc);
+LIST_TRUNC_TESTS(float, __builtin_truncf);
 LIST_TRUNC_TESTS(double, __builtin_trunc);
 LIST_TRUNC_TESTS((long double), __builtin_trunc);
+LIST_TRUNC_TESTS((long double), __builtin_truncl);
 LIST_TRUNC_TESTS(__fp16, __builtin_truncf16)
 #ifdef __FLOAT128__
 LIST_TRUNC_TESTS(__float128, __builtin_truncf128)
