@@ -529,15 +529,15 @@ def AddiuRxPcImmX16: FEXT_RI16_PC_ins<0b00001, "addiu">;
 //
 def AddiuSpImm16
   : FI816_SP_ins<0b011, "addiu"> {
-  let Defs = [SP];
-  let Uses = [SP];
+  let Defs = [R29];
+  let Uses = [R29];
   let AddedComplexity = 5;
 }
 
 def AddiuSpImmX16
   : FEXT_I816_SP_ins<0b011, "addiu"> {
-  let Defs = [SP];
-  let Uses = [SP];
+  let Defs = [R29];
+  let Uses = [R29];
 }
 
 //
@@ -612,11 +612,11 @@ def Break16: FRRBreakNull16_ins<"break 0">;
 // To test special register T then do a PC-relative conditional branch.
 //
 def Bteqz16: FI816_ins<0b000, "bteqz">, cbranch16 {
-  let Uses = [T8];
+  let Uses = [R24];
 }
 
 def BteqzX16: FEXT_I816_ins<0b000, "bteqz">, cbranch16 {
-  let Uses = [T8];
+  let Uses = [R24];
 }
 
 def BteqzT8CmpX16: FEXT_T8I816_ins<"bteqz", "cmp">, cbranch16;
@@ -640,11 +640,11 @@ def BteqzT8SltiuX16: FEXT_T8I8I16_ins<"bteqz", "sltiu">,
 //
 
 def Btnez16: FI816_ins<0b001, "btnez">, cbranch16 {
-  let Uses = [T8];
+  let Uses = [R24];
 }
 
 def BtnezX16: FEXT_I816_ins<0b001, "btnez"> ,cbranch16 {
-  let Uses = [T8];
+  let Uses = [R24];
 }
 
 def BtnezT8CmpX16: FEXT_T8I816_ins<"btnez", "cmp">, cbranch16;
@@ -666,7 +666,7 @@ def BtnezT8SltiuX16: FEXT_T8I8I16_ins<"btnez", "sltiu">,
 // To compare the contents of two GPRs.
 //
 def CmpRxRy16: FRR16R_ins<0b01010, "cmp"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 //
@@ -675,7 +675,7 @@ def CmpRxRy16: FRR16R_ins<0b01010, "cmp"> {
 // To compare a constant with the contents of a GPR.
 //
 def CmpiRxImm16: FRI16R_ins<0b01110, "cmpi"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 //
@@ -684,7 +684,7 @@ def CmpiRxImm16: FRI16R_ins<0b01110, "cmpi"> {
 // To compare a constant with the contents of a GPR.
 //
 def CmpiRxImmX16: FEXT_RI16R_ins<0b01110, "cmpi"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 
@@ -715,13 +715,13 @@ def DivuRxRy16: FRR16_div_ins<0b11011, "divu"> {
 def Jal16 : FJAL16_ins<0b0, "jal"> {
   let hasDelaySlot = 0;  // not true, but we add the nop for now
   let isCall=1;
-  let Defs = [RA];
+  let Defs = [R31];
 }
 
 def JalB16 : FJALB16_ins<0b0, "jal">, branch16 {
   let hasDelaySlot = 0;  // not true, but we add the nop for now
   let isBranch=1;
-  let Defs = [RA];
+  let Defs = [R31];
 }
 
 //
@@ -941,8 +941,8 @@ def Restore16:
   FI8_SVRS16<0b1, (outs), (ins variable_ops),
              "", [] >, MayLoad {
   let isCodeGenOnly = 1;
-  let Defs = [SP];
-  let Uses = [SP];
+  let Defs = [R29];
+  let Uses = [R29];
 }
 
 
@@ -950,8 +950,8 @@ def RestoreX16:
   FI8_SVRS16<0b1, (outs), (ins variable_ops),
              "", [] >, MayLoad {
   let isCodeGenOnly = 1;
-  let Defs = [SP];
-  let Uses = [SP];
+  let Defs = [R29];
+  let Uses = [R29];
 }
 
 //
@@ -965,16 +965,16 @@ def Save16:
   FI8_SVRS16<0b1, (outs), (ins variable_ops),
              "", [] >, MayStore {
   let isCodeGenOnly = 1;
-  let Uses = [SP];
-  let Defs = [SP];
+  let Uses = [R29];
+  let Defs = [R29];
 }
 
 def SaveX16:
   FI8_SVRS16<0b1, (outs), (ins variable_ops),
              "", [] >, MayStore {
   let isCodeGenOnly = 1;
-  let Uses = [SP];
-  let Defs = [SP];
+  let Uses = [R29];
+  let Defs = [R29];
 }
 //
 // Format: SB ry, offset(rx) MIPS16e
@@ -1144,7 +1144,7 @@ def SllvRxRy16 : FRxRxRy16_ins<0b00100, "sllv">;
 //
 //
 def SltiRxImm16: FRI16R_ins<0b01010, "slti"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 //
@@ -1154,7 +1154,7 @@ def SltiRxImm16: FRI16R_ins<0b01010, "slti"> {
 //
 //
 def SltiRxImmX16: FEXT_RI16R_ins<0b01010, "slti"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 def SltiCCRxImmX16: FEXT_CCRXI16_ins<"slti">;
@@ -1165,7 +1165,7 @@ def SltiCCRxImmX16: FEXT_CCRXI16_ins<"slti">;
 //
 //
 def SltiuRxImm16: FRI16R_ins<0b01011, "sltiu"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 //
@@ -1175,7 +1175,7 @@ def SltiuRxImm16: FRI16R_ins<0b01011, "sltiu"> {
 //
 //
 def SltiuRxImmX16: FEXT_RI16R_ins<0b01011, "sltiu"> {
-  let Defs = [T8];
+  let Defs = [R24];
 }
 //
 // Format: SLTIU rx, immediate MIPS16e
@@ -1190,7 +1190,7 @@ def SltiuCCRxImmX16: FEXT_CCRXI16_ins<"sltiu">;
 // To record the result of a less-than comparison.
 //
 def SltRxRy16: FRR16R_ins<0b00010, "slt">{
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 def SltCCRxRy16: FCCRR16_ins<"slt">;
@@ -1200,12 +1200,12 @@ def SltCCRxRy16: FCCRR16_ins<"slt">;
 // To record the result of an unsigned less-than comparison.
 //
 def SltuRxRy16: FRR16R_ins<0b00011, "sltu">{
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 def SltuRxRyRz16: FRRTR16_ins<"sltu"> {
   let isCodeGenOnly=1;
-  let Defs = [T8];
+  let Defs = [R24];
 }
 
 
@@ -1360,7 +1360,7 @@ let isCall=1, hasDelaySlot=0 in
 def JumpLinkReg16:
   FRR16_JALRC<0, 0, 0, (outs), (ins CPU16Regs:$rx),
               "jalrc\t$rx", [(MipsJmpLink CPU16Regs:$rx)]> {
-  let Defs = [RA];
+  let Defs = [R31];
 }
 
 // Mips16 pseudos
@@ -1521,7 +1521,7 @@ def: UncondBranch16_pat<br, Bimm16>;
 
 // Small immediates
 def: Mips16Pat<(i32 immSExt16:$in),
-               (AddiuRxRxImmX16 (MoveR3216 ZERO), immSExt16:$in)>;
+               (AddiuRxRxImmX16 (MoveR3216 R0), immSExt16:$in)>;
 
 def: Mips16Pat<(i32 immZExt16:$in), (LiRxImmX16 immZExt16:$in)>;
 
@@ -1889,4 +1889,4 @@ MipsPseudo16<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
 // Instruction Aliases
 
 let EncodingPredicates = [InMips16Mode] in
-def : MipsInstAlias<"nop", (Move32R16 ZERO, S0)>;
+def : MipsInstAlias<"nop", (Move32R16 R0, R16)>;

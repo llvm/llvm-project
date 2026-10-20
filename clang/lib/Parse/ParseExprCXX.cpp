@@ -205,10 +205,11 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       if (DS.getTypeSpecType() == DeclSpec::TST_error)
         return false;
 
-      QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
-      QualType Type =
-          Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
-                                        DS.getBeginLoc(), DS.getEllipsisLoc());
+      TypeSourceInfo *PatternTSI = nullptr;
+      QualType Pattern =
+          Sema::GetTypeFromParser(DS.getRepAsType(), &PatternTSI);
+      QualType Type = Actions.ActOnPackIndexingType(
+          Pattern, DS.getPackIndexingExpr(), DS.getBeginLoc());
 
       if (Type.isNull())
         return false;
@@ -226,13 +227,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           getCurScope()->isFunctionDeclarationScope())
         Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
-      if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
-        AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
-                                            EndLoc);
+      TryConsumeToken(tok::coloncolon, CCLoc);
+      ParsedType T = Actions.ActOnCXXNestedNameSpecifierIndexedPack(
+          SS, DS, PatternTSI, CCLoc, Type);
+      if (CCLoc.isInvalid()) {
+        AnnotateExistingIndexedTypeNamePack(T, Start, EndLoc);
         return false;
       }
-      if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
-                                                         std::move(Type)))
+      if (!T)
         SS.SetInvalid(SourceRange(Start, CCLoc));
       HasScopeSpecifier = true;
     }
@@ -3711,11 +3713,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Create a fake EOF to mark end of Toks buffer.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), Toks.data());
   Toks.push_back(AttrEnd);
 
   // The current token should go after the cached tokens.

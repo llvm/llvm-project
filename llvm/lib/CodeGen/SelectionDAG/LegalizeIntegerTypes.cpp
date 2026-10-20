@@ -99,10 +99,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:       Res = PromoteIntRes_SETCC(N); break;
-  case ISD::SMIN:
-  case ISD::SMAX:        Res = PromoteIntRes_SExtIntBinOp(N); break;
-  case ISD::UMIN:
-  case ISD::UMAX:        Res = PromoteIntRes_UMINUMAX(N); break;
 
   case ISD::SHL:         Res = PromoteIntRes_SHL(N); break;
   case ISD::SIGN_EXTEND_INREG:
@@ -159,6 +155,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = PromoteIntRes_GET_ACTIVE_LANE_MASK(N);
     break;
+  case ISD::MASK_BEFOREFIRST:
+    Res = PromoteIntRes_MASK_BEFOREFIRST(N);
+    break;
   case ISD::VECTOR_MATCH:
     Res = PromoteIntRes_VECTOR_MATCH(N);
     break;
@@ -202,6 +201,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SUB:
   case ISD::MUL:          Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::SMIN:
+  case ISD::SMAX:
   case ISD::ABDS:
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
@@ -210,13 +211,16 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:      Res = PromoteIntRes_SExtIntBinOp(N); break;
 
-  case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::VP_UDIV:
   case ISD::VP_UREM:     Res = PromoteIntRes_ZExtIntBinOp(N); break;
+
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::ABDU:        Res = PromoteIntRes_SExtOrZExtIntBinOp(N); break;
 
   case ISD::MASKED_UDIV:
   case ISD::MASKED_UREM:
@@ -1503,7 +1507,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SExtMaskedIntBinOp(SDNode *N) {
                      Mask);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
@@ -4769,10 +4773,10 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
     } else if (Scale < VTSize) {
       // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
-      SDValue HLAdjusted =
-          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+      SDValue HHAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHH,
                       DAG.getShiftAmountConstant(Scale - NVTSize, NVT, dl));
-      SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
+      SatMax = DAG.getSetCC(dl, BoolNVT, HHAdjusted, NVTZero, ISD::SETNE);
     } else
       llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
                        "(and saturation can't happen with Scale==VTSize).");
@@ -6457,6 +6461,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), NVT, N->ops());
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_MASK_BEFOREFIRST(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue Op = PromoteTargetBoolean(N->getOperand(0), NVT);
+  return DAG.getNode(ISD::MASK_BEFOREFIRST, SDLoc(N), NVT, Op);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_MATCH(SDNode *N) {

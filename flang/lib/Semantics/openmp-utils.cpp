@@ -17,6 +17,7 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
@@ -490,14 +491,6 @@ struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
 
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
-    return Visit(x.value());
-  }
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Reference<Contained> &x) {
-    return Visit(x.get());
-  }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
     return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
@@ -1309,8 +1302,7 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1319,8 +1311,7 @@ WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   return WithReason<T>();
 }
 
-template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
 WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }

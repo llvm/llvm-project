@@ -445,7 +445,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1176,7 +1176,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2116,7 +2116,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__main_block_invoke.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2345,7 +2345,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2527,7 +2527,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@g1_block_invoke_2.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2684,7 +2684,7 @@ int main() {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@___ZN2SSC2ERi_block_invoke.omp_outlined
-// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2861,7 +2861,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3616,7 +3616,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

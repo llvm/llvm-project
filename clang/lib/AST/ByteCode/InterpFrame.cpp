@@ -24,13 +24,12 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
-      ArgSize(0), Depth(0) {}
+      ArgSize(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
-      Depth(Caller ? Caller->Depth + 1 : 0) {
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize) {
   assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
@@ -277,6 +276,11 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
+    return Caller->getSource(getRetOpPC());
+
+  // If we have a frame for an invalid function, check the caller.
+  // This happens for the fake function frame we create in TrivialCopy.
+  if (Func && !Func->isValid())
     return Caller->getSource(getRetOpPC());
 
   // Similarly, if the resulting source location is invalid anyway,

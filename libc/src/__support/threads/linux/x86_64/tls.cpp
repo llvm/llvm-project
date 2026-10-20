@@ -8,6 +8,7 @@
 
 #include "config/app.h"
 #include "hdr/sys_mman_macros.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
@@ -33,7 +34,7 @@ namespace LIBC_NAMESPACE_DECL {
       linux_syscalls::mmap(nullptr, tls_size_with_tcb, PROT_READ | PROT_WRITE,
                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (!mmap_ret.has_value())
-    syscall_impl<long>(SYS_exit, 1);
+    linux_syscalls::exit(1);
   uintptr_t *tls_addr = static_cast<uintptr_t *>(mmap_ret.value());
 
   // x86_64 TLS faces down from the thread pointer with the first entry
@@ -55,7 +56,7 @@ namespace LIBC_NAMESPACE_DECL {
   ErrorOr<ssize_t> stack_guard_retval =
       linux_syscalls::getrandom(&tcb->stack_guard, sizeof(tcb->stack_guard), 0);
   if (!stack_guard_retval.has_value())
-    syscall_impl(SYS_exit, 1);
+    linux_syscalls::exit(1);
 
   tls_descriptor = {tls_size_with_tcb, reinterpret_cast<uintptr_t>(tls_addr),
                     end_ptr};

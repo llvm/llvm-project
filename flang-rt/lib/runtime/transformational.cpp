@@ -320,7 +320,7 @@ static inline RT_API_ATTRS void DoBesselYnX0(Descriptor &result, int32_t n1,
   for (int j{1}; j <= n2 - n1 + 1; ++j) {
     at[0] = j;
     *result.Element<CppTypeFor<CAT, KIND>>(at) =
-        -std::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
+        -common::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
   }
 }
 

@@ -95,23 +95,23 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_11
 ; CHECK-NEXT:  ## %bb.12: ## %while.body200.preheader
-; CHECK-NEXT:    xorl %r12d, %r12d
+; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    leaq LJTI0_0(%rip), %rdx
 ; CHECK-NEXT:    leaq LJTI0_1(%rip), %r14
 ; CHECK-NEXT:    movb $1, %sil
 ; CHECK-NEXT:    movl $0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
-; CHECK-NEXT:    xorl %r13d, %r13d
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    jmp LBB0_13
 ; CHECK-NEXT:  LBB0_43: ## %while.cond1037.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    testb %r12b, %r12b
+; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    je LBB0_54
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_20: ## %while.cond197.backedge
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    movl %ebx, %r13d
+; CHECK-NEXT:    movl %ebx, %r12d
 ; CHECK-NEXT:    jle LBB0_21
 ; CHECK-NEXT:  LBB0_13: ## %while.body200
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
@@ -127,12 +127,12 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jmpq *%rax
 ; CHECK-NEXT:  LBB0_25: ## %sw.bb474
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    testb %r12b, %r12b
+; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    ## implicit-def: $r15
 ; CHECK-NEXT:    jne LBB0_33
 ; CHECK-NEXT:  ## %bb.26: ## %do.body479.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    testb %r12b, %r12b
+; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    ## implicit-def: $r15
 ; CHECK-NEXT:    jne LBB0_33
 ; CHECK-NEXT:  ## %bb.27: ## %land.rhs485.preheader
@@ -143,7 +143,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_31: ## %do.body479.backedge
 ; CHECK-NEXT:    ## in Loop: Header=BB0_28 Depth=2
 ; CHECK-NEXT:    leaq 1(%r15), %rax
-; CHECK-NEXT:    testb %r12b, %r12b
+; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    je LBB0_32
 ; CHECK-NEXT:  LBB0_28: ## %land.rhs485
 ; CHECK-NEXT:    ## Parent Loop BB0_13 Depth=1
@@ -202,7 +202,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    incq %r15
 ; CHECK-NEXT:  LBB0_33: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    leal -324(%r13), %eax
+; CHECK-NEXT:    leal -324(%r12), %eax
 ; CHECK-NEXT:    cmpl $59, %eax
 ; CHECK-NEXT:    ja LBB0_34
 ; CHECK-NEXT:  ## %bb.56: ## %if.end517
@@ -212,11 +212,11 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jb LBB0_37
 ; CHECK-NEXT:  LBB0_34: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    cmpl $11, %r13d
+; CHECK-NEXT:    cmpl $11, %r12d
 ; CHECK-NEXT:    je LBB0_37
 ; CHECK-NEXT:  ## %bb.35: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    cmpl $24, %r13d
+; CHECK-NEXT:    cmpl $24, %r12d
 ; CHECK-NEXT:    je LBB0_37
 ; CHECK-NEXT:  ## %bb.36: ## %if.then532
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
@@ -226,7 +226,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_37: ## %for.cond534
 ; CHECK-NEXT:    ## Parent Loop BB0_13 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    testb %r12b, %r12b
+; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    jne LBB0_37
 ; CHECK-NEXT:  ## %bb.38: ## %for.cond542.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1

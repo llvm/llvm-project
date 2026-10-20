@@ -26,4 +26,3 @@ add_libc_fuzzer(
     libc.src.arpa.inet.inet_pton
     libc.src.errno.errno
 )
-

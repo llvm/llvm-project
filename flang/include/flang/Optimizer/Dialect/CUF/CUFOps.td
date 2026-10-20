@@ -24,6 +24,7 @@ include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
@@ -334,7 +335,8 @@ def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
   let results = (outs LLVM_AnyPointer:$modulePtr);
 }
 
-def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Register a CUDA kernel";
 
   let arguments = (ins
@@ -472,6 +474,21 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+}
+
+def cuf_DeviceSynchronizeOp : cuf_Op<"device_synchronize", []> {
+  let summary = "Synchronize the device";
+
+  let description = [{
+    Returns true if the CUDA device's primary context is alive. Used to
+    guard host-side scope-exit deallocation against a user cudaDeviceReset().
+
+    Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
+    to `false` in device code, so host-only cleanup is DCE'd from GPU
+    functions.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

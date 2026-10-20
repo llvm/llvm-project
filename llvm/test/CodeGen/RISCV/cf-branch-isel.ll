@@ -12,7 +12,7 @@
 
 define void @brind(i32 noundef signext %0) {
   ; CHECK-LABEL: name: brind
-  ; CHECK: PseudoBRIND killed %{{[0-9]+}}, 0
+  ; CHECK: PseudoBRIND %{{[0-9]+}}, 0
   %2 = sext i32 %0 to i64
   %3 = getelementptr inbounds [2 x ptr], ptr @brind.arr, i64 0, i64 %2
   %4 = load ptr, ptr %3, align 8

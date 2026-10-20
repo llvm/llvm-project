@@ -94,7 +94,7 @@ must be requested explicitly, for example
 
 (riscv-extensions)=
 
-## Extensions
+## Ratified Extensions
 
 The following table provides a status summary for extensions which have been
 ratified and thus have finalized specifications. When relevant, detailed notes
@@ -728,6 +728,10 @@ Clang's `-msmall-data-limit=` option controls what the threshold size is (in byt
 The small data limit threshold is also used to separate small constants into sections with names starting with `.srodata`. LLD does not place these with the `.sdata` and `.sbss` sections as `.srodata` sections are read only and the other two are writable. Instead the `.srodata` sections are placed adjacent to `.rodata`.
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
+
+## Save/Restore Support
+
+In some circumstances, LLVM may not emit `__riscv_restore_<N>` tail calls when it has used `__riscv_save_<N>` to save GPRs. This is done intentionally -- specifically when the `__riscv_restore_<N>` call does not support functionality that can be emitted inline before or after a `__riscv_save<N>` call. We still emit the `__riscv_save_<N>` call so that the code size impact of inlining the restore sequence is not as severe as if we also inlined the save sequence.
 
 ## Sanitizers
 

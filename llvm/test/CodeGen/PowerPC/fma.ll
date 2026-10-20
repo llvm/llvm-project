@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -ppc-vsx-fma-mutation | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -ppc-vsx-fma-mutation | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -ppc-vsx-fma-mutation | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ppc-vsx-fma-mutation | FileCheck -check-prefix=CHECK-P8 %s
 
 declare double @dummy1(double) #0
 declare double @dummy2(double, double) #0

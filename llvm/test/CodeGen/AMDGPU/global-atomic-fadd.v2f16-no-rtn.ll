@@ -17,7 +17,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_no_rtn(ptr addrspace(1) %ptr, <2
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 killed [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A_GFX942-LABEL: name: global_atomic_fadd_v2f16_no_rtn
@@ -29,7 +29,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_no_rtn(ptr addrspace(1) %ptr, <2
   ; GFX90A_GFX942-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 killed [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -45,7 +45,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_saddr_no_rtn(ptr addrspace(1) in
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR [[V_MOV_B32_e32_]], [[COPY]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A_GFX942-LABEL: name: global_atomic_fadd_v2f16_saddr_no_rtn
@@ -57,7 +57,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_saddr_no_rtn(ptr addrspace(1) in
   ; GFX90A_GFX942-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR [[V_MOV_B32_e32_]], [[COPY]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -73,7 +73,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_no_rtn_flat(ptr addrspace(1) %pt
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 killed [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A_GFX942-LABEL: name: global_atomic_fadd_v2f16_no_rtn_flat
@@ -85,7 +85,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_no_rtn_flat(ptr addrspace(1) %pt
   ; GFX90A_GFX942-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 killed [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -101,7 +101,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_saddr_no_rtn_flat(ptr addrspace(
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR [[V_MOV_B32_e32_]], [[COPY]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A_GFX942-LABEL: name: global_atomic_fadd_v2f16_saddr_no_rtn_flat
@@ -113,7 +113,7 @@ define amdgpu_ps void @global_atomic_fadd_v2f16_saddr_no_rtn_flat(ptr addrspace(
   ; GFX90A_GFX942-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GFX90A_GFX942-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A_GFX942-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR killed [[V_MOV_B32_e32_]], [[COPY]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_PK_ADD_F16_SADDR [[V_MOV_B32_e32_]], [[COPY]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX942-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void

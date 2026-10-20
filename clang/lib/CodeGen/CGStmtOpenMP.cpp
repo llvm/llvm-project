@@ -35,7 +35,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Debug.h"
@@ -5588,8 +5587,6 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             Declare->setExpression(llvm::DIExpression::get(Ctx, Ops));
           };
           llvm::Instruction &Last = CGF.Builder.GetInsertBlock()->back();
-          if (auto DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&Last))
-            UpdateExpr(DDI->getContext(), DDI, Offset);
           // If we're emitting using the new debug info format into a block
           // without a terminator, the record will be "trailing".
           assert(!Last.isTerminator() && "unexpected terminator");
