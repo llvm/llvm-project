@@ -2292,6 +2292,22 @@ LogicalResult spirv::CLRootnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.sincos
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLSincosOp::verify() {
+  auto storageClass =
+      cast<spirv::PointerType>(getCosval().getType()).getStorageClass();
+  if (!llvm::is_contained(
+          {spirv::StorageClass::CrossWorkgroup, spirv::StorageClass::Workgroup,
+           spirv::StorageClass::Function, spirv::StorageClass::Generic},
+          storageClass))
+    return emitOpError("cosval must point to CrossWorkgroup, Workgroup, "
+                       "Function, or Generic storage");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ShiftLeftLogicalOp
 //===----------------------------------------------------------------------===//
 

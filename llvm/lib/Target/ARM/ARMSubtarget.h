@@ -51,7 +51,7 @@ protected:
   enum ARMProcFamilyEnum {
     Others,
 #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
-#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#include "ARMGenTargetDef.inc"
 #undef ARM_PROCESSOR_FAMILY
   };
   enum ARMProcClassEnum {
@@ -63,7 +63,7 @@ protected:
   };
   enum ARMArchEnum {
 #define ARM_ARCHITECTURE(ENUM) ENUM,
-#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#include "ARMGenTargetDef.inc"
 #undef ARM_ARCHITECTURE
   };
 

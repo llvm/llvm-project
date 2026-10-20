@@ -9,6 +9,7 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "TestTypes.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
@@ -74,9 +75,19 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const final {
     if (auto concreteAttr = llvm::dyn_cast<TestAttrParamsAttr>(attr)) {
+      // Without dialect version metadata, use the textual fallback rather than
+      // emit a historical encoding that a reader would interpret as current.
+      if (writer.getBytecodeVersion() < bytecode::kDialectVersioning)
+        return failure();
       writer.writeVarInt(test_encoding::k_attr_params);
-      writer.writeVarInt(concreteAttr.getV0());
-      writer.writeVarInt(concreteAttr.getV1());
+      auto version = writer.getDialectVersion<TestDialect>();
+      bool useOldEncoding =
+          succeeded(version) &&
+          static_cast<const TestDialectVersion *>(*version)->major_ < 2;
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV1()
+                                        : concreteAttr.getV0());
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV0()
+                                        : concreteAttr.getV1());
       return success();
     }
     return failure();
@@ -95,6 +106,39 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return readAttrNewEncoding(reader);
     // Forbid reading future versions by returning nullptr.
     return Attribute();
+  }
+
+  std::unique_ptr<DialectVersion> parseVersion(StringRef version) const final {
+    auto [major, minor] = version.split('.');
+    uint32_t majorVersion, minorVersion;
+    if (major.getAsInteger(10, majorVersion) ||
+        minor.getAsInteger(10, minorVersion) || majorVersion > 2 ||
+        (majorVersion == 2 && minorVersion > 0))
+      return nullptr;
+    return std::make_unique<TestDialectVersion>(majorVersion, minorVersion);
+  }
+
+  LogicalResult verifyVersion(Operation *topLevelOp,
+                              const DialectVersion &version) const final {
+    if (static_cast<const TestDialectVersion &>(version).major_ >= 2)
+      return success();
+    WalkResult result = topLevelOp->walk([](TestVersionedOpA op) {
+      if (!op.getModifier())
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "'modifier = true'");
+      return WalkResult::interrupt();
+    });
+    if (result.wasInterrupted())
+      return failure();
+    result = topLevelOp->walk([](TestOpWithVersionedProperties op) {
+      if (op.getProperties().prop.value2 == 0)
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "a nonzero 'value2' property");
+      return WalkResult::interrupt();
+    });
+    return failure(result.wasInterrupted());
   }
 
   // Emit a specific version of the dialect.

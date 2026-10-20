@@ -42,6 +42,38 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   !$omp end teams
 end subroutine distribute_parallel_do_simd_dist_schedule
 
+! A num_threads temporary is created outside omp.parallel and must be
+! destroyed once, after it.
+! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_temp_cleanup(
+subroutine distribute_parallel_do_simd_temp_cleanup(n)
+  integer :: n
+  interface
+    function get(n) result(r)
+      integer, intent(in) :: n
+      integer, allocatable :: r(:)
+    end function
+  end interface
+  !$omp teams
+
+  ! CHECK:      omp.teams {
+  ! CHECK:      fir.call @_QPget(
+  ! CHECK:      %[[NT_TMP:.*]] = hlfir.as_expr
+  ! CHECK:      omp.parallel num_threads({{.*}}) {
+  ! CHECK-NOT:  hlfir.destroy
+  ! CHECK:      omp.distribute {
+  ! CHECK-NOT:  hlfir.destroy
+  ! CHECK:      omp.terminator
+  ! CHECK-NEXT: } {omp.composite}
+  ! CHECK:      hlfir.destroy %[[NT_TMP]] :
+  ! CHECK-NEXT: omp.terminator
+  !$omp distribute parallel do simd num_threads(size(get(n)))
+  do index_ = 1, 10
+  end do
+  !$omp end distribute parallel do simd
+
+  !$omp end teams
+end subroutine distribute_parallel_do_simd_temp_cleanup
+
 ! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_schedule(
 subroutine distribute_parallel_do_simd_schedule()
   !$omp teams
@@ -67,8 +99,8 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) simdlen(4) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) simdlen(4) {
+  ! DEFAULT-NEXT: omp.simd simdlen(4) linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd simdlen(4) linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -92,9 +124,9 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear(%{{.*}}) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
   ! DEFAULT-SAME:                  : !fir.ref<i64>) {
-  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
   ! OPENMP52-SAME:                  : !fir.ref<i64>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
