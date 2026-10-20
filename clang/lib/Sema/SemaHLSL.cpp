@@ -1020,6 +1020,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   case SemanticKind::StartVertexLocation:
   case SemanticKind::StartInstanceLocation:
     return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::ViewID:
+    return IsInput;
   default:
     return false;
   }
@@ -1280,6 +1282,7 @@ void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
 
   switch (Kind) {
   case SemanticKind::Barycentrics:
+  case SemanticKind::ViewID:
     if (Triple.getOSVersion() < VersionTuple(6, 1))
       Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
           << A->getAttrName() << "6.1";
@@ -1412,6 +1415,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
     return;
   case SemanticKind::StartVertexLocation:
   case SemanticKind::StartInstanceLocation:
+  case SemanticKind::ViewID:
     if (DeclaredTy != T || !T->isScalarType() ||
         !isIntElementOfWidth(Ctx, T, 32))
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
@@ -2269,7 +2273,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::StencilRef:
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
-  case SemanticKind::ViewID:
   case SemanticKind::CullPrimitive:
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
     return;
