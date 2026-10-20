@@ -830,6 +830,7 @@ set(files
   __system_error/system_error.h
   __system_error/throw_system_error.h
   __thread/formatter.h
+  __thread/hardware_concurrency.h
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
