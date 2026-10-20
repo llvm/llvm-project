@@ -6,6 +6,7 @@ add_mlir_conversion_library(MLIRGPUToAGXIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRAGXDialect
+  MLIRAGXTransforms
   MLIRAGXIRDialect
   MLIRAGXToAGXIR
   MLIRArithToLLVM

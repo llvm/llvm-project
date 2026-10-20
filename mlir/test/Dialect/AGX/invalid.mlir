@@ -34,6 +34,59 @@ func.func @reduce_int_minnumf(%v: i32) -> i32 {
 
 func.func @mma_shape(%a: vector<4xf32>) -> vector<4xf32> {
   // expected-error @+1 {{operand #0 must be vector of 16-bit float or bfloat16 type or 32-bit float values of length 2}}
-  %0 = agx.mma %a * %a + %a : vector<4xf32>
+  %0 = agx.mma %a * %a + %a : vector<4xf32>, vector<4xf32>
   return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @mma_accumulator(%a: vector<2xf32>, %c: vector<2xf16>) -> vector<2xf16> {
+  // expected-error @+1 {{accumulator 'f16' cannot accumulate 'f32' products}}
+  %0 = agx.mma %a * %a + %c : vector<2xf32>, vector<2xf16>
+  return %0 : vector<2xf16>
+}
+
+// -----
+
+func.func @tile_size(%A: memref<?x?xf16>, %acc: vector<32xf32>, %i: index) -> vector<32xf32> {
+  // expected-error @+1 {{requires m, n and k to be multiples of 8}}
+  %0 = agx.mma_tile %A[%i, %i] * %A[%i, %i] + %acc tile(32, 32, 4)
+      : memref<?x?xf16>, memref<?x?xf16>, vector<32xf32>
+  return %0 : vector<32xf32>
+}
+
+// -----
+
+func.func @tile_acc(%A: memref<?x?xf16>, %acc: vector<16xf32>, %i: index) -> vector<16xf32> {
+  // expected-error @+1 {{requires an accumulator of m * n / 32 = 32 elements per thread, got 16}}
+  %0 = agx.mma_tile %A[%i, %i] * %A[%i, %i] + %acc tile(32, 32, 8)
+      : memref<?x?xf16>, memref<?x?xf16>, vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @fragment_type(%A: memref<?x?xf16>, %i: index) -> vector<2xf32> {
+  // expected-error @+1 {{fragment 'vector<2xf32>' does not match the elements of 'memref<?x?xf16>'}}
+  %0 = agx.matrix_load %A[%i, %i] : memref<?x?xf16> -> vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// -----
+
+func.func @lane_shift(%x: f32) -> f32 {
+  // expected-error @+1 {{shift 4 does not stay inside a segment of 4 lanes}}
+  %0 = agx.fma_lane_shift %x, %x, %x shift 4 width 4 : f32
+  return %0 : f32
+}
+
+// -----
+
+func.func @uniform_thread_dependent() -> index {
+  %0 = agx.uniform_region -> (index) {
+    // expected-error @+1 {{is thread-dependent and cannot be in an agx.uniform_region}}
+    %t = gpu.thread_id x
+    agx.yield %t : index
+  }
+  return %0 : index
 }

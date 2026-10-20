@@ -11,8 +11,8 @@ dialects: the functions of its gpu.module are translated to LLVM IR.
 Each ARG is a kernel argument in order: `TYPE:V,V,...` is a buffer
 initialized with the values (TYPE is i32, u32, i64, f16, f32 or f64),
 `TYPE:iota*N` one with 0, 1, ..., N - 1, `TYPE:@FILE` one with the values in
-FILE, and `TYPE*N` an output buffer of N
-elements. Arguments are passed as pointers
+FILE, `TYPE*N` an output buffer of N
+elements, and `i32=V` / `i64=V` / `index=V` a scalar. Arguments are passed as pointers
 in uniform registers (see AGXUsage.rst). The output buffers are printed one
 per line, `NAME: v v v ...`, with NAME the argument number.
 """
@@ -78,6 +78,13 @@ def main():
         outs = []
         for i, arg in enumerate(a.args):
             base = 0x100000 * (i + 1)
+            if '=' in arg and ':' not in arg:
+                # A scalar: 32-bit values take one uniform, 64-bit ones (index
+                # is 64-bit) two, low word first.
+                t, v = arg.split('=')
+                v = int(v, 0)
+                uniforms += [v & 0xffffffff] if t == 'i32' else [v & 0xffffffff, (v >> 32) & 0xffffffff]
+                continue
             if '*' in arg and ':' not in arg:
                 t, n = arg.split('*')
                 size = struct.calcsize('<' + FMT[t]) * int(n)

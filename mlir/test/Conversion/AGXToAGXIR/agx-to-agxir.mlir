@@ -67,7 +67,7 @@ func.func @memory_barriers() {
 // CHECK-LABEL: @mma
 func.func @mma(%a: vector<2xf32>, %b: vector<2xf32>, %c: vector<2xf32>) -> vector<2xf32> {
   // CHECK: agxir.simdgroup.matrix.fma %{{.*}}, %{{.*}}, %{{.*}} : vector<2xf32>
-  %0 = agx.mma %a * %b + %c : vector<2xf32>
+  %0 = agx.mma %a * %b + %c : vector<2xf32>, vector<2xf32>
   return %0 : vector<2xf32>
 }
 

@@ -36,6 +36,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AGX/IR/AGXDialect.h"
+#include "mlir/Dialect/AGX/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -286,10 +287,23 @@ struct LowerGpuOpsToAGXIROpsPass final
       options.overrideIndexBitwidth(indexBitwidth);
     options.useBarePtrCallConv = useBarePtrCallConv;
 
-    // In-dialect lowering of gpu.all_reduce and friends first.
+    // In-dialect lowering of gpu.all_reduce and friends first, and the
+    // portable forms of the agx operations the module's chip does not run
+    // natively.
     {
+      // The backend's default processor when the module names no chip.
+      FailureOr<agx::ChipInfo> chip = agx::ChipInfo::get("agx-g14g");
+      if (ArrayAttr targets = m.getTargetsAttr())
+        for (Attribute t : targets)
+          if (auto target = dyn_cast<AGXIR::AGXIRTargetAttr>(t))
+            chip = agx::ChipInfo::get(target.getChip());
+      if (failed(chip)) {
+        m.emitError() << "unknown AGX chip in the module's #agxir.target";
+        return signalPassFailure();
+      }
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
+      agx::populateAGXExpandOpsPatterns(patterns, *chip);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 

@@ -14,7 +14,7 @@ gpu.module @kernels {
     %t = gpu.lane_id
     %x = memref.load %a[%t] : memref<32xvector<2xf32>, 1>
     %y = memref.load %b[%t] : memref<32xvector<2xf32>, 1>
-    %d = agx.mma %x * %y + %y : vector<2xf32>
+    %d = agx.mma %x * %y + %y : vector<2xf32>, vector<2xf32>
     memref.store %d, %out[%t] : memref<32xvector<2xf32>, 1>
     gpu.return
   }
