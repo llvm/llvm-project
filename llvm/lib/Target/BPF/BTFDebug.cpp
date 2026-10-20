@@ -252,6 +252,13 @@ static bool canUseNocallOptimizedSignature(
   return true;
 }
 
+/// Return the BTF name of a type. Released kernels only accept identifiers as
+/// type names, so a C++ template specialization is named without its template
+/// arguments, as with -gsimple-template-names.
+static StringRef getBTFTypeName(StringRef Name) {
+  return Name.take_front(Name.find('<'));
+}
+
 /// Emit a BTF common type.
 void BTFTypeBase::emitType(MCStreamer &OS) {
   OS.AddComment(std::string(BTFKindStr[Kind]) + "(id = " + std::to_string(Id) +
@@ -264,7 +271,7 @@ void BTFTypeBase::emitType(MCStreamer &OS) {
 
 BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
                                bool NeedsFixup)
-    : DTy(DTy), NeedsFixup(NeedsFixup), Name(DTy->getName()) {
+    : DTy(DTy), NeedsFixup(NeedsFixup), Name(getBTFTypeName(DTy->getName())) {
   switch (Tag) {
   case dwarf::DW_TAG_pointer_type:
     Kind = BTF::BTF_KIND_PTR;
@@ -352,7 +359,8 @@ void BTFTypeDerived::setPointeeType(uint32_t PointeeType) {
 }
 
 /// Represent a struct/union forward declaration.
-BTFTypeFwd::BTFTypeFwd(StringRef Name, bool IsUnion) : Name(Name) {
+BTFTypeFwd::BTFTypeFwd(StringRef Name, bool IsUnion)
+    : Name(getBTFTypeName(Name)) {
   Kind = BTF::BTF_KIND_FWD;
   BTFType.Info = IsUnion << 31 | Kind << 24;
   BTFType.Type = 0;
@@ -422,7 +430,7 @@ void BTFTypeEnum::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(ETy->getName());
+  BTFType.NameOff = BDebug.addString(getBTFTypeName(ETy->getName()));
 
   DINodeArray Elements = ETy->getElements();
   for (const auto Element : Elements) {
@@ -461,7 +469,7 @@ void BTFTypeEnum64::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(ETy->getName());
+  BTFType.NameOff = BDebug.addString(getBTFTypeName(ETy->getName()));
 
   DINodeArray Elements = ETy->getElements();
   for (const auto Element : Elements) {
@@ -537,7 +545,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(STy->getName());
+  BTFType.NameOff = BDebug.addString(getBTFTypeName(STy->getName()));
 
   if (STy->getTag() == dwarf::DW_TAG_variant_part) {
     // Variant parts might have a discriminator, which has its own memory
@@ -1152,10 +1160,15 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
   return false;
 }
 
-/// Handle pointer, typedef, const, volatile, restrict and member types.
+/// Handle pointer, reference, typedef, const, volatile, restrict and member
+/// types.
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
   unsigned Tag = DTy->getTag();
+  // BTF has no references; a C++ reference is represented as a pointer.
+  if (Tag == dwarf::DW_TAG_reference_type ||
+      Tag == dwarf::DW_TAG_rvalue_reference_type)
+    Tag = dwarf::DW_TAG_pointer_type;
 
   if (Tag == dwarf::DW_TAG_atomic_type)
     return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
@@ -1186,8 +1199,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef) {
     int TmpTypeId = genBTFTypeTags(DTy, -1);
     if (TmpTypeId >= 0) {
-      auto TypeDEntry =
-          std::make_unique<BTFTypeDerived>(TmpTypeId, Tag, DTy->getName());
+      auto TypeDEntry = std::make_unique<BTFTypeDerived>(
+          TmpTypeId, Tag, getBTFTypeName(DTy->getName()));
       TypeId = addType(std::move(TypeDEntry), DTy);
     } else {
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);

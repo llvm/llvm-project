@@ -313,11 +313,28 @@ static DIDerivedType *getDIRecordField(const DICompositeType *CTy,
   return Field;
 }
 
-/// Return the position of Field among the BTF members of record CTy.
+/// Return the position of the element at DI index AccessIndex among the BTF
+/// members of record CTy, ordered as getBTFRecordElements() orders them,
+/// without building that list for every access.
 static uint64_t getBTFMemberIndex(const DICompositeType *CTy,
-                                  const DINode *Field) {
-  SmallVector<const DINode *, 8> Elements = getBTFRecordElements(CTy);
-  return llvm::find(Elements, Field) - Elements.begin();
+                                  uint64_t AccessIndex) {
+  DINodeArray Elements = CTy->getElements();
+  bool IsStruct = isStructTag(CTy->getTag());
+  uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
+  uint64_t BTFIndex = 0;
+  for (unsigned I = 0; I < Elements.size(); ++I) {
+    if (!isBTFRecordElement(Elements[I]))
+      continue;
+    // Union members keep their DI order, struct members are stably sorted by
+    // offset.
+    bool Before = I < AccessIndex;
+    if (IsStruct) {
+      uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+      Before = ElementOffset < Offset || (ElementOffset == Offset && Before);
+    }
+    BTFIndex += Before;
+  }
+  return BTFIndex;
 }
 
 static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
@@ -960,6 +977,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // and access key construction.
   while (CallStack.size()) {
     auto StackElem = CallStack.top();
+    Call = StackElem.first;
     CInfo = StackElem.second;
     CallStack.pop();
 
@@ -992,8 +1010,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     uint64_t BTFIndex = AccessIndex;
     if (isStructTag(CTy->getTag()) ||
         CTy->getTag() == dwarf::DW_TAG_union_type) {
-      const DINode *Field = getDIRecordField(CTy, AccessIndex);
-      if (!Field) {
+      if (!getDIRecordField(CTy, AccessIndex)) {
         Call->getContext().diagnose(DiagnosticInfoUnsupported(
             *Call->getFunction(),
             "CO-RE access index " + Twine(AccessIndex) +
@@ -1002,7 +1019,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
             Call->getDebugLoc()));
         return nullptr;
       }
-      BTFIndex = getBTFMemberIndex(CTy, Field);
+      BTFIndex = getBTFMemberIndex(CTy, AccessIndex);
     }
     AccessKey += ":" + std::to_string(BTFIndex);
 
