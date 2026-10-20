@@ -127,18 +127,17 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
     auto *PackedTy =
         FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
     if (!isGuaranteedNotToBeUndefOrPoison(ExtractedVec))
-      ExtractedVec = Builder.CreateFreeze(ExtractedVec, "extracted.frozen");
+      ExtractedVec = Builder.CreateFreeze(ExtractedVec);
 
-    Value *Packed = Builder.CreateBitCast(ExtractedVec, PackedTy, "packed");
-    Value *Word =
-        Builder.CreateExtractElement(Packed, (uint64_t)0, "packed.extract");
+    Value *Packed = Builder.CreateBitCast(ExtractedVec, PackedTy);
+    Value *Word = Builder.CreateExtractElement(Packed, (uint64_t)0);
 
     for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
       Value *LaneWord = Word;
       if (Lane != 0)
         LaneWord = Builder.CreateLShr(
             Word, ConstantInt::get(Word->getType(), Lane * EltBits));
-      Value *NewExtract = Builder.CreateTrunc(LaneWord, EltTy, "extract.lane");
+      Value *NewExtract = Builder.CreateTrunc(LaneWord, EltTy);
       ExtractPerLane[Lane]->replaceAllUsesWith(NewExtract);
     }
 
