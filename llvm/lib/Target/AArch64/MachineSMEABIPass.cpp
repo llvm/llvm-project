@@ -888,7 +888,7 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
     // no lazy saves). If we want to handle Windows here, we'll need to
     // implement something similar to LowerWindowsDYNAMIC_STACKALLOC.
     assert(!Subtarget->isTargetWindowsOrUEFI() &&
-           "Lazy ZA save is not yet supported on Windows");
+           "Lazy ZA save is not yet supported on Windows or UEFI");
     Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     // Get original stack pointer.
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), SP)
