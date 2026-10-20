@@ -34,3 +34,13 @@ ybndswi a0, a0, 8192
 // CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 4112
 // CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
+
+/// Zyhybrid instructions are not part of the base Y extension.
+ymoder a0, a1
+// CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
+ymodew a0, a1, a2
+// CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
+ymodeswy
+// CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
+ymodeswi
+// CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
