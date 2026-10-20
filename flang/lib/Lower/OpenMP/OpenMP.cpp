@@ -1000,6 +1000,29 @@ extractMappedBaseValues(llvm::ArrayRef<mlir::Value> vars,
   });
 }
 
+static bool
+usesIteratorDeclareMapper(mlir::ModuleOp module, mlir::Value map,
+                          llvm::SmallPtrSetImpl<mlir::Operation *> &visited) {
+  auto mapInfo = map.getDefiningOp<mlir::omp::MapInfoOp>();
+  if (!mapInfo)
+    return false;
+  if (llvm::any_of(mapInfo.getMembers(), [&](mlir::Value member) {
+        return usesIteratorDeclareMapper(module, member, visited);
+      }))
+    return true;
+  mlir::FlatSymbolRefAttr mapperId = mapInfo.getMapperIdAttr();
+  if (!mapperId)
+    return false;
+  auto mapper = module.lookupSymbol<mlir::omp::DeclareMapperOp>(mapperId);
+  if (!mapper || !visited.insert(mapper).second)
+    return false;
+  mlir::omp::DeclareMapperInfoOp info = mapper.getDeclareMapperInfo();
+  return !info.getMapIterated().empty() ||
+         llvm::any_of(info.getMapVars(), [&](mlir::Value var) {
+           return usesIteratorDeclareMapper(module, var, visited);
+         });
+}
+
 static lower::pft::Evaluation *
 getCollapsedLoopEval(lower::pft::Evaluation &eval, int collapseValue) {
   // Return the Evaluation of the innermost collapsed loop, or the current one
@@ -4264,6 +4287,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       captureImplicitMap(*sym, /*forceAddressPreserving=*/true);
 
   lower::pft::visitAllSymbols(eval, captureImplicitMap);
+
+  // Translating omp.target cannot yet emit a mapper with iterated entries.
+  llvm::SmallPtrSet<mlir::Operation *, 4> visitedMappers;
+  if (llvm::any_of(clauseOps.mapVars, [&](mlir::Value map) {
+        return usesIteratorDeclareMapper(converter.getModuleOp(), map,
+                                         visitedMappers);
+      }))
+    TODO(loc, "TARGET construct using a declare mapper with iterator modifier");
 
   auto targetOp = mlir::omp::TargetOp::create(firOpBuilder, loc, clauseOps);
 

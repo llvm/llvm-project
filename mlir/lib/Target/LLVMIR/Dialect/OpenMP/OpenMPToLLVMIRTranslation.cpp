@@ -394,6 +394,31 @@ static omp::PrivateClauseOp findPrivatizer(Operation *from,
   return privatizer;
 }
 
+/// Returns true if \p map, one of its members, or a mapper reachable from them
+/// has map entries with an iterator modifier.
+static bool usesIteratorMapper(Operation *from, Value map,
+                               SmallPtrSetImpl<Operation *> &visited) {
+  auto mapInfo = map.getDefiningOp<omp::MapInfoOp>();
+  if (!mapInfo)
+    return false;
+  if (llvm::any_of(mapInfo.getMembers(), [&](Value member) {
+        return usesIteratorMapper(from, member, visited);
+      }))
+    return true;
+  FlatSymbolRefAttr mapperId = mapInfo.getMapperIdAttr();
+  if (!mapperId)
+    return false;
+  auto mapper = SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+      from, mapperId);
+  if (!mapper || !visited.insert(mapper).second)
+    return false;
+  omp::DeclareMapperInfoOp info = mapper.getDeclareMapperInfo();
+  return !info.getMapIterated().empty() ||
+         llvm::any_of(info.getMapVars(), [&](Value var) {
+           return usesIteratorMapper(from, var, visited);
+         });
+}
+
 /// Check whether translation to LLVM IR for the given operation is currently
 /// supported. If not, descriptive diagnostics will be emitted to let users know
 /// this is a not-yet-implemented feature.
@@ -624,6 +649,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkInReduction(op, result);
         checkMap(op, result);
         checkThreadLimit(op, result);
+        // createTarget cannot report a mapper translation failure.
+        SmallPtrSet<Operation *, 4> visitedMappers;
+        if (llvm::any_of(op.getMapVars(), [&](Value map) {
+              return usesIteratorMapper(op, map, visitedMappers);
+            }))
+          result = todo("mapper with iterator modifier");
       })
       .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
       .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
