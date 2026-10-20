@@ -29,7 +29,8 @@ namespace {
 static void
 handleAMDGPUFlatWorkGroupSizeAttr(const FunctionDecl *fd, cir::FuncOp func,
                                   CIRGenModule &cgm, CIRGenBuilderTy &builder,
-                                  bool isOpenCLKernel, bool isHIPKernel) {
+                                  bool isOpenCLKernel, bool isHIPKernel,
+                                  unsigned lbMaxThreads) {
   const auto *flatWGS = fd->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
   const auto *reqdWGS =
       cgm.getLangOpts().OpenCL ? fd->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
@@ -63,6 +64,9 @@ handleAMDGPUFlatWorkGroupSizeAttr(const FunctionDecl *fd, cir::FuncOp func,
     } else {
       assert(max == 0 && "Max must be zero");
     }
+  } else if (lbMaxThreads > 0) {
+    func->setAttr("cir.amdgpu-flat-work-group-size",
+                  builder.getStringAttr("1," + llvm::utostr(lbMaxThreads)));
   } else if (isOpenCLKernel || isHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -80,10 +84,16 @@ handleAMDGPUFlatWorkGroupSizeAttr(const FunctionDecl *fd, cir::FuncOp func,
 /// Handle amdgpu-waves-per-eu attribute.
 static void handleAMDGPUWavesPerEUAttr(const FunctionDecl *fd, cir::FuncOp func,
                                        CIRGenModule &cgm,
-                                       CIRGenBuilderTy &builder) {
+                                       CIRGenBuilderTy &builder,
+                                       unsigned lbMinWaves) {
   const auto *attr = fd->getAttr<AMDGPUWavesPerEUAttr>();
-  if (!attr)
+  if (!attr) {
+    // HIP maps __launch_bounds__ min blocks to min waves per EU.
+    if (lbMinWaves > 0)
+      func->setAttr("cir.amdgpu-waves-per-eu",
+                    builder.getStringAttr(llvm::utostr(lbMinWaves)));
     return;
+  }
   unsigned min =
       attr->getMin()->EvaluateKnownConstInt(cgm.getASTContext()).getExtValue();
   unsigned max = attr->getMax()
@@ -226,9 +236,22 @@ void clang::CIRGen::setAMDGPUTargetFunctionAttributes(const Decl *decl,
     const bool isHIPKernel =
         cgm.getLangOpts().HIP && fd->hasAttr<CUDAGlobalAttr>();
 
+    // Native AMDGPU attributes take precedence over __launch_bounds__.
+    unsigned lbMaxThreads = 0;
+    unsigned lbMinWaves = 0;
+    if (const auto *lb =
+            isHIPKernel ? fd->getAttr<CUDALaunchBoundsAttr>() : nullptr) {
+      lbMaxThreads = lb->getMaxThreads()
+                         ->EvaluateKnownConstInt(cgm.getASTContext())
+                         .getExtValue();
+      if (const Expr *minBlocks = lb->getMinBlocks())
+        lbMinWaves =
+            minBlocks->EvaluateKnownConstInt(cgm.getASTContext()).getExtValue();
+    }
+
     handleAMDGPUFlatWorkGroupSizeAttr(fd, func, cgm, builder, isOpenCLKernel,
-                                      isHIPKernel);
-    handleAMDGPUWavesPerEUAttr(fd, func, cgm, builder);
+                                      isHIPKernel, lbMaxThreads);
+    handleAMDGPUWavesPerEUAttr(fd, func, cgm, builder, lbMinWaves);
     handleAMDGPUNumSGPRAttr(fd, func, cgm, builder);
     handleAMDGPUNumVGPRAttr(fd, func, cgm, builder);
     handleAMDGPUMaxNumWorkGroupsAttr(fd, func, cgm, builder);
