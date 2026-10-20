@@ -749,6 +749,11 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
          "KCFI_CHECK call target doesn't match call operand");
 
+  // if cf-protection=branch is enabled, x7 is reserved for the zicfilp
+  // extension and cannot be used as scratch register.
+  const bool ReserveX7ForZicfilp =
+      MI.getMF()->getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
+
   // Temporary registers for comparing the hashes. If a register is used
   // for the call target, or reserved by the user, we can clobber another
   // temporary register as the check is immediately followed by the
@@ -757,6 +762,8 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   unsigned ScratchRegs[] = {RISCV::X6, RISCV::X7};
   unsigned NextReg = RISCV::X28;
   auto isRegAvailable = [&](unsigned Reg) {
+    if (ReserveX7ForZicfilp && Reg == RISCV::X7)
+      return false;
     return Reg != AddrReg && !STI->isRegisterReservedByUser(Reg);
   };
   for (auto &Reg : ScratchRegs) {
