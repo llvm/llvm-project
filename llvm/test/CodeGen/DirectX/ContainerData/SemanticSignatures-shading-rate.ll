@@ -1,6 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: llc -O0 -filetype=obj %t/vs.ll -o %t-vs.dxbc
 ; RUN: obj2yaml %t-vs.dxbc | FileCheck %s --check-prefix=VS
+; Container must survive obj2yaml -> yaml2obj -> obj2yaml round trip.
 ; RUN: obj2yaml %t-vs.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefix=VS
 ; RUN: llc -O0 -filetype=obj %t/ps.ll -o %t-ps.dxbc
 ; RUN: obj2yaml %t-ps.dxbc | FileCheck %s --check-prefix=PS
