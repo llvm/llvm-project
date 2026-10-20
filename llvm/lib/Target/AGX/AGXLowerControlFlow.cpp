@@ -123,6 +123,32 @@ static bool lowerShuffleIndex(MachineInstr &MI, const AGXInstrInfo &TII) {
   return true;
 }
 
+/// Remove a threadgroup barrier that follows another one in its block with
+/// nothing between them that touches memory, has side effects or changes the
+/// execution mask: the second one orders nothing more.
+static bool removeRepeatedBarriers(MachineFunction &MF) {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    bool AfterBarrier = false;
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.isMetaInstruction())
+        continue;
+      if (MI.getOpcode() == AGX::THREADGROUP_BARRIER) {
+        if (AfterBarrier) {
+          MI.eraseFromParent();
+          Changed = true;
+        }
+        AfterBarrier = true;
+        continue;
+      }
+      if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() || MI.isCall() ||
+          MI.isTerminator() || AGXInstrInfo::isExecMaskOp(MI))
+        AfterBarrier = false;
+    }
+  }
+  return Changed;
+}
+
 /// Remove the r0h resets that the next shuffle index of their block
 /// overwrites before the execution mask can change.
 static void removeRedundantIndexResets(MachineFunction &MF) {
@@ -262,6 +288,7 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
   if (HasShuffleIndex)
     removeRedundantIndexResets(MF);
+  removeRepeatedBarriers(MF);
 
   MachineBasicBlock &Entry = MF.front();
   if (HasShuffleIndex)
