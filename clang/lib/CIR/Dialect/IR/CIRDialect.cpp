@@ -2768,7 +2768,7 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       targetAS.getValue() ==
           CIRDataLayout(getOperation()->getParentOfType<ModuleOp>())
               .getProgramAddressSpace();
-  if (symAddrSpaceAttr != resultType.getAddrSpace() && !isProgramAS) {
+  if (!isProgramAS && symAddrSpaceAttr != resultType.getAddrSpace()) {
     return emitOpError()
            << "result type address space does not match the address "
               "space of the global @"
