@@ -35,7 +35,7 @@ LLDB solves this problem by using Data Formatters that take the types in the
 type system and produce an alternate layout for the types that corresponds to how
 the class is used (what the user really wants to see), not how it is
 implemented. These reformatted representations include [Synthetic
-Children](https://lldb.llvm.org/use/variable.html#synthetic-children) which are
+Children](../use/variable.md#synthetic-children) which are
 constructs that are not actually part of the original data type, but which
 facilitate showing users what they expect to see. The path expressions give you
 access to these reformatted representations. In addition, these reformatted
