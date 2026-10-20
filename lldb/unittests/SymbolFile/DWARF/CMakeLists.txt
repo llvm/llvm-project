@@ -1,6 +1,5 @@
 add_lldb_unittest(SymbolFileDWARFTests
   DWARFASTParserClangTests.cpp
-  DWARFASTParserFortranTests.cpp
   DWARFDebugNamesIndexTest.cpp
   DWARFDIETest.cpp
   DWARFIndexCachingTest.cpp
@@ -20,7 +19,6 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginTypeSystemClang
-    lldbPluginTypeSystemFortran
     lldbPluginPlatformMacOSX
     lldbUtilityHelpers
     lldbSymbolHelpers
