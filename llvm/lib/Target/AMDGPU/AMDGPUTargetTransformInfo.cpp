@@ -1633,8 +1633,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     return II;
   }
   case Intrinsic::amdgcn_flat_prefetch: {
-    if (NewV->getType()->getPointerAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
       return nullptr;
+    // llvm.amdgcn.global.prefetch only takes a global pointer.
+    if (NewAS != AMDGPUAS::GLOBAL_ADDRESS)
+      NewV = IRBuilder<>(II).CreateAddrSpaceCast(
+          NewV, PointerType::get(II->getContext(), AMDGPUAS::GLOBAL_ADDRESS));
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         II->getModule(), Intrinsic::amdgcn_global_prefetch);
     II->setArgOperand(0, NewV);

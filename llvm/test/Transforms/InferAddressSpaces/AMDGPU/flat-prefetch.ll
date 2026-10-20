@@ -37,15 +37,38 @@ define void @flat_prefetch_global_gep(ptr addrspace(1) %g, i64 %i) {
   ret void
 }
 
-; llvm.amdgcn.global.prefetch only takes a global pointer.
 define void @flat_prefetch_constant(ptr addrspace(4) %c) {
 ; CHECK-LABEL: define void @flat_prefetch_constant(
 ; CHECK-SAME: ptr addrspace(4) [[C:%.*]]) {
-; CHECK-NEXT:    [[F:%.*]] = addrspacecast ptr addrspace(4) [[C]] to ptr
-; CHECK-NEXT:    call void @llvm.amdgcn.flat.prefetch(ptr [[F]], i32 8)
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[C]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) [[TMP1]], i32 8)
 ; CHECK-NEXT:    ret void
 ;
   %f = addrspacecast ptr addrspace(4) %c to ptr
+  call void @llvm.amdgcn.flat.prefetch(ptr %f, i32 8)
+  ret void
+}
+
+define void @flat_prefetch_constant_32bit(ptr addrspace(6) %c) {
+; CHECK-LABEL: define void @flat_prefetch_constant_32bit(
+; CHECK-SAME: ptr addrspace(6) [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(6) [[C]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) [[TMP1]], i32 8)
+; CHECK-NEXT:    ret void
+;
+  %f = addrspacecast ptr addrspace(6) %c to ptr
+  call void @llvm.amdgcn.flat.prefetch(ptr %f, i32 8)
+  ret void
+}
+
+define void @flat_prefetch_unknown_as(ptr addrspace(999) %u) {
+; CHECK-LABEL: define void @flat_prefetch_unknown_as(
+; CHECK-SAME: ptr addrspace(999) [[U:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(999) [[U]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) [[TMP1]], i32 8)
+; CHECK-NEXT:    ret void
+;
+  %f = addrspacecast ptr addrspace(999) %u to ptr
   call void @llvm.amdgcn.flat.prefetch(ptr %f, i32 8)
   ret void
 }
