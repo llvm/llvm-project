@@ -1772,8 +1772,12 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
         Ptr = CmpX->getPointerOperand();
 
       if (Ptr) {
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
-        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        // Only flat pointers can be refined to a specific address space.
+        if (Ptr->getType()->getPointerAddressSpace() ==
+            AMDGPUAS::FLAT_ADDRESS) {
+          A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+          A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        }
         if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
           if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
             A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
