@@ -10,8 +10,10 @@ add_object_library(
     libc.hdr.ftw_macros
     libc.hdr.sys_stat_macros
     libc.hdr.types.__ftw_func_t
+    libc.hdr.types.__nftw_func_t
     libc.hdr.types.dev_t
     libc.hdr.types.ino_t
+    libc.hdr.types.struct_FTW
     libc.hdr.types.struct_dirent
     libc.hdr.types.struct_stat
     libc.src.__support.alloc_checker
@@ -24,6 +26,9 @@ add_object_library(
     libc.src.__support.File.scoped_dir
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.stat.stat_via_statx
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fchdir
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -36,6 +41,21 @@ add_entrypoint_object(
   DEPENDS
     .ftw_impl
     libc.hdr.types.__ftw_func_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  nftw
+  SRCS
+    nftw.cpp
+  HDRS
+    nftw.h
+  DEPENDS
+    .ftw_impl
+    libc.hdr.types.__nftw_func_t
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check

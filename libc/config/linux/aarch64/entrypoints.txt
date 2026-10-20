@@ -48,6 +48,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # ftw.h entrypoints
     libc.src.ftw.ftw
+    libc.src.ftw.nftw
 
     # grp.h entrypoints
     libc.src.grp.endgrent

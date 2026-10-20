@@ -10,14 +10,17 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.ftw_macros
+    libc.hdr.types.struct_FTW
     libc.hdr.types.struct_stat
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.string_view
     libc.src.fcntl.open
     libc.src.ftw.ftw
+    libc.src.ftw.nftw
     libc.src.sys.stat.chmod
     libc.src.sys.stat.mkdir
     libc.src.unistd.close
+    libc.src.unistd.getcwd
     libc.src.unistd.geteuid
     libc.src.unistd.rmdir
     libc.src.unistd.symlink
