@@ -662,6 +662,26 @@ define <16 x i32> @gather_v16i32_splat_addend(ptr %base, <16 x i16> %idx, <16 x 
   ret <16 x i32> %v
 }
 
+; Every index is a constant splat, so nothing in the index list varies. A
+; vector GEP spells out every lane, so a uniform base leaves the whole address
+; uniform and the index folds to a dword. Treating no varying index as proof
+; that the base varies would price this as a vector of pointers.
+; SKX-COST-LABEL: 'gather_v8i32_splat_const_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v8i32_splat_const_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v8i32_splat_const_index'
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v8i32_splat_const_index:
+; AVX2-ASM-COUNT-1: vpgatherdd
+; AVX2-ASM-NOT: vpgather
+define <8 x i32> @gather_v8i32_splat_const_index(ptr %base, <8 x i1> %mask) {
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> zeroinitializer
+  %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x i32> poison)
+  ret <8 x i32> %v
+}
+
 declare <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i32>)
 declare <8 x ptr> @llvm.masked.gather.v8p0.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x ptr>)
 declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i32>)

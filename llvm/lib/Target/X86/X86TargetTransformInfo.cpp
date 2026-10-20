@@ -7252,7 +7252,8 @@ getActiveGSLanesAndGroups(const Value *Mask, unsigned VF, unsigned GroupSize) {
 InstructionCost
 X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                             Type *SrcVTy, const Value *Ptr, Align Alignment,
-                            unsigned AddressSpace, const Value *Mask) const {
+                            unsigned AddressSpace, const Value *Mask,
+                            std::optional<bool> UniformBase) const {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
@@ -7276,6 +7277,15 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     unsigned NumOfVarIndices = 0;
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
+      return IndexSize;
+
+    // A scalar GEP does not say which operand varies across lanes: a chase like
+    // p[i]->y and a uniform base reached through a narrow index present the
+    // same GEP, and only the first gathers from a vector of pointers. The
+    // caller answers that. Without an answer, only a base no instruction
+    // defines counts as uniform.
+    if (!GEP->getType()->isVectorTy() &&
+        !UniformBase.value_or(!isa<Instruction>(Ptrs)))
       return IndexSize;
 
     // combineGatherScatter narrows through three routes: folding a constant,
@@ -7383,16 +7393,6 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
         return IndexSize;
     }
 
-    // Every index holds the same value in every lane, so the component that
-    // varies has to be the base pointer, and the operation gathers from a
-    // vector of pointers at pointer width. A caller that has already widened
-    // the address says as much with a vector base, which is answered above;
-    // LoopVectorize asks with the original scalar address, where a pointer
-    // chase like p[i]->y is otherwise indistinguishable from a uniform base
-    // reached through a narrow index.
-    if (NumOfVarIndices == 0)
-      return IndexSize;
-
     return (unsigned)32;
   };
 
@@ -7495,8 +7495,9 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
     if (II->getIntrinsicID() == MICA.getID())
       Mask = II->getArgOperand(IsLoad ? 1 : 2);
 
-  InstructionCost Cost = getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr,
-                                         Alignment, AddressSpace, Mask);
+  InstructionCost Cost =
+      getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace,
+                      Mask, MICA.getUniformBase());
 
   // Predicate fanout (see getPredicateFanoutCost); variable mask only.
   if (MICA.getVariableMask()) {
