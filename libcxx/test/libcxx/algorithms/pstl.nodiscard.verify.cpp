@@ -125,6 +125,12 @@ void test() {
   std::set_difference(
       std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_symmetric_difference(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set_symmetric_difference(
+      std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::set_intersection(std::execution::par, std::begin(a), std::end(a), std::begin(a), std::end(a), std::begin(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::set_intersection(

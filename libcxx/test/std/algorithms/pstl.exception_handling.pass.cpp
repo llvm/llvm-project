@@ -636,6 +636,28 @@ int main(int, char**) {
       {
         auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
+        // set_symmetric_difference(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_symmetric_difference(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_symmetric_difference(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_symmetric_difference(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
         // set_intersection(first1, last1, first2, last2, dest)
         assert_non_throwing([=, &policy] {
           (void)std::set_intersection(

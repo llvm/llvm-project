@@ -24,6 +24,7 @@
 #include <__algorithm/search_n.h>
 #include <__algorithm/set_difference.h>
 #include <__algorithm/set_intersection.h>
+#include <__algorithm/set_symmetric_difference.h>
 #include <__algorithm/set_union.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
@@ -344,6 +345,27 @@ struct __set_difference<__serial_backend_tag, _ExecutionPolicy> {
       _ForwardOutIterator __result,
       _Compare __comp) const noexcept {
     return std::set_difference(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::move(__result),
+        std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __set_symmetric_difference<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+  optional<_ForwardOutIterator> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first1,
+      _ForwardIterator1 __last1,
+      _ForwardIterator2 __first2,
+      _ForwardIterator2 __last2,
+      _ForwardOutIterator __result,
+      _Compare __comp) const noexcept {
+    return std::set_symmetric_difference(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
