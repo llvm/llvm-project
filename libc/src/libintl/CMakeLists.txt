@@ -15,6 +15,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gettext
+  SRCS
+    gettext.cpp
+  HDRS
+    gettext.h
+)
+
+add_entrypoint_object(
+  gettext_l
+  SRCS
+    gettext_l.cpp
+  HDRS
+    gettext_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
+)
+
+add_entrypoint_object(
   textdomain
   SRCS
     textdomain.cpp

@@ -11,8 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/locale_t.h"
 #include "src/libintl/bind_textdomain_codeset.h"
 #include "src/libintl/bindtextdomain.h"
+#include "src/libintl/gettext.h"
+#include "src/libintl/gettext_l.h"
 #include "src/libintl/textdomain.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -54,4 +57,13 @@ TEST_F(LlvmLibcLibintlTest, BindTextdomainCodeset) {
   constexpr const char *CODESET = "UTF-8";
   EXPECT_THAT(LIBC_NAMESPACE::bind_textdomain_codeset("my_app", CODESET),
               Succeeds(const_cast<char *>(CODESET)));
+}
+
+TEST_F(LlvmLibcLibintlTest, Gettext) {
+  constexpr const char *MSG = "hello world";
+  locale_t loc = nullptr;
+
+  EXPECT_THAT(LIBC_NAMESPACE::gettext(MSG), Succeeds(const_cast<char *>(MSG)));
+  EXPECT_THAT(LIBC_NAMESPACE::gettext_l(MSG, loc),
+              Succeeds(const_cast<char *>(MSG)));
 }

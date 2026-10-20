@@ -186,8 +186,9 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
+  // The trunc X to i1 lanes of a compare have the single operand X.
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    return Cmp->isCommutative();
+    return isa<CmpInst>(ValWithUses) && Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub && ValWithUses->hasUseList() &&
