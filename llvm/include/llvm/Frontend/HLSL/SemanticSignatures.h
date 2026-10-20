@@ -23,6 +23,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 #include <cstdint>
 
 namespace llvm {
@@ -164,6 +165,8 @@ struct SemanticSignatureElement {
 
   uint8_t getDeclaredMask() const {
     unsigned Column = isAllocated() ? StartCol : 0;
+    assert(Cols >= 1 && Column + Cols <= 4 &&
+           "declared components must fit within one register row");
     return static_cast<uint8_t>(((1U << Cols) - 1U) << Column);
   }
 
