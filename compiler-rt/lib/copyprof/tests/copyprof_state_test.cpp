@@ -10,8 +10,10 @@
 
 #include "copyprof/copyprof_allocator.h"
 #include "copyprof/copyprof_interface_internal.h"
+#include "copyprof/copyprof_per_object_state.h"
 #include "copyprof/copyprof_shadow.h"
 #include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_allocator.h"
 
 namespace __copyprof {
 namespace {
@@ -30,6 +32,7 @@ class CopyProfStateTest : public testing::Test {
   void SetUp() override {
     __copyprof_init_once();
     __copyprof_state = PerThreadState();
+    InitializePerObjectTracking();
   }
 };
 
@@ -240,6 +243,105 @@ TEST_F(CopyProfStateTest, DISABLED_MovedTemporaryInDtorDoesNotSuppressReport) {
   __copyprof_dtor_exit_callback(temp, sizeof(temp));
   __copyprof_dtor_exit_callback(obj, sizeof(obj));
   EXPECT_TRUE(__copyprof_state.is_transitive_copy);
+}
+
+TEST_F(CopyProfStateTest, PerObjectStateTrackingWorksCorrectly) {
+  char obj[24] = {0};
+
+  // Querying an untracked object returns 0 / false.
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), 0);
+  EXPECT_FALSE(GetPerObjectDidAllocate(obj));
+
+  InitPerObjectState(obj, sizeof(obj));
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), sizeof(obj));
+  EXPECT_FALSE(GetPerObjectDidAllocate(obj));
+
+  RecordPerObjectAllocation(obj, /*num_bytes=*/77);
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), sizeof(obj) + 77);
+  EXPECT_TRUE(GetPerObjectDidAllocate(obj));
+
+  RecordPerObjectAllocation(obj, /*num_bytes=*/32);
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), sizeof(obj) + 77 + 32);
+
+  RemovePerObjectState(obj);
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), 0);
+  EXPECT_FALSE(GetPerObjectDidAllocate(obj));
+}
+
+// Only a top-level copy gets per-object state, which is removed again when the
+// top-level d'tor exits. A copy nested in a c'tor (e.g. a member copied from a
+// c'tor argument) is eventually destroyed by a nested d'tor, so state created
+// for it would never be removed.
+TEST_F(CopyProfStateTest, CopyNestedInConstructorHasNoPerObjectState) {
+  char obj[32] = {0};
+  char other[16] = {0};
+  char* member = obj + 16;
+
+  __copyprof_ctor_enter_callback(obj, sizeof(obj));
+  __copyprof_copy_ctor_enter_callback(member, other, sizeof(other));
+  __copyprof_copy_ctor_exit_callback(member, other, sizeof(other));
+  __copyprof_ctor_exit_callback(obj, sizeof(obj));
+
+  EXPECT_EQ(GetPerObjectTrackedSize(member), 0u);
+}
+
+// Likewise for a copy nested in a d'tor, e.g. a temporary created by its body.
+TEST_F(CopyProfStateTest, CopyNestedInDestructorHasNoPerObjectState) {
+  char obj[16] = {0};
+  char temp[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  __copyprof_copy_ctor_enter_callback(temp, other, sizeof(temp));
+  __copyprof_copy_ctor_exit_callback(temp, other, sizeof(temp));
+  __copyprof_dtor_enter_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(temp, sizeof(temp));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+
+  EXPECT_EQ(GetPerObjectTrackedSize(temp), 0u);
+}
+
+TEST_F(CopyProfStateTest, AllocationDuringCopyIsRecordedInPerObjectState) {
+  char obj[16] = {0};
+  char other[16] = {0};
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  void* buf = CopyProfAllocate(/*size=*/32, /*align=*/8);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+
+  ASSERT_NE(buf, nullptr);
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), sizeof(obj) + 32);
+  EXPECT_TRUE(GetPerObjectDidAllocate(obj));
+  CopyProfDeallocate(buf, /*size=*/32, /*align=*/8);
+
+  // Destroying `obj` must erase its object state and hence the tracked size
+  // must be zero.
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), 0);
+}
+
+TEST_F(CopyProfStateTest, FailedAllocationDuringCopyIsNotRecorded) {
+  char obj[16] = {0};
+  char other[16] = {0};
+  const bool may_return_null = AllocatorMayReturnNull();
+  SetAllocatorMayReturnNull(true);
+
+  __copyprof_copy_ctor_enter_callback(obj, other, sizeof(obj));
+  // A non-power-of-two alignment makes the allocation fail.
+  void* buf = CopyProfAllocate(/*size=*/32, /*align=*/3);
+  __copyprof_copy_ctor_exit_callback(obj, other, sizeof(obj));
+  SetAllocatorMayReturnNull(may_return_null);
+
+  EXPECT_EQ(buf, nullptr);
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), sizeof(obj));
+  EXPECT_FALSE(GetPerObjectDidAllocate(obj));
+
+  // Destroying `obj` must erase its object state and hence the tracked size
+  // must be zero.
+  __copyprof_dtor_enter_callback(obj, sizeof(obj));
+  __copyprof_dtor_exit_callback(obj, sizeof(obj));
+  EXPECT_EQ(GetPerObjectTrackedSize(obj), 0);
 }
 
 TEST_F(CopyProfStateTest,
