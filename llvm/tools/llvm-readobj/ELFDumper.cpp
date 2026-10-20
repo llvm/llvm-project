@@ -376,8 +376,12 @@ protected:
                       unsigned Ndx, const Elf_Shdr *SymTab,
                       const Elf_Shdr *FunctionSec, const Elf_Shdr &StackSizeSec,
                       const RelocationResolver &Resolver, DataExtractor Data);
+  /// Prints a stack size entry for the functions in \p FuncNames. \p Address
+  /// is the function's address as stored in the entry, and is only set for a
+  /// linked file.
   virtual void printStackSizeEntry(uint64_t Size,
-                                   ArrayRef<std::string> FuncNames) = 0;
+                                   ArrayRef<std::string> FuncNames,
+                                   std::optional<uint64_t> Address) = 0;
 
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
@@ -757,8 +761,8 @@ private:
   void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
                                     const Twine &Label, unsigned EntriesNum);
 
-  void printStackSizeEntry(uint64_t Size,
-                           ArrayRef<std::string> FuncNames) override;
+  void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
+                           std::optional<uint64_t> Address) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -814,8 +818,8 @@ private:
                    bool /*ExtraSymInfo*/) const override;
   void printProgramHeaders() override;
   void printSectionMapping() override {}
-  void printStackSizeEntry(uint64_t Size,
-                           ArrayRef<std::string> FuncNames) override;
+  void printStackSizeEntry(uint64_t Size, ArrayRef<std::string> FuncNames,
+                           std::optional<uint64_t> Address) override;
   void printCallGraphRelocation(const CallGraphFunc<ELFT> &Func,
                                 const Elf_Shdr &RelSec, const Elf_Shdr &SymTab);
   // Returns the names of the functions at the address that the relocation for
@@ -7262,21 +7266,27 @@ bool ELFDumper<ELFT>::printFunctionStackSize(
     return false;
   }
 
+  // The address is only printed for a linked file. In a relocatable file the
+  // entry holds a placeholder for its relocation rather than an address.
+  std::optional<uint64_t> Address;
+  if (Obj.getHeader().e_type != ELF::ET_REL)
+    Address = SymValue;
   if (FuncSymIndexes.empty()) {
-    printStackSizeEntry(StackSize, {"?"});
+    printStackSizeEntry(StackSize, {"?"}, Address);
   } else {
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    printStackSizeEntry(StackSize, FuncSymNames);
+    printStackSizeEntry(StackSize, FuncSymNames, Address);
   }
 
   return true;
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                             ArrayRef<std::string> FuncNames) {
+void GNUELFDumper<ELFT>::printStackSizeEntry(
+    uint64_t Size, ArrayRef<std::string> FuncNames,
+    std::optional<uint64_t> /*Address*/) {
   OS.PadToColumn(2);
   OS << format_decimal(Size, 11);
   OS.PadToColumn(18);
@@ -9000,9 +9010,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printStackSizes() {
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
-                                              ArrayRef<std::string> FuncNames) {
+                                              ArrayRef<std::string> FuncNames,
+                                              std::optional<uint64_t> Address) {
   DictScope D(W, "Entry");
   W.printList("Functions", FuncNames);
+  if (Address)
+    W.printHex("Address", *Address);
   W.printHex("Size", Size);
 }
 
