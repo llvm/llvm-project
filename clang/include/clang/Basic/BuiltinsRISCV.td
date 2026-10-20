@@ -396,6 +396,14 @@ def pm4add_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, short>)">
 def pm4addu_u16x4 : RISCVBuiltin<"uint64_t(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 def pm4addsu_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, unsigned short>)">;
 
+// Packed Multiplication with Widening Horizontal Addition (32-bit)
+def pm2wadd_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
+def pm2wadd_x_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
+def pm2waddu_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pm2wsub_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
+def pm2wsub_x_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, short>)">;
+def pm2waddsu_i64 : RISCVBuiltin<"int64_t(_Vector<2, short>, _Vector<2, unsigned short>)">;
+
 // Packed Absolute Difference Sum (32-bit)
 def pabdsumu_u8x4_u32 : RISCVBuiltin<"unsigned int(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
 def pabdsumau_u8x4_u32 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<4, unsigned char>, _Vector<4, unsigned char>)">;

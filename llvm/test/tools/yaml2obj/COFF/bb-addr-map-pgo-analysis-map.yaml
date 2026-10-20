@@ -75,11 +75,11 @@ symbols: []
 ## bytes are emitted, even when BBRanges/PGOAnalyses follow.
 # RUN: yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=INVALID-FEATURE-DATA
-# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x200
 # INVALID-FEATURE-DATA:      Name: .llvm_bb_addr_map
 # INVALID-FEATURE-DATA:      RawDataSize: 0x3
 # INVALID-FEATURE-DATA:      SectionData (
-# INVALID-FEATURE-DATA-NEXT:   0000: 050001
+# INVALID-FEATURE-DATA-NEXT:   0000: 050002
 # INVALID-FEATURE-DATA-NEXT: )
 
 --- !COFF
@@ -91,7 +91,7 @@ sections:
     Entries:
       - Version: 5
 ##  Specify unsupported feature
-        Feature: 0x100
+        Feature: 0x200
         BBRanges:
           - BaseAddress: 0x0000000000000020
             BBEntries:

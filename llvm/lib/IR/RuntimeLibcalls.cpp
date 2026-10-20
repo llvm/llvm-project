@@ -28,6 +28,31 @@ using namespace RTLIB;
 #define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
 #include "llvm/IR/RuntimeLibcalls.inc"
 
+static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
+  switch (VecLib) {
+  case VectorLibrary::NoLibrary:
+    break;
+  case VectorLibrary::Accelerate:
+    return RuntimeLibrary::accelerate;
+  case VectorLibrary::DarwinLibSystemM:
+    return RuntimeLibrary::darwin_libsystem_m;
+  case VectorLibrary::LIBMVEC:
+    return RuntimeLibrary::libmvec;
+  case VectorLibrary::MASSV:
+    return RuntimeLibrary::massv;
+  case VectorLibrary::SVML:
+    return RuntimeLibrary::svml;
+  case VectorLibrary::SLEEFGNUABI:
+    return RuntimeLibrary::sleefgnuabi;
+  case VectorLibrary::ArmPL:
+    return RuntimeLibrary::armpl;
+  case VectorLibrary::AMDLIBM:
+    return RuntimeLibrary::amdlibm;
+  }
+
+  llvm_unreachable("no RuntimeLibrary for VectorLibrary");
+}
+
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
@@ -41,64 +66,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
-  // TODO: Tablegen should generate these sets
-  switch (VecLib) {
-  case VectorLibrary::SLEEFGNUABI:
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl__ZGVnN2vv_fmod, RTLIB::impl__ZGVnN4vv_fmodf,
-          RTLIB::impl__ZGVsMxvv_fmod, RTLIB::impl__ZGVsMxvv_fmodf,
-          RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
-          RTLIB::impl__ZGVsNxvl8_modf, RTLIB::impl__ZGVsNxvl4_modff,
-          RTLIB::impl__ZGVnN2vl8l8_sincos, RTLIB::impl__ZGVnN4vl4l4_sincosf,
-          RTLIB::impl__ZGVsNxvl8l8_sincos, RTLIB::impl__ZGVsNxvl4l4_sincosf,
-          RTLIB::impl__ZGVnN4vl4l4_sincospif, RTLIB::impl__ZGVnN2vl8l8_sincospi,
-          RTLIB::impl__ZGVsNxvl4l4_sincospif,
-          RTLIB::impl__ZGVsNxvl8l8_sincospi})
-      setAvailable(Impl);
-    break;
-  case VectorLibrary::ArmPL:
-    for (RTLIB::LibcallImpl Impl : {RTLIB::impl_armpl_svfmod_f32_x,
-                                    RTLIB::impl_armpl_svfmod_f64_x,
-                                    RTLIB::impl_armpl_vfmodq_f32,
-                                    RTLIB::impl_armpl_vfmodq_f64,
-                                    RTLIB::impl_armpl_vmodfq_f64,
-                                    RTLIB::impl_armpl_vmodfq_f32,
-                                    RTLIB::impl_armpl_svmodf_f64_x,
-                                    RTLIB::impl_armpl_svmodf_f32_x,
-                                    RTLIB::impl_armpl_vsincosq_f64,
-                                    RTLIB::impl_armpl_vsincosq_f32,
-                                    RTLIB::impl_armpl_svsincos_f64_x,
-                                    RTLIB::impl_armpl_svsincos_f32_x,
-                                    RTLIB::impl_armpl_vsincospiq_f32,
-                                    RTLIB::impl_armpl_vsincospiq_f64,
-                                    RTLIB::impl_armpl_svsincospi_f32_x,
-                                    RTLIB::impl_armpl_svsincospi_f64_x,
-                                    RTLIB::impl_armpl_svpow_f32_x,
-                                    RTLIB::impl_armpl_svpow_f64_x,
-                                    RTLIB::impl_armpl_vpowq_f32,
-                                    RTLIB::impl_armpl_vpowq_f64,
-                                    RTLIB::impl_armpl_svcbrt_f32_x,
-                                    RTLIB::impl_armpl_svcbrt_f64_x,
-                                    RTLIB::impl_armpl_vcbrtq_f32,
-                                    RTLIB::impl_armpl_vcbrtq_f64})
-      setAvailable(Impl);
-
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_armpl_vfmodq_f32, RTLIB::impl_armpl_vfmodq_f64,
-          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
-          RTLIB::impl_armpl_vpowq_f32, RTLIB::impl_armpl_vpowq_f64,
-          RTLIB::impl_armpl_vcbrtq_f32, RTLIB::impl_armpl_vcbrtq_f64})
-      setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
-    break;
-  case VectorLibrary::AMDLIBM:
-    for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_amd_vrd2_sincos, RTLIB::impl_amd_vrd4_sincos,
-          RTLIB::impl_amd_vrd8_sincos, RTLIB::impl_amd_vrs4_sincosf,
-          RTLIB::impl_amd_vrs8_sincosf, RTLIB::impl_amd_vrs16_sincosf})
-      setAvailable(Impl);
-    break;
-  default:
-    break;
+  if (VecLib != VectorLibrary::NoLibrary) {
+    setAvailableLibraryLibcalls(getVectorRuntimeLibrary(VecLib), TT,
+                                ExceptionModel, FloatABI, ABIName,
+                                TT.getDefaultLongDoubleFormat());
   }
 }
 
