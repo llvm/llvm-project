@@ -241,6 +241,8 @@ def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
 def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
+def HasSVE_LRCPC     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_LRCPC()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE_LRCPC), "sve-lrcpc">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -2761,16 +2763,6 @@ def : Pat<(i64 i64imm_32bit:$src),
 }
 
 // Materialize FP constants via MOVi32imm/MOVi64imm (MachO large code model).
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 
 def : Pat<(f32 fpimm:$in),
   (COPY_TO_REGCLASS (MOVi32imm (bitcast_fpimm_to_i32 f32:$in)), FPR32)>;

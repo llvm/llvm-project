@@ -237,8 +237,14 @@ TEST(ScudoTSDTest, TSDRegistryTSDsCount) {
   EXPECT_LE(Pointers.size(), 8U);
   Pointers.clear();
   auto Registry = Allocator->getTSDRegistry();
-  // Increase the number of TSDs to 16.
+  // Check that disable()/enable() stay balanced while only some of the 16 TSDs
+  // are active; a TSD left locked would hang the stress run below.
+  Registry->disable();
+  Registry->enable();
+  // Increase the number of TSDs to 16 and check the balance again.
   Registry->setOption(scudo::Option::MaxTSDsCount, 16);
+  Registry->disable();
+  Registry->enable();
   Ready = false;
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(stressSharedRegistry, Allocator.get());

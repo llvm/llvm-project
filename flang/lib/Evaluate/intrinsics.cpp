@@ -1750,7 +1750,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"signal",
         {{"number", AnyInt, Rank::scalar, Optionality::required,
              common::Intent::In},
-            // note: any pointer also accepts AnyInt
+            // ApplySpecificChecks() narrows this to a procedure or scalar
+            // INTEGER.
             {"handler", AnyPointer, Rank::scalar, Optionality::required,
                 common::Intent::In},
             {"status", AnyInt, Rank::scalar, Optionality::optional,
@@ -2051,6 +2052,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // (or compatible) type and kind do so.  Check for missing non-optional
   // arguments now, too.
   const ActualArgument *sameArg{nullptr};
+  const char *sameArgName{nullptr};
   const ActualArgument *operandArg{nullptr};
   const IntrinsicDummyArgument *kindDummyArg{nullptr};
   const ActualArgument *kindArg{nullptr};
@@ -2238,6 +2240,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       auto sameType{sameArg->GetType().value()};
       if (name == "move_alloc"s) {
@@ -2249,10 +2252,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       } else {
         argOk = sameType.IsTkLenCompatibleWith(*type);
       }
+      if (!argOk) {
+        CHECK(sameArgName);
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but '%s=' has type '%s'"_err_en_US,
+            d.keyword, type->AsFortran(), sameArgName, sameType.AsFortran());
+        return std::nullopt;
+      }
     } break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
       break;
@@ -2288,6 +2299,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
         argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
@@ -4035,6 +4047,23 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
+    }
+  } else if (name == "signal") {
+    const auto &arg{call.arguments[1]};
+    bool handlerOk{false};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (IsProcedure(*expr)) {
+          handlerOk = true;
+        } else if (auto type{expr->GetType()}) {
+          handlerOk = type->category() == TypeCategory::Integer;
+        }
+      }
+      if (!handlerOk) {
+        ok = false;
+        context.messages().Say(arg->sourceLocation(),
+            "'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER"_err_en_US);
+      }
     }
   } else if (name == "tokenize") {
     // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two

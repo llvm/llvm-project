@@ -5907,6 +5907,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Param, Init ? Init : Param->getDefaultArg(),
+                                  CallLoc);
+
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
                                    Init, InitializationContext->Context);
 }
@@ -5975,6 +5979,9 @@ ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
       Field->setInvalidDecl();
     return ExprError();
   }
+
+  if (getLangOpts().CUDA)
+    CUDA().checkRTTIInDefaultInit(Field, InClassInit, Loc);
 
   // CWG2631
   // An immediate invocation that is not evaluated where it appears is
@@ -18546,11 +18553,10 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
-          FD->isConsteval() ||
-          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
+    if (isLambdaMethod(FD) && !isLambdaCallOperator(FD))
+      Current.InImmediateFunctionContext = FD->isConsteval() ||
+                                           Parent.isConstantEvaluated() ||
+                                           Parent.isImmediateFunctionContext();
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }

@@ -36,6 +36,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
@@ -86,15 +87,18 @@ private:
     bool savedIsFPConstrained;
     LangOptions::FPExceptionModeKind savedExcept;
     llvm::RoundingMode savedRounding;
+    cir::FastMathFlags savedFastMathFlags;
 
     explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
         : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
           savedExcept(builder.getDefaultConstrainedExcept()),
-          savedRounding(builder.getDefaultConstrainedRounding()) {}
+          savedRounding(builder.getDefaultConstrainedRounding()),
+          savedFastMathFlags(builder.getFastMathFlags()) {}
     ~ConstrainedFPRAII() {
       builder.setIsFPConstrained(savedIsFPConstrained);
       builder.setDefaultConstrainedExcept(savedExcept);
       builder.setDefaultConstrainedRounding(savedRounding);
+      builder.setFastMathFlags(savedFastMathFlags);
     }
   } constrainedFPState{builder};
 
@@ -349,8 +353,11 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
+    std::optional<cir::FastMathFlags> oldFastMathFlags;
   };
   clang::FPOptions curFPFeatures;
+
+  void setFastMathFlags(FPOptions fpFeatures);
 
   /// Convert the active Clang floating-point options to CIR fast-math flags.
   cir::FastMathFlags getCurrentFastMathFlags() const;
@@ -705,6 +712,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
   };
 
+  using EvaluationOrder = CodeGenUtils::EvaluationOrder;
+
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
   RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
@@ -818,11 +827,12 @@ public:
     }
 
     bool isReference() const { return valueAndIsReference.getInt(); }
-    LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
+    LValue getReferenceLValue(CIRGenFunction &cgf, const Expr *refExpr) const {
       assert(isReference());
-      cgf.cgm.errorNYI(refExpr->getSourceRange(),
-                       "ConstantEmission::getReferenceLValue");
-      return {};
+      mlir::Value addr = cgf.getBuilder().getConstant(
+          cgf.getLoc(refExpr->getSourceRange()),
+          mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer()));
+      return cgf.makeNaturalAlignAddrLValue(addr, refExpr->getType());
     }
 
     mlir::TypedAttr getValue() const {
@@ -2048,7 +2058,8 @@ public:
   void emitCallArgs(
       CallArgList &args, PrototypeWrapper prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
-      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0,
+      EvaluationOrder order = EvaluationOrder::Default);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
@@ -2233,7 +2244,8 @@ public:
   void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
                       QualType deleteTy);
 
-  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s,
+                                 llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
@@ -2295,7 +2307,8 @@ public:
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
 
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &s,
+                                  llvm::ArrayRef<const Attr *> attrs = {});
 
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
@@ -2578,7 +2591,13 @@ public:
 
   void emitVariablyModifiedType(QualType ty);
 
-  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s,
+                                    llvm::ArrayRef<const Attr *> attrs = {});
+
+  /// Build the hints that get attached to a loop, or a null attribute
+  /// if there is nothing to say about it.
+  cir::LoopHintAttr getLoopHints(llvm::ArrayRef<const Attr *> attrs,
+                                 bool mustProgress);
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);

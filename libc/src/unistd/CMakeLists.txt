@@ -183,6 +183,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execvp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvp
+)
+
+add_entrypoint_object(
   fexecve
   ALIAS
   DEPENDS
@@ -404,6 +411,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.rmdir
+)
+
+add_entrypoint_object(
+  setegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setegid
+)
+
+add_entrypoint_object(
+  seteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.seteuid
 )
 
 add_entrypoint_object(

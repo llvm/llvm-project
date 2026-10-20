@@ -279,6 +279,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execvp
+  SRCS
+    execvp.cpp
+  HDRS
+    ../execvp.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
+    libc.src.errno.errno
+    libc.src.stdlib.environ_internal
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
   fexecve
   SRCS
     fexecve.cpp
@@ -729,6 +751,30 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.readlinkat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setegid
+  SRCS
+    setegid.cpp
+  HDRS
+    ../setegid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setresgid
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  seteuid
+  SRCS
+    seteuid.cpp
+  HDRS
+    ../seteuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setresuid
     libc.src.errno.errno
 )
 
