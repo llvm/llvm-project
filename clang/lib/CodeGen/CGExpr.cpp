@@ -5833,23 +5833,6 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
   return EmitLValueForLambdaField(Field, CXXABIThisValue);
 }
 
-/// Get the field index in the debug info. The debug info structure/union
-/// will ignore the unnamed bitfields.
-unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
-                                             unsigned FieldIndex) {
-  unsigned I = 0, Skipped = 0;
-
-  for (auto *F : Rec->getDefinition()->fields()) {
-    if (I == FieldIndex)
-      break;
-    if (F->isUnnamedBitField())
-      Skipped++;
-    I++;
-  }
-
-  return FieldIndex - Skipped;
-}
-
 /// Get the address of a zero-sized field within a record. The resulting
 /// address doesn't necessarily have the right type.
 static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
@@ -5912,14 +5895,14 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
                                         Address addr, const FieldDecl *field) {
   const RecordDecl *rec = field->getParent();
-  llvm::DIType *DbgInfo = CGF.getDebugInfo()->getOrCreateStandaloneType(
-      base.getType(), rec->getLocation());
+  auto [DbgInfo, DIIndex] =
+      CGF.getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
 
   unsigned idx =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  return CGF.Builder.CreatePreserveStructAccessIndex(
-      addr, idx, CGF.getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo);
+  return CGF.Builder.CreatePreserveStructAccessIndex(addr, idx, DIIndex,
+                                                     DbgInfo);
 }
 
 static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
@@ -5971,11 +5954,10 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
             Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
         }
       } else {
-        llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
-            getContext().getCanonicalTagType(rec), rec->getLocation());
-        Addr = Builder.CreatePreserveStructAccessIndex(
-            Addr, Idx, getDebugInfoFIndex(rec, field->getFieldIndex()),
-            DbgInfo);
+        auto [DbgInfo, DIIndex] = getDebugInfo()->getOrCreatePreserveAccessInfo(
+            getContext().getCanonicalTagType(rec), field);
+        Addr = Builder.CreatePreserveStructAccessIndex(Addr, Idx, DIIndex,
+                                                       DbgInfo);
       }
     }
     const unsigned SS =
@@ -6051,13 +6033,11 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       // Remember the original union field index
-      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateStandaloneType(base.getType(),
-          rec->getLocation());
-      addr =
-          Address(Builder.CreatePreserveUnionAccessIndex(
-                      addr.emitRawPointer(*this),
-                      getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo),
-                  addr.getElementType(), addr.getAlignment());
+      auto [DbgInfo, DIIndex] =
+          getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
+      addr = Address(Builder.CreatePreserveUnionAccessIndex(
+                         addr.emitRawPointer(*this), DIIndex, DbgInfo),
+                     addr.getElementType(), addr.getAlignment());
     }
 
     if (FieldType->isReferenceType())
@@ -7230,32 +7210,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (Chain)
     Args.add(RValue::get(Chain), CGM.getContext().VoidPtrTy);
 
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
-  // FIXME: Revisit this based on C++ committee response to unimplementability.
-  EvaluationOrder Order = EvaluationOrder::Default;
+  EvaluationOrder Order = CodeGenUtils::getCallArgEvaluationOrder(E);
   bool StaticOperator = false;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    if (OCE->isAssignmentOp())
-      Order = EvaluationOrder::ForceRightToLeft;
-    else {
-      switch (OCE->getOperator()) {
-      case OO_LessLess:
-      case OO_GreaterGreater:
-      case OO_AmpAmp:
-      case OO_PipePipe:
-      case OO_Comma:
-      case OO_ArrowStar:
-        Order = EvaluationOrder::ForceLeftToRight;
-        break;
-      default:
-        break;
-      }
-    }
-
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
         MD && MD->isStatic())

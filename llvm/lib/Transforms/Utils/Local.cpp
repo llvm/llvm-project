@@ -3111,8 +3111,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   auto *JProf = J->getMetadata(LLVMContext::MD_prof);
   auto *KProf = K->getMetadata(LLVMContext::MD_prof);
   if (!AAOnly && (JProf || KProf)) {
-    K->setMetadata(LLVMContext::MD_prof,
-                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+    // We do not need to merge metadata if we have select instructions and the
+    // one we're keeping (K) does not move (explicitly merging would drop the
+    // information in this case). Otherwise, explicitly handle the merging.
+    if (DoesKMove || (!isa<SelectInst>(J) || !isa<SelectInst>(K)) ||
+        ProfcheckDisableMetadataFixes)
+      K->setMetadata(LLVMContext::MD_prof,
+                     MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 

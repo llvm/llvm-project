@@ -1745,8 +1745,9 @@ bool ClauseProcessor::processIsDevicePtr(
   return clauseFound;
 }
 
-bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
-                                    bool isDeclareSimd) const {
+bool ClauseProcessor::processLinear(
+    mlir::omp::LinearClauseOps &result, bool isDeclareSimd,
+    llvm::SmallVectorImpl<const semantics::Symbol *> *linearSyms) const {
   lower::StatementContext stmtCtx;
   std::vector<mlir::Attribute> typeAttrs;
   std::vector<mlir::Attribute> linearModAttrs;
@@ -1776,6 +1777,8 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      if (linearSyms)
+        linearSyms->push_back(sym);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
 
