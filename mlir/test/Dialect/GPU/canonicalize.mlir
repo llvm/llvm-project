@@ -157,6 +157,61 @@ func.func @fold_memcpy_op(%arg0: i1) {
 
 // -----
 
+// CHECK-LABEL: func @synhcronous_self_memcpy
+func.func @synhcronous_self_memcpy(%arg0: memref<2xf16>)
+{
+  gpu.memcpy %arg0, %arg0 : memref<2xf16>, memref<2xf16>
+  return
+}
+
+// CHECK-NOT: gpu.memcpy
+
+// -----
+
+// CHECK-LABEL: func @asynchronous_self_memcpy1
+func.func @asynchronous_self_memcpy1(%arg0: memref<2xf16>) {
+  %1 = gpu.wait async
+  %memref, %asyncToken = gpu.alloc async [%1] () : memref<2xf16>
+  gpu.wait [%1]
+  %2 = gpu.wait async
+  %3 = gpu.memcpy async [%2] %memref, %memref : memref<2xf16>, memref<2xf16>
+  gpu.wait [%2]
+  return
+}
+
+// CHECK-NOT: gpu.memcpy
+
+// -----
+
+// CHECK-LABEL: func @asynchronous_self_memcpy2(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<2xf16>
+func.func @asynchronous_self_memcpy2(%arg0: memref<2xf16>) {
+    // CHECK: %[[T0:.*]] = gpu.wait async
+    %1 = gpu.wait async
+    
+    // CHECK: %{{.*}}, %[[T1:.*]] = gpu.alloc async [%[[T0]]] () : memref<2xf16>
+    // CHECK: %{{.*}}, %[[T2:.*]] = gpu.alloc async [%[[T0]]] () : memref<2xf16>
+    %memref, %asyncToken = gpu.alloc async [%1] () : memref<2xf16>
+    %memref1, %asyncToken1 = gpu.alloc async [%1] () : memref<2xf16>
+
+    // CHECK-NOT: gpu.memcpy {{.*}} %[[ARG0]], %[[ARG0]]
+    // CHECK: %[[T3:.*]] = gpu.wait async [%[[T1]], %[[T2]]]
+    %3 = gpu.memcpy async [%asyncToken, %asyncToken1] %arg0, %arg0 : memref<2xf16>, memref<2xf16>
+    
+    // CHECK: gpu.wait [%[[T3]]]
+    gpu.wait [%3]
+    
+    // CHECK: gpu.memcpy async [%[[T3]]] %[[ARG0]], %{{.*}}
+    // CHECK: gpu.memcpy async [%[[T3]]] %[[ARG0]], %{{.*}}
+    %4 = gpu.memcpy async [%3] %arg0, %memref : memref<2xf16>, memref<2xf16>
+    %5 = gpu.memcpy async [%3] %arg0, %memref1 : memref<2xf16>, memref<2xf16>
+
+    gpu.wait [%4, %5]
+    return
+}
+
+// -----
+
 // We cannot fold memcpy here as dest is a block argument.
 // CHECK-LABEL: func @do_not_fold_memcpy_op1
 func.func @do_not_fold_memcpy_op1(%arg0: i1, %arg1: memref<2xf16>) {
