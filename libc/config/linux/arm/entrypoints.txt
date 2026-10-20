@@ -211,6 +211,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/inotify.h entrypoints
     libc.src.sys.inotify.inotify_add_watch
     libc.src.sys.inotify.inotify_init

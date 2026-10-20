@@ -739,6 +739,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_eventfd
+  ../libc/include/sys/eventfd.yaml
+  sys/eventfd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_eventfd_macros
+)
+
+add_header_macro(
   sys_file
   ../libc/include/sys/file.yaml
   sys/file.h
