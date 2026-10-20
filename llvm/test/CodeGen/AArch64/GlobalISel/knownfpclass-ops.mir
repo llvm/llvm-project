@@ -922,8 +922,8 @@ body:             |
   ; CHECK-NEXT: %rhs:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %lhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %rhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
