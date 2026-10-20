@@ -62,8 +62,11 @@ void TargetGroupList::RemoveTarget(const TargetSP &target_sp) {
 
   std::lock_guard<std::recursive_mutex> guard(*m_mutex);
   std::vector<TargetGroupSP> groups = m_groups;
-  for (const TargetGroupSP &group_sp : groups)
+  for (const TargetGroupSP &group_sp : groups) {
     group_sp->RemoveTarget(target_sp);
+    if (group_sp->GetTargets().empty())
+      m_debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+  }
   m_groups.clear();
 }
 

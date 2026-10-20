@@ -1897,7 +1897,9 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
       continue;
     const SrcMgr::FileInfo &File = SLoc->getFile();
     const SrcMgr::ContentCache *Cache = &File.getContentCache();
-    if (!Cache->OrigEntry)
+    // Named pipes, including stdin, are serialized as buffers rather than
+    // files, since their contents can differ between AST files.
+    if (!Cache->OrigEntry || Cache->OrigEntry->isNamedPipe())
       continue;
 
     // Do not emit input files that do not affect current module.
@@ -2411,7 +2413,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
     unsigned Code;
     if (SLoc->isFile()) {
       const SrcMgr::ContentCache *Cache = &SLoc->getFile().getContentCache();
-      if (Cache->OrigEntry) {
+      if (Cache->OrigEntry && !Cache->OrigEntry->isNamedPipe()) {
         Code = SM_SLOC_FILE_ENTRY;
       } else
         Code = SM_SLOC_BUFFER_ENTRY;
@@ -2433,7 +2435,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       Record.push_back(File.hasLineDirectives());
 
       bool EmitBlob = false;
-      if (Content->OrigEntry) {
+      if (Code == SM_SLOC_FILE_ENTRY) {
         assert(Content->OrigEntry == Content->ContentsEntry &&
                "Writing to AST an overridden file is not supported");
 
