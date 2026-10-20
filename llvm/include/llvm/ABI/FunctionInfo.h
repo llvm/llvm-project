@@ -44,10 +44,16 @@ public:
     IndirectAliased,
     /// Ignore the argument (treat as void). Useful for void and empty structs.
     Ignore,
+
+    /// Only valid for aggregate argument types. The value is expanded into
+    /// one argument per non-padding element of CoerceToType. Arrays of i8 are
+    /// assumed to be padding.
+    CoerceAndExpand,
   };
 
 private:
   const Type *CoercionType = nullptr;
+  const Type *UnpaddedCoerceAndExpandType = nullptr;
   // Alignment is optional for direct arguments, but required for indirect
   // arguments. This invariant is enforced by the methods of this class.
   //
@@ -148,6 +154,24 @@ public:
 
   static ArgInfo getIgnore() { return ArgInfo(Ignore); }
 
+  /// \param CoerceToType Aggregate type whose non-padding elements are the
+  ///        in-memory pieces of the value, in order. Padding elements are
+  ///        arrays of i8.
+  /// \param UnpaddedCoerceToType \p CoerceToType with padding elements
+  ///        removed. A single element is stored as that element; two or more
+  ///        are a packed record.
+  static ArgInfo getCoerceAndExpand(const Type *CoerceToType,
+                                    const Type *UnpaddedCoerceToType) {
+    assert(CoerceToType && UnpaddedCoerceToType &&
+           "coerce-and-expand types cannot be null");
+    assert(isa<RecordType>(CoerceToType) &&
+           "coerce-and-expand coerce type must be a record");
+    ArgInfo AI(CoerceAndExpand);
+    AI.CoercionType = CoerceToType;
+    AI.UnpaddedCoerceAndExpandType = UnpaddedCoerceToType;
+    return AI;
+  }
+
   ArgInfo &setSignExt(bool SignExtend = true) {
     this->SignExt = SignExtend;
     if (SignExtend)
@@ -175,6 +199,7 @@ public:
   bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
+  bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
   unsigned getDirectOffset() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
@@ -244,8 +269,25 @@ public:
   }
 
   const Type *getCoerceToType() const {
-    assert((isDirect() || isExtend()) && "Invalid Kind!");
+    assert((isDirect() || isExtend() || isCoerceAndExpand()) &&
+           "Invalid Kind!");
     return CoercionType;
+  }
+
+  const Type *getUnpaddedCoerceAndExpandType() const {
+    assert(isCoerceAndExpand() && "Invalid Kind!");
+    return UnpaddedCoerceAndExpandType;
+  }
+
+  /// True if \p Ty is an array of i8, the padding element of a
+  /// coerce-and-expand type. A matrix is an array in this type system
+  /// and lowers to a vector, so it is not padding.
+  static bool isPaddingForCoerceAndExpand(const Type *Ty) {
+    const auto *AT = dyn_cast<ArrayType>(Ty);
+    if (!AT || AT->isMatrixType())
+      return false;
+    const auto *Elt = dyn_cast<IntegerType>(AT->getElementType());
+    return Elt && Elt->getSizeInBits().getFixedValue() == 8;
   }
 };
 

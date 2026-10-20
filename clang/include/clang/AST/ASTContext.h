@@ -183,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {
@@ -195,7 +199,8 @@ struct TypeInfo {
            AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -209,7 +214,8 @@ struct TypeInfoChars {
                 AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -1208,13 +1214,6 @@ public:
   /// Add an ExplicitInstantiationDecl for a given specialization.
   void addExplicitInstantiationDecl(const NamedDecl *Spec,
                                     ExplicitInstantiationDecl *EID);
-
-  /// If this variable is an instantiated static data member of a
-  /// class template specialization, returns the templated static data member
-  /// from which it was instantiated.
-  // FIXME: Remove ?
-  MemberSpecializationInfo *getInstantiatedFromStaticDataMember(
-                                                           const VarDecl *Var);
 
   /// Note that the static data member \p Inst is an instantiation of
   /// the static data member template \p Tmpl of a class template.
@@ -3657,6 +3656,13 @@ public:
   /// \returns true if the function/var must be CodeGen'ed/deserialized even if
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
+
+  /// Determines if the global variable or function \p D is emitted on the side
+  /// of the CUDA/HIP compilation, i.e. host or device, that is being compiled,
+  /// based on its host/device related attributes.
+  ///
+  /// \returns false if CodeGen never emits \p D in this compilation.
+  bool shouldEmitCUDADecl(const ValueDecl *D) const;
 
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.

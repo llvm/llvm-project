@@ -23,15 +23,15 @@ add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX SPIRV)
-if (NOT LLVM_LINK_LLVM_DYLIB)
-  foreach(target IN LISTS supported_jit_targets)
-    if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)
-      target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${target}")
+foreach(target IN LISTS supported_jit_targets)
+  if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)
+    target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${target}")
+    if (NOT LLVM_LINK_LLVM_DYLIB)
       llvm_map_components_to_libnames(llvm_libs ${target})
       target_link_libraries(PluginCommon PRIVATE ${llvm_libs})
     endif()
-  endforeach()
-endif()
+  endif()
+endforeach()
 
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)

@@ -148,9 +148,9 @@ static int BUCompareLatency(const SUnit *left, const SUnit *right) {
   int LDepth = left->getDepth();
   int RDepth = right->getDepth();
   if (LDepth != RDepth) {
-    LLVM_DEBUG(dbgs() << "  Comparing latency of SU (" << left->NodeNum
-                      << ") depth " << LDepth << " vs SU (" << right->NodeNum
-                      << ") depth " << RDepth << "\n");
+    LLVM_DEBUG(dbgs() << "  Comparing latency of " << *left << " depth "
+                      << LDepth << " vs " << *right << " depth " << RDepth
+                      << "\n");
     return LDepth < RDepth ? 1 : -1;
   }
   if (left->Latency != right->Latency)
@@ -323,9 +323,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
 
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate\n"
                          "Ready queue:";
-               for (auto &C
-                    : AvailQueue) dbgs()
-               << ' ' << C.SU->NodeNum;
+               for (auto &C : AvailQueue) dbgs() << ' ' << *C.SU;
                dbgs() << '\n';);
 
     auto *C = pickCandidate();

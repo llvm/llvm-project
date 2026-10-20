@@ -11,6 +11,7 @@
 
 #include "AMDGPUFrameLowering.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/SparseBitVector.h"
 
 namespace llvm {
 

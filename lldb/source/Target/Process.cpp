@@ -4279,6 +4279,16 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
   const StateType new_state =
       Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
+#ifdef LLDB_SIMULATE_SLOW_STOPS
+  // Simulate a slow machine that takes a long time to process an internal
+  // stop, so that ThreadPlanSingleThreadTimeout's 10ms timer fires while we
+  // are still in here.  This is helpful for diagnosing problems in
+  // the thread plans - particular the interaction with the
+  // ThreadPlanSingleThreadTimeout.
+  if (StateIsStoppedState(new_state, /*must_exist=*/true))
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
+  
   // First check to see if anybody wants a shot at this event:
   if (m_next_event_action_up) {
     NextEventAction::EventActionResult action_result =

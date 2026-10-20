@@ -22,9 +22,10 @@
 using namespace llvm;
 using namespace dwarf;
 
-void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                             const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void AArch64_ELFTargetObjectFile::initialize(MCContext &Ctx,
+                                             const TargetMachine &TM,
+                                             const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
   PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
   SupportDebugThreadLocalLocation =

@@ -415,6 +415,7 @@ public:
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
 
   SpecificBumpPtrAllocator &operator=(SpecificBumpPtrAllocator &&RHS) {
+    DestroyAll();
     Allocator = std::move(RHS.Allocator);
     return *this;
   }

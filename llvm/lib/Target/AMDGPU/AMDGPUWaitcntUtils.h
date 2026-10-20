@@ -17,7 +17,13 @@
 
 namespace llvm {
 
+class Function;
+class GCNSubtarget;
+
 namespace AMDGPU {
+
+/// Return whether expert scheduling mode is available and enabled for \p F.
+bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F);
 
 enum InstCounterType {
   LOAD_CNT = 0, // VMcnt prior to gfx12.
