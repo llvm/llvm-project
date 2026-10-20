@@ -18,7 +18,7 @@
 ; CHECK-YAML-NATIVE: MinimumPrecision: false
 ; CHECK-YAML-NATIVE: NativeLowPrecision: true
 ; CHECK-YAML: Name: ISG1
-; CHECK-YAML: Name: SV_Barycentrics
+; CHECK-YAML:      Name: SV_Barycentrics
 ; CHECK-YAML-NEXT: Index: 0
 ; CHECK-YAML-NEXT: SystemValue: Barycentrics
 ; CHECK-YAML-NEXT: CompType: Float16
@@ -33,7 +33,7 @@
 ; CHECK-YAML: SigInputVectors: 0
 ; CHECK-YAML: SigOutputVectors: [ 1, 0, 0, 0 ]
 ; CHECK-YAML: SigInputElements:
-; CHECK-YAML: Indices: [ 0 ]
+; CHECK-YAML:      Indices: [ 0 ]
 ; CHECK-YAML-NEXT: StartRow: 0
 ; CHECK-YAML-NEXT: Cols: 3
 ; CHECK-YAML-NEXT: StartCol: 0
@@ -41,7 +41,7 @@
 ; CHECK-YAML-NEXT: Kind: Barycentrics
 ; CHECK-YAML-MIN: Interpolation: LinearSample
 ; CHECK-YAML-NATIVE: Interpolation: LinearNoperspectiveCentroid
-; CHECK-YAML: InputOutputMap:
+; CHECK-YAML:      InputOutputMap:
 ; CHECK-YAML-NEXT: - [  ]
 
 ; CHECK-DXIL: call half @dx.op.loadInput.f16(i32 4, i32 0, i32 0, i8 2, i32 {{.*}})

@@ -33,7 +33,7 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !6 = !{i32 0, !"SV_Target", i32 9, i32 16, !7, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !7 = !{i32 0}
 
-; ANALYSIS: Inputs: 2 elements, 1 vectors
+; ANALYSIS:      Inputs: 2 elements, 1 vectors
 ; ANALYSIS-NEXT: 0: sv_barycentrics rows=1 cols=3 at 4294967295:255 usage=7 dynamic=0
 ; ANALYSIS-NEXT: 1: A rows=1 cols=4 at 0:0 usage=8 dynamic=0
 ; ANALYSIS-NEXT: Outputs: 1 elements, 1 vectors
@@ -50,7 +50,7 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; MD-DAG: !{i32 0, i64 4194304}
 
 ; PARTS: Name: ISG1
-; PARTS: Name: SV_Barycentrics
+; PARTS:      Name: SV_Barycentrics
 ; PARTS-NEXT: Index: 0
 ; PARTS-NEXT: SystemValue: Barycentrics
 ; PARTS-NEXT: CompType: Float32
@@ -59,15 +59,15 @@ attributes #0 = { "hlsl.shader"="pixel" }
 ; PARTS-NEXT: ExclusiveMask: 7
 ; PARTS: Name: PSV0
 ; PARTS: SampleFrequency: 1
-; PARTS: SigInputVectors: 1
+; PARTS:      SigInputVectors: 1
 ; PARTS-NEXT: SigOutputVectors: [ 1, 0, 0, 0 ]
 ; PARTS: SigInputElements:
-; PARTS: Indices: [ 0 ]
+; PARTS:      Indices: [ 0 ]
 ; PARTS-NEXT: StartRow: 0
 ; PARTS-NEXT: Cols: 3
 ; PARTS-NEXT: StartCol: 0
 ; PARTS-NEXT: Allocated: false
 ; PARTS-NEXT: Kind: Barycentrics
 ; PARTS: Interpolation: LinearNoperspectiveSample
-; PARTS: InputOutputMap:
+; PARTS:      InputOutputMap:
 ; PARTS-NEXT: - [ 0x0, 0x0, 0x0, 0x1 ]
