@@ -45,6 +45,7 @@ struct NonConstSizedView : std::ranges::view_base {
     std::size_t size();
 };
 
+// Test the pathological type where it is sized if it's const but not sized if it's const.
 static_assert(std::ranges::sized_range<NonConstSizedView>);
 static_assert(!std::ranges::sized_range<const NonConstSizedView>);
 static_assert(HasMemberSize<std::ranges::enumerate_view<NonConstSizedView>>);
