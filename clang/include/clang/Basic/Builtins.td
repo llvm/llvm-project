@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 include "clang/Basic/BuiltinsBase.td"
+include "clang/Basic/BuiltinsMeta.td"
 
 class FPMathTemplate : Template<["float", "double", "long double"],
                                 ["f",     "",       "l"]>;
@@ -1205,12 +1206,6 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
-}
-
-def MetaIsType : LangBuiltin<"CXX_LANG"> {
-  let Spellings = ["__builtin_meta_is_type"];
-  let Attributes = [NoThrow, Consteval];
-  let Prototype = "bool(std::meta::info)";
 }
 
 def ClearPadding : Builtin {
