@@ -4552,7 +4552,8 @@ multiclass Int16Med3Pat<Instruction med3Inst,
   def : GCNPat <
   (min (max i16:$src0, i16:$src1),
        (max (min i16:$src0, i16:$src1), i16:$src2)),
-  (med3Inst SRCMODS.NONE, VSrc_b16:$src0, SRCMODS.NONE, VSrc_b16:$src1, SRCMODS.NONE, VSrc_b16:$src2, DSTCLAMP.NONE)
+  (med3Inst SRCMODS.NONE, outputSrcType:$src0, SRCMODS.NONE, outputSrcType:$src1,
+            SRCMODS.NONE, outputSrcType:$src2, DSTCLAMP.NONE)
 >;
 }
 
