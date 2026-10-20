@@ -2910,7 +2910,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   }
 
   addUnwrappedLine();
-  const size_t BodyStart = CurrentLines->size();
+  const auto BodyStart = CurrentLines->size();
   ++Line->Level;
   ++Line->UnbracedBodyLevel;
   parseStructuralElement();
@@ -2920,7 +2920,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(!Line->InPPDirective);
     FormatToken *const LBraceTok = Tok;
     Tok = nullptr;
-    size_t BodyEnd = CurrentLines->size();
+    auto BodyEnd = CurrentLines->size();
     while (BodyEnd > 0) {
       const auto &L = (*CurrentLines)[--BodyEnd];
       if (!L.InPPDirective && getLastNonComment(L)) {
@@ -2932,10 +2932,10 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     // Don't insert the braces if they would enclose preprocessor directives.
     bool EnclosesPPDirective = false;
     for (size_t I = BodyStart; I <= BodyEnd && !EnclosesPPDirective; ++I) {
-      const auto &L = (*CurrentLines)[I];
+      const auto &BodyLine = (*CurrentLines)[I];
       EnclosesPPDirective =
-          L.InPPDirective ||
-          llvm::any_of(L.Tokens, [](const UnwrappedLineNode &Node) {
+          BodyLine.InPPDirective ||
+          llvm::any_of(BodyLine.Tokens, [](const UnwrappedLineNode &Node) {
             return Node.Tok->FirstAfterPPLine;
           });
     }
