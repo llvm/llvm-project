@@ -276,6 +276,10 @@ unsigned AGXInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AGX::AGX_IF:
   case AGX::AGX_ELSE:
   case AGX::AGX_LOOP:
+  case AGX::AGX_IF_ICMP:
+  case AGX::AGX_IF_FCMP:
+  case AGX::AGX_LOOP_ICMP:
+  case AGX::AGX_LOOP_FCMP:
     // An execution mask instruction and a jump.
     return 12;
   case AGX::AGX_BR:

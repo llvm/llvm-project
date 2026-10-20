@@ -127,5 +127,47 @@ bool AGXFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
     }
   }
+
+  // Branch on a comparison directly: an AGX_IF / AGX_LOOP whose condition is
+  // the only use of "icmpsel cc, a, b, T, F" with constant T and F, one of
+  // them zero, takes the comparison itself (inverted when T is the zero).
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::iterator T = MBB.getFirstTerminator();
+    if (T == MBB.end())
+      continue;
+    MachineInstr &Br = *T;
+    bool Loop = Br.getOpcode() == AGX::AGX_LOOP;
+    if (!Loop && Br.getOpcode() != AGX::AGX_IF)
+      continue;
+    Register Cond = Br.getOperand(0).getReg();
+    if (!Cond.isVirtual() || !MRI.hasOneNonDBGUse(Cond))
+      continue;
+    MachineInstr *Def = MRI.getVRegDef(Cond);
+    if (!Def || Def->getParent() != &MBB)
+      continue;
+    bool Float = Def->getOpcode() == AGX::FCMPSEL_F32;
+    if (!Float && Def->getOpcode() != AGX::ICMPSEL_I32)
+      continue;
+    // (dst, cc, src0_mods, src0, src1_mods, src1, src2_mods, src2, src3_mods,
+    //  src3)
+    const MachineOperand &X = Def->getOperand(7), &Y = Def->getOperand(9);
+    if (!X.isImm() || !Y.isImm() || Def->getOperand(6).getImm() ||
+        Def->getOperand(8).getImm() || (X.getImm() == 0) == (Y.getImm() == 0))
+      continue;
+    // A nonzero condition takes the if / breaks the loop.
+    unsigned CC = Def->getOperand(1).getImm() ^ (X.getImm() ? 0 : 8);
+    unsigned Opc = Loop ? (Float ? AGX::AGX_LOOP_FCMP : AGX::AGX_LOOP_ICMP)
+                        : (Float ? AGX::AGX_IF_FCMP : AGX::AGX_IF_ICMP);
+    BuildMI(MBB, Br, Br.getDebugLoc(), TII->get(Opc))
+        .addImm(CC)
+        .add(Def->getOperand(2))
+        .add(Def->getOperand(3))
+        .add(Def->getOperand(4))
+        .add(Def->getOperand(5))
+        .add(Br.getOperand(1));
+    Br.eraseFromParent();
+    Def->eraseFromParent();
+    Changed = true;
+  }
   return Changed;
 }

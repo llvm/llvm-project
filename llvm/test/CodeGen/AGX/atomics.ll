@@ -99,24 +99,23 @@ define agx_kernel void @threadgroup_rmw(ptr addrspace(1) %out, i32 %v) {
 define agx_kernel void @fadd(ptr addrspace(1) %p, float %v) {
 ; CHECK-LABEL: fadd:
 ; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 5 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 4 x 32-bit
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov_imm r0l, 0
 ; CHECK-NEXT:    mov_imm r2, 0
 ; CHECK-NEXT:    bitop 0101, r3, r2, 0
-; CHECK-NEXT:    atomic cmpxchg, 0, r3, u0_u1, 0, signed, r2_r3, 0
+; CHECK-NEXT:    atomic cmpxchg, 0, r1, u0_u1, 0, signed, r2_r3, 0
 ; CHECK-NEXT:    if_fcmp r0l, eq, 0.0, 0.0, 1
 ; CHECK-NEXT:    wait 0
 ; CHECK-NEXT:  .LBB3_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bitop 0101, r3, r1, 0
 ; CHECK-NEXT:    fadd32 r2, r3, u2
 ; CHECK-NEXT:    atomic cmpxchg, 0, r1, u0_u1, 0, signed, r2_r3, 0
 ; CHECK-NEXT:    wait 0
-; CHECK-NEXT:    icmpsel ueq, r4, r1, r3, 1, 0
-; CHECK-NEXT:    bitop 0101, r3, r1, 0
-; CHECK-NEXT:    while_icmp r0l, ueq, r4, 0, 1
+; CHECK-NEXT:    while_icmp r0l, nueq, r1, r3, 1
 ; CHECK-NEXT:    jmp_exec_any .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    pop_exec r0l, 1

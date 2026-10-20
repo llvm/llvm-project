@@ -163,6 +163,30 @@ bool AGXLowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         BuildMI(MBB, I, DL, TII.get(AGX::JMP_EXEC_ANY))
             .addMBB(MI.getOperand(1).getMBB());
         break;
+      case AGX::AGX_IF_ICMP:
+      case AGX::AGX_IF_FCMP:
+      case AGX::AGX_LOOP_ICMP:
+      case AGX::AGX_LOOP_FCMP: {
+        // (cc, src0_mods, src0, src1_mods, src1, target). An if keeps the
+        // threads where the comparison holds; a loop keeps those where it
+        // does not (the comparison is the break condition).
+        unsigned Opc = MI.getOpcode();
+        bool Loop = Opc == AGX::AGX_LOOP_ICMP || Opc == AGX::AGX_LOOP_FCMP;
+        bool Float = Opc == AGX::AGX_IF_FCMP || Opc == AGX::AGX_LOOP_FCMP;
+        unsigned CC = MI.getOperand(0).getImm() ^ (Loop ? 8 : 0);
+        unsigned Exec = Loop ? (Float ? AGX::WHILE_FCMP : AGX::WHILE_ICMP)
+                             : (Float ? AGX::IF_FCMP : AGX::IF_ICMP);
+        buildExecOp(MBB, I, DL, TII, Exec, CC)
+            .add(MI.getOperand(1))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(3))
+            .add(MI.getOperand(4))
+            .addImm(1);
+        BuildMI(MBB, I, DL,
+                TII.get(Loop ? AGX::JMP_EXEC_ANY : AGX::JMP_EXEC_NONE))
+            .addMBB(MI.getOperand(5).getMBB());
+        break;
+      }
       case AGX::AGX_LOOP_BEGIN:
         buildExecOp(MBB, I, DL, TII, AGX::IF_FCMP, FCondEQ)
             .addImm(0)

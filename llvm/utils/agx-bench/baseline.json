@@ -1,49 +1,49 @@
 {
  "histogram.ll:histogram:agx-g13g": {
-  "bytes": 134,
-  "cycles": 202.3,
-  "gprs": 8,
-  "instructions": 24,
+  "bytes": 126,
+  "cycles": 200.7,
+  "gprs": 7,
+  "instructions": 23,
   "uniform_halves": 16,
   "waits": 2
  },
  "histogram.ll:histogram:agx-g14c": {
-  "bytes": 134,
-  "cycles": 202.3,
-  "gprs": 8,
-  "instructions": 24,
+  "bytes": 126,
+  "cycles": 200.7,
+  "gprs": 7,
+  "instructions": 23,
   "uniform_halves": 16,
   "waits": 2
  },
  "reduce.ll:reduce:agx-g13g": {
-  "bytes": 260,
-  "cycles": 2016.1,
+  "bytes": 228,
+  "cycles": 1548.5,
   "gprs": 6,
-  "instructions": 44,
+  "instructions": 40,
   "uniform_halves": 14,
   "waits": 3
  },
  "reduce.ll:reduce:agx-g14c": {
-  "bytes": 194,
-  "cycles": 1812.0,
+  "bytes": 170,
+  "cycles": 1449.7,
   "gprs": 6,
-  "instructions": 33,
+  "instructions": 30,
   "uniform_halves": 14,
   "waits": 2
  },
  "saxpy.ll:saxpy:agx-g13g": {
-  "bytes": 70,
-  "cycles": 11.3,
+  "bytes": 62,
+  "cycles": 9.2,
   "gprs": 4,
-  "instructions": 12,
+  "instructions": 11,
   "uniform_halves": 18,
   "waits": 1
  },
  "saxpy.ll:saxpy:agx-g14c": {
-  "bytes": 70,
-  "cycles": 11.3,
+  "bytes": 62,
+  "cycles": 9.2,
   "gprs": 4,
-  "instructions": 12,
+  "instructions": 11,
   "uniform_halves": 18,
   "waits": 1
  },
@@ -80,18 +80,18 @@
   "waits": 1
  },
  "stencil.ll:stencil:agx-g13g": {
-  "bytes": 198,
+  "bytes": 190,
   "cycles": 96.1,
   "gprs": 8,
-  "instructions": 29,
+  "instructions": 28,
   "uniform_halves": 16,
   "waits": 1
  },
  "stencil.ll:stencil:agx-g14c": {
-  "bytes": 198,
+  "bytes": 190,
   "cycles": 96.1,
   "gprs": 8,
-  "instructions": 29,
+  "instructions": 28,
   "uniform_halves": 16,
   "waits": 1
  },

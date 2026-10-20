@@ -1334,6 +1334,12 @@ def ELSE_FCMP : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$cc,
                                        i32imm:$n)> {
   let G13Real = ELSE_FCMP_g13;
 }
+def WHILE_FCMP : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$cc,
+                                        SrcMods:$src0_mods, Src32Op:$src0,
+                                        SrcMods:$src1_mods, Src32Op:$src1,
+                                        i32imm:$n)> {
+  let G13Real = WHILE_FCMP_g13;
+}
 def POP_EXEC : AGXPseudo<(outs), (ins i32imm:$nest, i32imm:$n)> {
   let G13Real = POP_EXEC_g13;
 }
@@ -1368,6 +1374,17 @@ def AGX_ELSE : AGXCodeGenPseudo<(outs), (ins AGXBrTarget:$target),
 // loop header) if any thread remains active.
 def AGX_LOOP : AGXCodeGenPseudo<(outs), (ins GPR32:$brk, AGXBrTarget:$target),
                                 [(AGXloop i32:$brk, bb:$target)]>;
+// AGX_IF / AGX_LOOP whose condition is the comparison ($cc, $src0, $src1)
+// itself (cc bit 3 inverts it), formed by AGXFoldOperands from a single-use
+// icmpsel / fcmpsel that only produces the truth value.
+foreach Kind = ["ICMP", "FCMP"] in {
+def AGX_IF_#Kind : AGXCodeGenPseudo<(outs),
+    (ins i32imm:$cc, SrcMods:$src0_mods, Src32Op:$src0,
+         SrcMods:$src1_mods, Src32Op:$src1, AGXBrTarget:$target), []>;
+def AGX_LOOP_#Kind : AGXCodeGenPseudo<(outs),
+    (ins i32imm:$cc, SrcMods:$src0_mods, Src32Op:$src0,
+         SrcMods:$src1_mods, Src32Op:$src1, AGXBrTarget:$target), []>;
+}
 }
 
 let hasSideEffects = 1, Uses = [R0L], Defs = [R0L] in {
