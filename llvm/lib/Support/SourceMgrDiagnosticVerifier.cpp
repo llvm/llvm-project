@@ -254,6 +254,10 @@ SourceMgrDiagnosticVerifier::process(SourceMgr::DiagKind kind,
     // with a location in an unknown file can never match anything.
     diags = computeExpectedDiags(loc->buf);
   } else {
+    // '@unknown' directives may be in any buffer, including ones added after
+    // the verifier was created.
+    for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
+      (void)computeExpectedDiags(mgr.getMemoryBuffer(i + 1));
     diags = expectedUnknownLocDiags;
   }
 
@@ -327,16 +331,18 @@ bool SourceMgrDiagnosticVerifier::verify() {
       emitError(diag, "expected " + getDiagKindStr(diag.kind) + " \"" +
                           diag.substring + "\" was not produced");
   };
-  // Check buffers in registration order so that the output is deterministic.
+  // Check all buffers in registration order, including ones that were added
+  // after the verifier was created and had no diagnostics (e.g. included
+  // files). Clear the lists rather than the map so that calling verify()
+  // again does not rescan the buffers and report their directives again.
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i) {
-    auto it = expectedDiagsPerBuffer.find(mgr.getMemoryBuffer(i + 1));
-    if (it == expectedDiagsPerBuffer.end())
-      continue;
-    for (const ExpectedDiag &diag : it->second)
+    const MemoryBuffer *buf = mgr.getMemoryBuffer(i + 1);
+    for (const ExpectedDiag &diag : computeExpectedDiags(buf))
       checkExpectedDiags(diag);
+    expectedDiagsPerBuffer[buf].clear();
   }
   for (const ExpectedDiag &diag : expectedUnknownLocDiags)
     checkExpectedDiags(diag);
-  expectedDiagsPerBuffer.clear();
+  expectedUnknownLocDiags.clear();
   return ok;
 }
