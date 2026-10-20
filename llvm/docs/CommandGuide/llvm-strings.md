@@ -54,6 +54,7 @@ Specifies the encoding of the input file. Valid arguments are:
 - `s` (ASCII)
 - `S` (current locale's character set)
 - `utf8` (UTF-8)
+The default is `--encoding=S`.
 :::
 
 :::{option} --help, -h

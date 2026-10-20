@@ -32,6 +32,10 @@
 #include <cuchar>
 #include <string>
 
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
+
 using namespace llvm;
 using namespace llvm::object;
 
@@ -143,17 +147,42 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
 
   const char *Next = Cur;
   std::mbstate_t NextMBState = MBState;
+#if defined(_WIN32) || defined(__APPLE__)
+  wchar_t UCh;
+#else
   char32_t UCh;
+#endif
   for (;;) {
     // Read one byte at a time. This is usually not the best way to use
     // mbrtoc32(), usually it would make more sense to pass the size of the
     // buffer, but the strings utility is unusual in that it is expected to
     // encounter many bytes that do not form valid characters and it is more
     // useful to optimise for this case.
-    const std::size_t BytesRead = std::mbrtoc32(&UCh, Next, 1, &NextMBState);
+#if defined(_WIN32) || defined(__APPLE__)
+    // Workarounds:
+    // On Windows, mbrtoc32() ignores the locale and only converts UTF-8, but
+    // wchar_t is UTF-16 and is close enough, as long as we make sure to avoid
+    // it for UTF-8 locales.
+    // On Apple, <uchar.h> is not available, but wchar_t is UTF-32 and is a full
+    // substitute.
+    std::size_t BytesRead = std::mbrtowc(&UCh, Next, 1, &NextMBState);
+#else
+    std::size_t BytesRead = std::mbrtoc32(&UCh, Next, 1, &NextMBState);
+#endif
+    // Workaround:
+    // BytesRead == 0 should mean we found a null byte and should always have
+    // UCh == 0, but on glibc, it also gets returned for the case that should
+    // be indicated by (std::size_t)-3, as indicating that 0 bytes were
+    // converted. It can be detected by UCh != 0.
+    if (BytesRead == 0 && UCh) {
+      BytesRead = (std::size_t)-3;
+    }
     switch (BytesRead) {
     case 1:
       ++Next;
+      LLVM_FALLTHROUGH;
+
+    case (std::size_t)-3:
       Cur = Next;
       MBState = NextMBState;
       Ch = UCh;
@@ -240,7 +269,13 @@ void Strings<Encoding::Locale>::endString(raw_ostream &OS,
   char Buf[MB_LEN_MAX];
   // Note: This is only required for stateful encodings such as the
   // ISO-2022 ones.
+#if defined(_WIN32) || defined(__APPLE__)
+  const std::size_t BytesWritten = std::wcrtomb(Buf, L'\0', &MBState);
+#else
   const std::size_t BytesWritten = std::c32rtomb(Buf, U'\0', &MBState);
+#endif
+  assert(BytesWritten < (std::size_t)-1 &&
+         "A null character must always be valid");
   Buf[BytesWritten - 1] = '\n';
   OS << StringRef(Buf, BytesWritten);
 }
@@ -369,6 +404,9 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
       }
 
       if (EndOfChunk) {
+        if (AtEOF)
+          break;
+
         // Finish handling the current chunk and update ChunkOffset.
         ChunkOffset += Cur - Begin;
         Buffer.erase(Buffer.begin(), Cur);
@@ -477,6 +515,10 @@ int main(int argc, char **argv) {
       invalidArgValue(EncodingArg);
     Encoding = *EncodingVal;
   }
+#ifdef _WIN32
+  if (Encoding == Encoding::Locale && GetACP() == CP_UTF8)
+    Encoding = Encoding::Utf8;
+#endif
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
   Arg *RadixArg = Args.getLastArg(OPT_radix_EQ);
