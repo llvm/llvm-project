@@ -634,10 +634,9 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
-def LifetimeSafetyInvalidation
-    : DiagGroup<"lifetime-safety-experimental-invalidation"> {
+def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
   code Documentation = [{
-Experimental. Warning to detect invalidation of references.
+Warning to detect invalidation of references.
   }];
 }
 
@@ -682,7 +681,8 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
-                                    LifetimeSafetyDanglingGlobalInMain]>;
+                                    LifetimeSafetyDanglingGlobalInMain,
+                                    LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
@@ -744,29 +744,6 @@ Validates correct usage and adherence to lifetime safety annotations like [[clan
   }];
 }
 
-<<<<<<< HEAD
-=======
-def LifetimeSafetyFieldOriginEscape
-    : DiagGroup<"lifetime-safety-experimental-field-origin-escape"> {
-  code Documentation = [{
-Experimental. Detects member functions returning a value derived from a
-pointer, reference, or view field rather than from ``*this``. May report owned
-pointer fields (e.g., ``Vector::data()``), which can be silenced by marking the
-method ``[[clang::lifetimebound]]``.
-  }];
-}
-
-def LifetimeSafetyExperimental
-    : DiagGroup<"lifetime-safety-experimental",
-                [LifetimeSafetyInvalidation,
-                 LifetimeSafetyFieldOriginEscape]> {
-  code Documentation = [{
-Experimental lifetime safety warnings. These may have known false positives and
-their behavior may change. Not enabled by -Wlifetime-safety-all.
-  }];
-}
-
->>>>>>> 8e635b36
 def LifetimeSafetyAll : DiagGroup<"lifetime-safety-all",
                                   [LifetimeSafety,
                                   LifetimeSafetySuggestions,
