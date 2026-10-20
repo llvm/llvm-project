@@ -3244,44 +3244,20 @@ SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
   // Shifting more than the bitwidth is not valid.
   unsigned BitWidth = V.getScalarValueSizeInBits();
 
-  if (auto *Cst = dyn_cast<ConstantSDNode>(V.getOperand(1))) {
-    const APInt &ShAmt = Cst->getAPIntValue();
-    if (ShAmt.uge(BitWidth))
-      return std::nullopt;
-    return ConstantRange(ShAmt);
-  }
+  if (auto *Cst = dyn_cast<ConstantSDNode>(V.getOperand(1)))
+    return llvm::getValidShiftAmountRange(Cst->getAPIntValue(), BitWidth);
 
-  if (auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1))) {
-    const APInt *MinAmt = nullptr, *MaxAmt = nullptr;
-    for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
-      if (!DemandedElts[i])
-        continue;
-      auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
-      if (!SA) {
-        MinAmt = MaxAmt = nullptr;
-        break;
-      }
-      const APInt &ShAmt = SA->getAPIntValue();
-      if (ShAmt.uge(BitWidth))
-        return std::nullopt;
-      if (!MinAmt || MinAmt->ugt(ShAmt))
-        MinAmt = &ShAmt;
-      if (!MaxAmt || MaxAmt->ult(ShAmt))
-        MaxAmt = &ShAmt;
-    }
-    assert(((!MinAmt && !MaxAmt) || (MinAmt && MaxAmt)) &&
-           "Failed to find matching min/max shift amounts");
-    if (MinAmt && MaxAmt)
-      return ConstantRange(*MinAmt, *MaxAmt + 1);
-  }
-
-  // Use computeKnownBits to find a hidden constant/knownbits (usually type
-  // legalized). e.g. Hidden behind multiple bitcasts/build_vector/casts etc.
-  KnownBits KnownAmt = computeKnownBits(V.getOperand(1), DemandedElts, Depth);
-  if (KnownAmt.getMaxValue().ult(BitWidth))
-    return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
-
-  return std::nullopt;
+  auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1));
+  return llvm::getValidShiftAmountRange(
+      BitWidth, DemandedElts, BV ? BV->getNumOperands() : 0,
+      [&](unsigned I) -> const APInt * {
+        auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(I));
+        return SA ? &SA->getAPIntValue() : nullptr;
+      },
+      [&] {
+        // Find amounts hidden behind bitcasts/build_vector/casts etc.
+        return computeKnownBits(V.getOperand(1), DemandedElts, Depth);
+      });
 }
 
 std::optional<unsigned>
@@ -3290,11 +3266,8 @@ SelectionDAG::getValidShiftAmount(SDValue V, const APInt &DemandedElts,
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
           V.getOpcode() == ISD::SRA) &&
          "Unknown shift node");
-  if (std::optional<ConstantRange> AmtRange =
-          getValidShiftAmountRange(V, DemandedElts, Depth))
-    if (const APInt *ShAmt = AmtRange->getSingleElement())
-      return ShAmt->getZExtValue();
-  return std::nullopt;
+  return llvm::getValidShiftAmount(
+      getValidShiftAmountRange(V, DemandedElts, Depth));
 }
 
 std::optional<unsigned>

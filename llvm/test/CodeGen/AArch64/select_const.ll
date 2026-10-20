@@ -8,17 +8,11 @@
 ; select Cond, 0, 1 --> zext (!Cond)
 
 define i32 @select_0_or_1(i1 %cond) {
-; CHECK-SD-LABEL: select_0_or_1:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    bic w0, w8, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: select_0_or_1:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    eor w8, w0, #0x1
-; CHECK-GI-NEXT:    and w0, w8, #0x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: select_0_or_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    bic w0, w8, w0
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 1
   ret i32 %sel
 }
@@ -33,17 +27,11 @@ define i32 @select_0_or_1_zeroext(i1 zeroext %cond) {
 }
 
 define i32 @select_0_or_1_signext(i1 signext %cond) {
-; CHECK-SD-LABEL: select_0_or_1_signext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    bic w0, w8, w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: select_0_or_1_signext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    eor w8, w0, #0x1
-; CHECK-GI-NEXT:    and w0, w8, #0x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: select_0_or_1_signext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    bic w0, w8, w0
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 1
   ret i32 %sel
 }
@@ -420,8 +408,8 @@ define i8 @sel_constants_sdiv_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_sdiv_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    eor w8, w0, #0x1
-; CHECK-GI-NEXT:    and w8, w8, #0x1
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    bic w8, w8, w0
 ; CHECK-GI-NEXT:    lsl w0, w8, #2
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23

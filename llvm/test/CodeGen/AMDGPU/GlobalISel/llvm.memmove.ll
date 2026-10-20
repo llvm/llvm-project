@@ -33,14 +33,14 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
 ; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
 ; LOOP-NEXT:    v_or_b32_e32 v3, v4, v5
-; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
-; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
-; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64
+; LOOP-NEXT:    v_or_b32_e32 v3, v3, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[4:7], 0 addr64
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64 offset:1
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[4:7], 0 addr64 offset:1
-; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[4:7], 0 addr64 offset:2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v3
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[4:7], 0 addr64 offset:2
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64 offset:3
 ; LOOP-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; LOOP-NEXT:    ; implicit-def: $vgpr0_vgpr1
@@ -50,7 +50,7 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    s_waitcnt expcnt(2)
+; LOOP-NEXT:    s_waitcnt expcnt(1)
 ; LOOP-NEXT:    buffer_load_ubyte v4, v[2:3], s[0:3], 0 addr64 offset:1
 ; LOOP-NEXT:    buffer_load_ubyte v5, v[2:3], s[0:3], 0 addr64 offset:3
 ; LOOP-NEXT:    buffer_load_ubyte v6, v[2:3], s[0:3], 0 addr64 offset:2
@@ -65,14 +65,14 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
 ; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
 ; LOOP-NEXT:    v_or_b32_e32 v3, v4, v5
-; LOOP-NEXT:    v_or_b32_e32 v2, v3, v2
-; LOOP-NEXT:    v_bfe_u32 v4, v2, 8, 8
-; LOOP-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64
+; LOOP-NEXT:    v_or_b32_e32 v3, v3, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64
+; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:1
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
-; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:1
-; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    v_lshrrev_b32_e32 v2, 24, v3
+; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:2
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
 ; LOOP-NEXT:    s_endpgm
 ;

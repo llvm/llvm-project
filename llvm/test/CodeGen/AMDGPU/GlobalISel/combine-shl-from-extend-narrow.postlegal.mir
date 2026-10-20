@@ -226,31 +226,31 @@ body:             |
     ; GFX6-LABEL: name: narrow_shl_s64_by_2_from_zext_s32_lookthrough_amount
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: %narrow:_(s32) = COPY $vgpr0
-    ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
-    ; GFX6-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
-    ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ; GFX6-NEXT: %narrow:_(i32) = COPY $vgpr0
+    ; GFX6-NEXT: %masklow30:_(i32) = G_CONSTANT i32 1073741823
+    ; GFX6-NEXT: %masked:_(i32) = G_AND %narrow, %masklow30
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL %masked, [[C]](i32)
+    ; GFX6-NEXT: %shl:_(i64) = G_ZEXT [[SHL]](i32)
+    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(i64)
     ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s32_lookthrough_amount
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: %narrow:_(s32) = COPY $vgpr0
-    ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
-    ; GFX9-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX9-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
-    ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
-    %narrow:_(s32) = COPY $vgpr0
-    %masklow30:_(s32) = G_CONSTANT i32 1073741823
-    %masked:_(s32) = G_AND %narrow, %masklow30
-    %extend:_(s64) = G_ZEXT %masked
-    %shiftamt64:_(s64) = G_CONSTANT i64 2
-    %shiftamt:_(s32) = G_TRUNC %shiftamt64
-    %shl:_(s64) = G_SHL %extend, %shiftamt
+    ; GFX9-NEXT: %narrow:_(i32) = COPY $vgpr0
+    ; GFX9-NEXT: %masklow30:_(i32) = G_CONSTANT i32 1073741823
+    ; GFX9-NEXT: %masked:_(i32) = G_AND %narrow, %masklow30
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL %masked, [[C]](i32)
+    ; GFX9-NEXT: %shl:_(i64) = G_ZEXT [[SHL]](i32)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(i64)
+    %narrow:_(i32) = COPY $vgpr0
+    %masklow30:_(i32) = G_CONSTANT i32 1073741823
+    %masked:_(i32) = G_AND %narrow, %masklow30
+    %extend:_(i64) = G_ZEXT %masked
+    %shiftamt64:_(i64) = G_CONSTANT i64 2
+    %shiftamt:_(i32) = G_TRUNC %shiftamt64
+    %shl:_(i64) = G_SHL %extend, %shiftamt
     $vgpr0_vgpr1 = COPY %shl
 ...
 

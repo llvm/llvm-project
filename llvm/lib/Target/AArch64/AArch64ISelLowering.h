@@ -118,6 +118,10 @@ public:
     return 64;
   }
 
+  std::optional<APInt>
+  getDemandedXorConstant(const APInt &C,
+                         const APInt &DemandedBits) const override;
+
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
                                     const APInt &DemandedElts,
                                     TargetLoweringOpt &TLO) const override;
@@ -306,8 +310,9 @@ public:
     return false;
   }
 
-  /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
-  bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
+  bool isDesirableToCommuteXorWithShift(bool IsShl, const APInt &XorMask,
+                                        unsigned ShiftAmt,
+                                        bool IsVector) const override;
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
   bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
