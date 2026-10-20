@@ -56,6 +56,52 @@ bool fir::useStrictVolatileVerification() {
   return clUseStrictVolatileVerification;
 }
 
+//===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::AssertOp::verify() {
+  llvm::StringRef message = getMessage();
+  if (message.contains('\0'))
+    return emitOpError("message must not contain an embedded null character");
+  unsigned directives = 0;
+  while (!message.empty()) {
+    size_t percent = message.find('%');
+    if (percent == llvm::StringRef::npos)
+      break;
+    message = message.drop_front(percent + 1);
+    if (message.consume_front("%"))
+      continue;
+    if (!message.consume_front("lld"))
+      return emitOpError("message supports only %lld and %% format directives");
+    ++directives;
+  }
+  if (directives != getValues().size())
+    return emitOpError(
+        "number of %lld directives must match diagnostic values");
+  return mlir::success();
+}
+
+namespace {
+struct RemoveTrueAssert : mlir::OpRewritePattern<fir::AssertOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssertOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (!mlir::matchPattern(op.getCondition(), mlir::m_One()))
+      return mlir::failure();
+    rewriter.replaceOp(op, op.getGuarded());
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::AssertOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<RemoveTrueAssert>(context);
+}
+
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
   if (!fromOp || !toOp)
@@ -246,6 +292,13 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
 
     if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
       return varIface.isOptional();
+
+    if (auto assertOp = mlir::dyn_cast<fir::AssertOp>(defOp)) {
+      val =
+          assertOp
+              .getGuarded()[mlir::cast<mlir::OpResult>(val).getResultNumber()];
+      continue;
+    }
 
     // Check for fir.embox and fir.rebox before checking for
     // FortranObjectViewOpInterface, which they support.
@@ -6104,10 +6157,21 @@ valueCheckFirAttributes(mlir::Value value,
   };
   // If this is a fir.box that was loaded, the fir attributes will be on the
   // related fir.ref<fir.box> creation.
-  if (mlir::isa<fir::BoxType>(value.getType()))
-    if (auto definingOp = value.getDefiningOp())
-      if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(definingOp))
+  // This is an attribute query only. Do not make rewriting helpers transparent
+  // to guards: replacing a guarded use with its origin loses the check.
+  while (true) {
+    if (auto assertOp = value.getDefiningOp<fir::AssertOp>()) {
+      value = assertOp.getGuarded()[mlir::cast<mlir::OpResult>(value)
+                                        .getResultNumber()];
+      continue;
+    }
+    if (mlir::isa<fir::BoxType>(value.getType()))
+      if (auto loadOp = value.getDefiningOp<fir::LoadOp>()) {
         value = loadOp.getMemref();
+        continue;
+      }
+    break;
+  }
   // If this is a function argument, look in the argument attributes.
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
     if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())

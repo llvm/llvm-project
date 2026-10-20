@@ -560,11 +560,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; GFX8-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; GFX8-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX8-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX8-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX8-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; GFX8-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1200-LABEL: name: raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
@@ -588,11 +586,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_VBUFFER_OFFEN_RTN]].sub0_sub1
   ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; GFX1200-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; GFX1200-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1250-LABEL: name: raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
@@ -616,11 +612,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_VBUFFER_OFFEN_RTN]].sub0_sub1
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -756,11 +750,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__vgpr
   ; GFX8-NEXT: bb.5:
   ; GFX8-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub0
   ; GFX8-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub1
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY18]], implicit $exec
-  ; GFX8-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
-  ; GFX8-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
-  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX8-NEXT:   $vgpr0 = COPY [[COPY18]]
+  ; GFX8-NEXT:   $vgpr1 = COPY [[COPY19]]
+  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1200-LABEL: name: raw_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
@@ -822,11 +814,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__vgpr
   ; GFX1200-NEXT: bb.5:
   ; GFX1200-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub0
   ; GFX1200-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub1
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY18]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
-  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[COPY18]]
+  ; GFX1200-NEXT:   $vgpr1 = COPY [[COPY19]]
+  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1250-LABEL: name: raw_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
@@ -888,11 +878,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__vgpr
   ; GFX1250-NEXT: bb.5:
   ; GFX1250-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub0
   ; GFX1250-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub1
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY18]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
-  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY18]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY19]]
+  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -1103,11 +1091,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; GFX8-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; GFX8-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX8-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX8-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX8-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; GFX8-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1200-LABEL: name: raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr_rsrc__vgpr_voffset__sgpr_soffset__voffset_add4095
   ; GFX1200: bb.1 (%ir-block.0):
@@ -1131,11 +1117,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_VBUFFER_OFFEN_RTN]].sub0_sub1
   ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; GFX1200-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX1200-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; GFX1200-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
   ; GFX1250-LABEL: name: raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr_rsrc__vgpr_voffset__sgpr_soffset__voffset_add4095
   ; GFX1250: bb.1 (%ir-block.0):
@@ -1162,11 +1146,9 @@ define amdgpu_ps double @raw_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__sgpr
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vreg_64_align2 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_VBUFFER_OFFEN_RTN]].sub0_sub1
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub0
   ; GFX1250-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY11]].sub1
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
-  ; GFX1250-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY12]]
+  ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY13]]
+  ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %voffset = add i32 %voffset.base, 4095
   %ret = call i64 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double

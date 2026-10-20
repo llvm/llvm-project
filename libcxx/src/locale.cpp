@@ -563,9 +563,29 @@ void locale::facet::__on_zero_shared() noexcept { delete this; }
 // locale::id
 
 long locale::id::__get() {
-  constinit static int32_t next_id = 0;
-  call_once(__flag_, [&] { __id_ = __libcpp_atomic_add(&next_id, 1); });
-  return __id_ - 1;
+  constexpr __id_type uninitialized = 0;
+  constexpr __id_type pending       = 1;
+  constexpr __id_type first_id      = 2;
+
+  constinit static __id_type next_id = first_id;
+
+  auto val = __libcpp_atomic_load(&__id_, _AO_Relaxed);
+  if (val >= first_id)
+    return val - first_id;
+
+  if (val == uninitialized && __libcpp_atomic_compare_exchange_strong(&__id_, &val, pending)) {
+    auto new_id = __libcpp_atomic_add(&next_id, 1) - 1;
+    __libcpp_atomic_store(&__id_, new_id);
+    return new_id - first_id;
+  }
+
+  // Another thread is already initializing __id_. Wait for that in a spin loop. The initialization should be incredibly
+  // fast, a spin loop should be efficient enough.
+  while (true) {
+    auto id = __libcpp_atomic_load(&__id_);
+    if (id >= first_id)
+      return id - first_id;
+  }
 }
 
 // template <> class collate_byname<char>

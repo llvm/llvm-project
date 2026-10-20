@@ -4,12 +4,14 @@ static_library("AArch64") {
   deps = [
     "//bolt/lib/Core",
     "//llvm/lib/MC",
+    "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/MCTargetDesc",
   ]
   sources = [
     "AArch64MCPlusBuilder.cpp",
     "AArch64MCSymbolizer.cpp",
+    "AArch64RelocationHandler.cpp",
   ]
 
   # This target reaches into the internal headers of LLVM's AArch64 library.

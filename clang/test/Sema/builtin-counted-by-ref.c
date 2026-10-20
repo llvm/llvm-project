@@ -185,3 +185,117 @@ struct ptr_no_attr {
 void test11(struct ptr_no_attr *p) {
   _Static_assert(_Generic(__builtin_counted_by_ref(p->ptr), void * : 1, default : 0) == 1, "should be void*");
 }
+
+struct bitfield_counter {
+  int count : 13; // expected-note {{bit-field 'count' declared here}}
+  int array[] __attribute__((counted_by(count)));
+};
+
+void test_bitfield_counter(struct bitfield_counter *p) {
+  __builtin_counted_by_ref(p->array); // expected-error {{'__builtin_counted_by_ref' cannot be used on 'p->array' because its 'counted_by' attribute refers to bit-field 'count'}}
+}
+
+// The bit-field restriction also applies to 'counted_by' pointers, not just
+// flexible array members, and to a bit-field counter that isn't at the start of
+// its storage unit.
+struct bitfield_counter_ptr {
+  unsigned flags : 3;
+  unsigned count : 13; // expected-note {{bit-field 'count' declared here}}
+  int *ptr __attribute__((counted_by(count)));
+};
+
+void test_bitfield_counter_ptr(struct bitfield_counter_ptr *p) {
+  __builtin_counted_by_ref(p->ptr); // expected-error {{'__builtin_counted_by_ref' cannot be used on 'p->ptr' because its 'counted_by' attribute refers to bit-field 'count'}}
+}
+
+// Only 'counted_by' is supported. The '_or_null' and 'sized_by' variants return
+// 'void *', the same as a member without any attribute, so that the _Generic
+// idiom from the documentation still compiles for them.
+struct counted_by_or_null_ptr {
+  int count;
+  int *ptr __attribute__((counted_by_or_null(count)));
+};
+
+struct sized_by_ptr {
+  int count;
+  char *ptr __attribute__((sized_by(count)));
+};
+
+struct sized_by_or_null_ptr {
+  int count;
+  char *ptr __attribute__((sized_by_or_null(count)));
+};
+
+void test_or_null_kinds(struct counted_by_or_null_ptr *a, struct sized_by_ptr *b,
+                        struct sized_by_or_null_ptr *c) {
+  _Static_assert(_Generic(__builtin_counted_by_ref(a->ptr), void * : 1, default : 0) == 1, "should be void*");
+  _Static_assert(_Generic(__builtin_counted_by_ref(b->ptr), void * : 1, default : 0) == 1, "should be void*");
+  _Static_assert(_Generic(__builtin_counted_by_ref(c->ptr), void * : 1, default : 0) == 1, "should be void*");
+}
+
+// The returned pointer's pointee type is the counter's declared type, including
+// qualifiers, enums, and typedefs.
+enum count_enum { CE_ZERO, CE_ONE };
+typedef unsigned short count_t;
+
+struct volatile_count {
+  volatile int count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+struct const_count {
+  const int count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+struct enum_count {
+  enum count_enum count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+struct typedef_count {
+  count_t count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+void test_qualified_enum_typedef(struct volatile_count *vp, struct const_count *cp,
+                                 struct enum_count *ep, struct typedef_count *tp) {
+  _Static_assert(_Generic(__builtin_counted_by_ref(vp->array), volatile int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(cp->array), const int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(ep->array), enum count_enum * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(tp->array), count_t * : 1, default : 0) == 1, "wrong return type");
+
+  *__builtin_counted_by_ref(vp->array) = 42;                        // ok
+  *__builtin_counted_by_ref(cp->array) = 42;                        // expected-error {{read-only variable is not assignable}}
+}
+
+// Various ways of naming the flexible array member, including through nested
+// and anonymous structs.
+struct nested_inner {
+  int count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+struct nested_outer {
+  long tag;
+  struct nested_inner inner;
+};
+
+struct anon_count {
+  long tag;
+  struct {
+    int pad;
+    short count;
+  };
+  int array[] __attribute__((counted_by(count)));
+};
+
+void test_nested_anonymous_by_value_subscripted(struct nested_inner *p, struct nested_inner s,
+                                                struct nested_outer *o, struct anon_count *a) {
+  _Static_assert(_Generic(__builtin_counted_by_ref((*p).array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(p[1].array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref((p)->array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(s.array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(o->inner.array), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(a->array), short * : 1, default : 0) == 1, "wrong return type");
+}
