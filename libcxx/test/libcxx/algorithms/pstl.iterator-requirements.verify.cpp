@@ -276,6 +276,22 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output); // expected-error@*:* {{static assertion failed: set_difference}}
+
+    (void)std::set_difference(
+        pol, non_fwd, non_fwd, it, it, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+    (void)std::set_difference(
+        pol, it, it, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: set_difference}}
+  }
+
+  {
     (void)std::set_intersection(
         pol, non_fwd, non_fwd, it, it, it); // expected-error@*:* {{static assertion failed: set_intersection}}
     (void)std::set_intersection(
