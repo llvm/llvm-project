@@ -393,9 +393,12 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   }
 
   // Find all debug info types that may be referenced by NSDI instructions.
+  // Member types are not roots: each one is emitted only from its composite.
   DebugInfoFinder Finder;
   Finder.processModule(*M);
-  DebugTypes.assign(Finder.types().begin(), Finder.types().end());
+  copy_if(Finder.types(), std::back_inserter(DebugTypes), [](const DIType *Ty) {
+    return Ty->getTag() != dwarf::DW_TAG_member;
+  });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
     if (SP->isDefinition())
@@ -1303,10 +1306,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   std::optional<MCRegister> StaticMemberRegOpt;
   if (const DIDerivedType *SM = GV->getStaticDataMemberDeclaration()) {
-    EmitResult StaticMember = getOrCreateDebugScope(SM);
-    if (!StaticMember)
+    // Do not create the member here, just look it up to avoid orphaning it.
+    StaticMemberRegOpt = lookupOptReg(DebugScopeRegs, SM);
+    if (!StaticMemberRegOpt)
       return std::nullopt;
-    StaticMemberRegOpt = StaticMember.Reg;
   }
 
   MCRegister NameReg = getCachedOpStringReg(GV->getName());
