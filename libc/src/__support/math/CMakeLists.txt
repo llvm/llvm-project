@@ -4370,15 +4370,32 @@ add_header_library(
 )
 
 add_header_library(
+  exp2f_integer_eval
+  HDRS
+    exp2f_integer_eval.h
+  DEPENDS
+    .exp2f_integer_utils
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   exp2f
   HDRS
     exp2f.h
   DEPENDS
     .exp2f_double_eval
     .exp2f_float_eval
+    .exp2f_integer_eval
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
