@@ -92,6 +92,14 @@ int test16(int *b) {
   return b[0];
 }
 
+void test17_enable_if(int x) __attribute__((enable_if(x > 0, "")));
+void test17_pass_object_size(void *p __attribute__((pass_object_size(0))));
+int test17(int *a) {
+  a = __builtin_assume_aligned(test17_enable_if, 32); // expected-error {{cannot take address of function 'test17_enable_if'}}
+  a = __builtin_assume_aligned(test17_pass_object_size, 32); // expected-error {{cannot take address of function 'test17_pass_object_size'}}
+  return a[0];
+}
+
 void test_void_assume_aligned(void) __attribute__((assume_aligned(32))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 int test_int_assume_aligned(void) __attribute__((assume_aligned(16))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(64))); // no-warning

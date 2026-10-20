@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_S390X_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_S390X_H
 
-#include "RegisterContext_s390x.h"
-#include "RegisterInfoInterface.h"
-#include "lldb-s390x-register-enums.h"
+#include "Register/Arch/RegisterContext_s390x.h"
+#include "Register/RegisterInfoInterface.h"
+#include "Register/Arch/lldb-s390x-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 

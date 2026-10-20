@@ -21,9 +21,9 @@ components:
   implementations together for launching a binary.
 
 Since `lldb-dap` builds on top of LLDB, all of LLDB's extensibility mechanisms
-such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
-[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
-and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
+such as [Variable Pretty-Printing](variable.md),
+[Frame recognizers](tutorials/custom-frame-recognizers.md)
+and [Python Scripting](python-reference.md) are available
 also in `lldb-dap`.
 
 #### Links to IDE Extensions
@@ -38,7 +38,7 @@ There are multiple ways to obtain this binary:
 
 - Use the binary provided by your toolchain (for example `xcrun -f lldb-dap` on macOS) or contact your toolchain vendor to include it.
 - Download one of the release packages from the [LLVM release page](https://github.com/llvm/llvm-project/releases/). The `LLVM-{version}-{operating_system}.tar.xz` packages contain a prebuilt `lldb-dap` binary or check your systems prefered package manager.
-- Build it from source (see [LLDB's build instructions](https://lldb.llvm.org/resources/build.html)).
+- Build it from source (see [LLDB's build instructions](../resources/build.md)).
 
 In some cases, a language specific build of `lldb` / `lldb-dap` may also be
 available as part of the languages toolchain. For example the
