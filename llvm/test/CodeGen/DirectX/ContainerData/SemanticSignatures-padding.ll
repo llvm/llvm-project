@@ -12,18 +12,18 @@
 ; Validator 1.7 pads signature parts to a four-byte boundary; older versions
 ; do not. The differing name lengths leave PSV0 at an unaligned offset when
 ; unpadded.
-; CHECK: Name: ISG1
+; CHECK:               Name: ISG1
 ; CHECK-UNPADDED-NEXT: Size: 42
-; CHECK-PADDED-NEXT: Size: 44
+; CHECK-PADDED-NEXT:   Size: 44
 ; CHECK: Name: A
-; CHECK: Name: OSG1
+; CHECK:               Name: OSG1
 ; CHECK-UNPADDED-NEXT: Size: 43
-; CHECK-PADDED-NEXT: Size: 44
+; CHECK-PADDED-NEXT:   Size: 44
 ; CHECK: Name: BB
 ; CHECK: Name: PSV0
-; CHECK: SigInputElements:
+; CHECK:      SigInputElements:
 ; CHECK-NEXT: - Name: A
-; CHECK: SigOutputElements:
+; CHECK:      SigOutputElements:
 ; CHECK-NEXT: - Name: BB
 
 ;--- v16.ll
