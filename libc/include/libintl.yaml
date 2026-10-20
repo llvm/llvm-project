@@ -21,6 +21,19 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: gettext
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+  - name: gettext_l
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: locale_t
   - name: textdomain
     standards:
       - posix
