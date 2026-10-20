@@ -438,16 +438,14 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-NOFP-SD-LABEL: test_v3f32:
 ; CHECK-NOFP-SD:       // %bb.0:
-; CHECK-NOFP-SD-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mvni v1.2s, #127, msl #16
 ; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NOFP-SD-NEXT:    fmaxv s0, v0.4s
 ; CHECK-NOFP-SD-NEXT:    ret
 ;
 ; CHECK-FP-SD-LABEL: test_v3f32:
 ; CHECK-FP-SD:       // %bb.0:
-; CHECK-FP-SD-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mvni v1.2s, #127, msl #16
 ; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-FP-SD-NEXT:    fmaxv s0, v0.4s
 ; CHECK-FP-SD-NEXT:    ret
@@ -475,16 +473,14 @@ define float @test_v3f32(<3 x float> %a) nounwind {
 define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 ; CHECK-NOFP-SD-LABEL: test_v3f32_ninf:
 ; CHECK-NOFP-SD:       // %bb.0:
-; CHECK-NOFP-SD-NEXT:    mov w8, #-8388609 // =0xff7fffff
-; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mvni v1.2s, #128, lsl #16
 ; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NOFP-SD-NEXT:    fmaxv s0, v0.4s
 ; CHECK-NOFP-SD-NEXT:    ret
 ;
 ; CHECK-FP-SD-LABEL: test_v3f32_ninf:
 ; CHECK-FP-SD:       // %bb.0:
-; CHECK-FP-SD-NEXT:    mov w8, #-8388609 // =0xff7fffff
-; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mvni v1.2s, #128, lsl #16
 ; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-FP-SD-NEXT:    fmaxv s0, v0.4s
 ; CHECK-FP-SD-NEXT:    ret

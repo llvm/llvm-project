@@ -27,12 +27,8 @@ define float @bar() {
 define fp128 @baz() {
 ; CHECK-SD-LABEL: baz:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:  Lloh2:
-; CHECK-SD-NEXT:    adrp x8, lCPI2_0@PAGE
-; CHECK-SD-NEXT:  Lloh3:
-; CHECK-SD-NEXT:    ldr q0, [x8, lCPI2_0@PAGEOFF]
+; CHECK-SD-NEXT:    movi d0, #0000000000000000
 ; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 ;
 ; CHECK-GI-LABEL: baz:
 ; CHECK-GI:       ; %bb.0:

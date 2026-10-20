@@ -77,8 +77,7 @@ define double @movn48() {
 define double @orr() {
 ; CHECK-LABEL: orr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #281479271743489 // =0x1000100010001
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    movi v0.4h, #1
 ; CHECK-NEXT:    ret
   ret double 0x0001000100010001
 }
@@ -276,9 +275,7 @@ define double @orr_movk48() {
 define double @orr_orr() {
 ; CHECK-LABEL: orr_orr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #1125917086973956 // =0x4000400040004
-; CHECK-NEXT:    orr x8, x8, #0x1000100010001
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    movi v0.4h, #5
 ; CHECK-NEXT:    ret
   ret double 0x0005000500050005
 }
@@ -286,9 +283,7 @@ define double @orr_orr() {
 define double @orr_and() {
 ; CHECK-LABEL: orr_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
-; CHECK-NEXT:    and x8, x8, #0xff00ff00ff00ff
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    movi v0.4h, #85
 ; CHECK-NEXT:    ret
   ret double 0x0055005500550055
 }
@@ -572,8 +567,7 @@ define float @f32_movn16() {
 define float @f32_orr() {
 ; CHECK-LABEL: f32_orr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16843009 // =0x1010101
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    movi v0.8b, #1
 ; CHECK-NEXT:    ret
   ret float bitcast (i32 16843009 to float)
 }

@@ -254,22 +254,16 @@ define <8 x i16> @splat16_3c80() {
 ; CHECK-NOFP16-SD-NEXT:    dup.8h v0, w8
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: splat16_3c80:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    mov w8, #15488 // =0x3c80
-; CHECK-FP16-SD-NEXT:    dup.8h v0, w8
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: splat16_3c80:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fmov.8h v0, #1.12500000
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: splat16_3c80:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
 ; CHECK-NOFP16-GI-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NOFP16-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
 ; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: splat16_3c80:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fmov.8h v0, #1.12500000
-; CHECK-FP16-GI-NEXT:    ret
 entry:
   ret <8 x i16> <i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80, i16 u0x3c80>
 }
@@ -281,16 +275,10 @@ define <16 x i8> @splat8_3c80() {
 ; CHECK-NOFP16-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
 ; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: splat8_3c80:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI18_0
-; CHECK-FP16-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI18_0]
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: splat8_3c80:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fmov.8h v0, #1.12500000
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-FP16-LABEL: splat8_3c80:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fmov.8h v0, #1.12500000
+; CHECK-FP16-NEXT:    ret
 entry:
   ret <16 x i8> <i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c, i8 u0x80, i8 u0x3c>
 }

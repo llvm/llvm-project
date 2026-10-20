@@ -1562,13 +1562,6 @@ def fpimm32XForm : SDNodeXForm<fpimm, [{
       return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
-def fpimm32SIMDModImmType4XForm : SDNodeXForm<fpimm, [{
-      uint32_t enc = AArch64_AM::encodeAdvSIMDModImmType4(N->getValueAPF()
-                                                          .bitcastToAPInt()
-                                                          .getZExtValue());
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
-    }]>;
-
 def fpimm64XForm : SDNodeXForm<fpimm, [{
       uint32_t Enc = AArch64_AM::getFP64Imm(N->getValueAPF());
       return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
@@ -1597,12 +1590,6 @@ def fpimm32 : Operand<f32>,
   let PrintMethod = "printFPImmOperand";
   let OperandType = "OPERAND_IMM_UINT8";
   let OperandNamespace = "AArch64";
-}
-
-def fpimm32SIMDModImmType4 : FPImmLeaf<f32, [{
-      uint64_t Enc = Imm.bitcastToAPInt().getZExtValue();
-      return Enc != 0 && AArch64_AM::isAdvSIMDModImmType4(Enc << 32 | Enc);
-    }], fpimm32SIMDModImmType4XForm> {
 }
 
 def fpimm64 : Operand<f64>,

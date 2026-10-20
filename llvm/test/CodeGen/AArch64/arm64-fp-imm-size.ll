@@ -41,12 +41,8 @@ define float @bar() optsize {
 define fp128 @baz() optsize {
 ; CHECK-SD-LABEL: baz:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:  Lloh6:
-; CHECK-SD-NEXT:    adrp x8, lCPI3_0@PAGE
-; CHECK-SD-NEXT:  Lloh7:
-; CHECK-SD-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
+; CHECK-SD-NEXT:    movi d0, #0000000000000000
 ; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 ;
 ; CHECK-GI-LABEL: baz:
 ; CHECK-GI:       ; %bb.0:
@@ -58,12 +54,12 @@ define fp128 @baz() optsize {
 define double @foo2_pgso() !prof !14 {
 ; CHECK-SD-LABEL: foo2_pgso:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:  Lloh8:
+; CHECK-SD-NEXT:  Lloh6:
 ; CHECK-SD-NEXT:    adrp x8, lCPI4_0@PAGE
-; CHECK-SD-NEXT:  Lloh9:
+; CHECK-SD-NEXT:  Lloh7:
 ; CHECK-SD-NEXT:    ldr d0, [x8, lCPI4_0@PAGEOFF]
 ; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh8, Lloh9
+; CHECK-SD-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 ;
 ; CHECK-GI-LABEL: foo2_pgso:
 ; CHECK-GI:       ; %bb.0:
@@ -77,12 +73,12 @@ define double @foo2_pgso() !prof !14 {
 define float @bar_pgso() !prof !14 {
 ; CHECK-SD-LABEL: bar_pgso:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:  Lloh10:
+; CHECK-SD-NEXT:  Lloh8:
 ; CHECK-SD-NEXT:    adrp x8, lCPI5_0@PAGE
-; CHECK-SD-NEXT:  Lloh11:
+; CHECK-SD-NEXT:  Lloh9:
 ; CHECK-SD-NEXT:    ldr s0, [x8, lCPI5_0@PAGEOFF]
 ; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh10, Lloh11
+; CHECK-SD-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 ;
 ; CHECK-GI-LABEL: bar_pgso:
 ; CHECK-GI:       ; %bb.0:

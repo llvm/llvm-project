@@ -31,11 +31,10 @@ define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ucvtf s0, w0
 ; CHECK-SD-NEXT:    ucvtf s1, w1
-; CHECK-SD-NEXT:    mov w8, #-8388608 // =0xff800000
-; CHECK-SD-NEXT:    fmov s2, #17.00000000
-; CHECK-SD-NEXT:    fmov s3, w8
-; CHECK-SD-NEXT:    fmul s0, s0, s3
-; CHECK-SD-NEXT:    fadd s1, s1, s2
+; CHECK-SD-NEXT:    mvni v2.2s, #127, msl #16
+; CHECK-SD-NEXT:    fmov s3, #17.00000000
+; CHECK-SD-NEXT:    fmul s0, s0, s2
+; CHECK-SD-NEXT:    fadd s1, s1, s3
 ; CHECK-SD-NEXT:    fcmp s0, s1
 ; CHECK-SD-NEXT:    fcsel s0, s0, s1, pl
 ; CHECK-SD-NEXT:    ret

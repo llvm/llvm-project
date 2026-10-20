@@ -153,12 +153,11 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK-SD-NEXT:    fmov s8, s0
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #241, lsl #24
-; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
+; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
 ; CHECK-SD-NEXT:    mov x10, #34359738367 // =0x7ffffffff
 ; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
+; CHECK-SD-NEXT:    mvni v0.2s, #143, lsl #24
 ; CHECK-SD-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-SD-NEXT:    csel x8, x8, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s0
@@ -203,13 +202,12 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s8, s0
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v0.2s, #255, lsl #24
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
+; CHECK-SD-NEXT:    movi d0, #0xff000000ff000000
+; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-SD-NEXT:    mvni v0.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-SD-NEXT:    csel x8, x8, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s0
@@ -855,12 +853,11 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #241, lsl #24
-; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
+; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
 ; CHECK-SD-NEXT:    mov x10, #34359738367 // =0x7ffffffff
 ; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
+; CHECK-SD-NEXT:    mvni v0.2s, #143, lsl #24
 ; CHECK-SD-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-SD-NEXT:    csel x8, x8, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s0
@@ -926,13 +923,12 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v0.2s, #255, lsl #24
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
+; CHECK-SD-NEXT:    movi d0, #0xff000000ff000000
+; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-SD-NEXT:    mvni v0.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    csel x9, xzr, x0, lt
 ; CHECK-SD-NEXT:    csel x8, x8, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s0

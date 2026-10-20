@@ -255,8 +255,7 @@ define void @insertelement_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x double> @insertelement_v1f64(<1 x double> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: insertelement_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4617315517961601024 // =0x4014000000000000
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov d0, #5.00000000
 ; CHECK-NEXT:    ret
   %r = insertelement <1 x double> %op1, double 5.0, i64 0
   ret <1 x double> %r
