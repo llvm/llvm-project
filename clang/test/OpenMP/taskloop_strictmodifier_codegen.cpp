@@ -63,7 +63,7 @@ struct S {
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 72
 // CHECK-NEXT:    store i64 0, ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP6]] to i64
-// CHECK-NEXT:    tail call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr [[TMP7]], i32 1, ptr nonnull [[TMP8]], ptr nonnull [[TMP9]], i64 1, i32 1, i32 1, i64 [[TMP12]], i32 1, ptr null) #[[ATTR1:[0-9]+]]
+// CHECK-NEXT:    tail call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr [[TMP7]], i32 1, ptr nonnull [[TMP8]], ptr nonnull [[TMP9]], i64 1, i32 1, i32 1, i64 [[TMP12]], i32 1, ptr null)
 // CHECK-NEXT:    tail call void @__kmpc_end_master(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    br label %[[OMP_IF_END]]
 // CHECK:       [[OMP_IF_END]]:
@@ -100,7 +100,7 @@ struct S {
 // CHECK-NEXT:    store i64 1, ptr [[TMP24]], align 8, !tbaa [[LONG_TBAA16]]
 // CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP18]], i64 72
 // CHECK-NEXT:    store i64 0, ptr [[TMP25]], align 8
-// CHECK-NEXT:    call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP18]], i32 [[TMP21]], ptr nonnull [[TMP22]], ptr nonnull [[TMP23]], i64 1, i32 1, i32 2, i64 4, i32 1, ptr null) #[[ATTR1]]
+// CHECK-NEXT:    call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP18]], i32 [[TMP21]], ptr nonnull [[TMP22]], ptr nonnull [[TMP23]], i64 1, i32 1, i32 2, i64 4, i32 1, ptr null)
 // CHECK-NEXT:    call void @__kmpc_end_taskgroup(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    call void @__kmpc_end_master(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    br label %[[OMP_IF_END17]]
@@ -285,7 +285,7 @@ struct S {
 // CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 72
 // CHECK-NEXT:    store i64 0, ptr [[TMP9]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP2]] to i64
-// CHECK-NEXT:    call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP4]], i32 1, ptr nonnull [[TMP6]], ptr nonnull [[TMP7]], i64 1, i32 1, i32 2, i64 [[TMP10]], i32 1, ptr null) #[[ATTR1]]
+// CHECK-NEXT:    call void @__kmpc_taskloop_5(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP4]], i32 1, ptr nonnull [[TMP6]], ptr nonnull [[TMP7]], i64 1, i32 1, i32 2, i64 [[TMP10]], i32 1, ptr null)
 // CHECK-NEXT:    call void @__kmpc_end_taskgroup(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    call void @__kmpc_end_master(ptr nonnull @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    br label %[[OMP_IF_END]]

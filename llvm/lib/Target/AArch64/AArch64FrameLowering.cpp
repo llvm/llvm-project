@@ -2134,8 +2134,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
-    for (Register Reg :
-         reverse_conditionally(RGI.getRegisters(), isTargetWindows(MF)))
+    SmallVector<Register, 4> Registers = RGI.getRegisters();
+    for (Register Reg : reverse_conditionally(Registers, isTargetWindows(MF)))
       if (!MRI.isReserved(Reg))
         MBB.addLiveIn(Reg);
 
