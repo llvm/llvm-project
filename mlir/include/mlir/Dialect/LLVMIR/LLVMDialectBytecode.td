@@ -331,6 +331,7 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"BoolAttr">:$isVectorized,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
+  OptionalAttribute<"DistinctAttr">:$id,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses
 )>;
 

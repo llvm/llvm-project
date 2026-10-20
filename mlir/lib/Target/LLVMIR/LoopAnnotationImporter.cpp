@@ -445,7 +445,7 @@ LoopMetadataConversion::convertFollowup(const llvm::MDNode *followup) {
   // An explicit empty follow-up is different from an absent follow-up.
   if (followup->getNumOperands() == 1)
     return LoopAnnotationAttr::get(ctx, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-                                   {}, {}, {}, {}, {});
+                                   {}, {}, {}, {}, {}, {});
 
   return LoopMetadataConversion(followup, loc, loopAnnotationImporter,
                                 activeNodes)
@@ -488,11 +488,13 @@ LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
 
   FailureOr<FusedLoc> startLoc = convertStartLoc();
   FailureOr<FusedLoc> endLoc = convertEndLoc();
+  // Imported nodes have no id, the metadata node itself is the identity.
+  FailureOr<DistinctAttr> id = DistinctAttr();
 
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
       unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, peeledAttr,
-      unswitchAttr, mustProgress, isVectorized, startLoc, endLoc,
+      unswitchAttr, mustProgress, isVectorized, startLoc, endLoc, id,
       parallelAccesses);
 }
 
