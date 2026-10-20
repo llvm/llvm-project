@@ -90,19 +90,19 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   return Args;
 }
 
-// ZSTD_maxCLevel(). zstd::BestSizeCompression is the usual high end; the
-// library still accepts levels through this maximum.
+static constexpr int ZlibMinCompressionLevel = -1;
+static constexpr int ZstdMinCompressionLevel = -131072;
 static constexpr int ZstdMaxCompressionLevel = 22;
 
 static Error checkCompressionLevel(compression::Format Format, int Level) {
   int Lo, Hi;
   const char *Name;
   if (Format == compression::Format::Zlib) {
-    Lo = compression::zlib::NoCompression;
+    Lo = ZlibMinCompressionLevel;
     Hi = compression::zlib::BestSizeCompression;
     Name = "zlib";
   } else {
-    Lo = compression::zstd::NoCompression;
+    Lo = ZstdMinCompressionLevel;
     Hi = ZstdMaxCompressionLevel;
     Name = "zstd";
   }
