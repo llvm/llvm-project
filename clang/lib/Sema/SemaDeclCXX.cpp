@@ -170,8 +170,11 @@ bool CheckDefaultArgumentVisitor::VisitTemplateParameters(
   bool Invalid = false;
   for (NamedDecl *P : Parameters) {
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
-      if (NTTP->hasDefaultArgument())
-        Invalid |= Visit(NTTP->getDefaultArgument().getArgument().getAsExpr());
+      if (NTTP->hasDefaultArgument()) {
+        const TemplateArgument &Arg = NTTP->getDefaultArgument().getArgument();
+        if (Arg.getKind() == TemplateArgument::Expression)
+          Invalid |= Visit(Arg.getAsExpr());
+      }
     } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
       Invalid |=
           VisitTemplateParameters(TTP->getTemplateParameters()->asArray());

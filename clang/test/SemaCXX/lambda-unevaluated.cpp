@@ -389,4 +389,9 @@ void B<T>::b(auto) requires ([](auto) { return true; }(T{})) {} // expected-erro
 
 template <template <class T> requires requires(T t) { t; } class> struct C {};
 static_assert([](auto x) { return x; }(1) == 1);
+
+constexpr int k(int n = sizeof([]<int = 1, double = 1.0, auto = nullptr> {})) {
+  return n;
+}
+static_assert(k() > 0);
 }
