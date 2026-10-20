@@ -802,10 +802,9 @@ function(add_integration_test test_name)
   endif()
 endfunction()
 
-# Sets `result` to TRUE if the given benchmark targets include the GPU
-# benchmark target.
+# Sets `result` to TRUE if the given benchmark targets include GPU.
 function(is_gpu_benchmark result)
-  if("gpu-benchmark" IN_LIST ARGN)
+  if("GPU" IN_LIST ARGN)
     set(${result} TRUE PARENT_SCOPE)
   else()
     set(${result} FALSE PARENT_SCOPE)
@@ -832,7 +831,7 @@ endfunction()
 #     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #     STARTUP <startup object target used when internal startup is disabled>
-#     BENCHMARK_TARGET <list of benchmark targets the program belongs to>
+#     BENCHMARK_TARGET <list of benchmark targets, such as GPU>
 #   )
 function(add_libc_hermetic test_name)
   get_fq_target_name(${test_name} fq_target_name)

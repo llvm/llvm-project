@@ -17,7 +17,7 @@ function(add_benchmark benchmark_name)
   add_libc_hermetic(
     ${benchmark_name}
     BENCHMARK_TARGET
-      gpu-benchmark
+      GPU
     LINK_LIBRARIES
       LibcGpuBenchmark
       ${BENCHMARK_LINK_LIBRARIES}
