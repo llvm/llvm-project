@@ -71,171 +71,171 @@ static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisi
 namespace llvm {
 
 namespace detail {
-template<const fltSemantics& S>
+template <const fltSemantics &S>
 unsigned int IEEEFloat::partCountForSemantic() {
   static_assert(&S != &APFloatBase::semBogus);
-  static_assert (&S != &APFloatBase::semPPCDoubleDouble);
+  static_assert(&S != &APFloatBase::semPPCDoubleDouble);
 
   if constexpr (&S == &APFloatBase::semIEEEquad)
-      return 2;
+    return 2;
   else if constexpr (&S == &APFloatBase::semX87DoubleExtended)
-      return 2;
+    return 2;
   else
     return 1;
 }
 
-template<const fltSemantics& S>
-APInt bitcastForSemantics(const FloatRepr& R) {
-  const IEEEFloat& f { IEEEFloat::fromRepr(R) };
+template <const fltSemantics &S> APInt bitcastForSemantics(const FloatRepr &R) {
+  const IEEEFloat &f{IEEEFloat::fromRepr(R)};
   assert(f.partCount() == IEEEFloat::partCountForSemantic<S>());
   return f.convertIEEEFloatToAPInt<S>();
 }
 
-template<const fltSemantics& S>
-void initFromAPIntForSemantics(FloatRepr& R, const APInt& api) {
+template <const fltSemantics &S>
+void initFromAPIntForSemantics(FloatRepr &R, const APInt &api) {
   IEEEFloat::fromRepr(R).initFromIEEEAPInt<S>(api);
 }
 } // namespace detail
 
 constexpr fltSemantics APFloatBase::semIEEEhalf = {
-  15,
-  -14,
-  11,
-  16,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semIEEEhalf>,
-  &detail::bitcastForSemantics<APFloatBase::semIEEEhalf>};
-constexpr fltSemantics APFloatBase::semBFloat = {127,
-                                                 -126,
-                                                 8,
-                                                 16,
-                                                 fltNonfiniteBehavior::IEEE754,
-                                                 fltNanEncoding::IEEE,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 false,
-                                                 &detail::initFromAPIntForSemantics<APFloatBase::semBFloat>,
-                                                 &detail::bitcastForSemantics<APFloatBase::semBFloat>};
+    15,
+    -14,
+    11,
+    16,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEhalf>,
+    &detail::bitcastForSemantics<APFloatBase::semIEEEhalf>};
+constexpr fltSemantics APFloatBase::semBFloat = {
+    127,
+    -126,
+    8,
+    16,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semBFloat>,
+    &detail::bitcastForSemantics<APFloatBase::semBFloat>};
 constexpr fltSemantics APFloatBase::semIEEEsingle = {
-  127,
-  -126,
-  24,
-  32,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semIEEEsingle>,
-  &detail::bitcastForSemantics<APFloatBase::semIEEEsingle>};
+    127,
+    -126,
+    24,
+    32,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEsingle>,
+    &detail::bitcastForSemantics<APFloatBase::semIEEEsingle>};
 constexpr fltSemantics APFloatBase::semIEEEdouble = {
-  1023,
-  -1022,
-  53,
-  64,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semIEEEdouble>,
-  &detail::bitcastForSemantics<APFloatBase::semIEEEdouble>};
+    1023,
+    -1022,
+    53,
+    64,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEdouble>,
+    &detail::bitcastForSemantics<APFloatBase::semIEEEdouble>};
 constexpr fltSemantics APFloatBase::semIEEEquad = {
-  16383,
-  -16382,
-  113,
-  128,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semIEEEquad>,
-  &detail::bitcastForSemantics<APFloatBase::semIEEEquad>};
+    16383,
+    -16382,
+    113,
+    128,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEquad>,
+    &detail::bitcastForSemantics<APFloatBase::semIEEEquad>};
 constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
-  16383,
-  -16382,
-  64,
-  80,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  true,
-  &detail::initFromAPIntForSemantics<APFloatBase::semX87DoubleExtended>,
-  &detail::bitcastForSemantics<APFloatBase::semX87DoubleExtended>};
+    16383,
+    -16382,
+    64,
+    80,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    true,
+    &detail::initFromAPIntForSemantics<APFloatBase::semX87DoubleExtended>,
+    &detail::bitcastForSemantics<APFloatBase::semX87DoubleExtended>};
 constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {
-  -1,
-  0,
-  0,
-  128,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  nullptr,
-  nullptr};
+    -1,
+    0,
+    0,
+    128,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    nullptr,
+    nullptr};
 constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
-  1023,
-  -1022 + 53,
-  53 + 53,
-  128,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>,
-  &detail::bitcastForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>};
+    1023,
+    -1022 + 53,
+    53 + 53,
+    128,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>,
+    &detail::bitcastForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>};
 constexpr fltSemantics APFloatBase::semFloat8E5M2 = {
-  15,
-  -14,
-  3,
-  8,
-  fltNonfiniteBehavior::IEEE754,
-  fltNanEncoding::IEEE,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2>,
-  &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2>};
+    15,
+    -14,
+    3,
+    8,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2>,
+    &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2>};
 constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
-  15,
-  -15,
-  3,
-  8,
-  fltNonfiniteBehavior::NanOnly,
-  fltNanEncoding::NegativeZero,
-  true,
-  true,
-  true,
-  true,
-  false,
-  &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2FNUZ>,
-  &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2FNUZ>};
+    15,
+    -15,
+    3,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::NegativeZero,
+    true,
+    true,
+    true,
+    true,
+    false,
+    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2FNUZ>,
+    &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2FNUZ>};
 constexpr fltSemantics APFloatBase::semFloat8E4M3 = {
     7,
     -6,
@@ -3748,7 +3748,8 @@ hash_code hash_value(const IEEEFloat &Arg) {
 // the actual IEEE respresentations.  We compensate for that here.
 
 template <>
-APInt IEEEFloat::convertIEEEFloatToAPInt<APFloatBase::semPPCDoubleDoubleLegacy>() const {
+APInt IEEEFloat::convertIEEEFloatToAPInt<
+    APFloatBase::semPPCDoubleDoubleLegacy>() const {
   assert(semantics ==
          (const llvm::fltSemantics *)&APFloatBase::semPPCDoubleDoubleLegacy);
   assert(partCount()==2);
@@ -3772,7 +3773,8 @@ APInt IEEEFloat::convertIEEEFloatToAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(
   IEEEFloat u(extended);
   fs = u.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
   assert(fs == opOK || fs == opInexact);
-  words[0] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(u)).getRawData();
+  words[0] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(u))
+                  .getRawData();
 
   // If conversion was exact or resulted in a special case, we're done;
   // just set the second double to zero.  Otherwise, re-convert back to
@@ -3786,7 +3788,8 @@ APInt IEEEFloat::convertIEEEFloatToAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(
     v.subtract(u, rmNearestTiesToEven);
     fs = v.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
     assert(fs == opOK && !losesInfo);
-    words[1] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(v)).getRawData();
+    words[1] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(v))
+                    .getRawData();
   } else {
     words[1] = 0;
   }
@@ -3902,8 +3905,9 @@ float128 IEEEFloat::convertToQuad() const {
 }
 #endif
 
-template<>
-void IEEEFloat::initFromIEEEAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(const APInt &api) {
+template <>
+void IEEEFloat::initFromIEEEAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(
+    const APInt &api) {
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   bool losesInfo;
@@ -5926,7 +5930,9 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
 APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
-detail::IEEEFloat &detail::IEEEFloat::fromRepr(const FloatRepr &R) { return *R.Repr; }
+detail::IEEEFloat &detail::IEEEFloat::fromRepr(const FloatRepr &R) {
+  return *R.Repr;
+}
 
 void FloatRepr::initialize(const fltSemantics &Sem) { Repr->initialize(&Sem); }
 
