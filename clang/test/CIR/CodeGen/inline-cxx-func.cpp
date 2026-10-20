@@ -28,8 +28,8 @@ void use() {
 // CIR:   cir.return
 
 // CIR: cir.func{{.*}} @_ZN1S10InlineFuncEv(%arg0: !cir.ptr<!rec_S> {{.*}}) -> (!s32i {{.*}})
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "Member"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
@@ -44,8 +44,8 @@ void use() {
 // LLVM:   ret void
 
 // LLVM: define{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[ARG0:.*]])
-// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0

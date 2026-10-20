@@ -3885,12 +3885,18 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   assert(CmpInst::isIntPredicate(Pred) && "Not an integer compare!");
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
-    if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI);
-
-    // If we have a constant, make sure it is on the RHS.
-    std::swap(LHS, RHS);
-    Pred = CmpInst::getSwappedPredicate(Pred);
+    if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
+      if (Constant *C =
+              ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI))
+        return C;
+      // Constant folding cannot always decide a comparison between constants.
+      // Fall through to the generic logic below, which can still reason about
+      // them with value tracking.
+    } else {
+      // If we have a constant, make sure it is on the RHS.
+      std::swap(LHS, RHS);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
   }
   assert(!isa<UndefValue>(LHS) && "Unexpected icmp undef,%X");
 

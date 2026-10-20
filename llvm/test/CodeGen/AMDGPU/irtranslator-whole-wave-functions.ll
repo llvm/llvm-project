@@ -115,12 +115,12 @@ define amdgpu_cs void @call(i32 %x, ptr %p) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = G_SI_CALL [[GV1]](p0), @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr0
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   G_STORE [[COPY3]](i32), [[MV]](p0) :: (store (i32) into %ir.p)
   ; CHECK-NEXT:   S_ENDPGM 0
   %ret = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, i32 %x) convergent

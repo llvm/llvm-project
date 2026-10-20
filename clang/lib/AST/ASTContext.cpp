@@ -15,6 +15,7 @@
 #include "CXXABI.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -978,13 +979,6 @@ void ASTContext::cleanup() {
   }
   ASTRecordLayouts.clear();
 
-  for (llvm::DenseMap<const Decl*, AttrVec*>::iterator A = DeclAttrs.begin(),
-                                                    AEnd = DeclAttrs.end();
-       A != AEnd; ++A)
-    A->second->~AttrVec();
-  DeclAttrs.clear();
-  LastDeclAttrsDecl = nullptr;
-
   CtorClosureDefaultArgs.clear();
 
   for (const auto &Value : ModuleInitializers)
@@ -1534,33 +1528,8 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
   return SourceMgr.getDiagnostics();
 }
 
-AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
-  // 85% of lookups use the most recent D, so use a one-entry cache.
-  if (LastDeclAttrsDecl == D) {
-    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
-    return *LastDeclAttrs;
-  }
-
-  AttrVec *&Result = DeclAttrs[D];
-  if (!Result) {
-    void *Mem = Allocate(sizeof(AttrVec));
-    Result = new (Mem) AttrVec;
-  }
-
-  LastDeclAttrsDecl = D;
-  LastDeclAttrs = Result;
-  return *Result;
-}
-
-/// Erase the attributes corresponding to the given declaration.
-void ASTContext::eraseDeclAttrs(const Decl *D) {
-  llvm::DenseMap<const Decl*, AttrVec*>::iterator Pos = DeclAttrs.find(D);
-  if (Pos != DeclAttrs.end()) {
-    Pos->second->~AttrVec();
-    DeclAttrs.erase(Pos);
-  }
-  if (LastDeclAttrsDecl == D)
-    LastDeclAttrsDecl = nullptr;
+AttrVec *ASTContext::allocateAttrVec() {
+  return new (DeclAttrAllocator.Allocate()) AttrVec;
 }
 
 ArrayRef<CXXDefaultArgExpr *>
@@ -1587,14 +1556,6 @@ void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
                                               ExplicitInstantiationDecl *EID) {
   ExplicitInstantiations[cast<NamedDecl>(Spec->getCanonicalDecl())].push_back(
       EID);
-}
-
-// FIXME: Remove ?
-MemberSpecializationInfo *
-ASTContext::getInstantiatedFromStaticDataMember(const VarDecl *Var) {
-  assert(Var->isStaticDataMember() && "Not a static data member");
-  return getTemplateOrSpecializationInfo(Var)
-      .dyn_cast<MemberSpecializationInfo *>();
 }
 
 ASTContext::TemplateOrSpecializationInfo
@@ -2071,7 +2032,7 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
-  return getTypeInfo(T).AlignRequirement != AlignRequirementKind::None;
+  return getTypeInfo(T).isAlignRequired();
 }
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
@@ -2201,6 +2162,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
+    // Vector types have their natural alignment resist reduction by
+    // #pragma pack in MSVC record layout.
+    AlignRequirement = AlignRequirementKind::ResistPragmaPack;
     break;
   }
 
@@ -2362,6 +2326,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
         Width = Target->getLongDoubleWidth();
         Align = Target->getLongDoubleAlign();
       }
+      // x87 extended precision (fp80) has its natural alignment resist
+      // reduction by #pragma pack in MSVC record layout.
+      if (&Target->getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
+        AlignRequirement = AlignRequirementKind::ResistPragmaPack;
       break;
     case BuiltinType::Float128:
       if (Target->hasFloat128Type() || !getLangOpts().OpenMP ||
@@ -3096,6 +3064,14 @@ bool ASTContext::hasUniqueObjectRepresentations(
          "hasUniqueObjectRepresentations should not be called with an "
          "incomplete type");
 
+  // _Atomic(T) shares T's object representation unless its size was rounded
+  // up to a power of two, in which case the extra bytes are padding. Atomic
+  // types are never trivially copyable, so (9.1) is judged on the value type.
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    return getTypeSize(AT) == getTypeSize(AT->getValueType()) &&
+           hasUniqueObjectRepresentations(AT->getValueType(),
+                                          CheckIfTriviallyCopyable);
+
   // (9.1) - T is trivially copyable...
   if (CheckIfTriviallyCopyable && !Ty.isTriviallyCopyableType(*this))
     return false;
@@ -3136,7 +3112,6 @@ bool ASTContext::hasUniqueObjectRepresentations(
   // FIXME: More cases to handle here (list by rsmith):
   // vectors (careful about, eg, vector of 3 foo)
   // _Complex int and friends
-  // _Atomic T
   // Obj-C block pointers
   // Obj-C object pointers
   // and perhaps OpenCL's various builtin types (pipe, sampler_t, event_t,
@@ -6322,15 +6297,17 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    ExprValueKind VK;
-    if (T->isRecordType()) {
+    ExprValueKind VK = VK_PRValue;
+    if (NTTP->getType()->isReferenceType()) {
+      // As in Sema::BuildDeclarationNameExpr, a parameter of reference
+      // type, even an rvalue reference, is an lvalue.
+      VK = VK_LValue;
+    } else if (T->isRecordType()) {
       // C++ [temp.param]p8: An id-expression naming a non-type
       // template-parameter of class type T denotes a static storage duration
       // object of type const T.
       T.addConst();
       VK = VK_LValue;
-    } else {
-      VK = Expr::getValueKindForType(NTTP->getType());
     }
     Expr *E = new (*this)
         DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
@@ -12680,6 +12657,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
   bool IsChar = false, IsShort = false;
+  bool IsLeast = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12702,6 +12680,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Signed && "Can't use both 'S' and 'U' modifiers!");
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
+      break;
+    case 'l':
+      // This modifier represents the least-width type (e.g. uint_least8_t).
+      assert(!IsLeast && "Can't use 'l' modifier multiple times!");
+      IsLeast = true;
       break;
     case 'B':
       // This modifier represents int8 type (byte-width).
@@ -12853,6 +12836,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Unsigned ? Context.UnsignedLongTy : Context.LongTy;
     else
       Type = Unsigned ? Context.UnsignedIntTy : Context.IntTy;
+    if (IsLeast)
+      Type = Context.getLeastIntTypeForBitwidth(Context.getIntWidth(Type),
+                                                /*Signed=*/!Unsigned);
     break;
   case 'c':
     assert(HowLong == 0 && "Bad modifiers used with 'c'!");
@@ -13495,6 +13481,44 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   return false;
 }
 
+template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
+  if (auto *A = D->getAttr<AttrT>())
+    return A->isImplicit();
+  return D->isImplicit();
+}
+
+bool ASTContext::shouldEmitCUDADecl(const ValueDecl *D) const {
+  assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
+  assert((isa<FunctionDecl>(D) || isa<VarDecl>(D)) &&
+         "Expected Variable or Function");
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    // We need to emit host-side 'shadows' for all global device-side variables
+    // because the CUDA runtime needs their size and host-side address in order
+    // to provide access to their device-side incarnations.
+    return !LangOpts.CUDAIsDevice || VD->hasAttr<CUDADeviceAttr>() ||
+           VD->hasAttr<CUDAConstantAttr>() || VD->hasAttr<CUDASharedAttr>() ||
+           VD->getType()->isCUDADeviceBuiltinSurfaceType() ||
+           VD->getType()->isCUDADeviceBuiltinTextureType();
+  }
+
+  const auto *FD = cast<FunctionDecl>(D);
+  // Device-only functions are the only things we skip on the host.
+  if (!LangOpts.CUDAIsDevice)
+    return FD->hasAttr<CUDAHostAttr>() || !FD->hasAttr<CUDADeviceAttr>();
+
+  // Non-constexpr non-lambda implicit host device functions are not emitted
+  // unless they are used on device side.
+  return (FD->hasAttr<CUDADeviceAttr>() &&
+          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+            hasImplicitAttr<CUDAHostAttr>(FD) &&
+            hasImplicitAttr<CUDADeviceAttr>(FD) && !FD->isConstexpr() &&
+            !isLambdaCallOperator(FD) &&
+            !CUDAImplicitHostDeviceFunUsedByDevice.count(FD))) ||
+         FD->hasAttr<CUDAGlobalAttr>() ||
+         (LangOpts.HIPStdPar && !FD->hasAttr<CUDAHostAttr>());
+}
+
 void ASTContext::forEachMultiversionedFunctionVersion(
     const FunctionDecl *FD,
     llvm::function_ref<void(FunctionDecl *)> Pred) const {
@@ -13638,7 +13662,7 @@ size_t ASTContext::getSideTableAllocatedMemory() const {
          llvm::capacity_in_bytes(KeyFunctions) +
          llvm::capacity_in_bytes(ObjCImpls) +
          llvm::capacity_in_bytes(BlockVarCopyInits) +
-         llvm::capacity_in_bytes(DeclAttrs) +
+         DeclAttrAllocator.getTotalMemory() +
          llvm::capacity_in_bytes(TemplateOrInstantiation) +
          llvm::capacity_in_bytes(InstantiatedFromUsingDecl) +
          llvm::capacity_in_bytes(InstantiatedFromUsingShadowDecl) +
@@ -13844,6 +13868,9 @@ void ASTContext::setClassMaybeNeedsVectorDeletingDestructor(
 MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
+  // Reopened namespaces share a mangling context so that declarations in
+  // different namespace blocks do not receive duplicate mangling numbers.
+  DC = DC->getPrimaryContext();
   std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
   if (!MCtx)
     MCtx = createMangleNumberingContext();

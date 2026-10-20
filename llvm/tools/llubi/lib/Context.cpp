@@ -27,7 +27,9 @@ bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
   for (Function &F : M) {
-    if (F.hasAddressTaken()) {
+    if (F.hasAddressTaken(nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false)) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
@@ -829,6 +831,25 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   llvm_unreachable("Unsupported first class type.");
 }
 
+AnyValue Context::extractBits(const ByteValue &Src, uint32_t OffsetInBits,
+                              Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Src.getBitWidth() &&
+         "Bit range out of bounds");
+  return fromBytes(ConstBytesView(Src.bytes(), DL), Ty, OffsetInBits,
+                   /*CheckPaddingBits=*/false,
+                   /*ContainsUndefinedBits=*/nullptr);
+}
+
+void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
+                         const AnyValue &Val, Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Base.getBitWidth() &&
+         "Bit range out of bounds");
+  toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
+          /*PaddingBits=*/false);
+}
+
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                        bool *ContainsUndefinedBits) {
   return fromBytes(
@@ -1058,7 +1079,8 @@ Context::computeGEP(GEPOperator &GEP,
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+      unsigned ElementIdx =
+          cast<Constant>(V)->getUniqueInteger().getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
       ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),

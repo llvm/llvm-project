@@ -14376,6 +14376,18 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       // constraints.
 
       // C++ [over.over]p5:
+      //    [...] If more than one function in the set remains, all function
+      //    template specializations in the set are eliminated if the set also
+      //    contains a function that is not a function template specialization.
+      //    [...]
+      if (Result->isFunctionTemplateSpecialization() !=
+          FD->isFunctionTemplateSpecialization()) {
+        if (!FD->isFunctionTemplateSpecialization())
+          FoundBetter();
+        continue;
+      }
+
+      // C++ [over.over]p5:
       //    [...] Any given non-template function F0 is eliminated if the set
       //    contains a second non-template function that is more
       //    partial-ordering-constrained than F0 [...]
