@@ -46,15 +46,13 @@ define i32 @gather_root_xor_reduction(ptr %w, ptr %t) {
 ; CHECK-NEXT:    [[L5:%.*]] = load i32, ptr [[P5]], align 4
 ; CHECK-NEXT:    [[L6:%.*]] = load i32, ptr [[P6]], align 4
 ; CHECK-NEXT:    [[L7:%.*]] = load i32, ptr [[P7]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[L1]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[L0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[L2]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[L3]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[L4]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[L5]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[L7]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[L6]], i64 7
-; CHECK-NEXT:    [[TMP8]] = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[X1:%.*]] = xor i32 [[L1]], [[L0]]
+; CHECK-NEXT:    [[X2:%.*]] = xor i32 [[L2]], [[X1]]
+; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[L3]], [[X2]]
+; CHECK-NEXT:    [[X4:%.*]] = xor i32 [[L4]], [[X3]]
+; CHECK-NEXT:    [[X5:%.*]] = xor i32 [[L5]], [[X4]]
+; CHECK-NEXT:    [[X6:%.*]] = xor i32 [[L6]], [[X5]]
+; CHECK-NEXT:    [[TMP8]] = xor i32 [[L7]], [[X6]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
