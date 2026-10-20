@@ -77,7 +77,6 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX942-ARCH-FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX942-ARCH-FLAT-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-ARCH-FLAT-NEXT:    s_nop 0
 ; GFX942-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX942-ARCH-FLAT-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX942-ARCH-FLAT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1

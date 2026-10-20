@@ -262,7 +262,6 @@ define float @frexp_nan_clamp_mant_f32(float %x) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -679,7 +678,6 @@ define float @frexp_nan_clamp_amdgcn_mant_f32(float %x) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -734,7 +732,6 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
 ; GFX950-NEXT:    v_frexp_mant_f32_e32 v2, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -840,7 +837,6 @@ define i32 @frexp_nan_different_input(float %x, float %y) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -893,7 +889,6 @@ define i32 @frexp_nan_nonzero_const(float %x) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 42, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -946,7 +941,6 @@ define i32 @frexp_lt_zero_not_folded(float %x) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
 ; GFX950-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1001,7 +995,6 @@ define i32 @frexp_nan_other_operand_may_be_nan(float %x, float %y) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
 ; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
-; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;

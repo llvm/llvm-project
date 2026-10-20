@@ -22,7 +22,6 @@ define i1 @workitem_zero() {
 ; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
 ; DAGISEL-GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; DAGISEL-GFX942-NEXT:    s_nop 1
 ; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -60,7 +59,6 @@ define i1 @workitem_zero() {
 ; GISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 20, 10
 ; GISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GISEL-GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GISEL-GFX942-NEXT:    s_nop 1
 ; GISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -105,7 +103,6 @@ define i1 @workitem_nonzero() {
 ; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
 ; DAGISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; DAGISEL-GFX942-NEXT:    s_nop 1
 ; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -143,7 +140,6 @@ define i1 @workitem_nonzero() {
 ; GISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 20, 10
 ; GISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-GFX942-NEXT:    s_nop 1
 ; GISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -349,7 +345,6 @@ define i1 @workitem_workgroup_zero() {
 ; GFX942-NEXT:    v_bfe_u32 v1, v31, 10, 10
 ; GFX942-NEXT:    v_or3_b32 v0, s0, v0, v1
 ; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -442,7 +437,6 @@ define i1 @workitem_workgroup_nonzero() {
 ; DAGISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 10, 10
 ; DAGISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v2, v1
 ; DAGISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; DAGISEL-GFX942-NEXT:    s_nop 1
 ; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -480,7 +474,6 @@ define i1 @workitem_workgroup_nonzero() {
 ; GISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 20, 10
 ; GISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-GFX942-NEXT:    s_nop 1
 ; GISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;

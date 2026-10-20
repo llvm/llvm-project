@@ -52,10 +52,9 @@ define half @from_fp8_f16_s(i8 %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v3, v4, v2, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v3
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v5
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v2
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v5
 ; GFX950-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -93,10 +92,10 @@ define half @from_bf8_f16_s(i8 %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v0, v0, v1, 31 bitop3:0xec
 ; GFX950-NEXT:    v_bitop3_b16 v2, v4, v2, v6 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v5
-; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v1
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v5
+; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_mov_b32_e32 v2, 0xffff8000
 ; GFX950-NEXT:    v_bitop3_b16 v2, v3, s2, v2 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
@@ -191,13 +190,12 @@ define <2 x half> @from_fp8_v2f16(<2 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v6, v4, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v5
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v7
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v7
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %r = call <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8> %x, metadata !"Float8E4M3FN")
@@ -239,10 +237,10 @@ define <2 x half> @from_bf8_v2f16(<2 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v0, v0, v2, 31 bitop3:0xec
 ; GFX950-NEXT:    v_bitop3_b16 v3, v5, v3, v7 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v6
-; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v2
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v6
+; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_mov_b32_e32 v3, 0xffff8000
 ; GFX950-NEXT:    v_bitop3_b16 v4, v4, s2, v3 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
@@ -261,17 +259,16 @@ define <2 x half> @from_bf8_v2f16(<2 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v5, v7, v5, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v1
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v8
-; GFX950-NEXT:    v_bitop3_b16 v3, v6, s2, v3 bitop3:0xec
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v7, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v4
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v8
+; GFX950-NEXT:    v_bitop3_b16 v3, v6, s2, v3 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX950-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v4
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %r = call <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8> %x, metadata !"Float8E5M2")
@@ -366,9 +363,9 @@ define <3 x half> @from_fp8_v3f16(<3 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v6, v7, v5, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v6
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v7, 3, v1
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v8
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v8
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v4, 8, v1
 ; GFX950-NEXT:    v_and_b32_e32 v5, 7, v1
 ; GFX950-NEXT:    v_and_b32_e32 v8, 15, v7
@@ -395,13 +392,12 @@ define <3 x half> @from_fp8_v3f16(<3 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v6, v1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v7, v5, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v6
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v8
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v8
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -450,10 +446,10 @@ define <3 x half> @from_bf8_v3f16(<3 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v2, v2, v3, 31 bitop3:0xec
 ; GFX950-NEXT:    v_bitop3_b16 v4, v6, v4, v8 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v2
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v7
-; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v4, v6, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v3
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v7
+; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_mov_b32_e32 v4, 0xffff8000
 ; GFX950-NEXT:    v_bitop3_b16 v5, v5, s2, v4 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
@@ -472,10 +468,9 @@ define <3 x half> @from_bf8_v3f16(<3 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v8, v6, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v9
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v6, v8, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v5
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v9
 ; GFX950-NEXT:    v_bitop3_b16 v6, v7, s2, v4 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
@@ -492,17 +487,16 @@ define <3 x half> @from_bf8_v3f16(<3 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v6, v8, v6, v10 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v1
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v9
-; GFX950-NEXT:    v_bitop3_b16 v4, v7, s2, v4 bitop3:0xec
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v6, v8, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v5
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v9
+; GFX950-NEXT:    v_bitop3_b16 v4, v7, s2, v4 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; GFX950-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v5
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -600,9 +594,9 @@ define <4 x half> @from_fp8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v7, v8, v6, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v7
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 3, v0
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v5, 8, v0
 ; GFX950-NEXT:    v_and_b32_e32 v6, 7, v0
 ; GFX950-NEXT:    v_and_b32_e32 v9, 15, v8
@@ -630,9 +624,9 @@ define <4 x half> @from_fp8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v7, v8, v6, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v7
 ; GFX950-NEXT:    v_lshrrev_b16_e32 v8, 3, v1
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
 ; GFX950-NEXT:    v_lshlrev_b16_e32 v5, 8, v1
 ; GFX950-NEXT:    v_and_b32_e32 v6, 7, v1
 ; GFX950-NEXT:    v_and_b32_e32 v9, 15, v8
@@ -659,13 +653,12 @@ define <4 x half> @from_fp8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v7, v1, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v8, v6, 15 bitop3:0xec
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v7
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 7, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 15, v9
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    v_perm_b32 v1, v3, v2, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -716,10 +709,10 @@ define <4 x half> @from_bf8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_bitop3_b16 v2, v2, v4, 31 bitop3:0xec
 ; GFX950-NEXT:    v_bitop3_b16 v5, v7, v5, v9 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v2
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v8
-; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v5, v7, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v4
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v8
+; GFX950-NEXT:    s_movk_i32 s2, 0x7c00
 ; GFX950-NEXT:    v_mov_b32_e32 v5, 0xffff8000
 ; GFX950-NEXT:    v_bitop3_b16 v6, v6, s2, v5 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
@@ -738,10 +731,9 @@ define <4 x half> @from_bf8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v9, v7, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v3
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v7, v9, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
 ; GFX950-NEXT:    v_bitop3_b16 v7, v8, s2, v5 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
@@ -758,10 +750,9 @@ define <4 x half> @from_bf8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v9, v7, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v7, v9, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
 ; GFX950-NEXT:    v_bitop3_b16 v7, v8, s2, v5 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
@@ -778,17 +769,16 @@ define <4 x half> @from_bf8_v4f16(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GFX950-NEXT:    v_bitop3_b16 v7, v9, v7, v11 bitop3:0xfe
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v1
-; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
-; GFX950-NEXT:    v_bitop3_b16 v5, v8, s2, v5 bitop3:0xec
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v7, v9, vcc
 ; GFX950-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v6
+; GFX950-NEXT:    v_cmp_eq_u16_e64 s[0:1], 31, v10
+; GFX950-NEXT:    v_bitop3_b16 v5, v8, s2, v5 bitop3:0xec
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
 ; GFX950-NEXT:    v_cmp_ne_u16_e32 vcc, 0, v6
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; GFX950-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX950-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-NEXT:    v_perm_b32 v1, v3, v2, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
