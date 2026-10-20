@@ -12632,6 +12632,18 @@ static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
     return RISCVISD::PM4ADDSU;
   case Intrinsic::riscv_pm2addsu:
     return RISCVISD::PM2ADDSU;
+  case Intrinsic::riscv_pm2wadd:
+    return RISCVISD::PM2WADD;
+  case Intrinsic::riscv_pm2wadd_x:
+    return RISCVISD::PM2WADD_X;
+  case Intrinsic::riscv_pm2waddu:
+    return RISCVISD::PM2WADDU;
+  case Intrinsic::riscv_pm2wsub:
+    return RISCVISD::PM2WSUB;
+  case Intrinsic::riscv_pm2wsub_x:
+    return RISCVISD::PM2WSUB_X;
+  case Intrinsic::riscv_pm2waddsu:
+    return RISCVISD::PM2WADDSU;
   }
 }
 
@@ -12641,6 +12653,12 @@ static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
   auto Extract = [&](SDValue V, unsigned Idx) {
     return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
   };
+
+  if (Rs1.getSimpleValueType() == MVT::v2i16) {
+    SDValue Res =
+        DAG.getNode(getRVPHorizontalMulOpcode(IntNo), DL, MVT::v2i32, Rs1, Rs2);
+    return DAG.getBitcast(MVT::i64, Res);
+  }
 
   if (Rs1.getSimpleValueType() == MVT::v4i16) {
     auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
@@ -12884,6 +12902,9 @@ getRVPWordMulPartsAccOpcodeAndLanes(unsigned IntNo) {
     return {RISCVISD::WMACCSU, 1, 1};
   }
 }
+
+static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue V, MVT WideVT);
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
@@ -13625,6 +13646,65 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pm2wadd:
+  case Intrinsic::riscv_pm2wadd_x:
+  case Intrinsic::riscv_pm2waddu:
+  case Intrinsic::riscv_pm2wsub:
+  case Intrinsic::riscv_pm2wsub_x:
+  case Intrinsic::riscv_pm2waddsu: {
+    // These intrinsics only have a dedicated widening instruction on RV32
+    // (handled in ReplaceNodeResults). On RV64 the i64 result type is legal,
+    // so synthesize the equivalent value directly at i64 width: the add forms
+    // zero-extend their operands to v4i16 and reuse pm4add(u/su).h, relying on
+    // zero lanes contributing zero products (the "_x" exchanged form
+    // additionally swaps rs2's halfwords via ppairoe.h first); the sub forms
+    // extract and sign-extend each halfword lane and compute the product
+    // difference with plain i64 arithmetic. A custom RISCVISD opcode must
+    // never be the direct result of an i32-producing DAG.getNode here: i32 is
+    // not a legal type on RV64 (only i64 has a register class), and the
+    // generic legalizer's post-hoc promotion of such a "naked" custom-opcode
+    // node mis-widens its vector operands instead of leaving the node alone.
+    assert(Subtarget.is64Bit() && Op.getValueType() == MVT::i64 &&
+           "Unexpected widening horizontal multiply-add legalization");
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+
+    if (IntNo == Intrinsic::riscv_pm2wsub ||
+        IntNo == Intrinsic::riscv_pm2wsub_x) {
+      // Route through the existing riscv_pm2sub(_x) intrinsic (a plain
+      // ISD::INTRINSIC_WO_CHAIN, which is registered Custom for i32 on RV64)
+      // rather than calling RISCVISD::PM2SUB(_X) directly: a "naked" custom
+      // opcode freshly materialized here with an i32 result hits the same
+      // legalizer trap described above, but INTRINSIC_WO_CHAIN's i32 action
+      // is a recognized Custom target that correctly re-enters LowerOperation.
+      unsigned SubIntNo = IntNo == Intrinsic::riscv_pm2wsub
+                              ? Intrinsic::riscv_pm2sub
+                              : Intrinsic::riscv_pm2sub_x;
+      SDValue IntrId = DAG.getTargetConstant(SubIntNo, DL, MVT::i64);
+      SDValue Res =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, IntrId, Rs1, Rs2);
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Res);
+    }
+
+    auto WidenAny = [&](SDValue V) {
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
+                         DAG.getUNDEF(MVT::v2i16));
+    };
+
+    SDValue A = WidenAny(Rs1);
+    SDValue B;
+    if (IntNo == Intrinsic::riscv_pm2wadd_x) {
+      SDValue Rs2Wide = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      B = DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Wide, Rs2Wide);
+    } else {
+      B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+    }
+
+    unsigned MulOpc = IntNo == Intrinsic::riscv_pm2waddu    ? RISCVISD::PM4ADDU
+                      : IntNo == Intrinsic::riscv_pm2waddsu ? RISCVISD::PM4ADDSU
+                                                            : RISCVISD::PM4ADD;
+    return DAG.getNode(MulOpc, DL, MVT::i64, A, B);
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
@@ -14478,9 +14558,6 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
       DL, ResVT, NoNaNs, Res,
       DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
-
-static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
-                                          SDValue V, MVT WideVT);
 
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
@@ -17830,6 +17907,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                         DAG.getUNDEF(SrcVT));
       SDValue Wide = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Wide, 0));
+      return;
+    }
+
+    case Intrinsic::riscv_pm2wadd:
+    case Intrinsic::riscv_pm2wadd_x:
+    case Intrinsic::riscv_pm2waddu:
+    case Intrinsic::riscv_pm2wsub:
+    case Intrinsic::riscv_pm2wsub_x:
+    case Intrinsic::riscv_pm2waddsu: {
+      // i64 is only illegal here on RV32; the RV64 (legal i64) case is
+      // handled directly in LowerOperation.
+      assert(!Subtarget.is64Bit() && N->getSimpleValueType(0) == MVT::i64 &&
+             "Unexpected widening horizontal multiply-add legalization");
+      SDValue Rs1 = N->getOperand(1);
+      SDValue Rs2 = N->getOperand(2);
+      Results.push_back(lowerRV32HorizontalMul64(IntNo, Rs1, Rs2, DL, DAG));
       return;
     }
 
