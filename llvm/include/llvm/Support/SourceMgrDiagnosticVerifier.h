@@ -71,9 +71,15 @@ public:
   /// non-empty, directives are only recognized after the first occurrence of
   /// one of these strings on a line, so that text outside of comments is
   /// ignored.
+  ///
+  /// If \p oneDiagPerDirective is true, each directive matches at most one
+  /// diagnostic, as in Clang, so that a duplicated diagnostic is reported as
+  /// unexpected. Otherwise, a directive matches any number of identical
+  /// diagnostics on its line.
   SourceMgrDiagnosticVerifier(const SourceMgr &mgr, raw_ostream &os,
                               ArrayRef<StringRef> prefixes = {"expected"},
-                              ArrayRef<StringRef> commentPrefixes = {});
+                              ArrayRef<StringRef> commentPrefixes = {},
+                              bool oneDiagPerDirective = false);
 
   /// Matches a diagnostic against the expected diagnostics for \p loc, or
   /// against the '@unknown' expected diagnostics if \p loc is std::nullopt.
@@ -141,6 +147,9 @@ private:
 
   /// The strings that start a comment, see the constructor.
   SmallVector<std::string, 0> commentPrefixes;
+
+  /// Whether a directive can only match one diagnostic, see the constructor.
+  bool oneDiagPerDirective;
 
   /// The expected diagnostics for each buffer that has been scanned so far,
   /// keyed by buffer identifier (i.e. file name).

@@ -142,3 +142,31 @@ TEST_F(SourceMgrDiagnosticVerifierTest, CustomPrefixesAndCommentScoping) {
   EXPECT_TRUE(Verifier.verify());
   EXPECT_EQ(Output, "");
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, DirectiveMatchesDuplicates) {
+  const MemoryBuffer *Buf = addBuffer("op\n# expected-error@-1 {{dup}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+
+  SMDiagnostic Dup = getMessage(Buf, SourceMgr::DK_Error, "dup");
+  EXPECT_EQ(Verifier.process(Dup), MatchResult::Matched);
+  EXPECT_EQ(Verifier.process(Dup), MatchResult::Matched);
+  EXPECT_TRUE(Verifier.verify());
+  EXPECT_EQ(Output, "");
+}
+
+TEST_F(SourceMgrDiagnosticVerifierTest, OneDiagPerDirective) {
+  const MemoryBuffer *Buf = addBuffer("op\n"
+                                      "# expected-error@-1 {{dup}}\n"
+                                      "# expected-error@-2 {{dup}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS, {"expected"}, {},
+                                       /*oneDiagPerDirective=*/true);
+
+  // Each directive matches one diagnostic, so the third one is unexpected.
+  SMDiagnostic Dup = getMessage(Buf, SourceMgr::DK_Error, "dup");
+  EXPECT_EQ(Verifier.process(Dup), MatchResult::Matched);
+  EXPECT_EQ(Verifier.process(Dup), MatchResult::Matched);
+  EXPECT_EQ(Verifier.process(Dup), MatchResult::Unexpected);
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_EQ(StringRef(Output).count("error: dup"), 1u);
+  EXPECT_EQ(StringRef(Output).find("was not produced"), StringRef::npos);
+}
