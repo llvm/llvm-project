@@ -1,0 +1,114 @@
+{
+ "histogram.ll:histogram:agx-g13g": {
+  "bytes": 134,
+  "cycles": 202.3,
+  "gprs": 8,
+  "instructions": 24,
+  "uniform_halves": 16,
+  "waits": 2
+ },
+ "histogram.ll:histogram:agx-g14c": {
+  "bytes": 134,
+  "cycles": 202.3,
+  "gprs": 8,
+  "instructions": 24,
+  "uniform_halves": 16,
+  "waits": 2
+ },
+ "reduce.ll:reduce:agx-g13g": {
+  "bytes": 260,
+  "cycles": 2016.1,
+  "gprs": 6,
+  "instructions": 44,
+  "uniform_halves": 14,
+  "waits": 3
+ },
+ "reduce.ll:reduce:agx-g14c": {
+  "bytes": 194,
+  "cycles": 1812.0,
+  "gprs": 6,
+  "instructions": 33,
+  "uniform_halves": 14,
+  "waits": 2
+ },
+ "saxpy.ll:saxpy:agx-g13g": {
+  "bytes": 70,
+  "cycles": 11.3,
+  "gprs": 4,
+  "instructions": 12,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "saxpy.ll:saxpy:agx-g14c": {
+  "bytes": 70,
+  "cycles": 11.3,
+  "gprs": 4,
+  "instructions": 12,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "scan.ll:scan:agx-g13g": {
+  "bytes": 38,
+  "cycles": 125.7,
+  "gprs": 4,
+  "instructions": 7,
+  "uniform_halves": 10,
+  "waits": 1
+ },
+ "scan.ll:scan:agx-g14c": {
+  "bytes": 38,
+  "cycles": 125.7,
+  "gprs": 4,
+  "instructions": 7,
+  "uniform_halves": 10,
+  "waits": 1
+ },
+ "softmax_row.ll:softmax_row:agx-g13g": {
+  "bytes": 120,
+  "cycles": 180.8,
+  "gprs": 7,
+  "instructions": 20,
+  "uniform_halves": 10,
+  "waits": 1
+ },
+ "softmax_row.ll:softmax_row:agx-g14c": {
+  "bytes": 120,
+  "cycles": 180.8,
+  "gprs": 7,
+  "instructions": 20,
+  "uniform_halves": 10,
+  "waits": 1
+ },
+ "stencil.ll:stencil:agx-g13g": {
+  "bytes": 216,
+  "cycles": 99.4,
+  "gprs": 9,
+  "instructions": 32,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "stencil.ll:stencil:agx-g14c": {
+  "bytes": 216,
+  "cycles": 99.4,
+  "gprs": 9,
+  "instructions": 32,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "transpose.ll:transpose:agx-g13g": {
+  "bytes": 146,
+  "cycles": 193.4,
+  "gprs": 8,
+  "instructions": 23,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "transpose.ll:transpose:agx-g14c": {
+  "bytes": 146,
+  "cycles": 193.4,
+  "gprs": 8,
+  "instructions": 23,
+  "uniform_halves": 16,
+  "waits": 1
+ }
+}
