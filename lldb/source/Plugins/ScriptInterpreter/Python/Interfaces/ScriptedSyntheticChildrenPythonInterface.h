@@ -42,7 +42,8 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  llvm::Expected<uint32_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ChildCacheState Update() override;
 

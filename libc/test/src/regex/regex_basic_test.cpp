@@ -103,18 +103,73 @@ TEST(LlvmLibcRegexTest, PoolExhaustionReturnsEspace) {
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a", 0, nullptr, 0), REG_ESPACE);
   LIBC_NAMESPACE::regfree(&preg);
 
-  // One additional repeated byte (9999 'a's) hits MAX_NODE_LIMIT in
-  // make_concat; a novel byte ('b' at index 9998) hits MAX_NODE_LIMIT in
-  // make_lit. Calling regfree afterwards must be a safe no-op in both cases.
+  // One additional byte (9999 'a's) hits MAX_NODE_LIMIT during regcomp;
+  // calling regfree afterwards must be a safe no-op.
   pattern[9998] = 'a';
   pattern[9999] = '\0';
   EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pattern, REG_EXTENDED | REG_NOSUB),
             REG_ESPACE);
   LIBC_NAMESPACE::regfree(&preg);
+}
 
-  pattern[9998] = 'b';
-  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pattern, REG_EXTENDED | REG_NOSUB),
-            REG_ESPACE);
+TEST(LlvmLibcRegexTest, WildcardDot) {
+  regex_t preg;
+  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a.c", REG_EXTENDED | REG_NOSUB), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abc", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "axc", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "ac", 0, nullptr, 0), REG_NOMATCH);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "abbc", 0, nullptr, 0), REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+
+  ASSERT_EQ(
+      LIBC_NAMESPACE::regcomp(&preg, R"(a\.b.c)", REG_EXTENDED | REG_NOSUB), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a.bXc", 0, nullptr, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "aXbXc", 0, nullptr, 0),
+            REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+}
+
+TEST(LlvmLibcRegexTest, EscapedMetacharacters) {
+  regex_t preg;
+  ASSERT_EQ(
+      LIBC_NAMESPACE::regcomp(&preg, R"(a\.b\*c\\d)", REG_EXTENDED | REG_NOSUB),
+      0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, R"(xx a.b*c\d yy)", 0, nullptr, 0),
+            0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, R"(aXb*c\d)", 0, nullptr, 0),
+            REG_NOMATCH);
+  LIBC_NAMESPACE::regfree(&preg);
+
+  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, R"(trailing\)", REG_EXTENDED),
+            REG_EESCAPE);
+  LIBC_NAMESPACE::regfree(&preg);
+}
+
+TEST(LlvmLibcRegexTest, UnimplementedSyntaxAndFlags) {
+  regex_t preg;
+  // Missing REG_EXTENDED (BRE mode) and unsupported cflags return REG_BADPAT.
+  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a", 0), REG_BADPAT);
+  LIBC_NAMESPACE::regfree(&preg);
+  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a", REG_EXTENDED | REG_ICASE),
+            REG_BADPAT);
+  LIBC_NAMESPACE::regfree(&preg);
+  EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a", REG_EXTENDED | REG_NEWLINE),
+            REG_BADPAT);
+  LIBC_NAMESPACE::regfree(&preg);
+
+  // Unimplemented ERE metacharacters and special escapes return REG_BADPAT.
+  const char *const bad_patterns[] = {
+      "^a",   "a$",  "a*",    "a+",    "a?",    "(a)",   "[a]",
+      "a{1}", "a|b", R"(\1)", R"(\b)", R"(\w)", R"(\s)", R"(\d)"};
+  for (const char *pat : bad_patterns) {
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADPAT);
+    LIBC_NAMESPACE::regfree(&preg);
+  }
+
+  // Unsupported eflags in regexec return REG_BADPAT.
+  ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, "a", REG_EXTENDED), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a", 0, nullptr, REG_NOTBOL),
+            REG_BADPAT);
   LIBC_NAMESPACE::regfree(&preg);
 }
 

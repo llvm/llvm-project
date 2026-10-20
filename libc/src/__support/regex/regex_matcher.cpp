@@ -32,6 +32,10 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool) {
     return EMPTY_SET_ID;
   case ExprKind::Literal:
     return (c == e.ch) ? EMPTY_STR_ID : EMPTY_SET_ID;
+  case ExprKind::ByteSet:
+    return pool.get_byte_set(e.byte_set_id).test(static_cast<uint8_t>(c))
+               ? EMPTY_STR_ID
+               : EMPTY_SET_ID;
   case ExprKind::Concat: {
     // Product Rule:
     // D_c(L . R) = (D_c(L) . R) | (nullable(L) ? D_c(R) : EmptySet)

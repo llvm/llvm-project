@@ -166,7 +166,8 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     static constexpr llvm::StringLiteral g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
