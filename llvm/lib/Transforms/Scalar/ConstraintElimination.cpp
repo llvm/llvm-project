@@ -806,7 +806,7 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
 
   if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
     bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
-    if (!CI->uge(std::min(63u, CI->getBitWidth())) &&
+    if (CI->getValue().ult(std::min(63u, CI->getBitWidth())) &&
         (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
       int64_t Factor = int64_t(1) << CI->getZExtValue();
       auto Result = decompose(Op0, Info, IsSigned, DL);
