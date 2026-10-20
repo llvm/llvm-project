@@ -1473,6 +1473,39 @@ func.func @fold_mul_no_shift() -> tensor<i32> {
 
 // -----
 
+// CHECK-LABEL: @fold_mul_max_shift
+// CHECK: tosa.const values(dense<0> : tensor<i32>)
+func.func @fold_mul_max_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2147483647> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<63> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_negative_shift
+// CHECK: tosa.mul
+func.func @no_fold_mul_negative_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<-1> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_shift_64
+// CHECK: tosa.mul
+func.func @no_fold_mul_shift_64() -> tensor<i32> {
+  %c = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<64> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
 // CHECK-LABEL: @no_fold_mul_result_exceeds_i32
 // CHECK-DAG: %[[LHS:.*]] = tosa.const values(dense<23661> : tensor<i32>) : () -> tensor<i32>
 // CHECK-DAG: %[[RHS:.*]] = tosa.const values(dense<330222> : tensor<i32>) : () -> tensor<i32>
