@@ -16,6 +16,27 @@ func.func @whole_buffer(%v: vector<4xf32>) -> vector<4xf32> {
 
 // -----
 
+// A vscale*4-sized allocation matches the whole scalable vector, so plain
+// loads and stores can promote it to a single vector SSA value.
+// CHECK-LABEL: func.func @scalable_whole_buffer
+// CHECK-SAME: (%[[V:.*]]: vector<[4]xf32>)
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: vector.store
+// CHECK-NOT: vector.load
+// CHECK: return %[[V]] : vector<[4]xf32>
+func.func @scalable_whole_buffer(%v: vector<[4]xf32>) -> vector<[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %vs = vector.vscale
+  %size = arith.muli %vs, %c4 : index
+  %a = memref.alloca(%size) : memref<?xf32>
+  vector.store %v, %a[%c0] : memref<?xf32>, vector<[4]xf32>
+  %r = vector.load %a[%c0] : memref<?xf32>, vector<[4]xf32>
+  return %r : vector<[4]xf32>
+}
+
+// -----
+
 // Both kinds of vector access can use the same promoted slot.
 // CHECK-LABEL: func.func @mixed_transfers
 // CHECK-SAME: (%[[V:.*]]: vector<4xf32>,

@@ -47,20 +47,16 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Load/store accesses must cover the slot from its origin with an exactly
-/// matching vector type. The allocation or alias model determines that type.
-template <typename LoadStoreOpTy>
+/// Checks that the sole blocking use is the slot's base, the vector type
+/// matches the slot value type, and all access indices are constant zero.
+/// The allocation or alias model determines the slot value type; matching it
+/// alone does not guarantee an in-bounds access through a dynamic subview.
+template <typename VectorAccessOpTy>
 static bool
-isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
-                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+isWholeSlotAccessAtZero(VectorAccessOpTy op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
       op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
-    return false;
-
-  // A dynamic subview's slot holds the whole parent vector, which may be
-  // larger than the view. Matching that type does not prove a whole-view
-  // access, and plain loads/stores do not have transfer padding/mask semantics.
-  if (memref::isDynamicSubViewSlot(slot.ptr))
     return false;
 
   for (Value index : op.getIndices()) {
@@ -69,6 +65,21 @@ isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
       return false;
   }
   return true;
+}
+
+/// Load/store accesses must cover the slot from its origin with an exactly
+/// matching vector type. Dynamic subviews are not supported.
+template <typename LoadStoreOpTy>
+static bool
+isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
+                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (!isWholeSlotAccessAtZero(op, slot, blockingUses))
+    return false;
+
+  // A dynamic subview's slot holds the whole parent vector, which may be
+  // larger than the view. Matching that type does not prove a whole-view
+  // access, and plain loads/stores do not have transfer padding/mask semantics.
+  return !memref::isDynamicSubViewSlot(slot.ptr);
 }
 
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
@@ -82,27 +93,12 @@ isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The transfer's memref base must be the slot pointer.
-  if (blockingUses.size() != 1)
-    return false;
-  Value blockingUse = (*blockingUses.begin())->get();
-  if (blockingUse != slot.ptr || xferOp.getBase() != slot.ptr)
+  if (!isWholeSlotAccessAtZero(xferOp, slot, blockingUses))
     return false;
 
   // Reject the tensor form (already implied, since slot pointers are memrefs).
   if (!isa<MemRefType>(xferOp.getBase().getType()))
     return false;
-
-  // Exact type match pins rank/extents/element type/scalable dims.
-  if (xferOp.getVectorType() != slot.valueType)
-    return false;
-
-  // Access must start at the buffer origin in every dimension.
-  for (Value index : xferOp.getIndices()) {
-    std::optional<int64_t> constIndex = getConstantIntValue(index);
-    if (!constIndex || *constIndex != 0)
-      return false;
-  }
 
   // Identity map: no broadcast or transpose.
   if (!xferOp.getPermutationMap().isIdentity())
