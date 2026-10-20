@@ -7,14 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SourceMgrDiagnosticVerifier.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(const SourceMgr &mgr,
-                                                         raw_ostream &os)
+SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
+    const SourceMgr &mgr, raw_ostream &os, ArrayRef<StringRef> prefixes)
     : mgr(mgr), os(os) {
+  assert(!prefixes.empty() && "must have at least one prefix");
+  std::string prefixAlt;
+  raw_string_ostream prefixOs(prefixAlt);
+  ListSeparator sep("|");
+  for (StringRef prefix : prefixes) {
+    assert(!prefix.empty() && "prefixes must be non-empty");
+    prefixOs << sep << Regex::escape(prefix);
+  }
+  // Don't match 'expected' inside a longer word such as 'unexpected'.
+  expected = Regex("(^|[^[:alnum:]_-])(" + prefixAlt +
+                   ")-(error|note|remark|warning)(-re)?"
+                   " *(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
     (void)computeExpectedDiags(mgr.getMemoryBuffer(i + 1));
 }
@@ -107,12 +121,16 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(const MemoryBuffer *buf) {
   // The indices of designators that apply to the next non designator line.
   SmallVector<unsigned, 1> designatorsForNextLine;
 
-  // Scan the file for expected-* designators.
+  // Scan the file for <prefix>-* designators.
   SmallVector<StringRef, 100> lines;
   buf->getBuffer().split(lines, '\n');
   for (unsigned lineNo = 0, e = lines.size(); lineNo < e; ++lineNo) {
-    SmallVector<StringRef, 4> matches;
-    if (!expected.match(lines[lineNo].rtrim(), &matches)) {
+    StringRef line = lines[lineNo].rtrim();
+
+    // Every directive contains '{{'; check that first to avoid running the
+    // regex on most lines.
+    SmallVector<StringRef, 8> matches;
+    if (!line.contains("{{") || !expected.match(line, &matches)) {
       // Check for designators that apply to this line.
       if (!designatorsForNextLine.empty()) {
         for (unsigned diagIndex : designatorsForNextLine)
@@ -123,27 +141,27 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(const MemoryBuffer *buf) {
       continue;
     }
 
-    // Point to the start of expected-*.
-    SMLoc expectedStart = SMLoc::getFromPointer(matches[0].data());
+    // Point to the start of <prefix>-*.
+    SMLoc expectedStart = SMLoc::getFromPointer(matches[2].data());
 
     SourceMgr::DiagKind kind;
-    if (matches[1] == "error")
+    if (matches[3] == "error")
       kind = SourceMgr::DK_Error;
-    else if (matches[1] == "warning")
+    else if (matches[3] == "warning")
       kind = SourceMgr::DK_Warning;
-    else if (matches[1] == "remark")
+    else if (matches[3] == "remark")
       kind = SourceMgr::DK_Remark;
     else {
-      assert(matches[1] == "note");
+      assert(matches[3] == "note");
       kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[5]);
+    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[7]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
-    if (!matches[2].empty() && !computeRegex(record))
+    if (!matches[4].empty() && !computeRegex(record))
       continue;
 
-    StringRef offsetMatch = matches[3];
+    StringRef offsetMatch = matches[5];
     if (!offsetMatch.empty()) {
       offsetMatch = offsetMatch.drop_front(1);
 
