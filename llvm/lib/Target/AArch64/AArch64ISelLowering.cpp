@@ -13772,15 +13772,10 @@ SDValue AArch64TargetLowering::LowerVASTART(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
                                            SelectionDAG &DAG) const {
-  // AAPCS has three pointers and two ints (= 32 bytes), Darwin has single
-  // pointer.
   SDLoc DL(Op);
-  unsigned PtrSize = Subtarget->isTargetILP32() ? 4 : 8;
-  unsigned VaListSize;
-  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindowsOrUEFI())
-    VaListSize = PtrSize;
-  else
-    VaListSize = Subtarget->isTargetILP32() ? 20 : 32;
+  const DataLayout &DataL = DAG.getDataLayout();
+  unsigned PtrSize = DataL.getPointerSize();
+  unsigned VaListSize = getVaListSizeInBits(DataL) / 8;
   const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
@@ -34033,10 +34028,13 @@ bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
 
 unsigned
 AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
+  // Darwin and Windows use a single pointer. AAPCS has three pointers and two
+  // ints.
+  unsigned PtrBits = DL.getPointerSizeInBits();
   if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindowsOrUEFI())
-    return getPointerTy(DL).getSizeInBits();
+    return PtrBits;
 
-  return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
+  return 3 * PtrBits + 2 * 32;
 }
 
 void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
