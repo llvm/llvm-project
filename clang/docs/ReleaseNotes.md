@@ -1049,6 +1049,11 @@ features cannot lower the translation-unit ABI level;
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Fixed a bug where initializing a character array from a string literal in a
+  template mutated the shared `StringLiteral` AST node in place, causing other
+  instantiations of the template to use the wrong type or value category.
+  (#GH72738, #GH112189)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
