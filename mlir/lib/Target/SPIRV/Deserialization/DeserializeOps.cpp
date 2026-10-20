@@ -674,6 +674,10 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
       opBuilder, unknownLoc, resultType,
       SymbolRefAttr::get(opBuilder.getContext(), functionName), arguments);
 
+  if (auto it = decorations.find(resultID); it != decorations.end())
+    for (NamedAttribute attr : it->second)
+      opFunctionCall->setAttr(attr.getName(), attr.getValue());
+
   if (resultType)
     valueMap[resultID] = opFunctionCall.getResult(0);
   return success();

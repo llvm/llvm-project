@@ -1114,6 +1114,9 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
     valueIDMap[op.getResult(0)] = funcCallID;
 
   encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionCall, operands);
+  for (auto attr : op->getDiscardableAttrs())
+    if (failed(processDecoration(op.getLoc(), funcCallID, attr)))
+      return failure();
   return success();
 }
 
