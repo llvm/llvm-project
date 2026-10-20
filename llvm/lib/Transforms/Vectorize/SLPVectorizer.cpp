@@ -14527,15 +14527,15 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
     return;
 
-  SmallVector<Value *> PointerOps(E.Scalars.size());
-  transform(E.Scalars, PointerOps.begin(),
-            [](Value *V) { return cast<LoadInst>(V)->getPointerOperand(); });
+  SmallVector<Value *> PointerOps = map_to_vector(
+      E.Scalars,
+      [](Value *V) { return cast<LoadInst>(V)->getPointerOperand(); });
 
   Type *ScalarTy = E.getMainOp()->getType();
   Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
   StridedPtrInfo SPtrInfo;
   SmallVector<unsigned> Order;
-  std::optional<int64_t> Diff = getPointersDiff(
+  std::optional<int64_t> Diff = PtrsDiffCache.get(
       ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
   if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
                                                CommonAlignment, Order, *Diff,
@@ -14557,7 +14557,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   InstructionCost StridedCost =
       getStridedLoadCost(*TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy,
                          ScalarTy, LI0->getPointerOperand(), CommonAlignment,
-                         getCastContextHint(E), CostKind, /*IsReverse=*/false);
+                         TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
   if (StridedCost >= CompressedCost)
     return;
 
