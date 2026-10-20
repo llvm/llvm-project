@@ -229,7 +229,7 @@ private:
   void processMapObjectsWithIterator(
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
       const omp::ObjectList &objects,
-      llvm::ArrayRef<IteratorRange> iteratorRanges,
+      llvm::ArrayRef<IteratorRange> iteratorRanges, bool hasIteratorModifier,
       mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       mlir::omp::MapClauseOps &result,

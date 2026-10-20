@@ -144,6 +144,16 @@ end
 ! CAN: omp.iterator(%{{[^:]+}}: i32) =
 ! CAN-SAME: (%[[ONE]] to %[[FOUR]] step %[[ONE]])
 
+! Items of a clause without an iterator modifier still use ordinary maps.
+subroutine other_clause(a, b)
+  integer :: a(4), b(4)
+  !$omp target update to(iterator(i=1:2): a(i)) from(b(1:2))
+end
+! CHECK-LABEL: func.func @_QPother_clause
+! CHECK: %[[IT:.*]] = omp.iterator
+! CHECK: %[[B:.*]] = omp.map.info {{.*}}map_clauses(from) {{.*}}name("b(1:2)")
+! CHECK: omp.target_update map_entries(%[[B]] : {{.*}}) map_iterated(%[[IT]] :
+
 ! A reference removed by folding still selects its range, so an empty range
 ! removes the locator instead of mapping it unconditionally.
 subroutine folded_reference(a, n)

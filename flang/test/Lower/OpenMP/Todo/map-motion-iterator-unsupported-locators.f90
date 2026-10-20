@@ -38,6 +38,15 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/unreferenced-empty.f90 2>&1 | \
 ! RUN:   FileCheck %t/unreferenced-empty.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/later-clause-complex-part.f90 2>&1 | \
+! RUN:   FileCheck %t/later-clause-complex-part.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/earlier-clause-vector.f90 2>&1 | \
+! RUN:   FileCheck %t/earlier-clause-vector.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/earlier-map-clause-vector.f90 2>&1 | \
+! RUN:   FileCheck %t/earlier-map-clause-vector.f90
 
 ! Unsupported iterator locators in map and motion clauses.
 
@@ -169,4 +178,30 @@ subroutine target_exit_data_unreferenced_empty(a)
 
   ! CHECK: not yet implemented: iterator modifier with unsupported array section
   !$omp target exit data map(iterator(i = 1:1), from: a(1:0))
+end subroutine
+
+!--- later-clause-complex-part.f90
+subroutine target_enter_data_later_clause_complex_part(a, z)
+  integer :: a(4)
+  complex :: z
+
+  ! CHECK: not yet implemented: object type not supported by iterator modifier
+  !$omp target enter data map(iterator(i = 1:2), to: a(i)) map(to: z%re)
+end subroutine
+
+!--- earlier-clause-vector.f90
+! TO clauses are processed before FROM clauses.
+subroutine target_update_earlier_clause_vector(a, b)
+  integer :: a(4), b(4)
+
+  ! CHECK: not yet implemented: iterator modifier with unsupported array section
+  !$omp target update from(iterator(i = 1:2): a(i)) to(b([1, 3]))
+end subroutine
+
+!--- earlier-map-clause-vector.f90
+subroutine target_enter_data_earlier_clause_vector(a, b)
+  integer :: a(4), b(4)
+
+  ! CHECK: not yet implemented: iterator modifier with unsupported array section
+  !$omp target enter data map(to: b([1, 3])) map(iterator(i = 1:2), to: a(i))
 end subroutine

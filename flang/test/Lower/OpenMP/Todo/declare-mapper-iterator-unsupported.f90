@@ -44,6 +44,9 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/intrinsic-range.f90 2>&1 | \
 ! RUN:   FileCheck %t/intrinsic-range.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/later-clause-external.f90 2>&1 | \
+! RUN:   FileCheck %t/later-clause-external.f90
 
 ! Unsupported iterator locators inside declare mapper.
 
@@ -253,3 +256,17 @@ subroutine declare_mapper_iterator_intrinsic_range
 
   !$omp declare mapper(m: t :: v) map(iterator(i=1:maxval(v%b)), to: v%a(i))
 end subroutine
+
+!--- later-clause-external.f90
+! CHECK: not yet implemented: iterator modifier with locator outside
+! CHECK-SAME: declare mapper variable
+
+module declare_mapper_iterator_later_clause_external
+  integer :: tbl(1)
+  type :: t
+    integer :: a(1)
+  end type
+
+  !$omp declare mapper(m: t :: v) &
+  !$omp& map(iterator(i=1:1), to: v%a(i)) map(to: tbl(1))
+end module

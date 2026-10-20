@@ -2049,17 +2049,17 @@ static bool hasUnsupportedMapSection(const omp::SomeExpr &ref) {
 }
 
 // Lower iterator-dependent locators to mapIterated and other locators to
-// mapVars.
+// mapVars. With an iterator modifier on any clause, check items of all clauses.
 void ClauseProcessor::processMapObjectsWithIterator(
     lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
     const omp::ObjectList &objects,
-    llvm::ArrayRef<IteratorRange> iteratorRanges,
+    llvm::ArrayRef<IteratorRange> iteratorRanges, bool hasIteratorModifier,
     mlir::omp::ClauseMapFlags mapTypeBits,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     mlir::omp::MapClauseOps &result, llvm::SmallVectorImpl<Object> &mapObjects,
     llvm::StringRef mapperIdNameRef, bool isMotionModifier,
     llvm::omp::Directive directive) const {
-  if (iteratorRanges.empty()) {
+  if (!hasIteratorModifier) {
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,
                       mapperIdNameRef, isMotionModifier, directive);
@@ -2152,6 +2152,18 @@ getMapperIdentifier(lower::AbstractConverter &converter,
   return mapperIdName;
 }
 
+static bool hasIteratorModifier(const List<Clause> &clauses) {
+  auto hasIterator = [](const auto *clause) {
+    return clause && std::get<std::optional<omp::clause::Iterator>>(clause->t)
+                         .has_value();
+  };
+  return llvm::any_of(clauses, [&](const Clause &clause) {
+    return hasIterator(std::get_if<omp::clause::Map>(&clause.u)) ||
+           hasIterator(std::get_if<omp::clause::To>(&clause.u)) ||
+           hasIterator(std::get_if<omp::clause::From>(&clause.u));
+  });
+}
+
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
@@ -2163,6 +2175,7 @@ bool ClauseProcessor::processMap(
   llvm::SmallVectorImpl<Object> *ptrMapObjects =
       mapObjects ? mapObjects : &localMapObjects;
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
+  bool hasIterator = hasIteratorModifier(clauses);
 
   auto process = [&](const omp::clause::Map &clause,
                      const parser::CharBlock &source) {
@@ -2247,24 +2260,24 @@ bool ClauseProcessor::processMap(
 
     TodoLocators(currentLocation, objects);
 
-    llvm::SmallVector<IteratorRange> iteratorRanges;
-    if (iterator) {
-      // An executable target region needs a stable base capture for every
-      // iterated map object used in its body. Without such a capture, implicit
-      // mapping adds an ordinary whole-object map and changes the requested
-      // extent and direction. Reject this until omp.target can represent those
-      // captures separately from runtime map entries.
-      if (directive == llvm::omp::Directive::OMPD_target)
-        TODO(clauseLocation, "TARGET construct with MAP iterator modifier");
+    // An executable target region needs a stable base capture for every
+    // iterated map object used in its body. Without such a capture, implicit
+    // mapping adds an ordinary whole-object map and changes the requested
+    // extent and direction. Reject this until omp.target can represent those
+    // captures separately from runtime map entries.
+    if (iterator && directive == llvm::omp::Directive::OMPD_target)
+      TODO(clauseLocation, "TARGET construct with MAP iterator modifier");
 
-      if (auto declareMapper = getEnclosingDeclareMapper(converter))
-        checkDeclareMapperIteratorReferences(
-            converter, declareMapper, clauseLocation, *iterator, objects);
-      iteratorRanges = lowerIteratorRanges(clause, converter, stmtCtx);
-    }
+    if (auto declareMapper = getEnclosingDeclareMapper(converter);
+        declareMapper && hasIterator)
+      checkDeclareMapperIteratorReferences(
+          converter, declareMapper, clauseLocation,
+          iterator ? *iterator : omp::clause::Iterator{}, objects);
+    llvm::SmallVector<IteratorRange> iteratorRanges =
+        lowerIteratorRanges(clause, converter, stmtCtx);
     processMapObjectsWithIterator(
-        stmtCtx, clauseLocation, objects, iteratorRanges, mapTypeBits,
-        parentMemberIndices, result, *ptrMapObjects, mapperIdName,
+        stmtCtx, clauseLocation, objects, iteratorRanges, hasIterator,
+        mapTypeBits, parentMemberIndices, result, *ptrMapObjects, mapperIdName,
         /*isMotionModifier=*/false, directive);
   };
 
@@ -2284,6 +2297,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   // target update. Passing OMPD_target_update would disable that synthesis.
   constexpr llvm::omp::Directive mapperDirective =
       llvm::omp::Directive::OMPD_unknown;
+  bool hasIterator = hasIteratorModifier(clauses);
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
@@ -2303,8 +2317,8 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     llvm::SmallVector<IteratorRange> iteratorRanges =
         lowerIteratorRanges(clause, converter, stmtCtx);
     processMapObjectsWithIterator(
-        stmtCtx, clauseLocation, objects, iteratorRanges, mapTypeBits,
-        parentMemberIndices, result, mapObjects, mapperIdName,
+        stmtCtx, clauseLocation, objects, iteratorRanges, hasIterator,
+        mapTypeBits, parentMemberIndices, result, mapObjects, mapperIdName,
         /*isMotionModifier=*/true, mapperDirective);
   };
 
