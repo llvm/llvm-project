@@ -3477,8 +3477,11 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   Register ResultReg = MI.getOperand(0).getReg();
-  if (MF->getRegInfo().use_empty(ResultReg)) {
-    // Nothing to do. Pseudo erased below.
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  if (MRI.use_nodbg_empty(ResultReg)) {
+    // There are no non-debug uses, so no state read is needed. ResultReg will
+    // have no definition, so make its debug uses undef.
+    MRI.markUsesInDebugValueAsUndef(ResultReg);
   } else if (Subtarget->hasSME()) {
     BuildMI(*BB, MI, DL, TII->get(AArch64::MRS), ResultReg)
         .addImm(AArch64SysReg::SVCR)
@@ -4132,6 +4135,18 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
     // of a SUB operation can be reused.
     PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
                                     {Val->getOperand(0), Val->getOperand(1)});
+    // The first comparison supports the full 12-bit CMP/CMN immediate range,
+    // while subsequent CCMP/CCMN comparisons only support a 5-bit immediate [0,
+    // 31]. Prefer a wider-immediate comparison first to avoid materializing
+    // constants.
+    if (!PreferFirst && VT.isInteger()) {
+      if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(1))) {
+        APInt CVal = C->getAPIntValue();
+        if (CVal.abs().ugt(31) &&
+            AArch64_AM::isLegalArithImmed(CVal.abs().getZExtValue()))
+          PreferFirst = true;
+      }
+    }
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -15852,8 +15867,8 @@ AArch64TargetLowering::LowerZERO_EXTEND_VECTOR_INREG(SDValue Op,
   if (Scale != 2)
     return SDValue();
   SDValue Zeros = DAG.getConstant(0, DL, SrcVT);
-  return DAG.getBitcast(VT,
-                        DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
+                     DAG.getNode(AArch64ISD::ZIP1, DL, SrcVT, SrcOp, Zeros));
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
@@ -19792,7 +19807,7 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
                                              /*AllowNonInbounds=*/true);
 
   while (++It != End) {
-    if (It->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(*It))
       continue;
     if (MaxLookupDist-- == 0)
       break;
@@ -20402,6 +20417,14 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
     if (isa<ScalableVectorType>(Ty)) {
       EVT VT = getValueType(DL, Ty);
+
+      // Check if I is an extending load (that may need splitting).
+      if (I) {
+        User *U = I->getUniqueUndroppableUser();
+        if (isa_and_nonnull<ZExtInst, SExtInst>(U))
+          VT = getValueType(DL, U->getType());
+      }
+
       LLVMContext &Ctx = Ty->getContext();
       TargetLowering::LegalizeTypeAction Action = getTypeAction(Ctx, VT);
 
@@ -22578,6 +22601,37 @@ static SDValue performFADDCombine(SDNode *N,
     return R;
 
   return SDValue();
+}
+
+static SDValue performFADDPREDCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Pg = N->getOperand(0);
+  SDValue Acc = N->getOperand(1);
+  SDValue FMul = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDNodeFlags Flags = N->getFlags();
+  SDLoc DL(N);
+
+  // fadd contract Pg, Acc, (fmul contract Pg, L, R) -> fma Pg, L, R, Acc
+  if (!Flags.hasAllowContract())
+    return SDValue();
+
+  if (FMul->getOpcode() != AArch64ISD::FMUL_PRED ||
+      !FMul->getFlags().hasAllowContract())
+    std::swap(Acc, FMul);
+
+  if (FMul->getOpcode() != AArch64ISD::FMUL_PRED ||
+      !FMul->getFlags().hasAllowContract() || !FMul->hasOneUse())
+    return SDValue();
+
+  if (Pg != FMul->getOperand(0))
+    return SDValue();
+
+  SDValue L = FMul->getOperand(1);
+  SDValue R = FMul->getOperand(2);
+
+  return DAG.getNode(AArch64ISD::FMA_PRED, DL, VT, {Pg, L, R, Acc}, Flags);
 }
 
 static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
@@ -30217,8 +30271,8 @@ static SDValue performVselectPowCombine(SDNode *N,
   RTLIB::Libcall LC = RTLIB::getPOW(VT);
   SelectionDAG &DAG = DCI.DAG;
   auto &TLI = DAG.getTargetLoweringInfo();
-  bool HasLibCall =
-      TLI.getLibcallLoweringInfo().getLibcallImpl(LC) != RTLIB::Unsupported;
+  bool HasLibCall = TLI.getLibcallLoweringInfo().getVectorLibcallImplOrMasked(
+                        LC) != RTLIB::Unsupported;
   if (!HasLibCall)
     return SDValue();
 
@@ -31443,9 +31497,9 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
-    TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
+    TruncHighOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncHighOp);
   if (TruncLowOpVT != UZP1VT)
-    TruncLowOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncLowOp);
+    TruncLowOp = DAG.getNode(AArch64ISD::NVCAST, DL, UZP1VT, TruncLowOp);
 
   SDValue UZP1 =
       DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);
@@ -31930,9 +31984,43 @@ static unsigned getReductionForOpcode(unsigned Op) {
   }
 }
 
+// umin(abs(X), signed_max) is a saturating absolute value. In particular,
+// abs(signed_min) has the unsigned value signed_max + 1 and must be clamped.
+static SDValue trySQABSCombine(SDNode *N, SelectionDAG &DAG,
+                               const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !VT.isInteger() || VT.isVectorOf(MVT::i1) ||
+      !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue X;
+  const APInt Max = APInt::getSignedMaxValue(VT.getScalarSizeInBits());
+  if (!sd_match(N, m_UMin(m_Abs(m_Value(X)), m_SpecificInt(Max))))
+    return SDValue();
+
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDLoc DL(N);
+  if (VT.isScalableVector()) {
+    if (!(Subtarget.hasSVE2() || Subtarget.hasSME()))
+      return SDValue();
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_sqabs, DL, MVT::i32),
+        DAG.getPOISON(VT), getPredicateForVector(DAG, DL, VT), X);
+  }
+
+  if (Subtarget.isNeonAvailable() &&
+      (VT.is64BitVector() || VT.is128BitVector()))
+    return DAG.getNode(AArch64ISD::SQABS, DL, VT, X);
+  return SDValue();
+}
+
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
                                     const AArch64TargetLowering &TLI) {
   using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQABSCombine(N, DAG, TLI))
+    return V;
   if (SDValue V = trySQDMULHCombine(N, DAG))
     return V;
 
@@ -32071,6 +32159,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DCI);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
+  case AArch64ISD::FADD_PRED:
+    return performFADDPREDCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:

@@ -70,32 +70,23 @@ define amdgpu_ps double @s_test_ldexp_f64_i32(double inreg %a, i32 inreg %b) #0 
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_test_ldexp_f64_i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_test_ldexp_f64_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_test_ldexp_f64_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_ldexp_f64 v[0:1], s[0:1], s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call double @llvm.experimental.constrained.ldexp.f64.i32(double %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %result

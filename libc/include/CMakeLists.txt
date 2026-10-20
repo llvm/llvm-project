@@ -195,6 +195,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  libintl
+  ../libc/include/libintl.yaml
+  libintl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.locale_t
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
