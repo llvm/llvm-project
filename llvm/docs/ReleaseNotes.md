@@ -433,6 +433,9 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
+* llvm-ml now supports `-showIncludes` to report files read via `INCLUDE` in a
+  format compatible with Ninja's `deps = msvc` mode.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
