@@ -478,6 +478,14 @@ __packed_mulh_builtin(mulhsu_i32, int32_t, int32_t, uint32_t)
 __packed_mulh_builtin(mulhrsu_i32, int32_t, int32_t, uint32_t)
 #undef __packed_mulh_builtin
 
+/* Scalar Multiply High Accumulate */
+__packed_ternary_builtin(mhacc_i32, int32_t, __builtin_riscv_mhacc_i32)
+__packed_ternary_builtin(mhracc_i32, int32_t, __builtin_riscv_mhracc_i32)
+__packed_ternary_builtin(mhaccu_u32, uint32_t, __builtin_riscv_mhaccu_u32)
+__packed_ternary_builtin(mhraccu_u32, uint32_t, __builtin_riscv_mhraccu_u32)
+__packed_ternary_builtin_mixed(mhaccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhaccsu_i32)
+__packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhraccsu_i32)
+
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
 __packed_binary_builtin(mulqr_i32, int32_t, __builtin_riscv_mulqr_i32)
@@ -1176,6 +1184,14 @@ __packed_binary_builtin_mixed(pmqr2add_i32x2, int64_t, int32x2_t, int32x2_t, __b
 __packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __builtin_riscv_pm4add_i16x4)
 __packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
 __packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
+
+/* Packed Multiplication with Widening Horizontal Addition */
+__packed_binary_builtin_mixed(pm2wadd_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_i64)
+__packed_binary_builtin_mixed(pm2wadd_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_x_i64)
+__packed_binary_builtin_mixed(pm2waddu_u64, uint64_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2waddu_u64)
+__packed_binary_builtin_mixed(pm2wsub_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_i64)
+__packed_binary_builtin_mixed(pm2wsub_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_x_i64)
+__packed_binary_builtin_mixed(pm2waddsu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddsu_i64)
 
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)

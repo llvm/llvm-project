@@ -95,6 +95,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 }
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              TuneOptimizedNF3SegmentLoadStore,
+                              TuneOptimizedNF4SegmentLoadStore,
                               TuneEnableSelectOptimize];
 
 // `generic-rv32`, and `generic-rv64` are expected to target

@@ -104,9 +104,11 @@ Non-goals:
 - `%ok` (`i1`) is the condition that must hold.
 - `<kind>` is a check category (section 4). Options act on categories.
 - `<message>` is the error text, a `printf` format.
-- `values(%v0, ... : T0, ...)` are optional integer or `index` SSA values
-  (`T0`, ... are their types) printed into the message, one per `%lld`
-  directive. They are only read on the failure path. For example, the two
+- `values(%v0, ... : T0, ...)` are optional `i8`, `i16`, `i32`, `i64`, or
+  `index` SSA values (`T0`, ... are their types) printed as signed integers
+  into the message, one per `%lld` directive. Boolean diagnostics must be
+  explicitly extended by the producer to select their signed or unsigned
+  interpretation. Values are only read on the failure path. For example, the two
   extents in `"DOT_PRODUCT: SIZE(VECTOR_A) is %lld but SIZE(VECTOR_B) is %lld"`.
 - `guard(%x0, ... : U0, ...)` are the optional guarded values, of any type.
   The op has one result per guarded value, with the same type (`%g#i` has

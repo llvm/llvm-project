@@ -292,6 +292,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
 
+      assert(!isa<InsertValueInst>(Inst) &&
+             "legality must reject aggregate-producing insertvalue");
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
       SmallVector<VPValue *, 4> VPOperands;
@@ -1250,6 +1252,12 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
     for (VPRecipeBase &R : *VPBB) {
+      // Pseudo-probes are profiling placeholders with side effects but no real
+      // memory access. They are modeled as reading inaccessible memory, so skip
+      // them here to stay consistent with isReadOnlyLoop(), which classifies
+      // such loops as read-only.
+      if (match(&R, m_Intrinsic<Intrinsic::pseudoprobe>()))
+        continue;
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
         assert(!R.mayReadFromMemory() && "unexpected recipe reading memory");
@@ -1405,7 +1413,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
-    if (isa<VPIRValue>(V))
+    auto *DefR = V->getDefiningRecipe();
+    if (!DefR || DefR->getParent()->getEnclosingLoopRegion() != LoopRegion ||
+        is_contained({Header, Latch}, DefR->getParent()))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;

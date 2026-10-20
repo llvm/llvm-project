@@ -12669,7 +12669,8 @@ bool OpenMPAtomicUpdateChecker::checkStatement(Stmt *S, unsigned DiagId,
   }
   if (SemaRef.CurContext->isDependentContext())
     E = X = UpdateExpr = nullptr;
-  if (ErrorFound == NoError && E && X) {
+  if (ErrorFound == NoError && E && X && !E->containsErrors() &&
+      !X->containsErrors()) {
     // Build an update expression of form 'OpaqueValueExpr(x) binop
     // OpaqueValueExpr(expr)' or 'OpaqueValueExpr(expr) binop
     // OpaqueValueExpr(x)' and then cast it to the type of the 'x' expression.

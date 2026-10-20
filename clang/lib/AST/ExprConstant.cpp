@@ -17093,6 +17093,68 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
   return true;
 }
 
+// Implements the C2y §7.18.21 stdc_load8_* family: reads N bytes from
+// E->getArg(0) and assembles them per IsBE into a value of E's type. The
+// aligned_* variants additionally require the pointer to be aligned to the
+// natural alignment of E's type.
+static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
+                              bool IsAligned, APSInt &Result) {
+  LValue Ptr;
+  if (!EvaluatePointer(E->getArg(0), Ptr, Info))
+    return false;
+
+  if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
+      Ptr.Designator.Invalid)
+    return false;
+
+  if (Ptr.Designator.isMostDerivedAnUnsizedArray())
+    return false;
+
+  if (IsAligned) {
+    CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
+    CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
+    if (PtrAlign < RequiredAlign) {
+      Info.FFDiag(E, diag::note_constexpr_load8_unaligned)
+          << Info.Ctx.BuiltinInfo.getQuotedName(E->getBuiltinCallee())
+          << RequiredAlign.getQuantity() << PtrAlign.getQuantity();
+      return false;
+    }
+  }
+
+  QualType CharTy = Ptr.Designator.getType(Info.Ctx);
+  unsigned ByteWidth = Info.Ctx.getTypeSize(E->getType()) / 8;
+  uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
+  if (ByteWidth > RemainingElems) {
+    uint64_t ArrayIndex = Ptr.Designator.MostDerivedIsArrayElement
+                              ? Ptr.Designator.Entries.back().getAsArrayIndex()
+                              : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
+    APSInt Index = APSInt::get(ArrayIndex + ByteWidth - 1);
+    Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
+    return false;
+  }
+
+  // Load the bytes and assemble them per C2y §7.18.21:
+  // result = sum(b_index * 2^(8*index)) where b_index = ptr[index] (LE)
+  // or ptr[N/8 - index - 1] (BE).
+  uint64_t ResultBits = 0;
+  LValue BytePtr = Ptr;
+  for (unsigned I = 0; I < ByteWidth; ++I) {
+    APValue ByteVal;
+    if (!handleLValueToRValueConversion(Info, E, CharTy, BytePtr, ByteVal))
+      return false;
+    unsigned Shift = 8 * (IsBE ? ByteWidth - I - 1 : I);
+    ResultBits |= ByteVal.getInt().getZExtValue() << Shift;
+    if (I + 1 < ByteWidth)
+      if (!HandleLValueArrayAdjustment(Info, E, BytePtr, CharTy, 1))
+        return false;
+  }
+
+  bool IsSigned = E->getType()->isSignedIntegerType();
+  Result = APSInt(APInt(ByteWidth * 8, ResultBits), !IsSigned);
+  return true;
+}
+
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
@@ -17315,6 +17377,63 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
+  }
+
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_les64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/false, /*IsAligned=*/false,
+                           Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_les64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/false, /*IsAligned=*/true, Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_bes64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/true, /*IsAligned=*/false, Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_aligned_bes64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/true, /*IsAligned=*/true, Result))
+      return false;
+    return Success(Result, E);
   }
 
   case Builtin::BI__builtin_classify_type:
