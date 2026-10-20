@@ -425,7 +425,7 @@ private:
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
   void visitBitInsertInst(BitInsertInst &BII);
   void visitBitExtractInst(BitExtractInst &BEI);
-  void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
+  void visitVAArgInst(VAArgInst &VAA);
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
   void checkGEPOperator(const GEPOperator &GEP);
@@ -4645,6 +4645,13 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
             DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
+}
+
+void Verifier::visitVAArgInst(VAArgInst &VAA) {
+  // No target can lower va_arg of an aggregate, so frontends expand it.
+  Check(!VAA.getType()->isAggregateType(),
+        "va_arg with an aggregate type is not supported", &VAA);
+  visitInstruction(VAA);
 }
 
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
