@@ -13,8 +13,10 @@
 
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
+#include "src/__support/alloc-checker.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::AllocChecker;
 using LIBC_NAMESPACE::cpp::unique_ptr;
 
 struct DestructTracker {
@@ -31,7 +33,9 @@ struct DestructTracker {
 TEST(LlvmLibcUniquePtrTest, Basic) {
   int destruct_count = 0;
   {
-    unique_ptr<DestructTracker> ptr(new DestructTracker(&destruct_count));
+    AllocChecker ac;
+    unique_ptr<DestructTracker> ptr(new (ac) DestructTracker(&destruct_count));
+    ASSERT_TRUE(static_cast<bool>(ac));
     ASSERT_TRUE(static_cast<bool>(ptr));
     ASSERT_EQ(destruct_count, 0);
   }
@@ -49,7 +53,9 @@ TEST(LlvmLibcUniquePtrTest, Nullptr) {
 TEST(LlvmLibcUniquePtrTest, Move) {
   int destruct_count = 0;
   {
-    unique_ptr<DestructTracker> ptr1(new DestructTracker(&destruct_count));
+    AllocChecker ac;
+    unique_ptr<DestructTracker> ptr1(new (ac) DestructTracker(&destruct_count));
+    ASSERT_TRUE(static_cast<bool>(ac));
     unique_ptr<DestructTracker> ptr2(LIBC_NAMESPACE::cpp::move(ptr1));
     ASSERT_FALSE(static_cast<bool>(ptr1));
     ASSERT_TRUE(static_cast<bool>(ptr2));
@@ -63,8 +69,11 @@ TEST(LlvmLibcUniquePtrTest, MoveAssignment) {
   int destruct_count1 = 0;
   int destruct_count2 = 0;
   {
-    unique_ptr<DestructTracker> ptr1(new DestructTracker(&destruct_count1));
-    unique_ptr<DestructTracker> ptr2(new DestructTracker(&destruct_count2));
+    AllocChecker ac;
+    unique_ptr<DestructTracker> ptr1(new (ac) DestructTracker(&destruct_count1));
+    ASSERT_TRUE(static_cast<bool>(ac));
+    unique_ptr<DestructTracker> ptr2(new (ac) DestructTracker(&destruct_count2));
+    ASSERT_TRUE(static_cast<bool>(ac));
     ptr2 = LIBC_NAMESPACE::cpp::move(ptr1);
     ASSERT_FALSE(static_cast<bool>(ptr1));
     ASSERT_TRUE(static_cast<bool>(ptr2));
@@ -79,7 +88,9 @@ TEST(LlvmLibcUniquePtrTest, Release) {
   int destruct_count = 0;
   DestructTracker *raw_ptr = nullptr;
   {
-    unique_ptr<DestructTracker> ptr(new DestructTracker(&destruct_count));
+    AllocChecker ac;
+    unique_ptr<DestructTracker> ptr(new (ac) DestructTracker(&destruct_count));
+    ASSERT_TRUE(static_cast<bool>(ac));
     raw_ptr = ptr.release();
     ASSERT_FALSE(static_cast<bool>(ptr));
     ASSERT_EQ(destruct_count, 0);
@@ -94,8 +105,11 @@ TEST(LlvmLibcUniquePtrTest, Reset) {
   int destruct_count1 = 0;
   int destruct_count2 = 0;
   {
-    unique_ptr<DestructTracker> ptr(new DestructTracker(&destruct_count1));
-    ptr.reset(new DestructTracker(&destruct_count2));
+    AllocChecker ac;
+    unique_ptr<DestructTracker> ptr(new (ac) DestructTracker(&destruct_count1));
+    ASSERT_TRUE(static_cast<bool>(ac));
+    ptr.reset(new (ac) DestructTracker(&destruct_count2));
+    ASSERT_TRUE(static_cast<bool>(ac));
     ASSERT_EQ(destruct_count1, 1);
     ASSERT_EQ(destruct_count2, 0);
   }
@@ -107,7 +121,9 @@ TEST(LlvmLibcUniquePtrTest, Dereference) {
   struct Foo {
     int val;
   };
-  unique_ptr<Foo> ptr(new Foo{42});
+  AllocChecker ac;
+  unique_ptr<Foo> ptr(new (ac) Foo{42});
+  ASSERT_TRUE(static_cast<bool>(ac));
   ASSERT_EQ((*ptr).val, 42);
   ASSERT_EQ(ptr->val, 42);
 }
@@ -116,7 +132,9 @@ TEST(LlvmLibcUniquePtrTest, Dereference) {
 TEST(LlvmLibcUniquePtrTest, Array) {
   int destruct_count = 0;
   {
-    unique_ptr<DestructTracker[]> ptr(new DestructTracker[3]);
+    AllocChecker ac;
+    unique_ptr<DestructTracker[]> ptr(new (ac) DestructTracker[3]);
+    ASSERT_TRUE(static_cast<bool>(ac));
     ptr[0].destruct_count = &destruct_count;
     ptr[1].destruct_count = &destruct_count;
     ptr[2].destruct_count = &destruct_count;
@@ -138,8 +156,10 @@ struct CustomDeleter {
 TEST(LlvmLibcUniquePtrTest, CustomDeleter) {
   int deleter_count = 0;
   {
-    unique_ptr<int, CustomDeleter> ptr(new int(42),
+    AllocChecker ac;
+    unique_ptr<int, CustomDeleter> ptr(new (ac) int(42),
                                        CustomDeleter{&deleter_count});
+    ASSERT_TRUE(static_cast<bool>(ac));
     ASSERT_EQ(deleter_count, 0);
   }
   ASSERT_EQ(deleter_count, 1);
@@ -158,8 +178,10 @@ struct CustomArrayDeleter {
 TEST(LlvmLibcUniquePtrTest, CustomArrayDeleter) {
   int deleter_count = 0;
   {
+    AllocChecker ac;
     CustomArrayDeleter d{&deleter_count};
-    unique_ptr<int[], CustomArrayDeleter> ptr(new int[3], d);
+    unique_ptr<int[], CustomArrayDeleter> ptr(new (ac) int[3], d);
+    ASSERT_TRUE(static_cast<bool>(ac));
     ASSERT_EQ(deleter_count, 0);
     ASSERT_EQ(ptr.get_deleter().count, d.count);
   }
@@ -181,14 +203,18 @@ struct ReentrancyTracker {
 TEST(LlvmLibcUniquePtrTest, ResetSequencing) {
   bool checked = false;
   unique_ptr<ReentrancyTracker> ptr;
-  ptr.reset(new ReentrancyTracker(&ptr, &checked));
+  AllocChecker ac;
+  ptr.reset(new (ac) ReentrancyTracker(&ptr, &checked));
+  ASSERT_TRUE(static_cast<bool>(ac));
   ptr.reset(); // trigger destructor
   ASSERT_TRUE(checked);
 }
 
 // Test conversion constructor for const types.
 TEST(LlvmLibcUniquePtrTest, ConstConversion) {
-  unique_ptr<int> ptr1(new int(42));
+  AllocChecker ac;
+  unique_ptr<int> ptr1(new (ac) int(42));
+  ASSERT_TRUE(static_cast<bool>(ac));
   unique_ptr<const int> ptr2(LIBC_NAMESPACE::cpp::move(ptr1));
   ASSERT_FALSE(static_cast<bool>(ptr1));
   ASSERT_TRUE(static_cast<bool>(ptr2));
@@ -206,7 +232,9 @@ struct Derived : public Base {
 
 // Test conversion constructor for base/derived types.
 TEST(LlvmLibcUniquePtrTest, BaseDerivedConversion) {
-  unique_ptr<Derived> derived_ptr(new Derived(100));
+  AllocChecker ac;
+  unique_ptr<Derived> derived_ptr(new (ac) Derived(100));
+  ASSERT_TRUE(static_cast<bool>(ac));
   unique_ptr<Base> base_ptr(LIBC_NAMESPACE::cpp::move(derived_ptr));
   ASSERT_FALSE(static_cast<bool>(derived_ptr));
   ASSERT_TRUE(static_cast<bool>(base_ptr));
