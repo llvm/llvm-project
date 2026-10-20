@@ -49,6 +49,10 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  add_definitions("-D_OPEN_SYS_FILE_EXT=1")
+endif()
+
 if(SUPPORTS_VARIADIC_MACROS_FLAG)
   add_definitions("-Wno-variadic-macros")
 endif()
