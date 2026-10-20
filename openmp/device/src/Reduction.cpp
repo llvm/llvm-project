@@ -103,12 +103,12 @@ static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
     // Check for partial warp with non-contiguous lanes.
     // Consider that Liveness::ALL is a 64-bit value, so compare the actual
     // number of set bits to handle 32bit waves correctly.
-    uint32_t NumLive = static_cast<uint32_t>(utils::popc(Liveness));
-    if (NumLive == mapping::getWarpSize()) {
+    const uint64_t Full = ~uint64_t(0) >> (64 - mapping::getWarpSize());
+    if (Liveness == Full) {
       gpu_regular_warp_reduce(reduce_data, shflFct);
     } else if (!(Liveness & (Liveness + 1))) {
       // Partial warp but contiguous lanes.
-      gpu_irregular_warp_reduce(reduce_data, shflFct, NumLive,
+      gpu_irregular_warp_reduce(reduce_data, shflFct, utils::popc(Liveness),
                                 BlockThreadId % mapping::getWarpSize());
     } else {
       // Dispersed lanes. Only threads in L2 parallel region may enter here.
