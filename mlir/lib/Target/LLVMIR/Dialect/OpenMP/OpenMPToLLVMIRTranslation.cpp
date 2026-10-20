@@ -1812,7 +1812,11 @@ static LogicalResult createReductionsAndCleanup(
     return op->emitOpError() << "failed to convert reductions";
 
   llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
-  if (!isTeamsReduction) {
+  // With nowait the user opts out of the implicit end-of-construct
+  // barrier, matching clang, which selects the
+  // __kmpc_reduce_nowait/__kmpc_end_reduce_nowait variants and omits the
+  // trailing __kmpc_barrier. Teams reductions never emit this barrier.
+  if (!isTeamsReduction && !isNowait) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
         ompBuilder->createBarrier({*contInsertPoint, reductionLoc},
                                   llvm::omp::OMPD_for);
