@@ -146,11 +146,12 @@ __clc_erfc_scaled(__CLC_FLOATN x) {
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_erfc(__CLC_FLOATN x) {
   __CLC_FLOATN ax = __clc_fabs(x);
-  __CLC_FLOATN x2h = -x * x;
-  __CLC_FLOATN x2l = __clc_fma(-x, x, -x2h);
+  __CLC_FLOATN cx = ax > 0x1.41bbf8p+3f ? 0x1.41bbfcp+3f : ax;
+  __CLC_FLOATN x2h = -cx * cx;
+  __CLC_FLOATN x2l = __clc_fma(-cx, cx, -x2h);
   __CLC_FLOATN e = __clc_exp(x2h);
   e = __clc_fma(e, x2l, e);
-  __CLC_FLOATN ret = e * __clc_erfc_scaled(ax);
+  __CLC_FLOATN ret = e * __clc_erfc_scaled(cx);
   ret = ax > 0x1.41bbf8p+3f ? 0.0f : ret;
   __CLC_FLOATN nret = 2.0f - ret;
   return x < 0.0f ? nret : ret;
