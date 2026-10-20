@@ -355,6 +355,16 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
+/// Returns `op`'s parent if it owns embedded blocking uses, or `op` otherwise.
+/// Uses directly in `slotRegion` stay with `op`, since its parent is outside
+/// the slot's region.
+static Operation *getBlockingUseOwner(Operation *op, Region *slotRegion) {
+  if (op->getParentRegion() == slotRegion)
+    return op;
+  auto memOp = dyn_cast_or_null<PromotableMemOpInterface>(op->getParentOp());
+  return memOp && memOp.ownsEmbeddedBlockingUses() ? memOp : op;
+}
+
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     RegionBlockingUsesMap &userToBlockingUses,
     DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
@@ -373,13 +383,14 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
           RegionKind::Graph)
     return failure();
 
-  // First insert that all immediate users of the slot pointer must no longer
-  // use it.
-  for (OpOperand &use : slot.ptr.getUses()) {
-    SmallPtrSet<OpOperand *, 4> &blockingUses =
-        userToBlockingUses[use.getOwner()->getParentRegion()][use.getOwner()];
-    blockingUses.insert(&use);
-  }
+  auto addBlockingUse = [&](OpOperand *use) {
+    Operation *owner = getBlockingUseOwner(use->getOwner(), slotPtrRegion);
+    userToBlockingUses[owner->getParentRegion()][owner].insert(use);
+  };
+
+  // Register all direct uses of the slot pointer as blocking.
+  for (OpOperand &use : slot.ptr.getUses())
+    addBlockingUse(&use);
 
   // Regions that immediately contain a slot memory use that is not a store.
   RegionSet regionsWithDirectUse;
@@ -393,7 +404,15 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // pointer.
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
-  for (Operation *user : forwardSlice) {
+  for (Operation *op : forwardSlice) {
+    // Each owner wraps a single access, so replacing it preserves slice order.
+    Operation *user = getBlockingUseOwner(op, slotPtrRegion);
+    // Visit an owner only at its wrapped access, even if the slice also
+    // includes the owner or its terminator.
+    if (auto memOp = dyn_cast<PromotableMemOpInterface>(user);
+        memOp && memOp.ownsEmbeddedBlockingUses() &&
+        op != &user->getRegion(0).front().front())
+      continue;
     // If the next operation has no blocking uses, everything is fine.
     auto *blockingUsesMapIt = userToBlockingUses.find(user->getParentRegion());
     if (blockingUsesMapIt == userToBlockingUses.end())
@@ -445,14 +464,17 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
       return failure();
     }
 
+    // Reject new blocking uses from owners: users of their results are absent
+    // from the slice and would escape analysis.
+    auto memOp = dyn_cast<PromotableMemOpInterface>(user);
+    if (memOp && memOp.ownsEmbeddedBlockingUses() && !newBlockingUses.empty())
+      return failure();
+
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
-      Operation *useOwner = blockingUse->getOwner();
-      SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          userToBlockingUses[useOwner->getParentRegion()][useOwner];
-      newUserBlockingUseSet.insert(blockingUse);
+      addBlockingUse(blockingUse);
     }
   }
 
@@ -553,7 +575,9 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
   auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
     for (OpOperand &use : ptr.getUses()) {
-      Operation *user = use.getOwner();
+      // Attribute an embedded store to its blocking-use owner's block.
+      Operation *user =
+          getBlockingUseOwner(use.getOwner(), slot.ptr.getParentRegion());
       if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
         if (storeOp.storesTo(ptrSlot))
           definingBlocks[user->getParentRegion()].insert(user->getBlock());

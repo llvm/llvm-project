@@ -659,15 +659,17 @@ func.func @write_with_mask_static_subview(%v: vector<4xf32>, %init: vector<8xf32
 
 // -----
 
-// NEGATIVE: the masked form (`vector.mask` wrapping the transfer) is not
-// promoted. The transfer's use of the buffer is inside a region, and Mem2Reg
-// only promotes through regions whose parent op implements
-// `PromotableRegionOpInterface`, which `vector.mask` does not.
+// Promote `vector.mask` and its wrapped read together. Disabled lanes use the
+// read's padding.
 
-// CHECK-LABEL: func.func @negative_masked_read(
-//        CHECK:   memref.alloca
-//        CHECK:   vector.mask
-func.func @negative_masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+// CHECK-LABEL: func.func @masked_read(
+// CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PAD:.*]]: f32
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     vector.mask
+// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8xf32>
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[PS]]
+// CHECK:         return %[[SEL]]
+func.func @masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -677,12 +679,33 @@ func.func @negative_masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) 
 
 // -----
 
-// NEGATIVE: a write wrapped in vector.mask also prevents buffer promotion.
+// Disabled read lanes use the passthru when provided.
 
-// CHECK-LABEL: func.func @negative_masked_write(
-//        CHECK:   memref.alloca
-//        CHECK:   vector.mask
-func.func @negative_masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+// CHECK-LABEL: func.func @masked_read_passthru(
+// CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PT:.*]]: vector<8xf32>, %[[PAD:.*]]: f32
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     vector.mask
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[PT]]
+// CHECK:         return %[[SEL]]
+func.func @masked_read_passthru(%v: vector<8xf32>, %m: vector<8xi1>, %pt: vector<8xf32>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.mask %m, %pt { vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// Disabled write lanes retain the buffer's previous value.
+
+// CHECK-LABEL: func.func @masked_write(
+// CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[W:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PAD:.*]]: f32
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     vector.mask
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[W]], %[[V]]
+// CHECK:         return %[[SEL]]
+func.func @masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
