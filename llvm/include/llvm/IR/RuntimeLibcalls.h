@@ -191,6 +191,14 @@ public:
     return TT.isArch16Bit() ? 16 : 32;
   }
 
+  /// Determine the extension attributes needed for i32 parameters and returns
+  /// corresponding to C-level int or unsigned int on \p T.
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
+
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.
   /// If the C-type function signature is not provided, return nullptr.
