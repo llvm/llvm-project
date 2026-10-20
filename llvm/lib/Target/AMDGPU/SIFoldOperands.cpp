@@ -1037,9 +1037,8 @@ bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
                                          const FoldableDef &OpToFold) const {
   if (!TII->isSDWA(MI))
     return true;
-  // Operands of SDWA instructions must be registers. Since GFX9 these may be
-  // SGPRs as well as VGPRs; whether a particular register is legal (register
-  // class, constant bus) is checked by isOperandLegal when the fold is added.
+  // isOperandLegal accepts some SDWA operands that the verifier rejects, so
+  // apply the verifier's restrictions here.
   return OpToFold.isReg() && ST->hasSDWAScalar();
 }
 
