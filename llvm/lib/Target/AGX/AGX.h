@@ -38,6 +38,7 @@ FunctionPass *createAGXISelDag(AGXTargetMachine &TM);
 
 // Machine passes.
 FunctionPass *createAGXFoldOperandsPass();
+FunctionPass *createAGXHoistFromElseFlowPass();
 FunctionPass *createAGXLowerControlFlowPass();
 FunctionPass *createAGXInsertWaitsPass();
 
@@ -52,6 +53,7 @@ void initializeAGXAnnotateControlFlowPass(PassRegistry &);
 void initializeAGXLowerGenericAddressesPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);
+void initializeAGXHoistFromElseFlowPass(PassRegistry &);
 void initializeAGXLowerControlFlowPass(PassRegistry &);
 void initializeAGXInsertWaitsPass(PassRegistry &);
 void initializeAGXAsmPrinterPass(PassRegistry &);
