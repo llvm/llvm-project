@@ -677,8 +677,8 @@ public:
   }
 
   /// Check whether \a S is the loop the target kernel being emitted was
-  /// promoted for, to complete the promotion to a strided-loop SPMD kernel.
-  virtual bool canPromoteToStridedLoop(const OMPLoopDirective &S) const {
+  /// promoted for, to complete the promotion to a grid-stride loop SPMD kernel.
+  virtual bool canPromoteToGridStrideLoop(const OMPLoopDirective &S) const {
     return false;
   }
 

@@ -3994,7 +3994,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
 
     CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
     bool NoLoop = RT.canPromoteToNoLoop(S);
-    if (NoLoop || RT.canPromoteToStridedLoop(S)) {
+    if (NoLoop || RT.canPromoteToGridStrideLoop(S)) {
       // Prepare the loop variables and their privatization.
       emitLoopIterationspaceVars(CGF, S);
       OMPLoopScope PreInitScope(CGF, S);
@@ -6613,7 +6613,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
     // Emit 'then' code.
     {
       const bool IsPromotedLoopKernel =
-          RT.canPromoteToNoLoop(S) || RT.canPromoteToStridedLoop(S);
+          RT.canPromoteToNoLoop(S) || RT.canPromoteToGridStrideLoop(S);
       // A promoted 'teams loop' has the effective kind 'teams distribute', but
       // its inner parallel region reads the combined bounds.
       const bool UseCombinedBounds =
@@ -6649,7 +6649,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
         EmitOMPReductionClauseInit(S, LoopScope);
 
       // Defer lastprivate init to the parallel region for no-loop or
-      // strided-loop
+      // grid-stride loop
       if (!IsPromotedLoopKernel)
         HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
 
@@ -6680,7 +6680,8 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
       // omit the outer distribute loop and let the inner worksharing loop
       // schedule the flattened team/thread iteration space, necessary for
-      // GPU fused schedule and loop-grid optimization (no-loop & strided-loop).
+      // GPU fused schedule and loop-grid optimization (no-loop & grid-stride
+      // loop).
       if (canEmitGPUFusedDistSchedule(CGM, S, EKind) || IsPromotedLoopKernel) {
         JumpDest LoopExit =
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
@@ -9118,7 +9119,7 @@ emitTeamsGenericLoopAsDistributeParallelFor(CodeGenFunction &CGF,
 void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
     const OMPTeamsGenericLoopDirective &S) {
   if (CGM.getOpenMPRuntime().canPromoteToNoLoop(S) ||
-      CGM.getOpenMPRuntime().canPromoteToStridedLoop(S)) {
+      CGM.getOpenMPRuntime().canPromoteToGridStrideLoop(S)) {
     emitTeamsGenericLoopAsDistributeParallelFor(*this, S);
     return;
   }

@@ -8627,9 +8627,10 @@ Constant *OpenMPIRBuilder::emitKernelEnvironment(
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Constant *IsSPMDVal = ConstantInt::getSigned(Int8, Attrs.ExecFlags);
   Constant *UseGenericStateMachineVal = ConstantInt::getSigned(
-      Int8, Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD &&
-                Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP &&
-                Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP);
+      Int8,
+      Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD &&
+          Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP &&
+          Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_GRID_STRIDE_LOOP);
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 

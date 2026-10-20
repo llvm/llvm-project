@@ -64,7 +64,7 @@ private:
   void emitBareKernelEnvironment(const OMPExecutableDirective &D,
                                  CodeGenFunction &CGF);
 
-  /// Set NoLoopDirective or StridedLoopDirective to the loop the SPMD target
+  /// Set NoLoopDirective or GridStrideLoopDirective to the loop the SPMD target
   /// directive \a D can be promoted for, resetting both first.
   void checkAndSetPromotableLoopDirective(const OMPExecutableDirective &D);
 
@@ -158,9 +158,9 @@ public:
   }
 
   /// Check whether \a S is the loop the target kernel being emitted was
-  /// promoted for, to complete the promotion to a strided-loop SPMD kernel.
-  bool canPromoteToStridedLoop(const OMPLoopDirective &S) const override {
-    return &S == StridedLoopDirective;
+  /// promoted for, to complete the promotion to a grid-stride loop SPMD kernel.
+  bool canPromoteToGridStrideLoop(const OMPLoopDirective &S) const override {
+    return &S == GridStrideLoopDirective;
   }
 
   /// Get call to __kmpc_alloc_shared
@@ -399,9 +399,9 @@ private:
   /// by the kernel prologue and read back while the region's body is emitted.
   const OMPLoopDirective *NoLoopDirective = nullptr;
 
-  /// The loop the target region being emitted was promoted to strided-loop
-  /// for, set and read like NoLoopDirective.
-  const OMPLoopDirective *StridedLoopDirective = nullptr;
+  /// The loop the target region being emitted was promoted to a grid-stride
+  /// loop for, set and read like NoLoopDirective.
+  const OMPLoopDirective *GridStrideLoopDirective = nullptr;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
