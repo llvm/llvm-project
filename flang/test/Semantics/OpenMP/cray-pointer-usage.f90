@@ -4,6 +4,7 @@ subroutine test_cray_pointer_usage
   integer :: i
   real(8) :: var(*), pointee(2)
   pointer(ivar, var)
+  ! WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   ! ERROR: Cray Pointee 'var' may not appear in LINEAR clause
   ! ERROR: List item 'var' in LINEAR clause must be a scalar variable
   ! ERROR: The list item 'var' specified without the REF 'linear-modifier' must be of INTEGER type

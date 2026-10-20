@@ -205,6 +205,13 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Use the recorded pointee type for declarations.
+  if (F.isDeclaration())
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVPointerType(
+          ElemTy, MIRBuilder,
+          addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
+
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
   return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
@@ -673,6 +680,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                  .addDef(ResVReg)
                  .addUse(GR->getSPIRVTypeID(RetType))
                  .add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   for (const auto &Arg : Info.OrigArgs) {
     // Currently call args should have single vregs.

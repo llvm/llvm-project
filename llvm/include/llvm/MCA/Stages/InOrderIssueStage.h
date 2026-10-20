@@ -113,7 +113,8 @@ class LLVM_ABI InOrderIssueStage final : public Stage {
 
 public:
   InOrderIssueStage(const MCSubtargetInfo &STI, RegisterFile &PRF,
-                    CustomBehaviour &CB, LSUnitBase &LSU);
+                    CustomBehaviour &CB, LSUnitBase &LSU,
+                    float ReservationStationScaleFactor);
 
   unsigned getIssueWidth() const;
   bool isAvailable(const InstRef &) const override;

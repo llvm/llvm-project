@@ -1750,7 +1750,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"signal",
         {{"number", AnyInt, Rank::scalar, Optionality::required,
              common::Intent::In},
-            // note: any pointer also accepts AnyInt
+            // ApplySpecificChecks() narrows this to a procedure or scalar
+            // INTEGER.
             {"handler", AnyPointer, Rank::scalar, Optionality::required,
                 common::Intent::In},
             {"status", AnyInt, Rank::scalar, Optionality::optional,
@@ -2877,9 +2878,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   }
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */) {
-      // TODO: set Attr::Simple for MOVE_ALLOC when FROM is not a coarray
-      // (F2023)
-      attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.9.147 p2: MOVE_ALLOC is simple if and only if FROM is not a
+      // coarray
+      // F2023 16.1 p5: No other standard intrinsic subroutine is pure or simple
+      if (!IsCoarray(*rearranged[0])) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+        attrs.set(characteristics::Procedure::Attr::Pure);
+      }
     } else if (intrinsicClass == IntrinsicClass::simpleSubroutine ||
         intrinsicClass == IntrinsicClass::simpleElementalSubroutine) {
       attrs.set(characteristics::Procedure::Attr::Simple);
@@ -3770,6 +3775,24 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
       std::move(arguments)};
 }
 
+// STAT= of NEXT/PREVIOUS: any integer with a decimal exponent range >= 4.
+static DynamicType GetEnumerationStatType(const ActualArguments &arguments,
+    const char *procName, const common::IntrinsicTypeDefaultKinds &defaults,
+    FoldingContext &context) {
+  if (arguments.size() > 1 && arguments[1]) {
+    if (auto type{arguments[1]->GetType()}) {
+      if (type->category() != TypeCategory::Integer || type->kind() < 2) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "STAT= argument to %s() must be an integer with a decimal exponent range of at least four"_err_en_US,
+            procName);
+      }
+      return *type;
+    }
+  }
+  return DynamicType{
+      TypeCategory::Integer, defaults.GetDefaultKind(TypeCategory::Integer)};
+}
+
 // NEXT(a [, stat]) for enumeration types — returns the next enumerator
 std::optional<SpecificCall>
 IntrinsicProcTable::Implementation::HandleEnumerationNext(
@@ -3783,26 +3806,12 @@ IntrinsicProcTable::Implementation::HandleEnumerationNext(
     context.messages().Say("NEXT() requires argument A"_err_en_US);
     return std::nullopt;
   }
-  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
-  if (arguments.size() > 1 && arguments[1]) {
-    context.messages().Say(arguments[1]->sourceLocation(),
-        "NEXT() with STAT= is not yet supported"_err_en_US);
-    return std::nullopt;
-  }
-  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
-  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
-    if (!IsConstantExpr(*expr)) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "NEXT() with a non-constant argument is not yet supported"_err_en_US);
-      return std::nullopt;
-    }
-  }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{
       characteristics::TypeAndShape{enumerationType}};
   ddoA.intent = common::Intent::In;
   DynamicType statType{
-      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+      GetEnumerationStatType(arguments, "NEXT", defaults_, context)};
   characteristics::DummyDataObject ddoStat{
       characteristics::TypeAndShape{statType}};
   ddoStat.intent = common::Intent::Out;
@@ -3834,26 +3843,12 @@ IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
     context.messages().Say("PREVIOUS() requires argument A"_err_en_US);
     return std::nullopt;
   }
-  // TEMPORARY: Reject STAT= until lowering handler lands in PR 4/5
-  if (arguments.size() > 1 && arguments[1]) {
-    context.messages().Say(arguments[1]->sourceLocation(),
-        "PREVIOUS() with STAT= is not yet supported"_err_en_US);
-    return std::nullopt;
-  }
-  // TEMPORARY: Reject non-constant argument until lowering handler in PR 4/5
-  if (const auto *expr{arguments[0]->UnwrapExpr()}) {
-    if (!IsConstantExpr(*expr)) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "PREVIOUS() with a non-constant argument is not yet supported"_err_en_US);
-      return std::nullopt;
-    }
-  }
   DynamicType enumerationType{derived};
   characteristics::DummyDataObject ddoA{
       characteristics::TypeAndShape{enumerationType}};
   ddoA.intent = common::Intent::In;
   DynamicType statType{
-      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+      GetEnumerationStatType(arguments, "PREVIOUS", defaults_, context)};
   characteristics::DummyDataObject ddoStat{
       characteristics::TypeAndShape{statType}};
   ddoStat.intent = common::Intent::Out;
@@ -4041,6 +4036,23 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
+    }
+  } else if (name == "signal") {
+    const auto &arg{call.arguments[1]};
+    bool handlerOk{false};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (IsProcedure(*expr)) {
+          handlerOk = true;
+        } else if (auto type{expr->GetType()}) {
+          handlerOk = type->category() == TypeCategory::Integer;
+        }
+      }
+      if (!handlerOk) {
+        ok = false;
+        context.messages().Say(arg->sourceLocation(),
+            "'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER"_err_en_US);
+      }
     }
   } else if (name == "tokenize") {
     // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two

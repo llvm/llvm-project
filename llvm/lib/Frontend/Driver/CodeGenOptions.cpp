@@ -9,13 +9,8 @@
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/SystemLibraries.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/TargetParser/Triple.h"
-
-namespace llvm {
-extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
-    ProfileCorrelate;
-} // namespace llvm
+#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 
 namespace llvm::driver {
 
@@ -50,9 +45,9 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
       TargetTriple, convertDriverVectorLibraryToVectorLibrary(Veclib));
 }
 
-std::string getDefaultProfileGenName() {
-  return llvm::ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
+std::string
+getDefaultProfileGenName(const cl::LibraryOptionsContext &LibraryOptions) {
+  return isProfileCorrelationEnabled(LibraryOptions) ? "default_%m.proflite"
+                                                     : "default_%m.profraw";
 }
 } // namespace llvm::driver

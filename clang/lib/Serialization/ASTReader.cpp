@@ -2194,7 +2194,6 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -4881,8 +4880,13 @@ void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
   unsigned Idx = 0;
   unsigned N = Record[Idx++];
   F.DirectoryDependencies.reserve(N);
-  for (unsigned I = 0; I != N; ++I)
-    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+  for (unsigned I = 0; I != N; ++I) {
+    // The base directory is relative if the module was found through a
+    // relative search path, and empty with -fmodule-file-home-is-cwd.
+    SmallString<256> Dir(ReadPath(F, Record, Idx));
+    ModuleMap::canonicalizeDirectoryDependency(FileMgr, Dir);
+    F.DirectoryDependencies.push_back(std::string(Dir));
+  }
 }
 
 bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
@@ -11048,6 +11052,70 @@ void ASTReader::finishPendingActions() {
 
   // Inform any classes that had members added that they now have more members.
   for (auto [RD, MD] : PendingAddedClassMembers) {
+    // The module we just imported added MD to RD so we should do the same, but
+    // only RD doesn't already contain the same member. This can happen when two
+    // modules independent add and serialize the same implicit member.
+
+    // Fast path: we can check for the presence of implicit special members
+    // (default/copy/move constructors + copy/move assignments + destructors)
+    // with RD's needsImplicit*() methods (which are constant time).
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
+      if (!Ctor->isInheritingConstructor()) {
+        if (Ctor->isDefaultConstructor()) {
+          if (RD->needsImplicitDefaultConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+        if (Ctor->isCopyConstructor()) {
+          if (RD->needsImplicitCopyConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+        if (Ctor->isMoveConstructor()) {
+          if (RD->needsImplicitMoveConstructor())
+            RD->addHiddenDecl(MD);
+          continue;
+        }
+      }
+    } else if (const auto *Mthd = dyn_cast<CXXMethodDecl>(MD)) {
+      if (isa<CXXDestructorDecl>(Mthd)) {
+        if (RD->needsImplicitDestructor())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+      if (Mthd->isCopyAssignmentOperator()) {
+        if (RD->needsImplicitCopyAssignment())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+      if (Mthd->isMoveAssignmentOperator()) {
+        if (RD->needsImplicitMoveAssignment())
+          RD->addHiddenDecl(MD);
+        continue;
+      }
+    }
+
+    if (auto *FD = dyn_cast<FunctionDecl>(MD)) {
+      // Slow path: this is some other implicit added member (e.g., inherited
+      // constructor). We need iterate through all of RD's members and compare
+      // their ODR hash against MD's.
+      auto needToAddMD = true;
+      for (auto *RDD : RD->noload_decls()) {
+        if (auto *RDFD = dyn_cast<FunctionDecl>(RDD)) {
+          if (FD->getODRHash() == RDFD->getODRHash()) {
+            needToAddMD = false;
+            break;
+          }
+        }
+      }
+      if (needToAddMD)
+        RD->addHiddenDecl(MD);
+      continue;
+    }
+
+    // This branch is only reachable if MD is not a function decl (which means
+    // it doesn't have an ODR hash to compare). Call addedMember() to preserve
+    // historical behavior.
     RD->addedMember(MD);
   }
   PendingAddedClassMembers.clear();

@@ -4412,6 +4412,17 @@ private:
         activeConstructStack.back().stmtCtx;
     const Fortran::lower::SomeExpr *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    // Semantics already turned enumeration CASE values into ordinals.
+    std::optional<Fortran::lower::SomeExpr> enumOrdinal;
+    if (const auto *derived = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+      if (const auto *spec =
+              Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
+          spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
+        enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+        expr = &*enumOrdinal;
+      }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
     bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
     mlir::MLIRContext *context = builder->getContext();
@@ -4897,7 +4908,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
-    std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
+    std::size_t defaultAttrPos = Fortran::common::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
@@ -6679,6 +6690,21 @@ private:
     if (Fortran::lower::pft::Evaluation *alternateEntryEval =
             funit.getEntryEval())
       genBranch(alternateEntryEval->lexicalSuccessor->block);
+
+    setNonExecutionPartLocations(func.getBody());
+  }
+
+  /// Give line 0 to everything in \p body that is not execution part so that it
+  /// does not take part in line table calculation unless it has
+  /// FortranVariableOpInterface.
+  static void setNonExecutionPartLocations(mlir::Region &body) {
+    body.walk([](mlir::Operation *op) {
+      if (mlir::isa<fir::FortranVariableOpInterface>(op))
+        return;
+      if (auto fileLoc = op->getLoc()->findInstanceOf<mlir::FileLineColLoc>())
+        op->setLoc(mlir::FileLineColLoc::get(fileLoc.getFilename(),
+                                             /*line=*/0, /*column=*/0));
+    });
   }
 
   /// Recursively null every Evaluation::block in \p evaluationList.  Called
