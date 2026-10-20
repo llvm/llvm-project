@@ -90,7 +90,8 @@ private:
 
   template <class RelTy>
   void hashRelocs(const InputSection &sec, uint64_t &h,
-                  SmallVectorImpl<uint32_t> &edges, Relocs<RelTy> rels);
+                  SmallVectorImpl<uint32_t> &edges, uint32_t eqClassBase,
+                  Relocs<RelTy> rels);
 
   template <class RelTy>
   bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
@@ -147,10 +148,6 @@ private:
   int next = 0;
 };
 } // namespace
-
-// Until segregate() runs, a candidate's eqClass holds its index, then its hash,
-// with this bit set. Unique IDs of ineligible sections never have it.
-constexpr uint32_t tagBit = 1U << 31;
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *s) {
@@ -258,7 +255,7 @@ template <class ELFT>
 template <class RelTy>
 void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
                            SmallVectorImpl<uint32_t> &edges,
-                           Relocs<RelTy> rels) {
+                           uint32_t eqClassBase, Relocs<RelTy> rels) {
   for (RelTy rel : rels) {
     h = mix(h, rel.r_offset);
     h = mix(h, rel.getType(ctx.arg.isMips64EL));
@@ -278,8 +275,8 @@ void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
     auto *is = dyn_cast_or_null<InputSection>(d->section);
     if (!is)
       continue;
-    if (is->eqClass[0] & tagBit)
-      edges.push_back(is->eqClass[0] & ~tagBit);
+    if (is->eqClass[0] >= eqClassBase)
+      edges.push_back(is->eqClass[0] - eqClassBase);
     else
       h = mix(h, is->eqClass[0]);
   }
@@ -497,23 +494,24 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (InputSectionBase *sec : ctx.inputSections) {
     auto *s = dyn_cast<InputSection>(sec);
     if (s && s->eqClass[0] == 0) {
-      if (isEligible(s)) {
-        s->eqClass[0] = sections.size() | tagBit;
+      if (isEligible(s))
         sections.push_back(s);
-      } else {
+      else
         // Ineligible sections are assigned unique IDs, i.e. each section
         // belongs to an equivalence class of its own.
         s->eqClass[0] = s->eqClass[1] = ++uniqueId;
-      }
     }
   }
 
-  assert(sections.size() <= tagBit && uniqueId < tagBit &&
-         "tagBit marks a candidate and the low bits index sections");
+  // Number candidates above the unique IDs so that hashRelocs() can tell them
+  // apart. Use eqClassBase as the base for class IDs as well.
+  size_t numSections = sections.size();
+  uint32_t eqClassBase = ++uniqueId;
+  parallelFor(0, numSections,
+              [&](size_t i) { sections[i]->eqClass[0] = eqClassBase + i; });
 
   // Hash sections in chunks. Each chunk appends its sections' edges to its own
   // buffer; edgeEnd[i] is where section i's edges end.
-  size_t numSections = sections.size();
   constexpr size_t chunkSize = 1024;
   size_t numChunks = divideCeil(numSections, chunkSize);
   SmallVector<uint64_t, 0> hashes, nextHashes;
@@ -529,7 +527,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     for (size_t i = begin; i != end; ++i) {
       InputSection *s = sections[i];
       uint64_t h = xxh3_64bits(s->content());
-      invokeOnRelocs(*s, hashRelocs, *s, h, edges);
+      invokeOnRelocs(*s, hashRelocs, *s, h, edges, eqClassBase);
       hashes[i] = h;
       edgeEnd[i] = edges.size();
     }
@@ -537,7 +535,7 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Each round saves up to one segregate() pass. 7 is empirical: even Chromium
   // then needs just two passes.
-  for (int round = 7; round--; ) {
+  for (int round = 7; round--;) {
     parallelFor(0, numChunks, [&](size_t c) {
       ArrayRef<uint32_t> edges = chunkEdges[c];
       size_t begin = c * chunkSize,
@@ -559,7 +557,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   keys.resize_for_overwrite(numSections);
   parallelFor(0, numSections, [&](size_t i) {
     // mix()'s low bits depend only on the inputs' low bits. Fold the high half.
-    uint32_t h = (hashes[i] ^ hashes[i] >> 32) | tagBit;
+    uint32_t h = hashes[i] ^ hashes[i] >> 32;
     sections[i]->eqClass[0] = h;
     keys[i] = uint64_t(h) << 32 | i;
   });
@@ -573,7 +571,6 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with
   // the unique IDs already assigned.
-  uint32_t eqClassBase = ++uniqueId;
   parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
