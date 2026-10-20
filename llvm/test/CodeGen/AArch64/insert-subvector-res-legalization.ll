@@ -10,7 +10,6 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(ptr %a, ptr %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
@@ -26,7 +25,6 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(ptr %a, pt
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
@@ -42,7 +40,6 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(ptr %a, ptr
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
@@ -58,7 +55,6 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(ptr %a, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s

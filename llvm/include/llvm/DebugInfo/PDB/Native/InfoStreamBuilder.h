@@ -49,8 +49,6 @@ public:
   codeview::GUID getGuid() const { return Guid; }
   std::optional<uint32_t> getSignature() const { return Signature; }
 
-  LLVM_ABI uint32_t finalize();
-
   LLVM_ABI Error finalizeMsfLayout();
 
   LLVM_ABI Error commit(const msf::MSFLayout &Layout,

@@ -6,12 +6,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo2 = global ptr null, align 8
 @_ZTIi = external constant ptr
 
-define internal void @_ZL4bar1v() !PGOFuncName !0 {
+define internal void @_ZL4bar1v() !guid !0 {
 entry:
   ret void
 }
 
-define internal i32 @_ZL4bar2v() !PGOFuncName !1 {
+define internal i32 @_ZL4bar2v() !guid !1 {
 entry:
   ret i32 100
 }
@@ -96,8 +96,8 @@ declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
-!0 = !{!"invoke.ll:_ZL4bar1v"}
-!1 = !{!"invoke.ll:_ZL4bar2v"}
+!0 = !{i64 -2732222848796217051}
+!1 = !{i64 -6116256810522035449}
 !2 = !{!"VP", i32 0, i64 1, i64 -2732222848796217051, i64 1}
 !3 = !{!"VP", i32 0, i64 1, i64 -6116256810522035449, i64 1}
 ; ICP-NOT: !3 = !{!"VP", i32 0, i64 1, i64 -2732222848796217051, i64 1}

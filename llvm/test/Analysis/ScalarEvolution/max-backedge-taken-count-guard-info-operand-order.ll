@@ -7,7 +7,7 @@ define void @test_multiple_const_guards_order1(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,10) S: [0,10) Exits: %i LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,11) S: [1,11) Exits: (1 + %i)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order1
@@ -42,7 +42,7 @@ define void @test_multiple_const_guards_order2(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,10) S: [0,10) Exits: %i LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,11) S: [1,11) Exits: (1 + %i)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_const_guards_order2
@@ -77,7 +77,7 @@ define void @test_multiple_var_guards_order1(ptr nocapture %a, i64 %i, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,11) S: [0,11) Exits: %i LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,12) S: [1,12) Exits: (1 + %i)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order1
@@ -112,7 +112,7 @@ define void @test_multiple_var_guards_order2(ptr nocapture %a, i64 %i, i64 %N) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,11) S: [0,11) Exits: %i LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i) + %a)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * %i)<u nuw> + %a)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,12) S: [1,12) Exits: (1 + %i)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_var_guards_order2
@@ -216,7 +216,7 @@ define void @const_max_btc_32_or_order_1(i64 %n) {
 ; CHECK-LABEL: 'const_max_btc_32_or_order_1'
 ; CHECK-NEXT:  Classifying expressions for: @const_max_btc_32_or_order_1
 ; CHECK-NEXT:    %and.pre = and i1 %pre.1, %pre.0
-; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
+; CHECK-NEXT:    --> (%pre.0 umin %pre.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %ph ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
@@ -253,7 +253,7 @@ define void @const_max_btc_32_or_order_2(i64 %n) {
 ; CHECK-LABEL: 'const_max_btc_32_or_order_2'
 ; CHECK-NEXT:  Classifying expressions for: @const_max_btc_32_or_order_2
 ; CHECK-NEXT:    %and.pre = and i1 %pre.0, %pre.1
-; CHECK-NEXT:    --> (%pre.0 umin %pre.1) U: full-set S: full-set
+; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %ph ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,33) S: [0,33) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1

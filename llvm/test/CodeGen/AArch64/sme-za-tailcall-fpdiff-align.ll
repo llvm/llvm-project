@@ -32,8 +32,6 @@ define void @caller_more_args(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) 
 ; CHECK-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    b _callee_fewer_args
@@ -58,13 +56,13 @@ define void @caller_same_args(i64, i64, i64, i64, i64, i64, i64, i64, i64) "aarc
 ; CHECK-NEXT:    mov w8, #9 ; =0x9
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    mov w1, #2 ; =0x2
-; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    mov w2, #3 ; =0x3
 ; CHECK-NEXT:    mov w3, #4 ; =0x4
 ; CHECK-NEXT:    mov w4, #5 ; =0x5
 ; CHECK-NEXT:    mov w5, #6 ; =0x6
 ; CHECK-NEXT:    mov w6, #7 ; =0x7
 ; CHECK-NEXT:    mov w7, #8 ; =0x8
+; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
@@ -93,13 +91,13 @@ define void @caller_last_stack_arg_i64(i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    mov w1, #2 ; =0x2
-; CHECK-NEXT:    strb w8, [sp, #16]
 ; CHECK-NEXT:    mov w2, #3 ; =0x3
 ; CHECK-NEXT:    mov w3, #4 ; =0x4
 ; CHECK-NEXT:    mov w4, #5 ; =0x5
 ; CHECK-NEXT:    mov w5, #6 ; =0x6
 ; CHECK-NEXT:    mov w6, #7 ; =0x7
 ; CHECK-NEXT:    mov w7, #8 ; =0x8
+; CHECK-NEXT:    strb w8, [sp, #16]
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30

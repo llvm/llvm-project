@@ -29,5 +29,5 @@ int main() {
   // CHECK-ALLOW: {{previously allocated by thread T0 here:}}
   // CHECK-ALLOW: {{    #0 0x.* in malloc}}
   // CHECK-ALLOW: {{    #1 0x.* in main}}
-  // CHECK-DENY: {{.*HINT: Ensure mach_vm_region_recurse is allowed under sandbox}}
+  // CHECK-DENY: {{.*HINT: Is mach_vm_region_recurse allowed by sandbox}}
 }

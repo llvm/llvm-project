@@ -1,0 +1,48 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error @below {{custom op 'cir.func' attribute 'memory_effects' must be a #cir.memory_effects attribute}}
+cir.func private @wrong_memory_effects_kind() attributes {memory_effects = 42 : i32}
+
+// -----
+
+// expected-error @below {{custom op 'cir.func' attribute 'memory_effects' must be a #cir.memory_effects attribute}}
+cir.func @wrong_memory_effects_kind_with_body() attributes {memory_effects = "readwrite"} {
+  cir.return
+}
+
+// -----
+
+// expected-error @below {{custom op 'cir.func' attribute 'nounwind' must be a unit attribute}}
+cir.func private @wrong_nounwind_kind() attributes {nounwind = 42 : i32}
+
+// -----
+
+// expected-error @below {{custom op 'cir.func' attribute 'willreturn' must be a unit attribute}}
+cir.func private @wrong_willreturn_kind() attributes {willreturn = "yes"}
+
+// -----
+
+cir.func private @f1()
+cir.func @call_wrong_memory_effects_kind() {
+  // expected-error @below {{custom op 'cir.call' attribute 'memory_effects' must be a #cir.memory_effects attribute}}
+  cir.call @f1() {memory_effects = 42 : i32} : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @call_wrong_nounwind_kind() {
+  // expected-error @below {{custom op 'cir.call' attribute 'nounwind' must be a unit attribute}}
+  cir.call @f1() {nounwind = 42 : i32} : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @call_wrong_willreturn_kind() {
+  // expected-error @below {{custom op 'cir.call' attribute 'willreturn' must be a unit attribute}}
+  cir.call @f1() {willreturn = "yes"} : () -> ()
+  cir.return
+}

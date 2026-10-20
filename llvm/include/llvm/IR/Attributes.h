@@ -693,6 +693,15 @@ public:
     return addAttributesAtIndex(C, ReturnIndex, B);
   }
 
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddRetAttribute(LLVMContext &C, Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addAttributeAtIndex(C, ReturnIndex, Kind);
+    return *this;
+  }
+
   /// Add an argument attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList
@@ -719,6 +728,16 @@ public:
   [[nodiscard]] AttributeList addParamAttributes(LLVMContext &C, unsigned ArgNo,
                                                  const AttrBuilder &B) const {
     return addAttributesAtIndex(C, ArgNo + FirstArgIndex, B);
+  }
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddParamAttribute(LLVMContext &C, unsigned ArgNo,
+                         Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addParamAttribute(C, ArgNo, Kind);
+    return *this;
   }
 
   /// Remove the specified attribute at the specified index from this

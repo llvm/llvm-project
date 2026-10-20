@@ -18,6 +18,15 @@
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=IE-REL %s
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
+## The optimized sequence reaches the GOT with a 32-bit PC-relative
+## displacement, so it has the same range limit as an unrelaxed GOTTPOFF.
+# RUN: echo 'SECTIONS { .text 0x100000 : { *(.text) } .got 0x80200000 : { *(.got) } }' > %t.lds
+# RUN: not ld.lld %t.o %t1.so -T %t.lds -o /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=IE-RANGE %s --implicit-check-not=error:
+
+# IE-RANGE: error: {{.*}}.o:(.text+0x1e): relocation R_X86_64_GOTPC32_TLSDESC out of range: 2148532190 is not in [-2147483648, 2147483647]; references 'c'
+# IE-RANGE: error: {{.*}}.o:(.text+0x2e): relocation R_X86_64_CODE_4_GOTPC32_TLSDESC out of range: 2148532174 is not in [-2147483648, 2147483647]; references 'c'
+
 # GD-RELA:      .rela.dyn {
 # GD-RELA-NEXT:   0x23E0 R_X86_64_TLSDESC - 0xB
 # GD-RELA-NEXT:   0x23C0 R_X86_64_TLSDESC a 0x0

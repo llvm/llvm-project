@@ -165,7 +165,7 @@ public:
   unsigned getSlotSize() const { return SlotSize; }
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
@@ -176,6 +176,11 @@ public:
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
+  }
+
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
+    return 30;
   }
 };
 

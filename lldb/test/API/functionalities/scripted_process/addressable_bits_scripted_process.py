@@ -18,13 +18,15 @@ class AddressableBitsScriptedProcess(ScriptedProcess):
         super().__init__(exe_ctx, args)
         self.threads[0] = AddressableBitsScriptedThread(self, args)
         self.threads[1] = ScriptedFramesScriptedThread(self, args)
-        self.addressable_bits = {"lowmem": ADDRESSABLE_BITS}
+        self.metadata = {"addressable_bits": {"lowmem": ADDRESSABLE_BITS}}
 
     def read_memory_at_address(
         self, addr: int, size: int, error: lldb.SBError
     ) -> lldb.SBData:
         data = lldb.SBData()
-        data.SetData(
+        # The buffer has to outlive this call, so the SBData needs to own it
+        # rather than alias a Python object we're about to drop.
+        data.SetDataWithOwnership(
             error,
             bytes(size),
             self.target.GetByteOrder(),

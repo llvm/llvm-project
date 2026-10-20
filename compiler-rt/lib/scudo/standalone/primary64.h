@@ -578,6 +578,11 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
     bool PopulateFreeList = false;
     {
       ScopedFLLock FL(Region->FLLock, Region);
+      PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                               MaxBlockCount);
+      if (PopCount != 0U)
+        break;
+
       if (!Region->IsPopulatingFreeList) {
         Region->IsPopulatingFreeList = true;
         PopulateFreeList = true;
@@ -586,6 +591,20 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
 
     if (PopulateFreeList) {
       ScopedLock ML(Region->MMLock);
+
+      // While waiting for `MMLock`, another thread may have pushed blocks or
+      // `releaseToOSMaybe()` may have finished merging `GroupsToRelease` back
+      // into the freelist. Always re-check the freelist before mapping new
+      // pages.
+      {
+        ScopedFLLock FL(Region->FLLock, Region);
+        PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                                 MaxBlockCount);
+        if (PopCount != 0U) {
+          Region->IsPopulatingFreeList = false;
+          break;
+        }
+      }
 
       const bool RegionIsExhausted = Region->Exhausted;
       if (!RegionIsExhausted) {

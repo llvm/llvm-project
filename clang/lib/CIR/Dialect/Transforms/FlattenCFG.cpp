@@ -39,11 +39,13 @@ namespace {
 
 /// Lowers operations with the terminator trait that have a single successor.
 void lowerTerminator(mlir::Operation *op, mlir::Block *dest,
-                     mlir::PatternRewriter &rewriter) {
+                     mlir::PatternRewriter &rewriter,
+                     cir::LoopHintAttr loopHints = {}) {
   assert(op->hasTrait<mlir::OpTrait::IsTerminator>() && "not a terminator");
   mlir::OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
-  rewriter.replaceOpWithNewOp<cir::BrOp>(op, dest);
+  rewriter.replaceOpWithNewOp<cir::BrOp>(op, mlir::ValueRange{}, loopHints,
+                                         dest);
 }
 
 /// Walks a region while skipping operations of type `Ops`. This ensures the
@@ -110,8 +112,8 @@ rewriteRegionExitToContinue(mlir::PatternRewriter &rewriter,
   mlir::Operation *terminator = region.back().getTerminator();
   rewriter.setInsertionPointToEnd(&region.back());
   if (auto yieldOp = mlir::dyn_cast<cir::YieldOp>(terminator)) {
-    rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, yieldOp.getArgs(),
-                                           continueBlock);
+    rewriter.replaceOpWithNewOp<cir::BrOp>(
+        yieldOp, yieldOp.getArgs(), /*loop_hints=*/nullptr, continueBlock);
     return mlir::success();
   }
   if (isNonReturningTerminator(terminator))
@@ -156,6 +158,7 @@ struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
     if (auto thenYieldOp =
             dyn_cast<cir::YieldOp>(thenAfterBody->getTerminator())) {
       rewriter.replaceOpWithNewOp<cir::BrOp>(thenYieldOp, thenYieldOp.getArgs(),
+                                             /*loop_hints=*/nullptr,
                                              continueBlock);
     }
 
@@ -181,7 +184,8 @@ struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
       if (auto elseYieldOP =
               dyn_cast<cir::YieldOp>(elseAfterBody->getTerminator())) {
         rewriter.replaceOpWithNewOp<cir::BrOp>(
-            elseYieldOP, elseYieldOP.getArgs(), continueBlock);
+            elseYieldOP, elseYieldOP.getArgs(), /*loop_hints=*/nullptr,
+            continueBlock);
       }
     }
 
@@ -227,13 +231,15 @@ public:
     // Save stack and then branch into the body of the region.
     rewriter.setInsertionPointToEnd(currentBlock);
     assert(!cir::MissingFeatures::stackSaveOp());
-    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), beforeBody);
+    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), /*loop_hints=*/nullptr,
+                      beforeBody);
 
     // Replace the scopeop return with a branch that jumps out of the body.
     // Stack restore before leaving the body region.
     rewriter.setInsertionPointToEnd(afterBody);
     if (auto yieldOp = dyn_cast<cir::YieldOp>(afterBody->getTerminator())) {
       rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, yieldOp.getArgs(),
+                                             /*loop_hints=*/nullptr,
                                              continueBlock);
     }
 
@@ -253,7 +259,7 @@ public:
                              mlir::Block *destination) const {
     rewriter.setInsertionPoint(yieldOp);
     rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, yieldOp.getOperands(),
-                                           destination);
+                                           /*loop_hints=*/nullptr, destination);
   }
 
   // Return the new defaultDestination block.
@@ -428,7 +434,7 @@ public:
               rewriter.splitBlock(oldBlock, nextOp->getIterator());
           rewriter.setInsertionPointToEnd(oldBlock);
           cir::BrOp::create(rewriter, nextOp->getLoc(), mlir::ValueRange(),
-                            newBlock);
+                            /*loop_hints=*/nullptr, newBlock);
           rewriteYieldOp(rewriter, yieldOp, newBlock);
         }
       }
@@ -511,11 +517,13 @@ public:
 
   inline void lowerConditionOp(cir::ConditionOp op, mlir::Block *body,
                                mlir::Block *exit,
-                               mlir::PatternRewriter &rewriter) const {
+                               mlir::PatternRewriter &rewriter,
+                               cir::LoopHintAttr loopHints = {}) const {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(op);
-    rewriter.replaceOpWithNewOp<cir::BrCondOp>(op, op.getCondition(), body,
-                                               exit);
+    rewriter.replaceOpWithNewOp<cir::BrCondOp>(
+        op, op.getCondition(), mlir::ValueRange{}, mlir::ValueRange{},
+        loopHints, body, exit);
   }
 
   // Rewrite a loop that has a per-iteration cleanup region into a loop whose
@@ -698,8 +706,17 @@ public:
         (op.maybeGetStep() ? &op.maybeGetStep()->front() : nullptr);
 
     // Setup loop entry branch.
+    mlir::Block *firstBlock = &op.getEntry().front();
     rewriter.setInsertionPointToEnd(entry);
-    cir::BrOp::create(rewriter, op.getLoc(), &op.getEntry().front());
+    cir::BrOp::create(rewriter, op.getLoc(), firstBlock);
+
+    // We attach the op's loop hints to the ops that break back to the
+    // 'beginning' of the operation. For a while/for it is the condition block,
+    // for a do-while it is the top of the body.
+    cir::LoopHintAttr loopHints = op.getLoopHintsAttr();
+    auto hintsFor = [&](mlir::Block *target) {
+      return target == firstBlock ? loopHints : cir::LoopHintAttr{};
+    };
 
     // Branch from condition region to body or exit. The ConditionOp may not
     // be in the first block of the condition region if a cleanup scope was
@@ -707,7 +724,7 @@ public:
     // ConditionOp is always the terminator of the last block.
     auto conditionOp =
         cast<cir::ConditionOp>(op.getCond().back().getTerminator());
-    lowerConditionOp(conditionOp, body, exit, rewriter);
+    lowerConditionOp(conditionOp, body, exit, rewriter, hintsFor(body));
 
     // TODO(cir): Remove the walks below. It visits operations unnecessarily.
     // However, to solve this we would likely need a custom DialectConversion
@@ -719,7 +736,7 @@ public:
       if (!isa<cir::ContinueOp>(op))
         return mlir::WalkResult::advance();
 
-      lowerTerminator(op, dest, rewriter);
+      lowerTerminator(op, dest, rewriter, hintsFor(dest));
       return mlir::WalkResult::skip();
     });
 
@@ -737,7 +754,7 @@ public:
     for (mlir::Block &blk : op.getBody().getBlocks()) {
       auto bodyYield = dyn_cast<cir::YieldOp>(blk.getTerminator());
       if (bodyYield)
-        lowerTerminator(bodyYield, (step ? step : cond), rewriter);
+        lowerTerminator(bodyYield, dest, rewriter, hintsFor(dest));
     }
 
     // Lower mandatory step region yield. Like the condition region, the
@@ -746,7 +763,7 @@ public:
     if (step)
       lowerTerminator(
           cast<cir::YieldOp>(op.maybeGetStep()->back().getTerminator()), cond,
-          rewriter);
+          rewriter, hintsFor(cond));
 
     // Move region contents out of the loop op.
     rewriter.inlineRegionBefore(op.getCond(), exit);
@@ -844,6 +861,51 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
 /// Shared EH flattening utilities used by both CIRCleanupScopeOpFlattening
 /// and CIRTryOpFlattening.
 
+// Lifetime markers participate in existing EH paths, but do not require an
+// unwind edge on their own. Conservatively treat other cleanup code as real
+// cleanup, including regions with control flow.
+static bool isLifetimeMarkerOnly(mlir::Region &region) {
+  return llvm::hasSingleElement(region) &&
+         llvm::any_of(
+             region.front(),
+             [](mlir::Operation &op) { return isa<cir::LifetimeEndOp>(op); }) &&
+         llvm::all_of(region.front(), [](mlir::Operation &op) {
+           return isa<cir::LifetimeEndOp, cir::YieldOp>(op);
+         });
+}
+
+// Look for an enclosing handler or non-marker EH cleanup that protects this
+// operation. Follow regions, rather than just parent ops: a try does not catch
+// exceptions from its own handlers, and a cleanup does not protect itself.
+static bool hasEnclosingEHRequirement(mlir::Operation *op) {
+  for (mlir::Region *region = op->getParentRegion(); region;
+       region = region->getParentRegion()) {
+    mlir::Operation *parent = region->getParentOp();
+    if (!parent || isa<cir::FuncOp>(parent))
+      break;
+    if (auto tryOp = dyn_cast<cir::TryOp>(parent)) {
+      auto handlers = tryOp.getHandlerTypesAttr();
+      if (region == &tryOp.getTryRegion() && handlers &&
+          llvm::any_of(handlers, [](mlir::Attribute handler) {
+            return !isa<cir::UnwindAttr>(handler);
+          }))
+        return true;
+    } else if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent)) {
+      if (region == &cleanupOp.getBodyRegion() &&
+          cleanupOp.getCleanupKindAttr().isEH() &&
+          !isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()))
+        return true;
+    } else if (auto loopOp = dyn_cast<cir::LoopOpInterface>(parent)) {
+      // The enclosing loop may not yet have been rewritten to a cleanup scope.
+      mlir::Region *cleanup = loopOp.maybeGetCleanup();
+      if (cleanup && region != cleanup && loopOp.maybeGetCleanupKind().isEH() &&
+          !isLifetimeMarkerOnly(*cleanup))
+        return true;
+    }
+  }
+  return false;
+}
+
 // Collect all function calls in a region that may throw exceptions and need
 // to be replaced with try_call operations. Skips calls marked nothrow.
 // Nested cleanup scopes and try ops are always flattened before their
@@ -895,7 +957,7 @@ static mlir::Block *buildUnwindBlock(mlir::Block *dest, bool isCleanupOnly,
   auto ehInitiate =
       cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/isCleanupOnly);
   cir::BrOp::create(rewriter, loc, mlir::ValueRange{ehInitiate.getEhToken()},
-                    dest);
+                    /*loop_hints=*/nullptr, dest);
   return unwindBlock;
 }
 
@@ -1404,11 +1466,9 @@ public:
                  llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
     mlir::Location loc = cleanupOp.getLoc();
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-    bool hasNormalCleanup = cleanupKind == cir::CleanupKind::Normal ||
-                            cleanupKind == cir::CleanupKind::All;
-    bool hasEHCleanup = cleanupKind == cir::CleanupKind::EH ||
-                        cleanupKind == cir::CleanupKind::All;
+    cir::CleanupKindAttr cleanupKind = cleanupOp.getCleanupKindAttr();
+    bool hasNormalCleanup = cleanupKind.isNormal();
+    bool hasEHCleanup = cleanupKind.isEH();
     bool isMultiExit = exits.size() > 1;
 
     // If every exit from the body is a musttail return, nothing reaches the
@@ -1637,7 +1697,8 @@ public:
         mlir::Value ehToken = resumeOp.getEhToken();
         rewriter.setInsertionPoint(resumeOp);
         rewriter.replaceOpWithNewOp<cir::BrOp>(
-            resumeOp, mlir::ValueRange{ehToken}, ehCleanupEntry);
+            resumeOp, mlir::ValueRange{ehToken}, /*loop_hints=*/nullptr,
+            ehCleanupEntry);
       }
     }
 
@@ -1678,7 +1739,7 @@ public:
     if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
       return mlir::failure();
 
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
+    bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
@@ -1696,19 +1757,21 @@ public:
 #endif
 
     // Collect non-nothrow calls and throws that need to be converted to
-    // try_call/try_throw. This is only needed for EH and All cleanup kinds,
-    // but the vectors will simply be empty for Normal cleanup.
+    // try_call/try_throw. A marker-only cleanup must not introduce an unwind
+    // edge unless an enclosing handler or real EH cleanup requires one.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
-    if (cleanupKind != cir::CleanupKind::Normal) {
+    if (hasEHCleanup && (!isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()) ||
+                         hasEnclosingEHRequirement(cleanupOp))) {
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
       collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
     }
 
     // Collect resume ops from already-flattened inner cleanup scopes that
-    // need to chain through this cleanup's EH handler.
+    // need to chain through this cleanup's EH handler, including lifetime
+    // markers even when they did not introduce any unwind edges themselves.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    if (cleanupKind != cir::CleanupKind::Normal)
+    if (hasEHCleanup)
       collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
 
     return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,
@@ -2053,7 +2116,8 @@ public:
       mlir::Value ehToken = resumeOp.getEhToken();
       rewriter.setInsertionPoint(resumeOp);
       rewriter.replaceOpWithNewOp<cir::BrOp>(
-          resumeOp, mlir::ValueRange{ehToken}, dispatchBlock);
+          resumeOp, mlir::ValueRange{ehToken}, /*loop_hints=*/nullptr,
+          dispatchBlock);
     }
 
     // Finally, erase the original try op ----

@@ -91,10 +91,11 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
 }
 
 CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
-    const Target &T, StringRef DataLayoutString, const Triple &TT,
-    StringRef CPU, StringRef FS, const TargetOptions &Options, Reloc::Model RM,
-    CodeModel::Model CM, CodeGenOptLevel OL)
-    : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
+    const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
+    const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
+    CodeGenOptLevel OL)
+    : TargetMachine(T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT,
+                    CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
   this->OptLevel = OL;
@@ -237,10 +238,12 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
   if (!PassConfig)
     return true;
 
-  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+  if (PassConfig->willCompleteCodeGenPipeline()) {
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {
+    if (PassConfig->getMachineVerifierMode() == MachineVerifierMode::End)
+      PM.add(createMachineVerifierPass("At end of pipeline"));
     // MIR printing is redundant with -filetype=null.
     if (FileType != CodeGenFileType::Null)
       PM.add(createPrintMIRPass(Out));
@@ -265,7 +268,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
     return true;
-  assert(TargetPassConfig::willCompleteCodeGenPipeline() &&
+  assert(PassConfig->willCompleteCodeGenPipeline() &&
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();

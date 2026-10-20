@@ -58,6 +58,10 @@ namespace acc {
 ///  }
 /// \endcode
 ///
+/// The element bounds above assume ascending steps. For a descending dimension,
+/// the tile's far edge lies below the original bound, so the clamp uses max
+/// instead of min.
+///
 /// Unknown tile sizes (represented as -1 in acc dialect for `tile(*)`) are
 /// resolved to the provided default tile size.
 ///

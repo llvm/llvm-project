@@ -384,6 +384,14 @@ public:
   virtual void genEval(pft::Evaluation &eval,
                        bool unstructuredContext = true) = 0;
 
+  /// Emit \p loopEval's evaluations, folding the body into an
+  /// scf.execute_region when the loop's branching is confined to that body.
+  /// The loop control statements are emitted outside any wrap, exactly as they
+  /// are for a structured loop. Used by directive lowering, which consumes the
+  /// DO itself and so never reaches genFIR(DoConstruct), where a plain loop's
+  /// body is wrapped.
+  virtual void genLoopBodyEvaluations(pft::Evaluation &loopEval) = 0;
+
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
