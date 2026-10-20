@@ -333,40 +333,6 @@ public:
     return CGF.EmitLoadOfLValue(LV, Loc).getScalarVal();
   }
 
-  void EmitLValueAlignmentAssumption(const Expr *E, Value *V) {
-    const AlignValueAttr *AVAttr = nullptr;
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      const ValueDecl *VD = DRE->getDecl();
-
-      if (VD->getType()->isReferenceType()) {
-        if (const auto *TTy =
-                VD->getType().getNonReferenceType()->getAs<TypedefType>())
-          AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
-      } else {
-        // Assumptions for function parameters are emitted at the start of the
-        // function, so there is no need to repeat that here,
-        // unless the alignment-assumption sanitizer is enabled,
-        // then we prefer the assumption over alignment attribute
-        // on IR function param.
-        if (isa<ParmVarDecl>(VD) && !CGF.SanOpts.has(SanitizerKind::Alignment))
-          return;
-
-        AVAttr = VD->getAttr<AlignValueAttr>();
-      }
-    }
-
-    if (!AVAttr)
-      if (const auto *TTy = E->getType()->getAs<TypedefType>())
-        AVAttr = TTy->getDecl()->getAttr<AlignValueAttr>();
-
-    if (!AVAttr)
-      return;
-
-    Value *AlignmentValue = CGF.EmitScalarExpr(AVAttr->getAlignment());
-    llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(AlignmentValue);
-    CGF.emitAlignmentAssumption(V, E, AVAttr->getLocation(), AlignmentCI);
-  }
-
   /// EmitLoadOfLValue - Given an expression with complex type that represents a
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
@@ -374,7 +340,7 @@ public:
     Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
                                 E->getExprLoc());
 
-    EmitLValueAlignmentAssumption(E, V);
+    CGF.EmitLValueAlignmentAssumption(E, V);
     return V;
   }
 
@@ -688,7 +654,7 @@ public:
 
     Value *V = CGF.EmitCallExpr(E).getScalarVal();
 
-    EmitLValueAlignmentAssumption(E, V);
+    CGF.EmitLValueAlignmentAssumption(E, V);
     return V;
   }
 

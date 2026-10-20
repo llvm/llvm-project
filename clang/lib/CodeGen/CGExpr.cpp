@@ -5357,15 +5357,20 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // isn't evaluated a second time for the check. This mirrors the default
     // case of EmitPointerWithAlignment. The load goes through EmitLoadOfLValue,
     // not EmitLoadOfScalar, so that a '__ptrauth'-qualified field is
-    // authenticated before it's used.
+    // authenticated before it's used. Bypassing ScalarExprEmitter also skips
+    // the 'align_value' assumption it emits for loads, so emit that here, or
+    // enabling '-fsanitize=array-bounds' would drop it along with its
+    // '-fsanitize=alignment' check.
     Address CountedByFieldAddr = Address::invalid();
     Address BaseAddr = Address::invalid();
     if (CountedByME && E->getBase()->IgnoreParens() == CountedByLoad) {
       LValue FieldLV = EmitCheckedLValue(CountedByME, TCK_Load);
       CountedByFieldAddr = FieldLV.getAddress();
+      llvm::Value *Ptr =
+          EmitLoadOfLValue(FieldLV, CountedByME->getExprLoc()).getScalarVal();
+      EmitLValueAlignmentAssumption(CountedByME, Ptr);
       BaseAddr = makeNaturalAddressForPointer(
-          EmitLoadOfLValue(FieldLV, CountedByME->getExprLoc()).getScalarVal(),
-          E->getBase()->getType()->getPointeeType(), CharUnits(),
+          Ptr, E->getBase()->getType()->getPointeeType(), CharUnits(),
           /*ForPointeeType=*/true, &EltBaseInfo, &EltTBAAInfo);
     } else {
       // The base must be a pointer; emit it with an estimate of its alignment.

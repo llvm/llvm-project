@@ -3693,6 +3693,12 @@ public:
                                llvm::Value *Alignment,
                                llvm::Value *OffsetValue = nullptr);
 
+  /// Emit the alignment assumption implied by an 'align_value' attribute on
+  /// the declaration or typedef of the loaded l-value \p E, whose value is
+  /// \p V. Anything that loads a pointer from an l-value expression without
+  /// going through ScalarExprEmitter must call this to keep the assumption.
+  void EmitLValueAlignmentAssumption(const Expr *E, llvm::Value *V);
+
   //===--------------------------------------------------------------------===//
   //                             Statement Emission
   //===--------------------------------------------------------------------===//
