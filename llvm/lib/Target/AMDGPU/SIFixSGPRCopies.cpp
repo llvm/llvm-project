@@ -343,9 +343,8 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
       Register TmpAReg = MRI.createVirtualRegister(NewSrcRC);
       unsigned Opc = NewSrcRC == &AMDGPU::AGPR_32RegClass ?
         AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
-      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc),
-            TmpAReg)
-        .addReg(TmpReg, RegState::Kill);
+      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc), TmpAReg)
+          .addReg(TmpReg);
       TmpReg = TmpAReg;
     }
 

@@ -1,5 +1,7 @@
 ; Checks if conversion is only inserted for the spilled register
 ; instead of 2 conversions for the W register
+
+; REQUIRES: asserts
 ; RUN: llc -O2 -march=hexagon -mcpu=hexagonv81 -enable-xqf-gen=true \
 ; RUN: -hexagon-qfloat-mode=ieee -mattr=+hvxv81,+hvx-length128B \
 ; RUN: -enable-postra-xqf-check -debug-only=handle-qfp 2>&1 < %s -o /dev/null | FileCheck %s

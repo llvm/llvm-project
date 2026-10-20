@@ -2485,7 +2485,9 @@ private:
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
-  DenseMap<Function *, SmallVector<std::unique_ptr<ArgumentReplacementInfo>, 8>>
+  /// A MapVector so the functions are rewritten in a deterministic order.
+  MapVector<Function *,
+            SmallVector<std::unique_ptr<ArgumentReplacementInfo>, 8>>
       ArgumentReplacementMap;
 
   /// The set of functions we are deriving attributes for.

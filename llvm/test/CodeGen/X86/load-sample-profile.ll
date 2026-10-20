@@ -26,7 +26,7 @@
 ; PROFILE-MFS: SampleFDO loader in MIR
 ; PROFILE-MFS: Add FS discriminators in MIR
 ; PROFILE-MFS: SampleFDO loader in MIR
-; PROFILE-MFS: Machine Function Splitter Transformation
+; PROFILE-MFS: Basic Block Sections Transformation
 
 define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind {
   br i1 %0, label %3, label %7

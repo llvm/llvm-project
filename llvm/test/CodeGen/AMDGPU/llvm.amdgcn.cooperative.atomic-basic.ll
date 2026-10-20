@@ -149,11 +149,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 1, v4
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v0
+; GFX1250-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v4
 ; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %use
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -169,11 +169,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
-; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1251-SDAG-NEXT:    v_and_b32_e32 v0, 1, v4
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX1251-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v0
+; GFX1251-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v4
 ; GFX1251-SDAG-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1251-SDAG-NEXT:  ; %bb.1: ; %use
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -189,11 +189,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 1, v4
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1250-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v4
 ; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %use
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -209,11 +209,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off scope:SCOPE_SYS
-; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 1, v4
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX1251-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1251-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v4
 ; GFX1251-GISEL-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1251-GISEL-NEXT:  ; %bb.1: ; %use
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
