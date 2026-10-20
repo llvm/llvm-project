@@ -1094,7 +1094,8 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn, bool NeedsFlat = false) {
+                                      unsigned BuiltIn,
+                                      bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(*GV->getParent());
   // Emit all decorations as a single spirv.Decorations node.
