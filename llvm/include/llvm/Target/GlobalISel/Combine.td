@@ -221,6 +221,7 @@ GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
+def register_pair_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -1420,10 +1421,8 @@ def mul_by_neg_one: GICombineRule <
 >;
 
 // Fold (xor (and x, y), y) -> (and (not x), y)
-def xor_of_and_with_same_reg_matchinfo :
-    GIDefMatchData<"std::pair<Register, Register>">;
 def xor_of_and_with_same_reg: GICombineRule <
-  (defs root:$root, xor_of_and_with_same_reg_matchinfo:$matchinfo),
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
   (match (G_XOR $dst, $src1, $src2):$root,
          [{ return Helper.matchXorOfAndWithSameReg(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyXorOfAndWithSameReg(*${root}, ${matchinfo}); }])
