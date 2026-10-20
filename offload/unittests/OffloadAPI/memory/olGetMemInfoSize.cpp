@@ -15,11 +15,12 @@ struct olGetMemInfoSizeTypesTest : olPropertyTest<ol_mem_info_t> {
 
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(olPropertyTest<ol_mem_info_t>::SetUp());
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 0x1024, &Ptr));
+    ASSERT_SUCCESS(olMemAlloc(this->Context, this->Device, OL_ALLOC_TYPE_DEVICE,
+                              0x1024, &Ptr));
   }
 
   void TearDown() override {
-    ASSERT_SUCCESS(olMemFree(Ptr));
+    ASSERT_SUCCESS(olMemFree(this->Context, Ptr));
     RETURN_ON_FATAL_FAILURE(olPropertyTest<ol_mem_info_t>::TearDown());
   }
 
@@ -35,11 +36,12 @@ struct olGetMemInfoSizeTest : OffloadDeviceTest {
 
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 0x1024, &Ptr));
+    ASSERT_SUCCESS(olMemAlloc(this->Context, this->Device, OL_ALLOC_TYPE_DEVICE,
+                              0x1024, &Ptr));
   }
 
   void TearDown() override {
-    ASSERT_SUCCESS(olMemFree(Ptr));
+    ASSERT_SUCCESS(olMemFree(this->Context, Ptr));
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }
 
@@ -50,17 +52,17 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetMemInfoSizeTest);
 
 TEST_P(olGetMemInfoSizeTypesTest, Success) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, Property, &Size));
+  ASSERT_SUCCESS(olGetMemInfoSize(Context, Ptr, Property, &Size));
   ASSERT_EQ(Size, PropertySize);
 }
 
 TEST_P(olGetMemInfoSizeTest, InvalidSymbolInfoEnumeration) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
-               olGetMemInfoSize(Ptr, OL_MEM_INFO_FORCE_UINT32, &Size));
+               olGetMemInfoSize(Context, Ptr, OL_MEM_INFO_FORCE_UINT32, &Size));
 }
 
 TEST_P(olGetMemInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olGetMemInfoSize(Ptr, OL_MEM_INFO_DEVICE, nullptr));
+               olGetMemInfoSize(Context, Ptr, OL_MEM_INFO_DEVICE, nullptr));
 }

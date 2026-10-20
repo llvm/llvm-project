@@ -34,11 +34,16 @@ public:
     return {};
   }
 
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"num_children", "get_child_index"};
+  }
+
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  llvm::Expected<uint32_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ChildCacheState Update() override;
 

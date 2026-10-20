@@ -9,17 +9,18 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithCommon/CeilFloorDivExpansion.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
 #include <type_traits>
 
 namespace mlir {
@@ -140,6 +141,10 @@ using MaxNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
+using MaximumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaximumNumFOp, LLVM::MaximumNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
@@ -150,6 +155,10 @@ using MinimumFOpLowering =
                                /*FailOnUnsupportedFP=*/true>;
 using MinNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
+using MinimumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinimumNumFOp, LLVM::MinimumNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
 using MinSIOpLowering =
@@ -190,7 +199,9 @@ using ShRSIOpLowering =
 using ShRUIOpLowering =
     VectorConvertToLLVMPattern<arith::ShRUIOp, LLVM::LShrOp>;
 using SIToFPOpLowering =
-    VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
+    VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp,
+                               AttrConvertPassThrough,
+                               /*FailOnUnsupportedFP=*/true>;
 using SubFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
                                           /*HasRoundingMode=*/false,
@@ -560,9 +571,10 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
 
   // Handle the scalar and 1D vector cases.
   if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    Type newSumType = typeConverter->convertType(sumResultType);
     Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
-        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
+        LLVM::LLVMStructType::getLiteral(ctx, {newSumType, newOverflowType});
     Value addOverflow = LLVM::UAddWithOverflowOp::create(
         rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
@@ -887,10 +899,12 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     IndexCastOpUILowering,
     MaximumFOpLowering,
     MaxNumFOpLowering,
+    MaximumNumFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,
     MinimumFOpLowering,
     MinNumFOpLowering,
+    MinimumNumFOpLowering,
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,

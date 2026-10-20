@@ -231,7 +231,7 @@ def FeatureUseCompactBranches
 def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
                       AssemblerPredicate<(all_of FeaturePTR64Bit)>;
 def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+                      AssemblerPredicate<(none_of FeaturePTR64Bit)>;
 def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
                          AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
 
@@ -313,7 +313,8 @@ def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
 def MipsAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltNameWithIndex = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {

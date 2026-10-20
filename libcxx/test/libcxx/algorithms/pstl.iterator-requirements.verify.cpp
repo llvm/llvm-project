@@ -32,7 +32,6 @@
 
 #include "test_iterators.h"
 
-using non_input_iterator         = cpp17_output_iterator<int*>;
 using non_forward_iterator       = cpp17_input_iterator<int*>;
 using non_bidirectional_iterator = forward_iterator<int*>;
 using non_randomaccess_iterator  = bidirectional_iterator<int*>;
@@ -40,8 +39,7 @@ struct non_output_iterator : forward_iterator<int*> {
   constexpr int const& operator*() const; // prevent it from being an output iterator
 };
 
-void f(non_input_iterator non_input,
-       non_forward_iterator non_fwd,
+void f(non_forward_iterator non_fwd,
        non_output_iterator non_output,
        non_bidirectional_iterator non_bidir,
        non_randomaccess_iterator non_random,
@@ -282,6 +280,11 @@ void f(non_input_iterator non_input,
   }
 
   {
+    (void)std::swap_ranges(pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: swap_ranges}}
+    (void)std::swap_ranges(pol, it, it, non_fwd);      // expected-error@*:* {{static assertion failed: swap_ranges}}
+  }
+
+  {
     (void)std::transform(pol, non_fwd, non_fwd, out, func); // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(pol, it, it, non_fwd, func);       // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(pol, it, it, non_output, func);    // expected-error@*:* {{static assertion failed: transform}}
@@ -343,17 +346,17 @@ void f(non_input_iterator non_input,
 
   {
     std::uninitialized_copy(
-        pol, non_input, non_input, it);            // expected-error@*:* {{static assertion failed: uninitialized_copy}}
+        pol, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: uninitialized_copy}}
     std::uninitialized_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_copy}}
     std::uninitialized_copy_n(
-        pol, non_input, n, it); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
+        pol, non_fwd, n, it); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
     std::uninitialized_copy_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_copy_n}}
     std::uninitialized_move(
-        pol, non_input, non_input, it);            // expected-error@*:* {{static assertion failed: uninitialized_move}}
+        pol, non_fwd, non_fwd, it);                // expected-error@*:* {{static assertion failed: uninitialized_move}}
     std::uninitialized_move(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move}}
     std::uninitialized_move_n(
-        pol, non_input, n, it); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
+        pol, non_fwd, n, it); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
     std::uninitialized_move_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
   }

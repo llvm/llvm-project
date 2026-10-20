@@ -214,6 +214,28 @@ void foo9(RefCountable& o) {
   }
 }
 
+bool operator==(const Ref<RefCountable>&, const Ref<RefCountable>&);
+void consumeConstRef(const Ref<RefCountable>&);
+
+void guardian_const_operator_call(RefCountable& o, Ref<RefCountable>& other) {
+  Ref<RefCountable> guardian(o);
+  {
+    RefCountable *bar = guardian.ptr();
+    guardian->method();
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    if (guardian == other)
+      bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    consumeConstRef(guardian);
+    bar->method();
+  }
+}
+
 RefCountable* provide();
 
 struct Derived : public RefCountable {
@@ -420,6 +442,90 @@ void foo(RefPtr<RefCountable>& arg) {
 
 } // namespace local_assignment_to_guardian
 
+namespace raw_pointer_or_reference_guardian_parameter {
+
+void consume(RefCountable&);
+void consumeConst(const RefCountable&);
+void consumePtr(RefCountable*);
+void reseat(RefCountable*&);
+
+void memberCallThroughReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  obj.method();
+  ref.method();
+}
+
+void memberCallThroughPointer(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  obj->method();
+  ptr->method();
+}
+
+void passReferenceToNonConstReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  consume(obj);
+  ref.method();
+}
+
+void passConstReferenceToConstReference(const RefCountable& obj) {
+  const RefCountable& ref = obj;
+  consumeConst(obj);
+  ref.constMethod();
+}
+
+void passPointerByValue(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  consumePtr(obj);
+  ptr->method();
+}
+
+void passPointerByNonConstReference(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseat(obj);
+  ptr->method();
+}
+
+void assignToPointer(RefCountable* obj, RefCountable* other) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  obj = other;
+  ptr->method();
+}
+
+void reseatViaPointerToPointer(RefCountable**);
+void readViaPointerToConstPointer(RefCountable* const*);
+
+void passAddressOfPointer(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseatViaPointerToPointer(&obj);
+  ptr->method();
+}
+
+void passAddressOfPointerAsConst(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  readViaPointerToConstPointer(&obj);
+  ptr->method();
+}
+
+void passAddressOfReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  consumePtr(&obj);
+  ref.method();
+}
+
+void reseatSmartPointer(RefPtr<RefCountable>*);
+
+void passAddressOfSmartPointerParameter(RefPtr<RefCountable>& guardian) {
+  RefCountable* ptr = guardian.get();
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseatSmartPointer(&guardian);
+  ptr->method();
+}
+
+} // namespace raw_pointer_or_reference_guardian_parameter
+
 namespace local_assignment_to_parameter {
 
 RefCountable *provide_ref_cntbl();
@@ -620,6 +726,37 @@ namespace vardecl_in_if_condition {
       return obj->next();
   }
 
+  RefCountable* trivialProvide() { return nullptr; }
+
+  void local_in_non_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_non_trivial_else_if(bool flag) {
+    if (auto* obj = provide())
+      obj->trivial();
+    else if (flag) {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = trivialProvide(); // no warning
+      other->trivial();
+    }
+  }
+
 }
 
 namespace delete_unresolved_type {
@@ -707,6 +844,13 @@ namespace binding_raw_ptr {
   void bind_temp_with_safe_ptr() {
     auto [a, b] = pair<RefCountable*, RefPtr<RefCountable>> { provide(), provide() };
     // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefPtr<RefCountable>>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_temp_from_guarded(RefPtr<RefCountable> owner) {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { owner.get(), owner.get() };
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 
@@ -799,3 +943,134 @@ namespace using_reexported_ref_deref {
   }
 
 }
+
+namespace short_lived_temporaries {
+
+Ref<RefCountable> provide_ref();
+bool condition(const Ref<RefCountable> &);
+
+void dying_ref_temporary() {
+  RefCountable *bar = provide_ref().ptr();
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  bar->method();
+}
+
+void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
+  Ref<RefCountable> guardian(obj);
+  {
+    RefCountable *bar = condition(provide_ref()) ? guardian.ptr() : nullptr;
+    someFunction();
+    if (bar)
+      bar->method();
+  }
+}
+
+} // namespace short_lived_temporaries
+
+namespace call_returning_reference_to_smart_pointer {
+
+template <typename T> struct Vector {
+  T& operator[](unsigned);
+  T* m_buffer;
+};
+
+class Owner {
+public:
+  const RefPtr<RefCountable>& referenceGetter() const { return m_obj; }
+
+  void localFromReferenceGetter() {
+    RefCountable *obj = referenceGetter().get();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+  void localFromVectorElement() {
+    RefCountable *obj = m_items[0].ptr();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+private:
+  RefPtr<RefCountable> m_obj;
+  Vector<Ref<RefCountable>> m_items;
+};
+
+} // namespace call_returning_reference_to_smart_pointer
+
+namespace hash_table_empty_value {
+
+template <typename T> struct HashTraits {
+  static T emptyValue() { return T(); }
+  static T peek(const T& value) { return value; }
+};
+
+template <typename P> struct HashTraits<Ref<P>> {
+  static Ref<P> emptyValue() { return HashTableEmptyValue; }
+  static P* peek(const Ref<P>& value) { return value.ptr(); }
+};
+
+template <typename KeyType, typename MappedType> struct SingleEntryHashMap {
+  using KeyTraits = HashTraits<KeyType>;
+  using MappedTraits = HashTraits<MappedType>;
+
+  auto get(const KeyType& key) const {
+    if (key == KeyTraits::emptyValue() || key != m_key)
+      return MappedTraits::peek(MappedTraits::emptyValue());
+    return MappedTraits::peek(*m_value);
+  }
+
+  KeyType m_key;
+  MappedType* m_value;
+};
+
+void get_in_trivial_context(const SingleEntryHashMap<int, Ref<RefCountable>>& map) {
+  {
+    auto* obj = map.get(1); // no-warning
+    obj->trivial();
+  }
+}
+
+Ref<RefCountable> makeEmptyRef() { return HashTableEmptyValue; }
+
+void null_temporary_from_free_function() {
+  {
+    auto* foo = HashTraits<Ref<RefCountable>>::peek(makeEmptyRef()); // no-warning
+    foo->trivial();
+  }
+}
+
+Ref<RefCountable> makeRef(RefCountable& obj) { return obj; }
+
+void non_null_temporary(RefCountable& obj) {
+  {
+    auto* bar = HashTraits<Ref<RefCountable>>::peek(makeRef(obj));
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    bar->trivial();
+  }
+}
+
+void null_temporary_swapped_with_guardian(RefCountable& src) {
+  RefPtr<RefCountable> obj = &src;
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    RefPtr<RefCountable>().swap(obj);
+    foo->trivial();
+  }
+}
+
+void moveInto(RefPtr<RefCountable>&& dst, RefPtr<RefCountable>& src) { dst.swap(src); }
+
+void null_temporary_filled_by_callee(RefPtr<RefCountable> obj) {
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    moveInto(RefPtr<RefCountable>(), obj);
+    foo->trivial();
+  }
+}
+
+} // namespace hash_table_empty_value

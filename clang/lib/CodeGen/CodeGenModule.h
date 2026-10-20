@@ -506,7 +506,10 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
+  // The key owns its storage: not every mangled name handed to
+  // GetOrCreateLLVMFunction outlives the call.
+  llvm::MapVector<std::string, const ValueDecl *, llvm::StringMap<unsigned>>
+      DeferredAnnotations;
 
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
@@ -651,9 +654,6 @@ private:
   void createHLSLRuntime();
 
   bool shouldEmitFunction(GlobalDecl GD);
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
@@ -1521,6 +1521,7 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param Attrs [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
+  /// \param AttrOnCallSite - Whether or not the attributes are on a call site
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
@@ -1537,6 +1538,8 @@ public:
   void addDefaultFunctionDefinitionAttributes(llvm::AttrBuilder &attrs);
 
   StringRef getMangledName(GlobalDecl GD);
+  std::string getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                             const NamedDecl *ND);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
   const GlobalDecl getMangledNameDecl(StringRef);
 

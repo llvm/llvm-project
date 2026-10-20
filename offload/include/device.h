@@ -31,10 +31,13 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
+#include "Program.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
@@ -44,12 +47,74 @@ using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
+/// Kernel launch-geometry properties.
+struct KernelLaunchInfoTy {
+  uint32_t MaxNumThreads = 0;
+  uint32_t PreferredNumThreads = 0;
+  uint32_t ReductionDataSize = 0;
+  uint32_t StaticBlockMemSize = 0;
+  llvm::omp::OMPTgtExecModeFlags Mode = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
+
+  bool isBareMode() const { return Mode == llvm::omp::OMP_TGT_EXEC_MODE_BARE; }
+  bool isGenericMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isGenericSPMDMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isSPMDMode() const { return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD; }
+  bool isNoLoopMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+
+  static const char *getExecutionModeName(llvm::omp::OMPTgtExecModeFlags Mode) {
+    switch (Mode) {
+    case llvm::omp::OMP_TGT_EXEC_MODE_BARE:
+      return "BARE";
+    case llvm::omp::OMP_TGT_EXEC_MODE_SPMD:
+      return "SPMD";
+    case llvm::omp::OMP_TGT_EXEC_MODE_GENERIC:
+      return "Generic";
+    case llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD:
+      return "Generic-SPMD";
+    case llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+      return "SPMD-No-Loop";
+    }
+    return "Unknown";
+  }
+
+  const char *getExecutionModeName() const {
+    return getExecutionModeName(Mode);
+  }
+};
+
+/// Device properties that drive the computation of the launch geometry of a
+/// kernel.
+struct DeviceGeometryPropsTy {
+  /// Number of threads in a warp/wavefront.
+  uint32_t WarpSize = 0;
+  /// Maximum number of threads a block can be launched with.
+  uint32_t ThreadLimit = 0;
+  /// Number of threads per block to use when the user does not request one.
+  uint32_t DefaultNumThreads = 0;
+  /// Number of blocks to use when the user does not request one.
+  uint32_t DefaultNumBlocks = 0;
+  /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
+  uint64_t MaxBlockSharedMemSize = 0;
+};
+
+struct PluginManager;
+
 struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
+  ol_device_handle_t DeviceHandle;
+  PluginManager *PM;
+  ol_context_handle_t Context = nullptr;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
+  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+           ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -59,10 +124,23 @@ struct DeviceTy {
   /// Try to initialize the device and return any failure.
   llvm::Error init();
 
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
+
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
+  /// Whether this device executes kernels on the host CPU.
+  bool isHostDevice() const { return IsHostDevice; }
+
+  /// Load \p Img onto the device and return the resulting program.
+  llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
+
+  /// Resolve the device address of the global variable \p Name in \p Program,
+  /// recording it for kernel record/replay if recording is currently active.
+  llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
+                                                   const char *Name,
+                                                   size_t ExpectedSize);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -81,19 +159,29 @@ struct DeviceTy {
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
+  /// Allocate \p Size bytes of \p Type memory in the device's context, which,
+  /// unlike allocData, caches the allocation for reuse. \p Type must be
+  /// OL_ALLOC_TYPE_DEVICE or OL_ALLOC_TYPE_MANAGED. Free it with freeCtxMem.
+  llvm::Expected<void *> allocCtxMem(int64_t Size, ol_alloc_type_t Type);
+
+  /// Free memory allocated with allocCtxMem.
+  llvm::Error freeCtxMem(void *Ptr);
+
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
-                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                     const ident_t *Loc = nullptr, const char *Name = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
-                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                       const ident_t *Loc = nullptr);
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -105,6 +193,15 @@ struct DeviceTy {
   // Insert a data fence between previous data operations and the following
   // operations if necessary for the device.
   int32_t dataFence(AsyncInfoTy &AsyncInfo);
+
+  /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
+  /// with \p Size bytes, returning the device-accessible pointer.
+  llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
+                                        bool LockMemory = true);
+
+  /// Unregister (and, if \p UnlockMemory, page-unlock) a host buffer
+  /// previously registered via registerMemory.
+  llvm::Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
@@ -130,17 +227,13 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print device info function in the plugin.
-  bool printDeviceInfo();
-
   /// Event related interfaces.
   /// {
-  /// Create an event.
-  int32_t createEvent(void **Event);
-
   /// Record the event based on status in AsyncInfo->Queue at the moment the
-  /// function is called.
-  int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
+  /// function is called. If \p Event already holds an event, it is replaced
+  /// with a new one representing the current queue state and the old event
+  /// is destroyed.
+  int32_t recordEvent(void **Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
   /// depending on the implementation. It is expected to set a dependence on the
@@ -170,34 +263,101 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Return the unique identifier of the device.
+  llvm::StringRef getUid() const { return Uid; }
+
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
-    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
-
-    auto EntryOpt = DevInfo.get(Info);
-    if (!EntryOpt)
-      return 0;
-
-    auto Entry = *EntryOpt;
-    if (!std::holds_alternative<T>(Entry->Value))
+    T Value{};
+    if (olGetDeviceInfo(DeviceHandle, static_cast<ol_device_info_t>(Info),
+                        sizeof(Value), &Value))
       return T{};
-    return std::get<T>(Entry->Value);
+    return Value;
+  }
+
+  /// Get string information from the device into \p Out, which is left empty
+  /// if the information cannot be obtained. \p Out is always null terminated.
+  template <unsigned N>
+  void getInfoString(DeviceInfo Info, llvm::SmallString<N> &Out) const {
+    auto Prop = static_cast<ol_device_info_t>(Info);
+    size_t Size = 0;
+    if (!olGetDeviceInfoSize(DeviceHandle, Prop, &Size) && Size > 0) {
+      Out.resize(Size);
+      if (olGetDeviceInfo(DeviceHandle, Prop, Size, Out.data()))
+        Out.clear();
+      else
+        // Drop the null terminator from the length, c_str() puts it back.
+        Out.pop_back();
+    } else {
+      Out.clear();
+    }
+    // Make sure the data can be handed out as a C string.
+    Out.c_str();
+  }
+
+  /// Return the maximum number of threads per team this device supports,
+  /// further limited by OMP_TEAMS_THREAD_LIMIT if the user set it.
+  uint32_t getThreadLimit() const;
+
+  /// Return the number of threads per team to use when the user does not
+  /// request one.
+  uint32_t getDefaultNumThreads() const {
+    return GeometryProps.DefaultNumThreads;
+  }
+
+  /// Return the maximum amount of shared memory, in bytes, a team can use in
+  /// any kernel.
+  uint64_t getMaxBlockSharedMemSize() const {
+    return GeometryProps.MaxBlockSharedMemSize;
+  }
+
+  /// Record the launch-geometry properties for the kernel at \p KernelPtr,
+  /// read once at registration time from its "<name>_kernel_environment"
+  /// device global.
+  void setKernelLaunchInfo(void *KernelPtr, KernelLaunchInfoTy Info) {
+    (*KernelLaunchInfoMap.getExclusiveAccessor())[KernelPtr] = Info;
+  }
+
+  /// Return the launch-geometry properties recorded for the kernel at
+  /// \p KernelPtr, or a default-constructed KernelLaunchInfoTy if none were
+  /// recorded.
+  KernelLaunchInfoTy getKernelLaunchInfo(void *KernelPtr) {
+    return (*KernelLaunchInfoMap.getExclusiveAccessor())[KernelPtr];
   }
 
 private:
-  /// Deinitialize the device (and plugin).
-  void deinit();
+  /// Query the properties used to compute the launch geometry of a kernel.
+  llvm::Error initGeometryProps();
+
+  /// Unique identifier of the device.
+  llvm::SmallString<32> Uid;
+
+  /// Properties used to compute the launch geometry of a kernel.
+  DeviceGeometryPropsTy GeometryProps;
 
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
   ProtectedObj<DeviceOffloadEntriesMapTy> DeviceOffloadEntries;
 
+  /// Launch-geometry properties for each kernel registered on this device.
+  using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
+  ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Whether this is a host device.
+  bool IsHostDevice = false;
+
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;
 
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
+
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers = false;
+
+  /// Indicate whether failures when locking mapped buffers should be ignored.
+  bool IgnoreLockMappedFailures = true;
 };
 
 #endif

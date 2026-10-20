@@ -5,8 +5,8 @@ define i1 @test() {
 ; CHECK-LABEL: define i1 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C2:%.*]] = fpext float 0.000000e+00 to double
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x double> <double 0.000000e+00, double 5.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x double> <double 4.000000e+00, double 3.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> <double 2.000000e+00, double 1.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x double> <double 0.000000e+00, double 5.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison>, <8 x double> <double 4.000000e+00, double 3.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> <double 2.000000e+00, double 1.000000e+00, double poison, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x double> [[TMP1]], double [[C2]], i64 6
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <8 x double> zeroinitializer, [[TMP5]]

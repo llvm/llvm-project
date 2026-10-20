@@ -41,7 +41,7 @@ class LLVM_ABI TargetFolder final : public IRBuilderFolder {
     return ConstantFoldConstant(C, DL);
   }
 
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION() override;
 
 public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
@@ -116,8 +116,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -125,7 +125,11 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      if (Constant *GEP =
+              ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW))
+        return Fold(GEP);
     }
     return nullptr;
   }
@@ -184,6 +188,23 @@ public:
     return nullptr;
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    auto *CBase = dyn_cast<Constant>(Base);
+    auto *CVal = dyn_cast<Constant>(Val);
+    auto *COffset = dyn_cast<Constant>(Offset);
+    if (CBase && CVal && COffset)
+      return ConstantFoldBitInsertOperands(CBase, CVal, COffset, DL);
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    auto *CSrc = dyn_cast<Constant>(Src);
+    auto *COffset = dyn_cast<Constant>(Offset);
+    if (CSrc && COffset)
+      return ConstantFoldBitExtractOperands(Ty, CSrc, COffset, DL);
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V))
@@ -193,11 +214,11 @@ public:
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
-                       Function *CxtF = nullptr) const override {
+                       Function *CtxF = nullptr) const override {
     if (all_of(Ops, IsaPred<Constant>))
       return ConstantFoldIntrinsic(
           ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty, DL,
-          CxtF);
+          CtxF);
     return nullptr;
   }
 

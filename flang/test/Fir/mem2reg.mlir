@@ -72,15 +72,15 @@ func.func @cycle(%arg0: i64, %arg1: i1, %arg2: i64) {
 // CHECK-LABEL: func.func @test_simple_declare(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
 // CHECK: %[[C42:.*]] = arith.constant 42 : i32
 // CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK: %[[ARG_DECL:.*]] = fir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-// CHECK: fir.declare_value %[[C42]] {uniq_name = "_QFfooEj"} : i32
+// CHECK: %[[ARG_DECL:.*]] = fir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFfooEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK: fir.declare_value %[[C42]] uniq_name("_QFfooEj") : i32
 // CHECK: fir.store %[[C42]] to %[[ARG_DECL]] : !fir.ref<i32>
 func.func @test_simple_declare(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
     %c42_i32 = arith.constant 42 : i32
     %0 = fir.dummy_scope : !fir.dscope
-    %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFfooEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     %2 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFfooEj"}
-    %3 = fir.declare %2 {uniq_name = "_QFfooEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %3 = fir.declare %2 uniq_name("_QFfooEj") : (!fir.ref<i32>) -> !fir.ref<i32>
     fir.store %c42_i32 to %3 : !fir.ref<i32>
     %4 = fir.load %3 : !fir.ref<i32>
     fir.store %4 to %1 : !fir.ref<i32>
@@ -92,19 +92,19 @@ func.func @test_simple_declare(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
 // CHECK-LABEL:   func.func @test_two_values(
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 43 : i32
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 42 : i32
-// CHECK:           fir.declare_value %[[CONSTANT_1]] {uniq_name = "_QFfooEjlocal"} : i32
+// CHECK:           fir.declare_value %[[CONSTANT_1]] uniq_name("_QFfooEjlocal") : i32
 // CHECK:           fir.store %[[CONSTANT_1]] to %{{.*}} : !fir.ref<i32>
-// CHECK:           fir.declare_value %[[CONSTANT_0]] {uniq_name = "_QFfooEjlocal"} : i32
+// CHECK:           fir.declare_value %[[CONSTANT_0]] uniq_name("_QFfooEjlocal") : i32
 // CHECK:           fir.store %[[CONSTANT_0]] to %{{.*}} : !fir.ref<i32>
 
 func.func @test_two_values(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}, %arg1: !fir.ref<i32> {fir.bindc_name = "j"}) {
   %c43_i32 = arith.constant 43 : i32
   %c42_i32 = arith.constant 42 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-  %2 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFfooEj"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFfooEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFfooEj") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %3 = fir.alloca i32 {bindc_name = "jlocal", uniq_name = "_QFfooEjlocal"}
-  %4 = fir.declare %3 {uniq_name = "_QFfooEjlocal"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %3 uniq_name("_QFfooEjlocal") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c42_i32 to %4 : !fir.ref<i32>
   %5 = fir.load %4 : !fir.ref<i32>
   fir.store %5 to %1 : !fir.ref<i32>
@@ -126,10 +126,10 @@ func.func @array_val_not_mem2reg(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_n
   %c2 = arith.constant 2 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 arg 1 {uniq_name = "_QFarrayEi"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<2xi32>>
-  %3 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFarrayEj"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 arg 1 uniq_name("_QFarrayEi") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<2xi32>>
+  %3 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFarrayEj") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %4 = fir.alloca !fir.array<2xi32> {bindc_name = "jlocal", uniq_name = "_QFarrayEjlocal"}
-  %5 = fir.declare %4(%1) {uniq_name = "_QFarrayEjlocal"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
+  %5 = fir.declare %4(%1) uniq_name("_QFarrayEjlocal") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
   fir.store %arrayval to %5 : !fir.ref<!fir.array<2xi32>>
   %val_load = fir.load %5 : !fir.ref<!fir.array<2xi32>>
   fir.store %val_load to %2 : !fir.ref<!fir.array<2xi32>>
@@ -146,10 +146,10 @@ func.func @array_val_not_mem2reg(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_n
 
 func.func @box_not_mem2reg(%arg0: !fir.ref<!fir.box<f32>> {fir.bindc_name = "i"}, %arg1: !fir.ref<i32> {fir.bindc_name = "j"}, %arrayval : !fir.box<f32>) {
   %0 = fir.dummy_scope : !fir.dscope
-  %2 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFarrayEi"} : (!fir.ref<!fir.box<f32>>, !fir.dscope) -> !fir.ref<!fir.box<f32>>
-  %3 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFarrayEj"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFarrayEi") : (!fir.ref<!fir.box<f32>>, !fir.dscope) -> !fir.ref<!fir.box<f32>>
+  %3 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFarrayEj") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %4 = fir.alloca !fir.box<f32> {bindc_name = "jlocal", uniq_name = "_QFarrayEjlocal"}
-  %5 = fir.declare %4 {uniq_name = "_QFarrayEjlocal"} : (!fir.ref<!fir.box<f32>>) -> !fir.ref<!fir.box<f32>>
+  %5 = fir.declare %4 uniq_name("_QFarrayEjlocal") : (!fir.ref<!fir.box<f32>>) -> !fir.ref<!fir.box<f32>>
   fir.store %arrayval to %5 : !fir.ref<!fir.box<f32>>
   %val_load = fir.load %5 : !fir.ref<!fir.box<f32>>
   fir.store %val_load to %2 : !fir.ref<!fir.box<f32>>
@@ -172,7 +172,7 @@ func.func @box_not_mem2reg(%arg0: !fir.ref<!fir.box<f32>> {fir.bindc_name = "i"}
 func.func @block_argument_value(%arg0: i32, %cdt: i1) -> i32 {
   %c42_i32 = arith.constant 42 : i32
   %3 = fir.alloca i32 {bindc_name = "jlocal", uniq_name = "_QFfooEjlocal"}
-  %4 = fir.declare %3 {uniq_name = "_QFfooEjlocal"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %3 uniq_name("_QFfooEjlocal") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c42_i32 to %4 : !fir.ref<i32>
   llvm.cond_br %cdt, ^bb1, ^bb2
 ^bb1:
@@ -199,7 +199,7 @@ func.func @block_argument_value(%arg0: i32, %cdt: i1) -> i32 {
 func.func @loop_conditional_update(%arg0: i32, %cdt: i1) -> i32 {
   %c1 = arith.constant 1 : i32
   %alloca = fir.alloca i32 {bindc_name = "mywatch", uniq_name = "_QFkernelEmywatch"}
-  %declare = fir.declare %alloca {uniq_name = "_QFkernelEmywatch"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %declare = fir.declare %alloca uniq_name("_QFkernelEmywatch") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %arg0 to %declare : !fir.ref<i32>
   llvm.br ^loop
 ^loop:
@@ -226,7 +226,7 @@ func.func @dummy_scope(%arg : i32) {
   %alloca = fir.alloca i32 {adapt.valuebyref}
   fir.store %arg to %alloca : !fir.ref<i32>
   %scope = fir.dummy_scope : !fir.dscope
-  %declare = fir.declare %alloca dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "foo"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %declare = fir.declare %alloca dummy_scope %scope arg 1 uniq_name("foo") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %result = fir.load %declare : !fir.ref<i32>
   fir.call @use(%result) : (i32) -> ()
   return
@@ -250,7 +250,7 @@ func.func @dummy_scope_block_argument(%arg : i32, %cond : i1) {
   cf.cond_br %cond, ^body, ^exit
 ^body:
   %scope = fir.dummy_scope : !fir.dscope
-  %declare = fir.declare %alloca dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "foo"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %declare = fir.declare %alloca dummy_scope %scope arg 1 uniq_name("foo") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %next = arith.addi %result, %c1 : i32
   fir.store %next to %alloca : !fir.ref<i32>
   cf.br ^loop
@@ -304,7 +304,7 @@ func.func @scalar_slot_through_casts(%n: index) {
   scf.parallel (%i) = (%c0) to (%n) step (%c1) {
     %alloca = memref.alloca() {bindc_name = "k"} : memref<i32>
     %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-    %d = fir.declare %r {uniq_name = "_QFEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %d = fir.declare %r uniq_name("_QFEk") : (!fir.ref<i32>) -> !fir.ref<i32>
     %v = arith.index_cast %i : index to i32
     %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
     memref.store %v, %m[] : memref<i32>
@@ -343,7 +343,7 @@ func.func @ranked_memref_not_promoted(%arg: i32) {
 func.func @read_only_slot_not_promoted() {
   %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
   %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32>
   %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
   %l = memref.load %m[] : memref<i32>
   "test.use"(%l) : (i32) -> ()
@@ -361,7 +361,7 @@ func.func @read_only_slot_not_promoted() {
 func.func @partially_written_slot_not_promoted(%c: i1, %arg: i32) {
   %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
   %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32>
   %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
   scf.if %c {
     memref.store %arg, %m[] : memref<i32>
@@ -382,7 +382,7 @@ func.func @partially_written_slot_not_promoted(%c: i1, %arg: i32) {
 func.func @store_through_sibling_alias(%arg: i32) {
   %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
   %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32>
   %stored = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
   memref.store %arg, %stored[] : memref<i32>
   %loaded = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
@@ -402,7 +402,7 @@ func.func @store_through_sibling_alias(%arg: i32) {
 // CHECK: fir.load
 func.func @declare_changing_pointee() {
   %alloca = fir.alloca i32
-  %d = fir.declare %alloca {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<f32>
+  %d = fir.declare %alloca uniq_name("x") : (!fir.ref<i32>) -> !fir.ref<f32>
   %l = fir.load %d : !fir.ref<f32>
   "test.use"(%l) : (f32) -> ()
   return
@@ -420,7 +420,7 @@ func.func @declare_changing_pointee() {
 // CHECK: return %[[ARG0]] : f32
 func.func @fp_declare_single_block(%arg: f32) -> f32 {
   %alloca = fir.alloca f32
-  %d = fir.declare %alloca {uniq_name = "_QFEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d = fir.declare %alloca uniq_name("_QFEx") : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.store %arg to %d : !fir.ref<f32>
   %v = fir.load %d : !fir.ref<f32>
   return %v : f32
@@ -437,7 +437,7 @@ func.func @fp_declare_single_block(%arg: f32) -> f32 {
 // CHECK: fir.load
 func.func @fp_declare_multi_block(%arg: f32, %cdt: i1) -> f32 {
   %alloca = fir.alloca f32
-  %d = fir.declare %alloca {uniq_name = "_QFEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d = fir.declare %alloca uniq_name("_QFEx") : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.store %arg to %d : !fir.ref<f32>
   llvm.cond_br %cdt, ^bb1, ^bb2
 ^bb1:
@@ -513,7 +513,7 @@ func.func @volatile_convert_not_promoted(%arg: i32) {
 func.func @write_dominating_read_in_another_block(%arg: i32) {
   %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
   %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32>
   %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
   memref.store %arg, %m[] : memref<i32>
   cf.br ^bb1
@@ -538,7 +538,7 @@ func.func @write_dominating_read_in_another_block(%arg: i32) {
 func.func @write_before_loop_updated_in_loop(%arg: i32, %n: i32) {
   %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
   %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
-  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32>
   %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
   memref.store %arg, %m[] : memref<i32>
   cf.br ^bb1

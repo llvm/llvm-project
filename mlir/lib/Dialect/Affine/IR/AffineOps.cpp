@@ -2860,7 +2860,7 @@ std::optional<APInt> AffineForOp::getStaticTripCount() {
   for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i) {
     AffineExpr expr = tripCountValueMap.getResult(i).ceilDiv(step);
     if (auto constExpr = llvm::dyn_cast<AffineConstantExpr>(expr)) {
-      uint64_t value = constExpr.getValue();
+      uint64_t value = std::max<int64_t>(constExpr.getValue(), 0);
       if (tripCount.has_value())
         tripCount = std::min(*tripCount, value);
       else
@@ -4279,21 +4279,18 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::minimumf:
   case arith::AtomicRMWKind::minnumf:
     return isa<FloatType>(resultType);
-  case arith::AtomicRMWKind::maxs: {
-    auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
-  }
+  // The kind carries the signedness of the comparison; the integer is
+  // signless (what arith's maxsi/minsi/maxui/minui, which the reduction
+  // lowers to, operate on) or of that signedness.
+  case arith::AtomicRMWKind::maxs:
   case arith::AtomicRMWKind::mins: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
+    return intType && !intType.isUnsigned();
   }
-  case arith::AtomicRMWKind::maxu: {
-    auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
-  }
+  case arith::AtomicRMWKind::maxu:
   case arith::AtomicRMWKind::minu: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
+    return intType && !intType.isSigned();
   }
   case arith::AtomicRMWKind::ori:
   case arith::AtomicRMWKind::andi:
@@ -5097,7 +5094,7 @@ namespace {
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5159,7 +5156,7 @@ struct DropUnitExtentBasis
 /// in-bounds the way the outputs of the delinearization would be.
 struct CancelDelinearizeOfLinearizeDisjointExactTail
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5230,7 +5227,7 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
 /// where the original %1:4 is replaced by %1:2 ++ %2:2
 struct SplitDelinearizeSpanningLastLinearizeArg final
     : OpRewritePattern<affine::AffineDelinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5463,7 +5460,7 @@ namespace {
 /// the operation isn't asserted to be `disjoint`.
 struct DropLinearizeUnitComponentsIfDisjointOrZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
@@ -5560,7 +5557,7 @@ OpFoldResult computeProduct(Location loc, OpBuilder &builder,
 /// becoming `%t = affine.linearize_index [%x, %c0] by (64, 16)`
 struct CancelLinearizeOfDelinearizePortion final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 private:
   // Struct representing a case where the cancellation pattern
@@ -5740,7 +5737,7 @@ public:
 /// to `affine.linearize_index [...a] by (...b)` in all cases.
 struct DropLinearizeLeadingZero final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
