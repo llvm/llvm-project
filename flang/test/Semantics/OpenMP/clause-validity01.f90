@@ -325,6 +325,7 @@ use omp_lib
   !ERROR: Unmatched END SECTIONS directive
   !$omp end sections
 
+  !ERROR: If a compound directive starts with PARALLEL, NOWAIT clause must not be specified
   !$omp parallel sections
   !$omp end parallel sections nowait
 
@@ -602,4 +603,12 @@ use omp_lib
   !$omp target enter data map(alloc:A) device(0)
   !$omp target exit data map(delete:A) device(0)
 
+! parallel-masked-taskloop
+  z = 0
+  !ERROR: If a compound directive starts with PARALLEL, IN_REDUCTION clause must not be specified
+  !$omp parallel masked taskloop reduction(+: z) in_reduction(+: z)
+  do i = 1, 10
+    z = z + 1
+  end do
+  !$omp end parallel masked taskloop
 end program
