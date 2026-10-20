@@ -57,6 +57,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
+  DwarfUsesRelocationsAcrossSections = false;
 
   initializeAtSpecifiers(atSpecifiers);
 }
