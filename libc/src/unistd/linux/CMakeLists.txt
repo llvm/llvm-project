@@ -741,6 +741,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setegid
+  SRCS
+    setegid.cpp
+  HDRS
+    ../setegid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setresgid
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  seteuid
+  SRCS
+    seteuid.cpp
+  HDRS
+    ../seteuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setresuid
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   setgid
   SRCS
     setgid.cpp

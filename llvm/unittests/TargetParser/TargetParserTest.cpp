@@ -3664,10 +3664,9 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
   using namespace AMDGPU;
 
   // Existing SRAMECC targets retain their selectable modes, including generic
-  // targets and gfx12.5, where XNACK is hardwired on.
+  // targets.
   for (StringRef GPU :
-       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
-        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic"}) {
     SCOPED_TRACE(GPU);
     GPUKind Kind = parseArchAMDGCN(GPU);
     const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
@@ -3713,6 +3712,24 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
     EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
                   .getSramEccSetting(),
               TargetIDSetting::Unsupported);
+  }
+
+  // gfx12.5 hardwires SRAMECC on, so the modifier is rejected.
+  for (StringRef GPU :
+       {"gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_FALSE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(), TargetIDSetting::On);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "-sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::On);
   }
 }
 

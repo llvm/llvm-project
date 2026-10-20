@@ -130,6 +130,7 @@ private:
   bool SelectSETP_BF16X2(SDNode *N);
   bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
+  void PostprocessISelDAG() override;
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
@@ -625,6 +626,64 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
 
   return true;
 }
+
+static std::optional<unsigned> getI16ExtractIndex(const SDNode *N) {
+  if (!N->isMachineOpcode() || N->use_empty())
+    return std::nullopt;
+  switch (N->getMachineOpcode()) {
+  default:
+    return std::nullopt;
+  case NVPTX::CVT_u16_u32:
+    if (N->getConstantOperandVal(1) != NVPTX::PTXCvtMode::NONE)
+      return std::nullopt;
+    [[fallthrough]];
+  case NVPTX::I32toI16L:
+  case NVPTX::I32toI16L_Sink:
+    return 0;
+  case NVPTX::I32toI16H:
+  case NVPTX::I32toI16H_Sink:
+    return 1;
+  }
+}
+
+// Merge scalar truncations and individual vector extracts after selection, when
+// bitcasts no longer hide that they extract the same 16-bit halves.
+static void mergeI16Unpacks(SelectionDAG &DAG) {
+  auto Position = DAG.allnodes_begin();
+  // Replacing extracts can CSE downstream nodes, including the next node.
+  SelectionDAG::DAGNodeDeletedListener Listener(
+      DAG, [&](SDNode *Deleted, SDNode *) {
+        if (Position == SelectionDAG::allnodes_iterator(Deleted))
+          ++Position;
+      });
+
+  bool Changed = false;
+  while (Position != DAG.allnodes_end()) {
+    SDNode *N = &*Position++;
+    if (!getI16ExtractIndex(N))
+      continue;
+    SDValue Word = N->getOperand(0);
+    SmallVector<SDValue, 2> Halves[2];
+    for (SDNode *User : Word->users()) {
+      std::optional<unsigned> Index = getI16ExtractIndex(User);
+      if (Index && User->getOperand(0) == Word)
+        Halves[*Index].emplace_back(User, 0);
+    }
+    if (Halves[0].empty() || Halves[1].empty())
+      continue;
+
+    SDNode *Scatter = DAG.getMachineNode(NVPTX::I32toV2I16, SDLoc(N), MVT::i16,
+                                         MVT::i16, Word);
+    for (unsigned Index : {0u, 1u})
+      for (SDValue V : Halves[Index])
+        DAG.ReplaceAllUsesOfValueWith(V, SDValue(Scatter, Index));
+    Changed = true;
+  }
+  if (Changed)
+    DAG.RemoveDeadNodes();
+}
+
+void NVPTXDAGToDAGISel::PostprocessISelDAG() { mergeI16Unpacks(*CurDAG); }
 
 NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   auto AS =
