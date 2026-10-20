@@ -131,6 +131,11 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///   bytes, stack bytes per thread, argument count, and for each argument
 ///   of the source kernel: kind (0 = its bytes are in the uniforms, 1 = a
 ///   64-bit pointer to its bytes is), its size in bytes, and its first half.
+///   Optional tagged extensions follow, up to the record's size; readers skip
+///   the ones they do not know:
+///     1, x, y, z: the kernel runs clusters of x * y * z CTAs as one
+///     threadgroup (function attribute agx-cluster-dims): the launch divides
+///     the grid by (x, y, z) and multiplies the threadgroup's z by x * y * z.
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -175,6 +180,18 @@ void AGXAsmPrinter::recordKernel() {
   }
   R.push_back(Args.size() / 3);
   R.append(Args);
+  Attribute Cluster = F.getFnAttribute("agx-cluster-dims");
+  if (Cluster.isValid()) {
+    SmallVector<StringRef, 3> Dims;
+    Cluster.getValueAsString().split(Dims, ',');
+    R.push_back(1);
+    for (unsigned I = 0; I < 3; ++I) {
+      unsigned D = 1;
+      if (I < Dims.size() && Dims[I].trim().getAsInteger(10, D))
+        D = 1;
+      R.push_back(std::max(D, 1u));
+    }
+  }
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }
 
