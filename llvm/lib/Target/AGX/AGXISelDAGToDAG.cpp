@@ -66,15 +66,16 @@ private:
                           SDValue &Signed, SDValue &Shift) {
     return SelectDeviceAddr(Addr, 2, Base, Index, Signed, Shift);
   }
-  bool SelectLocalAddr(SDValue Addr, SDValue &Base, SDValue &Index);
+  bool SelectLocalAddr(SDValue Addr, SDValue &Base, SDValue &Index,
+                       unsigned Unit);
   bool SelectLocalAddr8(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 4);
   }
   bool SelectLocalAddr16(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 8);
   }
   bool SelectLocalAddr32(SDValue Addr, SDValue &Base, SDValue &Index) {
-    return SelectLocalAddr(Addr, Base, Index);
+    return SelectLocalAddr(Addr, Base, Index, 16);
   }
   bool SelectStackAddr(SDValue Addr, SDValue &Offset);
 };
@@ -330,10 +331,24 @@ bool AGXDAGToDAGISel::SelectDeviceAddr(SDValue Addr, unsigned ElemLog2,
   return true;
 }
 
-/// Threadgroup addresses are 16-bit byte offsets in the base register.
+/// Threadgroup addresses are 16-bit byte offsets in the base register. The
+/// index counts four-element vectors, Unit bytes each (the address is base +
+/// 4 * element size * index), so constant offsets that are multiples of Unit
+/// go in the immediate index.
 bool AGXDAGToDAGISel::SelectLocalAddr(SDValue Addr, SDValue &Base,
-                                      SDValue &Index) {
+                                      SDValue &Index, unsigned Unit) {
   SDLoc DL(Addr);
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t Offset = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (Offset > 0 && Offset % Unit == 0 && isUInt<15>(Offset / Unit)) {
+      SDValue B = Addr.getOperand(0);
+      Base = isNullConstant(B)
+                 ? CurDAG->getTargetConstant(0, DL, MVT::i16)
+                 : CurDAG->getTargetExtractSubreg(AGX::lo16, DL, MVT::i16, B);
+      Index = CurDAG->getTargetConstant(Offset / Unit, DL, MVT::i16);
+      return true;
+    }
+  }
   if (isNullConstant(Addr))
     Base = CurDAG->getTargetConstant(0, DL, MVT::i16);
   else

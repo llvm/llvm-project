@@ -26,6 +26,7 @@ The kernels in `kernels/` cover the common shapes of CUDA code:
 | `histogram` | threadgroup and device atomics |
 | `scan` | SIMD prefix |
 | `softmax_row` | SIMD reductions + `exp` |
+| `matrixmul` | CUDA samples matrixMul through ZLUDA: threadgroup tiles, barriers, unrolled FMAs |
 
 `agx_cost` estimates come from the simulator's model calibrated on an M2 Max. Rebuild it from the simulator's
 current `main` before comparing over time. The baseline was recorded with simulator `main` f50bd88; that commit's
