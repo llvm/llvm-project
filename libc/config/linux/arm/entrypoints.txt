@@ -749,6 +749,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.sys.ptrace.ptrace
 
       # unistd.h entrypoints
+      libc.src.unistd.setegid
+      libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
       libc.src.unistd.setreuid
