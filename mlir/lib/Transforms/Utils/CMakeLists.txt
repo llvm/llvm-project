@@ -19,7 +19,7 @@ add_mlir_library(MLIRTransformUtils
   MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces

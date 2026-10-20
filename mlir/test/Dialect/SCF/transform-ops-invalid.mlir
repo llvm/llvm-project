@@ -255,3 +255,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// An unsigned loop with lb > ub (as unsigned values) has no iterations and
+// must not be peeled.
+
+func.func @peel_front_unsigned_empty(%out: memref<8xindex>) {
+  %lb = arith.constant -1 : index
+  %ub = arith.constant 5 : index
+  %step = arith.constant 1 : index
+  scf.for unsigned %i = %lb to %ub step %step {
+    %c0 = arith.constant 0 : index
+    memref.store %i, %out[%c0] : memref<8xindex>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %loops = transform.structured.match ops{["scf.for"]} in %root
+        : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to peel the first iteration}}
+    %main, %rest = transform.loop.peel %loops peel_front = true
+        : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

@@ -366,6 +366,11 @@ Makes programs 10x faster by doing Special New Thing.
   a data layout, base type and index sequence. The latter API returns an option,
   as it may fail if the indices cannot be converted into ptradd representation.
 
+* The `llcontext` argument of `builder_at`, `builder_before` and
+  `builder_at_end` has been removed. These functions now take only an insertion
+  point, instruction, or block, respectively. The context is implied by the
+  insertion point.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -396,6 +401,11 @@ Makes programs 10x faster by doing Special New Thing.
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
+* Fixed a crash
+  ([#204079](https://github.com/llvm/llvm-project/issues/204079)) in the
+  SelectionDAG pre-RA schedulers when they tried to unfold a load-folded
+  instruction to break a physical register dependency and the unfolded load
+  already existed in the DAG.
 * Fixed a crash
   ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
   compiling a `landingpad` whose result type is not a struct of an exception
@@ -453,6 +463,13 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to BOLT
 
 ### Changes to Sanitizers
+
+* AddressSanitizer's `operator new` now calls the current
+  `std::new_handler` on allocation failure, as the C++ standard
+  requires. With `allocator_may_return_null=1`, throwing `operator new`
+  throws `std::bad_alloc` instead of aborting (on runtimes built with
+  exceptions), and nothrow `operator new` returns `nullptr`. By default
+  it still aborts once the handler chain is exhausted.
 
 ### Other Changes
 

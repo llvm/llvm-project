@@ -493,8 +493,16 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
       // More than 1 variable index, use outer result.
       return Result;
     }
+    // The GEPs' wrap flags do not prevent the sum of the offsets from
+    // sign-wrapping.
+    bool Overflow = false;
+    APInt CombinedOffset =
+        Result.ConstantOffset.sadd_ov(ConstantOffset2, Overflow);
+    if (Overflow)
+      return Result;
+
     Result.BasePtr = InnerGEP->getPointerOperand();
-    Result.ConstantOffset += ConstantOffset2;
+    Result.ConstantOffset = CombinedOffset;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
@@ -2393,7 +2401,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
