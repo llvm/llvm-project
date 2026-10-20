@@ -295,7 +295,7 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
 
 bool AArch64FrameLowering::authenticatesReturnAddressEarly(
     MachineFunction &MF, MachineBasicBlock &MBB) const {
-  if (!needsWinCFI(MF) ||
+  if (!MF.needsWinCFI() ||
       !MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddress(MF))
     return false;
 
@@ -553,12 +553,6 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // are accessed off the frame pointer in both the parent function and the
   // funclets.
   if (MF.hasEHFunclets())
-    return true;
-
-  // Unwinding through a callee that tail calls with a larger stack argument
-  // area leaves SP lower than our unwind info expects, so on Windows we must
-  // be found via the frame pointer instead.
-  if (AFI.hasWinCallToGuaranteedTCOFunction())
     return true;
 
   // When the stack guard is mixed with the frame pointer, a dedicated FP is
@@ -2337,14 +2331,14 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       // lower address (and so the first operand of the ldp once the pair is
       // swapped, as below), so restore just that register. The pair has not
       // been swapped yet at this point, so that register is Reg1.
-      if (!RPI.isPaired())
+      if (!RGI.isPaired())
         continue;
       assert(Reg2 == AArch64::LR && "Expected LR to be the second of the pair");
       MachineInstrBuilder MIB =
           BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXui));
       MIB.addReg(Reg1, getDefRegState(true));
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset)
+          .addImm(RGI.Offset)
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),

@@ -653,8 +653,21 @@ void AArch64PrologueEmitter::emitPrologue() {
   // have a tail-call where the caller only needs to adjust the stack pointer in
   // the epilogue. In this case, we still need to emit a SEH prologue sequence.
   // See `seh-minimal-prologue-epilogue.ll` test cases.
-  if (AFI->getArgumentStackToRestore())
+  if (int64_t ArgBytes = AFI->getArgumentStackToRestore()) {
     HasWinCFI |= NeedsWinCFI;
+
+    // The callee pops its stack arguments, so once the unwinder has undone
+    // the prologue it must also pop them to recover the caller's SP. The
+    // opcodes before end_c don't correspond to instructions, so describe the
+    // pop there.
+    if (NeedsWinCFI && !IsFunclet) {
+      BuildMI(MBB, PrologueBeginI, DL, TII->get(AArch64::SEH_StackAlloc))
+          .addImm(ArgBytes)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, PrologueBeginI, DL, TII->get(AArch64::SEH_EndC))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
 
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
