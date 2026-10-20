@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements memory slot interface models for
-// `vector.load`, `vector.store`, `vector.transfer_read`, and
-// `vector.transfer_write`. These models implement
-// `PromotableMemOpInterface` so Mem2Reg can replace vector accesses with uses
-// and definitions of a vector SSA value. The models for `memref.subview`
-// live in the MemRef dialect.
+// This file implements memory slot interface models for `vector.load`,
+// `vector.store`, `vector.transfer_read`, and `vector.transfer_write`.
+// These models implement `PromotableMemOpInterface` so Mem2Reg can replace
+// vector accesses with uses and definitions of a vector SSA value. The
+// models for `memref.subview` live in the MemRef dialect.
 //
 // A read uses the slot's current value; a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
@@ -52,7 +51,7 @@ using namespace mlir::vector;
 /// matching vector type. The allocation or alias model determines that type.
 template <typename LoadStoreOpTy>
 static bool
-isWholeBufferLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
+isPromotableLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
                        const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
       op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
@@ -139,7 +138,7 @@ struct LoadOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    return isWholeBufferLoadStore(cast<vector::LoadOp>(op), slot, blockingUses);
+    return isPromotableLoadStore(cast<vector::LoadOp>(op), slot, blockingUses);
   }
 
   DeletionKind
@@ -170,7 +169,7 @@ struct StoreOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    return isWholeBufferLoadStore(cast<vector::StoreOp>(op), slot,
+    return isPromotableLoadStore(cast<vector::StoreOp>(op), slot,
                                   blockingUses);
   }
 

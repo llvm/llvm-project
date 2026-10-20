@@ -137,12 +137,12 @@ func.func @mixed_masked_transfer(%v: vector<4xf32>, %w: vector<4xf32>, %mask: ve
 
 // A dynamic subview's slot has the parent's vector type, but the load may
 // extend beyond the view. Type equality alone must not allow promotion.
-// CHECK-LABEL: func.func @dynamic_subview_load
+// CHECK-LABEL: func.func @negative_dynamic_subview_load
 // CHECK: memref.alloca
 // CHECK: vector.store
 // CHECK: memref.subview
 // CHECK: vector.load
-func.func @dynamic_subview_load(%v: vector<8xf32>, %n: index) -> vector<8xf32> {
+func.func @negative_dynamic_subview_load(%v: vector<8xf32>, %n: index) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.store %v, %a[%c0] : memref<8xf32>, vector<8xf32>
