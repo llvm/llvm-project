@@ -242,6 +242,7 @@ private:
                               const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVPermPk16Hazard(MachineInstr *MI);
+  bool fixPkF32InvalidOpSel(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);

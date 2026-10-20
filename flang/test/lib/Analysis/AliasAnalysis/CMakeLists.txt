@@ -24,7 +24,7 @@ add_flang_library(FIRTestAnalysis
   ${dialect_libs}
   MLIRFuncDialect
   MLIRLLVMDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
   )
 
 target_include_directories(FIRTestAnalysis

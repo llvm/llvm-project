@@ -39,6 +39,30 @@ add_header_library(
 )
 
 add_header_library(
+  getcpu
+  HDRS
+    getcpu.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_get_priority_min
+  HDRS
+    sched_get_priority_min.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_getaffinity
   HDRS
     sched_getaffinity.h
@@ -53,9 +77,9 @@ add_header_library(
 )
 
 add_header_library(
-  sched_setscheduler
+  sched_getparam
   HDRS
-    sched_setscheduler.h
+    sched_getparam.h
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
@@ -80,12 +104,66 @@ add_header_library(
 )
 
 add_header_library(
-  sched_getparam
+  sched_rr_get_interval
   HDRS
-    sched_getparam.h
+    sched_rr_get_interval.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setaffinity
+  HDRS
+    sched_setaffinity.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setparam
+  HDRS
+    sched_setparam.h
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.types.struct_sched_param
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setscheduler
+  HDRS
+    sched_setscheduler.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_yield
+  HDRS
+    sched_yield.h
+  DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -1088,6 +1166,18 @@ add_header_library(
 )
 
 add_header_library(
+  syncfs
+  HDRS
+    syncfs.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   dup
   HDRS
     dup.h
@@ -1667,4 +1757,16 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.common
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  execveat
+  HDRS
+    execveat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
 )

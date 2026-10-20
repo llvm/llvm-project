@@ -441,7 +441,23 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
       Args.hasArg(options::OPT_dxc_row_major))
     getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
 
+  if (Args.hasArg(options::OPT_dxc_pack_prefix_stable) &&
+      Args.hasArg(options::OPT_dxc_pack_optimized))
+    getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+        << "-pack-prefix-stable" << "-pack-optimized";
+
   for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_dxc_pack_prefix_stable) ||
+        A->getOption().matches(options::OPT_dxc_pack_optimized)) {
+      DAL->AddJoinedArg(
+          nullptr,
+          Opts.getOption(options::OPT_fdx_semantic_signature_packing_mode_EQ),
+          A->getOption().matches(options::OPT_dxc_pack_prefix_stable)
+              ? "prefix-stable"
+              : "optimized");
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
       DAL->AddFlagArg(nullptr,
                       Opts.getOption(options::OPT_hlsl_all_resources_bound));

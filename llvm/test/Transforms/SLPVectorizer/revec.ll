@@ -149,13 +149,11 @@ define <4 x i1> @test6(ptr %in1, ptr %in2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[IN1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[IN2:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt <16 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq <16 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt <32 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <32 x i1> [[TMP6]], <32 x i1> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP22:%.*]] = and <16 x i1> [[TMP11]], [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <32 x i1> [[TMP6]], <32 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp ugt <16 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = and <16 x i1> [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -534,4 +532,105 @@ entry:
   %add1 = add <4 x i32> %add0, %a1
   %add2 = add <4 x i32> %add1, %a2
   ret <4 x i32> %add2
+}
+
+define void @alt_cmp_no_reseed(<2 x i8> %x, ptr %p) {
+; CHECK-LABEL: @alt_cmp_no_reseed(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], <i8 3, i8 3, i8 2, i8 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i8> [[TMP2]], <i8 127, i8 127, i8 3, i8 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <4 x i8> [[TMP2]], <i8 127, i8 127, i8 3, i8 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
+; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = zext <2 x i1> [[TMP12]] to <2 x i8>
+; CHECK-NEXT:    store <2 x i8> [[TMP13]], ptr [[P1]], align 1
+; CHECK-NEXT:    ret void
+;
+  %a0 = and <2 x i8> %x, splat (i8 3)
+  %c0 = icmp ult <2 x i8> %a0, splat (i8 127)
+  %a1 = and <2 x i8> %x, splat (i8 2)
+  %c1 = icmp uge <2 x i8> %a1, splat (i8 3)
+  %z0 = zext <2 x i1> %c0 to <2 x i8>
+  store <2 x i8> %z0, ptr %p, align 1
+  %z1 = zext <2 x i1> %c1 to <2 x i8>
+  %p1 = getelementptr inbounds <2 x i8>, ptr %p, i64 1
+  store <2 x i8> %z1, ptr %p1, align 1
+  ret void
+}
+
+define void @trunc_as_icmp_ne_and(<2 x i8> %x, <2 x i8> %y, ptr %p) {
+; CHECK-LABEL: @trunc_as_icmp_ne_and(
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[Y:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <2 x i8> [[M]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
+; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
+; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P1]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc <2 x i8> %x to <2 x i1>
+  %m = and <2 x i8> %y, splat (i8 2)
+  %c = icmp ne <2 x i8> %m, zeroinitializer
+  %z0 = zext <2 x i1> %t to <2 x i8>
+  %z1 = zext <2 x i1> %c to <2 x i8>
+  store <2 x i8> %z0, ptr %p, align 1
+  %p1 = getelementptr inbounds <2 x i8>, ptr %p, i64 1
+  store <2 x i8> %z1, ptr %p1, align 1
+  ret void
+}
+
+define void @trunc_as_icmp_ne_and_mixed_preds(<2 x i8> %x, <2 x i8> %y, ptr %p) {
+; CHECK-LABEL: @trunc_as_icmp_ne_and_mixed_preds(
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i8> [[TMP3]], <i8 6, i8 6, i8 4, i8 4>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <4 x i8> [[TMP4]], <i8 0, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp uge <4 x i8> [[TMP4]], <i8 0, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[T2:%.*]] = trunc <2 x i8> [[Y]] to <2 x i1>
+; CHECK-NEXT:    [[Z0:%.*]] = zext <2 x i1> [[T]] to <2 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[Z1:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[Z2:%.*]] = zext <2 x i1> [[TMP7]] to <2 x i8>
+; CHECK-NEXT:    [[Z3:%.*]] = zext <2 x i1> [[T2]] to <2 x i8>
+; CHECK-NEXT:    store <2 x i8> [[Z0]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
+; CHECK-NEXT:    store <2 x i8> [[Z1]], ptr [[P1]], align 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 2
+; CHECK-NEXT:    store <2 x i8> [[Z2]], ptr [[P2]], align 1
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 3
+; CHECK-NEXT:    store <2 x i8> [[Z3]], ptr [[P3]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc <2 x i8> %x to <2 x i1>
+  %m = and <2 x i8> %y, splat (i8 6)
+  %c = icmp ugt <2 x i8> %m, zeroinitializer
+  %m2 = and <2 x i8> %x, splat (i8 4)
+  %c2 = icmp uge <2 x i8> %m2, splat (i8 1)
+  %t2 = trunc <2 x i8> %y to <2 x i1>
+  %z0 = zext <2 x i1> %t to <2 x i8>
+  %z1 = zext <2 x i1> %c to <2 x i8>
+  %z2 = zext <2 x i1> %c2 to <2 x i8>
+  %z3 = zext <2 x i1> %t2 to <2 x i8>
+  store <2 x i8> %z0, ptr %p, align 1
+  %p1 = getelementptr inbounds <2 x i8>, ptr %p, i64 1
+  store <2 x i8> %z1, ptr %p1, align 1
+  %p2 = getelementptr inbounds <2 x i8>, ptr %p, i64 2
+  store <2 x i8> %z2, ptr %p2, align 1
+  %p3 = getelementptr inbounds <2 x i8>, ptr %p, i64 3
+  store <2 x i8> %z3, ptr %p3, align 1
+  ret void
 }

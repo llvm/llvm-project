@@ -627,9 +627,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI.doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    // On Windows targets, emit minimal CodeView compiler info even when debug
-    // info is disabled.
-    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+    // On Windows and UEFI targets, emit minimal CodeView compiler info even
+    // when debug info is disabled. UEFI follows the MSVC toolchain
+    // conventions, so it is treated the same way as Windows here.
+    if ((Target.isOSWindows() || Target.isUEFI()) &&
         M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
@@ -2845,8 +2846,9 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
     return;
 
   SmallString<128> Filename = *RS.getFilename();
-  sys::fs::make_absolute(Filename);
   assert(!Filename.empty() && "The filename can't be empty.");
+  assert((Filename == "-" || sys::path::is_absolute(Filename)) &&
+         "The remarks filename must be absolute.");
 
   std::string Buf;
   raw_string_ostream OS(Buf);

@@ -332,6 +332,14 @@ void MappedFileRegionArena::destroyImpl() {
     }
   }
 
+#ifdef _WIN32
+  // Always unmap to
+  // - avoid address space leak;
+  // - avoid data loss for sparse files.
+  if (Region)
+    Region.unmap();
+#endif
+
   auto Close = [](std::optional<int> &FD) {
     if (FD) {
       sys::fs::file_t File = sys::fs::convertFDToNativeFile(*FD);
