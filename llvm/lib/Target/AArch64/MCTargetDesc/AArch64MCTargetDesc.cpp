@@ -14,6 +14,7 @@
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "AArch64MCLFIRewriter.h"
+#include "AArch64MCOptions.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,6 +43,9 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "AArch64GenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "AArch64MCOptions.inc"
 
 #define GET_REGINFO_MC_DESC
 #include "AArch64GenRegisterInfo.inc"
@@ -514,6 +519,7 @@ createAArch64MCLFIRewriter(MCContext &Ctx,
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64TargetMC() {
+  static opt::RegisterLibraryOptions<AArch64MCOptions> O;
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
                     &getTheAArch64_32Target(), &getTheARM64Target(),
                     &getTheARM64_32Target()}) {

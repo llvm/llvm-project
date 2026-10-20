@@ -15,12 +15,18 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
+class BasicBlock;
+class DataLayout;
+class DominatorTree;
 class FastMathFlags;
 class IRBuilderBase;
 class Instruction;
+class LoopInfo;
 class PHINode;
 class Type;
 class Value;
@@ -29,11 +35,37 @@ enum class RecurKind;
 
 namespace llvm::slpvectorizer {
 
+struct NarrowedLeafInfo;
+
+/// The result of matching a boolean bitmask reduction over narrowed leaves.
+enum class BoolBitmask {
+  None,     // not a boolean bitmask reduction
+  NoMask,   // bitmask; the absorbed masks are redundant
+  NeedMask, // bitmask; the absorbed masks must be applied before the zero test
+};
+
 /// \returns the wide leaf type if the logical and/or reduction \p RdxKind
 /// with the i1 root type \p RootTy and the leaf type \p LeafTy is a
 /// booleanized reduction (performed in the wide leaf type, bit 0 of the
 /// result is the final value), nullptr otherwise.
 Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy);
+
+/// \returns the BoolBitmask match if the or-reduction of the narrowed leaves
+/// packs each boolean (0 or 1 after masking) leaf into its own bit position
+/// 0..N-1, i.e. it is a bitcast of the per-lane zero tests to an iN integer;
+/// BoolBitmask::None otherwise.
+BoolBitmask isBoolBitmaskRdx(
+    RecurKind RdxKind,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    const DataLayout &DL);
+
+/// Matches \p V as the zero-extended fields, placed one after another from the
+/// lowest bit and filling \p V completely. The instructions are looked through
+/// up to \p MaxDepth. Appends the fields in the order of their positions to
+/// \p Fields and the instructions of the pack to \p Chain.
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain);
 
 /// \returns the first operand of \p I that does not match \p Phi. If
 /// the operand is not an instruction, returns nullptr.
@@ -52,6 +84,12 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   RecurKind RdxKind, Value *Vec,
                                   const Value *Root, FastMathFlags FMF,
                                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
 
 } // namespace llvm::slpvectorizer
 

@@ -48,8 +48,7 @@ The core tier is composed of:
     compiler, debugger, linker, libraries, etc, including infrastructure code
     (table-gen, lit, file-check, unit-tests, etc).
   - Build infrastructure that creates releases and buildbots (CMake, scripts).
-  - [Phabricator](https://github.com/llvm/phabricator) and
-    [buildbot](https://github.com/llvm/llvm-zorg) infrastructure.
+  - [Buildbot](https://github.com/llvm/llvm-zorg) infrastructure.
   - The [test-suite](https://github.com/llvm/llvm-test-suite).
 
 ### Requirements
@@ -75,7 +74,7 @@ It is the responsibility of each sub-community to care about their own parts
 and the intersection of that with the core tier and other peripheral parts.
 
 There are three main groups of code that fit in this category:
-: - Code that is making its way into LLVM, via the [experimental](https://llvm.org/docs/DeveloperPolicy.html#introducing-new-components-into-llvm)
+: - Code that is making its way into LLVM, via the [experimental](DeveloperPolicy.md#introducing-new-components-into-llvm)
     roadmap or similar efforts.
   - Code that is making its way out of LLVM, via deprecation, replacement or
     bit-rot, and will be removed if the sub-community that cares about it

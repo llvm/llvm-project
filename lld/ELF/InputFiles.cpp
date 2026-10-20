@@ -1388,11 +1388,13 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
                << ") has invalid binding: " << (int)binding;
 
     // st_value of STT_TLS represents the assigned offset, not the actual
-    // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
-    // only be referenced by special TLS relocations. It is usually an error if
-    // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
-    if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
-        eSym.getType() != STT_NOTYPE)
+    // address which is used by STT_FUNC and STT_OBJECT. Report a TLS/non-TLS
+    // mismatch between the resolved symbol and this file's symbol. Exempt
+    // STT_NOTYPE, which may come from hand-written assembly or bitcode module
+    // asm (STT_NOTYPE before LTO).
+    if (LLVM_UNLIKELY(sym.isTls() != (eSym.getType() == STT_TLS)) &&
+        eSym.getType() != STT_NOTYPE &&
+        !(sym.type == STT_NOTYPE && isa_and_nonnull<BitcodeFile>(sym.file)))
       Err(ctx) << "TLS attribute mismatch: " << &sym << "\n>>> in " << sym.file
                << "\n>>> in " << this;
 
@@ -1436,73 +1438,6 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       continue;
     std::lock_guard<std::mutex> lock(mu);
     ctx.duplicates.push_back({&sym, this, sec, eSym.st_value});
-  }
-}
-
-// The handling of tentative definitions (COMMON symbols) in archives is murky.
-// A tentative definition will be promoted to a global definition if there are
-// no non-tentative definitions to dominate it. When we hold a tentative
-// definition to a symbol and are inspecting archive members for inclusion
-// there are 2 ways we can proceed:
-//
-// 1) Consider the tentative definition a 'real' definition (ie promotion from
-//    tentative to real definition has already happened) and not inspect
-//    archive members for Global/Weak definitions to replace the tentative
-//    definition. An archive member would only be included if it satisfies some
-//    other undefined symbol. This is the behavior Gold uses.
-//
-// 2) Consider the tentative definition as still undefined (ie the promotion to
-//    a real definition happens only after all symbol resolution is done).
-//    The linker searches archive members for STB_GLOBAL definitions to
-//    replace the tentative definition with. This is the behavior used by
-//    GNU ld.
-//
-//  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initialization in old
-//  (pre F90) FORTRAN code that is packaged into an archive.
-//
-//  The following functions search archive members for definitions to replace
-//  tentative definitions (implementing behavior 2).
-static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
-                                  StringRef archiveName) {
-  IRSymtabFile symtabFile = check(readIRSymtab(mb));
-  for (const irsymtab::Reader::SymbolRef &sym :
-       symtabFile.TheReader.symbols()) {
-    if (sym.isGlobal() && sym.getName() == symName)
-      return !sym.isUndefined() && !sym.isWeak() && !sym.isCommon();
-  }
-  return false;
-}
-
-template <class ELFT>
-static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
-                           StringRef symName, StringRef archiveName) {
-  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ctx, ekind, mb, archiveName);
-  obj->init();
-  StringRef stringtable = obj->getStringTable();
-
-  for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
-    Expected<StringRef> name = sym.getName(stringtable);
-    if (name && name.get() == symName)
-      return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
-             !sym.isCommon();
-  }
-  return false;
-}
-
-static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
-                           StringRef archiveName) {
-  switch (getELFKind(ctx, mb, archiveName)) {
-  case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
-  case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(ctx, ELF32BEKind, mb, symName, archiveName);
-  case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(ctx, ELF64LEKind, mb, symName, archiveName);
-  case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(ctx, ELF64BEKind, mb, symName, archiveName);
-  default:
-    llvm_unreachable("getELFKind");
   }
 }
 
@@ -2103,13 +2038,6 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (!lazy)
       break;
   }
-}
-
-bool InputFile::shouldExtractForCommon(StringRef name) const {
-  if (isa<BitcodeFile>(this))
-    return isBitcodeNonCommonDef(mb, name, archiveName);
-
-  return isNonCommonDef(ctx, mb, name, archiveName);
 }
 
 std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {

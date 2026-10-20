@@ -14,17 +14,20 @@
 
 #include <optional>
 
+namespace orc_rt::test {
+
 template <typename... SPSArgTs> struct MakeAllocAction {
   template <typename... ArgTs>
-  static std::optional<orc_rt::AllocAction> from(orc_rt::AllocActionFn Fn,
-                                                 ArgTs &&...Args) {
-    using SPS = orc_rt::SPSArgList<SPSArgTs...>;
-    auto B = orc_rt::WrapperFunctionBuffer::allocate(SPS::size(Args...));
-    orc_rt::SPSOutputBuffer OB(B.data(), B.size());
+  static std::optional<AllocAction> from(AllocActionFn Fn, ArgTs &&...Args) {
+    using SPS = SPSArgList<SPSArgTs...>;
+    auto B = WrapperFunctionBuffer::allocate(SPS::size(Args...));
+    SPSOutputBuffer OB(B.data(), B.size());
     if (!SPS::serialize(OB, Args...))
       return std::nullopt;
-    return orc_rt::AllocAction(Fn, std::move(B));
+    return AllocAction(Fn, std::move(B));
   }
 };
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_ALLOCACTIONTESTUTILS_H

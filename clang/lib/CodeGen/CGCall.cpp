@@ -34,6 +34,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
@@ -148,13 +149,6 @@ CanQualType CodeGenTypes::DeriveThisType(const CXXRecordDecl *RD,
     RecTy = CanQualType::CreateUnsafe(Context.getAddrSpaceQualType(
         RecTy, MD->getMethodQualifiers().getAddressSpace()));
   return Context.getPointerType(RecTy);
-}
-
-/// Returns the canonical formal type of the given C++ method.
-static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
-  return MD->getType()
-      ->getCanonicalTypeUnqualified()
-      .getAs<FunctionProtoType>();
 }
 
 /// Returns the "extra-canonicalized" return type, which discards
@@ -394,7 +388,7 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   assert(!isa<CXXConstructorDecl>(MD) && "wrong method for constructors!");
   assert(!isa<CXXDestructorDecl>(MD) && "wrong method for destructors!");
 
-  CanQualType FT = GetFormalType(MD).getAs<Type>();
+  CanQualType FT = CodeGenUtils::getFormalType(MD).getAs<Type>();
   setCUDAKernelCallingConvention(FT, CGM, MD);
   auto prototype = FT.getAs<FunctionProtoType>();
 
@@ -442,7 +436,7 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
       PassParams = inheritingCtorHasParams(Inherited, GD.getCtorType());
   }
 
-  CanQual<FunctionProtoType> FTP = GetFormalType(MD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(MD);
 
   // Add the formal parameters.
   if (PassParams)
@@ -518,7 +512,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
   // +1 for implicit this, which should always be args[0].
   unsigned TotalPrefixArgs = 1 + ExtraPrefixArgs;
 
-  CanQual<FunctionProtoType> FPT = GetFormalType(D);
+  CanQual<FunctionProtoType> FPT = CodeGenUtils::getFormalType(D);
   RequiredArgs Required = PassProtoArgs
                               ? RequiredArgs::forPrototypePlus(
                                     FPT, TotalPrefixArgs + ExtraSuffixArgs)
@@ -661,7 +655,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
 const CGFunctionInfo &
 CodeGenTypes::arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD) {
   assert(MD->isVirtual() && "only methods have thunks");
-  CanQual<FunctionProtoType> FTP = GetFormalType(MD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(MD);
   CanQualType ArgTys[] = {DeriveThisType(MD->getParent(), MD)};
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::None, ArgTys,
                                  FTP->getExtInfo(), {}, RequiredArgs(1), MD);
@@ -672,7 +666,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
                                    CXXCtorType CT) {
   assert(CT == Ctor_CopyingClosure || CT == Ctor_DefaultClosure);
 
-  CanQual<FunctionProtoType> FTP = GetFormalType(CD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(CD);
   SmallVector<CanQualType, 2> ArgTys;
   const CXXRecordDecl *RD = CD->getParent();
   ArgTys.push_back(DeriveThisType(RD, CD));
@@ -997,6 +991,16 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
                      << ")";
       });
       break;
+    case ABIArgInfo::CoerceAndExpand:
+      Check(Target.getUnpaddedCoerceAndExpandType() ==
+                Res.getUnpaddedCoerceAndExpandType(),
+            [&]() {
+              llvm::dbgs() << "UnpaddedCoerceAndExpandType mismatch (expected: "
+                           << *Target.getUnpaddedCoerceAndExpandType()
+                           << ", given: "
+                           << *Res.getUnpaddedCoerceAndExpandType() << ")";
+            });
+      break;
     default:
       break;
     }
@@ -1060,8 +1064,23 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                    AbiInfo.getIndirectByVal(),
                                    AbiInfo.getIndirectRealign());
   }
+  case llvm::abi::ArgInfo::IndirectAliased: {
+    // Aliased indirect carries an address space but never byval.
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirectAliased(Alignment,
+                                          AbiInfo.getIndirectAddrSpace(),
+                                          AbiInfo.getIndirectRealign());
+  }
   case llvm::abi::ArgInfo::Ignore:
     return ABIArgInfo::getIgnore();
+  case llvm::abi::ArgInfo::CoerceAndExpand: {
+    llvm::StructType *CoercedType = llvm::cast<llvm::StructType>(
+        AbiReverseMapper->convertType(AbiInfo.getCoerceToType()));
+    llvm::Type *UnpaddedType =
+        AbiReverseMapper->convertType(AbiInfo.getUnpaddedCoerceAndExpandType());
+    return ABIArgInfo::getCoerceAndExpand(CoercedType, UnpaddedType);
+  }
   }
   llvm_unreachable("Unexpected llvm::abi::ArgInfo kind");
 }
@@ -2452,8 +2471,10 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(Var, Value);
   }
 
-  TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  if (!AttrOnCallSite) {
+    TargetInfo::BranchProtectionInfo BPI(LangOpts);
+    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  }
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
@@ -2699,16 +2720,6 @@ static bool canApplyNoFPClass(const ABIArgInfo &AI, QualType ParamType,
   }
 
   return false;
-}
-
-/// Return the nofpclass mask that can be applied to floating-point parameters.
-static llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
-  llvm::FPClassTest Mask = llvm::fcNone;
-  if (LangOpts.NoHonorInfs)
-    Mask |= llvm::fcInf;
-  if (LangOpts.NoHonorNaNs)
-    Mask |= llvm::fcNan;
-  return Mask;
 }
 
 void CodeGenModule::AdjustMemoryAttribute(StringRef Name,
@@ -3035,7 +3046,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute(llvm::Attribute::InReg);
 
     if (canApplyNoFPClass(RetAI, RetTy, true))
-      RetAttrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
+      RetAttrs.addNoFPClassAttr(
+          CodeGenUtils::getNoFPClassTestMask(getLangOpts()));
 
     break;
   case ABIArgInfo::Ignore:
@@ -3197,7 +3209,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
 
       if (canApplyNoFPClass(AI, ParamType, false))
-        Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
+        Attrs.addNoFPClassAttr(
+            CodeGenUtils::getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
       assert(!ParamType->isIncompleteType() &&
@@ -5132,10 +5145,8 @@ void CodeGenFunction::EmitCallArgs(
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight =
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
-          ? Order == EvaluationOrder::ForceLeftToRight
-          : Order != EvaluationOrder::ForceRightToLeft;
+  bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      Order, CGM.getTarget().getCXXABI());
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
@@ -5431,16 +5442,26 @@ CodeGenFunction::getBundlesForFunclet(llvm::Value *Callee) {
   return BundleList;
 }
 
+static bool isConvergentIntrinsic(const llvm::Function *F) {
+  assert(F->isIntrinsic() && "expected an intrinsic declaration");
+  return F->isConvergent();
+}
+
 /// Emits a simple call (never an invoke) to the given runtime function.
 llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  ArrayRef<llvm::Value *> args,
-                                                 const llvm::Twine &name) {
-  llvm::CallInst *call = Builder.CreateCall(
-      callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+                                                 const llvm::Twine &name,
+                                                 bool IsConvergent) {
+  SmallVector<llvm::OperandBundleDef> BundleList =
+      getBundlesForFunclet(callee.getCallee());
+  if (IsConvergent)
+    addConvergenceControlBundle(BundleList);
 
-  if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(call));
+  llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList, name);
+  call->setCallingConv(getRuntimeCC());
+  assert((IsConvergent == call->isConvergent() ||
+          (!IsConvergent && !CGM.shouldEmitConvergenceTokens())) &&
+         "runtime call convergence doesn't match its declaration");
   return call;
 }
 
@@ -5461,11 +5482,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5478,11 +5498,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
     ArgTys.push_back(Arg->getType());
   llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
       &CGM.getModule(), ID, RetTy, ArgTys);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.
@@ -6298,11 +6317,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Remove call-site convergent attribute if requested.
-  if (InNoConvergentAttributedStmt)
-    Attrs =
-        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
-
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
@@ -6328,7 +6342,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // SEH cares about asynchronous exceptions, so everything can "throw."
     CannotThrow = false;
   } else if (isCleanupPadScope() &&
-             EHPersonality::get(*this).isMSVCXXPersonality()) {
+             getEHPersonality(*this).isMSVCXXPersonality()) {
     // The MSVC++ personality will implicitly terminate the program if an
     // exception is thrown during a cleanup outside of a try/catch.
     // We don't need to model anything in IR to get this behavior.
@@ -6374,6 +6388,26 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+
+  if (Attrs.hasFnAttr(llvm::Attribute::Convergent)) {
+    addConvergenceControlBundle(BundleList);
+
+    // Remove call-site convergent attribute if requested, unless the call must
+    // stay convergent to match its convergence token and the callee doesn't
+    // already make it convergent.
+    //
+    // FIXME: This means [[clang::noconvergent]] can't make an indirect call
+    // non-convergent when using convergence tokens. A call without a token can
+    // later be made direct to a convergent function, which mixes controlled
+    // and uncontrolled convergence and fails the verifier.
+    auto *CalleeFn = dyn_cast<llvm::Function>(CalleePtr);
+    if (InNoConvergentAttributedStmt &&
+        (!CGM.shouldEmitConvergenceTokens() ||
+         (CalleeFn && CalleeFn->isConvergent()))) {
+      Attrs = Attrs.removeFnAttribute(getLLVMContext(),
+                                      llvm::Attribute::Convergent);
+    }
+  }
 
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
@@ -6483,9 +6517,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   if (!CI->getType()->isVoidTy())
     CI->setName("call");
-
-  if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-    CI = addConvergenceControlToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =

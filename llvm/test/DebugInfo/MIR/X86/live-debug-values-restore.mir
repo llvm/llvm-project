@@ -1,8 +1,8 @@
-# RUN: llc -run-pass livedebugvalues -mtriple=x86_64 -o - %s \
+# RUN: llc -run-pass live-debug-values -mtriple=x86_64 -o - %s \
 # RUN:  -experimental-debug-variable-locations=true | FileCheck %s
 
 # Generated from the following source with:
-# clang -g -mllvm -stop-before=livedebugvalues -S -O2 test.c -o test.mir
+# clang -g -mllvm -stop-before=live-debug-values -S -O2 test.c -o test.mir
 # Then more functions added to test for extra behaviours with complex
 # expressions:
 #   'g': test for a crash from PR42773

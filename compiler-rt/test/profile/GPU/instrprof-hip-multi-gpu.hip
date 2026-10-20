@@ -1,13 +1,10 @@
 // Test that HIP PGO works on multi-GPU systems. The kernel runs on the default
-// device, so the host-shadow drain (guarded by upstream's launch tracking)
-// collects only that device and the supplemental HSA agent-walk then finds the
-// same code object and dedups it out. The point of the test is that neither
-// pass crashes or hangs reading a non-resident device on a host with several
-// GPUs (the failure mode that the launch tracking + HSA residency walk fix).
+// device. On Linux, the HSA agent walk drains the resident code object
+// without accessing images on other devices. The program must exit normally
+// on a host with several GPUs.
 //
 // REQUIRES: hip, amdgpu
-// The "walk complete" / dedup notes are Linux-only HSA-drain strings; the
-// Windows host-shadow drain collects only the current device.
+// The HSA walk notes are Linux-only; Windows uses the host-shadow drain.
 // UNSUPPORTED: windows
 // RUN: %clang -x hip -fprofile-instr-generate -fcoverage-mapping \
 // RUN:   --offload-arch=%amdgpu_arch %s -o %t -L%hip_lib_path -lamdhip64
@@ -15,11 +12,9 @@
 // RUN:   LD_LIBRARY_PATH=%hip_lib_path:$LD_LIBRARY_PATH \
 // RUN:   LLVM_PROFILE_VERBOSE=1 %run %t 2>&1 | FileCheck %s
 //
-// The host-shadow pass drains the launched device, the HSA walk finds that same
-// code object and dedups it (drained=0), and the program does not crash.
+// The HSA walk drains the loaded code object, and the program does not crash.
 // CHECK: Copied device sections:
-// CHECK: device bounds already drained, skipping
-// CHECK: walk complete: agents={{[0-9]+}} pairs={{[0-9]+}} found={{[1-9][0-9]*}} drained={{[0-9]+}}
+// CHECK: HSA walk complete: agents={{[0-9]+}} pairs={{[0-9]+}} found={{[1-9][0-9]*}} drained={{[1-9][0-9]*}}
 // CHECK: PASS
 
 #include <hip/hip_runtime.h>

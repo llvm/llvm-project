@@ -966,7 +966,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        // The array is not required to be NUL terminated, so ask for the
+        // The array is not required to be null-terminated, so ask for the
         // bytes rather than for a C string. Its data can also be shorter than
         // the array type, as for a DW_AT_const_value string, so clamp the
         // length to what is really there.
@@ -2042,18 +2042,17 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
 // "looks like" an array, in which case it has a leading [ symbol). while the [
 // is meaningful and should be shown to the user, . and -> are just parser
 // design, but by no means added information for the user.. strip them off
-static const char *SkipLeadingExpressionPathSeparators(const char *expression) {
-  if (!expression || !expression[0])
-    return expression;
-  if (expression[0] == '.')
-    return expression + 1;
-  if (expression[0] == '-' && expression[1] == '>')
-    return expression + 2;
+static llvm::StringRef
+SkipLeadingExpressionPathSeparators(llvm::StringRef expression) {
+  if (expression.starts_with('.'))
+    return expression.drop_front();
+  if (expression.starts_with("->"))
+    return expression.drop_front(2);
   return expression;
 }
 
 ValueObjectSP
-ValueObject::GetSyntheticExpressionPathChild(const char *expression,
+ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
                                              bool can_create) {
   ValueObjectSP synthetic_child_sp;
   ConstString name_const_string(expression);

@@ -31,7 +31,7 @@
 ; CHECK: %[[#SourceComp:]] = OpBitcast %[[#Int8PtrConst]] %[[#VarComp]]
 ; CHECK: OpCopyMemorySized %[[#]] %[[#SourceComp]] %[[#Const4]] Aligned 4
 
-; CHECK-SPIRV: %[[#]] = OpFunctionCall %[[#]] %[[#Memset_p0i32]] %[[#]] %[[#]] %[[#]] %[[#False]]
+; CHECK: %[[#]] = OpFunctionCall %[[#]] %[[#Memset_p0i32]] %[[#]] %[[#]] %[[#]] %[[#False]]
 
 ; CHECK: %[[#Memset_p0i32]] = OpFunction %[[#]]
 ; CHECK: %[[#Dest:]] = OpFunctionParameter %[[#]]

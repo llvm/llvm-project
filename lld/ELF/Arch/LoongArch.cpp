@@ -1113,7 +1113,7 @@ static bool isPairRelaxable(ArrayRef<Relocation> relocs, size_t i) {
 //   pcaddi $a0, %got_pc_hi20(sym_got)
 static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
                             uint64_t loc, Relocation &rHi20, Relocation &rLo12,
-                            uint32_t &remove) {
+                            uint32_t &remove, uint32_t prevRemove) {
   // check if the relocations are relaxable sequences.
   if (!((rHi20.type == R_LARCH_PCALA_HI20 &&
          rLo12.type == R_LARCH_PCALA_LO12) ||
@@ -1179,6 +1179,11 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
     return;
 
+  // When the caller specifies the old value of `remove`, disallow its
+  // increment.
+  if (prevRemove < 4)
+    return;
+
   sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
   if (rHi20.type == R_LARCH_TLS_GD_PC_HI20)
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_GD_PCREL20_S2;
@@ -1203,7 +1208,8 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
 // To:
 //   b/bl foo
 static void relaxMediumCall(Ctx &ctx, const InputSection &sec, size_t i,
-                            uint64_t loc, Relocation &r, uint32_t &remove) {
+                            uint64_t loc, Relocation &r, uint32_t &remove,
+                            uint32_t prevRemove) {
   const uint64_t dest =
       (r.expr == R_PLT_PC ? r.sym->getPltVA(ctx) : r.sym->getVA(ctx)) +
       r.addend;
@@ -1211,6 +1217,11 @@ static void relaxMediumCall(Ctx &ctx, const InputSection &sec, size_t i,
   const int64_t displace = dest - loc;
   // Check if the displace aligns 4 bytes or exceeds the range of b[l].
   if ((displace & 0x3) != 0 || !isInt<28>(displace))
+    return;
+
+  // When the caller specifies the old value of `remove`, disallow its
+  // increment.
+  if (prevRemove < 4)
     return;
 
   const uint32_t nextInsn = read32le(sec.content().data() + r.offset + 4);
@@ -1254,7 +1265,7 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static bool relax(Ctx &ctx, InputSection &sec) {
+static bool relax(Ctx &ctx, int pass, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -1267,6 +1278,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
+    // Prevent oscillation between states by disallowing the increment of
+    // `remove` after a few passes. The previous `remove` value is
+    // `cur-delta`.
+    uint32_t prevRemove = pass < 4 ? UINT32_MAX : cur - delta;
     switch (r.type) {
     case R_LARCH_ALIGN: {
       const uint64_t addend =
@@ -1298,19 +1313,19 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_LARCH_TLS_LD_PC_HI20:
       // The overflow check for i+2 will be carried out in isPairRelaxable.
       if (isPairRelaxable(relocs, i))
-        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove, prevRemove);
       break;
     case R_LARCH_TLS_DESC_PC_HI20:
       if (r.expr == RE_LOONGARCH_GOT_PAGE_PC || r.expr == R_TPREL) {
         if (relaxable(relocs, i))
           remove = 4;
       } else if (isPairRelaxable(relocs, i))
-        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove, prevRemove);
       break;
     case R_LARCH_CALL30:
     case R_LARCH_CALL36:
       if (relaxable(relocs, i))
-        relaxMediumCall(ctx, sec, i, loc, r, remove);
+        relaxMediumCall(ctx, sec, i, loc, r, remove, prevRemove);
       break;
     case R_LARCH_TLS_LE_HI20_R:
     case R_LARCH_TLS_LE_ADD_R:
@@ -1698,7 +1713,7 @@ bool LoongArch::relaxOnce(int pass) const {
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
       if (sec->relaxAux)
-        changed |= relax(ctx, *sec);
+        changed |= relax(ctx, pass, *sec);
   }
   return changed;
 }

@@ -19,16 +19,16 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %forbody
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
-; CHECK-NEXT:    leal (,%eax,8), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    addl %ecx, %edx
-; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    leal (,%eax,8), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; CHECK-NEXT:    psubb %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    movq %xmm2, (%edx,%eax,8)
+; CHECK-NEXT:    movq %xmm2, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %afterfor

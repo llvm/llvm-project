@@ -1195,7 +1195,9 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF)) {
+  bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
+                           shouldSkipOptimizationForOptBisect(MF.getFunction());
+  if (SC.run(MF, OnlyRemoveMarkers)) {
     auto PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserve<MachineRegisterClassAnalysis>();
     return PA;

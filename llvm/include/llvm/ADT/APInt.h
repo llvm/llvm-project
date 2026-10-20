@@ -1572,7 +1572,7 @@ public:
   std::optional<uint64_t> tryZExtValue() const {
     return (getActiveBits() <= 64) ? std::optional<uint64_t>(getZExtValue())
                                    : std::nullopt;
-  };
+  }
 
   /// Get sign extended value
   ///
@@ -1594,7 +1594,7 @@ public:
   std::optional<int64_t> trySExtValue() const {
     return (getSignificantBits() <= 64) ? std::optional<int64_t>(getSExtValue())
                                         : std::nullopt;
-  };
+  }
 
   /// Get bits required for string value.
   ///
@@ -2311,6 +2311,14 @@ LLVM_ABI APInt avgCeilS(const APInt &C1, const APInt &C2);
 
 /// Compute the ceil of the unsigned average of C1 and C2
 LLVM_ABI APInt avgCeilU(const APInt &C1, const APInt &C2);
+
+/// Compute floor((C1 - C2) / 2) where C1 and C2 are treated as signed, so the
+/// subtraction is performed without wrapping.
+LLVM_ABI APInt avgSubFloorS(const APInt &C1, const APInt &C2);
+
+/// Compute floor((C1 - C2) / 2) where C1 and C2 are treated as unsigned, so the
+/// subtraction is performed without wrapping.
+LLVM_ABI APInt avgSubFloorU(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on sign-extended operands.
 /// Returns the high N bits of the multiplication result.

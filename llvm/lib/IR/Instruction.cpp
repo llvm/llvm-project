@@ -821,6 +821,7 @@ void Instruction::andIRFlags(const Value *V) {
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
+  // clang-format off
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
@@ -902,9 +903,12 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
   case Freeze:         return "freeze";
+  case BitInsert:      return "bitinsert";
+  case BitExtract:     return "bitextract";
 
   default: return "<Invalid operator> ";
   }
+  // clang-format on
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
@@ -996,13 +1000,21 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }
 
 bool Instruction::isIdenticalTo(const Instruction *I) const {
-  return isIdenticalToWhenDefined(I) &&
-         SubclassOptionalData == I->SubclassOptionalData;
+  if (!isIdenticalToWhenDefined(I) ||
+      SubclassOptionalData != I->SubclassOptionalData)
+    return false;
+
+  if (isa<FPMathOperator>(this))
+    return getFastMathFlags() == I->getFastMathFlags();
+
+  return true;
 }
 
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
@@ -1244,9 +1256,6 @@ bool Instruction::isVolatile() const {
 }
 
 bool Instruction::maySynchronize() const {
-  // FIXME: This currently treats atomics with monotonic ordering as
-  // synchronizing. This is unnecessarily conservative and does not match
-  // our LangRef definition of the property.
   switch (getOpcode()) {
   default:
     assert(!isAtomic() && "Unhandled atomic instruction");
@@ -1257,12 +1266,16 @@ bool Instruction::maySynchronize() const {
     return FI->getSyncScopeID() != SyncScope::SingleThread;
   }
   case Instruction::AtomicRMW:
-  case Instruction::AtomicCmpXchg:
-    return true;
+    return isStrongerThanMonotonic(cast<AtomicRMWInst>(this)->getOrdering());
+  case Instruction::AtomicCmpXchg: {
+    auto *ACXI = cast<AtomicCmpXchgInst>(this);
+    return isStrongerThanMonotonic(ACXI->getSuccessOrdering()) ||
+           isStrongerThanMonotonic(ACXI->getFailureOrdering());
+  }
   case Instruction::Store:
-    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<StoreInst>(this)->getOrdering());
   case Instruction::Load:
-    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<LoadInst>(this)->getOrdering());
   case Instruction::Call:
   case Instruction::Invoke:
   case Instruction::CallBr:
@@ -1380,19 +1393,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isLaunderOrStripInvariantGroup() const {
-  auto *II = dyn_cast<IntrinsicInst>(this);
-  if (!II)
-    return false;
-  Intrinsic::ID ID = II->getIntrinsicID();
-  return ID == Intrinsic::launder_invariant_group ||
-         ID == Intrinsic::strip_invariant_group;
-}
-
-bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {

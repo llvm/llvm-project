@@ -24,10 +24,10 @@ end subroutine
 ! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPdelayed_privatization_private_firstprivate() {
-! CHECK:  %[[VAR1_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var1"
+! CHECK:  %[[VAR1_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "var1"
 ! CHECK:  %[[VAR1_DECL:.*]]:2 = hlfir.declare %[[VAR1_ALLOC]]
 
-! CHECK:  %[[VAR2_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var2"
+! CHECK:  %[[VAR2_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "var2"
 ! CHECK:  %[[VAR2_DECL:.*]]:2 = hlfir.declare %[[VAR2_ALLOC]]
 
 ! CHECK:  omp.parallel private(
