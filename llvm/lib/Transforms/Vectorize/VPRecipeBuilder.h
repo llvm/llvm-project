@@ -38,6 +38,11 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
+  /// Optimize the special case where the operand of \p VPI is a constant
+  /// integer induction variable.
+  VPWidenIntOrFpInductionRecipe *
+  tryToOptimizeInductionTruncate(VPInstruction *VPI, VFRange &Range);
+
   /// Check if \p VPI has an opcode that can be widened and return a
   /// widened recipe if it can. The function should only be called if the
   /// cost-model indicates that widening should be performed.
