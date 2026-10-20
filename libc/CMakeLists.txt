@@ -579,6 +579,8 @@ endforeach()
 
 if(MSVC AND NOT MSYS)
   set(libc_opt_high_flag "/O2")
+elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+  set(libc_opt_high_flag "-Os")
 else()
   set(libc_opt_high_flag "-O3")
 endif()
