@@ -1,24 +1,24 @@
 ; RUN: split-file %s %t
 ; RUN: llc -filetype=obj %t/v16.ll -o %t/16.dxbc
-; RUN: obj2yaml %t/16.dxbc | FileCheck %s --check-prefixes=CHECK,UNPADDED
-; RUN: llc -filetype=obj %t/v17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=CHECK,PADDED
+; RUN: obj2yaml %t/16.dxbc | FileCheck %s --check-prefixes=CHECK,CHECK-UNPADDED
+; RUN: llc -filetype=obj %t/v17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=CHECK,CHECK-PADDED
 
 ; Round trip the unpadded container through yaml2obj to check that the
 ; explicit (unpadded) part sizes are preserved and that the following,
 ; unaligned, PSV0 part is still readable.
-; RUN: obj2yaml %t/16.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefixes=CHECK,UNPADDED
+; RUN: obj2yaml %t/16.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefixes=CHECK,CHECK-UNPADDED
 
 ; Each case is a complete module that differs only in its validator version.
 ; Validator 1.7 pads signature parts to a four-byte boundary; older versions
 ; do not. The differing name lengths leave PSV0 at an unaligned offset when
 ; unpadded.
 ; CHECK: Name: ISG1
-; UNPADDED-NEXT: Size: 42
-; PADDED-NEXT: Size: 44
+; CHECK-UNPADDED-NEXT: Size: 42
+; CHECK-PADDED-NEXT: Size: 44
 ; CHECK: Name: A
 ; CHECK: Name: OSG1
-; UNPADDED-NEXT: Size: 43
-; PADDED-NEXT: Size: 44
+; CHECK-UNPADDED-NEXT: Size: 43
+; CHECK-PADDED-NEXT: Size: 44
 ; CHECK: Name: BB
 ; CHECK: Name: PSV0
 ; CHECK: SigInputElements:
