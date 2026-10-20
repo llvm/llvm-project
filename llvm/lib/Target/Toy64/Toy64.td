@@ -20,11 +20,21 @@ include "Toy64RegisterInfo.td"
 
 include "Toy64InstrInfo.td"
 
-// Map the target-independent pseudo-instruction pointer register class
-// (ptr_rc) to Toy64's 64-bit general-purpose register class.
-//
-// Toy64 has 64-bit pointers, and all pointers are held in GPRs.
+// Map generic LLVM pointer pseudo operands onto Toy64's GPR class.
 defm : RemapAllTargetPseudoPointerOperands<GPR>;
+
+//===----------------------------------------------------------------------===//
+// Processor definitions
+//===----------------------------------------------------------------------===//
+
+// Toy64 currently has one generic processor.
+//
+// NoSchedModel means that we have not yet described pipeline resources,
+// latencies, issue width, etc.
+//
+// The empty feature list means the generic processor has no optional
+// subtarget features yet.
+def : ProcessorModel<"generic", NoSchedModel, []>;
 
 //===----------------------------------------------------------------------===//
 // Target

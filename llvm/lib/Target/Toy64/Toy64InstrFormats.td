@@ -89,3 +89,21 @@ class Toy64IType<bits<3> funct3, bits<7> opcode, dag outs, dag ins,
   let Inst{11-7}  = rd;
   let Inst{6-0}   = opcode;
 }
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo instructions
+//===----------------------------------------------------------------------===//
+
+class Toy64Pseudo<
+    dag outs,
+    dag ins,
+    string asmstr = "",
+    list<dag> pattern = []
+> : Toy64Inst<outs, ins, asmstr, pattern> {
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+
+  // Pseudos do not have a real machine encoding.
+  let Inst{31-0} = 0;
+}

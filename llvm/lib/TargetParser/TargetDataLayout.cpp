@@ -519,6 +519,10 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::riscv32be:
   case Triple::riscv64be:
     return computeRISCVDataLayout(*this, ABIName);
+  // ekayang: added BEGINS
+  case Triple::toy64:
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  // ekayang: added ENDS
   case Triple::sparc:
   case Triple::sparcv9:
   case Triple::sparcel:
