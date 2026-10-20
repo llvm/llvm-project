@@ -405,7 +405,9 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_false:
@@ -470,7 +472,8 @@ define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_med3_f32 v0, v0, 0, 1.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false:
@@ -536,13 +539,17 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_true:
@@ -552,7 +559,9 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
@@ -600,13 +609,17 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_false:
@@ -616,7 +629,9 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
@@ -663,7 +678,8 @@ define float @test_max_min_maybe_NaN_input_ieee_false_nosnan(float %a.arg) #1 {
 define amdgpu_ps float @test_min_max_f32_sgpr(float inreg %a) {
 ; GFX10-LABEL: test_min_max_f32_sgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr:
@@ -724,7 +740,8 @@ define amdgpu_ps float @test_min_max_f32_sgpr_nosnan(float inreg %a.arg) {
 define amdgpu_ps float @test_min_max_f32_sgpr_1(float inreg %a) {
 ; GFX10-LABEL: test_min_max_f32_sgpr_1:
 ; GFX10:       ; %bb.0: ; %.entry
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_fma_f32 v0, v0, 0, 0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -799,7 +816,8 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1_nosnan(float inreg %a.arg) {
 define amdgpu_ps float @test_min_max_f32_sgpr_fma_user(float inreg %a, float inreg %b, float inreg %c) {
 ; GFX10-LABEL: test_min_max_f32_sgpr_fma_user:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_fma_f32 v0, v0, s3, s4
 ; GFX10-NEXT:    ; return to shader part epilog
 ;

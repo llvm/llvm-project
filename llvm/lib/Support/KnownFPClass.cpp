@@ -112,11 +112,14 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
   Known.propagateNonNaN(KnownLHS, KnownRHS);
 
   // The *num functions return the non-NaN operand if only one operand is NaN.
-  // FIXME: minnum/maxnum may return a NaN if either operand is a signaling NaN.
   if ((KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN()) &&
       (Kind == MinMaxKind::minnum || Kind == MinMaxKind::maxnum ||
-       Kind == MinMaxKind::minimumnum || Kind == MinMaxKind::maximumnum))
-    Known.knownNot(fcNan);
+       Kind == MinMaxKind::minimumnum || Kind == MinMaxKind::maximumnum)) {
+    // minnum/maxnum may return NaN if one operand may be sNaN.
+    if (Kind == MinMaxKind::minimumnum || Kind == MinMaxKind::maximumnum ||
+        (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan)))
+      Known.knownNot(fcNan);
+  }
 
   switch (Kind) {
   case MinMaxKind::maxnum: {
