@@ -13821,6 +13821,8 @@ def err_hlsl_semantic_invalid_type
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
+def err_hlsl_semantic_mutually_exclusive
+    : Error<"semantics '%0' and '%1' are mutually exclusive in %2 shader %3">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
     : Error<"semantic %0 is not supported in %1 shader %2">;
 def err_hlsl_semantic_in_wrong_shader_model

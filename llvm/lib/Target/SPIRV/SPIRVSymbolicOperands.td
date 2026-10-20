@@ -539,7 +539,7 @@ defm ShaderViewportIndexLayerEXT : CapabilityOperand<5254, 0, 0, [], [MultiViewp
 defm ShaderViewportMaskNV : CapabilityOperand<5255, 0, 0, [], [ShaderViewportIndexLayerEXT]>;
 defm ShaderStereoViewNV : CapabilityOperand<5259, 0, 0, [], [ShaderViewportMaskNV]>;
 defm PerViewAttributesNV : CapabilityOperand<5260, 0, 0, [], [MultiView]>;
-defm FragmentFullyCoveredEXT : CapabilityOperand<5265, 0, 0, [], [Shader]>;
+defm FragmentFullyCoveredEXT : CapabilityOperand<5265, 0, 0, [SPV_EXT_fragment_fully_covered], [Shader]>;
 defm MeshShadingNV : CapabilityOperand<5266, 0, 0, [], [Shader]>;
 defm ShaderNonUniformEXT : CapabilityOperand<5301, 0, 0, [], [Shader]>;
 defm RuntimeDescriptorArrayEXT : CapabilityOperand<5302, 0, 0, [], [Shader]>;

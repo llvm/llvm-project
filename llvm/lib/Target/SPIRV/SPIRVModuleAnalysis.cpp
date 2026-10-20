@@ -1180,6 +1180,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
           "FragStencilRefEXT requires the following SPIR-V extension: "
           "SPV_EXT_shader_stencil_export",
           false);
+    if (BuiltIn == SPIRV::BuiltIn::FullyCoveredEXT &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_EXT_fragment_fully_covered))
+      report_fatal_error(
+          "FullyCoveredEXT requires the following SPIR-V extension: "
+          "SPV_EXT_fragment_fully_covered",
+          false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:
     case SPIRV::BuiltIn::BaseInstance:
