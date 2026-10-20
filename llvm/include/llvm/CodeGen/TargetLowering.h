@@ -2547,15 +2547,16 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
-  /// floating-point operations use are expanded to a compare-exchange loop.
+  /// AtomicRMW, if at all. By default, multi-lane elementwise operations are
+  /// split and single-lane vectors use the scalar policy.
+  /// Floating-point operations are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    if (RMW->isElementwise())
-      return AtomicExpansionKind::Expand;
+    if (auto *VecTy = dyn_cast<FixedVectorType>(RMW->getType());
+        VecTy && VecTy->getNumElements() > 1)
+      return RMW->isElementwise() ? AtomicExpansionKind::Expand
+                                  : AtomicExpansionKind::CmpXChg;
     if (RMW->isFloatingPointOperation())
-      return AtomicExpansionKind::CmpXChg;
-    if (RMW->getType()->isVectorTy())
       return AtomicExpansionKind::CmpXChg;
     return AtomicExpansionKind::None;
   }

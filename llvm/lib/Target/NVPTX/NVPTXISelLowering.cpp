@@ -8004,8 +8004,11 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
   if (AtomicRMWInst::isFPOperation(Op))
     return AtomicExpansionKind::CmpXChg;
 
-  assert(Ty->isIntegerTy() && "Expected an integer atomicrmw type");
-  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
+  // Single-lane vector exchanges are queried before AtomicExpand casts their
+  // floating-point or pointer value to an integer of the same storage size.
+  assert((Ty->isIntegerTy() || Op == AtomicRMWInst::Xchg) &&
+         "Expected an integer atomicrmw or exchange");
+  const unsigned BitWidth = F.getDataLayout().getTypeStoreSizeInBits(Ty);
 
   switch (Op) {
   default:
@@ -8081,13 +8084,10 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
   // TODO: once we support native elementwise vector atoms,
   // return `AtomicExpansionKind::None` to preserve and lower them.
-  if (AI->isElementwise()) {
+  if (AI->isElementwise() &&
+      cast<FixedVectorType>(AI->getType())->getNumElements() > 1) {
     auto *VecTy = cast<FixedVectorType>(AI->getType());
     Type *Ty = VecTy->getElementType();
-
-    // Collapse <1 x T> elementwise RMWs to scalar RMWs
-    if (VecTy->getNumElements() == 1)
-      return AtomicExpansionKind::Expand;
 
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
@@ -8126,9 +8126,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     return AtomicExpansionKind::Expand;
   }
 
-  Type *Ty = AI->getValOperand()->getType();
-  if (Ty->isVectorTy())
-    return AtomicExpansionKind::CmpXChg;
+  Type *Ty = AI->getType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    if (VecTy->getNumElements() > 1)
+      return AtomicExpansionKind::CmpXChg;
+    Ty = VecTy->getElementType();
+  }
   return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
                                      *AI->getFunction(), IgnoreDenormalMode,
                                      STI);
@@ -8136,42 +8139,49 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff AtomicExpandPass should enforce the
-  // instruction's ordering with fences instead of leaving that ordering on the
-  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
-  // operations (which are not natively supported by the PTX `atom`
-  // instruction), and elementwise atomicrmw expansion.
-  //
-  // atomicrmw and cmpxchg instructions not efficiently supported by PTX
-  // are lowered to CAS emulation loops that preserve their memory order,
-  // syncscope, and volatile semantics. For PTX, it is more efficient to use
-  // atom.cas.relaxed.sco instructions within the loop, and fences before and
-  // after the loop to restore order.
-  //
-  // For ordered elementwise atomicrmw, if we expand elementwise, it is also
-  // more efficient to insert fences around the whole split sequence once and
-  // downgrade the ordering for the entire sequence, rather than having the
-  // stronger ordering on every expanded atomicrmw.
-  //
-  // On targets with memory-order qualifiers, atomic instructions efficiently
-  // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
-  // their corresponding memory order and scope. Since PTX does not support
-  // seq_cst, we emulate it by lowering to a fence.sc followed by an atom
-  // according to the PTX atomics ABI.
-  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
-  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
-    return (cast<IntegerType>(CI->getCompareOperand()->getType())
-                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
-           !STI.hasMemoryOrdering() ||
-           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
+  // A true result lets AtomicExpand enforce the original ordering with fences
+  // and weaken the atomic itself. The pass only emits fences for ordered
+  // operations.
+  AtomicOrdering Ordering;
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    // Subword cmpxchg needs a CAS loop. Place fences outside the loop so its
+    // retries can use relaxed atomics.
+    if (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits())
+      return true;
+    Ordering = CI->getMergedOrdering();
+  } else if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
-    return Expansion == AtomicExpansionKind::CmpXChg ||
-           (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
-           !STI.hasMemoryOrdering() ||
-           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+    // Enforce ordering around the entire RMW loop, leaving each CAS relaxed.
+    if (Expansion == AtomicExpansionKind::CmpXChg)
+      return true;
+
+    if (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) {
+      // AtomicExpand reprocesses subtraction after rewriting it to addition.
+      // Decide on fences then, so a native addition can retain the original
+      // ordering.
+      if (RI->getOperation() == AtomicRMWInst::Sub ||
+          RI->getOperation() == AtomicRMWInst::FSub)
+        return false;
+
+      // Splitting creates several atomics. Use one set of fences around the
+      // whole sequence instead of enforcing ordering on each piece.
+      return true;
+    }
+    Ordering = RI->getOrdering();
+  } else {
+    return false;
   }
-  return false;
+
+  // Older targets lack atomic memory-order qualifiers, so fences must enforce
+  // any ordering stronger than monotonic.
+  if (!STI.hasMemoryOrdering())
+    return true;
+
+  // Native atomics can carry acquire/release ordering, but PTX has no seq_cst
+  // qualifier. The PTX atomic ABI requires fence.sc followed by atom.acquire.
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  return Ordering == AtomicOrdering::SequentiallyConsistent;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
