@@ -307,7 +307,12 @@ precision`_; diagnosed as unsupported), vector memory
 operations (vectors are scalarized), textures and graphics shaders, calls
 to functions that are not defined in the module, and recursion.
 
-The hardware has no calls: all functions are inlined into the kernels. An
+The backend does not use the hardware call and return instructions: all
+functions are inlined into the kernels. (G14C does have direct and
+register-indirect calls with buffer-relative return targets, but only
+calls by a whole, fully active SIMD-group have been measured so far; the
+divergent cases that code generation would need are still open, see the
+AGX Performance Simulator's ``tasks/unsafe-01-call-ret.md``.) An
 indirect call becomes a test of the callee against each address-taken
 function of the module with the same type, with a direct call (inlined) for
 each, and a trap if none matches. The address of such a function, as a
