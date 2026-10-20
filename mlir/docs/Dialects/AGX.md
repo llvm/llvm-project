@@ -156,6 +156,6 @@ names. ZLUDA's cuBLAS / cuDNN / cuFFT replacements keep their sources next to th
 `mlir/utils/agx-kernels/agx-build-fatbin.py` compiles one source for a list of chips and packs the objects into one
 *fat AGX object*: magic `ZAGXFAT1`, an entry per chip (name, offset, size), then the AGX ELF objects. For each chip the
 pipeline is `--agxir-attach-target=chip=CHIP`, `--convert-gpu-to-agxir`, `mlir-translate --mlir-to-llvmir` of the
-gpu.module, and `llc -mcpu=CHIP`; the chip is chosen only by the attached `#agxir.target`. A runtime loads the fat
+gpu.module, `opt -O3` and `llc -mcpu=CHIP`; the chip is chosen only by the attached `#agxir.target`. A runtime loads the fat
 object and picks the entry for its device (ZLUDA's `cuModuleLoadData` does). Each kernel is tested in the simulator on
 at least two generations.
