@@ -887,14 +887,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     const APInt *Step;
     if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
       WrapFlags = WideIV->getNoWrapFlagsOrNone().withoutNoSignedWrap();
-    VPValue *Start = WideIV->getStartValue();
-    if (VPValue *Offset = WideIV->getStartOffset())
-      Start = VPBuilder(Plan.getVectorPreheader()).createAdd(Start, Offset);
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        WideIV->getScalarType(), Start, WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder, WrapFlags);
+        WideIV->getScalarType(), WideIV->getStartValue(),
+        WideIV->getStepValue(), WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -6326,12 +6323,18 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
+      VPValue *Start = WideIV->getStartValue();
+      if (StartOffset) {
+        const APInt *StartC;
+        [[maybe_unused]] bool IsConstantStart = match(Start, m_APInt(StartC));
+        assert(IsConstantStart && "expected a constant start for an offset IV");
+        Start = Plan.getConstantInt(*StartC + *StartOffset);
+      }
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
-          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
+          WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
           VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
-          VPI.getDebugLoc(),
-          StartOffset ? Plan.getConstantInt(*StartOffset) : nullptr);
+          VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

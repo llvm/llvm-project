@@ -284,9 +284,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   }
 
   VPBuilder Builder(Plan->getVectorPreheader());
-  if (VPValue *Offset = WidenIVR->getStartOffset())
-    Start = Builder.createAdd(Start, Offset, DL);
-
   // If the phi is truncated, truncate the start and step values.
   Type *StepTy = Step->getScalarType();
   if (Ty->getScalarSizeInBits() < StepTy->getScalarSizeInBits()) {
