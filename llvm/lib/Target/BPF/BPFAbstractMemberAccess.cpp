@@ -338,11 +338,28 @@ static DIDerivedType *getDIRecordField(const DICompositeType *CTy,
   return Field;
 }
 
-/// Return the position of Field among the BTF members of record CTy.
+/// Return the position of the element at DI index AccessIndex among the BTF
+/// members of record CTy, ordered as getBTFRecordElements() orders them,
+/// without building that list for every access.
 static uint64_t getBTFMemberIndex(const DICompositeType *CTy,
-                                  const DINode *Field) {
-  SmallVector<const DINode *, 8> Elements = getBTFRecordElements(CTy);
-  return llvm::find(Elements, Field) - Elements.begin();
+                                  uint64_t AccessIndex) {
+  DINodeArray Elements = CTy->getElements();
+  bool IsStruct = isStructTag(CTy->getTag());
+  uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
+  uint64_t BTFIndex = 0;
+  for (unsigned I = 0; I < Elements.size(); ++I) {
+    if (!isBTFRecordElement(Elements[I]))
+      continue;
+    // Union members keep their DI order, struct members are stably sorted by
+    // offset.
+    bool Before = I < AccessIndex;
+    if (IsStruct) {
+      uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+      Before = ElementOffset < Offset || (ElementOffset == Offset && Before);
+    }
+    BTFIndex += Before;
+  }
+  return BTFIndex;
 }
 
 static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
@@ -957,14 +974,20 @@ Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
   // A terminal preserve_field_info call is not part of the chain.
   const bool IsFieldInfo = Terminal.Kind == BPFPreserveFieldInfoAI;
   SmallVector<CallInfo, 4> CallStack;
-  if (!IsFieldInfo)
+  SmallVector<CallInst *, 4> AccessCalls;
+  if (!IsFieldInfo) {
     CallStack.push_back(Terminal);
+    AccessCalls.push_back(Call);
+  }
   for (auto It = AIChain.find(Call); It != AIChain.end();
-       It = AIChain.find(It->second.first))
+       It = AIChain.find(It->second.first)) {
     CallStack.push_back(It->second.second);
+    AccessCalls.push_back(It->second.first);
+  }
 
   Value *const Base = CallStack.back().Base;
   const auto Root = consumeAccessRoot(CallStack);
+  AccessCalls.resize(CallStack.size());
   if (!Root) {
     if (IsFieldInfo)
       report_fatal_error(
@@ -982,10 +1005,9 @@ Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
 
   // Build the access string and compute the local byte offset or requested
   // field property while each access still has its debug type.
-  ArrayRef<CallInfo> Fields = CallStack;
-  while (!Fields.empty()) {
-    const CallInfo &CInfo = Fields.back();
-    Fields = Fields.drop_back();
+  for (size_t I = CallStack.size(); I != 0; --I) {
+    const CallInfo &CInfo = CallStack[I - 1];
+    CallInst *AccessCall = AccessCalls[I - 1];
 
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
@@ -998,24 +1020,22 @@ Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
     uint64_t BTFIndex = AccessIndex;
     if (isStructTag(CTy->getTag()) ||
         CTy->getTag() == dwarf::DW_TAG_union_type) {
-      const DINode *Field = getDIRecordField(CTy, AccessIndex);
-      if (!Field) {
-        Call->getContext().diagnose(DiagnosticInfoUnsupported(
-            *Call->getFunction(),
+      if (!getDIRecordField(CTy, AccessIndex)) {
+        AccessCall->getContext().diagnose(DiagnosticInfoUnsupported(
+            *AccessCall->getFunction(),
             "CO-RE access index " + Twine(AccessIndex) +
                 " does not refer to a field of '" + CTy->getName() +
                 "' in the debug info",
-            Call->getDebugLoc()));
+            AccessCall->getDebugLoc()));
         return nullptr;
       }
-      BTFIndex = getBTFMemberIndex(CTy, Field);
+      BTFIndex = getBTFMemberIndex(CTy, AccessIndex);
     }
     AccessString += ":" + std::to_string(BTFIndex);
 
     // Earlier accesses contribute byte offsets. Only the final field supplies
     // the property requested by preserve_field_info.
-    const uint32_t FieldKind =
-        Fields.empty() ? InfoKind : BTF::FIELD_BYTE_OFFSET;
+    const uint32_t FieldKind = I == 1 ? InfoKind : BTF::FIELD_BYTE_OFFSET;
     PatchImm = GetFieldInfo(FieldKind, CTy, AccessIndex, PatchImm,
                             CInfo.RecordAlignment);
   }

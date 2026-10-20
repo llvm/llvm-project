@@ -15,16 +15,23 @@
 ; unsigned long get_in_x(V *v) {
 ;   return (unsigned long)__builtin_preserve_access_index(&v->in.x);
 ; }
+; struct Outer { int pad; V v; };
+; unsigned long get_outer_v(Outer *o) {
+;   return (unsigned long)__builtin_preserve_access_index(&o->v.v);
+; }
 
 ; CHECK: error: test.cpp:3:1: in function get_v i64 (ptr): CO-RE access index 2 does not refer to a field of 'V' in the debug info
 ; CHECK: error: test.cpp:4:1: in function info_v i32 (ptr): CO-RE access index 2 does not refer to a field of 'V' in the debug info
 ; CHECK: error: test.cpp:5:1: in function get_in_x i64 (ptr): CO-RE access index 3 does not refer to a field of 'V' in the debug info
+; The error is at the invalid inner access, not at the valid outer one.
+; CHECK: error: test.cpp:6:20: in function get_outer_v i64 (ptr): CO-RE access index 2 does not refer to a field of 'V' in the debug info
 
 target triple = "bpf"
 
 %struct.V = type <{ ptr, i32, %struct.Inner, %struct.Base, [4 x i8] }>
 %struct.Base = type { i32, i32 }
 %struct.Inner = type { i32, i32 }
+%struct.Outer = type { i32, %struct.V }
 
 define dso_local i64 @get_v(ptr %v) !dbg !10 {
 entry:
@@ -46,6 +53,14 @@ entry:
   %1 = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.Inner) %0, i32 1, i32 1), !dbg !31, !llvm.preserve.access.index !32
   %2 = ptrtoint ptr %1 to i64, !dbg !31
   ret i64 %2, !dbg !31
+}
+
+define dso_local i64 @get_outer_v(ptr %o) !dbg !40 {
+entry:
+  %0 = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.Outer) %o, i32 1, i32 1), !dbg !41, !llvm.preserve.access.index !42
+  %1 = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.V) %0, i32 1, i32 2), !dbg !43, !llvm.preserve.access.index !15
+  %2 = ptrtoint ptr %1 to i64, !dbg !43
+  ret i64 %2, !dbg !43
 }
 
 declare ptr @llvm.preserve.struct.access.index.p0.p0(ptr, i32 immarg, i32 immarg)
@@ -78,3 +93,13 @@ declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64 immarg)
 !33 = !{!34, !35}
 !34 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !32, file: !1, line: 2, baseType: !25, size: 32)
 !35 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !32, file: !1, line: 2, baseType: !25, size: 32, offset: 32)
+!40 = distinct !DISubprogram(name: "get_outer_v", scope: !1, file: !1, line: 6, type: !44, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!41 = !DILocation(line: 6, column: 1, scope: !40)
+!42 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Outer", file: !1, line: 6, size: 320, elements: !46, identifier: "_ZTS5Outer")
+!43 = !DILocation(line: 6, column: 20, scope: !40)
+!44 = !DISubroutineType(types: !45)
+!45 = !{!13, !49}
+!46 = !{!47, !48}
+!47 = !DIDerivedType(tag: DW_TAG_member, name: "pad", scope: !42, file: !1, line: 6, baseType: !25, size: 32)
+!48 = !DIDerivedType(tag: DW_TAG_member, name: "v", scope: !42, file: !1, line: 6, baseType: !15, size: 256, offset: 64)
+!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !42, size: 64)

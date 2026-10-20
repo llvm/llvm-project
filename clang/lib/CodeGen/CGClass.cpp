@@ -315,6 +315,14 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     VBase = nullptr; // we no longer have a virtual step
   }
 
+  // A CO-RE relocation is relative to the record that has the field, so the
+  // offset of its base subobject would not be relocated.
+  if (IsInPreservedAIRegion && (VBase || !NonVirtualOffset.isZero())) {
+    CGM.Error(Loc, "CO-RE access through a virtual base or a base at a "
+                   "non-zero offset not supported");
+    return Value.withElementType(ConvertType((PathEnd[-1])->getType()));
+  }
+
   // Get the base pointer type.
   llvm::Type *BaseValueTy = ConvertType((PathEnd[-1])->getType());
   llvm::Type *PtrTy = llvm::PointerType::get(
