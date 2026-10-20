@@ -372,11 +372,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s32, getScalarMemAlign(32)}});
   } else if (ST.hasStdExtD() || ST.hasStdExtZilsd()) {
-    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd).
-    // FIXME: Under -mzilsd-word-align SDAG allows 4-byte alignment for i64
-    // (getZilsdAlign()); we require 8-byte and fall back to two s32
-    // accesses. LLT cannot distinguish i64 from f64, so a single rule
-    // applies to both.
+    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd); LLT cannot tell the
+    // two apart, so one rule covers both.
+    // FIXME: We require natural alignment, so under -mzilsd-word-align an
+    // align-4 i64 access is split into two s32 ones. riscv-prera-zilsd-opt
+    // merges them back into LD_RV32/SD_RV32, but it is skipped at -O0.
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
     StoreActions.legalForTypesWithMemDesc(
