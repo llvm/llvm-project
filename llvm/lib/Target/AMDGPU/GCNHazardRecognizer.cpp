@@ -1829,7 +1829,8 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
       }
 
       // SGPR/VCC inputs used as a condition or carry do not require the
-      // two-state wait for scalar-data reads, per CDNA3 and CDNA4 ISA section 4.5.
+      // two-state wait for scalar-data reads, per CDNA3 and CDNA4 ISA
+      // section 4.5.
       if (isConditionOrCarryInput(*VALU, OpIdx))
         continue;
 
