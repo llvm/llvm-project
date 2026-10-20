@@ -249,9 +249,9 @@ public:
     if (auto sel = dyn_cast<arith::SelectOp>(op))
       return visitSelect(sel, operands, results);
     if (auto cast = dyn_cast<arith::IndexCastOp>(op))
-      return visitPassThrough(cast, operands, results);
+      return visitIndexCast</*IsUnsigned=*/false>(cast, operands, results);
     if (auto cast = dyn_cast<arith::IndexCastUIOp>(op))
-      return visitPassThrough(cast, operands, results);
+      return visitIndexCast</*IsUnsigned=*/true>(cast, operands, results);
     setAllPessimistic(op, results);
     return success();
   }
@@ -867,15 +867,65 @@ private:
     return success();
   }
 
-  template <typename OpTy>
-  LogicalResult visitPassThrough(OpTy op,
-                                 ArrayRef<const AxisInfoLattice *> operands,
-                                 ArrayRef<AxisInfoLattice *> results) {
+  // arith.index_cast / arith.index_castui. `index` is 32 or 64 bits wide, so a
+  // cast can truncate, and the unsigned form zero-extends. Neither keeps the
+  // value in general:
+  //   - `arith.index_cast %c258 : index to i8` gives 2, not 258.
+  //   - `arith.index_castui %cm1 : i8 to index` gives 255, not -1.
+  // Equal values stay equal, so constancy always survives. The low bits up to
+  // the narrower width are unchanged, so divisibility survives up to that
+  // width. The values, and with them contiguity and stride, survive only a
+  // signed cast that cannot truncate. A known constant is kept when every
+  // width involved represents it, and is folded exactly for a signed cast to a
+  // fixed width.
+  template <bool IsUnsigned, typename OpTy>
+  LogicalResult visitIndexCast(OpTy op,
+                               ArrayRef<const AxisInfoLattice *> operands,
+                               ArrayRef<AxisInfoLattice *> results) {
     if (!getTrackedShape(op.getType())) {
       setAllPessimistic(op, results);
       return success();
     }
-    propagateIfChanged(results[0], results[0]->join(operands[0]->getValue()));
+    AxisInfo src = operands[0]->getValue();
+    if (!src.isInitialized()) {
+      setAllPessimistic(op, results);
+      return success();
+    }
+    Type srcElemTy = getElementTypeOrSelf(op.getIn().getType());
+    Type dstElemTy = getElementTypeOrSelf(op.getType());
+    auto minWidth = [](Type t) -> unsigned {
+      return t.isIndex() ? 32 : t.getIntOrFloatBitWidth();
+    };
+    auto maxWidth = [](Type t) -> unsigned {
+      return t.isIndex() ? 64 : t.getIntOrFloatBitWidth();
+    };
+    if (!IsUnsigned && minWidth(dstElemTy) >= maxWidth(srcElemTy)) {
+      // Sign extension (or same width): every value is kept.
+      propagateIfChanged(results[0], results[0]->join(src));
+      return success();
+    }
+
+    // One side is `index`, so the narrower width is at most 32.
+    unsigned narrowest = std::min(minWidth(srcElemTy), minWidth(dstElemTy));
+    AxisInfo v = AxisInfo::getPessimistic(src.getRank());
+    v.constancy = src.constancy;
+    int64_t divCap = std::min<int64_t>(kAxisInfoTop, int64_t(1) << narrowest);
+    for (unsigned d = 0; d < src.getRank(); ++d)
+      v.divisibility[d] = std::min(src.divisibility[d], divCap);
+    if (src.innerStride && *src.innerStride == 0)
+      v.innerStride = 0;
+    if (src.knownConstant) {
+      int64_t c = *src.knownConstant;
+      int64_t bound = int64_t(1) << (narrowest - 1);
+      bool fits =
+          IsUnsigned ? (c >= 0 && c < bound) : (c >= -bound && c < bound);
+      if (fits)
+        v.knownConstant = c;
+      else if (!IsUnsigned && !dstElemTy.isIndex())
+        v.knownConstant =
+            llvm::SignExtend64(c, dstElemTy.getIntOrFloatBitWidth());
+    }
+    propagateIfChanged(results[0], results[0]->join(v));
     return success();
   }
 };

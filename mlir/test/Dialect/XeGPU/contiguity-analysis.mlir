@@ -408,6 +408,55 @@ func.func @load_matrix_scalar_no_attr(%m: !xegpu.mem_desc<32x64xf32>) -> f32 {
 }
 
 // -----
+// A truncating cast does not keep the value: 258 cast to i8 is 2. With 6-wide
+// blocks, an origin of 2 only allows runs of 2.
+// CHECK-LABEL: func.func @load_matrix_truncating_index_cast(
+// CHECK: xegpu.load_matrix
+// CHECK-SAME: <{contiguity = 2 : i64}>
+func.func @load_matrix_truncating_index_cast(
+    %m: !xegpu.mem_desc<8x192xf32, #xegpu.mem_layout<block = [8, 6]>>) -> vector<8x96xf32> {
+  %c258 = arith.constant 258 : index
+  %narrow = arith.index_cast %c258 : index to i8
+  %x = arith.index_cast %narrow : i8 to index
+  %v = xegpu.load_matrix %m[0, %x]
+      : !xegpu.mem_desc<8x192xf32, #xegpu.mem_layout<block = [8, 6]>>, index -> vector<8x96xf32>
+  return %v : vector<8x96xf32>
+}
+
+// -----
+// An unsigned cast does not keep a negative value: -6 as i8 becomes 250. Only
+// the low bits survive, so the origin is known to be even, and runs of 2 are
+// all that 6-wide blocks allow.
+// CHECK-LABEL: func.func @load_matrix_unsigned_index_cast(
+// CHECK: xegpu.load_matrix
+// CHECK-SAME: <{contiguity = 2 : i64}>
+func.func @load_matrix_unsigned_index_cast(
+    %m: !xegpu.mem_desc<8x384xf32, #xegpu.mem_layout<block = [8, 6]>>) -> vector<8x96xf32> {
+  %cm6 = arith.constant -6 : i8
+  %x = arith.index_castui %cm6 : i8 to index
+  %v = xegpu.load_matrix %m[0, %x]
+      : !xegpu.mem_desc<8x384xf32, #xegpu.mem_layout<block = [8, 6]>>, index -> vector<8x96xf32>
+  return %v : vector<8x96xf32>
+}
+
+// -----
+// A sign-extending cast keeps every value, so `%sg * 16` keeps its
+// divisibility through the cast to index.
+// CHECK-LABEL: func.func @store_matrix_sign_extending_index_cast(
+// CHECK: xegpu.store_matrix
+// CHECK-SAME: <{contiguity = 16 : i64}>
+func.func @store_matrix_sign_extending_index_cast(
+    %m: !xegpu.mem_desc<8x256xf32, #xegpu.mem_layout<block = [8, 16]>>,
+    %v: vector<8x32xf32>, %sg: i32) {
+  %c16 = arith.constant 16 : i32
+  %base = arith.muli %sg, %c16 : i32
+  %x = arith.index_cast %base : i32 to index
+  xegpu.store_matrix %v, %m[0, %x]
+      : vector<8x32xf32>, !xegpu.mem_desc<8x256xf32, #xegpu.mem_layout<block = [8, 16]>>, index
+  return
+}
+
+// -----
 // A pre-existing `contiguity` on a matrix op takes precedence.
 // CHECK-LABEL: func.func @load_matrix_user_attr_preserved(
 // CHECK: xegpu.load_matrix
