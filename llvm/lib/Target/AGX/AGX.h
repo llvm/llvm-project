@@ -31,6 +31,7 @@ FunctionPass *createAGXLowerFPEnvPass();
 FunctionPass *createAGXSoftF64Pass();
 FunctionPass *createAGXExpandWideAtomicsPass(const AGXTargetMachine *TM = nullptr);
 FunctionPass *createAGXAnnotateControlFlowPass();
+FunctionPass *createAGXLowerGenericAddressesPass();
 
 // Instruction selection.
 FunctionPass *createAGXISelDag(AGXTargetMachine &TM);
@@ -48,6 +49,7 @@ void initializeAGXLowerFPEnvPass(PassRegistry &);
 void initializeAGXSoftF64Pass(PassRegistry &);
 void initializeAGXExpandWideAtomicsPass(PassRegistry &);
 void initializeAGXAnnotateControlFlowPass(PassRegistry &);
+void initializeAGXLowerGenericAddressesPass(PassRegistry &);
 void initializeAGXDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAGXFoldOperandsPass(PassRegistry &);
 void initializeAGXLowerControlFlowPass(PassRegistry &);

@@ -43,6 +43,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXSoftF64Pass(PR);
   initializeAGXExpandWideAtomicsPass(PR);
   initializeAGXAnnotateControlFlowPass(PR);
+  initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
   initializeAGXLowerControlFlowPass(PR);
@@ -156,6 +157,8 @@ void AGXPassConfig::addIRPasses() {
     addPass(createInferAddressSpacesPass());
     addPass(createSROAPass());
   }
+  // Generic pointers that may name threadgroup memory become tagged integers.
+  addPass(createAGXLowerGenericAddressesPass());
   // By-reference kernel arguments become uniform register values.
   addPass(createAGXPromoteKernelArgsPass());
   // Vector arithmetic is scalar code (as in instruction selection), which the
