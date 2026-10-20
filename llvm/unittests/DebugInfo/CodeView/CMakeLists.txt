@@ -7,6 +7,7 @@ add_llvm_unittest(DebugInfoCodeViewTests
   RandomAccessVisitorTest.cpp
   TypeHashingTest.cpp
   TypeIndexDiscoveryTest.cpp
+  TypeRecordMappingTest.cpp
   )
 
 target_link_libraries(DebugInfoCodeViewTests PRIVATE LLVMTestingSupport)
