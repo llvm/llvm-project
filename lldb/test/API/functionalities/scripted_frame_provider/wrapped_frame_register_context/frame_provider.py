@@ -78,6 +78,10 @@ class WrappedFrame(ScriptedFrame):
 
         return struct.pack(struct_format, *struct_data)
 
+    def get_value_for_variable_expression(self, expr, options, error):
+        error.SetErrorString(f"no scripted value for {expr}")
+        return None
+
 
 class WrapVariablesProvider(ScriptedFrameProvider):
     @staticmethod

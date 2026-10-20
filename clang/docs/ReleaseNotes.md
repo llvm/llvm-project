@@ -251,6 +251,13 @@ features cannot lower the translation-unit ABI level;
   }
 ```
 
+- Implemented the C2y `<stdbit.h>` endian-aware 8-bit load functions
+  `stdc_load8_{le,be}{u,s}{8,16,32,64}` and their aligned counterparts
+  `stdc_load8_aligned_{le,be}{u,s}{8,16,32,64}` with constexpr evaluation
+  support. These functions read N/8 bytes from a `const unsigned char *`
+  and assemble them into an integer using little-endian or big-endian
+  byte order.
+
 - Clang now diagnoses the use of the same identifier with both internal and
   external linkage within a translation unit, as made ill-formed by
   [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
@@ -277,6 +284,10 @@ features cannot lower the translation-unit ABI level;
 
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
+
+- Clang no longer crashes on unknown command-line argument when
+  `-fdiagnostics-format=sarif` is passed
+  (#GH233241).
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
@@ -515,6 +526,16 @@ features cannot lower the translation-unit ABI level;
     DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
   };
   ```
+
+- Added `-Wlifetime-safety-experimental` to group experimental lifetime safety
+  warnings. It is not part of `-Wlifetime-safety-all`. It contains:
+
+  - `-Wlifetime-safety-experimental-invalidation`, renamed from
+    `-Wlifetime-safety-invalidation` and no longer enabled by
+    `-Wlifetime-safety` or `-Wlifetime-safety-strict`.
+  - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
+    member function returns a value derived from a pointer, reference, or view
+    field rather than from `*this`.
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.
@@ -761,6 +782,7 @@ features cannot lower the translation-unit ABI level;
   types that their evaluation silently mishandled. (#GH216997)
 - Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
   during constant evaluation. (#GH173767)
+- Fixed a crash on an invalid pointer argument to `__builtin_assume_aligned`. (#GH194289)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
   or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
@@ -979,6 +1001,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed deduction of the template parameters appearing in the type of a
   constant template parameter of reference type. (#GH40328)
 
+- Template template parameters of the form `template <X &> class` no longer reject
+  template template arguments with the same parameters.
+
+- Fixed an assertion when matching a template template argument against a
+  template template parameter whose constant template parameter is declared
+  as `auto &&`.
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
@@ -1188,6 +1217,11 @@ features cannot lower the translation-unit ABI level;
   libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
   The `-nogpuinc` option disables this path together with the other HIP include
   paths.
+
+- Clang now rejects RTTI operations (`typeid` and `dynamic_cast`) in HIP and
+  CUDA device code. Previously these were silently ignored, potentially causing
+  link-time failures. `dynamic_cast<void*>` is still allowed because it does not
+  use RTTI.
 
 #### CUDA Support
 

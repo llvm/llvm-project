@@ -7997,6 +7997,98 @@ define i64 @test_pm4addsu_v4i16_i64(<4 x i16> %a, <4 x i16> %b) {
   ret i64 %r
 }
 
+; Packed Multiplication with Widening Horizontal Addition.
+define i64 @test_pm2wadd_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2wadd_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2wadd.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2wadd_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    pm4add.h a0, a0, a1
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2wadd.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
+define i64 @test_pm2wadd_x_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2wadd_x_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2wadd.hx a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2wadd_x_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    ppairoe.h a1, a1, a1
+; RV64-NEXT:    pm4add.h a0, a0, a1
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2wadd.x.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
+define i64 @test_pm2waddu_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2waddu_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2waddu.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2waddu_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    pm4addu.h a0, a0, a1
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2waddu.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
+define i64 @test_pm2wsub_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2wsub_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2wsub.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2wsub_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2sub.h a0, a0, a1
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2wsub.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
+define i64 @test_pm2wsub_x_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2wsub_x_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2wsub.hx a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2wsub_x_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm2sub.hx a0, a0, a1
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2wsub.x.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
+define i64 @test_pm2waddsu_v2i16_i64(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pm2waddsu_v2i16_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm2waddsu.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pm2waddsu_v2i16_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    pm4addsu.h a0, a0, a1
+; RV64-NEXT:    ret
+  %r = call i64 @llvm.riscv.pm2waddsu.i64.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret i64 %r
+}
+
 ; Packed Multiply Parts Accumulate.
 declare <2 x i32> @llvm.riscv.pmacc.00.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmacc.01.v2i32(<2 x i32>, <4 x i16>, <4 x i16>)
