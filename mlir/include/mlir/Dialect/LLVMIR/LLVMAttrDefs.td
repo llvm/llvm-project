@@ -299,11 +299,12 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     It stores annotations in attribute parameters and groups related options in
     nested attributes to provide structured access.
 
-    The optional 'id' identifies distinct loops.  It doesn't generate metadata,
-    however it participates in equality to provide users of this attribute an
-    ability to enforce distinct-ness across separate loops. If provided, the
-    'id' should represent annotations that are collectively a single distinct
-    set of metadata.
+    The optional 'id' parameter is used to make the metadata 'distinct' from
+    other `loop_annotation` attributes that share the same values. It doesn't
+    generate metadata, however it participates in equality to provide users of
+    this attribute an ability to enforce distinct-ness across separate loops.
+    If provided, the 'id' should represent annotations that are collectively a
+    single distinct set of metadata.
   }];
 
   let parameters = (ins
