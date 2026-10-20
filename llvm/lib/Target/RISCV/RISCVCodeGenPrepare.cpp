@@ -73,7 +73,7 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
   if (!ST->hasVInstructions())
     return false;
 
-  DenseMap<Value *, SmallVector<ExtractElementInst *, 8>> ExtractsPerVec;
+  SmallDenseMap<Value *, SmallVector<ExtractElementInst *, 8>> ExtractsPerVec;
   for (Instruction &I : BB) {
     auto *Extract = dyn_cast<ExtractElementInst>(&I);
     if (!Extract)
