@@ -552,6 +552,11 @@ TEST_F(FormatterBytecodeTest, FormatVersion2) {
   // "{{" is a literal "{", and "}" is a literal.
   EXPECT_EQ(fmt({"A"}, "{{{}}"), "{A}");
   EXPECT_EQ(fmt({}, "a}b"), "a}b");
+  // A "}" outside of a replacement is always a literal, even if it follows a
+  // replacement, or another "}". Unlike "{{", "}}" is not an escape.
+  EXPECT_EQ(fmt({}, "}"), "}");
+  EXPECT_EQ(fmt({"A"}, "{}}"), "A}");
+  EXPECT_EQ(fmt({}, "}}"), "}}");
 
   // Layouts and options are accepted, but not yet supported, so they are
   // ignored and format the same as "{}".

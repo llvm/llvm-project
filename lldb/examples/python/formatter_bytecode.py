@@ -1101,8 +1101,11 @@ class Compiler(ast.NodeVisitor):
             self._output(node.value)
 
     def visit_JoinedStr(self, node: ast.JoinedStr) -> None:
-        # f-strings are compiled to @fmt, which formats with llvm::formatv. The
-        # formatted values are pushed in order, followed by the format string.
+        """
+        f-strings are compiled to @fmt, which formats using llvm::formatv. The
+        formatted values are pushed in order, followed by the format string.
+        """
+
         fmt = ""
         for child in node.values:
             if isinstance(child, ast.Constant):
@@ -1416,6 +1419,12 @@ if __name__ == "__main__":
             self.assertEqual(count_fmt_params("{{}"), 0)
             self.assertEqual(formatv("{}{}", ["a", "b"]), "ab")
             self.assertEqual(formatv("{{{}}", [1]), "{1}")
+            # A "}" outside of a replacement is always a literal, even if it
+            # follows a replacement, or another "}". Unlike "{{", "}}" is not an
+            # escape. This differs from Python's str.format.
+            self.assertEqual(formatv("}", []), "}")
+            self.assertEqual(formatv("{}}", ["A"]), "A}")
+            self.assertEqual(formatv("}}", []), "}}")
 
             # Adjacent literals, including escaped braces, are merged.
             self.assertEqual(_parse_fmt(""), [])
@@ -1426,6 +1435,8 @@ if __name__ == "__main__":
                 _parse_fmt("x={}, {{y}}={}!"), ["x=", 0, ", {y}}=", 1, "!"]
             )
             self.assertEqual(_parse_fmt("{}{}"), [0, 1])
+            self.assertEqual(_parse_fmt("}"), ["}"])
+            self.assertEqual(_parse_fmt("{}}"), [0, "}"])
 
             # Layouts and options are accepted, but ignored.
             self.assertEqual(formatv("[{,8}]", ["ab"]), "[ab]")
@@ -1662,6 +1673,14 @@ if __name__ == "__main__":
                 assemble('1 pick "{{{}}" @fmt call return'),
             )
             self.assertEqual(run('f"{{{name}}}"'), "{x}")
+            # The f-string escape "}}" is a literal "}", which formatv
+            # doesn't escape.
+            self.assertEqual(
+                compile_fstring('f"{name}}}"'),
+                assemble('1 pick "{}}" @fmt call return'),
+            )
+            self.assertEqual(run('f"{name}}}"'), "x}")
+            self.assertEqual(run('f"}}"'), "}")
 
             # Quotes and backslashes are escaped in the assembly.
             self.assertEqual(run(r"""f'"{name}"\\'"""), '"x"\\')
