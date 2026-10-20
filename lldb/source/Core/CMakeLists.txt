@@ -10,15 +10,7 @@ lldb_tablegen(CoreProperties.json -dump-json
   SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesJsonGen)
 
-set(LLDB_CURSES_LIBS)
 set(LLDB_LIBEDIT_LIBS)
-
-if (LLDB_ENABLE_CURSES)
-  list(APPEND LLDB_CURSES_LIBS ${PANEL_LIBRARIES} ${CURSES_LIBRARIES})
-  if (LLVM_BUILD_STATIC)
-    list(APPEND LLDB_CURSES_LIBS gpm)
-  endif()
-endif()
 
 add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Address.cpp
@@ -44,7 +36,6 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   FormatEntity.cpp
   Highlighter.cpp
   IOHandler.cpp
-  IOHandlerCursesGUI.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp
@@ -85,7 +76,6 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
     lldbUtility
     lldbValueObject
     lldbVersion
-    ${LLDB_CURSES_LIBS}
   )
 
 set(LLDB_SAFE_AUTO_LOAD_PATHS "" CACHE STRING
@@ -113,7 +103,3 @@ add_dependencies(lldbCore
 # Needed to properly resolve references in a debug build.
 # TODO: Remove once we have better layering
 set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 5)
-
-if (LLDB_ENABLE_CURSES)
-  target_include_directories(lldbCore PRIVATE ${CURSES_INCLUDE_DIRS})
-endif()

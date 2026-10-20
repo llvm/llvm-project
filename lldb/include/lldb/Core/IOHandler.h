@@ -40,7 +40,6 @@ public:
     CommandInterpreter,
     CommandList,
     Confirm,
-    Curses,
     Expression,
     REPL,
     ProcessIO,

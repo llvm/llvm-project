@@ -223,11 +223,11 @@ class HelpCommandTestCase(TestBase):
     @no_debug_info_test
     def test_help_ambiguous(self):
         self.expect(
-            "help g",
+            "help se",
             substrs=[
                 "Help requested with ambiguous command name, possible completions:",
-                "gdb-remote",
-                "gui",
+                "session",
+                "settings",
             ],
         )
 
