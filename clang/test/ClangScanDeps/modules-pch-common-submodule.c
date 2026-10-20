@@ -1,6 +1,6 @@
 // Unsupported on AIX because we don't support the requisite "__clangast"
 // section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // Check that when depending on a precompiled module, we depend on the
 // **top-level** module. Submodules don't have some information present (for

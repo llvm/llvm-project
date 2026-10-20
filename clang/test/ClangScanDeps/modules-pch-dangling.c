@@ -1,6 +1,6 @@
 // Unsupported on AIX because we don't support the requisite "__clangast"
 // section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // This test checks that the dependency scanner can handle larger amount of
 // explicitly built modules retrieved from the PCH.

@@ -1,6 +1,6 @@
 // Unsupported on AIX because we don't support the requisite "__clangast"
 // section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch/* %t

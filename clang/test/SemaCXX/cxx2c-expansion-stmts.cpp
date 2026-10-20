@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,old-interp
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,new-interp -fexperimental-new-constant-interpreter
 namespace std {

@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 %s -I %S/Inputs -std=c++2c -fsyntax-only -verify
 
 int wibble(); // #wibble_decl

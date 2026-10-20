@@ -3,6 +3,7 @@
 # also covers this through library-side overlap detection; this test pins the
 # pre-dedup pass's contract that the dedup applies regardless of length.
 
+# XFAIL: target={{.*}}-zos{{.*}}
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp

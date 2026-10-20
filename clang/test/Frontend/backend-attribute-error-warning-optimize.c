@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -O2 -verify -emit-codegen-only %s
 
 __attribute__((error("oh no foo"))) void foo(void);

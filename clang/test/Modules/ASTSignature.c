@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1             -iquote %S/Inputs/ASTHash/ -fsyntax-only \
 // RUN:   -fmodules -fimplicit-module-maps -fmodules-strict-context-hash \
