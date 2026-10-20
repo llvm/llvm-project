@@ -1,15 +1,22 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,GPR64
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,NOHFAALIGN,GPR64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,NOHFAALIGN,GPR64 --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,LE
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,BE
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,BE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS64,GPR64,LE
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS64,GPR64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS64,GPR64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS64,GPR64,BE --implicit-check-not="not yet implemented"
+// RUN: %if cir-enabled %{ %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=LLVMCIR,CHECK,NOHFAALIGN,GPR64 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=LLVMCIR,CHECK,AAPCS64,GPR64,LE %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=LLVMCIR,CHECK,AAPCS64,GPR64,BE %}
 
 // This test is verifying that the LLVM ABI library classifies C++ record
 // arguments that cannot be passed in registers the same way Clang does without
 // the library.
+
+// The LLVMCIR runs check the same classification with -fclangir on the 64-bit
+// triples. OGCG marks the 64-bit checks that only the runs without -fclangir
+// match.
 
 // Structures with a non-trivial copy constructor or destructor are passed
 // indirectly (as a pointer) rather than in registers.
@@ -135,7 +142,9 @@ struct PtrWithEmptyBase : EmptyBase {
   void *p;
 };
 void arg_ptr_empty_base(PtrWithEmptyBase s) {}
-// GPR64: define{{.*}} void @arg_ptr_empty_base(i64 %{{.*}})
+// OGCG: define{{.*}} void @arg_ptr_empty_base(i64 %{{.*}})
+// FIXME: The CIR record type does not hold the empty base.
+// LLVMCIR: define{{.*}} void @arg_ptr_empty_base(ptr %{{.*}})
 // ILP32: define{{.*}} void @arg_ptr_empty_base(i32 %{{.*}})
 
 struct __attribute__((aligned(16))) OveralignedInt {

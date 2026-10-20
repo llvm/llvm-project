@@ -1,15 +1,18 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,DARWIN,LONG64,LE
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,DARWIN,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,DARWIN,LONG32,LE
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,DARWIN,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG64,LE
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG64,BE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=OGCG,CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %if cir-enabled %{ %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fclangir -DSKIP_CIR_NYI -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fclangir -DSKIP_CIR_NYI -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fclangir -DSKIP_CIR_NYI -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE %}
 
 // This test is verifying that the LLVM ABI library classifies return types in
 // the same way that Clang does without the library.
@@ -17,6 +20,10 @@
 // The AArch64 support in the ABI library is a work in progress. New test cases
 // will be added here as the types are implemented. Unimplemented cases will
 // report a warning if the ABI library is used.
+
+// The -fclangir runs check the same classification through CIR. SKIP_CIR_NYI
+// leaves out the constructs CIR code generation does not support yet, which
+// only the OGCG runs check.
 
 void ret_void() {}
 // CHECK: define{{.*}} void @ret_void
@@ -67,8 +74,11 @@ void* ret_void_ptr() { return &gi; }
 // CHECK: define{{.*}} ptr @ret_void_ptr
 
 typedef float fx2x2_t __attribute__((matrix_type(2, 2)));
+// CIR cannot create a temporary of matrix type yet.
+#ifndef SKIP_CIR_NYI
 fx2x2_t ret_matrix() { return (fx2x2_t){1.0f, 2.0f, 3.0f, 4.0f}; }
-// CHECK: define{{.*}} <4 x float> @ret_matrix
+// OGCG: define{{.*}} <4 x float> @ret_matrix
+#endif
 
 _BitInt(7) ret_bitint7(void) { return 0; }
 // AAPCS: define{{.*}} i7 @ret_bitint7
@@ -146,6 +156,8 @@ HVA3x32 ret_hva3x32() {
 }
 // CHECK: define{{.*}} %struct.HVA3x32 @ret_hva3x32
 
+// CIR calling-convention lowering does not handle matrix types yet.
+#ifndef SKIP_CIR_NYI
 // A 2x2 float matrix is four homogeneous float members.
 typedef struct {
   fx2x2_t m;
@@ -154,7 +166,7 @@ HFAMatrix ret_hfa_matrix() {
   HFAMatrix r;
   return r;
 }
-// CHECK: define{{.*}} %struct.HFAMatrix @ret_hfa_matrix
+// OGCG: define{{.*}} %struct.HFAMatrix @ret_hfa_matrix
 
 typedef float fx2x1_t __attribute__((matrix_type(2, 1)));
 typedef struct {
@@ -164,7 +176,8 @@ HFAMatrix2 ret_hfa_matrix2() {
   HFAMatrix2 r;
   return r;
 }
-// CHECK: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
+// OGCG: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
+#endif
 
 // Empty records and zero-size types are ignored as returns (void).
 typedef struct {

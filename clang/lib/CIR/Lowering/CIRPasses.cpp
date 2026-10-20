@@ -29,6 +29,9 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
     return CallConvTarget::X86_64;
   if (triple.isAMDGPU())
     return CallConvTarget::AMDGPU;
+  if (triple.isAArch64() && !triple.isOSWindows() &&
+      triple.getArch() != llvm::Triple::aarch64_32)
+    return CallConvTarget::AArch64;
   return CallConvTarget::None;
 }
 
