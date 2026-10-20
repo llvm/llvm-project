@@ -8,7 +8,8 @@ The kernel source names no chip. For each chip the pipeline is:
   mlir-opt --agxir-attach-target=chip=CHIP --convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1
            --reconcile-unrealized-casts
   mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
-  llc -mtriple=agx -mcpu=CHIP -filetype=obj
+  opt -mtriple=agx -mcpu=CHIP -O3
+  llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
 
 Fat AGX object layout (little-endian):
 
@@ -21,7 +22,7 @@ Fat AGX object layout (little-endian):
         u64       size of the object
       then the objects (AGX ELF files), each 16-byte aligned.
 
-  agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC
+  agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
                       [--chips agx-g13g,agx-g14c,...] kernels.mlir -o out.agxfat
 """
 
@@ -58,6 +59,9 @@ def compile_for(a, src, chip, tmp):
     open(body, "w").write(gpu_module_body(lowered))
     ll = os.path.join(tmp, chip + ".ll")
     subprocess.run([a.mlir_translate, "--mlir-to-llvmir", body, "-o", ll], check=True)
+    optimized = os.path.join(tmp, chip + ".opt.ll")
+    subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, "-O3", ll, "-o", optimized], check=True)
+    ll = optimized
     obj = os.path.join(tmp, chip + ".o")
     subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, "-O3", "-filetype=obj", ll, "-o", obj], check=True)
     return open(obj, "rb").read()
@@ -82,10 +86,12 @@ def main():
     ap.add_argument("--mlir-opt", required=True)
     ap.add_argument("--mlir-translate", required=True)
     ap.add_argument("--llc", required=True)
+    ap.add_argument("--opt", default=None, help="LLVM opt (default: next to llc)")
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
+    a.opt = a.opt or os.path.join(os.path.dirname(a.llc), "opt")
     with tempfile.TemporaryDirectory() as tmp:
         objects = [(c, compile_for(a, a.source, c, tmp)) for c in a.chips.split(",") if c]
     open(a.out, "wb").write(pack(objects))

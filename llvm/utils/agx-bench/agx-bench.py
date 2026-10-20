@@ -108,6 +108,7 @@ def main():
     ap.add_argument("--cost", required=True, help="agx_cost from the AGX Performance Simulator")
     ap.add_argument("--zoc", default=None)
     ap.add_argument("--ptx", nargs="*", default=[])
+    ap.add_argument("--ll", nargs="*", default=[], help="more LLVM IR files (for example MLIR library kernels)")
     ap.add_argument("--baseline", default=os.path.join(HERE, "baseline.json"))
     ap.add_argument("--update", action="store_true")
     ap.add_argument("--tolerance", type=float, default=0.02, help="relative slack before a change counts")
@@ -116,6 +117,7 @@ def main():
 
     sources = [("ll", os.path.join(HERE, "kernels", f)) for f in sorted(os.listdir(os.path.join(HERE, "kernels")))
                if f.endswith(".ll")]
+    sources += [("ll", p) for p in a.ll]
     if a.ptx:
         if not a.zoc:
             sys.exit("--ptx needs --zoc")
