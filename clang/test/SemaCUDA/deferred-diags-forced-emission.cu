@@ -44,7 +44,7 @@
 #include "Inputs/cuda.h"
 
 __device__ void device_only(); // #device_only
-// host-note@#device_only 4 {{'device_only' declared here}}
+// host-note@#device_only 6 {{'device_only' declared here}}
 // host-all-note@#device_only 2 {{'device_only' declared here}}
 // host-key-note@#device_only {{'device_only' declared here}}
 __host__ void host_only(); // #host_only
@@ -161,6 +161,19 @@ inline auto lambda = [] __attribute__((used)) __host__ __device__ {
   device_only();
 };
 
+// Such as by a forced function.
+inline __host__ __device__ __attribute__((used)) void lambda_caller() {
+  auto lambda = [] {
+    throw NULL;
+    // dev-error@-1 {{cannot use 'throw' in __host__ __device__ function}}
+    device_only();
+    // host-error@-1 {{reference to __device__ function 'device_only' in __host__ __device__ function}}
+  };
+  lambda();
+  // dev-note@-1 {{called by 'lambda_caller'}}
+  // host-note@-2 {{called by 'lambda_caller'}}
+}
+
 // With -foffload-implicit-host-device-templates, this is an implicit host
 // device function only used on the host.
 template <class T> T implicit_hd(T x) {
@@ -175,6 +188,21 @@ extern inline __attribute__((gnu_inline, used)) __host__ __device__ void
 available_externally() {
   throw NULL;
   device_only();
+}
+
+// So it is checked when a forced function calls it.
+extern inline __attribute__((gnu_inline, used)) __host__ __device__ void
+called_available_externally() {
+  throw NULL;
+  // dev-error@-1 {{cannot use 'throw' in __host__ __device__ function}}
+  device_only();
+  // host-error@-1 {{reference to __device__ function 'device_only' in __host__ __device__ function}}
+}
+inline __host__ __device__ __attribute__((used)) void
+available_externally_caller() {
+  called_available_externally();
+  // dev-note@-1 {{called by 'available_externally_caller'}}
+  // host-note@-2 {{called by 'available_externally_caller'}}
 }
 
 // Implicit functions and functions defaulted on their first declaration are
