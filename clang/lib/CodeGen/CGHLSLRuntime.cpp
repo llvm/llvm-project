@@ -1241,7 +1241,8 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
 namespace {
 // Describes how a semantic leaf lowers to signature rows
 struct SemanticShape {
-  SmallVector<unsigned> Dimensions; // Arrays followed by matrix major vectors.
+  // Array length followed by matrix major-axis length.
+  SmallVector<unsigned> Dimensions;
   unsigned Cols;
   QualType RowType;
   bool IsMatrix = false;
