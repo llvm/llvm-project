@@ -44,15 +44,17 @@ static unsigned singleLetterExtensionRank(char Ext) {
     return 0;
   case 'e':
     return 1;
+  case 'y':
+    return 2;
   }
 
   size_t Pos = RISCVISAUtils::AllStdExts.find(Ext);
   if (Pos != StringRef::npos)
-    return Pos + 2; // Skip 'e' and 'i' from above.
+    return Pos + 3; // Skip 'e', 'i', and 'y' from above.
 
   // If we got an unknown extension letter, then give it an alphabetical
   // order, but after all known standard extensions.
-  return 2 + RISCVISAUtils::AllStdExts.size() + (Ext - 'a');
+  return 3 + RISCVISAUtils::AllStdExts.size() + (Ext - 'a');
 }
 
 // Get the rank for multi-letter extension, lower value meaning higher
