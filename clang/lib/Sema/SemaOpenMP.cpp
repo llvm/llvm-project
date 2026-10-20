@@ -17368,32 +17368,10 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   }
 
   CaptureVars CopyTransformer(SemaRef);
-  // Convert a non-integer trip count. Width matches buildNumIterations.
-  // Signedness follows an integer loop variable so a float count stays signed.
-  auto MakeNumIterations = [&CopyTransformer, &LoopHelpers, &Context,
-                            &SemaRef =
-                                this->SemaRef](unsigned I) -> ExprResult {
-    ExprResult N = CopyTransformer.TransformExpr(LoopHelpers[I].NumIterations);
-    if (!N.isUsable())
-      return ExprError();
-    QualType Type = N.get()->getType();
-    if (Type->isIntegerType())
-      return N;
-    const auto *Counter = cast<DeclRefExpr>(LoopHelpers[I].Counters.front());
-    QualType VarType = Counter->getType().getNonReferenceType();
-    bool VarIsInt = VarType->hasIntegerRepresentation();
-    bool UseVarWidth =
-        VarIsInt && Context.getTypeSize(Type) > Context.getTypeSize(VarType);
-    unsigned NewSize =
-        UseVarWidth ? Context.getTypeSize(VarType) : Context.getTypeSize(Type);
-    bool IsSigned = VarIsInt ? VarType->hasSignedIntegerRepresentation()
-                             : Type->hasFloatingRepresentation();
-    QualType IntTy = getIntTypeForBitwidthOrBitInt(Context, NewSize, IsSigned);
-    N = SemaRef.PerformImplicitConversion(
-        N.get(), IntTy, AssignmentAction::Converting, /*AllowExplicit=*/true);
-    if (!N.isUsable())
-      return ExprError();
-    return N;
+  auto MakeNumIterations = [&CopyTransformer,
+                            &LoopHelpers](unsigned I) -> Expr * {
+    return AssertSuccess(
+        CopyTransformer.TransformExpr(LoopHelpers[I].NumIterations));
   };
 
   OMPLoopBasedDirective::HelperExprs &OutermostHelper = LoopHelpers[0];
@@ -17408,10 +17386,7 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   auto BuildTripCount = [&](unsigned Bits) -> ExprResult {
     ExprResult Product;
     for (unsigned I = 0; I < NumLoops; ++I) {
-      ExprResult N = MakeNumIterations(I);
-      if (!N.isUsable())
-        return ExprError();
-      N = widenIterationCount(Bits, N.get(), SemaRef);
+      ExprResult N = widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
       if (!N.isUsable())
         return ExprError();
       if (I == 0)
@@ -17489,31 +17464,27 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   if (!TripCount.isUsable())
     return StmtError();
 
-  auto MakeNumIterationsInIVTy = [&](unsigned I) -> ExprResult {
-    ExprResult N = MakeNumIterations(I);
-    if (!N.isUsable())
-      return ExprError();
-    return SemaRef.PerformImplicitConversion(
-        N.get(), IVTy, AssignmentAction::Converting, /*AllowExplicit=*/true);
+  auto MakeNumIterationsInIVTy = [&](unsigned I) -> Expr * {
+    return AssertSuccess(SemaRef.PerformImplicitConversion(
+        MakeNumIterations(I), IVTy, AssignmentAction::Converting,
+        /*AllowExplicit=*/true));
   };
 
   // Divisors in index recovery use (N == 0 ? 1 : N) so a zero trip count does
   // not warn.
-  auto MakeDivisorInIVTy = [&](unsigned I) -> ExprResult {
-    ExprResult N = MakeNumIterationsInIVTy(I);
-    ExprResult NCmp = MakeNumIterationsInIVTy(I);
-    if (!N.isUsable() || !NCmp.isUsable())
-      return ExprError();
+  auto MakeDivisorInIVTy = [&](unsigned I) -> Expr * {
+    Expr *N = MakeNumIterationsInIVTy(I);
+    Expr *NCmp = MakeNumIterationsInIVTy(I);
     auto MakeCst = [&](uint64_t V) -> Expr * {
       return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, V), IVTy,
                                     CondLoc);
     };
     ExprResult IsZero =
-        SemaRef.BuildBinOp(CurScope, CondLoc, BO_EQ, NCmp.get(), MakeCst(0));
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_EQ, NCmp, MakeCst(0));
     if (!IsZero.isUsable())
       return N;
-    return SemaRef.ActOnConditionalOp(CondLoc, CondLoc, IsZero.get(),
-                                      MakeCst(1), N.get());
+    return AssertSuccess(SemaRef.ActOnConditionalOp(
+        CondLoc, CondLoc, IsZero.get(), MakeCst(1), N));
   };
 
   // \code{.cpp}
@@ -17578,14 +17549,9 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     ExprResult Value = MakeFlattenedRef();
     if (I + 1 < NumLoops) {
       ExprResult Divisor = MakeDivisorInIVTy(I + 1);
-      if (!Divisor.isUsable())
-        return StmtError();
       for (unsigned J = I + 2; J < NumLoops; ++J) {
-        ExprResult Next = MakeDivisorInIVTy(J);
-        if (!Next.isUsable())
-          return StmtError();
         Divisor = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Mul,
-                                     Divisor.get(), Next.get());
+                                     Divisor.get(), MakeDivisorInIVTy(J));
         if (!Divisor.isUsable())
           return StmtError();
       }
@@ -17595,11 +17561,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
         return StmtError();
     }
     if (I > 0) {
-      ExprResult RemDivisor = MakeDivisorInIVTy(I);
-      if (!RemDivisor.isUsable())
-        return StmtError();
       Value = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Rem, Value.get(),
-                                 RemDivisor.get());
+                                 MakeDivisorInIVTy(I));
       if (!Value.isUsable())
         return StmtError();
     }
