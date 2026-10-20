@@ -56,6 +56,7 @@ TEST_F(ABITypesTest, OpaqueFloat8Properties) {
   EXPECT_FALSE(MFP8->isVector());
   EXPECT_EQ(MFP8->getKind(), llvm::abi::TypeKind::OpaqueFloat8);
   EXPECT_EQ(MFP8->getSizeInBits(), TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getABISizeInBits(), 8u);
   EXPECT_EQ(MFP8->getAlignment(), Align(1));
   EXPECT_TRUE(llvm::isa<llvm::abi::OpaqueFloat8Type>(MFP8));
 }

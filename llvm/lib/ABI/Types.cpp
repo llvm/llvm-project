@@ -37,6 +37,7 @@ uint64_t llvm::abi::Type::getABISizeInBits() const {
     return bit_ceil(std::max<uint64_t>(Width, 8));
   }
   case TypeKind::Void:
+  case TypeKind::OpaqueFloat8:
   case TypeKind::Atomic:
   case TypeKind::MemberPointer:
   case TypeKind::Pointer:
