@@ -274,7 +274,14 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     static LogicalResult
     verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                      ArrayRef<Type> types, bool);
-    using Base::verifyInvariants;
+    /// Verifies a literal struct's storage key, which sub-element replacement
+    /// passes to get().
+    template <typename StorageKey>
+    static LogicalResult
+    verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.getTypeList(), key.isPacked());
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;
