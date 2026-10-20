@@ -9,7 +9,8 @@ buffer with a Python model of the kernel:
   big-code       a loop around 12000 instructions (about 150 KB of code);
   nesting        48 nested divergent ifs;
   tg-48k         48 KiB of threadgroup memory;
-  generic        a load through a generic pointer that may name threadgroup or device memory.
+  generic        a load through a generic pointer that may name threadgroup or device memory;
+  generic3       the same with private memory as a third choice.
 
   agx-stress.py --llc build/bin/llc --run path/to/agx_run [--objcopy build/bin/llvm-objcopy] [--only NAME]
 
@@ -152,6 +153,35 @@ define agx_kernel void @k(ptr addrspace(1) %out, ptr addrspace(1) %dev, i32 %sel
                 uniforms=[OUT, 0, IN, 0, sel], expect=list(range(32)) if sel == 0 else [1000] * 32)
 
 
+def generic3(sel):
+    """A generic pointer to threadgroup (sel 0), private (sel 1) or device (sel 2) memory."""
+    ir = """@buf = internal addrspace(3) global [64 x i32] undef
+declare i32 @llvm.agx.thread.position.in.threadgroup.x()
+define agx_kernel void @k(ptr addrspace(1) %out, ptr addrspace(1) %dev, i32 %sel) {
+  %priv = alloca [4 x i32], addrspace(5)
+  %t = call i32 @llvm.agx.thread.position.in.threadgroup.x()
+  %pp = getelementptr [4 x i32], ptr addrspace(5) %priv, i32 0, i32 %sel
+  %pv = add i32 %t, 100
+  store volatile i32 %pv, ptr addrspace(5) %pp
+  %s = getelementptr [64 x i32], ptr addrspace(3) @buf, i32 0, i32 %t
+  store i32 %t, ptr addrspace(3) %s
+  %gs = addrspacecast ptr addrspace(3) %s to ptr
+  %gp = addrspacecast ptr addrspace(5) %pp to ptr
+  %gd = addrspacecast ptr addrspace(1) %dev to ptr
+  %c0 = icmp eq i32 %sel, 0
+  %c1 = icmp eq i32 %sel, 1
+  %p12 = select i1 %c1, ptr %gp, ptr %gd
+  %p = select i1 %c0, ptr %gs, ptr %p12
+  %v = load i32, ptr %p
+  %po = getelementptr i32, ptr addrspace(1) %out, i32 %t
+  store i32 %v, ptr addrspace(1) %po
+  ret void
+}"""
+    expect = list(range(32)) if sel == 0 else [t + 100 for t in range(32)] if sel == 1 else [1000] * 32
+    return dict(ir=ir, threads=32, wg=32, shared=256, inputs=struct.pack("<I", 1000),
+                uniforms=[OUT, 0, IN, 0, sel], expect=expect)
+
+
 CASES = {
     "pressure": lambda: pressure(None),
     "pressure-1024-threads": lambda: pressure('"agx-max-threads-per-threadgroup"="1024"'),
@@ -161,6 +191,9 @@ CASES = {
     "tg-48k": tg_48k,
     "generic-threadgroup": lambda: generic(0),
     "generic-device": lambda: generic(1),
+    "generic3-threadgroup": lambda: generic3(0),
+    "generic3-private": lambda: generic3(1),
+    "generic3-device": lambda: generic3(2),
 }
 
 

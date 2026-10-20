@@ -722,7 +722,10 @@ def ConvertGpuOpsToAGXIROps : Pass<"convert-gpu-to-agxir", "gpu::GPUModuleOp"> {
     "AGXIR::AGXIRDialect",
     "agx::AGXDialect",
     "cf::ControlFlowDialect",
+    "math::MathDialect",
     "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "vector::VectorDialect",
   ];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",

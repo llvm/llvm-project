@@ -17,10 +17,10 @@ gpu.module @kernels {
     %zero = arith.constant dense<0.0> : vector<8xf32>
     %acc = agx.mma_tile %a[%c0, %c0] * %b[%c0, %c0] + %zero tile(16, 16, 16)
         : memref<16x16xf32, 1>, memref<16x16xf32, 1>, vector<8xf32>
-    %f0 = vector.extract_strided_slice %acc {offsets = [0], sizes = [2], strides = [1]} : vector<8xf32> to vector<2xf32>
-    %f1 = vector.extract_strided_slice %acc {offsets = [2], sizes = [2], strides = [1]} : vector<8xf32> to vector<2xf32>
-    %f2 = vector.extract_strided_slice %acc {offsets = [4], sizes = [2], strides = [1]} : vector<8xf32> to vector<2xf32>
-    %f3 = vector.extract_strided_slice %acc {offsets = [6], sizes = [2], strides = [1]} : vector<8xf32> to vector<2xf32>
+    %f0 = vector.extract_strided_slice %acc offsets = [0], sizes = [2], strides = [1] : vector<8xf32> to vector<2xf32>
+    %f1 = vector.extract_strided_slice %acc offsets = [2], sizes = [2], strides = [1] : vector<8xf32> to vector<2xf32>
+    %f2 = vector.extract_strided_slice %acc offsets = [4], sizes = [2], strides = [1] : vector<8xf32> to vector<2xf32>
+    %f3 = vector.extract_strided_slice %acc offsets = [6], sizes = [2], strides = [1] : vector<8xf32> to vector<2xf32>
     agx.matrix_store %f0, %c[%c0, %c0] : vector<2xf32> -> memref<16x16xf32, 1>
     agx.matrix_store %f1, %c[%c0, %c8] : vector<2xf32> -> memref<16x16xf32, 1>
     agx.matrix_store %f2, %c[%c8, %c0] : vector<2xf32> -> memref<16x16xf32, 1>

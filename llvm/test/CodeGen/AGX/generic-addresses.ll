@@ -70,3 +70,44 @@ define agx_kernel void @device_only(ptr %p, i32 %v) {
   store i32 %v, ptr %p
   ret void
 }
+
+; Private pointers are tagged with bit 62. With both tagged memories, an
+; access tests the top two bits: 2 or 3 is threadgroup, 1 private, 0 device.
+; Atomics have no private form (PTX leaves them undefined).
+; IR-LABEL: @three_spaces
+; IR: or i64 %{{.*}}, -9223372036854775808
+; IR: or i64 %{{.*}}, 4611686018427387904
+; IR: lshr i32 %{{.*}}, 30
+; IR: icmp uge i32 %{{.*}}, 2
+; IR: load i32, ptr addrspace(3)
+; IR: icmp eq i32 %{{.*}}, 1
+; IR: load i32, ptr addrspace(5)
+; IR: load i32, ptr addrspace(1)
+; IR: phi i32
+; IR: atomicrmw add ptr addrspace(3)
+; IR-NOT: atomicrmw add ptr addrspace(5)
+; IR: atomicrmw add ptr addrspace(1)
+; CHECK-LABEL: three_spaces:
+; CHECK-DAG: threadgroup_load
+; CHECK-DAG: device_load
+define agx_kernel void @three_spaces(ptr addrspace(1) %out, ptr addrspace(1) %dev, i32 %sel) {
+  %priv = alloca [4 x i32], addrspace(5)
+  %t = call i32 @llvm.agx.thread.position.in.threadgroup.x()
+  %pp = getelementptr [4 x i32], ptr addrspace(5) %priv, i32 0, i32 %sel
+  store volatile i32 %sel, ptr addrspace(5) %pp
+  %s = getelementptr [64 x i32], ptr addrspace(3) @buf, i32 0, i32 %t
+  store i32 %t, ptr addrspace(3) %s
+  %gs = addrspacecast ptr addrspace(3) %s to ptr
+  %gp = addrspacecast ptr addrspace(5) %pp to ptr
+  %gd = addrspacecast ptr addrspace(1) %dev to ptr
+  %c0 = icmp eq i32 %sel, 0
+  %c1 = icmp eq i32 %sel, 1
+  %p01 = select i1 %c1, ptr %gp, ptr %gd
+  %p = select i1 %c0, ptr %gs, ptr %p01
+  %v = load i32, ptr %p
+  %a = atomicrmw add ptr %p, i32 1 monotonic
+  %w = add i32 %v, %a
+  %po = getelementptr i32, ptr addrspace(1) %out, i32 %t
+  store i32 %w, ptr addrspace(1) %po
+  ret void
+}
