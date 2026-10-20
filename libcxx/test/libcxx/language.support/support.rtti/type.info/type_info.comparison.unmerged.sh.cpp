@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: no-rtti
 
+// The executable references the shared library by its host path, which doesn't exist on the device.
+// UNSUPPORTED: android
+
 // The type A has external linkage, so its RTTI name is not prefixed with '*'.
 // Its RTTI is emitted separately in the shared library and in the main executable,
 // and libc++ compares the names with strcmp, so the two type_index values must be equal.
