@@ -1035,9 +1035,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   // The createTarget functions embeds user written code into
   // the target region which may inject allocas which need to
   // be moved to the entry block of our target or risk malformed
-  // optimisations by later passes, this is only relevant for
-  // the device pass which appears to be a little more delicate
-  // when it comes to optimisations (however, we do not block on
+  // optimisations by later passes (however, we do not block on
   // that here, it's up to the inserter to the list to do so).
   // This notbaly has to occur after the OutlinedInfo candidates
   // have been extracted so we have an end product that will not
@@ -6167,8 +6165,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
 
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
@@ -6922,8 +6919,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -9400,9 +9396,8 @@ static Expected<Function *> createOutlinedFunction(
 
   // As we embed the user code in the middle of our target region after we
   // generate entry code, we must move what allocas we can into the entry
-  // block to avoid possible breaking optimisations for device
-  if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
+  // block to avoid possible breaking optimisations
+  OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   BasicBlock *ExitBB = splitBB(Builder, /*CreateBranch=*/true, "target.exit");
   BasicBlock *OutlinedBodyBB =
@@ -9432,7 +9427,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
-  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
+  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrPseudoProbe());
 
   // Do not include the artificial dyn_ptr argument.
   const auto &ArgRange = make_range(Func->arg_begin(), Func->arg_end() - 1);
