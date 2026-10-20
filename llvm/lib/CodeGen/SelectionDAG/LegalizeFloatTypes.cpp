@@ -624,10 +624,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
     if (IsStrict)
       ReplaceValueWith(SDValue(N, 1), Res32.second);
     return Res32.first;
-  } else {
-    if (IsStrict)
-      Chain = Res32.second;
   }
+  if (IsStrict)
+    Chain = Res32.second;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   RTLIB::Libcall LC = RTLIB::getFPEXT(MVT::f32, N->getValueType(0));
@@ -3392,9 +3391,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SETCC(SDNode *N) {
     SDValue Chain = N->getOperand(0);
     return DAG.getNode(N->getOpcode(), dl, N->getVTList(), Chain, Op0, Op1,
                        DAG.getCondCode(CCCode));
-  } else {
-    return DAG.getSetCC(SDLoc(N), N->getValueType(0), Op0, Op1, CCCode);
   }
+  return DAG.getSetCC(SDLoc(N), N->getValueType(0), Op0, Op1, CCCode);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo) {
