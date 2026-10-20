@@ -23,10 +23,67 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/KnownBits.h"
 
 #define DEBUG_TYPE "codegen-common"
 
 using namespace llvm;
+
+std::optional<ConstantRange>
+llvm::detail::getValidShiftAmountRange(const APInt &Amt, unsigned BitWidth) {
+  if (Amt.uge(BitWidth))
+    return std::nullopt;
+  return ConstantRange(Amt);
+}
+
+std::optional<ConstantRange>
+llvm::detail::getValidShiftAmountRange(const KnownBits &KnownAmt,
+                                       unsigned BitWidth) {
+  if (KnownAmt.getMaxValue().ult(BitWidth))
+    return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
+  return std::nullopt;
+}
+
+std::optional<ConstantRange> llvm::detail::getValidShiftAmountRange(
+    unsigned BitWidth, const APInt &DemandedElts, unsigned NumElements,
+    function_ref<const APInt *(unsigned)> GetConstant,
+    function_ref<KnownBits()> ComputeKnownBits) {
+  const APInt *MinAmt = nullptr, *MaxAmt = nullptr;
+  for (unsigned I = 0; I != NumElements; ++I) {
+    if (!DemandedElts[I])
+      continue;
+    const APInt *Amt = GetConstant(I);
+    if (!Amt) {
+      MinAmt = MaxAmt = nullptr;
+      break;
+    }
+    if (Amt->uge(BitWidth))
+      return std::nullopt;
+    if (!MinAmt || MinAmt->ugt(*Amt))
+      MinAmt = Amt;
+    if (!MaxAmt || MaxAmt->ult(*Amt))
+      MaxAmt = Amt;
+  }
+  assert(((!MinAmt && !MaxAmt) || (MinAmt && MaxAmt)) &&
+         "Failed to find matching min/max shift amounts");
+  if (MinAmt && MaxAmt)
+    return ConstantRange(*MinAmt, *MaxAmt + 1);
+
+  return getValidShiftAmountRange(ComputeKnownBits(), BitWidth);
+}
+
+std::optional<unsigned> llvm::detail::getValidShiftAmount(
+    const std::optional<ConstantRange> &AmtRange) {
+  if (AmtRange)
+    if (const APInt *Amt = AmtRange->getSingleElement())
+      return Amt->getZExtValue();
+  return std::nullopt;
+}
+
+std::optional<unsigned> llvm::detail::getValidShiftAmount(const APInt &Amt,
+                                                          unsigned BitWidth) {
+  return getValidShiftAmount(getValidShiftAmountRange(Amt, BitWidth));
+}
 
 const MDNode *llvm::getMemCacheHintMetadata(const Instruction &I,
                                             unsigned OperandNo) {

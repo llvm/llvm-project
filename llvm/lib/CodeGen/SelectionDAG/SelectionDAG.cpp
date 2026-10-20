@@ -3245,10 +3245,10 @@ SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
   unsigned BitWidth = V.getScalarValueSizeInBits();
 
   if (auto *Cst = dyn_cast<ConstantSDNode>(V.getOperand(1)))
-    return llvm::getValidShiftAmountRange(Cst->getAPIntValue(), BitWidth);
+    return detail::getValidShiftAmountRange(Cst->getAPIntValue(), BitWidth);
 
   auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1));
-  return llvm::getValidShiftAmountRange(
+  return detail::getValidShiftAmountRange(
       BitWidth, DemandedElts, BV ? BV->getNumOperands() : 0,
       [&](unsigned I) -> const APInt * {
         auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(I));
@@ -3266,7 +3266,7 @@ SelectionDAG::getValidShiftAmount(SDValue V, const APInt &DemandedElts,
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
           V.getOpcode() == ISD::SRA) &&
          "Unknown shift node");
-  return llvm::getValidShiftAmount(
+  return detail::getValidShiftAmount(
       getValidShiftAmountRange(V, DemandedElts, Depth));
 }
 

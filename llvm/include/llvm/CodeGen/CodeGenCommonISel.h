@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_CODEGENCOMMONISEL_H
 #define LLVM_CODEGEN_CODEGENCOMMONISEL_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/Support/KnownBits.h"
 #include <cassert>
 #include <optional>
 namespace llvm {
@@ -24,71 +24,38 @@ namespace llvm {
 class BasicBlock;
 class Instruction;
 class MDNode;
+struct KnownBits;
 enum FPClassTest : unsigned;
 
+namespace detail {
+
 /// Return the constant shift amount as a range if it is less than BitWidth.
-inline std::optional<ConstantRange>
-getValidShiftAmountRange(const APInt &Amt, unsigned BitWidth) {
-  if (Amt.uge(BitWidth))
-    return std::nullopt;
-  return ConstantRange(Amt);
-}
+LLVM_ABI std::optional<ConstantRange>
+getValidShiftAmountRange(const APInt &Amt, unsigned BitWidth);
 
 /// Return the unsigned shift range if every possible amount is valid.
-inline std::optional<ConstantRange>
-getValidShiftAmountRange(const KnownBits &KnownAmt, unsigned BitWidth) {
-  if (KnownAmt.getMaxValue().ult(BitWidth))
-    return ConstantRange::fromKnownBits(KnownAmt, /*IsSigned=*/false);
-  return std::nullopt;
-}
+LLVM_ABI std::optional<ConstantRange>
+getValidShiftAmountRange(const KnownBits &KnownAmt, unsigned BitWidth);
 
 /// Find the range of demanded constant lanes, falling back to KnownBits.
 /// GetConstant returns a pointer to a lane's APInt, or nullptr if it is not a
 /// constant. Pass zero NumElements when there is no explicit vector to inspect.
 /// ComputeKnownBits must account for DemandedElts and the analysis depth.
-template <typename GetConstantT, typename ComputeKnownBitsT>
-std::optional<ConstantRange>
+LLVM_ABI std::optional<ConstantRange>
 getValidShiftAmountRange(unsigned BitWidth, const APInt &DemandedElts,
-                         unsigned NumElements, GetConstantT GetConstant,
-                         ComputeKnownBitsT ComputeKnownBits) {
-  const APInt *MinAmt = nullptr, *MaxAmt = nullptr;
-  for (unsigned I = 0; I != NumElements; ++I) {
-    if (!DemandedElts[I])
-      continue;
-    const APInt *Amt = GetConstant(I);
-    if (!Amt) {
-      MinAmt = MaxAmt = nullptr;
-      break;
-    }
-    if (Amt->uge(BitWidth))
-      return std::nullopt;
-    if (!MinAmt || MinAmt->ugt(*Amt))
-      MinAmt = Amt;
-    if (!MaxAmt || MaxAmt->ult(*Amt))
-      MaxAmt = Amt;
-  }
-  assert(((!MinAmt && !MaxAmt) || (MinAmt && MaxAmt)) &&
-         "Failed to find matching min/max shift amounts");
-  if (MinAmt && MaxAmt)
-    return ConstantRange(*MinAmt, *MaxAmt + 1);
-
-  return getValidShiftAmountRange(ComputeKnownBits(), BitWidth);
-}
+                         unsigned NumElements,
+                         function_ref<const APInt *(unsigned)> GetConstant,
+                         function_ref<KnownBits()> ComputeKnownBits);
 
 /// Return a single shift amount from a previously validated range.
-inline std::optional<unsigned>
-getValidShiftAmount(const std::optional<ConstantRange> &AmtRange) {
-  if (AmtRange)
-    if (const APInt *Amt = AmtRange->getSingleElement())
-      return Amt->getZExtValue();
-  return std::nullopt;
-}
+LLVM_ABI std::optional<unsigned>
+getValidShiftAmount(const std::optional<ConstantRange> &AmtRange);
 
 /// Return a constant shift amount if it is less than BitWidth.
-inline std::optional<unsigned> getValidShiftAmount(const APInt &Amt,
-                                                   unsigned BitWidth) {
-  return getValidShiftAmount(getValidShiftAmountRange(Amt, BitWidth));
-}
+LLVM_ABI std::optional<unsigned> getValidShiftAmount(const APInt &Amt,
+                                                     unsigned BitWidth);
+
+} // namespace detail
 
 /// Encapsulates all of the information needed to generate a stack protector
 /// check, and signals to isel when initialized that one needs to be generated.

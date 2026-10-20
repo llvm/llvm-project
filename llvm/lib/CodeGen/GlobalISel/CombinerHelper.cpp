@@ -8726,14 +8726,15 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       std::optional<unsigned> Amt;
       if (auto C =
               getConstantOrConstantSplatVector(Shift->getOperand(2).getReg()))
-        Amt = getValidShiftAmount(*C, BW);
+        Amt = detail::getValidShiftAmount(*C, BW);
       if (!Amt) {
         APInt DemandedElts = OpTy.isFixedVector()
                                  ? APInt::getAllOnes(OpTy.getNumElements())
                                  : APInt(1, 1);
         KnownBits AmtKnown = VT->getKnownBits(Shift->getOperand(2).getReg(),
                                               DemandedElts, Depth + 2);
-        Amt = getValidShiftAmount(getValidShiftAmountRange(AmtKnown, BW));
+        Amt = detail::getValidShiftAmount(
+            detail::getValidShiftAmountRange(AmtKnown, BW));
       }
       LLT AmtTy = MRI.getType(Shift->getOperand(2).getReg());
       if (Amt &&
@@ -8821,7 +8822,7 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
         std::optional<unsigned> Amt;
         if (auto ShiftC =
                 getConstantOrConstantSplatVector(Shift->getOperand(2).getReg()))
-          Amt = getValidShiftAmount(*ShiftC, BW);
+          Amt = detail::getValidShiftAmount(*ShiftC, BW);
         if (Amt) {
           APInt Ones = APInt::getAllOnes(BW);
           Ones = ShiftOpc == TargetOpcode::G_SHL ? Ones.shl(*Amt)
