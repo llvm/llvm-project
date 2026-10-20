@@ -9,8 +9,6 @@
 #ifndef LLVM_LIB_TARGET_BPF_BPFCORE_H
 #define LLVM_LIB_TARGET_BPF_BPFCORE_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -42,7 +40,7 @@ inline bool isBTFRecordElement(const DINode *Element) {
 
 /// Whether a debug info tag describes a record that BTF represents as a
 /// struct. A C++ record declared with the class keyword is one as well.
-inline bool isStructTag(unsigned Tag) {
+inline bool isBTFStructTag(unsigned Tag) {
   return Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_class_type;
 }
 
@@ -57,21 +55,6 @@ inline uint64_t getBTFRecordElementOffset(const DINode *Element) {
   default:
     llvm_unreachable("Unexpected DI tag of a struct element");
   }
-}
-
-/// Return the BTF members of a record in BTF order: structure members by
-/// offset (BTF requires nondecreasing offsets), stable for equal offsets.
-inline SmallVector<const DINode *, 8>
-getBTFRecordElements(const DICompositeType *CTy) {
-  SmallVector<const DINode *, 8> Elements;
-  for (const DINode *Element : CTy->getElements())
-    if (isBTFRecordElement(Element))
-      Elements.push_back(Element);
-  if (isStructTag(CTy->getTag()))
-    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
-      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
-    });
-  return Elements;
 }
 
 class BPFCoreSharedInfo {
