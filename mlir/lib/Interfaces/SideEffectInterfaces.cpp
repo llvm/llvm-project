@@ -178,11 +178,14 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
 
 void DeadnessCache::invalidate(Operation *op) {
   op->walk([&](Operation *nested) { cache.erase(nested); });
+  invalidateAncestors(op);
+}
+
+void DeadnessCache::invalidateAncestors(Operation *op) {
   // An ancestor may report nested effects through its own effect interface,
   // without querying the intermediate cache entries. A missing entry cannot
   // stop invalidation of its ancestors.
-  for (Operation *parent = op->getParentOp(); parent;
-       parent = parent->getParentOp())
+  for (Operation *parent = op; parent; parent = parent->getParentOp())
     cache.erase(parent);
 }
 

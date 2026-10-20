@@ -560,6 +560,9 @@ public:
   /// Invalidate the operation, its descendants, and its ancestors.
   void invalidate(Operation *op);
 
+  /// Invalidate the operation and its ancestors, preserving descendant entries.
+  void invalidateAncestors(Operation *op);
+
 private:
   enum class State : uint8_t { Alive, Dead };
   DenseMap<Operation *, State> cache;
