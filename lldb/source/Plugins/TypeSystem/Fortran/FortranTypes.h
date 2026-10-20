@@ -44,12 +44,14 @@ public:
     KIND_LOGICAL,
     KIND_REAL,
     KIND_COMPLEX,
+    KIND_FUNCTION,
     KIND_UNKNOWN
   };
 
   FortranType(int32_t kind, uint64_t bitsize, const ConstString &name)
       : m_kind(kind), m_bitsize(bitsize), m_type_name(name) {}
   virtual ~FortranType();
+
   int GetKind() const { return m_kind; }
   uint64_t GetBitSize() const { return m_bitsize; }
   ConstString GetName() const { return m_type_name; }
@@ -68,6 +70,41 @@ private:
   int32_t m_kind;
   uint64_t m_bitsize;
   ConstString m_type_name;
+};
+
+class FortranFunction : public FortranType {
+public:
+  FortranFunction(ConstString func_name,
+                  const llvm::SmallVectorImpl<CompilerType> &parameters,
+                  const llvm::SmallVectorImpl<llvm::StringRef> &parameter_names,
+                  CompilerType return_type);
+
+  llvm::ArrayRef<CompilerType> GetParameters() const { return m_parameters; }
+  size_t GetNumberOfParameters() const { return m_parameters.size(); }
+  CompilerType GetReturnType() const { return m_return_type; }
+  ConstString GetFunctionSignature() const { return m_function_signature; };
+
+  void Profile(llvm::FoldingSetNodeID &id) const {
+    Profile(id, GetName(), m_parameters, m_return_type);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &id, ConstString func_name,
+                      llvm::ArrayRef<CompilerType> parameters,
+                      CompilerType return_type) {
+    id.AddString(func_name.GetStringRef());
+    id.AddInteger(parameters.size());
+
+    if (return_type.IsValid())
+      id.AddPointer(return_type.GetOpaqueQualType());
+
+    for (const auto &param : parameters)
+      id.AddPointer(param.GetOpaqueQualType());
+  }
+
+private:
+  llvm::SmallVector<CompilerType, 4> m_parameters;
+  CompilerType m_return_type;
+  ConstString m_function_signature;
 };
 
 } // namespace fortran
