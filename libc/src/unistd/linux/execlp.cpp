@@ -24,6 +24,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execlp, (const char *file, const char *arg0, ...)) {
+  LIBC_CRASH_ON_NULLPTR(file);
   LIBC_CRASH_ON_NULLPTR(arg0);
 
   va_list varargs, varargs_copy;
@@ -49,6 +50,8 @@ LLVM_LIBC_FUNCTION(int, execlp, (const char *file, const char *arg0, ...)) {
   va_end(varargs_copy);
   argv[argc] = nullptr;
 
+  // Control will not reach here on success but having a return statement will
+  // keep the compilers happy.
   return LIBC_NAMESPACE::execvp(file, argv);
 }
 

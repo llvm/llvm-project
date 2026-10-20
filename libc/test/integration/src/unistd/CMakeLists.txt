@@ -258,15 +258,16 @@ add_integration_test(
     execlp_test.cpp
   DEPENDS
     libc_execv_test_normal_exit
+    libc_execvp_test_normal_exit
     libc_exec_test_signal_exit
+    libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
     libc.src.errno.errno
+    libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
-    libc.src.unistd.environ
     libc.src.unistd.execlp
     libc.src.unistd.fork
   ENV
     EXECV_TEST=PASS
-    PATH=.
 )
