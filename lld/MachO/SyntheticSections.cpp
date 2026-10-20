@@ -2571,7 +2571,8 @@ void ChainedFixupsSection::finalizeContents() {
     while (i < count && sameSegment(locations[i], firstLoc)) {
       uint64_t pageIdx = locations[i].offset / pageSize;
       if (pageIdx >= UINT16_MAX)
-        fatal("chained fixup too large in segment " + oseg->name + "; use -no_fixup_chains");
+        fatal("chained fixup too large in segment " + oseg->name +
+              "; use -no_fixup_chains");
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;
