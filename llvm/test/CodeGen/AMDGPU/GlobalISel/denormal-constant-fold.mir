@@ -43,22 +43,22 @@ name: fbinops
 body: |
   bb.0:
     ; CHECK-LABEL: name: fbinops
-    ; CHECK: %add:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: $vgpr0 = COPY %add(s32)
-    ; CHECK-NEXT: $vgpr1 = COPY %add(s32)
-    ; CHECK-NEXT: $vgpr2 = COPY %add(s32)
-    ; CHECK-NEXT: $vgpr3 = COPY %add(s32)
-    ; CHECK-NEXT: $vgpr4 = COPY %add(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %negdenorm:_(s32) = G_FCONSTANT float -1.40129846e-45
-    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    %half:_(s32) = G_FCONSTANT float 5.000000e-01
-    %add:_(s32) = G_FADD %denorm, %denorm
-    %sub:_(s32) = G_FSUB %denorm, %negdenorm
-    %mul:_(s32) = G_FMUL %denorm, %two
-    %div:_(s32) = G_FDIV %denorm, %half
-    %rem:_(s32) = G_FREM %denorm, %two
+    ; CHECK: %add:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %add(f32)
+    ; CHECK-NEXT: $vgpr1 = COPY %add(f32)
+    ; CHECK-NEXT: $vgpr2 = COPY %add(f32)
+    ; CHECK-NEXT: $vgpr3 = COPY %add(f32)
+    ; CHECK-NEXT: $vgpr4 = COPY %add(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %negdenorm:_(f32) = G_FCONSTANT float -1.40129846e-45
+    %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %half:_(f32) = G_FCONSTANT float 5.000000e-01
+    %add:_(f32) = G_FADD %denorm, %denorm
+    %sub:_(f32) = G_FSUB %denorm, %negdenorm
+    %mul:_(f32) = G_FMUL %denorm, %two
+    %div:_(f32) = G_FDIV %denorm, %half
+    %rem:_(f32) = G_FREM %denorm, %two
     $vgpr0 = COPY %add
     $vgpr1 = COPY %sub
     $vgpr2 = COPY %mul
@@ -71,12 +71,12 @@ name: fma
 body: |
   bb.0:
     ; CHECK-LABEL: name: fma
-    ; CHECK: %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: $vgpr0 = COPY %zero(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    %one:_(s32) = G_FCONSTANT float 1.000000e+00
-    %result:_(s32) = G_FMA %denorm, %one, %zero
+    ; CHECK: %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %zero(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %one:_(f32) = G_FCONSTANT float 1.000000e+00
+    %result:_(f32) = G_FMA %denorm, %one, %zero
     $vgpr0 = COPY %result
 ...
 
@@ -85,18 +85,18 @@ name: ftz_boundary
 body: |
   bb.0:
     ; CHECK-LABEL: name: ftz_boundary
-    ; CHECK: %a:_(s32) = G_FCONSTANT float f0x91FFFFFF
-    ; CHECK-NEXT: %b:_(s32) = G_FCONSTANT float f0xAE000000
-    ; CHECK-NEXT: %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: %mul:_(s32) = G_FMUL %a, %b
-    ; CHECK-NEXT: %fma:_(s32) = G_FMA %a, %b, %zero
-    ; CHECK-NEXT: $vgpr0 = COPY %mul(s32)
-    ; CHECK-NEXT: $vgpr1 = COPY %fma(s32)
-    %a:_(s32) = G_FCONSTANT float f0x91FFFFFF
-    %b:_(s32) = G_FCONSTANT float f0xAE000000
-    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    %mul:_(s32) = G_FMUL %a, %b
-    %fma:_(s32) = G_FMA %a, %b, %zero
+    ; CHECK: %a:_(f32) = G_FCONSTANT float f0x91FFFFFF
+    ; CHECK-NEXT: %b:_(f32) = G_FCONSTANT float f0xAE000000
+    ; CHECK-NEXT: %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: %mul:_(f32) = G_FMUL %a, %b
+    ; CHECK-NEXT: %fma:_(f32) = G_FMA %a, %b, %zero
+    ; CHECK-NEXT: $vgpr0 = COPY %mul(f32)
+    ; CHECK-NEXT: $vgpr1 = COPY %fma(f32)
+    %a:_(f32) = G_FCONSTANT float f0x91FFFFFF
+    %b:_(f32) = G_FCONSTANT float f0xAE000000
+    %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %mul:_(f32) = G_FMUL %a, %b
+    %fma:_(f32) = G_FMA %a, %b, %zero
     $vgpr0 = COPY %mul
     $vgpr1 = COPY %fma
 ...
@@ -106,12 +106,12 @@ name: fcmp
 body: |
   bb.0:
     ; CHECK-LABEL: name: fcmp
-    ; CHECK: %extended:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: $vgpr0 = COPY %extended(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    %result:_(s1) = G_FCMP floatpred(oeq), %denorm, %zero
-    %extended:_(s32) = G_ZEXT %result
+    ; CHECK: %extended:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: $vgpr0 = COPY %extended(i32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %result:_(i1) = G_FCMP floatpred(oeq), %denorm, %zero
+    %extended:_(i32) = G_ZEXT %result
     $vgpr0 = COPY %extended
 ...
 
@@ -120,11 +120,11 @@ name: dynamic
 body: |
   bb.0:
     ; CHECK-LABEL: name: dynamic
-    ; CHECK: %denorm:_(s32) = G_FCONSTANT float 1.401300e-45
-    ; CHECK-NEXT: %result:_(s32) = G_FADD %denorm, %denorm
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %result:_(s32) = G_FADD %denorm, %denorm
+    ; CHECK: %denorm:_(f32) = G_FCONSTANT float 1.401300e-45
+    ; CHECK-NEXT: %result:_(f32) = G_FADD %denorm, %denorm
+    ; CHECK-NEXT: $vgpr0 = COPY %result(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %result:_(f32) = G_FADD %denorm, %denorm
     $vgpr0 = COPY %result
 ...
 
@@ -133,10 +133,10 @@ name: ceil
 body: |
   bb.0:
     ; CHECK-LABEL: name: ceil
-    ; CHECK: %result:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %result:_(s32) = G_FCEIL %denorm
+    ; CHECK: %result:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %result(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %result:_(f32) = G_FCEIL %denorm
     $vgpr0 = COPY %result
 ...
 
@@ -145,11 +145,11 @@ name: ceil_dynamic
 body: |
   bb.0:
     ; CHECK-LABEL: name: ceil_dynamic
-    ; CHECK: %denorm:_(s32) = G_FCONSTANT float 1.401300e-45
-    ; CHECK-NEXT: %result:_(s32) = G_FCEIL %denorm
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %result:_(s32) = G_FCEIL %denorm
+    ; CHECK: %denorm:_(f32) = G_FCONSTANT float 1.401300e-45
+    ; CHECK-NEXT: %result:_(f32) = G_FCEIL %denorm
+    ; CHECK-NEXT: $vgpr0 = COPY %result(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %result:_(f32) = G_FCEIL %denorm
     $vgpr0 = COPY %result
 ...
 
@@ -158,22 +158,22 @@ name: minmax
 body: |
   bb.0:
     ; CHECK-LABEL: name: minmax
-    ; CHECK: %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: $vgpr0 = COPY %zero(s32)
-    ; CHECK-NEXT: $vgpr1 = COPY %zero(s32)
-    ; CHECK-NEXT: $vgpr2 = COPY %zero(s32)
-    ; CHECK-NEXT: $vgpr3 = COPY %zero(s32)
-    ; CHECK-NEXT: $vgpr4 = COPY %zero(s32)
-    ; CHECK-NEXT: $vgpr5 = COPY %zero(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
-    %one:_(s32) = G_FCONSTANT float 1.000000e+00
-    %minnum:_(s32) = G_FMINNUM %denorm, %one
-    %maxnum:_(s32) = G_FMAXNUM %denorm, %zero
-    %minimum:_(s32) = G_FMINIMUM %denorm, %one
-    %maximum:_(s32) = G_FMAXIMUM %denorm, %zero
-    %minimumnum:_(s32) = G_FMINIMUMNUM %denorm, %one
-    %maximumnum:_(s32) = G_FMAXIMUMNUM %denorm, %zero
+    ; CHECK: %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %zero(f32)
+    ; CHECK-NEXT: $vgpr1 = COPY %zero(f32)
+    ; CHECK-NEXT: $vgpr2 = COPY %zero(f32)
+    ; CHECK-NEXT: $vgpr3 = COPY %zero(f32)
+    ; CHECK-NEXT: $vgpr4 = COPY %zero(f32)
+    ; CHECK-NEXT: $vgpr5 = COPY %zero(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %zero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %one:_(f32) = G_FCONSTANT float 1.000000e+00
+    %minnum:_(f32) = G_FMINNUM %denorm, %one
+    %maxnum:_(f32) = G_FMAXNUM %denorm, %zero
+    %minimum:_(f32) = G_FMINIMUM %denorm, %one
+    %maximum:_(f32) = G_FMAXIMUM %denorm, %zero
+    %minimumnum:_(f32) = G_FMINIMUMNUM %denorm, %one
+    %maximumnum:_(f32) = G_FMAXIMUMNUM %denorm, %zero
     $vgpr0 = COPY %minnum
     $vgpr1 = COPY %maxnum
     $vgpr2 = COPY %minimum
@@ -187,12 +187,12 @@ name: minmax_dynamic
 body: |
   bb.0:
     ; CHECK-LABEL: name: minmax_dynamic
-    ; CHECK: %denorm:_(s32) = G_FCONSTANT float 1.401300e-45
-    ; CHECK-NEXT: %one:_(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: %result:_(s32) = G_FMINNUM %denorm, %one
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %denorm:_(s32) = G_FCONSTANT float 1.40129846e-45
-    %one:_(s32) = G_FCONSTANT float 1.000000e+00
-    %result:_(s32) = G_FMINNUM %denorm, %one
+    ; CHECK: %denorm:_(f32) = G_FCONSTANT float 1.401300e-45
+    ; CHECK-NEXT: %one:_(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: %result:_(f32) = G_FMINNUM %denorm, %one
+    ; CHECK-NEXT: $vgpr0 = COPY %result(f32)
+    %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
+    %one:_(f32) = G_FCONSTANT float 1.000000e+00
+    %result:_(f32) = G_FMINNUM %denorm, %one
     $vgpr0 = COPY %result
 ...
