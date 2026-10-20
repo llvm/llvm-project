@@ -256,13 +256,13 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
     case Radix::None:
       break;
     case Radix::Octal:
-      OS << format("%7o ", StringStart);
+      OS << format("%7zo ", StringStart);
       break;
     case Radix::Hexadecimal:
-      OS << format("%7x ", StringStart);
+      OS << format("%7zx ", StringStart);
       break;
     case Radix::Decimal:
-      OS << format("%7u ", StringStart);
+      OS << format("%7zu ", StringStart);
       break;
     }
   };
