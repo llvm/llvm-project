@@ -95,6 +95,14 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return false; }
+  // Local reassignment makes the greedy allocator try every other register
+  // for each interfering live range. With the AGX register file (overlapping
+  // 16-bit to 128-bit classes over 256 halves) that dominates the compile time
+  // of kernels under register pressure (mma emulation: 3-5x slower) for a code
+  // size difference under 0.3% either way.
+  bool enableRALocalReassignment(CodeGenOptLevel) const override {
+    return false;
+  }
 };
 
 } // namespace llvm
