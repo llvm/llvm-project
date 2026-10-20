@@ -158,30 +158,35 @@ Choose DWARF debug sections compression.
 :::
 
 :::{option} --verify[=<prefixes>]
-Check diagnostics against directives in comments of the input instead of
-printing them, similar to Clang's `-verify`. `<prefixes>` is a comma-separated
-list of directive prefixes (default: `expected`). A directive has the form
+Check diagnostics against directives in single-line comments instead of printing
+them (similar to Clang's `-verify`):
+
+```asm
+.foo # expected-error {{unknown directive}}
+.bar # expected-error-re {{unknown {{directive|instruction}}}}
+```
+
+Directives have the form:
 
 ```text
 <prefix>-<kind>[-re][@<offset>] {{<text>}}
 ```
 
-where `<kind>` is `error`, `warning`, `note` or `remark`, and `<text>` must be
-a substring of the diagnostic message (with `-re`, `{{...}}` blocks inside
-`<text>` are regular expressions). Without `@<offset>`, the directive applies
-to its own line; `@+N` and `@-N` refer to the line `N` lines below or above,
-`@above` and `@below` to the nearest non-directive line, and `@unknown` to
-diagnostics without a location. For example:
+- `<prefix>`: `expected` by default, or any prefix listed in the
+  comma-separated `<prefixes>` argument.
+- `<kind>`: one of `error`, `warning`, `note`, or `remark`.
+- `<text>`: a substring of the diagnostic message. With `-re`, `{{...}}` blocks
+  inside `<text>` are matched as regular expressions.
+- `@<offset>`: the line where the diagnostic is expected (defaults to the
+  directive's own line):
+  - `@+N` / `@-N`: `N` lines below or above the directive.
+  - `@above` / `@below`: the nearest non-directive line above or below.
+  - `@unknown`: a diagnostic with no source location.
 
-```asm
-.foo # expected-error {{unknown directive}}
-```
-
-Directives are only recognized in single-line comments, at most one per line.
-Each directive matches exactly one diagnostic, so a diagnostic that is reported
-twice needs two directives. The exit status is 0 if every diagnostic matches a
-directive and every directive matches a diagnostic. Unlike Clang, directives
-take no count and `expected-no-diagnostics` is not needed.
+At most one directive is recognized per line, and each directive matches a
+single diagnostic. {program}`llvm-mc` succeeds if all directives are matched
+and no unexpected diagnostics are emitted. Unlike Clang, occurrence counts are
+not supported and `expected-no-diagnostics` is not needed.
 :::
 
 ## EXIT STATUS
