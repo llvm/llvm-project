@@ -70,7 +70,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   SmallVector<CompileUnitInfo> CompileUnits;
   int64_t DwarfVersion = 0;
 
-  SmallVector<const DIType *, 8> DebugTypes;
+  SmallVector<const DIType *> DebugTypes;
 
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
