@@ -139,32 +139,11 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
   copy_bytes_and_bump_pointers(dst, src, size);
 }
 
-// `memcpy` guarantees that `dst` and `src` do not overlap. Whether the
-// implementation gets to know it is a code size trade-off:
-// - With MVE, the compiler then vectorizes the word by word copies with
-//   `vldrb.u8`/`vstrb.8`. Without `__restrict`, the SLP vectorizer versions
-//   the copy loops with runtime alias checks and a scalar fallback instead,
-//   which is about 50% larger.
-// - Without MVE, the compiler would reorder the word by word loads and stores,
-//   which needs more registers and adds push/pop. Hiding `__restrict` keeps
-//   the tuned load/store sequence.
-#ifdef __ARM_FEATURE_MVE
-#define LIBC_ARM_MEMCPY_RESTRICT __restrict
-#else
-#define LIBC_ARM_MEMCPY_RESTRICT
-#endif
-
-// Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52, M55, M85 with
-// hardware support for unaligned loads and stores. It compiles down to 272
-// bytes (222 bytes with MVE) when used through `memcpy` that also needs to
-// return the `dst` ptr.
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_arm_mid_end(Ptr LIBC_ARM_MEMCPY_RESTRICT dst_,
-                          CPtr LIBC_ARM_MEMCPY_RESTRICT src_, size_t size) {
-  // The helpers take the pointers by reference, which a `__restrict` pointer
-  // cannot bind to.
-  Ptr dst = dst_;
-  CPtr src = src_;
+// Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52 with hardware
+// support for unaligned loads and stores. It compiles down to 272 bytes when
+// used through `memcpy` that also needs to return the `dst` ptr.
+[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_mid_end(Ptr dst, CPtr src,
+                                                            size_t size) {
   if (misaligned(bitwise_or(src, dst)))
     LIBC_ATTR_UNLIKELY {
       if (size < 8)
@@ -215,11 +194,14 @@ inline_memcpy_arm_mid_end(Ptr LIBC_ARM_MEMCPY_RESTRICT dst_,
 
 [[maybe_unused]] LIBC_INLINE void inline_memcpy_arm(Ptr dst, CPtr src,
                                                     size_t size) {
-#ifndef __ARM_FEATURE_MVE
-  // Hide the `__restrict` of the `memcpy` prototype from the implementation,
-  // see `LIBC_ARM_MEMCPY_RESTRICT`.
+  // The compiler performs alias analysis and is able to prove that `dst` and
+  // `src` do not alias by propagating the `__restrict` keyword from the
+  // `memcpy` prototype. This allows the compiler to merge consecutive
+  // load/store (LDR, STR) instructions generated in
+  // `copy_block_and_bump_pointers` with `BlockOp::kByWord` into load/store
+  // double (LDRD, STRD) instructions, this is undesirable so we prevent the
+  // compiler from inferring `__restrict` with the following line.
   asm volatile("" : "+r"(dst), "+r"(src));
-#endif
 #ifdef __ARM_FEATURE_UNALIGNED
   return inline_memcpy_arm_mid_end(dst, src, size);
 #else
