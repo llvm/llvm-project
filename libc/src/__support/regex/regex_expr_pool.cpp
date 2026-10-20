@@ -39,6 +39,9 @@ uint32_t hash_expr(const Expr &e) {
   case ExprKind::Literal:
     hasher.update(&e.ch, sizeof(e.ch));
     break;
+  case ExprKind::Anchor:
+    hasher.update(&e.anchor_mask, sizeof(e.anchor_mask));
+    break;
   case ExprKind::ByteSet:
     hasher.update(&e.byte_set_id, sizeof(e.byte_set_id));
     break;
@@ -226,6 +229,9 @@ ErrorOr<ExprId> ExprPool::empty_str() {
 ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
+ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  return intern(Expr::make_anchor(mask));
+}
 
 ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
   size_t count = 0;
@@ -284,7 +290,8 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
     return r;
   if (r == EMPTY_STR_ID)
     return l;
-  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r)));
+  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r),
+                                  has_anchors(l) || has_anchors(r)));
 }
 ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
@@ -300,7 +307,8 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
     return l;
   if (l > r)
     cpp::swap(l, r);
-  return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r)));
+  return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r),
+                               has_anchors(l) || has_anchors(r)));
 }
 
 } // namespace regex
