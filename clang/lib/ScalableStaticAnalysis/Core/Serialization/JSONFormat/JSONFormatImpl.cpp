@@ -55,7 +55,8 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
         .build();
   }
 
-  auto BufferOrError = llvm::MemoryBuffer::getFile(Path, /*IsText=*/true);
+  auto BufferOrError =
+      llvm::MemoryBuffer::getFile(Path, llvm::sys::fs::OF_TextWithCRLF);
   if (!BufferOrError) {
     const std::error_code EC = BufferOrError.getError();
     return ErrorBuilder::create(EC, ErrorMessages::FailedToReadFile, Path,

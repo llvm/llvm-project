@@ -497,7 +497,7 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
 
 static void checkFileData(StringRef FileName, StringRef GoldenData) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(FileName, sys::fs::OF_TextWithCRLF);
   EXPECT_FALSE(BufOrErr.getError());
 
   EXPECT_EQ((*BufOrErr)->getBufferSize(), GoldenData.size());

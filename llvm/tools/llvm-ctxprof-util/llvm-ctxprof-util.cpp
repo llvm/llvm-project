@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -48,7 +49,7 @@ namespace {
 // Save the bitstream profile from the JSON representation.
 Error convertFromYaml() {
   auto BufOrError =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, sys::fs::OF_TextWithCRLF);
   if (!BufOrError)
     return createFileError(InputFilename, BufOrError.getError());
 

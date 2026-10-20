@@ -708,7 +708,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
         PathToOpen = std::move(*Resolved);
     }
 
-    auto BufferOrError = MemoryBuffer::getFile(PathToOpen, /*IsText=*/true);
+    auto BufferOrError =
+        MemoryBuffer::getFile(PathToOpen, sys::fs::OF_TextWithCRLF);
     if (!BufferOrError) {
       if (MissingSources.insert(LineInfo.FileName).second)
         reportWarning("failed to find source " + LineInfo.FileName,
