@@ -627,6 +627,10 @@ def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
 def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
   "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
 
+def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRCPC",
+  "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
+   [FeatureSVE2, FeatureRCPC3]>;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
@@ -1034,6 +1038,11 @@ def FeatureFixedLoadLatency4 : SubtargetFeature<
 def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
+def FeatureLimitedSVEIntCmpBandwidth : SubtargetFeature<
+    "has-limited-sve-int-cmp-bandwidth", "HasLimitedSVEIntCmpBandwidth", "true",
+    "Has limited SVE integer compare bandwidth compared to Neon compare",
     [], InlineIgnore>;
 
 def FeatureUseReciprocalFDivCombineThreshold2 : SubtargetFeature<

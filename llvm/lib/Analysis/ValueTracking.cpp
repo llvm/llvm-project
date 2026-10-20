@@ -3230,9 +3230,48 @@ static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
                                                 m_Specific(Op0), m_Zero())));
 }
 
+/// Return true if "addr(P) + Off" cannot be zero. The object P points to
+/// cannot cross the unsigned address space boundary, including the address one
+/// past its end, so an offset that stays within the object cannot wrap around
+/// to zero. This holds even if the object starts at the zero address, which is
+/// all that null_pointer_is_valid permits, so a non-zero offset is enough.
+static bool isNonZeroAddrPlusOffset(const SimplifyQuery &Q, Value *X,
+                                    Value *Y) {
+  const APInt *Off;
+  if (!match(Y, m_APInt(Off)) || Off->isZero())
+    return false;
+
+  // ptrtoaddr always produces the address. ptrtoint only does so when its
+  // result is at least as wide as the address: a narrower result is truncated
+  // and may wrap to zero, while bits above the address can only make the
+  // result more non-zero.
+  Value *P;
+  if (!match(X, m_PtrToAddr(m_Value(P))) &&
+      !(match(X, m_PtrToInt(m_Value(P))) &&
+        X->getType()->getScalarSizeInBits() >=
+            Q.DL.getAddressSizeInBits(P->getType())))
+    return false;
+
+  // A vector of pointers has no single object whose size can be taken, and
+  // getPointerDereferenceableBytes() requires a plain pointer.
+  if (!P->getType()->isPointerTy())
+    return false;
+
+  bool CanBeNull;
+  uint64_t DerefBytes = P->getPointerDereferenceableBytes(
+      Q.DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  if (CanBeNull || DerefBytes == 0 || !Off->ule(DerefBytes))
+    return false;
+
+  return true;
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
                          unsigned BitWidth, Value *X, Value *Y, bool NSW,
                          bool NUW, unsigned Depth) {
+  if (isNonZeroAddrPlusOffset(Q, X, Y) || isNonZeroAddrPlusOffset(Q, Y, X))
+    return true;
+
   // (X + (X != 0)) is non zero
   if (matchOpWithOpEqZero(X, Y))
     return true;
@@ -3903,12 +3942,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
     if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
       return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
-    // A global variable in address space 0 is non null unless extern weak
-    // or an absolute symbol reference. Other address spaces may have null as a
-    // valid address for a global, so we can't assume anything.
+    // A global variable is non null unless extern weak or an absolute symbol
+    // reference. An alias is also excluded, as it may resolve to a weak
+    // undefined symbol and thus to the null address. Where null is a valid
+    // address an allocation may start there, so nothing can be assumed; that
+    // covers both null_pointer_is_valid and address spaces other than zero.
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
-      if (!GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
-          GV->getType()->getAddressSpace() == 0)
+      if (!NullPointerIsDefined(Q.getFunction(),
+                                GV->getType()->getAddressSpace()) &&
+          !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
+          !isa<GlobalAlias>(GV))
         return true;
     }
 
@@ -8239,7 +8282,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       return !includesUndef(Kind);
 
     if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
-        isa<ConstantPointerNull>(C) || isa<Function>(C))
+        isa<ConstantPointerNull>(C) || isa<Function>(C) || isa<ConstantData>(C))
       return true;
 
     if (C->getType()->isVectorTy() || C->getType()->isAggregateType()) {
@@ -8248,12 +8291,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         if (Constant *SplatC = C->getSplatValue())
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
-      } else {
-        if (includesUndef(Kind) && C->containsUndefElement())
-          return false;
-        if (includesPoison(Kind) && C->containsPoisonElement())
-          return false;
-        return !C->containsConstantExpression();
+      } else if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+        return all_of(CA->operands(), [&](const Use &Op) {
+          return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
+                                                  Depth + 1, Kind);
+        });
       }
     }
   }
