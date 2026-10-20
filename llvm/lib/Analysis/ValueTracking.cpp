@@ -11165,3 +11165,215 @@ bool llvm::collectPossibleValues(const Value *V,
   }
   return true;
 }
+
+static bool isScalarFPRangeTy(Type *Ty) {
+  return Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy();
+}
+
+static DenormalMode getFPRangeDenormalMode(const Instruction &I,
+                                           const fltSemantics &Sem) {
+  const BasicBlock *BB = I.getParent();
+  const Function *F = BB ? BB->getParent() : nullptr;
+  return F ? F->getDenormalMode(Sem) : DenormalMode::getDynamic();
+}
+
+/// If \p R contains a zero of either sign, add the other one.
+static ConstantFPRange addOppositeZero(ConstantFPRange R) {
+  const fltSemantics &Sem = R.getSemantics();
+  APFloat PosZero = APFloat::getZero(Sem, /*Negative=*/false);
+  APFloat NegZero = APFloat::getZero(Sem, /*Negative=*/true);
+  if (R.contains(PosZero) || R.contains(NegZero))
+    R = R.unionWith(ConstantFPRange::getNonNaN(NegZero, PosZero));
+  return R;
+}
+
+/// Apply the fast-math flags and output denormal mode of \p I to \p R and
+/// append \p I to \p Used.
+static ConstantFPRange
+finishFPRange(const Instruction &I, ConstantFPRange R,
+              SmallVectorImpl<const Instruction *> *Used) {
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+    // nnan/ninf violations are poison.
+    if (FPOp->hasNoNaNs())
+      R = R.getWithoutNaN();
+    if (FPOp->hasNoInfs())
+      R = R.getWithoutInf();
+    if (FPOp->hasNoSignedZeros())
+      R = addOppositeZero(R);
+  }
+  if (R.isEmptySet())
+    return ConstantFPRange::getFull(R.getSemantics());
+  R.flushDenormals(getFPRangeDenormalMode(I, R.getSemantics()).Output);
+  if (Used)
+    Used->push_back(&I);
+  return R;
+}
+
+static ConstantFPRange rangeFromIntToFP(const CastInst &Cast, bool Signed,
+                                        const SimplifyQuery &SQ) {
+  const fltSemantics &Sem = Cast.getType()->getFltSemantics();
+  ConstantRange CR = computeConstantRangeIncludingKnownBits(
+      Cast.getOperand(0), Signed, SQ.getWithInstruction(&Cast));
+  if (CR.isEmptySet())
+    return ConstantFPRange::getFull(Sem);
+
+  APInt IntMin = Signed ? CR.getSignedMin() : CR.getUnsignedMin();
+  APInt IntMax = Signed ? CR.getSignedMax() : CR.getUnsignedMax();
+  APFloat Lo(Sem), Hi(Sem);
+  Lo.convertFromAPInt(IntMin, Signed, APFloat::rmNearestTiesToEven);
+  Hi.convertFromAPInt(IntMax, Signed, APFloat::rmNearestTiesToEven);
+  // The conversion is monotonic and maps 0 to +0.
+  return ConstantFPRange::getNonNaN(std::move(Lo), std::move(Hi));
+}
+
+static ConstantFPRange
+rangeFromFPCast(const CastInst &Cast, const SimplifyQuery &SQ, unsigned Depth,
+                SmallVectorImpl<const Instruction *> *Used) {
+  ConstantFPRange SrcR =
+      computeConstantFPRange(Cast.getOperand(0), SQ, Depth + 1, Used);
+  SrcR.flushDenormals(getFPRangeDenormalMode(Cast, SrcR.getSemantics()).Input);
+  return SrcR.cast(Cast.getType()->getFltSemantics());
+}
+
+static ConstantFPRange
+rangeFromFPBinOp(const Instruction &I, const SimplifyQuery &SQ, unsigned Depth,
+                 SmallVectorImpl<const Instruction *> *Used) {
+  auto *FPOp = cast<FPMathOperator>(&I);
+  const fltSemantics &Sem = I.getType()->getFltSemantics();
+  // afn allows an approximate fdiv.
+  if (I.getOpcode() == Instruction::FDiv && FPOp->hasApproxFunc())
+    return ConstantFPRange::getFull(Sem);
+
+  ConstantFPRange LHS =
+      computeConstantFPRange(I.getOperand(0), SQ, Depth + 1, Used);
+  ConstantFPRange RHS =
+      computeConstantFPRange(I.getOperand(1), SQ, Depth + 1, Used);
+
+  DenormalMode Mode = getFPRangeDenormalMode(I, Sem);
+  for (ConstantFPRange *R : {&LHS, &RHS}) {
+    R->flushDenormals(Mode.Input);
+    if (FPOp->hasNoSignedZeros())
+      *R = addOppositeZero(*R);
+  }
+
+  switch (I.getOpcode()) {
+  case Instruction::FAdd:
+    return LHS.add(RHS);
+  case Instruction::FSub:
+    return LHS.sub(RHS);
+  case Instruction::FMul:
+    return LHS.mul(RHS);
+  case Instruction::FDiv: {
+    ConstantFPRange R = LHS.div(RHS);
+    if (!FPOp->hasAllowReciprocal())
+      return R;
+    // arcp allows x * (1 / y). Targets may use an approximate reciprocal, so
+    // only handle an f32/f64 constant divisor.
+    if (I.getType()->isHalfTy() || !isa<ConstantFP>(I.getOperand(1)))
+      return ConstantFPRange::getFull(Sem);
+    ConstantFPRange Recip = ConstantFPRange(APFloat::getOne(Sem)).div(RHS);
+    return R.unionWith(LHS.mul(Recip));
+  }
+  default:
+    llvm_unreachable("Unexpected FP binary operator");
+  }
+}
+
+static ConstantFPRange
+rangeFromIntrinsic(const IntrinsicInst &I, const SimplifyQuery &SQ,
+                   unsigned Depth, SmallVectorImpl<const Instruction *> *Used) {
+  const fltSemantics &Sem = I.getType()->getFltSemantics();
+  Intrinsic::ID IID = I.getIntrinsicID();
+  if (IID == Intrinsic::canonicalize) {
+    ConstantFPRange SrcR =
+        computeConstantFPRange(I.getArgOperand(0), SQ, Depth + 1, Used);
+    SrcR.flushDenormals(getFPRangeDenormalMode(I, Sem).Input);
+    return SrcR;
+  }
+
+  bool IsMax;
+  switch (IID) {
+  case Intrinsic::maxnum:
+  case Intrinsic::maximumnum:
+    IsMax = true;
+    break;
+  case Intrinsic::minnum:
+  case Intrinsic::minimumnum:
+    IsMax = false;
+    break;
+  default:
+    return ConstantFPRange::getFull(Sem);
+  }
+
+  const Value *Src = I.getArgOperand(0);
+  const APFloat *K;
+  if (!match(I.getArgOperand(1), m_APFloat(K))) {
+    Src = I.getArgOperand(1);
+    if (!match(I.getArgOperand(0), m_APFloat(K)))
+      return ConstantFPRange::getFull(Sem);
+  }
+
+  DenormalMode Mode = getFPRangeDenormalMode(I, Sem);
+  if (K->isNaN() || (K->isDenormal() && Mode.Input != DenormalMode::IEEE))
+    return ConstantFPRange::getFull(Sem);
+
+  // minnum/maxnum(NaN, K) is K.
+  ConstantFPRange SrcR = computeConstantFPRange(Src, SQ, Depth + 1, Used);
+  if (SrcR.containsNaN() || SrcR.isEmptySet())
+    return ConstantFPRange::getFull(Sem);
+  SrcR.flushDenormals(Mode.Input);
+
+  // minnum/maxnum with a constant is monotonic. nsz is applied by
+  // finishFPRange.
+  const APFloat &SrcLo = SrcR.getLower();
+  const APFloat &SrcHi = SrcR.getUpper();
+  APFloat Lo = IsMax ? maxnum(SrcLo, *K) : minnum(SrcLo, *K);
+  APFloat Hi = IsMax ? maxnum(SrcHi, *K) : minnum(SrcHi, *K);
+  return ConstantFPRange::getNonNaN(std::move(Lo), std::move(Hi));
+}
+
+ConstantFPRange
+llvm::computeConstantFPRange(const Value *V, const SimplifyQuery &SQ,
+                             unsigned Depth,
+                             SmallVectorImpl<const Instruction *> *Used) {
+  assert(V->getType()->isFPOrFPVectorTy() && "Expected floating-point value");
+  const fltSemantics &Sem = V->getType()->getScalarType()->getFltSemantics();
+  if (!isScalarFPRangeTy(V->getType()))
+    return ConstantFPRange::getFull(Sem);
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
+    return ConstantFPRange(CFP->getValueAPF());
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return ConstantFPRange::getFull(Sem);
+
+  // !fpmath allows a less accurate result.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->hasMetadata(LLVMContext::MD_fpmath))
+    return ConstantFPRange::getFull(Sem);
+
+  ConstantFPRange R = ConstantFPRange::getFull(Sem);
+  switch (I->getOpcode()) {
+  case Instruction::UIToFP:
+    R = rangeFromIntToFP(cast<CastInst>(*I), /*Signed=*/false, SQ);
+    break;
+  case Instruction::SIToFP:
+    R = rangeFromIntToFP(cast<CastInst>(*I), /*Signed=*/true, SQ);
+    break;
+  case Instruction::FPExt:
+  case Instruction::FPTrunc:
+    R = rangeFromFPCast(cast<CastInst>(*I), SQ, Depth, Used);
+    break;
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+    R = rangeFromFPBinOp(*I, SQ, Depth, Used);
+    break;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(I))
+      R = rangeFromIntrinsic(*II, SQ, Depth, Used);
+    break;
+  default:
+    break;
+  }
+  return finishFPRange(*I, std::move(R), Used);
+}
