@@ -61409,7 +61409,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         EVT ConcatVT = EVT::getVectorVT(
             *DAG.getContext(), SubVT.getSimpleVT().getScalarType(),
             SubVT.getVectorElementCount() * Subs.size());
-        if (ConcatVT.isSimple()) {
+        // Don't form an illegal concatenation from legal subvectors, e.g.
+        // v16bf16 from v8bf16 without BWI; this also runs after legalization.
+        if (ConcatVT.isSimple() &&
+            (TLI.isTypeLegal(ConcatVT) || !TLI.isTypeLegal(SubVT))) {
           for (SDValue &Sub : Subs)
             Sub = DAG.getBitcast(SubVT, Sub);
           if (SDValue ConcatSrc = combineConcatVectorOps(
