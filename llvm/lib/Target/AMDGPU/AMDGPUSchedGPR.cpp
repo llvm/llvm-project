@@ -13,8 +13,8 @@
 ///   1. reads the requested register number and strict flag from the immediate
 ///      operands,
 ///   2. attaches an AMDGPURI::{VGPR,SGPR,AGPR}RegHint register allocation hint
-///      to the destination (and source) vreg so the allocator prefers that exact
-///      physical register,
+///      to the destination (and source) vreg so the allocator prefers that
+///      exact physical register,
 ///   3. propagates the hint through COPY / REG_SEQUENCE / INSERT_SUBREG /
 ///      SUBREG_TO_REG so it survives coalescing, and
 ///   4. replaces the pseudo with a plain COPY.
@@ -125,16 +125,13 @@ static bool runSchedGPR(MachineFunction &MF) {
       unsigned HintKind;
       switch (Kind) {
       case SGK_VGPR:
-        HintKind = Strict ? AMDGPURI::StrictVGPRRegHint
-                          : AMDGPURI::VGPRRegHint;
+        HintKind = Strict ? AMDGPURI::StrictVGPRRegHint : AMDGPURI::VGPRRegHint;
         break;
       case SGK_SGPR:
-        HintKind = Strict ? AMDGPURI::StrictSGPRRegHint
-                          : AMDGPURI::SGPRRegHint;
+        HintKind = Strict ? AMDGPURI::StrictSGPRRegHint : AMDGPURI::SGPRRegHint;
         break;
       case SGK_AGPR:
-        HintKind = Strict ? AMDGPURI::StrictAGPRRegHint
-                          : AMDGPURI::AGPRRegHint;
+        HintKind = Strict ? AMDGPURI::StrictAGPRRegHint : AMDGPURI::AGPRRegHint;
         break;
       default:
         llvm_unreachable("unexpected schedule GPR kind");

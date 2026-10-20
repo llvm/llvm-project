@@ -2299,12 +2299,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_sched_vgpr:
-      IID = Intrinsic::amdgcn_sched_vgpr; break;
+      IID = Intrinsic::amdgcn_sched_vgpr;
+      break;
     case AMDGPU::BI__builtin_amdgcn_sched_sgpr:
-      IID = Intrinsic::amdgcn_sched_sgpr; break;
+      IID = Intrinsic::amdgcn_sched_sgpr;
+      break;
     case AMDGPU::BI__builtin_amdgcn_sched_agpr:
-      IID = Intrinsic::amdgcn_sched_agpr; break;
-    default: llvm_unreachable("unexpected builtin");
+      IID = Intrinsic::amdgcn_sched_agpr;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin");
     }
     llvm::Function *F = CGM.getIntrinsic(IID, Val->getType());
     return Builder.CreateCall(F, {Val, RegNum, Strict});

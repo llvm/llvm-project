@@ -474,10 +474,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     QualType DataTy = DataArg->getType();
     if (DataTy->isAnyComplexType() ||
         !(DataTy->isArithmeticType() ||
-          (DataTy->isVectorType() &&
-           DataTy->castAs<VectorType>()
-               ->getElementType()
-               ->isArithmeticType()))) {
+          (DataTy->isVectorType() && DataTy->castAs<VectorType>()
+                                         ->getElementType()
+                                         ->isArithmeticType()))) {
       SemaRef.Diag(DataArg->getBeginLoc(),
                    diag::err_typecheck_cond_expect_int_float)
           << DataTy << DataArg->getSourceRange();
@@ -486,10 +485,17 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(DataTy);
     int MaxReg;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_sched_vgpr: MaxReg = 1023; break;
-    case AMDGPU::BI__builtin_amdgcn_sched_sgpr: MaxReg = 105;  break;
-    case AMDGPU::BI__builtin_amdgcn_sched_agpr: MaxReg = 255;  break;
-    default: llvm_unreachable("unexpected builtin");
+    case AMDGPU::BI__builtin_amdgcn_sched_vgpr:
+      MaxReg = 1023;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_sched_sgpr:
+      MaxReg = 105;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_sched_agpr:
+      MaxReg = 255;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin");
     }
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, MaxReg);
   }
