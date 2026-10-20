@@ -427,9 +427,9 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
-      return isTargetWindows();
+      return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
-      return IsVarArg && isTargetWindows();
+      return IsVarArg && isTargetWindowsOrUEFI();
     case CallingConv::Win64:
       return true;
     default:

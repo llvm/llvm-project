@@ -9240,7 +9240,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
   case CallingConv::GRAAL:
-    if (Subtarget->isTargetWindows()) {
+    if (Subtarget->isTargetWindowsOrUEFI()) {
       if (IsVarArg) {
         if (Subtarget->isWindowsArm64EC())
           return CC_AArch64_Arm64EC_VarArg;
@@ -13776,10 +13776,11 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
   // pointer.
   SDLoc DL(Op);
   unsigned PtrSize = Subtarget->isTargetILP32() ? 4 : 8;
-  unsigned VaListSize =
-      (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
-          ? PtrSize
-          : Subtarget->isTargetILP32() ? 20 : 32;
+  unsigned VaListSize;
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindowsOrUEFI())
+    VaListSize = PtrSize;
+  else
+    VaListSize = Subtarget->isTargetILP32() ? 20 : 32;
   const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
 
@@ -34032,7 +34033,7 @@ bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
 
 unsigned
 AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
-  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindows())
+  if (Subtarget->isTargetDarwin() || Subtarget->isTargetWindowsOrUEFI())
     return getPointerTy(DL).getSizeInBits();
 
   return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
