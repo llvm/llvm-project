@@ -85,11 +85,12 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  return insertInstr(buildInstrNoInsert(TargetOpcode::DBG_VALUE)
-                         .addFrameIndex(FI)
-                         .addImm(0)
-                         .addMetadata(Variable)
-                         .addMetadata(Expr));
+  return insertInstr(
+      BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_VALUE))
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMetadata(Variable)
+          .addMetadata(Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
@@ -100,7 +101,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  auto MIB = buildInstrNoInsert(TargetOpcode::DBG_VALUE);
+  auto MIB = BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_VALUE));
 
   auto *NumericConstant = [&] () -> const Constant* {
     if (const auto *CE = dyn_cast<ConstantExpr>(&C))
@@ -155,7 +156,8 @@ MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
   assert(isa<DILabel>(Label) && "not a label");
   assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(State.DL) &&
          "Expected inlined-at fields to agree");
-  auto MIB = buildInstr(TargetOpcode::DBG_LABEL);
+  auto MIB = insertInstr(
+      BuildMI(getMF(), getDL(), getTII().get(TargetOpcode::DBG_LABEL)));
 
   return MIB.addMetadata(Label);
 }

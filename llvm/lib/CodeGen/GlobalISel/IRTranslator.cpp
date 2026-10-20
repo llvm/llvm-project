@@ -5286,11 +5286,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
         Verifier.setCurrentInst(&Inst);
 #endif // ifndef NDEBUG
 
-        // Translate debug records attached to Inst before Inst itself. Do not
-        // let them inherit PC sections or MMRA metadata from the previously
-        // translated instruction.
-        CurBuilder->setPCSections(nullptr);
-        CurBuilder->setMMRAMetadata(nullptr);
+        // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
 
         if (translate(Inst))
