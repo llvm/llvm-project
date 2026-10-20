@@ -45,30 +45,31 @@ struct Test {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     {
+      using T = TrivialSortable;
       { // Check the result type
-        TrivialSortable a[]  = {0};
-        TrivialSortable b[]  = {0};
-        TrivialSortable c[2] = {};
-        auto res             = std::set_union(
+        T a[]    = {0};
+        T b[]    = {0};
+        T c[2]   = {};
+        auto res = std::set_union(
             policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(c));
         static_assert(std::is_same_v<decltype(res), decltype(std::begin(c))>);
       }
       { // First is shorter
-        TrivialSortable a[]                    = {11, 33, 31, 41};
-        TrivialSortable b[]                    = {22, 32, 43, 42, 52};
-        TrivialSortable expected[]             = {11, 22, 33, 31, 41, 42, 52};
-        TrivialSortable c[std::size(expected)] = {};
-        auto res                               = std::set_union(
+        T a[]                    = {11, 33, 31, 41};
+        T b[]                    = {22, 32, 43, 42, 52};
+        T expected[]             = {11, 22, 33, 31, 41, 42, 52};
+        T c[std::size(expected)] = {};
+        auto res                 = std::set_union(
             policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(c));
         assert(res == std::end(c));
         assert(std::lexicographical_compare(std::begin(c), res, std::begin(expected), std::end(expected)) == 0);
       }
       { // First is longer
-        TrivialSortable a[]                    = {22, 32, 43, 42, 52};
-        TrivialSortable b[]                    = {11, 33, 31, 41};
-        TrivialSortable expected[]             = {11, 22, 32, 31, 43, 42, 52};
-        TrivialSortable c[std::size(expected)] = {};
-        auto res                               = std::set_union(
+        T a[]                    = {22, 32, 43, 42, 52};
+        T b[]                    = {11, 33, 31, 41};
+        T expected[]             = {11, 22, 32, 31, 43, 42, 52};
+        T c[std::size(expected)] = {};
+        auto res                 = std::set_union(
             policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(c));
         assert(res == std::end(c));
         assert(std::lexicographical_compare(std::begin(c), res, std::begin(expected), std::end(expected)) == 0);
