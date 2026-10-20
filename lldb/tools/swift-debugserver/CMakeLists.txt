@@ -4,7 +4,7 @@ project(swift-debugserver LANGUAGES C Swift)
 
 include(GNUInstallDirs)
 
-if (PROJECT_IS_TOP_LEVEL)
+if(PROJECT_IS_TOP_LEVEL)
   set(LLDB_BUILT_STANDALONE ON)
 
   list(APPEND CMAKE_MODULE_PATH
