@@ -395,45 +395,18 @@ define void @no_peel_last_already_peeled_front_count_exceeds_max(i32 %n) {
 ; CHECK-LABEL: define void @no_peel_last_already_peeled_front_count_exceeds_max(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
-; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ 100, %[[ENTRY_SPLIT]] ], [ 5, %[[LOOP]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i32 [ 200, %[[ENTRY_SPLIT]] ], [ [[P1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ 100, %[[ENTRY]] ], [ 5, %[[LOOP]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi i32 [ 200, %[[ENTRY]] ], [ [[P1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 10, i32 20
 ; CHECK-NEXT:    call void @foo(i32 [[SEL]])
 ; CHECK-NEXT:    call void @foo(i32 [[P2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
-; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ]
-; CHECK-NEXT:    [[DOTPH1:%.*]] = phi i32 [ 5, %[[LOOP]] ]
-; CHECK-NEXT:    [[DOTPH2:%.*]] = phi i32 [ [[P1]], %[[LOOP]] ]
-; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
-; CHECK:       [[EXIT_PEEL_BEGIN]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 100, %[[ENTRY]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ 200, %[[ENTRY]] ], [ [[DOTPH2]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
-; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
-; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[C_PEEL:%.*]] = icmp ult i32 [[TMP3]], 1
-; CHECK-NEXT:    [[SEL_PEEL:%.*]] = select i1 [[C_PEEL]], i32 10, i32 20
-; CHECK-NEXT:    call void @foo(i32 [[SEL_PEEL]])
-; CHECK-NEXT:    call void @foo(i32 [[TMP5]])
-; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw i32 [[TMP3]], 1
-; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp eq i32 [[IV_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
-; CHECK:       [[EXIT_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
-; CHECK:       [[LOOP_PEEL_NEXT]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -463,19 +436,42 @@ define void @peel_last_already_peeled_front_count_exceeds_max(i32 %n) {
 ; CHECK-LABEL: define void @peel_last_already_peeled_front_count_exceeds_max(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[C_LAST:%.*]] = icmp eq i32 [[IV]], [[SUB]]
-; CHECK-NEXT:    [[SEL_LAST:%.*]] = select i1 [[C_LAST]], i32 1, i32 2
-; CHECK-NEXT:    call void @foo(i32 [[SEL_LAST]])
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @foo(i32 2)
 ; CHECK-NEXT:    [[C_FIRST:%.*]] = icmp ult i32 [[IV]], 2
 ; CHECK-NEXT:    [[SEL_FIRST:%.*]] = select i1 [[C_FIRST]], i32 10, i32 20
 ; CHECK-NEXT:    call void @foo(i32 [[SEL_FIRST]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[SUB_PEEL:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[C_LAST_PEEL:%.*]] = icmp eq i32 [[TMP3]], [[SUB_PEEL]]
+; CHECK-NEXT:    [[SEL_LAST_PEEL:%.*]] = select i1 [[C_LAST_PEEL]], i32 1, i32 2
+; CHECK-NEXT:    call void @foo(i32 [[SEL_LAST_PEEL]])
+; CHECK-NEXT:    [[C_FIRST_PEEL:%.*]] = icmp ult i32 [[TMP3]], 2
+; CHECK-NEXT:    [[SEL_FIRST_PEEL:%.*]] = select i1 [[C_FIRST_PEEL]], i32 10, i32 20
+; CHECK-NEXT:    call void @foo(i32 [[SEL_FIRST_PEEL]])
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp ne i32 [[IV_NEXT_PEEL]], [[N]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -499,8 +495,49 @@ exit:
   ret void
 }
 
+
+; Peeling the first 7 iterations exceeds the max peel count due to the already
+; peeled iteration. Make sure we don't fall back to peeling the last iteration.
+define void @already_peeled_first_count_exceeds_max(i32 %n) {
+; CHECK-LABEL: define void @already_peeled_first_count_exceeds_max(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 10, i32 20
+; CHECK-NEXT:    call void @foo(i32 [[SEL]])
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[IV]], i32 7)
+; CHECK-NEXT:    call void @foo(i32 [[UMIN]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp ult i32 %iv, 2
+  %sel = select i1 %c, i32 10, i32 20
+  call void @foo(i32 %sel)
+  %umin = call i32 @llvm.umin.i32(i32 %iv, i32 7)
+  call void @foo(i32 %umin)
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !2
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.peeled.count", i32 6}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.peeled.count", i32 1}
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
@@ -509,7 +546,8 @@ exit:
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.peeled.count", i32 7}
+; CHECK: [[META6]] = !{!"llvm.loop.peeled.count", i32 6}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.peeled.count", i32 6}
+; CHECK: [[META8]] = !{!"llvm.loop.peeled.count", i32 7}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ;.
