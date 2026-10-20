@@ -89,7 +89,7 @@ def FeatureCanonicalNaN : SubtargetFeature<"canonical-nan", "HasCanonicalNaN",
 
 def FeatureMultiDieCoherency : SubtargetFeature<"multi-die-coherency",
   "HasMultiDieCoherency", "true",
-  "Device atomics must set the coherency bit (multi-die G13 parts)"
+  "Device atomics must set the coherency bit (multi-cluster G13 and two-die parts)"
 >;
 
 def FeatureThreadgroupAtomics : SubtargetFeature<"threadgroup-atomics",

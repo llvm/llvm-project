@@ -61,11 +61,11 @@ Use ``-mcpu`` (or the ``target-cpu`` function attribute) to select the GPU.
    ``agx-g14g``    G14        AGX2              M2
    ``agx-g14s``    G14        AGX2              M2 Pro
    ``agx-g14c``    G14        AGX2              M2 Max
-   ``agx-g14d``    G14        AGX2              M2 Ultra
+   ``agx-g14d``    G14        AGX2              M2 Ultra (``multi-die-coherency``)
    ``agx-g15g``    G15        AGX2              M3
    ``agx-g15s``    G15        AGX2              M3 Pro
    ``agx-g15c``    G15        AGX2              M3 Max
-   ``agx-g15d``    G15        AGX2              M3 Ultra
+   ``agx-g15d``    G15        AGX2              M3 Ultra (``multi-die-coherency``)
    ``agx-g16g``    G16        Apple9            M4
    ``agx-g16s``    G16        Apple9            M4 Pro
    ``agx-g16c``    G16        Apple9            M4 Max
@@ -144,8 +144,8 @@ another.
                                   quad. Divergent shuffle indices are expanded
                                   into four shuffles (see `SIMD-group
                                   shuffles`_).
-   ``multi-die-coherency``        Device atomics set the coherency bit (multi-die
-                                  G13 parts).
+   ``multi-die-coherency``        Device atomics set the coherency bit
+                                  (multi-cluster G13 parts and two-die parts).
    ``threadgroup-atomics``        Threadgroup memory atomics.
    ``device-atomics``             Device memory atomics.
    ``stack-access``               Per-thread stack loads and stores.
