@@ -2740,6 +2740,31 @@ std::optional<unsigned> SelectBestMetadirectiveCandidate(
 }
 
 namespace {
+struct ConditionSymbols : evaluate::Traverse<ConditionSymbols, bool, false> {
+  using Base = evaluate::Traverse<ConditionSymbols, bool, false>;
+  explicit ConditionSymbols(std::vector<const Symbol *> &symbols)
+      : Base{*this}, symbols{symbols} {}
+  using Base::operator();
+  bool Default() const { return true; }
+  template <typename... A> bool Combine(A...) const { return true; }
+  bool operator()(const Symbol &symbol) const {
+    symbols.push_back(&symbol);
+    return true;
+  }
+  std::vector<const Symbol *> &symbols;
+};
+
+// Expr equality matches dummy arguments by position, so compare symbols too.
+template <typename T>
+bool AreSameMetadirectiveCondition(const T &left, const T &right) {
+  if (!(left == right))
+    return false;
+  std::vector<const Symbol *> leftSymbols, rightSymbols;
+  ConditionSymbols{leftSymbols}(left);
+  ConditionSymbols{rightSymbols}(right);
+  return leftSymbols == rightSymbols;
+}
+
 struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
   using evaluate::rewrite::Identity::operator();
 
@@ -2756,7 +2781,7 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
       const evaluate::LogicalOperation<KIND> &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
-        operation.left() == operation.right())
+        AreSameMetadirectiveCondition(operation.left(), operation.right()))
       return common::Clone(operation.left());
     return std::move(expr);
   }
@@ -2797,7 +2822,8 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
 
   MetadirectiveConditionNormalizer normalizer;
   evaluate::rewrite::Mutator normalize{normalizer};
-  return normalize(*leftExpr) == normalize(*rightExpr);
+  return AreSameMetadirectiveCondition(
+      normalize(*leftExpr), normalize(*rightExpr));
 }
 
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(

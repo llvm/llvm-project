@@ -1397,26 +1397,26 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Latch->setName("vector.latch");
   VPBlockUtils::connectBlocks(Header, Latch);
 
-  // Collect any values defined in the loop that need a phi. Currently this
-  // includes header phi backedges and live-outs extracted in the middle block.
+  // Collect any values defined in the loop that need a phi, that is header phis
+  // and any value defined n the loop and used in the middle block.
   // TODO: Handle early exits via Plan.getExitBlocks()
   MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
+  auto CollectBypassedOperands = [&](VPRecipeBase &R) {
+    for (VPValue *Op : R.operands()) {
+      auto *DefR = Op->getDefiningRecipe();
+      if (DefR && DefR->getParent()->getEnclosingLoopRegion() == LoopRegion &&
+          !is_contained({Header, Latch}, DefR->getParent()))
+        NeedsPhi[Op].push_back(&R);
+    }
+  };
   for (VPRecipeBase &R : Header->phis())
-    if (!isa<VPWidenInductionRecipe>(R))
-      NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
-
-  VPValue *V;
+    CollectBypassedOperands(R);
   for (VPRecipeBase &R : *Plan.getMiddleBlock())
-    if (match(&R, m_ExtractLastPart(m_VPValue(V))))
-      NeedsPhi[V].push_back(&R);
+    CollectBypassedOperands(R);
 
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
-    auto *DefR = V->getDefiningRecipe();
-    if (!DefR || DefR->getParent()->getEnclosingLoopRegion() != LoopRegion ||
-        is_contained({Header, Latch}, DefR->getParent()))
-      continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&

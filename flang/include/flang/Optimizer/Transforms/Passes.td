@@ -589,7 +589,8 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
   let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
-    from function entry to just before their first use. This defers
+    from function entry to just before their first use, but never into a block
+    on a CFG cycle, where the alloc would run on every trip. This defers
     cudaMallocManaged calls so that users can call cudaSetDevice before any
     CUDA context is created.
   }];

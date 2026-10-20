@@ -406,7 +406,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
@@ -508,7 +508,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
   if (name == "deleter")
