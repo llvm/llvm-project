@@ -9,26 +9,30 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
-// Register definitions
+// Registers
 //===----------------------------------------------------------------------===//
 
 include "Toy64RegisterInfo.td"
 
 //===----------------------------------------------------------------------===//
-// Instruction information
+// Instructions
 //===----------------------------------------------------------------------===//
 
-// We haven't defined any real instructions yet.
+include "Toy64InstrInfo.td"
+
+// Map the target-independent pseudo-instruction pointer register class
+// (ptr_rc) to Toy64's 64-bit general-purpose register class.
 //
-// We still need an InstrInfo object because Target requires an instruction
-// set description.
-def Toy64InstrInfo : InstrInfo {
-  let guessInstructionProperties = false;
-}
+// Toy64 has 64-bit pointers, and all pointers are held in GPRs.
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//
+
+def Toy64InstrInfo : InstrInfo {
+  let guessInstructionProperties = false;
+}
 
 def Toy64 : Target {
   let InstructionSet = Toy64InstrInfo;
