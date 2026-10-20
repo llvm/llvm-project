@@ -31,7 +31,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -1381,7 +1380,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
       B.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
     B.CreateRetVoid();
-    llvm::appendToGlobalCtors(M, CtorFn, /*Priority=*/65535);
+    CGM.AddGlobalCtor(CtorFn);
   }
 }
 
