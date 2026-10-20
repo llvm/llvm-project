@@ -327,7 +327,7 @@ void taintedVerfieidVLA(void) {
 }
 ```
 
-(core-StackUseAfterScope)=
+(core-stackuseafterscope)=
 
 #### core.StackUseAfterScope (C, C++)
 
@@ -335,7 +335,7 @@ Check for dereferences of pointers that refer to an object whose
 lifetime has already ended. Such a pointer is dangling. The checker
 reports it when it is dereferenced and when it is passed to a function.
 A return statement that does not dereference the pointer does not lead to a report.
-Such a case is reported by the {ref}`core-StackAddressEscape` checker.
+Such a case is reported by the {ref}`core-stackaddressescape` checker.
 
 Each object is reported at most once on an execution path. If the same dangling
 pointer is used several times then only the first use is reported. Setting the pointer
@@ -3374,7 +3374,7 @@ int &method_return() {
 directly. This checker extends that detection through functions that are
 annotated with `[[clang::lifetimebound]]`.
 
-{ref}`alpha-core-danglingptrderef` reports use-after-scope errors anywhere in
+{ref}`core-stackuseafterscope` reports use-after-scope errors anywhere in
 the function and does not rely on annotations. This checker reports the value
 that is returned from the function.
 
