@@ -18189,6 +18189,35 @@ follow {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 This intrinsic behaves the same as `llvm.maxnum` other than its treatment of
 sNaN inputs.
 
+(int_hypot)=
+
+#### '`llvm.hypot.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.hypot` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+```
+declare float     @llvm.hypot.f32(float %Val0, float %Val1)
+declare double    @llvm.hypot.f64(double %Val0, double %Val1)
+declare x86_fp80  @llvm.hypot.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+declare fp128     @llvm.hypot.f128(fp128 %Val0, fp128 %Val1)
+declare ppc_fp128 @llvm.hypot.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+```
+
+##### Overview:
+
+
+##### Arguments:
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+##### Semantics:
+
+
 (int_copysign)=
 
 #### '`llvm.copysign.*`' Intrinsic
