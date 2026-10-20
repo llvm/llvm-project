@@ -499,7 +499,7 @@ void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
   MachineInstr *BuildMI1 = MRI.getVRegDef(SrcVec1);
   MachineInstr *BuildMI2 = MRI.getVRegDef(SrcVec2);
   LLT EltTy = MRI.getType(SrcVec1).getElementType();
-  int Width = MRI.getType(SrcVec1).getNumElements();
+  int NumElts = MRI.getType(SrcVec1).getNumElements();
   assert(BuildMI2->getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
          BuildMI2->getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
 
@@ -507,10 +507,10 @@ void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
   for (int Val : Shuffle.getMask()) {
     if (Val == -1)
       Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
-    else if (Val < Width)
+    else if (Val < NumElts)
       Extracts.push_back(BuildMI1->getOperand(Val + 1).getReg());
     else if (BuildMI2->getOpcode() == TargetOpcode::G_BUILD_VECTOR)
-      Extracts.push_back(BuildMI2->getOperand(Val - Width + 1).getReg());
+      Extracts.push_back(BuildMI2->getOperand(Val - NumElts + 1).getReg());
     else
       Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
   }

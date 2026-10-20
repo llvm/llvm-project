@@ -436,7 +436,7 @@ def AArch64PostLegalizerCombiner
                        [copy_prop, cast_of_cast_combines, constant_fold_fp_ops,
                         buildvector_of_truncate, integer_of_truncate,
                         combine_shuffle_of_buildvector_to_buildvector,
-                        combine_shuffle_of_buildvector_to_buildvectors,
+                        combine_shuffle_of_buildvectors_to_buildvector,
                         mutate_anyext_to_zext, combines_for_extload,
                         combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,

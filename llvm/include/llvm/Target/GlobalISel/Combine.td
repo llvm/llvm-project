@@ -2468,7 +2468,7 @@ def combine_shuffle_of_buildvector_to_buildvector : GICombineRule<
          (G_IMPLICIT_DEF $src2),
          (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
-def combine_shuffle_of_buildvector_to_buildvectors : GICombineRule<
+def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
   (defs root:$root),
   (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused1),
          (G_BUILD_VECTOR $src2, GIVariadic<>:$unused2),

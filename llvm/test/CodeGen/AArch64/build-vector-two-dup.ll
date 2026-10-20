@@ -12,23 +12,9 @@ define <16 x i8> @test1(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    ldr b1, [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[3], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[4], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[5], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[6], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[7], [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[8], [x1]
-; CHECK-GI-NEXT:    mov v0.b[9], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[10], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[11], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[12], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[13], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[14], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[15], v1.b[0]
+; CHECK-GI-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-GI-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -97,23 +83,9 @@ define <16 x i8> @test4(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test4:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr b0, [x1]
-; CHECK-GI-NEXT:    ldr b1, [x0]
-; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[3], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[4], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[5], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[6], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[7], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.b }[8], [x0]
-; CHECK-GI-NEXT:    mov v0.b[9], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[10], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[11], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[12], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[13], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[14], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[15], v1.b[0]
+; CHECK-GI-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-GI-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -219,15 +191,9 @@ define <8 x i16> @test8(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    ldr h1, [x1]
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x0]
-; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x0]
-; CHECK-GI-NEXT:    ld1 { v1.h }[2], [x1]
-; CHECK-GI-NEXT:    ld1 { v0.h }[3], [x0]
-; CHECK-GI-NEXT:    ld1 { v1.h }[3], [x1]
-; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ld1r { v0.4h }, [x0]
+; CHECK-GI-NEXT:    ld1r { v1.4h }, [x1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i16, ptr %a, align 1
@@ -250,11 +216,9 @@ define <4 x i32> @test9(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test9:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    ldr s1, [x1]
-; CHECK-GI-NEXT:    ld1 { v0.s }[1], [x0]
-; CHECK-GI-NEXT:    ld1 { v1.s }[1], [x1]
-; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ld1r { v0.2s }, [x0]
+; CHECK-GI-NEXT:    ld1r { v1.2s }, [x1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1
