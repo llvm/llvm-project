@@ -33,6 +33,15 @@ void caller() {
   // CIR: cir.return
   // LLVM: call void{{.*}}@no_conv() #[[NO_CONV_CALL_ATTR:.*]]
 }
+
+// CIR: cir.func{{.*}}@inline_asm
+__attribute__((device))
+void inline_asm() {
+  asm volatile("");
+  // CIR: cir.asm(
+  // CIR: side_effects convergent
+  // LLVM: call void asm sideeffect "", "{{.*}}"() #[[ASM_ATTR:[0-9]+]]
+}
 }
 
 // LLVM: attributes #[[NORMAL_ATTR]] 
@@ -43,3 +52,5 @@ void caller() {
 // LLVM-SAME: convergent
 // LLVM: attributes #[[NO_CONV_CALL_ATTR]] 
 // LLVM-NOT: convergent
+// LLVM: attributes #[[ASM_ATTR]]
+// LLVM-SAME: convergent
