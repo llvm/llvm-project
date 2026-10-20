@@ -90,6 +90,7 @@ add_llvm_unittest(SupportTests
   SignalsTest.cpp
   SipHashTest.cpp
   SourceMgrTest.cpp
+  SourceMgrDiagnosticVerifierTest.cpp
   SpecialCaseListTest.cpp
   SuffixTreeTest.cpp
   SwapByteOrderTest.cpp

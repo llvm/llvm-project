@@ -641,8 +641,9 @@ namespace mlir {
 namespace detail {
 struct SourceMgrDiagnosticVerifierHandlerImpl {
   SourceMgrDiagnosticVerifierHandlerImpl(
+      llvm::SourceMgr &srcMgr, raw_ostream &out,
       SourceMgrDiagnosticVerifierHandler::Level level)
-      : level(level) {}
+      : verifier(srcMgr, out), level(level) {}
 
   /// The generic SourceMgr-based verifier core that this handler delegates
   /// scanning and matching of 'expected-*' diagnostics to.
@@ -672,13 +673,7 @@ static StringRef getDiagKindStr(DiagnosticSeverity kind) {
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
     llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out, Level level)
     : SourceMgrDiagnosticHandler(srcMgr, ctx, out),
-      impl(new SourceMgrDiagnosticVerifierHandlerImpl(level)) {
-  // Compute the expected diagnostics for each of the current files in the
-  // source manager.
-  for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
-    (void)impl->verifier.computeExpectedDiags(out, mgr,
-                                              mgr.getMemoryBuffer(i + 1));
-
+      impl(new SourceMgrDiagnosticVerifierHandlerImpl(srcMgr, out, level)) {
   // The base class registered a handler that prints every diagnostic. The
   // verifier takes its place: it consumes diagnostics and reports unexpected
   // ones itself.
@@ -698,7 +693,7 @@ SourceMgrDiagnosticVerifierHandler::~SourceMgrDiagnosticVerifierHandler() {
 /// diagnostics were emitted. This return success if all diagnostics were
 /// verified correctly, failure otherwise.
 LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
-  return success(impl->verifier.verify(os, mgr));
+  return success(impl->verifier.verify());
 }
 
 std::unique_ptr<ScopedDiagnosticHandler>
@@ -719,16 +714,16 @@ void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
 void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
                                                  StringRef msg,
                                                  DiagnosticSeverity kind) {
-  FileLineColLoc fileLoc = loc.findInstanceOf<FileLineColLoc>();
-  const llvm::MemoryBuffer *buf =
-      fileLoc ? getBufferForFile(fileLoc.getFilename()) : nullptr;
+  using Verifier = llvm::SourceMgrDiagnosticVerifier;
+  std::optional<Verifier::Location> verifierLoc;
+  if (FileLineColLoc fileLoc = loc.findInstanceOf<FileLineColLoc>())
+    verifierLoc = Verifier::Location{getBufferForFile(fileLoc.getFilename()),
+                                     fileLoc.getLine()};
   bool reportUnexpected = impl->level != Level::OnlyExpected;
 
-  using MatchResult = llvm::SourceMgrDiagnosticVerifier::MatchResult;
-  MatchResult result = impl->verifier.process(
-      os, mgr, getDiagKind(kind), /*hasLoc=*/static_cast<bool>(fileLoc), buf,
-      fileLoc ? fileLoc.getLine() : 0, msg, reportUnexpected);
-  if (result == MatchResult::Unexpected)
+  Verifier::MatchResult result = impl->verifier.process(
+      getDiagKind(kind), verifierLoc, msg, reportUnexpected);
+  if (result == Verifier::MatchResult::Unexpected)
     emitDiagnostic(loc, "unexpected " + getDiagKindStr(kind) + ": " + msg,
                    DiagnosticSeverity::Error);
 }
