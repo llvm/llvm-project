@@ -5114,7 +5114,8 @@ public:
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           pattern);
-    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
+    mlir::cf::populateAssertToLLVMConversionPattern(
+        typeConverter, pattern, /*abortOnFailure=*/true, &symbolTables);
     // Math operations that have not been converted yet must be converted
     // to Libm.
     if (!isAMDGCN && !isNVPTX)

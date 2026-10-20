@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
+#include <type_traits>
 
 namespace fir {
 
@@ -63,35 +64,26 @@ static constexpr unsigned defaultAddressSpace = 0u;
 /// last failure path.
 
 /// Look up the symbol `name` in `symbolTableOp`, returning null if there is no
-/// such symbol or it is not an `OpTy`.
-template <typename OpTy>
-OpTy lookupSymbolIn(mlir::Operation *symbolTableOp, llvm::StringRef name,
+/// such symbol or it is not an `OpTy`. `name` is a string (`StringRef` or
+/// anything convertible to it), a `StringAttr`, or a `SymbolRefAttr`; a nested
+/// reference is resolved through the nested symbol tables.
+template <typename OpTy, typename NameT>
+OpTy lookupSymbolIn(mlir::Operation *symbolTableOp, NameT name,
                     mlir::SymbolTableCollection *symbolTables) {
   if (!symbolTables)
     return mlir::dyn_cast_or_null<OpTy>(
         mlir::SymbolTable::lookupSymbolIn(symbolTableOp, name));
-  OpTy op = symbolTables->getSymbolTable(symbolTableOp).lookup<OpTy>(name);
+  OpTy op;
+  if constexpr (std::is_same_v<NameT, mlir::SymbolRefAttr>)
+    op = symbolTables->lookupSymbolIn<OpTy>(symbolTableOp, name);
+  else
+    op = symbolTables->getSymbolTable(symbolTableOp).lookup<OpTy>(name);
 #ifdef EXPENSIVE_CHECKS
   // A replacement is always inserted before the operation it replaces, so on
   // a hit the linear walk must find the same operation.
   assert((!op ||
           op == mlir::dyn_cast_or_null<OpTy>(
                     mlir::SymbolTable::lookupSymbolIn(symbolTableOp, name))) &&
-         "symbol tables and module out of sync");
-#endif
-  return op;
-}
-template <typename OpTy>
-OpTy lookupSymbolIn(mlir::Operation *symbolTableOp, mlir::SymbolRefAttr symbol,
-                    mlir::SymbolTableCollection *symbolTables) {
-  if (!symbolTables)
-    return mlir::dyn_cast_or_null<OpTy>(
-        mlir::SymbolTable::lookupSymbolIn(symbolTableOp, symbol));
-  OpTy op = symbolTables->lookupSymbolIn<OpTy>(symbolTableOp, symbol);
-#ifdef EXPENSIVE_CHECKS
-  assert((!op ||
-          op == mlir::dyn_cast_or_null<OpTy>(mlir::SymbolTable::lookupSymbolIn(
-                    symbolTableOp, symbol))) &&
          "symbol tables and module out of sync");
 #endif
   return op;
