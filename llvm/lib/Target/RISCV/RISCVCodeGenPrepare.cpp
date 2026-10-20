@@ -109,7 +109,12 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
     if (!Complete)
       continue;
 
-    IRBuilder<> Builder(ByIndex[0]);
+    Instruction *FirstExt =
+      *std::min_element(ByIndex.begin(), ByIndex.end(),
+                        [](Instruction *X, Instruction *Y) {
+                          return X->comesBefore(Y);
+                        });
+    IRBuilder<> Builder(FirstExt);
     auto *PackedTy =
         FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
     Value *Packed = Builder.CreateBitCast(Vec, PackedTy, "packed");

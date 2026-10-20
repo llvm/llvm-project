@@ -1747,21 +1747,17 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 define i8 @explode_4xi8_dominates(<4 x i8> %v) {
 ; RV32-LABEL: explode_4xi8_dominates:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    vslidedown.vi v9, v8, 3
-; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    slli a1, a0, 8
+; RV32-NEXT:    srli a2, a0, 24
+; RV32-NEXT:    srli a1, a1, 24
+; RV32-NEXT:    divu a1, a1, a2
+; RV32-NEXT:    slli a2, a0, 16
 ; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    srli a2, a2, 24
+; RV32-NEXT:    divu a0, a0, a2
 ; RV32-NEXT:    divu a0, a0, a1
-; RV32-NEXT:    vslidedown.vi v9, v8, 1
-; RV32-NEXT:    vmv.x.s a1, v9
-; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    zext.b a1, a1
-; RV32-NEXT:    zext.b a2, a2
-; RV32-NEXT:    divu a1, a2, a1
-; RV32-NEXT:    divu a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_4xi8_dominates:
