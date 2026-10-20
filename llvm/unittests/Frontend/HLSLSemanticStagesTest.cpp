@@ -75,7 +75,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::InstanceID,
                                            SemanticKind::ShadingRate,
                                            SemanticKind::Barycentrics,
-                                           SemanticKind::StartVertexLocation};
+                                           SemanticKind::StartVertexLocation,
+                                           SemanticKind::StartInstanceLocation};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -179,6 +180,15 @@ TEST(HLSLSemanticStagesTest, StartVertexLocationSignaturePoints) {
       {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
   };
   expectOnlySignaturePoints(SemanticKind::StartVertexLocation, Valid);
+}
+
+// SV_StartInstanceLocation is read with a dedicated operation and is never
+// placed in a signature. Valid only on vertex inputs.
+TEST(HLSLSemanticStagesTest, StartInstanceLocationSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+  };
+  expectOnlySignaturePoints(SemanticKind::StartInstanceLocation, Valid);
 }
 
 } // namespace

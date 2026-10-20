@@ -604,4 +604,7 @@ let TargetPrefix = "dx" in {
 
   def int_dx_start_vertex_location
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_start_instance_location
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }

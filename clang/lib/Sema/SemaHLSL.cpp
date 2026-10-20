@@ -1017,6 +1017,7 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   case SemanticKind::Barycentrics:
     return ST == llvm::Triple::Pixel && IsInput;
   case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
     return ST == llvm::Triple::Vertex && IsInput;
   default:
     return false;
@@ -1288,6 +1289,7 @@ void SemaHLSL::diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
           << A->getAttrName() << "6.4";
     return;
   case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
     if (Triple.getOSVersion() < VersionTuple(6, 8))
       Diag(A->getLoc(), diag::err_hlsl_semantic_in_wrong_shader_model)
           << A->getAttrName() << "6.8";
@@ -1408,6 +1410,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << /* 16 or 32 bit integer */ 0 << DeclaredTy;
     return;
   case SemanticKind::StartVertexLocation:
+  case SemanticKind::StartInstanceLocation:
     if (DeclaredTy != T || !T->isScalarType() ||
         !isIntElementOfWidth(Ctx, T, 32))
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
