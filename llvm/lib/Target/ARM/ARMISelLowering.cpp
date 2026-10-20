@@ -17021,9 +17021,11 @@ static SDValue PerformLegalizedInterleavedStoreCombine(
       Ops.front() = NewStore;
     }
   }
-  for (StoreSDNode *Store : Stores)
+  for (StoreSDNode *Store : Stores) {
+    DAG.makeEquivalentMemoryOrdering(SDValue(Store, 0), NewStore);
     if (Store != ST)
       DCI.CombineTo(Store, NewStore);
+  }
   return NewStore;
 }
 
