@@ -257,6 +257,12 @@ namespace clang {
     ParsedAttr::Kind Kind;
     SourceLocation NameLoc;
 
+    /// Set by `Sema::ProcessLateParsedTypeAttr` once type construction has
+    /// rejected and diagnosed this attribute, so declarators sharing it (a
+    /// declaration-specifier attribute) skip it rather than diagnose it again.
+    /// The eager path does the same with `ParsedAttr::setInvalid`.
+    bool Invalid = false;
+
     /// The type built for this attribute during type construction, still missing
     /// the argument that hasn't been parsed yet. Filled in by
     /// `Sema::ProcessLateParsedTypeAttr` and completed once the enclosing scope

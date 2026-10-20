@@ -2599,10 +2599,11 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /// Late-parsed bounds types dropped while the current declarator was built.
-  /// The attribute has already been diagnosed and the node is not part of this
-  /// declarator's type, so the parser must not pair the declarator's field with
-  /// the attribute. Other declarators sharing the node may still use it.
+  /// Late-parsed bounds types rejected for the current declarator, such as one
+  /// nested under another pointer. The attribute has already been diagnosed and
+  /// the node is not part of this declarator's type, so the parser must not
+  /// pair the declarator's field with the attribute. Other declarators sharing
+  /// the node may still use it.
   llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
@@ -2610,8 +2611,8 @@ public:
     RejectedLateParsedBoundsTypes.insert(BATy);
   }
 
-  /// Return true if \p BATy was dropped while the current declarator was built,
-  /// and clear the mark for the next declarator.
+  /// Return true if \p BATy was rejected for the current declarator, and clear
+  /// the mark for the next declarator.
   bool takeLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
     return RejectedLateParsedBoundsTypes.erase(BATy);
   }
@@ -2619,7 +2620,15 @@ public:
   /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
   /// CountAttributedType with no count yet, recorded on \p LA for later
   /// completion. Returns false if \p LA is invalid.
-  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+  
+  /// Validate the late-parsed type attribute \p LA and wrap \p type in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. \p PointerNestLevel and \p OnReturnType describe where the
+  /// attribute sits in the current declarator (see
+  /// ValidateBoundsAttrTypeForTypePosition). Ignores other attributes. Returns
+  /// false if \p LA is invalid, or is rejected for the current declarator.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT,
+                                 unsigned PointerNestLevel, bool OnReturnType);
 
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
   /// built for it by ProcessLateParsedTypeAttr, and run the checks that need

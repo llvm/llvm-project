@@ -5063,13 +5063,26 @@ void Parser::CompleteLateParsedTypeAttributes(
     AttributeFactory AF;
     ParsedAttributes Attrs(AF);
     ParseLexedTypeAttribute(*LTA, Attrs);
+    assert(Attrs.size() <= 1);
 
-    // An unparseable argument leaves no attribute behind; already diagnosed.
-    if (Attrs.empty())
-      continue;
-    assert(Attrs.size() == 1);
-
-    Expr *Arg = Attrs[0].getArgAsExpr(0);
+    // An unparseable argument leaves no attribute behind; it's already been
+    // diagnosed. The node is already part of the fields' types, so complete it
+    // with a recovery expression rather than leave it without a count; Sema
+    // then rejects it and marks the fields invalid, as for an argument that
+    // parses but has errors. Build the RecoveryExpr directly, since the node
+    // needs a count even with -fno-recovery-ast.
+    Expr *Arg;
+    if (Attrs.empty()) {
+      // The cached tokens are `( ... ) <eof>`; end at the closing paren.
+      SourceLocation End = LTA->Toks.size() >= 2
+                               ? LTA->Toks[LTA->Toks.size() - 2].getLocation()
+                               : LTA->AttrNameLoc;
+      ASTContext &Ctx = Actions.getASTContext();
+      Arg = RecoveryExpr::Create(Ctx, Ctx.IntTy, LTA->AttrNameLoc, End,
+                                 /*SubExprs=*/{});
+    } else {
+      Arg = Attrs[0].getArgAsExpr(0);
+    }
     assert(Arg);
 
     bool Valid = true;
@@ -5077,6 +5090,8 @@ void Parser::CompleteLateParsedTypeAttributes(
       Valid &= Actions.ActOnLateParsedTypeAttrArgument(
           BATy, cast<FieldDecl>(FD), Arg);
 
+    if (Attrs.empty())
+      continue;
     if (Valid)
       Attrs[0].setUsedAsTypeAttr();
     else
@@ -5266,9 +5281,15 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   // attribute-specifiers between `}` and the `;`/declarator are skipped with a
   // reverting tentative parse, so a trailing `[[...]]` / `__attribute__` etc.
   // doesn't defeat the check.
+  //
+  // It must also be declared directly in a record. An unnamed struct in a
+  // statement expression inside a member, such as
+  // `char a[({ struct { int n; int *__counted_by(n) p; }; 1; })];`, is a local
+  // declaration, not a member, so its fields never join the enclosing record.
   if (getLangOpts().ExperimentalLateParseAttributes && !LateTypeAttrs.empty()) {
     bool IsAnonymous = false;
-    if (!TagDecl->getIdentifier()) {
+    if (!TagDecl->getIdentifier() &&
+        isa<RecordDecl>(TagDecl->getDeclContext())) {
       TentativeParsingAction TPA(*this);
       IsAnonymous = TrySkipAttributes() && Tok.is(tok::semi);
       TPA.Revert();
@@ -6833,24 +6854,17 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                          ? AR_GNUAttributesParsed
                          : AR_GNUAttributesParsedAndRejected);
 
-    // Late-parsed type attributes apply to members and function parameters,
-    // not variables. Completion is driven by the enclosing record
-    // (CompleteLateParsedTypeAttributes), so only late-parse when there is one:
-    // a free-function prototype (e.g. `void f(int *__counted_by(n), int n)`)
-    // has no record to complete into, and late-parsing there would leave a
-    // CountAttributedType with a null count in the AST. Such parameters fall
-    // back to eager handling instead. A function-pointer parameter inside a
-    // struct field is still late-parsed, since that record completes it.
-    bool LateParsingContext =
-        (D.getContext() == DeclaratorContext::Member ||
-         D.getContext() == DeclaratorContext::Prototype) &&
-        CurRecordLateParsedTypeAttrs != nullptr;
-
+    // Late-parsed type attributes apply to members only (see
+    // isLateParsedTypeAttrContext). A free-function prototype (e.g.
+    // `void f(int *__counted_by(n), int n)`) has no record to complete into,
+    // and a function-pointer member's parameters would be resolved in struct
+    // scope rather than the prototype's, so both fall back to eager handling.
+    //
     // No guard on ExperimentalLateParseAttributes is needed here;
     // DS.getLateAttributes() already initializes with
     // LateAttrParseExperimentalExtOnly.
     LateParsedAttrList *LateAttrs =
-        LateParsingContext ? &DS.getLateAttributes() : nullptr;
+        isLateParsedTypeAttrContext(D) ? &DS.getLateAttributes() : nullptr;
 
     ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
                               !D.mayOmitIdentifier(), {}, LateAttrs);
@@ -6869,11 +6883,14 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     std::move(DS.getAttributes()), SourceLocation(),
                     std::move(DS.getLateAttributes()));
     } else {
-      assert(DS.getLateAttributes().empty());
       // Remember that we parsed a Block type, and remember the type-quals.
+      // Hand over late-parsed type attributes too, as for a pointer: Sema
+      // rejects a counted_by-family attribute on a block pointer when it builds
+      // the chunk, just as it does when the attribute is parsed eagerly.
       D.AddTypeInfo(
           DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(), Loc),
-          std::move(DS.getAttributes()), SourceLocation());
+          std::move(DS.getAttributes()), SourceLocation(),
+          std::move(DS.getLateAttributes()));
     }
   } else {
     // Is a reference
@@ -7443,14 +7460,14 @@ void Parser::ParseParenDeclarator(Declarator &D) {
   LateParsedAttrList LateAttrs = LateParsedAttrList::forTypeAttrs();
   bool RequiresArg = false;
   if (Tok.is(tok::kw___attribute)) {
-    // Only late-parse type attributes when there is an enclosing record to
-    // complete the CountAttributedType (see ParseDeclaratorInternal). A
-    // grouping paren at file scope, e.g. `IP (__counted_by(n) x)` where `IP` is
-    // a pointer typedef, has no record to complete into, so late-parsing there
-    // would leave a CountAttributedType with a null count in the AST; parse
-    // eagerly instead.
+    // Only late-parse type attributes in a member declarator (see
+    // isLateParsedTypeAttrContext). A grouping paren at file scope, e.g.
+    // `IP (__counted_by(n) x)` where `IP` is a pointer typedef, has no record
+    // to complete the CountAttributedType, and an abstract declarator nested in
+    // a member, such as a parameter or a type name in `sizeof`, isn't resolved
+    // in its own scope, so both parse eagerly instead.
     LateParsedAttrList *LA =
-        CurRecordLateParsedTypeAttrs ? &LateAttrs : nullptr;
+        isLateParsedTypeAttrContext(D) ? &LateAttrs : nullptr;
     ParseGNUAttributes(attrs, LA);
 
     // We require that the argument list (if this is a non-grouping paren) be
@@ -7517,6 +7534,8 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     return;
   }
 
+  // Type attributes are only late-parsed in member declarators, which can't
+  // omit their identifier, so their parens always group.
   assert(LateAttrs.empty() &&
          "Late parsed type attribute on FirstParamAttr is dropped");
 
