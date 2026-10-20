@@ -598,9 +598,9 @@ static void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
                                                               : StringRef(),
          E.SemanticIndices,
          E.isAllocated() ? static_cast<uint8_t>(E.StartRow) : uint8_t(0),
-         E.Cols, E.getStartColOrZero(), E.isAllocated(),
-         E.SemanticKind, static_cast<dxbc::PSV::ComponentType>(Type),
-         E.InterpMode, E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
+         E.Cols, E.getStartColOrZero(), E.isAllocated(), E.SemanticKind,
+         static_cast<dxbc::PSV::ComponentType>(Type), E.InterpMode,
+         E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
   }
 }
 
