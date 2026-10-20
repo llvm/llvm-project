@@ -141,9 +141,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
 
     // If the format uses relocations with dwarf, refer to the symbol directly.
     if (doesDwarfUseRelocationsAcrossSections()) {
-      const MCExpr *Expr =
-          getObjFileLowering().getDwarfSymbolReference(Label, TM, OutContext);
-      OutStreamer->emitValue(Expr, getDwarfOffsetByteSize());
+      OutStreamer->emitSymbolValue(Label, getDwarfOffsetByteSize());
       return;
     }
   }
@@ -165,8 +163,7 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
 }
 
 void AsmPrinter::emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
-  emitLabelPlusOffset(Label, Offset, getDwarfOffsetByteSize(),
-                      /*IsSectionRelative=*/true);
+  emitLabelPlusOffset(Label, Offset, getDwarfOffsetByteSize());
 }
 
 void AsmPrinter::emitDwarfLengthOrOffset(uint64_t Value) const {
