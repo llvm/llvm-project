@@ -17,6 +17,7 @@ add_library(PluginCommon OBJECT
   src/RecordReplay.cpp
   src/RPC.cpp
   src/OffloadError.cpp
+  src/ErrorReporting.cpp
   src/Utils/ELF.cpp
 )
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)

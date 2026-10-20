@@ -1,4 +1,4 @@
-//===- ErrorReporting.h - Helper to provide nice error messages ----- c++ -===//
+//===- ErrorReporting.h - Detect and triage offload errors ------- c++ -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,27 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Diagnostic entry points for offload error detection.
+// Nothing here formats user-visible messages beyond the one-line summary of
+// what went wrong.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H
 
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
 #include "Shared/EnvironmentVar.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/WithColor.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
 #include <functional>
-#include <optional>
 #include <string>
 
 namespace llvm {
@@ -34,28 +37,124 @@ namespace omp {
 namespace target {
 namespace plugin {
 
-class ErrorReporter {
-
-  enum ColorTy {
-    Yellow = int(HighlightColor::Address),
-    Green = int(HighlightColor::String),
-    DarkBlue = int(HighlightColor::Tag),
-    Cyan = int(HighlightColor::Attribute),
-    DarkPurple = int(HighlightColor::Enumerator),
-    DarkRed = int(HighlightColor::Macro),
-    BoldRed = int(HighlightColor::Error),
-    BoldLightPurple = int(HighlightColor::Warning),
-    BoldDarkGrey = int(HighlightColor::Note),
-    BoldLightBlue = int(HighlightColor::Remark),
-  };
-
-  /// The banner printed at the beginning of an error report.
-  static constexpr auto ErrorBanner = "OFFLOAD ERROR: ";
-
-  /// Return the device id as string, or n/a if not available.
-  static std::string getDeviceIdStr(GenericDeviceTy *Device) {
-    return Device ? std::to_string(Device->getDeviceId()) : "n/a";
+/// Builds an ol_diagnostic_t and owns the storage its pointers refer to, so the
+/// diagnostic is only usable while the builder is alive.
+class DiagnosticBuilderTy {
+public:
+  explicit DiagnosticBuilderTy(ol_diagnostic_kind_t Kind) {
+    Diag.Kind = Kind;
+    Diag.IsFatal = 1;
+    // The strings in a diagnostic are never null, only possibly empty.
+    Diag.Summary = "";
+    Diag.OffendingStackTrace = "";
   }
+
+  /// The diagnostic being built. Its pointer fields are owned by this object.
+  ol_diagnostic_t Diag{};
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgcc-compat"
+#pragma clang diagnostic ignored "-Wformat-security"
+#endif
+  /// Set the one-line description of the problem to \p Format, instantiated
+  /// with \p Args.
+  template <typename... ArgsTy>
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 2, 3)]]
+#endif
+  void setSummary(const char *Format, ArgsTy &&...Args) {
+    SmallString<128> Summary;
+    raw_svector_ostream OS(Summary);
+    OS << llvm::format(Format, Args...);
+    Diag.Summary = store(Summary);
+  }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+  /// Set the host stack trace at the point of detection.
+  void setOffendingStackTrace(StringRef StackTrace) {
+    Diag.OffendingStackTrace = store(StackTrace);
+  }
+
+  void setTracking(GenericDeviceTy &Device) {
+    // The names are string literals, so they can be used as C strings.
+    Diag.Tracking.AllocationTracesEnabled = Device.OMPX_TrackAllocationTraces;
+    Diag.Tracking.AllocationTracesEnvar =
+        Device.OMPX_TrackAllocationTraces.getName().data();
+    Diag.Tracking.KernelLaunchesEnvar =
+        Device.OMPX_TrackNumKernelLaunches.getName().data();
+    Diag.Tracking.KernelLaunchesRequested =
+        Device.OMPX_TrackNumKernelLaunches.get();
+  }
+
+  ol_pointer_info_t &setPointer(void *DevicePtr) {
+    Pointer = ol_pointer_info_t{};
+    Pointer.DevicePtr = DevicePtr;
+    Pointer.Relation = OL_POINTER_RELATION_NO_ALLOCATIONS;
+    Diag.Pointer = &Pointer;
+    return Pointer;
+  }
+
+  void setAllocation(AllocationTraceInfoTy *ATI) {
+    assert(Diag.Pointer && "No pointer to attach the allocation to");
+    fill(Allocation, ATI);
+
+    for (auto *Prior = ATI->LastAllocationInfo; Prior;
+         Prior = Prior->LastAllocationInfo)
+      fill(PriorAllocations.emplace_back(), Prior);
+
+    Allocation.Prior =
+        PriorAllocations.empty() ? nullptr : PriorAllocations.data();
+    Allocation.NumPrior = PriorAllocations.size();
+    Pointer.Allocation = &Allocation;
+  }
+
+  void addKernelTrace(const KernelTraceInfoTy &KTI, bool IsCulprit) {
+    ol_kernel_launch_info_t &Info = KernelTraces.emplace_back();
+    // The name belongs to the kernel, which outlives the diagnostic.
+    Info.Name = KTI.Kernel->getName();
+    Info.LaunchTrace = store(KTI.LaunchTrace);
+    Info.IsCulprit = IsCulprit;
+
+    Diag.KernelTraces = KernelTraces.data();
+    Diag.NumKernelTraces = KernelTraces.size();
+  }
+
+private:
+  /// Keep a copy of \p Str and return it as a C string. The copies live until
+  /// the builder dies, and StringSaver null-terminates them.
+  const char *store(StringRef Str) { return Strings.save(Str).data(); }
+
+  /// Copy the parts of \p ATI the messaging side can report into \p Info.
+  void fill(ol_allocation_info_t &Info, AllocationTraceInfoTy *ATI) {
+    Info.AllocationTrace = store(ATI->AllocationTrace);
+    Info.DeallocationTrace = store(ATI->DeallocationTrace);
+    Info.DevicePtr = ATI->DevicePtr;
+    Info.HostPtr = ATI->HostPtr;
+    Info.Size = ATI->Size;
+    Info.Prior = nullptr;
+    Info.NumPrior = 0;
+  }
+
+  /// Storage for the strings the diagnostic points into.
+  BumpPtrAllocator StringAlloc;
+  StringSaver Strings{StringAlloc};
+
+  ol_pointer_info_t Pointer{};
+  ol_allocation_info_t Allocation{};
+  SmallVector<ol_allocation_info_t> PriorAllocations;
+  SmallVector<ol_kernel_launch_info_t> KernelTraces;
+};
+
+/// Hand \p Diag to \p Handler, falling back to the built-in minimal reporting
+/// if there is no handler or if the handler asks for it, then end the execution
+/// unless the handler decided otherwise.
+void emitDiagnostic(const ol_diagnostic_handler_t *Handler,
+                    const ol_diagnostic_t &Diag);
+
+class ErrorReporter {
 
   /// Return a nice name for an TargetAllocTy.
   static StringRef getAllocTyName(TargetAllocTy Kind) {
@@ -72,214 +171,126 @@ class ErrorReporter {
     llvm_unreachable("Unknown target alloc kind");
   }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgcc-compat"
-#pragma clang diagnostic ignored "-Wformat-security"
-#endif
-  /// Print \p Format, instantiated with \p Args to stderr.
-  /// TODO: Allow redirection into a file stream.
-  template <typename... ArgsTy>
-#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
-  [[gnu::format(__printf__, 1, 2)]]
-#endif
-  static void print(const char *Format, ArgsTy &&...Args) {
-    auto &OS = llvm::errs();
-    OS << llvm::format(Format, Args...);
-  }
+  /// Classify how \p DevicePtr relates to the allocations known to \p Device.
+  static void classifyPointer(GenericDeviceTy &Device, void *DevicePtr,
+                              DiagnosticBuilderTy &Builder) {
+    ol_pointer_info_t &Pointer = Builder.setPointer(DevicePtr);
 
-  /// Print \p Format, instantiated with \p Args to stderr, but colored.
-  /// TODO: Allow redirection into a file stream.
-  template <typename... ArgsTy>
-#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
-  [[gnu::format(__printf__, 2, 3)]]
-#endif
-  static void print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
-    auto &OS = llvm::errs();
-    WithColor(OS, HighlightColor(Color)) << llvm::format(Format, Args...);
-  }
-
-  /// Print \p Format, instantiated with \p Args to stderr, but colored and with
-  /// a banner.
-  /// TODO: Allow redirection into a file stream.
-  template <typename... ArgsTy>
-#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
-  [[gnu::format(__printf__, 1, 2)]]
-#endif
-  static void reportError(const char *Format, ArgsTy &&...Args) {
-    print(BoldRed, "%s", ErrorBanner);
-    print(BoldRed, Format, Args...);
-    print("\n");
-  }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-  static void reportError(const char *Str) { reportError("%s", Str); }
-  static void print(const char *Str) { print("%s", Str); }
-  static void print(StringRef Str) { print("%s", Str.str().c_str()); }
-  static void print(ColorTy Color, const char *Str) { print(Color, "%s", Str); }
-  static void print(ColorTy Color, StringRef Str) {
-    print(Color, "%s", Str.str().c_str());
-  }
-
-  /// Pretty print a stack trace.
-  static void reportStackTrace(StringRef StackTrace) {
-    if (StackTrace.empty())
-      return;
-
-    SmallVector<StringRef> Lines, Parts;
-    StackTrace.split(Lines, "\n", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-    int Start = Lines.empty() || !Lines[0].contains("PrintStackTrace") ? 0 : 1;
-    unsigned NumDigits =
-        (int)(floor(log10(Lines.size() - Start - /*0*/ 1)) + 1);
-    for (int I = Start, E = Lines.size(); I < E; ++I) {
-      auto Line = Lines[I];
-      Parts.clear();
-      Line = Line.drop_while([](char C) { return std::isspace(C); });
-      Line.split(Parts, " ", /*MaxSplit=*/2);
-      if (Parts.size() != 3 || Parts[0].size() < 2 || Parts[0][0] != '#') {
-        print("%s\n", Line.str().c_str());
-        continue;
-      }
-      unsigned FrameIdx = std::stoi(Parts[0].drop_front(1).str());
-      if (Start)
-        FrameIdx -= 1;
-      print(DarkPurple, "    %s", Parts[0].take_front().str().c_str());
-      print(Green, "%*u", NumDigits, FrameIdx);
-      print(BoldLightBlue, " %s", Parts[1].str().c_str());
-      print(" %s\n", Parts[2].str().c_str());
-    }
-    print("\n");
-  }
-
-  /// Report information about an allocation associated with \p ATI.
-  static void reportAllocationInfo(AllocationTraceInfoTy *ATI) {
-    if (!ATI)
-      return;
-
-    if (!ATI->DeallocationTrace.empty()) {
-      print(BoldLightPurple, "Last deallocation:\n");
-      reportStackTrace(ATI->DeallocationTrace);
-    }
-
-    if (ATI->HostPtr)
-      print(BoldLightPurple,
-            "Last allocation of size %lu for host pointer %p -> device pointer "
-            "%p:\n",
-            ATI->Size, ATI->HostPtr, ATI->DevicePtr);
-    else
-      print(BoldLightPurple,
-            "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
-            ATI->DevicePtr);
-    reportStackTrace(ATI->AllocationTrace);
-    if (!ATI->LastAllocationInfo)
-      return;
-
-    unsigned I = 0;
-    print(BoldLightPurple, "Prior allocations with the same base pointer:");
-    while (ATI->LastAllocationInfo) {
-      print("\n");
-      ATI = ATI->LastAllocationInfo;
-      print(BoldLightPurple, " #%u Prior deallocation of size %lu:\n", I,
-            ATI->Size);
-      reportStackTrace(ATI->DeallocationTrace);
-      if (ATI->HostPtr)
-        print(
-            BoldLightPurple,
-            " #%u Prior allocation for host pointer %p -> device pointer %p:\n",
-            I, ATI->HostPtr, ATI->DevicePtr);
-      else
-        print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n",
-              I, ATI->DevicePtr);
-      reportStackTrace(ATI->AllocationTrace);
-      ++I;
-    }
-  }
-
-  /// End the execution of the program.
-  static void abortExecution() { abort(); }
-
-public:
-#define DEALLOCATION_ERROR(Format, ...)                                        \
-  reportError(Format, __VA_ARGS__);                                            \
-  reportStackTrace(StackTrace);                                                \
-  reportAllocationInfo(ATI);                                                   \
-  abortExecution();
-
-  static void reportDeallocationOfNonAllocatedPtr(void *DevicePtr,
-                                                  TargetAllocTy Kind,
-                                                  AllocationTraceInfoTy *ATI,
-                                                  std::string &StackTrace) {
-    DEALLOCATION_ERROR("deallocation of non-allocated %s: %p",
-                       getAllocTyName(Kind).data(), DevicePtr);
-  }
-
-  static void reportDeallocationOfDeallocatedPtr(void *DevicePtr,
-                                                 TargetAllocTy Kind,
-                                                 AllocationTraceInfoTy *ATI,
-                                                 std::string &StackTrace) {
-    DEALLOCATION_ERROR("double-free of %s: %p", getAllocTyName(Kind).data(),
-                       DevicePtr);
-  }
-
-  static void reportDeallocationOfWrongPtrKind(void *DevicePtr,
-                                               TargetAllocTy Kind,
-                                               AllocationTraceInfoTy *ATI,
-                                               std::string &StackTrace) {
-    DEALLOCATION_ERROR("deallocation requires %s but allocation was %s: %p",
-                       getAllocTyName(Kind).data(),
-                       getAllocTyName(ATI->Kind).data(), DevicePtr);
-#undef DEALLOCATION_ERROR
-  }
-
-  static void reportMemoryAccessError(GenericDeviceTy &Device, void *DevicePtr,
-                                      std::string &ErrorStr, bool Abort) {
-    reportError(ErrorStr.c_str());
-
-    if (!Device.OMPX_TrackAllocationTraces) {
-      print(Yellow, "Use '%s=true' to track device allocations\n",
-            Device.OMPX_TrackAllocationTraces.getName().data());
-      if (Abort)
-        abortExecution();
-      return;
-    }
-    uintptr_t Distance = false;
+    uintptr_t Distance = 0;
     auto *ATI =
         Device.getClosestAllocationTraceInfoForAddr(DevicePtr, Distance);
     if (!ATI) {
-      print(Cyan,
-            "No host-issued allocations; device pointer %p might be "
-            "a global, stack, or shared location\n",
-            DevicePtr);
-      if (Abort)
-        abortExecution();
+      Pointer.Relation = OL_POINTER_RELATION_NO_ALLOCATIONS;
       return;
     }
+
     if (!Distance) {
-      print(Cyan, "Device pointer %p points into%s host-issued allocation:\n",
-            DevicePtr, ATI->DeallocationTrace.empty() ? "" : " prior");
-      reportAllocationInfo(ATI);
-      if (Abort)
-        abortExecution();
+      Pointer.Relation = ATI->DeallocationTrace.empty()
+                             ? OL_POINTER_RELATION_INSIDE
+                             : OL_POINTER_RELATION_INSIDE_PRIOR;
+      Builder.setAllocation(ATI);
       return;
     }
 
     bool IsClose = Distance < (1L << 29L /*512MB=*/);
-    print(Cyan,
-          "Device pointer %p does not point into any (current or prior) "
-          "host-issued allocation%s.\n",
-          DevicePtr,
-          IsClose ? "" : " (might be a global, stack, or shared location)");
-    if (IsClose) {
-      print(Cyan,
-            "Closest host-issued allocation (distance %" PRIuPTR
-            " byte%s; might be by page):\n",
-            Distance, Distance > 1 ? "s" : "");
-      reportAllocationInfo(ATI);
+    Pointer.Distance = Distance;
+    if (!IsClose) {
+      Pointer.Relation = OL_POINTER_RELATION_FAR;
+      return;
     }
-    if (Abort)
-      abortExecution();
+
+    Pointer.Relation = OL_POINTER_RELATION_NEAR;
+    Builder.setAllocation(ATI);
+  }
+
+  /// Report the kernel launches recorded in \p KTIR, most recent first.
+  static void collectKernelTraces(KernelTraceInfoRecordTy &KTIR,
+                                  DiagnosticBuilderTy &Builder) {
+    Builder.Diag.Tracking.KernelLaunchesKnown = 1;
+    Builder.Diag.Tracking.KernelLaunchesCapacity = KTIR.size();
+
+    for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
+      auto KTI = KTIR.getKernelTraceInfo(I);
+      if (KTI.Kernel == nullptr)
+        break;
+      Builder.addKernelTrace(KTI, /*IsCulprit=*/false);
+    }
+    Builder.Diag.Tracking.KernelLaunchesAvailable =
+        Builder.Diag.NumKernelTraces;
+  }
+
+public:
+#define DEALLOCATION_DIAGNOSTIC(DiagKind, Format, ...)                         \
+  DiagnosticBuilderTy Builder(DiagKind);                                       \
+  Builder.Diag.HasDeviceId = 1;                                                \
+  Builder.Diag.DeviceId = Device.getDeviceId();                                \
+  Builder.setSummary(Format, __VA_ARGS__);                                     \
+  Builder.setOffendingStackTrace(StackTrace);                                  \
+  if (ATI) {                                                                   \
+    Builder.setPointer(DevicePtr).Relation = OL_POINTER_RELATION_INSIDE;       \
+    Builder.setAllocation(ATI);                                                \
+  }                                                                            \
+  emitDiagnostic(Device.getDiagnosticHandler(), Builder.Diag);
+
+  static void reportDeallocationOfNonAllocatedPtr(GenericDeviceTy &Device,
+                                                  void *DevicePtr,
+                                                  TargetAllocTy Kind,
+                                                  AllocationTraceInfoTy *ATI,
+                                                  std::string &StackTrace) {
+    DEALLOCATION_DIAGNOSTIC(
+        OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_NON_ALLOCATED_PTR,
+        "deallocation of non-allocated %s: %p", getAllocTyName(Kind).data(),
+        DevicePtr);
+  }
+
+  static void reportDeallocationOfDeallocatedPtr(GenericDeviceTy &Device,
+                                                 void *DevicePtr,
+                                                 TargetAllocTy Kind,
+                                                 AllocationTraceInfoTy *ATI,
+                                                 std::string &StackTrace) {
+    DEALLOCATION_DIAGNOSTIC(OL_DIAGNOSTIC_KIND_DOUBLE_FREE,
+                            "double-free of %s: %p",
+                            getAllocTyName(Kind).data(), DevicePtr);
+  }
+
+  static void reportDeallocationOfWrongPtrKind(GenericDeviceTy &Device,
+                                               void *DevicePtr,
+                                               TargetAllocTy Kind,
+                                               AllocationTraceInfoTy *ATI,
+                                               std::string &StackTrace) {
+    DEALLOCATION_DIAGNOSTIC(
+        OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND,
+        "deallocation requires %s but allocation was %s: %p",
+        getAllocTyName(Kind).data(), getAllocTyName(ATI->Kind).data(),
+        DevicePtr);
+#undef DEALLOCATION_DIAGNOSTIC
+  }
+
+  /// Report that the device faulted accessing \p DevicePtr. If \p KTIR is given
+  /// the known kernel launches are reported alongside the fault. The fault is
+  /// asynchronous: there is no call to attribute it to, it is reported with
+  /// the handler of the device it happened on like everything else.
+  static void reportMemoryAccessError(GenericDeviceTy &Device, void *DevicePtr,
+                                      std::string &ErrorStr, bool Abort,
+                                      KernelTraceInfoRecordTy *KTIR = nullptr) {
+    DiagnosticBuilderTy Builder(OL_DIAGNOSTIC_KIND_MEMORY_ACCESS_FAULT);
+    Builder.Diag.HasDeviceId = 1;
+    Builder.Diag.DeviceId = Device.getDeviceId();
+    Builder.Diag.IsFatal = Abort;
+    Builder.setSummary("%s", ErrorStr.c_str());
+    Builder.setTracking(Device);
+
+    if (KTIR)
+      collectKernelTraces(*KTIR, Builder);
+
+    // Without allocation tracking there is nothing to say about the pointer
+    // beyond its value, the messaging side will suggest enabling tracking.
+    if (Device.OMPX_TrackAllocationTraces)
+      classifyPointer(Device, DevicePtr, Builder);
+    else
+      Builder.setPointer(DevicePtr);
+
+    emitDiagnostic(Device.getDiagnosticHandler(), Builder.Diag);
   }
 
   /// Report that a kernel encountered a trap instruction.
@@ -287,6 +298,13 @@ public:
       GenericDeviceTy &Device, KernelTraceInfoRecordTy &KTIR,
       std::function<bool(__tgt_async_info &)> AsyncInfoWrapperMatcher) {
     assert(AsyncInfoWrapperMatcher && "A matcher is required");
+
+    DiagnosticBuilderTy Builder(OL_DIAGNOSTIC_KIND_TRAP_IN_KERNEL);
+    Builder.Diag.HasDeviceId = 1;
+    Builder.Diag.DeviceId = Device.getDeviceId();
+    Builder.setSummary("%s",
+                       "execution interrupted by hardware trap instruction");
+    Builder.setTracking(Device);
 
     uint32_t Idx = 0;
     for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
@@ -301,75 +319,10 @@ public:
     }
 
     auto KTI = KTIR.getKernelTraceInfo(Idx);
-    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
-      auto PrettyKernelName =
-          llvm::omp::prettifyFunctionName(KTI.Kernel->getName());
-      reportError("Kernel '%s'", PrettyKernelName.c_str());
-    }
-    reportError("execution interrupted by hardware trap instruction");
-    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo))) {
-      if (!KTI.LaunchTrace.empty())
-        reportStackTrace(KTI.LaunchTrace);
-      else
-        print(Yellow, "Use '%s=1' to show the stack trace of the kernel\n",
-              Device.OMPX_TrackNumKernelLaunches.getName().data());
-    }
-    abort();
-  }
+    if (KTI.AsyncInfo && (AsyncInfoWrapperMatcher(*KTI.AsyncInfo)))
+      Builder.addKernelTrace(KTI, /*IsCulprit=*/true);
 
-  /// Report the kernel traces taken from \p KTIR, up to
-  /// OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES many.
-  static void reportKernelTraces(GenericDeviceTy &Device,
-                                 KernelTraceInfoRecordTy &KTIR) {
-    uint32_t NumKTIs = 0;
-    for (uint32_t I = 0, E = KTIR.size(); I < E; ++I) {
-      auto KTI = KTIR.getKernelTraceInfo(I);
-      if (KTI.Kernel == nullptr)
-        break;
-      ++NumKTIs;
-    }
-    if (NumKTIs == 0) {
-      print(BoldRed, "No kernel launches known\n");
-      return;
-    }
-
-    uint32_t TracesToShow =
-        std::min(Device.OMPX_TrackNumKernelLaunches.get(), NumKTIs);
-    if (TracesToShow == 0) {
-      if (NumKTIs == 1)
-        print(BoldLightPurple, "Display only launched kernel:\n");
-      else
-        print(BoldLightPurple, "Display last %u kernels launched:\n", NumKTIs);
-    } else {
-      if (NumKTIs == 1)
-        print(BoldLightPurple, "Display kernel launch trace:\n");
-      else
-        print(BoldLightPurple,
-              "Display %u of the %u last kernel launch traces:\n", TracesToShow,
-              NumKTIs);
-    }
-
-    for (uint32_t Idx = 0, I = 0; I < NumKTIs; ++Idx) {
-      auto KTI = KTIR.getKernelTraceInfo(Idx);
-      auto PrettyKernelName =
-          llvm::omp::prettifyFunctionName(KTI.Kernel->getName());
-      if (NumKTIs == 1)
-        print(BoldLightPurple, "Kernel '%s'\n", PrettyKernelName.c_str());
-      else
-        print(BoldLightPurple, "Kernel %d: '%s'\n", I,
-              PrettyKernelName.c_str());
-      reportStackTrace(KTI.LaunchTrace);
-      ++I;
-    }
-
-    if (NumKTIs != 1) {
-      print(Yellow,
-            "Use '%s=<num>' to adjust the number of shown stack traces (%u "
-            "now, up to %zu)\n",
-            Device.OMPX_TrackNumKernelLaunches.getName().data(),
-            Device.OMPX_TrackNumKernelLaunches.get(), KTIR.size());
-    }
-    // TODO: Let users know how to serialize kernels
+    emitDiagnostic(Device.getDiagnosticHandler(), Builder.Diag);
   }
 };
 
