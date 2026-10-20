@@ -1,5 +1,4 @@
 ! LINEAR on an allocatable uses a `linear` omp.private with a data_address.
-! XFAIL: *
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
@@ -15,7 +14,7 @@
 
 ! CHECK-LABEL: func.func @_QPsimd_linear_allocatable
 ! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsimd_linear_allocatableEa") fortran_attrs<allocatable>
-! CHECK:         omp.simd linear(@_QFsimd_linear_allocatableEa_linear_box_heap_i32 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32,
+! CHECK:         omp.simd linear(val(@_QFsimd_linear_allocatableEa_linear_box_heap_i32 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32),
 ! CHECK-SAME:    linear_var_types([i32
 ! CHECK:           omp.loop_nest
 ! CHECK:             %[[PRIV_A:.*]]:2 = hlfir.declare %[[ARG]] uniq_name("_QFsimd_linear_allocatableEa") fortran_attrs<allocatable>
@@ -36,7 +35,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdo_linear_allocatable
 ! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_linear_allocatableEa") fortran_attrs<allocatable>
 ! CHECK:         omp.parallel
-! CHECK:           omp.wsloop linear(@_QFdo_linear_allocatableEa_linear_box_heap_i32 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32)
+! CHECK:           omp.wsloop linear(val(@_QFdo_linear_allocatableEa_linear_box_heap_i32 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32))
 ! CHECK:             omp.loop_nest
 ! CHECK:               hlfir.declare %[[ARG]] uniq_name("_QFdo_linear_allocatableEa") fortran_attrs<allocatable>
 subroutine do_linear_allocatable()
@@ -54,8 +53,8 @@ end subroutine
 ! Composite: the linear clause is on omp.wsloop.
 ! CHECK-LABEL: func.func @_QPdo_simd_linear_allocatable
 ! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simd_linear_allocatableEa") fortran_attrs<allocatable>
-! CHECK:         omp.wsloop linear(@_QFdo_simd_linear_allocatableEa_linear_box_heap_i64 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i64>>> = %{{.*}} : i64)
-! CHECK-NEXT:      omp.simd linear(@_QFdo_simd_linear_allocatableEi_linear_i32
+! CHECK:         omp.wsloop linear(val(@_QFdo_simd_linear_allocatableEa_linear_box_heap_i64 %[[A]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i64>>> = %{{.*}} : i64))
+! CHECK-NEXT:      omp.simd linear(val(@_QFdo_simd_linear_allocatableEi_linear_i32
 ! CHECK:             omp.loop_nest
 ! CHECK:               hlfir.declare %[[ARG]] uniq_name("_QFdo_simd_linear_allocatableEa") fortran_attrs<allocatable>
 subroutine do_simd_linear_allocatable()
@@ -73,7 +72,7 @@ end subroutine
 ! An allocatable loop iteration variable.
 ! CHECK-LABEL: func.func @_QPallocatable_iv
 ! CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFallocatable_ivEi") fortran_attrs<allocatable>
-! CHECK:         omp.simd linear(@_QFallocatable_ivEi_linear_box_heap_i32 %[[I]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32,
+! CHECK:         omp.simd linear(val(@_QFallocatable_ivEi_linear_box_heap_i32 %[[I]]#0 -> %[[ARG:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32),
 ! CHECK:           omp.loop_nest (%[[IV:.*]]) :
 ! CHECK:             %[[PRIV_I:.*]]:2 = hlfir.declare %[[ARG]] uniq_name("_QFallocatable_ivEi") fortran_attrs<allocatable>
 ! CHECK:             %[[BOX:.*]] = fir.load %[[PRIV_I]]#0

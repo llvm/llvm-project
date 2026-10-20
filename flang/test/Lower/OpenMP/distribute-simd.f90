@@ -1,5 +1,4 @@
 ! This test checks lowering of OpenMP DISTRIBUTE SIMD composite constructs.
-! XFAIL: *
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
@@ -66,7 +65,7 @@ subroutine distribute_simd_private()
   !$omp teams
   ! CHECK:      omp.distribute
   ! CHECK:      omp.simd
-  ! CHECK-SAME: linear(@{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:[^ ]+]] :
+  ! CHECK-SAME: linear(val(@{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:[^ ]+]] :
   ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
   ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
   !$omp distribute simd private(tmp)

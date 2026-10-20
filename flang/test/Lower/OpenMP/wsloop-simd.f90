@@ -1,5 +1,4 @@
 ! This test checks lowering of OpenMP DO SIMD composite constructs.
-! XFAIL: *
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
@@ -92,7 +91,7 @@ subroutine do_simd_private()
   ! CHECK:      %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simd_privateEi")
   ! CHECK:      omp.wsloop
   ! CHECK-NEXT: omp.simd
-  ! CHECK-SAME: linear(@{{.*}} %[[I_DECL]]#0 -> %[[I_ARG:[^ ]+]] :
+  ! CHECK-SAME: linear(val(@{{.*}} %[[I_DECL]]#0 -> %[[I_ARG:[^ ]+]] :
   ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
   ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
   !$omp do simd private(tmp)
@@ -113,7 +112,7 @@ subroutine do_simd_lastprivate_firstprivate()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %{{.*}} -> %[[FIRSTPRIVATE_A:.*]] : !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
-  ! CHECK-SAME: linear(@{{.*}}#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{[^:]*}} : i32)
+  ! CHECK-SAME: linear(val(@{{.*}}#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{[^:]*}} : i32))
   ! CHECK-SAME: private(@[[PRIVATE_A_SYM:.*]] %{{.*}} -> %[[PRIVATE_A:.*]] : !fir.ref<i32>)
   !$omp do simd lastprivate(a) firstprivate(a)
   do i = 1, 10
