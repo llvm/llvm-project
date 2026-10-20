@@ -874,6 +874,17 @@ func.func @slice_fold_static_dynamic(%arg0: tensor<?x4xf32>) -> tensor<?x4xf32> 
 
 // -----
 
+// CHECK-LABEL: @slice_nofold_static_to_dynamic
+func.func @slice_nofold_static_to_dynamic(%arg0: tensor<3x4xf32>) -> tensor<?x4xf32> {
+  %start = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %size = tosa.const_shape values(dense<[3, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.slice
+  %slice = tosa.slice %arg0, %start, %size : (tensor<3x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %slice : tensor<?x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @slice_nofold_static
 func.func @slice_nofold_static(%arg0: tensor<3x4xf32>) -> tensor<3x2xf32> {
   %0 = tosa.const_shape values(dense<[0, 0]> : tensor<2xindex>) : () -> !tosa.shape<2>

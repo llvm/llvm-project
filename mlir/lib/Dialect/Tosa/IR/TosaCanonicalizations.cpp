@@ -2301,7 +2301,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     }
 
     if (sizeMatchesInput)
-      return getInput1();
+      return foldToInputIfTypeMatches(getType(), getInput1());
   }
 
   // The following checks require the input to be a constant
