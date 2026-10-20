@@ -68,25 +68,19 @@ are placeholders for families that do not yet have a generic target. See
   - Covered Subarches (Processor)
 * - `amdgpu6`
   - *(none)*
-  - `amdgpu6.00` (`gfx600`), `amdgpu6.01` (`gfx601`),
-    `amdgpu6.02` (`gfx602`)
+  - `amdgpu6.00` (`gfx600`), `amdgpu6.01` (`gfx601`), `amdgpu6.02` (`gfx602`)
 * - `amdgpu7`
   - *(none)*
-  - `amdgpu7.00` (`gfx700`), `amdgpu7.01` (`gfx701`),
-    `amdgpu7.02` (`gfx702`), `amdgpu7.03` (`gfx703`),
-    `amdgpu7.04` (`gfx704`), `amdgpu7.05` (`gfx705`)
+  - `amdgpu7.00` (`gfx700`), `amdgpu7.01` (`gfx701`), `amdgpu7.02` (`gfx702`), `amdgpu7.03` (`gfx703`), `amdgpu7.04` (`gfx704`), `amdgpu7.05` (`gfx705`)
 * - `amdgpu8`
   - *(none)*
-  - `amdgpu8.01` (`gfx801`), `amdgpu8.02` (`gfx802`),
-    `amdgpu8.03` (`gfx803`), `amdgpu8.05` (`gfx805`)
+  - `amdgpu8.01` (`gfx801`), `amdgpu8.02` (`gfx802`), `amdgpu8.03` (`gfx803`), `amdgpu8.05` (`gfx805`)
 * - `amdgpu8.10`
   - *(none)*
   - `amdgpu8.10` (`gfx810`)
 * - `amdgpu9`
   - `gfx9-generic`
-  - `amdgpu9.00` (`gfx900`), `amdgpu9.02` (`gfx902`),
-    `amdgpu9.04` (`gfx904`), `amdgpu9.06` (`gfx906`),
-    `amdgpu9.09` (`gfx909`), `amdgpu9.0c` (`gfx90c`)
+  - `amdgpu9.00` (`gfx900`), `amdgpu9.02` (`gfx902`), `amdgpu9.04` (`gfx904`), `amdgpu9.06` (`gfx906`), `amdgpu9.09` (`gfx909`), `amdgpu9.0c` (`gfx90c`)
 * - `amdgpu9.08`
   - *(none)*
   - `amdgpu9.08` (`gfx908`)
@@ -98,25 +92,16 @@ are placeholders for families that do not yet have a generic target. See
   - `amdgpu9.42` (`gfx942`), `amdgpu9.50` (`gfx950`)
 * - `amdgpu10.1`
   - `gfx10-1-generic`
-  - `amdgpu10.10` (`gfx1010`), `amdgpu10.11` (`gfx1011`),
-    `amdgpu10.12` (`gfx1012`), `amdgpu10.13` (`gfx1013`)
+  - `amdgpu10.10` (`gfx1010`), `amdgpu10.11` (`gfx1011`), `amdgpu10.12` (`gfx1012`), `amdgpu10.13` (`gfx1013`)
 * - `amdgpu10.3`
   - `gfx10-3-generic`
-  - `amdgpu10.30` (`gfx1030`), `amdgpu10.31` (`gfx1031`),
-    `amdgpu10.32` (`gfx1032`), `amdgpu10.33` (`gfx1033`),
-    `amdgpu10.34` (`gfx1034`), `amdgpu10.35` (`gfx1035`),
-    `amdgpu10.36` (`gfx1036`)
+  - `amdgpu10.30` (`gfx1030`), `amdgpu10.31` (`gfx1031`), `amdgpu10.32` (`gfx1032`), `amdgpu10.33` (`gfx1033`), `amdgpu10.34` (`gfx1034`), `amdgpu10.35` (`gfx1035`), `amdgpu10.36` (`gfx1036`)
 * - `amdgpu11`
   - `gfx11-generic`
-  - `amdgpu11.00` (`gfx1100`), `amdgpu11.01` (`gfx1101`),
-    `amdgpu11.02` (`gfx1102`), `amdgpu11.03` (`gfx1103`),
-    `amdgpu11.50` (`gfx1150`), `amdgpu11.51` (`gfx1151`),
-    `amdgpu11.52` (`gfx1152`), `amdgpu11.53` (`gfx1153`)
-    `amdgpu11.54` (`gfx1154`)
+  - `amdgpu11.00` (`gfx1100`), `amdgpu11.01` (`gfx1101`), `amdgpu11.02` (`gfx1102`), `amdgpu11.03` (`gfx1103`), `amdgpu11.50` (`gfx1150`), `amdgpu11.51` (`gfx1151`), `amdgpu11.52` (`gfx1152`), `amdgpu11.53` (`gfx1153`) `amdgpu11.54` (`gfx1154`)
 * - `amdgpu11.7`
   - `gfx11-7-generic`
-  - `amdgpu11.70` (`gfx1170`), `amdgpu11.71` (`gfx1171`),
-    `amdgpu11.72` (`gfx1172`)
+  - `amdgpu11.70` (`gfx1170`), `amdgpu11.71` (`gfx1171`), `amdgpu11.72` (`gfx1172`)
 * - `amdgpu12`
   - `gfx12-generic`
   - `amdgpu12.00` (`gfx1200`), `amdgpu12.01` (`gfx1201`)
@@ -152,22 +137,15 @@ are placeholders for families that do not yet have a generic target. See
 * - *\<empty\>*
   - Defaults to the *unknown* OS.
 * - `amdhsa`
-  - Compute kernels executed on HSA [{ref}`HSA <hsa>`] compatible runtimes
-    such as:
+  - Compute kernels executed on HSA [{ref}`HSA <hsa>`] compatible runtimes such as:
 
-    - AMD's ROCm™ runtime [{ref}`AMD-ROCm <amd-rocm>`] using the *rocm-amdhsa*
-      loader on Linux. See *AMD ROCm Platform Release Notes*
-      [{ref}`AMD-ROCm-Release-Notes <amd-rocm-release-notes>`] for supported hardware and
-      software.
-    - AMD's PAL runtime using the *pal-amdhsa* loader on
-      Windows.
+    - AMD's ROCm™ runtime [{ref}`AMD-ROCm <amd-rocm>`] using the *rocm-amdhsa* loader on Linux.
+      See *AMD ROCm Platform Release Notes* [{ref}`AMD-ROCm-Release-Notes <amd-rocm-release-notes>`] for supported hardware and software.
+    - AMD's PAL runtime using the *pal-amdhsa* loader on Windows.
 * - `amdpal`
-  - Graphic shaders and compute kernels executed on AMD's PAL
-    runtime using the *pal-amdpal* loader on Windows and Linux
-    Pro.
+  - Graphic shaders and compute kernels executed on AMD's PAL runtime using the *pal-amdpal* loader on Windows and Linux Pro.
 * - `mesa3d`
-  - Graphic shaders and compute kernels executed on AMD's Mesa
-    3D runtime using the *mesa-mesa3d* loader on Linux.
+  - Graphic shaders and compute kernels executed on AMD's Mesa 3D runtime using the *mesa-mesa3d* loader on Linux.
 :::
 
 :::{list-table} AMDGPU Environments
@@ -231,34 +209,13 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
   :widths: auto
 
   * - Processor
-    - Alternative
-      Processor
-    - Target
-      Triple
-      Architecture
-    - dGPU/
-      APU
-    - Target
-      Features
-      Supported
-    - Target
-      Properties
-    - OS Support
-      *(see*
-      {ref}`amdgpu-os <amdgpu-os>`
-      *and
-      corresponding
-      runtime
-      release
-      notes for
-      current
-      information
-      and
-      level
-      of
-      support)*
-    - Example
-      Products
+    - Alternative Processor
+    - Target Triple Architecture
+    - dGPU/ APU
+    - Target Features Supported
+    - Target Properties
+    - OS Support *(see* {ref}`amdgpu-os <amdgpu-os>` *and corresponding runtime release notes for current information and level of support)*
+    - Example Products
   * - **Radeon HD 2000/3000 Series (R600)** \[{ref}`AMD-RADEON-HD-2000-3000 <amd-radeon-hd-2000-3000>`\]
     -
     -
@@ -272,11 +229,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `r630`
@@ -284,11 +237,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `rs880`
@@ -296,11 +245,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `rv670`
@@ -308,11 +253,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - **Radeon HD 4000 Series (R700)** \[{ref}`AMD-RADEON-HD-4000 <amd-radeon-hd-4000>`\]
@@ -328,11 +269,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `rv730`
@@ -340,11 +277,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `rv770`
@@ -352,11 +285,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - **Radeon HD 5000 Series (Evergreen)** \[{ref}`AMD-RADEON-HD-5000 <amd-radeon-hd-5000>`\]
@@ -372,11 +301,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `cypress`
@@ -384,11 +309,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `juniper`
@@ -396,11 +317,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `redwood`
@@ -408,11 +325,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `sumo`
@@ -420,11 +333,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - **Radeon HD 6000 Series (Northern Islands)** \[{ref}`AMD-RADEON-HD-6000 <amd-radeon-hd-6000>`\]
@@ -440,11 +349,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `caicos`
@@ -452,11 +357,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `cayman`
@@ -464,11 +365,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - `turks`
@@ -476,11 +373,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `r600`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     -
     -
   * - **GCN GFX6 (Southern Islands (SI))** \[{ref}`AMD-GCN-GFX6 <amd-gcn-gfx6>`\]
@@ -496,11 +389,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu6.00`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     - - *pal-amdpal*
     -
   * - `gfx601`
@@ -509,11 +398,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu6.01`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     - - *pal-amdpal*
     -
   * - `gfx602`
@@ -522,11 +407,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu6.02`
     - dGPU
     -
-    - - Does not
-        support
-        generic
-        address
-        space
+    - - Does not support generic address space
     - - *pal-amdpal*
     -
   * - **GCN GFX7 (Sea Islands (CI))** \[{ref}`AMD-GCN-GFX7 <amd-gcn-gfx7>`\]
@@ -542,9 +423,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.00`
     - APU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -563,9 +442,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.01`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -578,9 +455,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.02`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -594,9 +469,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.03`
     - APU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *pal-amdhsa*
       - *pal-amdpal*
     - - E1-2100
@@ -613,9 +486,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.04`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *pal-amdhsa*
       - *pal-amdpal*
     - - Radeon HD 7790
@@ -627,9 +498,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu7.05`
     - APU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *pal-amdhsa*
       - *pal-amdpal*
     - *TBA*
@@ -651,9 +520,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu8.01`
     - APU
     - - xnack
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -681,9 +548,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu8.02`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -710,9 +575,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu8.03`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -724,9 +587,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu8.03`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -736,25 +597,20 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu8.05`
     - dGPU
     -
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
     - - FirePro S7150
       - FirePro S7100
       - FirePro W7100
-      - Mobile FirePro
-        M7170
+      - Mobile FirePro M7170
   * - `gfx810`
     - - `stoney`
     - `amdgpu8.10`
     - APU
     - - xnack
-    - - Offset
-        flat
-        scratch
+    - - Offset flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -777,27 +633,21 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu9.00`
     - dGPU
     - - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
-    - - Radeon Vega
-        Frontier Edition
+    - - Radeon Vega Frontier Edition
       - Radeon RX Vega 56
       - Radeon RX Vega 64
-      - Radeon RX Vega 64
-        Liquid
+      - Radeon RX Vega 64 Liquid
       - Radeon Instinct MI25
   * - `gfx902`
     -
     - `amdgpu9.02`
     - APU
     - - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -824,9 +674,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - sramecc
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -840,9 +688,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - sramecc
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
     - - AMD Instinct MI100 Accelerator
   * - `gfx909`
@@ -850,9 +696,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu9.09`
     - APU
     - - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - *TBA*
 
@@ -867,16 +711,9 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - sramecc
       - tgsplit
       - xnack
-      - kernarg
-        preload
-        (except
-        MI210)
-    - - Absolute
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+      - kernarg preload (except MI210)
+    - - Absolute flat scratch
+      - Packed work-item IDs
     - - *rocm-amdhsa*
       - *rocm-amdhsa*
       - *rocm-amdhsa*
@@ -888,9 +725,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - `amdgpu9.0c`
     - APU
     - - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - - Ryzen 7 4700G
       - Ryzen 7 4700GE
@@ -912,14 +747,9 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - sramecc
       - tgsplit
       - xnack
-      - kernarg
-        preload
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+      - kernarg preload
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - - AMD Instinct MI300X
       - AMD Instinct MI300A
@@ -930,14 +760,9 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - sramecc
       - tgsplit
       - xnack
-      - kernarg
-        preload
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+      - kernarg preload
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -960,9 +785,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - cumode
       - wavefrontsize64
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -977,9 +800,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - cumode
       - wavefrontsize64
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -992,9 +813,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - cumode
       - wavefrontsize64
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -1007,9 +826,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - - cumode
       - wavefrontsize64
       - xnack
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -1033,9 +850,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -1050,9 +865,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -1063,9 +876,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *rocm-amdhsa*
       - *pal-amdhsa*
       - *pal-amdpal*
@@ -1081,9 +892,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - *TBA*
 
@@ -1097,9 +906,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - *TBA*
 
@@ -1113,9 +920,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - *TBA*
 
@@ -1129,9 +934,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Absolute
-        flat
-        scratch
+    - - Absolute flat scratch
     - - *pal-amdpal*
     - *TBA*
 
@@ -1153,12 +956,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     - - *pal-amdpal*
     - - Radeon PRO W7900 Dual Slot
       - Radeon PRO W7900
@@ -1172,12 +971,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - - Radeon RX 7800 XT
       - Radeon RX 7700 XT
@@ -1188,12 +983,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - - Radeon RX 7600 XT
       - Radeon RX 7600
@@ -1203,12 +994,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1230,12 +1017,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - Radeon 890M
 
@@ -1249,12 +1032,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - Radeon 8060S
 
@@ -1268,12 +1047,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - Radeon 860M
 
@@ -1287,12 +1062,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1306,12 +1077,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1333,12 +1100,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1352,12 +1115,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1371,12 +1130,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1398,12 +1153,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - - Radeon RX 9060
       - Radeon RX 9060 XT
@@ -1413,12 +1164,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - - Radeon RX 9070
       - Radeon RX 9070 XT
@@ -1429,17 +1176,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - sramecc
       - xnack
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
-      - Globally
-        Accessible
-        Scratch
-      - Workgroup
-        Clusters
+    - - Architected flat scratch
+      - Packed work-item IDs
+      - Globally Accessible Scratch
+      - Workgroup Clusters
     -
     - *TBA*
 
@@ -1453,17 +1193,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - sramecc
       - xnack
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
-      - Globally
-        Accessible
-        Scratch
-      - Workgroup
-        Clusters
+    - - Architected flat scratch
+      - Packed work-item IDs
+      - Globally Accessible Scratch
+      - Workgroup Clusters
     -
     - *TBA*
 
@@ -1477,17 +1210,10 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - APU
     - - sramecc
       - xnack
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
-      - Globally
-        Accessible
-        Scratch
-      - Workgroup
-        Clusters
+    - - Architected flat scratch
+      - Packed work-item IDs
+      - Globally Accessible Scratch
+      - Workgroup Clusters
     -
     - *TBA*
 
@@ -1509,12 +1235,8 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     - dGPU
     - - cumode
       - wavefrontsize64
-    - - Architected
-        flat
-        scratch
-      - Packed
-        work-item
-        IDs
+    - - Architected flat scratch
+      - Packed work-item IDs
     -
     - *TBA*
 
@@ -1539,13 +1261,9 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
 :widths: auto
 
 * - Processor
-  - Target
-    Triple
-    Architecture
-  - Supported
-    Processors
-  - Target Features
-    Supported
+  - Target Triple Architecture
+  - Supported Processors
+  - Target Features Supported
   - Target Properties
   - Target Restrictions
 * - `gfx9-generic`
@@ -1557,18 +1275,11 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx909`
     - `gfx90c`
   - - xnack
-  - - Absolute flat
-      scratch
-  - - `v_mad_mix` instructions
-      are not available on
-      `gfx900`, `gfx902`,
-      `gfx909`, `gfx90c`
-    - `v_fma_mix` instructions
-      are not available on `gfx904`
-    - sramecc is not available on
-      `gfx906`
-    - The following instructions
-      are not available on `gfx906`:
+  - - Absolute flat scratch
+  - - `v_mad_mix` instructions are not available on `gfx900`, `gfx902`, `gfx909`, `gfx90c`
+    - `v_fma_mix` instructions are not available on `gfx904`
+    - sramecc is not available on `gfx906`
+    - The following instructions are not available on `gfx906`:
 
       - `v_fmac_f32`
       - `v_xnor_b32`
@@ -1587,16 +1298,9 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - tgsplit
     - xnack
     - kernarg preload
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
-  - FP8 and BF8 instructions,
-    FP8 and BF8 conversion
-    instructions, as well as
-    instructions with XF32 format
-    support are not available.
+  - - Architected flat scratch
+    - Packed work-item IDs
+  - FP8 and BF8 instructions, FP8 and BF8 conversion instructions, as well as instructions with XF32 format support are not available.
 * - `gfx10-1-generic`
   - `amdgpu10.1`
   - - `gfx1010`
@@ -1606,11 +1310,8 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
   - - xnack
     - wavefrontsize64
     - cumode
-  - - Absolute flat
-      scratch
-  - - The following instructions are
-      not available on `gfx1011`
-      and `gfx1012`
+  - - Absolute flat scratch
+  - - The following instructions are not available on `gfx1011` and `gfx1012`
 
       - `v_dot4_i32_i8`
       - `v_dot8_i32_i4`
@@ -1621,9 +1322,7 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
       - `v_dot4_u32_u8`
       - `v_dot8_u32_u4`
       - `v_dot2_f32_f16`
-    - BVH Ray Tracing instructions
-      are not available on
-      `gfx1013`
+    - BVH Ray Tracing instructions are not available on `gfx1013`
 * - `gfx10-3-generic`
   - `amdgpu10.3`
   - - `gfx1030`
@@ -1635,8 +1334,7 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1036`
   - - wavefrontsize64
     - cumode
-  - - Absolute flat
-      scratch
+  - - Absolute flat scratch
   - No restrictions.
 * - `gfx11-generic`
   - `amdgpu11`
@@ -1651,15 +1349,9 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1154`
   - - wavefrontsize64
     - cumode
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
-  - Various codegen pessimizations
-    are applied to work around some
-    hazards specific to some targets
-    within this family.
+  - - Architected flat scratch
+    - Packed work-item IDs
+  - Various codegen pessimizations are applied to work around some hazards specific to some targets within this family.
 
     Not all VGPRs can be used on:
 
@@ -1667,16 +1359,14 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1101`
     - `gfx1151`
 
-    SALU floating point instructions
-    are not available on:
+    SALU floating point instructions are not available on:
 
     - `gfx1100`
     - `gfx1101`
     - `gfx1102`
     - `gfx1103`
 
-    SGPRs are not supported for src1
-    in dpp instructions for:
+    SGPRs are not supported for src1 in dpp instructions for:
 
     - `gfx1100`
     - `gfx1101`
@@ -1689,11 +1379,8 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1172`
   - - wavefrontsize64
     - cumode
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
+  - - Architected flat scratch
+    - Packed work-item IDs
   - No restrictions.
 * - `gfx12-generic`
   - `amdgpu12`
@@ -1701,11 +1388,8 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1201`
   - - wavefrontsize64
     - cumode
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
+  - - Architected flat scratch
+    - Packed work-item IDs
   - No restrictions.
 * - `gfx12-5-generic`
   - `amdgpu12.5`
@@ -1713,23 +1397,16 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
     - `gfx1251`
   - - sramecc
     - xnack
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
-  - Functionally equivalent to
-    gfx1250.
+  - - Architected flat scratch
+    - Packed work-item IDs
+  - Functionally equivalent to gfx1250.
 * - `gfx13-generic`
   - `amdgpu13`
   - - `gfx1310`
   - - wavefrontsize64
     - cumode
-  - - Architected
-      flat scratch
-    - Packed
-      work-item
-      IDs
+  - - Architected flat scratch
+    - Packed work-item IDs
   - No restrictions.
 :::
 
@@ -1809,64 +1486,36 @@ For example:
     -
   * - cumode
     - - `-m[no-]cumode`
-    - Control the wavefront execution mode used
-      when generating code for kernels. When disabled
-      native WGP wavefront execution mode is used,
-      when enabled CU wavefront execution mode is used
-      (see {ref}`amdgpu-amdhsa-memory-model`).
+    - Control the wavefront execution mode used when generating code for kernels.
+      When disabled native WGP wavefront execution mode is used, when enabled CU wavefront execution mode is used (see {ref}`amdgpu-amdhsa-memory-model`).
   * - sramecc
     - - `-mcpu`
       - `--offload-arch`
-    - If specified, generate code that can only be
-      loaded and executed in a process that has a
-      matching setting for SRAMECC.
+    - If specified, generate code that can only be loaded and executed in a process that has a matching setting for SRAMECC.
 
-      If not specified for code object V2 to V3, generate
-      code that can be loaded and executed in a process
-      with SRAMECC enabled.
+      If not specified for code object V2 to V3, generate code that can be loaded and executed in a process with SRAMECC enabled.
 
-      If not specified for code object V4 or above, generate
-      code that can be loaded and executed in a process
-      with either setting of SRAMECC.
+      If not specified for code object V4 or above, generate code that can be loaded and executed in a process with either setting of SRAMECC.
   * - tgsplit
     - `-m[no-]tgsplit`
-    - Enable/disable generating code that assumes
-      work-groups are launched in threadgroup split mode.
-      When enabled the waves of a work-group may be
-      launched in different CUs.
+    - Enable/disable generating code that assumes work-groups are launched in threadgroup split mode.
+      When enabled the waves of a work-group may be launched in different CUs.
   * - wavefrontsize64
     - - `-m[no-]wavefrontsize64`
-    - Control the wavefront size used when
-      generating code for kernels. When disabled
-      native wavefront size 32 is used, when enabled
-      wavefront size 64 is used.
+    - Control the wavefront size used when generating code for kernels.
+      When disabled native wavefront size 32 is used, when enabled wavefront size 64 is used.
   * - xnack
     - - `-mcpu`
       - `--offload-arch`
-    - If specified, generate code that can only be
-      loaded and executed in a process that has a
-      matching setting for XNACK replay.
+    - If specified, generate code that can only be loaded and executed in a process that has a matching setting for XNACK replay.
 
-      If not specified for code object V2 to V3, generate
-      code that can be loaded and executed in a process
-      with XNACK replay enabled.
+      If not specified for code object V2 to V3, generate code that can be loaded and executed in a process with XNACK replay enabled.
 
-      If not specified for code object V4 or above, generate
-      code that can be loaded and executed in a process
-      with either setting of XNACK replay.
+      If not specified for code object V4 or above, generate code that can be loaded and executed in a process with either setting of XNACK replay.
 
-      XNACK replay can be used for demand paging and
-      page migration. If enabled in the device, then if
-      a page fault occurs the code may execute
-      incorrectly unless generated with XNACK replay
-      enabled, or generated for code object V4 or above without
-      specifying XNACK replay. Executing code that was
-      generated with XNACK replay enabled, or generated
-      for code object V4 or above without specifying XNACK replay,
-      on a device that does not have XNACK replay
-      enabled will execute correctly but may be less
-      performant than code generated for XNACK replay
-      disabled.
+      XNACK replay can be used for demand paging and page migration.
+      If enabled in the device, then if a page fault occurs the code may execute incorrectly unless generated with XNACK replay enabled, or generated for code object V4 or above without specifying XNACK replay.
+      Executing code that was generated with XNACK replay enabled, or generated for code object V4 or above without specifying XNACK replay, on a device that does not have XNACK replay enabled will execute correctly but may be less performant than code generated for XNACK replay disabled.
   :::
 
 (amdgpu-module-flags)=
@@ -1889,73 +1538,64 @@ consumed by the AMDGPU backend during code generation.
 * - `amdgpu.buffer.oob.mode`
   - `i32`
   - Max
-  - Controls out-of-bounds semantics for untyped buffer
-    instructions (`buffer_load` / `buffer_store`).
+  - Controls out-of-bounds semantics for untyped buffer instructions (`buffer_load` / `buffer_store`).
 
-    - `0` (or absent): **any**. The module does not care about OOB
-      semantics. This is an alias of **strict** that is allowed to link
-      with any other module. Code generation is identical to **strict**.
-    - `1`: **relaxed**. The backend may merge misaligned buffer
-      accesses for performance, even if that changes OOB behaviour, and will
-      not split vector accesses that may produce unexpected OOB accesses.
-    - `2`: **strict**. The backend preserves per-byte OOB guarantees
-      by preventing merging of misaligned buffer accesses that could
-      straddle an OOB boundary (e.g. as required by Vulkan
-      `robustBufferAccess2`) and by splitting vector accesses to buffer
-      fat pointers that may produce incorrect results under a robust buffer
-      access scheme. See {ref}`amdgpu-fat-buffer-oob-handling` for details.
+    - `0` (or absent): **any**.
+      The module does not care about OOB semantics.
+      This is an alias of **strict** that is allowed to link with any other module.
+      Code generation is identical to **strict**.
+    - `1`: **relaxed**.
+      The backend may merge misaligned buffer accesses for performance, even if that changes OOB behaviour, and will not split vector accesses that may produce unexpected OOB accesses.
+    - `2`: **strict**.
+      The backend preserves per-byte OOB guarantees by preventing merging of misaligned buffer accesses that could straddle an OOB boundary (e.g. as required by Vulkan `robustBufferAccess2`) and by splitting vector accesses to buffer fat pointers that may produce incorrect results under a robust buffer access scheme.
+      See {ref}`amdgpu-fat-buffer-oob-handling` for details.
 
 * - `amdgpu.tbuffer.oob.mode`
   - `i32`
   - Max
-  - Same as above, but for typed buffer instructions (`tbuffer_load` /
-    `tbuffer_store`).
+  - Same as above, but for typed buffer instructions (`tbuffer_load` / `tbuffer_store`).
 
 * - `amdgpu.xnack`
   - `i32`
   - Error
-  - Controls XNACK (page fault) replay mode. This is ignored on
-    targets which do not support xnack.
+  - Controls XNACK (page fault) replay mode.
+    This is ignored on targets which do not support xnack.
 
-    - absent: **any**. The module can be loaded and executed in a process
-      with XNACK replay either enabled or disabled. Code generation
-      assumes XNACK may be enabled.
-    - `0`: **off**. The module can only be loaded and executed in a
-      process with XNACK replay disabled. Code generation is optimized
-      for XNACK disabled.
-    - `1`: **on**. The module can only be loaded and executed in a
-      process with XNACK replay enabled. Code generation assumes XNACK
-      is enabled.
+    - absent: **any**.
+      The module can be loaded and executed in a process with XNACK replay either enabled or disabled.
+      Code generation assumes XNACK may be enabled.
+    - `0`: **off**.
+      The module can only be loaded and executed in a process with XNACK replay disabled.
+      Code generation is optimized for XNACK disabled.
+    - `1`: **on**.
+      The module can only be loaded and executed in a process with XNACK replay enabled.
+      Code generation assumes XNACK is enabled.
 
-    At link time, modules with conflicting settings (`0` vs `1`)
-    produce an error. Modules with **any** (absent flag) are compatible
-    with any setting.
+    At link time, modules with conflicting settings (`0` vs `1`) produce an error.
+    Modules with **any** (absent flag) are compatible with any setting.
 
-    XNACK is disabled if `SH_MEM_CONFIG.ADDRESS_MODE = GPUVM` on chips
-    that support XNACK. The current default kernel driver setting is XNACK
-    disabled on the graphics ring and XNACK enabled on the compute ring.
-    If XNACK is enabled, the VMEM latency can be worse. If XNACK is
-    disabled, the 2 SGPRs otherwise reserved for the XNACK mask can be used
-    for general purposes.
+    XNACK is disabled if `SH_MEM_CONFIG.ADDRESS_MODE = GPUVM` on chips that support XNACK.
+    The current default kernel driver setting is XNACK disabled on the graphics ring and XNACK enabled on the compute ring.
+    If XNACK is enabled, the VMEM latency can be worse.
+    If XNACK is disabled, the 2 SGPRs otherwise reserved for the XNACK mask can be used for general purposes.
 
 * - `amdgpu.sramecc`
   - `i32`
   - Error
-  - Controls SRAMECC mode. This is ignored on targets which do not
-    support SRAMECC on/off modes. Targets that support SRAMECC without
-    on/off modes always have SRAMECC enabled.
+  - Controls SRAMECC mode.
+    This is ignored on targets which do not support SRAMECC on/off modes.
+    Targets that support SRAMECC without on/off modes always have SRAMECC enabled.
 
-    - absent: **any**. The module can be loaded and executed in a process
-      with SRAMECC either enabled or disabled.
-    - `0`: **off**. The module can only be loaded and executed in a
-      process with SRAMECC disabled.
-    - `1`: **on**. The module can only be loaded and executed in a
-      process with SRAMECC enabled. Some instructions behave differently
-      (e.g., D16 memory instructions).
+    - absent: **any**.
+      The module can be loaded and executed in a process with SRAMECC either enabled or disabled.
+    - `0`: **off**.
+      The module can only be loaded and executed in a process with SRAMECC disabled.
+    - `1`: **on**.
+      The module can only be loaded and executed in a process with SRAMECC enabled.
+      Some instructions behave differently (e.g., D16 memory instructions).
 
-    At link time, modules with conflicting settings (`0` vs `1`)
-    produce an error. Modules with **any** (absent flag) are compatible
-    with any setting.
+    At link time, modules with conflicting settings (`0` vs `1`) produce an error.
+    Modules with **any** (absent flag) are compatible with any setting.
 :::
 
 :::{note}
@@ -2050,14 +1690,10 @@ supported for the `amdgcn` target.
   - 64-Bit Process Address Space
   -
 * - Address Space Name
-  - LLVM IR Address
-    Space Number
-  - HSA Segment
-    Name
-  - Hardware
-    Name
-  - Address
-    Size
+  - LLVM IR Address Space Number
+  - HSA Segment Name
+  - Hardware Name
+  - Address Size
   - NULL Value
 * - Generic
   - 0
@@ -2540,93 +2176,49 @@ the happens-before relation to be non-transitive.
 * - *none*
   - The default: `system`.
 
-    Synchronizes with, and participates in modification
-    and seq_cst total orderings with, other operations
-    (except image operations) for all address spaces
-    (except private, or generic that accesses private)
-    provided the other operation's sync scope is:
+    Synchronizes with, and participates in modification and seq_cst total orderings with, other operations (except image operations) for all address spaces (except private, or generic that accesses private) provided the other operation's sync scope is:
 
     - `system`.
-    - `agent` and executed by a thread on the same
-      agent.
-    - `workgroup` and executed by a thread in the
-      same work-group.
-    - `wavefront` and executed by a thread in the
-      same wavefront.
+    - `agent` and executed by a thread on the same agent.
+    - `workgroup` and executed by a thread in the same work-group.
+    - `wavefront` and executed by a thread in the same wavefront.
 * - `agent`
-  - Synchronizes with, and participates in modification
-    and seq_cst total orderings with, other operations
-    (except image operations) for all address spaces
-    (except private, or generic that accesses private)
-    provided the other operation's sync scope is:
+  - Synchronizes with, and participates in modification and seq_cst total orderings with, other operations (except image operations) for all address spaces (except private, or generic that accesses private) provided the other operation's sync scope is:
 
-    - `system` or `agent` and executed by a thread
-      on the same agent.
-    - `workgroup` and executed by a thread in the
-      same work-group.
-    - `wavefront` and executed by a thread in the
-      same wavefront.
+    - `system` or `agent` and executed by a thread on the same agent.
+    - `workgroup` and executed by a thread in the same work-group.
+    - `wavefront` and executed by a thread in the same wavefront.
 * - `cluster`
-  - Synchronizes with, and participates in modification
-    and seq_cst total orderings with, other operations
-    (except image operations) for all address spaces
-    (except private, or generic that accesses private)
-    provided the other operation's sync scope is:
+  - Synchronizes with, and participates in modification and seq_cst total orderings with, other operations (except image operations) for all address spaces (except private, or generic that accesses private) provided the other operation's sync scope is:
 
-    - `system`, `agent` or `cluster` and
-      executed by a thread on the same cluster.
-    - `workgroup` and executed by a thread in the
-      same work-group.
-    - `wavefront` and executed by a thread in the
-      same wavefront.
+    - `system`, `agent` or `cluster` and executed by a thread on the same cluster.
+    - `workgroup` and executed by a thread in the same work-group.
+    - `wavefront` and executed by a thread in the same wavefront.
 
-    On targets that do not support workgroup cluster
-    launch mode, this behaves like `agent` scope instead.
+    On targets that do not support workgroup cluster launch mode, this behaves like `agent` scope instead.
 * - `workgroup`
-  - Synchronizes with, and participates in modification
-    and seq_cst total orderings with, other operations
-    (except image operations) for all address spaces
-    (except private, or generic that accesses private)
-    provided the other operation's sync scope is:
+  - Synchronizes with, and participates in modification and seq_cst total orderings with, other operations (except image operations) for all address spaces (except private, or generic that accesses private) provided the other operation's sync scope is:
 
-    - `system`, `agent` or `workgroup` and
-      executed by a thread in the same work-group.
-    - `wavefront` and executed by a thread in the
-      same wavefront.
+    - `system`, `agent` or `workgroup` and executed by a thread in the same work-group.
+    - `wavefront` and executed by a thread in the same wavefront.
 * - `wavefront`
-  - Synchronizes with, and participates in modification
-    and seq_cst total orderings with, other operations
-    (except image operations) for all address spaces
-    (except private, or generic that accesses private)
-    provided the other operation's sync scope is:
+  - Synchronizes with, and participates in modification and seq_cst total orderings with, other operations (except image operations) for all address spaces (except private, or generic that accesses private) provided the other operation's sync scope is:
 
-    - `system`, `agent`, `workgroup` or
-      `wavefront` and executed by a thread in the
-      same wavefront.
+    - `system`, `agent`, `workgroup` or `wavefront` and executed by a thread in the same wavefront.
 * - `singlethread`
-  - Only synchronizes with and participates in
-    modification and seq_cst total orderings with,
-    other operations (except image operations) running
-    in the same thread for all address spaces (for
-    example, in signal handlers).
+  - Only synchronizes with and participates in modification and seq_cst total orderings with, other operations (except image operations) running in the same thread for all address spaces (for example, in signal handlers).
 * - `one-as`
-  - Same as `system` but only synchronizes with other
-    operations within the same address space.
+  - Same as `system` but only synchronizes with other operations within the same address space.
 * - `agent-one-as`
-  - Same as `agent` but only synchronizes with other
-    operations within the same address space.
+  - Same as `agent` but only synchronizes with other operations within the same address space.
 * - `cluster-one-as`
-  - Same as `cluster` but only synchronizes with other
-    operations within the same address space.
+  - Same as `cluster` but only synchronizes with other operations within the same address space.
 * - `workgroup-one-as`
-  - Same as `workgroup` but only synchronizes with
-    other operations within the same address space.
+  - Same as `workgroup` but only synchronizes with other operations within the same address space.
 * - `wavefront-one-as`
-  - Same as `wavefront` but only synchronizes with
-    other operations within the same address space.
+  - Same as `wavefront` but only synchronizes with other operations within the same address space.
 * - `singlethread-one-as`
-  - Same as `singlethread` but only synchronizes with
-    other operations within the same address space.
+  - Same as `singlethread` but only synchronizes with other operations within the same address space.
 :::
 
 (amdgpu-fat-buffer-oob-handling)=
@@ -2766,22 +2358,21 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 * - LLVM Intrinsic
   - Description
 * - llvm.amdgcn.sqrt
-  - Provides direct access to v_sqrt_f64, v_sqrt_f32 and v_sqrt_f16
-    (on targets with half support). Performs sqrt function.
+  - Provides direct access to v_sqrt_f64, v_sqrt_f32 and v_sqrt_f16 (on targets with half support).
+    Performs sqrt function.
 * - llvm.amdgcn.log
-  - Provides direct access to v_log_f32 and v_log_f16
-    (on targets with half support). Performs log2 function.
+  - Provides direct access to v_log_f32 and v_log_f16 (on targets with half support).
+    Performs log2 function.
 * - llvm.amdgcn.exp2
-  - Provides direct access to v_exp_f32 and v_exp_f16
-    (on targets with half support). Performs exp2 function.
+  - Provides direct access to v_exp_f32 and v_exp_f16 (on targets with half support).
+    Performs exp2 function.
 * - {ref}`llvm.frexp <int_frexp>`
   - Implemented for half, float and double.
 * - {ref}`llvm.log2 <int_log2>`
-  - Implemented for float and half (and vectors of float or
-    half). Not implemented for double. Hardware provides
-    1ULP accuracy for float, and 0.51ULP for half. Float
-    instruction does not natively support denormal
-    inputs.
+  - Implemented for float and half (and vectors of float or half).
+    Not implemented for double.
+    Hardware provides 1ULP accuracy for float, and 0.51ULP for half.
+    Float instruction does not natively support denormal inputs.
 * - {ref}`llvm.sqrt <int_sqrt>`
   - Implemented for double, float and half (and vectors).
 * - {ref}`llvm.log <int_log>`
@@ -2791,291 +2382,217 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 * - {ref}`llvm.log10 <int_log10>`
   - Implemented for float and half (and vectors).
 * - {ref}`llvm.exp2 <int_exp2>`
-  - Implemented for float and half (and vectors of float or
-    half). Not implemented for double. Hardware provides
-    1ULP accuracy for float, and 0.51ULP for half. Float
-    instruction does not natively support denormal
-    inputs.
+  - Implemented for float and half (and vectors of float or half).
+    Not implemented for double.
+    Hardware provides 1ULP accuracy for float, and 0.51ULP for half.
+    Float instruction does not natively support denormal inputs.
 * - {ref}`llvm.stacksave.p5 <int_stacksave>`
   - Implemented, must use the alloca address space.
 * - {ref}`llvm.stackrestore.p5 <int_stackrestore>`
   - Implemented, must use the alloca address space.
 * - {ref}`llvm.get.fpmode.i32 <int_get_fpmode>`
-  - The natural floating-point mode type is i32. This
-    is implemented by extracting relevant bits out of the MODE
-    register with s_getreg_b32. The first 10 bits are the
-    core floating-point mode. Bits 12:18 are the exception
-    mask. On gfx9+, bit 23 is FP16_OVFL. Bitfields not
-    relevant to floating-point instructions are 0s.
+  - The natural floating-point mode type is i32.
+    This is implemented by extracting relevant bits out of the MODE register with s_getreg_b32.
+    The first 10 bits are the core floating-point mode.
+    Bits 12:18 are the exception mask.
+    On gfx9+, bit 23 is FP16_OVFL.
+    Bitfields not relevant to floating-point instructions are 0s.
 * - {ref}`llvm.get.rounding<int_get_rounding>`
-  - AMDGPU supports two separately controllable rounding
-    modes depending on the floating-point type. One
-    controls float, and the other controls both double and
-    half operations. If both modes are the same, returns
-    one of the standard return values. If the modes are
-    different, returns one of {ref}`12 extended values
-    <amdgpu-rounding-mode-enumeration-values-table>`
-    describing the two modes.
+  - AMDGPU supports two separately controllable rounding modes depending on the floating-point type.
+    One controls float, and the other controls both double and half operations.
+    If both modes are the same, returns one of the standard return values.
+    If the modes are different, returns one of {ref}`12 extended values <amdgpu-rounding-mode-enumeration-values-table>` describing the two modes.
 
-    To nearest, ties away from zero is not a supported
-    mode. The raw rounding mode values in the MODE
-    register do not exactly match the FLT_ROUNDS values,
-    so a conversion is performed.
+    To nearest, ties away from zero is not a supported mode.
+    The raw rounding mode values in the MODE register do not exactly match the FLT_ROUNDS values, so a conversion is performed.
 * - {ref}`llvm.set.rounding<int_set_rounding>`
-  - Input value expected to be one of the valid results
-    from '`llvm.get.rounding`'. Rounding mode is
-    undefined if not passed a valid input. This should be
-    a wave uniform value. In case of a divergent input
-    value, the first active lane's value will be used.
+  - Input value expected to be one of the valid results from '`llvm.get.rounding`'.
+    Rounding mode is undefined if not passed a valid input.
+    This should be a wave uniform value.
+    In case of a divergent input value, the first active lane's value will be used.
 * - {ref}`llvm.get.fpenv<int_get_fpenv>`
   - Returns the current value of the AMDGPU floating point environment.
-    This stores information related to the current rounding mode,
-    denormalization mode, enabled traps, and floating point exceptions.
+    This stores information related to the current rounding mode, denormalization mode, enabled traps, and floating point exceptions.
     The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 * - {ref}`llvm.set.fpenv<int_set_fpenv>`
   - Sets the floating point environment to the specified state.
 * - llvm.amdgcn.readfirstlane
-  - Provides direct access to v_readfirstlane_b32. Returns the value in
-    the lowest active lane of the input operand. Currently implemented
-    for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>,
-    i64, double, pointers, multiples of the 32-bit vectors.
+  - Provides direct access to v_readfirstlane_b32.
+    Returns the value in the lowest active lane of the input operand.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.readlane
-  - Provides direct access to v_readlane_b32. Returns the value in the
-    specified lane of the first input operand. The second operand specifies
-    the lane to read from. Currently implemented for i16, i32, float, half,
-    bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers,
-    multiples of the 32-bit vectors.
+  - Provides direct access to v_readlane_b32.
+    Returns the value in the specified lane of the first input operand.
+    The second operand specifies the lane to read from.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.writelane
-  - Provides direct access to v_writelane_b32. Writes value in the first input
-    operand to the specified lane of divergent output. The second operand
-    specifies the lane to write. Currently implemented for i16, i32, float,
-    half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers,
-    multiples of the 32-bit vectors.
+  - Provides direct access to v_writelane_b32.
+    Writes value in the first input operand to the specified lane of divergent output.
+    The second operand specifies the lane to write.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.wave.reduce.umin
-  - Performs an arithmetic unsigned min reduction on the unsigned values
-    provided by each lane in the wavefront.
-    Intrinsic takes a hint for reduction strategy using second operand
-    0: Target default preference,
-    1: `Iterative strategy`, and
-    2: `DPP`.
-    If the target does not support the DPP operations (e.g. gfx6/7),
-    reduction will be performed using default iterative strategy.
+  - Performs an arithmetic unsigned min reduction on the unsigned values provided by each lane in the wavefront.
+    Intrinsic takes a hint for reduction strategy using second operand 0: Target default preference, 1: `Iterative strategy`, and 2: `DPP`.
+    If the target does not support the DPP operations (e.g. gfx6/7), reduction will be performed using default iterative strategy.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.min
-  - Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a signed min
-    reduction on signed integers.
+  - Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a signed min reduction on signed integers.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.fmin
-  - Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a floating point min
-    reduction on floating point values.
+  - Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a floating point min reduction on floating point values.
     Intrinsic is implemented for float and double types.
     Intrinsic is modelled similar to `llvm.minnum` intrinsic.
     For a reduction between two NAN values, a NAN is returned.
-    For a reduction between a NAN and a number, the number is returned.
-    -0.0 \< +0.0 is true for this reduction.
+    For a reduction between a NAN and a number, the number is returned. -0.0 \< +0.0 is true for this reduction.
     The ordering behaviour of SNANs is non-deterministic.
 * - llvm.amdgcn.wave.reduce.umax
-  - Performs an arithmetic unsigned max reduction on the unsigned values
-    provided by each lane in the wavefront.
-    Intrinsic takes a hint for reduction strategy using second operand
-    0: Target default preference,
-    1: `Iterative strategy`, and
-    2: `DPP`.
-    If the target does not support the DPP operations (e.g. gfx6/7),
-    reduction will be performed using default iterative strategy.
+  - Performs an arithmetic unsigned max reduction on the unsigned values provided by each lane in the wavefront.
+    Intrinsic takes a hint for reduction strategy using second operand 0: Target default preference, 1: `Iterative strategy`, and 2: `DPP`.
+    If the target does not support the DPP operations (e.g. gfx6/7), reduction will be performed using default iterative strategy.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.max
-  - Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a signed max
-    reduction on signed integers.
+  - Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a signed max reduction on signed integers.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.fmax
-  - Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a floating point max
-    reduction on floating point values.
+  - Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a floating point max reduction on floating point values.
     Intrinsic is implemented for float and double types.
     Intrinsic is modelled similar to `llvm.maxnum` intrinsic.
     For a reduction between two NAN values, a NAN is returned.
-    For a reduction between a NAN and a number, the number is returned.
-    -0.0 \< +0.0 is true for this reduction.
+    For a reduction between a NAN and a number, the number is returned. -0.0 \< +0.0 is true for this reduction.
     The ordering behaviour of SNANs is non-deterministic.
 * - llvm.amdgcn.wave.reduce.add
-  - Performs an arithmetic add reduction on the signed/unsigned values
-    provided by each lane in the wavefront.
-    Intrinsic takes a hint for reduction strategy using second operand
-    0: Target default preference,
-    1: `Iterative strategy`, and
-    2: `DPP`.
-    If the target does not support the DPP operations (e.g. gfx6/7),
-    reduction will be performed using default iterative strategy.
+  - Performs an arithmetic add reduction on the signed/unsigned values provided by each lane in the wavefront.
+    Intrinsic takes a hint for reduction strategy using second operand 0: Target default preference, 1: `Iterative strategy`, and 2: `DPP`.
+    If the target does not support the DPP operations (e.g. gfx6/7), reduction will be performed using default iterative strategy.
     Intrinsic is implemented for signed/unsigned i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.fadd
-  - Similar to `llvm.amdgcn.wave.reduce.add`, but performs a floating point add
-    reduction on floating point values.
+  - Similar to `llvm.amdgcn.wave.reduce.add`, but performs a floating point add reduction on floating point values.
     Intrinsic is implemented for float and double types.
 * - llvm.amdgcn.wave.reduce.sub
-  - Performs an arithmetic sub reduction on the signed/unsigned values
-    provided by each lane in the wavefront.
-    Intrinsic takes a hint for reduction strategy using second operand
-    0: Target default preference,
-    1: `Iterative strategy`, and
-    2: `DPP`.
-    If the target does not support the DPP operations (e.g. gfx6/7),
-    reduction will be performed using default iterative strategy.
+  - Performs an arithmetic sub reduction on the signed/unsigned values provided by each lane in the wavefront.
+    Intrinsic takes a hint for reduction strategy using second operand 0: Target default preference, 1: `Iterative strategy`, and 2: `DPP`.
+    If the target does not support the DPP operations (e.g. gfx6/7), reduction will be performed using default iterative strategy.
     Intrinsic is implemented for signed/unsigned i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.fsub
-  - Similar to `llvm.amdgcn.wave.reduce.sub`, but performs a floating point sub
-    reduction on floating point values.
+  - Similar to `llvm.amdgcn.wave.reduce.sub`, but performs a floating point sub reduction on floating point values.
     Intrinsic is implemented for float and double types.
 * - llvm.amdgcn.wave.reduce.and
-  - Performs a bitwise-and reduction on the values
-    provided by each lane in the wavefront.
-    Intrinsic takes a hint for reduction strategy using second operand
-    0: Target default preference,
-    1: `Iterative strategy`, and
-    2: `DPP`.
-    If the target does not support the DPP operations (e.g. gfx6/7),
-    reduction will be performed using default iterative strategy.
+  - Performs a bitwise-and reduction on the values provided by each lane in the wavefront.
+    Intrinsic takes a hint for reduction strategy using second operand 0: Target default preference, 1: `Iterative strategy`, and 2: `DPP`.
+    If the target does not support the DPP operations (e.g. gfx6/7), reduction will be performed using default iterative strategy.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.or
-  - Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-or
-    reduction on the values provided by each wavefront.
+  - Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-or reduction on the values provided by each wavefront.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.wave.reduce.xor
-  - Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-xor
-    reduction on the values provided by each wavefront.
+  - Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-xor reduction on the values provided by each wavefront.
     Intrinsic is implemented for i32 and i64 types.
 * - llvm.amdgcn.permlane16
-  - Provides direct access to v_permlane16_b32. Performs arbitrary gather-style
-    operation within a row (16 contiguous lanes) of the second input operand.
-    The third and fourth inputs must be scalar values. These are combined into
-    a single 64-bit value representing lane selects used to swizzle within each
-    row. Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>,
-    \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
+  - Provides direct access to v_permlane16_b32.
+    Performs arbitrary gather-style operation within a row (16 contiguous lanes) of the second input operand.
+    The third and fourth inputs must be scalar values.
+    These are combined into a single 64-bit value representing lane selects used to swizzle within each row.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.permlanex16
-  - Provides direct access to v_permlanex16_b32. Performs arbitrary gather-style
-    operation across two rows of the second input operand (each row is 16 contiguous
-    lanes). The third and fourth inputs must be scalar values. These are combined
-    into a single 64-bit value representing lane selects used to swizzle within each
-    row. Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>,
-    \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
+  - Provides direct access to v_permlanex16_b32.
+    Performs arbitrary gather-style operation across two rows of the second input operand (each row is 16 contiguous lanes).
+    The third and fourth inputs must be scalar values.
+    These are combined into a single 64-bit value representing lane selects used to swizzle within each row.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.permlane64
-  - Provides direct access to v_permlane64_b32. Performs a specific permutation across
-    lanes of the input operand where the high half and low half of a wave64 are swapped.
-    Performs no operation in wave32 mode. Currently implemented for i16, i32, float, half,
-    bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the
-    32-bit vectors.
+  - Provides direct access to v_permlane64_b32.
+    Performs a specific permutation across lanes of the input operand where the high half and low half of a wave64 are swapped.
+    Performs no operation in wave32 mode.
+    Currently implemented for i16, i32, float, half, bfloat, \<2 x i16>, \<2 x half>, \<2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 * - llvm.amdgcn.wave.match.b32
-  - Provides direct access to v_wave_match_b32. Returns a 32-bit mask whose bit N is
-    set when lane N is active and its first operand equals the current lane's second
-    operand. Passing the same value as both operands yields the mask of active lanes
-    sharing that value. In wave64 mode each 32-lane half is handled independently.
+  - Provides direct access to v_wave_match_b32.
+    Returns a 32-bit mask whose bit N is set when lane N is active and its first operand equals the current lane's second operand.
+    Passing the same value as both operands yields the mask of active lanes sharing that value.
+    In wave64 mode each 32-lane half is handled independently.
 * - llvm.amdgcn.exclusive.scan.\*
-  - Provides direct access to the v_exclusive_scan\_\* instructions. Performs an
-    exclusive prefix scan of the first input operand across a subgroup of lanes,
-    selected by the mask in the second operand. Each lane receives the reduction of
-    the earlier lanes in its subgroup, so the lowest lane gets the identity value.
-    In wave64 mode the two halves of the wave are scanned independently. The operation
-    is part of the name (sum, xor, or, and, min, max).
+  - Provides direct access to the v_exclusive_scan\_\* instructions.
+    Performs an exclusive prefix scan of the first input operand across a subgroup of lanes, selected by the mask in the second operand.
+    Each lane receives the reduction of the earlier lanes in its subgroup, so the lowest lane gets the identity value.
+    In wave64 mode the two halves of the wave are scanned independently.
+    The operation is part of the name (sum, xor, or, and, min, max).
     Sum takes an extra i1 clamp operand.
 * - llvm.amdgcn.udot2
-  - Provides direct access to v_dot2_u32_u16 across targets which
-    support such instructions. This performs an unsigned dot product
-    with two v2i16 operands, summed with the third i32 operand. The
-    i1 fourth operand is used to clamp the output.
+  - Provides direct access to v_dot2_u32_u16 across targets which support such instructions.
+    This performs an unsigned dot product with two v2i16 operands, summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
 * - llvm.amdgcn.udot4
-  - Provides direct access to v_dot4_u32_u8 across targets which
-    support such instructions. This performs an unsigned dot product
-    with two i32 operands (holding a vector of 4 8bit values), summed
-    with the third i32 operand. The i1 fourth operand is used to clamp
-    the output.
+  - Provides direct access to v_dot4_u32_u8 across targets which support such instructions.
+    This performs an unsigned dot product with two i32 operands (holding a vector of 4 8bit values), summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
 * - llvm.amdgcn.udot8
-  - Provides direct access to v_dot8_u32_u4 across targets which
-    support such instructions. This performs an unsigned dot product
-    with two i32 operands (holding a vector of 8 4bit values), summed
-    with the third i32 operand. The i1 fourth operand is used to clamp
-    the output.
+  - Provides direct access to v_dot8_u32_u4 across targets which support such instructions.
+    This performs an unsigned dot product with two i32 operands (holding a vector of 8 4bit values), summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
 * - llvm.amdgcn.sdot2
-  - Provides direct access to v_dot2_i32_i16 across targets which
-    support such instructions. This performs a signed dot product
-    with two v2i16 operands, summed with the third i32 operand. The
-    i1 fourth operand is used to clamp the output.
-    When applicable (e.g. no clamping), this is lowered into
-    v_dot2c_i32_i16 for targets which support it.
+  - Provides direct access to v_dot2_i32_i16 across targets which support such instructions.
+    This performs a signed dot product with two v2i16 operands, summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
+    When applicable (e.g. no clamping), this is lowered into v_dot2c_i32_i16 for targets which support it.
 * - llvm.amdgcn.sdot4
-  - Provides direct access to v_dot4_i32_i8 across targets which
-    support such instructions. This performs a signed dot product
-    with two i32 operands (holding a vector of 4 8bit values), summed
-    with the third i32 operand. The i1 fourth operand is used to clamp
-    the output.
-    When applicable (i.e. no clamping / operand modifiers), this is lowered
-    into v_dot4c_i32_i8 for targets which support it.
-    RDNA3 does not offer v_dot4_i32_i8, and rather offers
-    v_dot4_i32_iu8 which has operands to hold the signedness of the
-    vector operands. Thus, this intrinsic lowers to the signed version
-    of this instruction for gfx11 targets.
+  - Provides direct access to v_dot4_i32_i8 across targets which support such instructions.
+    This performs a signed dot product with two i32 operands (holding a vector of 4 8bit values), summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
+    When applicable (i.e. no clamping / operand modifiers), this is lowered into v_dot4c_i32_i8 for targets which support it.
+    RDNA3 does not offer v_dot4_i32_i8, and rather offers v_dot4_i32_iu8 which has operands to hold the signedness of the vector operands.
+    Thus, this intrinsic lowers to the signed version of this instruction for gfx11 targets.
 * - llvm.amdgcn.sdot8
-  - Provides direct access to v_dot8_u32_u4 across targets which
-    support such instructions. This performs a signed dot product
-    with two i32 operands (holding a vector of 8 4bit values), summed
-    with the third i32 operand. The i1 fourth operand is used to clamp
-    the output.
-    When applicable (i.e. no clamping / operand modifiers), this is lowered
-    into v_dot8c_i32_i4 for targets which support it.
-    RDNA3 does not offer v_dot8_i32_i4, and rather offers
-    v_dot4_i32_iu4 which has operands to hold the signedness of the
-    vector operands. Thus, this intrinsic lowers to the signed version
-    of this instruction for gfx11 targets.
+  - Provides direct access to v_dot8_u32_u4 across targets which support such instructions.
+    This performs a signed dot product with two i32 operands (holding a vector of 8 4bit values), summed with the third i32 operand.
+    The i1 fourth operand is used to clamp the output.
+    When applicable (i.e. no clamping / operand modifiers), this is lowered into v_dot8c_i32_i4 for targets which support it.
+    RDNA3 does not offer v_dot8_i32_i4, and rather offers v_dot4_i32_iu4 which has operands to hold the signedness of the vector operands.
+    Thus, this intrinsic lowers to the signed version of this instruction for gfx11 targets.
 * - llvm.amdgcn.sudot4
-  - Provides direct access to v_dot4_i32_iu8 on gfx11 targets. This performs
-    dot product with two i32 operands (holding a vector of 4 8bit values), summed
-    with the fifth i32 operand. The i1 sixth operand is used to clamp
-    the output. The i1s preceding the vector operands decide the signedness.
+  - Provides direct access to v_dot4_i32_iu8 on gfx11 targets.
+    This performs dot product with two i32 operands (holding a vector of 4 8bit values), summed with the fifth i32 operand.
+    The i1 sixth operand is used to clamp the output.
+    The i1s preceding the vector operands decide the signedness.
 * - llvm.amdgcn.sudot8
-  - Provides direct access to v_dot8_i32_iu4 on gfx11 targets. This performs
-    dot product with two i32 operands (holding a vector of 8 4bit values), summed
-    with the fifth i32 operand. The i1 sixth operand is used to clamp
-    the output. The i1s preceding the vector operands decide the signedness.
+  - Provides direct access to v_dot8_i32_iu4 on gfx11 targets.
+    This performs dot product with two i32 operands (holding a vector of 8 4bit values), summed with the fifth i32 operand.
+    The i1 sixth operand is used to clamp the output.
+    The i1s preceding the vector operands decide the signedness.
 * - llvm.amdgcn.sched.barrier
-  - Controls the types of instructions that may be allowed to cross the intrinsic
-    during instruction scheduling. The parameter is a mask for the instruction types
-    that can cross the intrinsic.
+  - Controls the types of instructions that may be allowed to cross the intrinsic during instruction scheduling.
+    The parameter is a mask for the instruction types that can cross the intrinsic.
 
     - 0x0000: No instructions may be scheduled across sched_barrier.
-    - 0x0001: All, non-memory, non-side-effect producing instructions may be
-      scheduled across sched_barrier, *i.e.* allow ALU instructions to pass.
+    - 0x0001: All, non-memory, non-side-effect producing instructions may be scheduled across sched_barrier, *i.e.* allow ALU instructions to pass.
     - 0x0002: VALU instructions may be scheduled across sched_barrier.
     - 0x0004: SALU instructions may be scheduled across sched_barrier.
     - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
-    - 0x0010: All VMEM instructions may be scheduled across sched_barrier. This
-      includes LDSDMA instructions.
-    - 0x0020: VMEM read instructions may be scheduled across sched_barrier. This
-      does not include LDSDMA loads, even though they also read from global
-      memory; only loads targeting VGPRs are classified as VMEM read.
-    - 0x0040: VMEM write instructions may be scheduled across sched_barrier. This
-      does not include LDSDMA stores, even though they also write to global
-      memory; only stores sourcing from VGPRs are classified as VMEM write.
-    - 0x0080: All DS instructions may be scheduled across sched_barrier. This
-      includes LDSDMA instructions.
+    - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
+      This includes LDSDMA instructions.
+    - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
+      This does not include LDSDMA loads, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
+    - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
+      This does not include LDSDMA stores, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
+    - 0x0080: All DS instructions may be scheduled across sched_barrier.
+      This includes LDSDMA instructions.
     - 0x0100: All DS read instructions may be scheduled across sched_barrier.
     - 0x0200: All DS write instructions may be scheduled across sched_barrier.
     - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
     - 0x0800: All LDSDMA instructions may be scheduled across sched_barrier.
 * - llvm.amdgcn.sched.group.barrier
-  - Creates schedule groups with specific properties to create custom scheduling
-    pipelines. The ordering between groups is enforced by the instruction scheduler.
-    The intrinsic applies to the code that precedes the intrinsic. The intrinsic
-    takes three values that control the behavior of the schedule groups.
+  - Creates schedule groups with specific properties to create custom scheduling pipelines.
+    The ordering between groups is enforced by the instruction scheduler.
+    The intrinsic applies to the code that precedes the intrinsic.
+    The intrinsic takes three values that control the behavior of the schedule groups.
 
     - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
     - Size : The number of instructions that are in the group.
     - SyncID : Order is enforced between groups with matching values.
 
-    The mask can include multiple instruction types. It is undefined behavior to set
-    values beyond the range of valid masks.
+    The mask can include multiple instruction types.
+    It is undefined behavior to set values beyond the range of valid masks.
 
-    Combining multiple sched_group_barrier intrinsics enables an ordering of specific
-    instruction types during instruction scheduling. For example, the following enforces
-    a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA
-    instructions.
+    Combining multiple sched_group_barrier intrinsics enables an ordering of specific instruction types during instruction scheduling.
+    For example, the following enforces a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA instructions.
 
     `// 1 VMEM read`\
     `__builtin_amdgcn_sched_group_barrier(32, 1, 0)`\
@@ -3084,33 +2601,30 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     `// 5 MFMA`\
     `__builtin_amdgcn_sched_group_barrier(8, 5, 0)`
 * - llvm.amdgcn.iglp.opt
-  - An **experimental** intrinsic for instruction group level parallelism. The intrinsic
-    implements predefined instruction scheduling orderings. The intrinsic applies to the
-    surrounding scheduling region. The intrinsic takes a value that specifies the
-    strategy. The compiler implements two strategies.
+  - An **experimental** intrinsic for instruction group level parallelism.
+    The intrinsic implements predefined instruction scheduling orderings.
+    The intrinsic applies to the surrounding scheduling region.
+    The intrinsic takes a value that specifies the strategy.
+    The compiler implements two strategies.
 
     0. Interleave DS and MFMA instructions for small GEMM kernels.
     1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
     2. Interleave TRANS and MFMA instructions, as well as their VALU and DS predecessors, for attention kernels.
     3. Interleave TRANS and MFMA instructions, with no predecessor interleaving, for attention kernels.
 
-    Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
-    cannot be combined with sched_barrier or sched_group_barrier.
+    Only one iglp_opt intrinsic may be used in a scheduling region.
+    The iglp_opt intrinsic cannot be combined with sched_barrier or sched_group_barrier.
 
     The iglp_opt strategy implementations are subject to change.
 * - llvm.amdgcn.s.getpc
-  - Provides access to the s_getpc_b64 instruction, but with the return value
-    sign-extended from the width of the underlying PC hardware register even on
-    processors where the s_getpc_b64 instruction returns a zero-extended value.
+  - Provides access to the s_getpc_b64 instruction, but with the return value sign-extended from the width of the underlying PC hardware register even on processors where the s_getpc_b64 instruction returns a zero-extended value.
 * - llvm.amdgcn.ballot
-  - Returns a bitfield(i32 or i64) containing the result of its i1 argument
-    in all active lanes, and zero in all inactive lanes.
-    Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
-    used by hardware to control active lanes when used in EXEC register.
+  - Returns a bitfield(i32 or i64) containing the result of its i1 argument in all active lanes, and zero in all inactive lanes.
+    Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield used by hardware to control active lanes when used in EXEC register.
     For example, ballot(i1 true) return EXEC mask.
 * - llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4
-  - Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
-    last 4 operands correspond to the scale inputs.
+  - Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor.
+    The last 4 operands correspond to the scale inputs.
 
     - 2-bit byte index to use for each lane for matrix A
     - Matrix A scale values
@@ -3120,16 +2634,16 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   - Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 * - llvm.amdgcn.permlane16.swap
   - Provide direct access to `v_permlane16_swap_b32` instruction on supported targets.
-    Swaps the values across lanes of first 2 operands. Odd rows of the first operand are
-    swapped with even rows of the second operand (one row is 16 lanes).
-    Returns a pair for the swapped registers. The first element of the return corresponds
-    to the swapped element of the first argument.
+    Swaps the values across lanes of first 2 operands.
+    Odd rows of the first operand are swapped with even rows of the second operand (one row is 16 lanes).
+    Returns a pair for the swapped registers.
+    The first element of the return corresponds to the swapped element of the first argument.
 * - llvm.amdgcn.permlane32.swap
   - Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
-    Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
-    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
-    Returns a pair for the swapped registers. The first element of the return
-    corresponds to the swapped element of the first argument.
+    Swaps the values across lanes of first 2 operands.
+    Rows 2 and 3 of the first operand are swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
+    Returns a pair for the swapped registers.
+    The first element of the return corresponds to the swapped element of the first argument.
 * - llvm.amdgcn.mov.dpp
   - The llvm.amdgcn.mov.dpp.\`\<type>\` intrinsic represents the mov.dpp operation in AMDGPU.
     This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
@@ -3139,8 +2653,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     Various data types are supported, including, bf16, f16, f32, f64, i16, i32, i64, p0, p3, p5, v2f16, v2f32, v2i16, v2i32, v2p0, v3i32, v4i32, v8f16.
     This operation is equivalent to a sequence of v_mov_b32 operations.
     It is preferred over llvm.amdgcn.mov.dpp.\`\<type>\` for future use.
-    `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
-    Should be equivalent to:
+    `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>` Should be equivalent to:
 
     - `v_mov_b32 <dest> <old>`
     - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
@@ -3149,8 +2662,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     First argument is flat, global, or constant address space pointer.
     Any other address space is not supported.
     On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
-    Second argument is rw and currently ignored. Can be 0 or 1.
-    Third argument is locality, 0-3. Translates to memory scope:
+    Second argument is rw and currently ignored.
+    Can be 0 or 1.
+    Third argument is locality, 0-3.
+    Translates to memory scope:
 
     - 0 - SCOPE_SYS
     - 1 - SCOPE_DEV
@@ -3165,9 +2680,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
     Instruction cache prefetches are unsafe on invalid address.
 * - llvm.amdgcn.s.barrier
-  - Performs a barrier *arrive* operation immediately followed
-    by a barrier *wait* operation on the *workgroup barrier* object.
-    see {ref}`amdgpu-amdhsa-execution-barriers`.
+  - Performs a barrier *arrive* operation immediately followed by a barrier *wait* operation on the *workgroup barrier* object. see {ref}`amdgpu-amdhsa-execution-barriers`.
 * - llvm.amdgcn.s.barrier.init
   - Performs a barrier *init* operation on the barrier *object* determined by the first operand.
     See {ref}`amdgpu-amdhsa-execution-barriers`.
@@ -3178,20 +2691,18 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     Available starting GFX12.
 * - llvm.amdgcn.s.barrier.signal.var
   - Performs a barrier *arrive* operation on the barrier *object* determined by the first argument.
-    The second argument is an `i32` immediate *expected count*. The *expected count* of the barrier *object*
-    is only set when the argument is not zero, and when the barrier *object* is a *named barrier object*.
+    The second argument is an `i32` immediate *expected count*.
+    The *expected count* of the barrier *object* is only set when the argument is not zero, and when the barrier *object* is a *named barrier object*.
     See {ref}`amdgpu-amdhsa-execution-barriers`.
     Available starting GFX12.
 * - llvm.amdgcn.s.barrier.signal.isfirst
   - Performs a barrier *arrive* operation on the barrier *object* determined by the `i32` immediate argument.
-    Returns `i1 1` if the wave is running in a workgroup, and it was the first wave to *arrive* at the barrier
-    *object*, otherwise returns `i1 0`.
+    Returns `i1 1` if the wave is running in a workgroup, and it was the first wave to *arrive* at the barrier *object*, otherwise returns `i1 0`.
     See {ref}`amdgpu-amdhsa-execution-barriers`.
     Available starting GFX12.
 * - llvm.amdgcn.s.barrier.wait
   - Performs a barrier *wait* operation on the barrier *object* determined by the `i16` immediate argument.
-    If waiting on a *named barrier object*, this instruction always waits on the last *named barrier object*
-    that the thread has *joined*, even if it is different from the argument.
+    If waiting on a *named barrier object*, this instruction always waits on the last *named barrier object* that the thread has *joined*, even if it is different from the argument.
     See {ref}`amdgpu-amdhsa-execution-barriers`.
     Available starting GFX12.
 * - llvm.amdgcn.s.barrier.join
@@ -3204,10 +2715,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     Available starting GFX12.5.
 * - llvm.amdgcn.flat.load.monitor
   - Available on GFX12.5 only.
-    Corresponds to `flat_load_monitor_b32/64/128` (`.b32/64/128` suffixes)
-    instructions.
-    For the purposes of the memory model, this is an atomic load operation in
-    the generic (flat) address space.
+    Corresponds to `flat_load_monitor_b32/64/128` (`.b32/64/128` suffixes) instructions.
+    For the purposes of the memory model, this is an atomic load operation in the generic (flat) address space.
 
     This intrinsic has 3 operands:
 
@@ -3216,10 +2725,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     - {ref}`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
 * - llvm.amdgcn.global.load.monitor
   - Available on GFX12.5 only.
-    Corresponds to `global_load_monitor_b32/64/128` (`.b32/64/128` suffixes)
-    instructions.
-    For the purposes of the memory model, this is an atomic load operation in
-    the global address space.
+    Corresponds to `global_load_monitor_b32/64/128` (`.b32/64/128` suffixes) instructions.
+    For the purposes of the memory model, this is an atomic load operation in the global address space.
 
     This intrinsic has 3 operands:
 
@@ -3230,24 +2737,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   - Available starting GFX12.5.
     Corresponds to `ds_atomic_barrier_arrive_rtn_b64`.
 
-    For the purposes of the memory model, this is a monotonic atomic
-    read-modify-write operation in the local address space.
+    For the purposes of the memory model, this is a monotonic atomic read-modify-write operation in the local address space.
 
     This intrinsic has 2 operands:
 
     - Local pointer to the LDS barrier data.
-    - Update value; the pending count of the barrier will be
-      decremented by this value (generally 1).
+    - Update value; the pending count of the barrier will be decremented by this value (generally 1).
 
-    Returns the LDS barrier data as it was before this operation
-    was executed.
+    Returns the LDS barrier data as it was before this operation was executed.
 * - llvm.amdgcn.ds.atomic.async.barrier.arrive.b64
   - Available starting GFX12.5.
     Corresponds to `ds_atomic_async_barrier_arrive_b64`.
 
-    For the purposes of the memory model, this is an asynchronous
-    monotonic atomic read-modify-write operation in the local
-    address space.
+    For the purposes of the memory model, this is an asynchronous monotonic atomic read-modify-write operation in the local address space.
 
     This intrinsic has 1 operand:
 
@@ -3474,11 +2976,8 @@ then this intrinsic causes undefined behavior.
 :widths: auto
 
 * - LLVM Intrinsic
-  - Number of
-    Threads
-    Used
-  - Access Size
-    Per Thread
+  - Number of Threads Used
+  - Access Size Per Thread
   - Total Size
 * - `llvm.amdgcn.cooperative.atomic.store.32x4B`
   - 32
@@ -3553,8 +3052,7 @@ determined by the C ABI encoding of atomic memory orderings. The supported value
 :widths: auto
 
 * - Value
-  - Atomic Memory
-    Ordering
+  - Atomic Memory Ordering
   - Notes
 * - `i32 0`
   - `relaxed`
@@ -3734,207 +3232,146 @@ The AMDGPU backend supports the following LLVM IR attributes.
 * - LLVM Attribute
   - Description
 * - "amdgpu-flat-work-group-size"="min,max"
-  - Specify the minimum and maximum flat work group sizes that
-    will be specified when the kernel is dispatched. Generated
-    by the `amdgpu_flat_work_group_size` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
-    If the `reqd_work_group_size` metadata is present, the product
-    of its three workgroup size dimensions must match both `min`
-    and `max`.
-    The IR implied default value is 1,1024. Clang may emit this attribute
-    with more restrictive bounds depending on language defaults.
-    If the actual block or workgroup size exceeds the limit at any point during
-    the execution, the behavior is undefined. For example, even if there is
-    only one active thread but the thread local id exceeds the limit, the
-    behavior is undefined.
+  - Specify the minimum and maximum flat work group sizes that will be specified when the kernel is dispatched.
+    Generated by the `amdgpu_flat_work_group_size` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
+    If the `reqd_work_group_size` metadata is present, the product of its three workgroup size dimensions must match both `min` and `max`.
+    The IR implied default value is 1,1024.
+    Clang may emit this attribute with more restrictive bounds depending on language defaults.
+    If the actual block or workgroup size exceeds the limit at any point during the execution, the behavior is undefined.
+    For example, even if there is only one active thread but the thread local id exceeds the limit, the behavior is undefined.
 * - "amdgpu-implicitarg-num-bytes"="n"
-  - Number of kernel argument bytes to add to the kernel
-    argument block size for the implicit arguments. This
-    varies by OS and language (for OpenCL see
-    {ref}`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
+  - Number of kernel argument bytes to add to the kernel argument block size for the implicit arguments.
+    This varies by OS and language (for OpenCL see {ref}`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
 * - "amdgpu-num-sgpr"="n"
-  - Deprecated. Specifies the number of SGPRs to use. Generated
-    by the `amdgpu_num_sgpr` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
+  - Deprecated.
+    Specifies the number of SGPRs to use.
+    Generated by the `amdgpu_num_sgpr` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
     Use `"amdgpu-waves-per-eu"` instead.
 * - "amdgpu-num-vgpr"="n"
-  - Deprecated. Specifies the number of VGPRs to use. Generated
-    by the `amdgpu_num_vgpr` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
+  - Deprecated.
+    Specifies the number of VGPRs to use.
+    Generated by the `amdgpu_num_vgpr` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
     Use `"amdgpu-waves-per-eu"` instead.
 * - "amdgpu-waves-per-eu"="m,n"
-  - Specify the minimum and maximum number of waves per
-    execution unit. Generated by the `amdgpu_waves_per_eu`
-    CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\]. This is an optimization hint,
-    and the backend may not be able to satisfy the request. If
-    the specified range is incompatible with the function's
-    "amdgpu-flat-work-group-size" value, the implied occupancy
-    bounds by the workgroup size takes precedence.
+  - Specify the minimum and maximum number of waves per execution unit.
+    Generated by the `amdgpu_waves_per_eu` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
+    This is an optimization hint, and the backend may not be able to satisfy the request.
+    If the specified range is incompatible with the function's "amdgpu-flat-work-group-size" value, the implied occupancy bounds by the workgroup size takes precedence.
 * - "amdgpu-ieee" true/false.
-  - GFX6-GFX11 (Except GFX11.7) Only
-    Specify whether the function expects the IEEE field of the
-    mode register to be set on entry. Overrides the default for
-    the calling convention.
+  - GFX6-GFX11 (Except GFX11.7) Only Specify whether the function expects the IEEE field of the mode register to be set on entry.
+    Overrides the default for the calling convention.
 * - "amdgpu-dx10-clamp" true/false.
-  - GFX6-GFX11 (Except GFX11.7) Only
-    Specify whether the function expects the DX10_CLAMP field of
-    the mode register to be set on entry. Overrides the default
-    for the calling convention.
+  - GFX6-GFX11 (Except GFX11.7) Only Specify whether the function expects the DX10_CLAMP field of the mode register to be set on entry.
+    Overrides the default for the calling convention.
 * - "amdgpu-no-workitem-id-x"
-  - Indicates the function does not depend on the value of the
-    llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-    attribute, or reached through a call site marked with this attribute,
-    and that intrinsic is called, the behavior of the program is undefined.
-    (Whole-program undefined behavior is used here because, for example,
-    the absence of a required workitem ID in the preloaded register set can
-    mean that all other preloaded registers are earlier than the compilation
-    assumed they would be.) The backend can generally infer this during code
-    generation, so typically there is no benefit to frontends marking
-    functions with this.
+  - Indicates the function does not depend on the value of the llvm.amdgcn.workitem.id.x intrinsic.
+    If a function is marked with this attribute, or reached through a call site marked with this attribute, and that intrinsic is called, the behavior of the program is undefined.
+    (Whole-program undefined behavior is used here because, for example, the absence of a required workitem ID in the preloaded register set can mean that all other preloaded registers are earlier than the compilation assumed they would be.)
+    The backend can generally infer this during code generation, so typically there is no benefit to frontends marking functions with this.
 * - "amdgpu-no-workitem-id-y"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.workitem.id.y intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.workitem.id.y intrinsic.
 * - "amdgpu-no-workitem-id-z"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.workitem.id.z intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.workitem.id.z intrinsic.
 * - "amdgpu-no-workgroup-id-x"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.workgroup.id.x intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.workgroup.id.x intrinsic.
 * - "amdgpu-no-workgroup-id-y"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.workgroup.id.y intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.workgroup.id.y intrinsic.
 * - "amdgpu-no-workgroup-id-z"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.workgroup.id.z intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.workgroup.id.z intrinsic.
 * - "amdgpu-no-cluster-id-x"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.cluster.id.x intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.cluster.id.x intrinsic.
 * - "amdgpu-no-cluster-id-y"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.cluster.id.y intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.cluster.id.y intrinsic.
 * - "amdgpu-no-cluster-id-z"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.cluster.id.z intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.cluster.id.z intrinsic.
 * - "amdgpu-no-dispatch-ptr"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.dispatch.ptr intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.dispatch.ptr intrinsic.
 * - "amdgpu-no-implicitarg-ptr"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.implicitarg.ptr intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.implicitarg.ptr intrinsic.
 * - "amdgpu-no-dispatch-id"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.dispatch.id intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.dispatch.id intrinsic.
 * - "amdgpu-no-wwm"
-  - The same as amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.strict.wwm intrinsic.
+  - The same as amdgpu-no-workitem-id-x, except for the llvm.amdgcn.strict.wwm intrinsic.
 * - "amdgpu-no-queue-ptr"
-  - Similar to amdgpu-no-workitem-id-x, except for the
-    llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
-    attributes, the queue pointer may be required in situations where the
-    intrinsic call does not directly appear in the program. Some subtargets
-    require the queue pointer to handle some addrspacecasts, as well
-    as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
-    llvm.debug intrinsics.
+  - Similar to amdgpu-no-workitem-id-x, except for the llvm.amdgcn.queue.ptr intrinsic.
+    Note that unlike the other ABI hint attributes, the queue pointer may be required in situations where the intrinsic call does not directly appear in the program.
+    Some subtargets require the queue pointer to handle some addrspacecasts, as well as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and llvm.debug intrinsics.
 * - "amdgpu-no-hostcall-ptr"
-  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-    kernel argument that holds the pointer to the hostcall buffer. If this
-    attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit kernel argument that holds the pointer to the hostcall buffer.
+    If this attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 * - "amdgpu-no-heap-ptr"
-  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-    kernel argument that holds the pointer to an initialized memory buffer
-    that conforms to the requirements of the malloc/free device library V1
-    version implementation. If this attribute is absent, then the
-    amdgpu-no-implicitarg-ptr is also removed.
+  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit kernel argument that holds the pointer to an initialized memory buffer that conforms to the requirements of the malloc/free device library V1 version implementation.
+    If this attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 * - "amdgpu-no-multigrid-sync-arg"
-  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-    kernel argument that holds the multigrid synchronization pointer. If this
-    attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit kernel argument that holds the multigrid synchronization pointer.
+    If this attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 * - "amdgpu-no-default-queue"
-  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-    kernel argument that holds the default queue pointer. If this
-    attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit kernel argument that holds the default queue pointer.
+    If this attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 * - "amdgpu-no-completion-action"
-  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-    kernel argument that holds the completion action pointer. If this
-    attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+  - Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit kernel argument that holds the completion action pointer.
+    If this attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 * - "amdgpu-no-lds-dma"
-  - Indicates the function does not execute any {ref}`LDS DMA operations
-    <amdgpu-dma-operations>`.
+  - Indicates the function does not execute any {ref}`LDS DMA operations <amdgpu-dma-operations>`.
 * - "amdgpu-tg-split"
-  - Enable threadgroup split execution mode for the function. This must be
-    consistently set (or unset) for all reachable functions. This is only
-    relevant on targets with the `tgsplit-support` feature.
+  - Enable threadgroup split execution mode for the function.
+    This must be consistently set (or unset) for all reachable functions.
+    This is only relevant on targets with the `tgsplit-support` feature.
 * - "amdgpu-lds-size"="min\[,max\]"
-  - Min is the minimum number of bytes that will be allocated in the Local
-    Data Store at address zero. Variables are allocated within this frame
-    using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
-    pass. Optional max is the maximum number of bytes that will be allocated.
-    Note that min==max indicates that no further variables can be added to
-    the frame. This is an internal detail of how LDS variables are lowered,
-    language front ends should not set this attribute.
+  - Min is the minimum number of bytes that will be allocated in the Local Data Store at address zero.
+    Variables are allocated within this frame using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS pass.
+    Optional max is the maximum number of bytes that will be allocated.
+    Note that min==max indicates that no further variables can be added to the frame.
+    This is an internal detail of how LDS variables are lowered, language front ends should not set this attribute.
 * - "amdgpu-gds-size"
   - Bytes expected to be allocated at the start of GDS memory at entry.
 * - "amdgpu-git-ptr-high"
-  - The hard-wired high half of the address of the global information table
-    for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
-    current hardware only allows a 16-bit value.
+  - The hard-wired high half of the address of the global information table for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since current hardware only allows a 16-bit value.
 * - "amdgpu-32bit-address-high-bits"
-  - Assumed high 32-bits for 32-bit address spaces which are really truncated
-    64-bit addresses (i.e., addrspace(6))
+  - Assumed high 32-bits for 32-bit address spaces which are really truncated 64-bit addresses (i.e., addrspace(6))
 * - "amdgpu-color-export"
   - Indicates shader exports color information if set to 1.
-    Defaults to 1 for {ref}`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
-    conventions. Determines the necessity and type of null exports when a shader
-    terminates early by killing lanes.
+    Defaults to 1 for {ref}`amdgpu_ps <amdgpu-cc>`, and 0 for other calling conventions.
+    Determines the necessity and type of null exports when a shader terminates early by killing lanes.
 * - "amdgpu-depth-export"
-  - Indicates shader exports depth information if set to 1. Determines the
-    necessity and type of null exports when a shader terminates early by killing
-    lanes. A depth-only shader will export to depth channel when no null export
-    target is available (GFX11+).
+  - Indicates shader exports depth information if set to 1.
+    Determines the necessity and type of null exports when a shader terminates early by killing lanes.
+    A depth-only shader will export to depth channel when no null export target is available (GFX11+).
 * - "InitialPSInputAddr"
-  - Set the initial value of the `spi_ps_input_addr` register for
-    {ref}`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
-    be enabled in the final register value.
+  - Set the initial value of the `spi_ps_input_addr` register for {ref}`amdgpu_ps <amdgpu-cc>` shaders.
+    Any bits enabled by this value will be enabled in the final register value.
 * - "amdgpu-wave-priority-threshold"
-  - VALU instruction count threshold for adjusting wave priority. If exceeded,
-    temporarily raise the wave priority at the start of the shader function
-    until its last VMEM instructions to allow younger waves to issue their VMEM
-    instructions as well.
+  - VALU instruction count threshold for adjusting wave priority.
+    If exceeded, temporarily raise the wave priority at the start of the shader function until its last VMEM instructions to allow younger waves to issue their VMEM instructions as well.
 * - "amdgpu-memory-bound"
   - Set internally by backend
 * - "amdgpu-wave-limiter"
   - Set internally by backend
 * - "amdgpu-unroll-threshold"
-  - Set base cost threshold preference for loop unrolling within this function,
-    default is 300. Actual threshold may be varied by per-loop metadata or
-    reduced by heuristics.
+  - Set base cost threshold preference for loop unrolling within this function, default is 300.
+    Actual threshold may be varied by per-loop metadata or reduced by heuristics.
 * - "amdgpu-partial-unroll-threshold"
-  - Set base cost threshold preference for partial and runtime loop unrolling
-    within this function, default is 150. This is independent of
-    `amdgpu-unroll-threshold`, which controls the threshold used for full
-    unrolling.
+  - Set base cost threshold preference for partial and runtime loop unrolling within this function, default is 150.
+    This is independent of `amdgpu-unroll-threshold`, which controls the threshold used for full unrolling.
 * - "amdgpu-max-num-workgroups"="x,y,z"
-  - Specify the maximum number of work groups for the kernel dispatch in the
-    X, Y, and Z dimensions. Each number must be >= 1. Generated by the
-    `amdgpu_max_num_work_groups` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\]. Clang only
-    emits this attribute when all the three numbers are >= 1.
+  - Specify the maximum number of work groups for the kernel dispatch in the X, Y, and Z dimensions.
+    Each number must be >= 1.
+    Generated by the `amdgpu_max_num_work_groups` CLANG attribute \[{ref}`CLANG-ATTR <clang-attr>`\].
+    Clang only emits this attribute when all the three numbers are >= 1.
 * - "amdgpu-hidden-argument"
-  - This attribute is used internally by the backend to mark function arguments
-    as hidden. Hidden arguments are managed by the compiler and are not part of
-    the explicit arguments supplied by the user.
+  - This attribute is used internally by the backend to mark function arguments as hidden.
+    Hidden arguments are managed by the compiler and are not part of the explicit arguments supplied by the user.
 * - "amdgpu-agpr-alloc"="min(,max)"
-  - Indicates a minimum and maximum range for the number of AGPRs to make
-    available to allocate. The values will be rounded up to the next multiple
-    of the allocation granularity (4). The minimum value is interpreted as the
-    minimum required number of AGPRs for the function to allocate (that is, the
-    function requires no more than min registers). If only one value is specified,
-    it is interpreted as the minimum register budget. The maximum will restrict
-    allocation to use no more than max AGPRs.
+  - Indicates a minimum and maximum range for the number of AGPRs to make available to allocate.
+    The values will be rounded up to the next multiple of the allocation granularity (4).
+    The minimum value is interpreted as the minimum required number of AGPRs for the function to allocate (that is, the function requires no more than min registers).
+    If only one value is specified, it is interpreted as the minimum register budget.
+    The maximum will restrict allocation to use no more than max AGPRs.
 
-    The values may be ignored if satisfying it would violate other allocation
-    constraints.
+    The values may be ignored if satisfying it would violate other allocation constraints.
 
-    The behavior is undefined if a function which requires more AGPRs than the
-    lower bound is reached through any function marked with a higher value of this
-    attribute. A minimum value of 0 indicates the function does not require
-    any AGPRs.
+    The behavior is undefined if a function which requires more AGPRs than the lower bound is reached through any function marked with a higher value of this attribute.
+    A minimum value of 0 indicates the function does not require any AGPRs.
 
     This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
 * - "amdgpu-sgpr-hazard-boundary-cull"
@@ -3945,46 +3382,36 @@ The AMDGPU backend supports the following LLVM IR attributes.
     Cull sequence reduces future hazard waits, but has a performance cost.
     Attempt to amortize cost by overlapping with memory accesses.
 * - "amdgpu-sgpr-hazard-mem-wait-cull-threshold"
-  - Sets the number of active SGPR hazards that must be present before
-    inserting a cull sequence at a memory wait.
+  - Sets the number of active SGPR hazards that must be present before inserting a cull sequence at a memory wait.
 * - "amdgpu-promote-alloca-to-vector-max-regs"
   - Maximum vector size (in 32b registers) to create when promoting alloca.
 * - "amdgpu-promote-alloca-to-vector-vgpr-ratio"
   - Ratio of VGPRs to budget for promoting alloca to vectors.
 * - "amdgpu-dynamic-vgpr-block-size"
-  - Represents the size of a VGPR block in the "Dynamic VGPR" hardware mode,
-    introduced in GFX12.
+  - Represents the size of a VGPR block in the "Dynamic VGPR" hardware mode, introduced in GFX12.
     A value of 0 (default) means that dynamic VGPRs are not enabled.
     Valid values for GFX12+ are 16 and 32.
-    Waves launched in this mode may allocate or deallocate the VGPRs
-    using dedicated instructions, but may not send the DEALLOC_VGPRS
-    message. If a shader has this attribute, then all its callees must
-    match its value.
-    An amd_cs_chain CC function with this enabled has an extra symbol
-    prefixed with "\_dvgpr$" with the value of the function symbol,
-    offset by one less than the number of dynamic VGPR blocks required
-    by the function encoded in bits 5..3.
+    Waves launched in this mode may allocate or deallocate the VGPRs using dedicated instructions, but may not send the DEALLOC_VGPRS message.
+    If a shader has this attribute, then all its callees must match its value.
+    An amd_cs_chain CC function with this enabled has an extra symbol prefixed with "\_dvgpr$" with the value of the function symbol, offset by one less than the number of dynamic VGPR blocks required by the function encoded in bits 5..3.
 * - "amdgpu-cluster-dims"="x,y,z"
-  - Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
-    cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
-    but the dimensions cannot be determined at compile time. Any other value explicitly
-    specifies the cluster dimensions.
+  - Specify the cluster workgroup dimensions.
+    A value of "0,0,0" indicates that cluster is disabled.
+    A value of "1024,1024,1024" indicates that cluster is enabled, but the dimensions cannot be determined at compile time.
+    Any other value explicitly specifies the cluster dimensions.
 
     This is only relevant on targets with cluster support.
 * - "amdgpu-expert-scheduling-mode" true/false.
-  - Enable expert scheduling mode 2 for this function. This is a hardware execution
-    mode introduced in GFX12.
+  - Enable expert scheduling mode 2 for this function.
+    This is a hardware execution mode introduced in GFX12.
 
     This is only relevant on GFX12+.
 * - "amdgpu-expand-waitcnt-profiling"
   - Enable expansion of s_waitcnt instructions for profiling purposes.
-    When enabled, each s_waitcnt instruction that waits on multiple counter
-    types is expanded into a sequence of s_waitcnt instructions, each waiting
-    on a single counter type. This allows PC-sampling based profilers to
-    attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
+    When enabled, each s_waitcnt instruction that waits on multiple counter types is expanded into a sequence of s_waitcnt instructions, each waiting on a single counter type.
+    This allows PC-sampling based profilers to attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 * - "amdgpu-no-fwd-progress"
-  - Disable forward progress mode for wave priority
-    (enabled by default).
+  - Disable forward progress mode for wave priority (enabled by default).
 
     Relevant for GFX10+.
 :::
@@ -4001,102 +3428,72 @@ The AMDGPU backend supports the following calling conventions:
 * - Calling Convention
   - Description
 * - `ccc`
-  - The C calling convention. Used by default.
-    See {ref}`amdgpu-amdhsa-function-call-convention-non-kernel-functions`
-    for more details.
+  - The C calling convention.
+    Used by default.
+    See {ref}`amdgpu-amdhsa-function-call-convention-non-kernel-functions` for more details.
 * - `fastcc`
-  - The fast calling convention. Mostly the same as the `ccc`.
+  - The fast calling convention.
+    Mostly the same as the `ccc`.
 * - `coldcc`
-  - The cold calling convention. Mostly the same as the `ccc`.
+  - The cold calling convention.
+    Mostly the same as the `ccc`.
 * - `amdgpu_cs`
-  - Used for Mesa/AMDPAL compute shaders.
-    ..TODO::
-    Describe.
+  - Used for Mesa/AMDPAL compute shaders. ..TODO:: Describe.
 * - `amdgpu_cs_chain`
   - Similar to `amdgpu_cs`, with differences described below.
 
-    Functions with this calling convention cannot be called directly. They must
-    instead be launched via the `llvm.amdgcn.cs.chain` intrinsic.
+    Functions with this calling convention cannot be called directly.
+    They must instead be launched via the `llvm.amdgcn.cs.chain` intrinsic.
 
-    Arguments are passed in SGPRs, starting at s0, if they have the `inreg`
-    attribute, and in VGPRs otherwise, starting at v8. Using more SGPRs or VGPRs
-    than available in the subtarget is not allowed. On subtargets that use
-    a scratch buffer descriptor (as opposed to `scratch_{load,store}_*` instructions),
-    the scratch buffer descriptor is passed in s\[48:51\]. This limits the
-    SGPR / `inreg` arguments to the equivalent of 48 dwords; using more
-    than that is not allowed.
+    Arguments are passed in SGPRs, starting at s0, if they have the `inreg` attribute, and in VGPRs otherwise, starting at v8.
+    Using more SGPRs or VGPRs than available in the subtarget is not allowed.
+    On subtargets that use a scratch buffer descriptor (as opposed to `scratch_{load,store}_*` instructions), the scratch buffer descriptor is passed in s\[48:51\].
+    This limits the SGPR / `inreg` arguments to the equivalent of 48 dwords; using more than that is not allowed.
 
     The return type must be void.
     Varargs, sret, byval, byref, inalloca, preallocated are not supported.
 
-    Values in scalar registers as well as v0-v7 are not preserved. Values in
-    VGPRs starting at v8 are not preserved for the active lanes, but must be
-    saved by the callee for inactive lanes when using WWM (a notable exception is
-    when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this
-    case the backend assumes that there are no inactive lanes upon entry; any inactive
-    lanes that need to be preserved must be explicitly present in the IR).
+    Values in scalar registers as well as v0-v7 are not preserved.
+    Values in VGPRs starting at v8 are not preserved for the active lanes, but must be saved by the callee for inactive lanes when using WWM (a notable exception is when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this case the backend assumes that there are no inactive lanes upon entry; any inactive lanes that need to be preserved must be explicitly present in the IR).
 
-    Chain functions receive a stack pointer from their caller (in s32), similar to
-    `amdgpu_gfx` functions. If needed, the frame pointer is s33 and the base pointer
-    is s34. Calls to `amdgpu_gfx` functions are allowed and behave like they do in
-    `amdgpu_cs` functions.
+    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions.
+    If needed, the frame pointer is s33 and the base pointer is s34.
+    Calls to `amdgpu_gfx` functions are allowed and behave like they do in `amdgpu_cs` functions.
 
-    A function may have multiple exits (e.g. one chain exit and one plain `ret void`
-    for when the wave ends), but all `llvm.amdgcn.cs.chain` exits must be in
-    uniform control flow.
+    A function may have multiple exits (e.g. one chain exit and one plain `ret void` for when the wave ends), but all `llvm.amdgcn.cs.chain` exits must be in uniform control flow.
 * - `amdgpu_cs_chain_preserve`
   - Same as `amdgpu_cs_chain`, but active lanes for VGPRs starting at v8 are preserved.
-    Calls to `amdgpu_gfx` functions are not allowed, and any calls to `llvm.amdgcn.cs.chain`
-    must not pass more VGPR arguments than the caller's VGPR function parameters.
+    Calls to `amdgpu_gfx` functions are not allowed, and any calls to `llvm.amdgcn.cs.chain` must not pass more VGPR arguments than the caller's VGPR function parameters.
 * - `amdgpu_es`
-  - Used for AMDPAL shader stage before geometry shader if geometry is in
-    use. So either the domain (= tessellation evaluation) shader if
-    tessellation is in use, or otherwise the vertex shader.
-    ..TODO::
-    Describe.
+  - Used for AMDPAL shader stage before geometry shader if geometry is in use.
+    So either the domain (= tessellation evaluation) shader if tessellation is in use, or otherwise the vertex shader. ..TODO:: Describe.
 * - `amdgpu_gfx`
-  - Used for AMD graphics targets. Functions with this calling convention
-    cannot be used as entry points.
-    ..TODO::
-    Describe.
+  - Used for AMD graphics targets.
+    Functions with this calling convention cannot be used as entry points. ..TODO:: Describe.
 * - `amdgpu_gfx_whole_wave`
-  - Used for AMD graphics targets. Functions with this calling convention
-    cannot be used as entry points. They must have an i1 as the first argument,
-    which will be mapped to the value of EXEC on entry into the function. Other
-    arguments will contain poison in their inactive lanes. Similarly, the return
-    value for the inactive lanes is poison.
+  - Used for AMD graphics targets.
+    Functions with this calling convention cannot be used as entry points.
+    They must have an i1 as the first argument, which will be mapped to the value of EXEC on entry into the function.
+    Other arguments will contain poison in their inactive lanes.
+    Similarly, the return value for the inactive lanes is poison.
 
-    The function will run with all lanes enabled, i.e. EXEC will be set to -1 in the
-    prologue and restored to its original value in the epilogue. The inactive lanes
-    will be preserved for all the registers used by the function. Active lanes only
-    will only be preserved for the callee saved registers.
+    The function will run with all lanes enabled, i.e. EXEC will be set to -1 in the prologue and restored to its original value in the epilogue.
+    The inactive lanes will be preserved for all the registers used by the function.
+    Active lanes only will only be preserved for the callee saved registers.
 
-    In all other respects, functions with this calling convention behave like
-    `amdgpu_gfx` functions.
+    In all other respects, functions with this calling convention behave like `amdgpu_gfx` functions.
 * - `amdgpu_gs`
-  - Used for Mesa/AMDPAL geometry shaders.
-    ..TODO::
-    Describe.
+  - Used for Mesa/AMDPAL geometry shaders. ..TODO:: Describe.
 * - `amdgpu_hs`
-  - Used for Mesa/AMDPAL hull shaders (= tessellation control shaders).
-    ..TODO::
-    Describe.
+  - Used for Mesa/AMDPAL hull shaders (= tessellation control shaders). ..TODO:: Describe.
 * - `amdgpu_kernel`
   - See {ref}`amdgpu-amdhsa-function-call-convention-kernel-functions`
 * - `amdgpu_ls`
-  - Used for AMDPAL vertex shader if tessellation is in use.
-    ..TODO::
-    Describe.
+  - Used for AMDPAL vertex shader if tessellation is in use. ..TODO:: Describe.
 * - `amdgpu_ps`
-  - Used for Mesa/AMDPAL pixel shaders.
-    ..TODO::
-    Describe.
+  - Used for Mesa/AMDPAL pixel shaders. ..TODO:: Describe.
 * - `amdgpu_vs`
-  - Used for Mesa/AMDPAL last shader stage before rasterization (vertex
-    shader if tessellation and geometry are not in use, or otherwise
-    copy shader if one is needed).
-    ..TODO::
-    Describe.
+  - Used for Mesa/AMDPAL last shader stage before rasterization (vertex shader if tessellation and geometry are not in use, or otherwise copy shader if one is needed). ..TODO:: Describe.
 :::
 
 The following ABI conventions apply to all calling conventions that are used for
@@ -4130,16 +3527,13 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
   - Return value
 * - `max(arg, ...)`
   - 1 or more
-  - Variadic signed operation that returns the maximum
-    value of all its arguments.
+  - Variadic signed operation that returns the maximum value of all its arguments.
 * - `min(arg, ...)`
   - 1 or more
-  - Variadic signed operation that returns the minimum
-    value of all its arguments
+  - Variadic signed operation that returns the minimum value of all its arguments
 * - `or(arg, ...)`
   - 1 or more
-  - Variadic signed operation that returns the bitwise-or
-    result of all its arguments.
+  - Variadic signed operation that returns the bitwise-or result of all its arguments.
 :::
 
 ### Function Resource Usage
@@ -4163,54 +3557,39 @@ The following describes all emitted function resource usage symbols:
   - Example
 * - \<function_name>.num_vgpr
   - Integer
-  - Number of VGPRs used by \<function_name>,
-    worst case of itself and its callees'
-    VGPR use
+  - Number of VGPRs used by \<function_name>, worst case of itself and its callees' VGPR use
   - .set foo.num_vgpr, max(32, bar.num_vgpr, baz.num_vgpr)
 * - \<function_name>.num_agpr
   - Integer
-  - Number of AGPRs used by \<function_name>,
-    worst case of itself and its callees'
-    AGPR use
+  - Number of AGPRs used by \<function_name>, worst case of itself and its callees' AGPR use
   - .set foo.num_agpr, max(35, bar.num_agpr)
 * - \<function_name>.numbered_sgpr
   - Integer
-  - Number of SGPRs used by \<function_name>,
-    worst case of itself and its callees'
-    SGPR use (without any of the implicitly
-    used SGPRs)
+  - Number of SGPRs used by \<function_name>, worst case of itself and its callees' SGPR use (without any of the implicitly used SGPRs)
   - .set foo.num_sgpr, 21
 * - \<function_name>.private_seg_size
   - Integer
-  - Total stack size required for
-    \<function_name>, expression is the
-    locally used stack size + the worst case
-    callee
+  - Total stack size required for \<function_name>, expression is the locally used stack size + the worst case callee
   - .set foo.private_seg_size, 16+max(bar.private_seg_size, baz.private_seg_size)
 * - \<function_name>.uses_vcc
   - Bool
-  - Whether \<function_name>, or any of its
-    callees, uses vcc
+  - Whether \<function_name>, or any of its callees, uses vcc
   - .set foo.uses_vcc, or(0, bar.uses_vcc)
 * - \<function_name>.uses_flat_scratch
   - Bool
-  - Whether \<function_name>, or any of its
-    callees, uses flat scratch or not
+  - Whether \<function_name>, or any of its callees, uses flat scratch or not
   - .set foo.uses_flat_scratch, 1
 * - \<function_name>.has_dyn_sized_stack
   - Bool
-  - Whether \<function_name>, or any of its
-    callees, is dynamically sized
+  - Whether \<function_name>, or any of its callees, is dynamically sized
   - .set foo.has_dyn_sized_stack, 1
 * - \<function_name>.has_recursion
   - Bool
-  - Whether \<function_name>, or any of its
-    callees, contains recursion
+  - Whether \<function_name>, or any of its callees, contains recursion
   - .set foo.has_recursion, 0
 * - \<function_name>.has_indirect_call
   - Bool
-  - Whether \<function_name>, or any of its
-    callees, contains an indirect call
+  - Whether \<function_name>, or any of its callees, contains an indirect call
   - .set foo.has_indirect_call, max(0, bar.has_indirect_call)
 :::
 
@@ -4266,10 +3645,7 @@ The AMDGPU backend uses the following ELF header:
 * - `e_entry`
   - 0
 * - `e_flags`
-  - See {ref}`amdgpu-elf-header-e_flags-v2-table`,
-    {ref}`amdgpu-elf-header-e_flags-table-v3`,
-    {ref}`amdgpu-elf-header-e_flags-table-v4-v5`,
-    and {ref}`amdgpu-elf-header-e_flags-table-v6-onwards`
+  - See {ref}`amdgpu-elf-header-e_flags-v2-table`, {ref}`amdgpu-elf-header-e_flags-table-v3`, {ref}`amdgpu-elf-header-e_flags-table-v4-v5`, and {ref}`amdgpu-elf-header-e_flags-table-v6-onwards`
 :::
 
 %
@@ -4398,27 +3774,14 @@ The AMDGPU backend uses the following ELF header:
     - Description
   * - `EF_AMDGPU_FEATURE_XNACK_V2`
     - 0x01
-    - Indicates if the `xnack`
-      target feature is
-      enabled for all code
-      contained in the code object.
-      If the processor
-      does not support the
-      `xnack` target
-      feature then must
-      be 0.
-      See
-      {ref}`amdgpu-target-features`.
+    - Indicates if the `xnack` target feature is enabled for all code contained in the code object.
+      If the processor does not support the `xnack` target feature then must be 0.
+      See {ref}`amdgpu-target-features`.
   * - `EF_AMDGPU_FEATURE_TRAP_HANDLER_V2`
     - 0x02
-    - Indicates if the trap
-      handler is enabled for all
-      code contained in the code
-      object. If the processor
-      does not support a trap
-      handler then must be 0.
-      See
-      {ref}`amdgpu-target-features`.
+    - Indicates if the trap handler is enabled for all code contained in the code object.
+      If the processor does not support a trap handler then must be 0.
+      See {ref}`amdgpu-target-features`.
   :::
 
   :::{list-table} AMDGPU ELF Header `e_flags` for Code Object V3
@@ -4430,37 +3793,17 @@ The AMDGPU backend uses the following ELF header:
     - Description
   * - `EF_AMDGPU_MACH`
     - 0x0ff
-    - AMDGPU processor selection
-      mask for
-      `EF_AMDGPU_MACH_xxx` values
-      defined in
-      {ref}`amdgpu-ef-amdgpu-mach-table`.
+    - AMDGPU processor selection mask for `EF_AMDGPU_MACH_xxx` values defined in {ref}`amdgpu-ef-amdgpu-mach-table`.
   * - `EF_AMDGPU_FEATURE_XNACK_V3`
     - 0x100
-    - Indicates if the `xnack`
-      target feature is
-      enabled for all code
-      contained in the code object.
-      If the processor
-      does not support the
-      `xnack` target
-      feature then must
-      be 0.
-      See
-      {ref}`amdgpu-target-features`.
+    - Indicates if the `xnack` target feature is enabled for all code contained in the code object.
+      If the processor does not support the `xnack` target feature then must be 0.
+      See {ref}`amdgpu-target-features`.
   * - `EF_AMDGPU_FEATURE_SRAMECC_V3`
     - 0x200
-    - Indicates if the `sramecc`
-      target feature is
-      enabled for all code
-      contained in the code object.
-      If the processor
-      does not support the
-      `sramecc` target
-      feature then must
-      be 0.
-      See
-      {ref}`amdgpu-target-features`.
+    - Indicates if the `sramecc` target feature is enabled for all code contained in the code object.
+      If the processor does not support the `sramecc` target feature then must be 0.
+      See {ref}`amdgpu-target-features`.
   :::
 
   :::{list-table} AMDGPU ELF Header `e_flags` for Code Object V4 and V5
@@ -4472,16 +3815,10 @@ The AMDGPU backend uses the following ELF header:
     - Description
   * - `EF_AMDGPU_MACH`
     - 0x0ff
-    - AMDGPU processor selection
-      mask for
-      `EF_AMDGPU_MACH_xxx` values
-      defined in
-      {ref}`amdgpu-ef-amdgpu-mach-table`.
+    - AMDGPU processor selection mask for `EF_AMDGPU_MACH_xxx` values defined in {ref}`amdgpu-ef-amdgpu-mach-table`.
   * - `EF_AMDGPU_FEATURE_XNACK_V4`
     - 0x300
-    - XNACK selection mask for
-      `EF_AMDGPU_FEATURE_XNACK_*_V4`
-      values.
+    - XNACK selection mask for `EF_AMDGPU_FEATURE_XNACK_*_V4` values.
   * - `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
     - 0x000
     - XNACK mode selection unsupported.
@@ -4496,9 +3833,7 @@ The AMDGPU backend uses the following ELF header:
     - XNACK enabled.
   * - `EF_AMDGPU_FEATURE_SRAMECC_V4`
     - 0xc00
-    - SRAMECC selection mask for
-      `EF_AMDGPU_FEATURE_SRAMECC_*_V4`
-      values.
+    - SRAMECC selection mask for `EF_AMDGPU_FEATURE_SRAMECC_*_V4` values.
   * - `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`
     - 0x000
     - SRAMECC mode selection unsupported.
@@ -4522,16 +3857,10 @@ The AMDGPU backend uses the following ELF header:
     - Description
   * - `EF_AMDGPU_MACH`
     - 0x0ff
-    - AMDGPU processor selection
-      mask for
-      `EF_AMDGPU_MACH_xxx` values
-      defined in
-      {ref}`amdgpu-ef-amdgpu-mach-table`.
+    - AMDGPU processor selection mask for `EF_AMDGPU_MACH_xxx` values defined in {ref}`amdgpu-ef-amdgpu-mach-table`.
   * - `EF_AMDGPU_FEATURE_XNACK_V4`
     - 0x300
-    - XNACK selection mask for
-      `EF_AMDGPU_FEATURE_XNACK_*_V4`
-      values.
+    - XNACK selection mask for `EF_AMDGPU_FEATURE_XNACK_*_V4` values.
   * - `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
     - 0x000
     - XNACK mode selection unsupported.
@@ -4546,9 +3875,7 @@ The AMDGPU backend uses the following ELF header:
     - XNACK enabled.
   * - `EF_AMDGPU_FEATURE_SRAMECC_V4`
     - 0xc00
-    - SRAMECC selection mask for
-      `EF_AMDGPU_FEATURE_SRAMECC_*_V4`
-      values.
+    - SRAMECC selection mask for `EF_AMDGPU_FEATURE_SRAMECC_*_V4` values.
   * - `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`
     - 0x000
     - SRAMECC mode selection unsupported.
@@ -4563,10 +3890,8 @@ The AMDGPU backend uses the following ELF header:
     - SRAMECC enabled.
   * - `EF_AMDGPU_GENERIC_VERSION_V`
     - 0xff000000
-    - Generic code object version selection
-      mask. This is a value between 1 and 255,
-      stored in the most significant byte
-      of EFLAGS.
+    - Generic code object version selection mask.
+      This is a value between 1 and 255, stored in the most significant byte of EFLAGS.
       See {ref}`amdgpu-generic-processor-versioning`
   :::
 
@@ -4589,8 +3914,7 @@ The AMDGPU backend uses the following ELF header:
 
   * - Name
     - Value
-    - Description (see
-      {ref}`amdgpu-processor-table`)
+    - Description (see {ref}`amdgpu-processor-table`)
   * - `EF_AMDGPU_MACH_NONE`
     - 0x000
     - *not specified*
@@ -4643,10 +3967,8 @@ The AMDGPU backend uses the following ELF header:
     - 0x010
     - `turks`
   * - *reserved*
-    - 0x011 -
-      0x01f
-    - Reserved for `r600`
-      architecture processors.
+    - 0x011 - 0x01f
+    - Reserved for `r600` architecture processors.
   * - `EF_AMDGPU_MACH_AMDGCN_GFX600`
     - 0x020
     - `gfx600`
@@ -5102,15 +4424,13 @@ are deprecated and should not be used.
   - Code object version.
 * - "AMD"
   - `NT_AMD_HSA_HSAIL`
-  - HSAIL properties generated by the HSAIL
-    Finalizer and not the LLVM compiler.
+  - HSAIL properties generated by the HSAIL Finalizer and not the LLVM compiler.
 * - "AMD"
   - `NT_AMD_HSA_ISA_VERSION`
   - Target ISA version.
 * - "AMD"
   - `NT_AMD_HSA_METADATA`
-  - Metadata null terminated string in
-    YAML \[{ref}`YAML <yaml>`\] textual format.
+  - Metadata null terminated string in YAML \[{ref}`YAML <yaml>`\] textual format.
 * - "AMD"
   - `NT_AMD_HSA_ISA_NAME`
   - Target ISA name.
@@ -5313,13 +4633,11 @@ are deprecated and should not be used.
   - Description
 * - "AMDGPU"
   - `NT_AMDGPU_METADATA`
-  - Metadata in Message Pack \[{ref}`MsgPack <msgpack>`\]
-    binary format.
+  - Metadata in Message Pack \[{ref}`MsgPack <msgpack>`\] binary format.
 * - "AMDGPU"
   - `NT_AMDGPU_KFD_CORE_STATE`
-  - Snapshot of runtime, agent and queues
-    state for use in core dump. See
-    {ref}`amdgpu_corefile_note`.
+  - Snapshot of runtime, agent and queues state for use in core dump.
+    See {ref}`amdgpu_corefile_note`.
 :::
 
 %
@@ -5490,20 +4808,17 @@ The following relocation types are supported:
   - *none*
   - *none*
 * - `R_AMDGPU_ABS32_LO`
-  - Static,
-    Dynamic
+  - Static, Dynamic
   - 1
   - `word32`
   - (S + A) & 0xFFFFFFFF
 * - `R_AMDGPU_ABS32_HI`
-  - Static,
-    Dynamic
+  - Static, Dynamic
   - 2
   - `word32`
   - (S + A) >> 32
 * - `R_AMDGPU_ABS64`
-  - Static,
-    Dynamic
+  - Static, Dynamic
   - 3
   - `word64`
   - S + A
@@ -5518,8 +4833,7 @@ The following relocation types are supported:
   - `word64`
   - S + A - P
 * - `R_AMDGPU_ABS32`
-  - Static,
-    Dynamic
+  - Static, Dynamic
   - 6
   - `word32`
   - S + A
@@ -5686,49 +5000,37 @@ mapping.
 * - 0
   - PC_32
   - 32
-  - Program Counter (PC) when
-    executing in a 32-bit process
-    address space. Used in the CFI to
-    describe the PC of the calling
-    frame.
+  - Program Counter (PC) when executing in a 32-bit process address space.
+    Used in the CFI to describe the PC of the calling frame.
 * - 1
   - EXEC_MASK_32
   - 32
-  - Execution Mask Register when
-    executing in wavefront 32 mode.
+  - Execution Mask Register when executing in wavefront 32 mode.
 * - 2-15
   - *Reserved*
   -
-  - *Reserved for highly accessed
-    registers using DWARF shortcut.*
+  - *Reserved for highly accessed registers using DWARF shortcut.*
 * - 16
   - PC_64
   - 64
-  - Program Counter (PC) when
-    executing in a 64-bit process
-    address space. Used in the CFI to
-    describe the PC of the calling
-    frame.
+  - Program Counter (PC) when executing in a 64-bit process address space.
+    Used in the CFI to describe the PC of the calling frame.
 * - 17
   - EXEC_MASK_64
   - 64
-  - Execution Mask Register when
-    executing in wavefront 64 mode.
+  - Execution Mask Register when executing in wavefront 64 mode.
 * - 18-31
   - *Reserved*
   -
-  - *Reserved for highly accessed
-    registers using DWARF shortcut.*
+  - *Reserved for highly accessed registers using DWARF shortcut.*
 * - 32-95
   - SGPR0-SGPR63
   - 32
-  - Scalar General Purpose
-    Registers.
+  - Scalar General Purpose Registers.
 * - 96-127
   - *Reserved*
   -
-  - *Reserved for frequently accessed
-    registers using DWARF 1-byte ULEB.*
+  - *Reserved for frequently accessed registers using DWARF 1-byte ULEB.*
 * - 128
   - STATUS
   - 32
@@ -5736,32 +5038,23 @@ mapping.
 * - 129-511
   - *Reserved*
   -
-  - *Reserved for future Scalar
-    Architectural Registers.*
+  - *Reserved for future Scalar Architectural Registers.*
 * - 512
   - VCC_32
   - 32
-  - Vector Condition Code Register
-    when executing in wavefront 32
-    mode.
+  - Vector Condition Code Register when executing in wavefront 32 mode.
 * - 513-767
   - *Reserved*
   -
-  - *Reserved for future Vector
-    Architectural Registers when
-    executing in wavefront 32 mode.*
+  - *Reserved for future Vector Architectural Registers when executing in wavefront 32 mode.*
 * - 768
   - VCC_64
   - 64
-  - Vector Condition Code Register
-    when executing in wavefront 64
-    mode.
+  - Vector Condition Code Register when executing in wavefront 64 mode.
 * - 769-1023
   - *Reserved*
   -
-  - *Reserved for future Vector
-    Architectural Registers when
-    executing in wavefront 64 mode.*
+  - *Reserved for future Vector Architectural Registers when executing in wavefront 64 mode.*
 * - 1024-1087
   - *Reserved*
   -
@@ -5773,56 +5066,39 @@ mapping.
 * - 1130-1535
   - *Reserved*
   -
-  - *Reserved for future Scalar
-    General Purpose Registers.*
+  - *Reserved for future Scalar General Purpose Registers.*
 * - 1536-2047
   - VGPR0-VGPR511
   - 32\*32
-  - Vector General Purpose Registers
-    when executing in wavefront 32
-    mode.
+  - Vector General Purpose Registers when executing in wavefront 32 mode.
 * - 2048-2303
   - AGPR0-AGPR255
   - 32\*32
-  - Vector Accumulation Registers
-    when executing in wavefront 32
-    mode.
+  - Vector Accumulation Registers when executing in wavefront 32 mode.
 * - 2304-2559
   - *Reserved*
   -
-  - *Reserved for future Vector
-    Accumulation Registers when
-    executing in wavefront 32 mode.*
+  - *Reserved for future Vector Accumulation Registers when executing in wavefront 32 mode.*
 * - 2560-2815
   - VGPR0-VGPR255
   - 64\*32
-  - Vector General Purpose Registers
-    when executing in wavefront 64
-    mode.
+  - Vector General Purpose Registers when executing in wavefront 64 mode.
 * - 2816-3071
   - *Reserved*
   -
-  - *Reserved for future Vector
-    General Purpose Registers when
-    executing in wavefront 64 mode.*
+  - *Reserved for future Vector General Purpose Registers when executing in wavefront 64 mode.*
 * - 3072-3327
   - AGPR0-AGPR255
   - 64\*32
-  - Vector Accumulation Registers
-    when executing in wavefront 64
-    mode.
+  - Vector Accumulation Registers when executing in wavefront 64 mode.
 * - 3328-3583
   - *Reserved*
   -
-  - *Reserved for future Vector
-    Accumulation Registers when
-    executing in wavefront 64 mode.*
+  - *Reserved for future Vector Accumulation Registers when executing in wavefront 64 mode.*
 * - 3584-4095
   - VGPR512-VGPR1023
   - 32\*32
-  - Second Block of Vector General
-    Purpose Registers When executing
-    in wavefront 32 mode
+  - Second Block of Vector General Purpose Registers When executing in wavefront 32 mode
 :::
 
 The vector registers are represented as the full size for the wavefront. They
@@ -5932,14 +5208,8 @@ The DWARF address space mapping used for AMDGPU is defined in
   -
 * -
   -
-  - 64-bit
-    process
-    address
-    space
-  - 32-bit
-    process
-    address
-    space
+  - 64-bit process address space
+  - 32-bit process address space
   -
   -
 * - `DW_ASPACE_LLVM_none`
@@ -6597,10 +5867,8 @@ The Clang option used to control source embedding in AMDGPU is defined in
 * - Debug Flag
   - Description
 * - -g\[no-\]embed-source
-  - Enable/disable embedding source text in DWARF
-    debug sections. Useful for environments where
-    source cannot be written to disk, such as
-    when performing online compilation.
+  - Enable/disable embedding source text in DWARF debug sections.
+    Useful for environments where source cannot be written to disk, such as when performing online compilation.
 :::
 
 For example:
@@ -6706,51 +5974,38 @@ non-AMD key names should be prefixed by "*vendor-name*.".
   - Required?
   - Description
 * - "Version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - - The first integer is the major
-      version. Currently 1.
-    - The second integer is the minor
-      version. Currently 0.
+  - - The first integer is the major version.
+      Currently 1.
+    - The second integer is the minor version.
+      Currently 0.
 * - "Printf"
-  - sequence of
-    strings
+  - sequence of strings
   -
-  - Each string is encoded information
-    about a printf function call. The
-    encoded information is organized as
-    fields separated by colon (':'):
+  - Each string is encoded information about a printf function call.
+    The encoded information is organized as fields separated by colon (':'):
 
     `ID:N:S[0]:S[1]:...:S[N-1]:FormatString`
 
     where:
 
     `ID`
-    : A 32-bit integer as a unique id for
-      each printf function call
+    : A 32-bit integer as a unique id for each printf function call
 
     `N`
-    : A 32-bit integer equal to the number
-      of arguments of printf function call
-      minus 1
+    : A 32-bit integer equal to the number of arguments of printf function call minus 1
 
     `S[i]` (where i = 0, 1, ... , N-1)
-    : 32-bit integers for the size in bytes
-      of the i-th FormatString argument of
-      the printf function call
+    : 32-bit integers for the size in bytes of the i-th FormatString argument of the printf function call
 
     FormatString
-    : The format string passed to the
-      printf function call.
+    : The format string passed to the printf function call.
 * - "Kernels"
-  - sequence of
-    mapping
+  - sequence of mapping
   - Required
-  - Sequence of the mappings for each
-    kernel in the code object. See
-    {ref}`amdgpu-amdhsa-code-object-kernel-metadata-map-v2-table`
-    for the definition of the mapping.
+  - Sequence of the mappings for each kernel in the code object.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-metadata-map-v2-table` for the definition of the mapping.
 :::
 
 %
@@ -6771,8 +6026,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "SymbolName"
   - string
   - Required
-  - Name of the kernel
-    descriptor ELF symbol.
+  - Name of the kernel descriptor ELF symbol.
 * - "Language"
   - string
   -
@@ -6784,35 +6038,25 @@ non-AMD key names should be prefixed by "*vendor-name*.".
     - "HCC"
     - "OpenMP"
 * - "LanguageVersion"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   -
-  - - The first integer is the major
-      version.
-    - The second integer is the
-      minor version.
+  - - The first integer is the major version.
+    - The second integer is the minor version.
 * - "Attrs"
   - mapping
   -
   - Mapping of kernel attributes.
-    See
-    {ref}`amdgpu-amdhsa-code-object-kernel-attribute-metadata-map-v2-table`
-    for the mapping definition.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-attribute-metadata-map-v2-table` for the mapping definition.
 * - "Args"
-  - sequence of
-    mapping
+  - sequence of mapping
   -
-  - Sequence of mappings of the
-    kernel arguments. See
-    {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-v2-table`
-    for the definition of the mapping.
+  - Sequence of mappings of the kernel arguments.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-v2-table` for the definition of the mapping.
 * - "CodeProps"
   - mapping
   -
-  - Mapping of properties related to
-    the kernel code. See
-    {ref}`amdgpu-amdhsa-code-object-kernel-code-properties-metadata-map-v2-table`
-    for the mapping definition.
+  - Mapping of properties related to the kernel code.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-code-properties-metadata-map-v2-table` for the mapping definition.
 :::
 
 %
@@ -6827,49 +6071,30 @@ non-AMD key names should be prefixed by "*vendor-name*.".
   - Required?
   - Description
 * - "ReqdWorkGroupSize"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
-  - If not 0, 0, 0 then all values
-    must be >=1 and the dispatch
-    work-group size X, Y, Z must
-    correspond to the specified
-    values. Defaults to 0, 0, 0.
+  - If not 0, 0, 0 then all values must be >=1 and the dispatch work-group size X, Y, Z must correspond to the specified values.
+    Defaults to 0, 0, 0.
 
-    Corresponds to the OpenCL
-    `reqd_work_group_size`
-    attribute.
+    Corresponds to the OpenCL `reqd_work_group_size` attribute.
 * - "WorkGroupSizeHint"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
-  - The dispatch work-group size
-    X, Y, Z is likely to be the
-    specified values.
+  - The dispatch work-group size X, Y, Z is likely to be the specified values.
 
-    Corresponds to the OpenCL
-    `work_group_size_hint`
-    attribute.
+    Corresponds to the OpenCL `work_group_size_hint` attribute.
 * - "VecTypeHint"
   - string
   -
-  - The name of a scalar or vector
-    type.
+  - The name of a scalar or vector type.
 
-    Corresponds to the OpenCL
-    `vec_type_hint` attribute.
+    Corresponds to the OpenCL `vec_type_hint` attribute.
 * - "RuntimeHandle"
   - string
   -
-  - The external symbol name
-    associated with a kernel.
-    OpenCL runtime allocates a
-    global buffer for the symbol
-    and saves the kernel's address
-    to it, which is used for
-    device side enqueueing. Only
-    available for device side
-    enqueued kernels.
+  - The external symbol name associated with a kernel.
+    OpenCL runtime allocates a global buffer for the symbol and saves the kernel's address to it, which is used for device side enqueueing.
+    Only available for device side enqueued kernels.
 :::
 
 %
@@ -6898,128 +6123,81 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "Align"
   - integer
   - Required
-  - Kernel argument alignment in
-    bytes. Must be a power of two.
+  - Kernel argument alignment in bytes.
+    Must be a power of two.
 * - "ValueKind"
   - string
   - Required
-  - Kernel argument kind that
-    specifies how to set up the
-    corresponding argument.
+  - Kernel argument kind that specifies how to set up the corresponding argument.
     Values include:
 
     "ByValue"
-    : The argument is copied
-      directly into the kernarg.
+    : The argument is copied directly into the kernarg.
 
     "GlobalBuffer"
-    : A global address space pointer
-      to the buffer data is passed
-      in the kernarg.
+    : A global address space pointer to the buffer data is passed in the kernarg.
 
     "DynamicSharedPointer"
-    : A group address space pointer
-      to dynamically allocated LDS
-      is passed in the kernarg.
+    : A group address space pointer to dynamically allocated LDS is passed in the kernarg.
 
     "Sampler"
-    : A global address space
-      pointer to a S# is passed in
-      the kernarg.
+    : A global address space pointer to a S# is passed in the kernarg.
 
     "Image"
-    : A global address space
-      pointer to a T# is passed in
-      the kernarg.
+    : A global address space pointer to a T# is passed in the kernarg.
 
     "Pipe"
-    : A global address space pointer
-      to an OpenCL pipe is passed in
-      the kernarg.
+    : A global address space pointer to an OpenCL pipe is passed in the kernarg.
 
     "Queue"
-    : A global address space pointer
-      to an OpenCL device enqueue
-      queue is passed in the
-      kernarg.
+    : A global address space pointer to an OpenCL device enqueue queue is passed in the kernarg.
 
     "HiddenGlobalOffsetX"
-    : The OpenCL grid dispatch
-      global offset for the X
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the X dimension is passed in the kernarg.
 
     "HiddenGlobalOffsetY"
-    : The OpenCL grid dispatch
-      global offset for the Y
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the Y dimension is passed in the kernarg.
 
     "HiddenGlobalOffsetZ"
-    : The OpenCL grid dispatch
-      global offset for the Z
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the Z dimension is passed in the kernarg.
 
     "HiddenNone"
-    : An argument that is not used
-      by the kernel. Space needs to
-      be left for it, but it does
-      not need to be set up.
+    : An argument that is not used by the kernel.
+      Space needs to be left for it, but it does not need to be set up.
 
     "HiddenPrintfBuffer"
-    : A global address space pointer
-      to the runtime printf buffer
-      is passed in kernarg. Mutually
-      exclusive with
-      "HiddenHostcallBuffer".
+    : A global address space pointer to the runtime printf buffer is passed in kernarg.
+      Mutually exclusive with "HiddenHostcallBuffer".
 
     "HiddenHostcallBuffer"
-    : A global address space pointer
-      to the runtime hostcall buffer
-      is passed in kernarg. Mutually
-      exclusive with
-      "HiddenPrintfBuffer".
+    : A global address space pointer to the runtime hostcall buffer is passed in kernarg.
+      Mutually exclusive with "HiddenPrintfBuffer".
 
     "HiddenDefaultQueue"
-    : A global address space pointer
-      to the OpenCL device enqueue
-      queue that should be used by
-      the kernel by default is
-      passed in the kernarg.
+    : A global address space pointer to the OpenCL device enqueue queue that should be used by the kernel by default is passed in the kernarg.
 
     "HiddenCompletionAction"
-    : A global address space pointer
-      to help link enqueued kernels into
-      the ancestor tree for determining
-      when the parent kernel has finished.
+    : A global address space pointer to help link enqueued kernels into the ancestor tree for determining when the parent kernel has finished.
 
     "HiddenMultiGridSyncArg"
-    : A global address space pointer for
-      multi-grid synchronization is
-      passed in the kernarg.
+    : A global address space pointer for multi-grid synchronization is passed in the kernarg.
 * - "ValueType"
   - string
   -
-  - Unused and deprecated. This should no longer
-    be emitted, but is accepted for compatibility.
+  - Unused and deprecated.
+    This should no longer be emitted, but is accepted for compatibility.
 * - "PointeeAlign"
   - integer
   -
-  - Alignment in bytes of pointee
-    type for pointer type kernel
-    argument. Must be a power
-    of 2. Only present if
-    "ValueKind" is
-    "DynamicSharedPointer".
+  - Alignment in bytes of pointee type for pointer type kernel argument.
+    Must be a power of 2.
+    Only present if "ValueKind" is "DynamicSharedPointer".
 * - "AddrSpaceQual"
   - string
   -
-  - Kernel argument address space
-    qualifier. Only present if
-    "ValueKind" is "GlobalBuffer" or
-    "DynamicSharedPointer". Values
-    are:
+  - Kernel argument address space qualifier.
+    Only present if "ValueKind" is "GlobalBuffer" or "DynamicSharedPointer".
+    Values are:
 
     - "Private"
     - "Global"
@@ -7039,11 +6217,9 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "AccQual"
   - string
   -
-  - Kernel argument access
-    qualifier. Only present if
-    "ValueKind" is "Image" or
-    "Pipe". Values
-    are:
+  - Kernel argument access qualifier.
+    Only present if "ValueKind" is "Image" or "Pipe".
+    Values are:
 
     - "ReadOnly"
     - "WriteOnly"
@@ -7056,18 +6232,11 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "ActualAccQual"
   - string
   -
-  - The actual memory accesses
-    performed by the kernel on the
-    kernel argument. Only present if
-    "ValueKind" is "GlobalBuffer",
-    "Image", or "Pipe". This may be
-    more restrictive than indicated
-    by "AccQual" to reflect what the
-    kernel actually does. If not
-    present then the runtime must
-    assume what is implied by
-    "AccQual" and "IsConst". Values
-    are:
+  - The actual memory accesses performed by the kernel on the kernel argument.
+    Only present if "ValueKind" is "GlobalBuffer", "Image", or "Pipe".
+    This may be more restrictive than indicated by "AccQual" to reflect what the kernel actually does.
+    If not present then the runtime must assume what is implied by "AccQual" and "IsConst".
+    Values are:
 
     - "ReadOnly"
     - "WriteOnly"
@@ -7075,30 +6244,23 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "IsConst"
   - boolean
   -
-  - Indicates if the kernel argument
-    is const qualified. Only present
-    if "ValueKind" is
-    "GlobalBuffer".
+  - Indicates if the kernel argument is const qualified.
+    Only present if "ValueKind" is "GlobalBuffer".
 * - "IsRestrict"
   - boolean
   -
-  - Indicates if the kernel argument
-    is restrict qualified. Only
-    present if "ValueKind" is
-    "GlobalBuffer".
+  - Indicates if the kernel argument is restrict qualified.
+    Only present if "ValueKind" is "GlobalBuffer".
 * - "IsVolatile"
   - boolean
   -
-  - Indicates if the kernel argument
-    is volatile qualified. Only
-    present if "ValueKind" is
-    "GlobalBuffer".
+  - Indicates if the kernel argument is volatile qualified.
+    Only present if "ValueKind" is "GlobalBuffer".
 * - "IsPipe"
   - boolean
   -
-  - Indicates if the kernel argument
-    is pipe qualified. Only present
-    if "ValueKind" is "Pipe".
+  - Indicates if the kernel argument is pipe qualified.
+    Only present if "ValueKind" is "Pipe".
 
     ```{todo}
     Can GlobalBuffer be pipe
@@ -7120,104 +6282,51 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 * - "KernargSegmentSize"
   - integer
   - Required
-  - The size in bytes of
-    the kernarg segment
-    that holds the values
-    of the arguments to
-    the kernel.
+  - The size in bytes of the kernarg segment that holds the values of the arguments to the kernel.
 * - "GroupSegmentFixedSize"
   - integer
   - Required
-  - The amount of group
-    segment memory
-    required by a
-    work-group in
-    bytes. This does not
-    include any
-    dynamically allocated
-    group segment memory
-    that may be added
-    when the kernel is
-    dispatched.
+  - The amount of group segment memory required by a work-group in bytes.
+    This does not include any dynamically allocated group segment memory that may be added when the kernel is dispatched.
 * - "PrivateSegmentFixedSize"
   - integer
   - Required
-  - The amount of fixed
-    private address space
-    memory required for a
-    work-item in
-    bytes. If the kernel
-    uses a dynamic call
-    stack then additional
-    space must be added
-    to this value for the
-    call stack.
+  - The amount of fixed private address space memory required for a work-item in bytes.
+    If the kernel uses a dynamic call stack then additional space must be added to this value for the call stack.
 * - "KernargSegmentAlign"
   - integer
   - Required
-  - The maximum byte
-    alignment of
-    arguments in the
-    kernarg segment. Must
-    be a power of 2.
+  - The maximum byte alignment of arguments in the kernarg segment.
+    Must be a power of 2.
 * - "WavefrontSize"
   - integer
   - Required
-  - Wavefront size. Must
-    be a power of 2.
+  - Wavefront size.
+    Must be a power of 2.
 * - "NumSGPRs"
   - integer
   - Required
-  - Number of scalar
-    registers used by a
-    wavefront for
-    GFX6-GFX11. This
-    includes the special
-    SGPRs for VCC, Flat
-    Scratch (GFX7-GFX10)
-    and XNACK (for
-    GFX8-GFX10). It does
-    not include the 16
-    SGPR added if a trap
-    handler is
-    enabled. It is not
-    rounded up to the
-    allocation
-    granularity.
+  - Number of scalar registers used by a wavefront for GFX6-GFX11.
+    This includes the special SGPRs for VCC, Flat Scratch (GFX7-GFX10) and XNACK (for GFX8-GFX10).
+    It does not include the 16 SGPR added if a trap handler is enabled.
+    It is not rounded up to the allocation granularity.
 * - "NumVGPRs"
   - integer
   - Required
-  - Number of vector
-    registers used by
-    each work-item for
-    GFX6-GFX11
+  - Number of vector registers used by each work-item for GFX6-GFX11
 * - "MaxFlatWorkGroupSize"
   - integer
   - Required
-  - Maximum flat
-    work-group size
-    supported by the
-    kernel in work-items.
-    Must be >=1 and
-    consistent with
-    ReqdWorkGroupSize if
-    not 0, 0, 0.
+  - Maximum flat work-group size supported by the kernel in work-items.
+    Must be >=1 and consistent with ReqdWorkGroupSize if not 0, 0, 0.
 * - "NumSpilledSGPRs"
   - integer
   -
-  - Number of stores from
-    a scalar register to
-    a register allocator
-    created spill
-    location.
+  - Number of stores from a scalar register to a register allocator created spill location.
 * - "NumSpilledVGPRs"
   - integer
   -
-  - Number of stores from
-    a vector register to
-    a register allocator
-    created spill
-    location.
+  - Number of stores from a vector register to a register allocator created spill location.
 :::
 
 (amdgpu-amdhsa-code-object-metadata-v3)=
@@ -7254,52 +6363,38 @@ same *vendor-name*.
   - Required?
   - Description
 * - "amdhsa.version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - - The first integer is the major
-      version. Currently 1.
-    - The second integer is the minor
-      version. Currently 0.
+  - - The first integer is the major version.
+      Currently 1.
+    - The second integer is the minor version.
+      Currently 0.
 * - "amdhsa.printf"
-  - sequence of
-    strings
+  - sequence of strings
   -
-  - Each string is encoded information
-    about a printf function call. The
-    encoded information is organized as
-    fields separated by colon (':'):
+  - Each string is encoded information about a printf function call.
+    The encoded information is organized as fields separated by colon (':'):
 
     `ID:N:S[0]:S[1]:...:S[N-1]:FormatString`
 
     where:
 
     `ID`
-    : A 32-bit integer as a unique id for
-      each printf function call
+    : A 32-bit integer as a unique id for each printf function call
 
     `N`
-    : A 32-bit integer equal to the number
-      of arguments of printf function call
-      minus 1
+    : A 32-bit integer equal to the number of arguments of printf function call minus 1
 
     `S[i]` (where i = 0, 1, ... , N-1)
-    : 32-bit integers for the size in bytes
-      of the i-th FormatString argument of
-      the printf function call
+    : 32-bit integers for the size in bytes of the i-th FormatString argument of the printf function call
 
     FormatString
-    : The format string passed to the
-      printf function call.
+    : The format string passed to the printf function call.
 * - "amdhsa.kernels"
-  - sequence of
-    map
+  - sequence of map
   - Required
-  - Sequence of the maps for each
-    kernel in the code object. See
-    {ref}`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v3`
-    for the definition of the keys included
-    in that map.
+  - Sequence of the maps for each kernel in the code object.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v3` for the definition of the keys included in that map.
 :::
 
 %
@@ -7320,8 +6415,7 @@ same *vendor-name*.
 * - ".symbol"
   - string
   - Required
-  - Name of the kernel
-    descriptor ELF symbol.
+  - Name of the kernel descriptor ELF symbol.
 * - ".language"
   - string
   -
@@ -7335,226 +6429,114 @@ same *vendor-name*.
     - "OpenMP"
     - "Assembler"
 * - ".language_version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   -
-  - - The first integer is the major
-      version.
-    - The second integer is the
-      minor version.
+  - - The first integer is the major version.
+    - The second integer is the minor version.
 * - ".args"
-  - sequence of
-    map
+  - sequence of map
   -
-  - Sequence of maps of the
-    kernel arguments. See
-    {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3`
-    for the definition of the keys
-    included in that map.
+  - Sequence of maps of the kernel arguments.
+    See {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3` for the definition of the keys included in that map.
 * - ".reqd_workgroup_size"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
-  - If not 0, 0, 0 then all values
-    must be >=1 and the dispatch
-    work-group size X, Y, Z must
-    correspond to the specified
-    values. Defaults to 0, 0, 0.
+  - If not 0, 0, 0 then all values must be >=1 and the dispatch work-group size X, Y, Z must correspond to the specified values.
+    Defaults to 0, 0, 0.
 
-    Corresponds to the OpenCL
-    `reqd_work_group_size`
-    attribute.
+    Corresponds to the OpenCL `reqd_work_group_size` attribute.
 * - ".workgroup_size_hint"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
-  - The dispatch work-group size
-    X, Y, Z is likely to be the
-    specified values.
+  - The dispatch work-group size X, Y, Z is likely to be the specified values.
 
-    Corresponds to the OpenCL
-    `work_group_size_hint`
-    attribute.
+    Corresponds to the OpenCL `work_group_size_hint` attribute.
 * - ".vec_type_hint"
   - string
   -
-  - The name of a scalar or vector
-    type.
+  - The name of a scalar or vector type.
 
-    Corresponds to the OpenCL
-    `vec_type_hint` attribute.
+    Corresponds to the OpenCL `vec_type_hint` attribute.
 * - ".device_enqueue_symbol"
   - string
   -
-  - The external symbol name
-    associated with a kernel.
-    OpenCL runtime allocates a
-    global buffer for the symbol
-    and saves the kernel's address
-    to it, which is used for
-    device side enqueueing. Only
-    available for device side
-    enqueued kernels.
+  - The external symbol name associated with a kernel.
+    OpenCL runtime allocates a global buffer for the symbol and saves the kernel's address to it, which is used for device side enqueueing.
+    Only available for device side enqueued kernels.
 * - ".kernarg_segment_size"
   - integer
   - Required
-  - The size in bytes of
-    the kernarg segment
-    that holds the values
-    of the arguments to
-    the kernel.
+  - The size in bytes of the kernarg segment that holds the values of the arguments to the kernel.
 * - ".group_segment_fixed_size"
   - integer
   - Required
-  - The amount of group
-    segment memory
-    required by a
-    work-group in
-    bytes. This does not
-    include any
-    dynamically allocated
-    group segment memory
-    that may be added
-    when the kernel is
-    dispatched.
+  - The amount of group segment memory required by a work-group in bytes.
+    This does not include any dynamically allocated group segment memory that may be added when the kernel is dispatched.
 * - ".private_segment_fixed_size"
   - integer
   - Required
-  - The amount of fixed
-    private address space
-    memory required for a
-    work-item in
-    bytes. If the kernel
-    uses a dynamic call
-    stack then additional
-    space must be added
-    to this value for the
-    call stack.
+  - The amount of fixed private address space memory required for a work-item in bytes.
+    If the kernel uses a dynamic call stack then additional space must be added to this value for the call stack.
 * - ".kernarg_segment_align"
   - integer
   - Required
-  - The maximum byte
-    alignment of
-    arguments in the
-    kernarg segment. Must
-    be a power of 2.
+  - The maximum byte alignment of arguments in the kernarg segment.
+    Must be a power of 2.
 * - ".wavefront_size"
   - integer
   - Required
-  - Wavefront size. Must
-    be a power of 2.
+  - Wavefront size.
+    Must be a power of 2.
 * - ".sgpr_count"
   - integer
   - Required
-  - Number of scalar
-    registers required by a
-    wavefront for
-    GFX6-GFX9. A register
-    is required if it is
-    used explicitly, or
-    if a higher numbered
-    register is used
-    explicitly. This
-    includes the special
-    SGPRs for VCC, Flat
-    Scratch (GFX7-GFX9)
-    and XNACK (for
-    GFX8-GFX9). It does
-    not include the 16
-    SGPR added if a trap
-    handler is
-    enabled. It is not
-    rounded up to the
-    allocation
-    granularity.
+  - Number of scalar registers required by a wavefront for GFX6-GFX9.
+    A register is required if it is used explicitly, or if a higher numbered register is used explicitly.
+    This includes the special SGPRs for VCC, Flat Scratch (GFX7-GFX9) and XNACK (for GFX8-GFX9).
+    It does not include the 16 SGPR added if a trap handler is enabled.
+    It is not rounded up to the allocation granularity.
 * - ".vgpr_count"
   - integer
   - Required
-  - Number of vector
-    registers required by
-    each work-item for
-    GFX6-GFX9. A register
-    is required if it is
-    used explicitly, or
-    if a higher numbered
-    register is used
-    explicitly.
+  - Number of vector registers required by each work-item for GFX6-GFX9.
+    A register is required if it is used explicitly, or if a higher numbered register is used explicitly.
 * - ".agpr_count"
   - integer
   - Required
-  - Number of accumulator
-    registers required by
-    each work-item for
-    GFX90A, GFX908.
+  - Number of accumulator registers required by each work-item for GFX90A, GFX908.
 * - ".max_flat_workgroup_size"
   - integer
   - Required
-  - Maximum flat
-    work-group size
-    supported by the
-    kernel in work-items.
-    Must be >=1 and
-    consistent with
-    ReqdWorkGroupSize if
-    not 0, 0, 0.
+  - Maximum flat work-group size supported by the kernel in work-items.
+    Must be >=1 and consistent with ReqdWorkGroupSize if not 0, 0, 0.
 * - ".sgpr_spill_count"
   - integer
   -
-  - Number of stores from
-    a scalar register to
-    a register allocator
-    created spill
-    location.
+  - Number of stores from a scalar register to a register allocator created spill location.
 * - ".vgpr_spill_count"
   - integer
   -
-  - Number of stores from
-    a vector register to
-    a register allocator
-    created spill
-    location.
+  - Number of stores from a vector register to a register allocator created spill location.
 * - ".kind"
   - string
   -
-  - The kind of the kernel
-    with the following
-    values:
+  - The kind of the kernel with the following values:
 
     "normal"
     : Regular kernels.
 
     "init"
-    : These kernels must be
-      invoked after loading
-      the containing code
-      object and must
-      complete before any
-      normal and fini
-      kernels in the same
-      code object are
-      invoked.
+    : These kernels must be invoked after loading the containing code object and must complete before any normal and fini kernels in the same code object are invoked.
 
     "fini"
-    : These kernels must be
-      invoked before
-      unloading the
-      containing code object
-      and after all init and
-      normal kernels in the
-      same code object have
-      been invoked and
-      completed.
+    : These kernels must be invoked before unloading the containing code object and after all init and normal kernels in the same code object have been invoked and completed.
 
-    If omitted, "normal" is
-    assumed.
+    If omitted, "normal" is assumed.
 * - ".max_num_work_groups\_{x,y,z}"
   - integer
   -
-  - The max number of
-    launched work-groups
-    in the X, Y, and Z
-    dimensions. Each number
-    must be >=1.
+  - The max number of launched work-groups in the X, Y, and Z dimensions.
+    Each number must be >=1.
 :::
 
 %
@@ -7583,132 +6565,81 @@ same *vendor-name*.
 * - ".offset"
   - integer
   - Required
-  - Kernel argument offset in
-    bytes. The offset must be a
-    multiple of the alignment
-    required by the argument.
+  - Kernel argument offset in bytes.
+    The offset must be a multiple of the alignment required by the argument.
 * - ".value_kind"
   - string
   - Required
-  - Kernel argument kind that
-    specifies how to set up the
-    corresponding argument.
+  - Kernel argument kind that specifies how to set up the corresponding argument.
     Values include:
 
     "by_value"
-    : The argument is copied
-      directly into the kernarg.
+    : The argument is copied directly into the kernarg.
 
     "global_buffer"
-    : A global address space pointer
-      to the buffer data is passed
-      in the kernarg.
+    : A global address space pointer to the buffer data is passed in the kernarg.
 
     "dynamic_shared_pointer"
-    : A group address space pointer
-      to dynamically allocated LDS
-      is passed in the kernarg.
+    : A group address space pointer to dynamically allocated LDS is passed in the kernarg.
 
     "sampler"
-    : A global address space
-      pointer to a S# is passed in
-      the kernarg.
+    : A global address space pointer to a S# is passed in the kernarg.
 
     "image"
-    : A global address space
-      pointer to a T# is passed in
-      the kernarg.
+    : A global address space pointer to a T# is passed in the kernarg.
 
     "pipe"
-    : A global address space pointer
-      to an OpenCL pipe is passed in
-      the kernarg.
+    : A global address space pointer to an OpenCL pipe is passed in the kernarg.
 
     "queue"
-    : A global address space pointer
-      to an OpenCL device enqueue
-      queue is passed in the
-      kernarg.
+    : A global address space pointer to an OpenCL device enqueue queue is passed in the kernarg.
 
     "hidden_global_offset_x"
-    : The OpenCL grid dispatch
-      global offset for the X
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the X dimension is passed in the kernarg.
 
     "hidden_global_offset_y"
-    : The OpenCL grid dispatch
-      global offset for the Y
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the Y dimension is passed in the kernarg.
 
     "hidden_global_offset_z"
-    : The OpenCL grid dispatch
-      global offset for the Z
-      dimension is passed in the
-      kernarg.
+    : The OpenCL grid dispatch global offset for the Z dimension is passed in the kernarg.
 
     "hidden_none"
-    : An argument that is not used
-      by the kernel. Space needs to
-      be left for it, but it does
-      not need to be set up.
+    : An argument that is not used by the kernel.
+      Space needs to be left for it, but it does not need to be set up.
 
     "hidden_printf_buffer"
-    : A global address space pointer
-      to the runtime printf buffer
-      is passed in kernarg. Mutually
-      exclusive with
-      "hidden_hostcall_buffer"
-      before Code Object V5.
+    : A global address space pointer to the runtime printf buffer is passed in kernarg.
+      Mutually exclusive with "hidden_hostcall_buffer" before Code Object V5.
 
     "hidden_hostcall_buffer"
-    : A global address space pointer
-      to the runtime hostcall buffer
-      is passed in kernarg. Mutually
-      exclusive with
-      "hidden_printf_buffer"
-      before Code Object V5.
+    : A global address space pointer to the runtime hostcall buffer is passed in kernarg.
+      Mutually exclusive with "hidden_printf_buffer" before Code Object V5.
 
     "hidden_default_queue"
-    : A global address space pointer
-      to the OpenCL device enqueue
-      queue that should be used by
-      the kernel by default is
-      passed in the kernarg.
+    : A global address space pointer to the OpenCL device enqueue queue that should be used by the kernel by default is passed in the kernarg.
 
     "hidden_completion_action"
-    : A global address space pointer
-      to help link enqueued kernels into
-      the ancestor tree for determining
-      when the parent kernel has finished.
+    : A global address space pointer to help link enqueued kernels into the ancestor tree for determining when the parent kernel has finished.
 
     "hidden_multigrid_sync_arg"
-    : A global address space pointer for
-      multi-grid synchronization is
-      passed in the kernarg.
+    : A global address space pointer for multi-grid synchronization is passed in the kernarg.
 * - ".value_type"
   - string
   -
-  - Unused and deprecated. This should no longer
-    be emitted, but is accepted for compatibility.
+  - Unused and deprecated.
+    This should no longer be emitted, but is accepted for compatibility.
 * - ".pointee_align"
   - integer
   -
-  - Alignment in bytes of pointee
-    type for pointer type kernel
-    argument. Must be a power
-    of 2. Only present if
-    ".value_kind" is
-    "dynamic_shared_pointer".
+  - Alignment in bytes of pointee type for pointer type kernel argument.
+    Must be a power of 2.
+    Only present if ".value_kind" is "dynamic_shared_pointer".
 * - ".address_space"
   - string
   -
-  - Kernel argument address space
-    qualifier. Only present if
-    ".value_kind" is "global_buffer" or
-    "dynamic_shared_pointer". Values
-    are:
+  - Kernel argument address space qualifier.
+    Only present if ".value_kind" is "global_buffer" or "dynamic_shared_pointer".
+    Values are:
 
     - "private"
     - "global"
@@ -7728,11 +6659,9 @@ same *vendor-name*.
 * - ".access"
   - string
   -
-  - Kernel argument access
-    qualifier. Only present if
-    ".value_kind" is "image" or
-    "pipe". Values
-    are:
+  - Kernel argument access qualifier.
+    Only present if ".value_kind" is "image" or "pipe".
+    Values are:
 
     - "read_only"
     - "write_only"
@@ -7745,18 +6674,11 @@ same *vendor-name*.
 * - ".actual_access"
   - string
   -
-  - The actual memory accesses
-    performed by the kernel on the
-    kernel argument. Only present if
-    ".value_kind" is "global_buffer",
-    "image", or "pipe". This may be
-    more restrictive than indicated
-    by ".access" to reflect what the
-    kernel actually does. If not
-    present then the runtime must
-    assume what is implied by
-    ".access" and ".is_const". Values
-    are:
+  - The actual memory accesses performed by the kernel on the kernel argument.
+    Only present if ".value_kind" is "global_buffer", "image", or "pipe".
+    This may be more restrictive than indicated by ".access" to reflect what the kernel actually does.
+    If not present then the runtime must assume what is implied by ".access" and ".is_const".
+    Values are:
 
     - "read_only"
     - "write_only"
@@ -7764,30 +6686,23 @@ same *vendor-name*.
 * - ".is_const"
   - boolean
   -
-  - Indicates if the kernel argument
-    is const qualified. Only present
-    if ".value_kind" is
-    "global_buffer".
+  - Indicates if the kernel argument is const qualified.
+    Only present if ".value_kind" is "global_buffer".
 * - ".is_restrict"
   - boolean
   -
-  - Indicates if the kernel argument
-    is restrict qualified. Only
-    present if ".value_kind" is
-    "global_buffer".
+  - Indicates if the kernel argument is restrict qualified.
+    Only present if ".value_kind" is "global_buffer".
 * - ".is_volatile"
   - boolean
   -
-  - Indicates if the kernel argument
-    is volatile qualified. Only
-    present if ".value_kind" is
-    "global_buffer".
+  - Indicates if the kernel argument is volatile qualified.
+    Only present if ".value_kind" is "global_buffer".
 * - ".is_pipe"
   - boolean
   -
-  - Indicates if the kernel argument
-    is pipe qualified. Only present
-    if ".value_kind" is "pipe".
+  - Indicates if the kernel argument is pipe qualified.
+    Only present if ".value_kind" is "pipe".
 
     ```{todo}
     Can "global_buffer" be pipe
@@ -7818,13 +6733,12 @@ defined in table {ref}`amdgpu-amdhsa-code-object-metadata-map-table-v4`.
   - Required?
   - Description
 * - "amdhsa.version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - - The first integer is the major
-      version. Currently 1.
-    - The second integer is the minor
-      version. Currently 1.
+  - - The first integer is the major version.
+      Currently 1.
+    - The second integer is the minor version.
+      Currently 1.
 * - "amdhsa.target"
   - string
   - Required
@@ -7834,9 +6748,8 @@ defined in table {ref}`amdgpu-amdhsa-code-object-metadata-map-table-v4`.
     <target-triple> [ "-" <target-id> ]
     ```
 
-    A canonical target ID must be
-    used. See {ref}`amdgpu-target-triples`
-    and {ref}`amdgpu-target-id`.
+    A canonical target ID must be used.
+    See {ref}`amdgpu-target-triples` and {ref}`amdgpu-target-id`.
 :::
 
 (amdgpu-amdhsa-code-object-metadata-v5)=
@@ -7859,13 +6772,12 @@ Code object V5 metadata is the same as
   - Required?
   - Description
 * - "amdhsa.version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - - The first integer is the major
-      version. Currently 1.
-    - The second integer is the minor
-      version. Currently 2.
+  - - The first integer is the major version.
+      Currently 1.
+    - The second integer is the minor version.
+      Currently 2.
 :::
 
 %
@@ -7882,13 +6794,11 @@ Code object V5 metadata is the same as
 * - ".uses_dynamic_stack"
   - boolean
   -
-  - Indicates if the generated machine code
-    is using a dynamically sized stack.
+  - Indicates if the generated machine code is using a dynamically sized stack.
 * - ".workgroup_processor_mode"
   - boolean
   -
-  - (GFX10+) Controls ENABLE_WGP_MODE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - (GFX10+) Controls ENABLE_WGP_MODE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 :::
 
 %
@@ -7905,14 +6815,9 @@ Code object V5 metadata is the same as
 * - ".uniform_work_group_size"
   - integer
   -
-  - Indicates if the kernel
-    requires that each dimension
-    of global size is a multiple
-    of corresponding dimension of
-    work-group size. Value of 1
-    implies true and value of 0
-    implies false. Metadata is
-    only emitted when value is 1.
+  - Indicates if the kernel requires that each dimension of global size is a multiple of corresponding dimension of work-group size.
+    Value of 1 implies true and value of 0 implies false.
+    Metadata is only emitted when value is 1.
 :::
 
 %
@@ -7931,103 +6836,82 @@ Code object V5 metadata is the same as
 * - ".value_kind"
   - string
   - Required
-  - Kernel argument kind that
-    specifies how to set up the
-    corresponding argument.
-    Values include:
-    the same as code object V3 metadata
-    (see {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3`)
-    with the following additions:
+  - Kernel argument kind that specifies how to set up the corresponding argument.
+    Values include: the same as code object V3 metadata (see {ref}`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3`) with the following additions:
 
     "hidden_block_count_x"
-    : The grid dispatch work-group count for the X dimension
-      is passed in the kernarg. Some languages, such as OpenCL,
-      support a last work-group in each dimension being partial.
+    : The grid dispatch work-group count for the X dimension is passed in the kernarg.
+      Some languages, such as OpenCL, support a last work-group in each dimension being partial.
       This count only includes the non-partial work-group count.
-      This is not the same as the value in the AQL dispatch packet,
-      which has the grid size in work-items.
+      This is not the same as the value in the AQL dispatch packet, which has the grid size in work-items.
 
     "hidden_block_count_y"
-    : The grid dispatch work-group count for the Y dimension
-      is passed in the kernarg. Some languages, such as OpenCL,
-      support a last work-group in each dimension being partial.
+    : The grid dispatch work-group count for the Y dimension is passed in the kernarg.
+      Some languages, such as OpenCL, support a last work-group in each dimension being partial.
       This count only includes the non-partial work-group count.
-      This is not the same as the value in the AQL dispatch packet,
-      which has the grid size in work-items. If the grid dimensionality
-      is 1, then must be 1.
+      This is not the same as the value in the AQL dispatch packet, which has the grid size in work-items.
+      If the grid dimensionality is 1, then must be 1.
 
     "hidden_block_count_z"
-    : The grid dispatch work-group count for the Z dimension
-      is passed in the kernarg. Some languages, such as OpenCL,
-      support a last work-group in each dimension being partial.
+    : The grid dispatch work-group count for the Z dimension is passed in the kernarg.
+      Some languages, such as OpenCL, support a last work-group in each dimension being partial.
       This count only includes the non-partial work-group count.
-      This is not the same as the value in the AQL dispatch packet,
-      which has the grid size in work-items. If the grid dimensionality
-      is 1 or 2, then must be 1.
+      This is not the same as the value in the AQL dispatch packet, which has the grid size in work-items.
+      If the grid dimensionality is 1 or 2, then must be 1.
 
     "hidden_group_size_x"
-    : The grid dispatch work-group size for the X dimension is
-      passed in the kernarg. This size only applies to the
-      non-partial work-groups. This is the same value as the AQL
-      dispatch packet work-group size.
+    : The grid dispatch work-group size for the X dimension is passed in the kernarg.
+      This size only applies to the non-partial work-groups.
+      This is the same value as the AQL dispatch packet work-group size.
 
     "hidden_group_size_y"
-    : The grid dispatch work-group size for the Y dimension is
-      passed in the kernarg. This size only applies to the
-      non-partial work-groups. This is the same value as the AQL
-      dispatch packet work-group size. If the grid dimensionality
-      is 1, then must be 1.
+    : The grid dispatch work-group size for the Y dimension is passed in the kernarg.
+      This size only applies to the non-partial work-groups.
+      This is the same value as the AQL dispatch packet work-group size.
+      If the grid dimensionality is 1, then must be 1.
 
     "hidden_group_size_z"
-    : The grid dispatch work-group size for the Z dimension is
-      passed in the kernarg. This size only applies to the
-      non-partial work-groups. This is the same value as the AQL
-      dispatch packet work-group size. If the grid dimensionality
-      is 1 or 2, then must be 1.
+    : The grid dispatch work-group size for the Z dimension is passed in the kernarg.
+      This size only applies to the non-partial work-groups.
+      This is the same value as the AQL dispatch packet work-group size.
+      If the grid dimensionality is 1 or 2, then must be 1.
 
     "hidden_remainder_x"
-    : The grid dispatch work group size of the partial work group
-      of the X dimension, if it exists. Must be zero if a partial
-      work group does not exist in the X dimension.
+    : The grid dispatch work group size of the partial work group of the X dimension, if it exists.
+      Must be zero if a partial work group does not exist in the X dimension.
 
     "hidden_remainder_y"
-    : The grid dispatch work group size of the partial work group
-      of the Y dimension, if it exists. Must be zero if a partial
-      work group does not exist in the Y dimension.
+    : The grid dispatch work group size of the partial work group of the Y dimension, if it exists.
+      Must be zero if a partial work group does not exist in the Y dimension.
 
     "hidden_remainder_z"
-    : The grid dispatch work group size of the partial work group
-      of the Z dimension, if it exists. Must be zero if a partial
-      work group does not exist in the Z dimension.
+    : The grid dispatch work group size of the partial work group of the Z dimension, if it exists.
+      Must be zero if a partial work group does not exist in the Z dimension.
 
     "hidden_grid_dims"
-    : The grid dispatch dimensionality. This is the same value
-      as the AQL dispatch packet dimensionality. Must be a value
-      between 1 and 3.
+    : The grid dispatch dimensionality.
+      This is the same value as the AQL dispatch packet dimensionality.
+      Must be a value between 1 and 3.
 
     "hidden_heap_v1"
-    : A global address space pointer to an initialized memory
-      buffer that conforms to the requirements of the malloc/free
-      device library V1 version implementation.
+    : A global address space pointer to an initialized memory buffer that conforms to the requirements of the malloc/free device library V1 version implementation.
 
     "hidden_dynamic_lds_size"
     : Size of the dynamically allocated LDS memory is passed in the kernarg.
 
     "hidden_private_base"
     : The high 32 bits of the flat addressing private aperture base.
-      Only used by GFX8 to allow conversion between private segment
-      and flat addresses. See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+      Only used by GFX8 to allow conversion between private segment and flat addresses.
+      See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
 
     "hidden_shared_base"
     : The high 32 bits of the flat addressing shared aperture base.
-      Only used by GFX8 to allow conversion between shared segment
-      and flat addresses. See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+      Only used by GFX8 to allow conversion between shared segment and flat addresses.
+      See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
 
     "hidden_queue_ptr"
-    : A global memory address space pointer to the ROCm runtime
-      `struct amd_queue_t` structure for the HSA queue of the
-      associated dispatch AQL packet. It is only required for pre-GFX9
-      devices for the trap handler ABI (see {ref}`amdgpu-amdhsa-trap-handler-abi`).
+    : A global memory address space pointer to the ROCm runtime `struct amd_queue_t` structure for the HSA queue of the associated dispatch AQL packet.
+      It is only required for pre-GFX9 devices for the trap handler ABI (see {ref}`amdgpu-amdhsa-trap-handler-abi`).
 :::
 
 (amdgpu-amdhsa-code-object-metadata-v6)=
@@ -8048,8 +6932,7 @@ Code object V6 metadata is the same as
   - Required?
   - Description
 * - ".cluster_dims"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
   - The dimension of the cluster.
 :::
@@ -8130,12 +7013,9 @@ The memory space properties are:
 :widths: auto
 
 * - Memory Space Name
-  - HSA Segment
-    Name
-  - Hardware
-    Name
-  - Address
-    Size
+  - HSA Segment Name
+  - Hardware Name
+  - Address Size
   - NULL Value
 * - Private
   - private
@@ -8154,8 +7034,7 @@ The memory space properties are:
   - 0x0000000000000000
 * - Constant
   - constant
-  - *same as
-    global*
+  - *same as global*
   - 64
   - 0x0000000000000000
 * - Generic
@@ -8167,8 +7046,7 @@ The memory space properties are:
   - N/A
   - GDS
   - 32
-  - *not implemented
-    for AMDHSA*
+  - *not implemented for AMDHSA*
 :::
 
 The global and constant memory spaces both use global virtual addresses, which
@@ -8282,59 +7160,23 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 31:0
   - 4 bytes
   - GROUP_SEGMENT_FIXED_SIZE
-  - The amount of fixed local
-    address space memory
-    required for a work-group
-    in bytes. This does not
-    include any dynamically
-    allocated local address
-    space memory that may be
-    added when the kernel is
-    dispatched.
+  - The amount of fixed local address space memory required for a work-group in bytes.
+    This does not include any dynamically allocated local address space memory that may be added when the kernel is dispatched.
 * - 63:32
   - 4 bytes
   - PRIVATE_SEGMENT_FIXED_SIZE
-  - The amount of fixed
-    private address space
-    memory required for a
-    work-item in bytes. When
-    this cannot be predicted,
-    code object v4 and older
-    sets this value to be
-    higher than the minimum
-    requirement.
+  - The amount of fixed private address space memory required for a work-item in bytes.
+    When this cannot be predicted, code object v4 and older sets this value to be higher than the minimum requirement.
 * - 95:64
   - 4 bytes
   - KERNARG_SIZE
-  - The size of the kernarg
-    memory pointed to by the
-    AQL dispatch packet. The
-    kernarg memory is used to
-    pass arguments to the
-    kernel.
+  - The size of the kernarg memory pointed to by the AQL dispatch packet.
+    The kernarg memory is used to pass arguments to the kernel.
 
-    - If the kernarg pointer in
-      the dispatch packet is NULL
-      then there are no kernel
-      arguments.
-    - If the kernarg pointer in
-      the dispatch packet is
-      not NULL and this value
-      is 0 then the kernarg
-      memory size is
-      unspecified.
-    - If the kernarg pointer in
-      the dispatch packet is
-      not NULL and this value
-      is not 0 then the value
-      specifies the kernarg
-      memory size in bytes. It
-      is recommended to provide
-      a value as it may be used
-      by CP to optimize making
-      the kernarg memory
-      visible to the kernel
-      code.
+    - If the kernarg pointer in the dispatch packet is NULL then there are no kernel arguments.
+    - If the kernarg pointer in the dispatch packet is not NULL and this value is 0 then the kernarg memory size is unspecified.
+    - If the kernarg pointer in the dispatch packet is not NULL and this value is not 0 then the value specifies the kernarg memory size in bytes.
+      It is recommended to provide a value as it may be used by CP to optimize making the kernarg memory visible to the kernel code.
 * - 127:96
   - 4 bytes
   -
@@ -8342,16 +7184,9 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 191:128
   - 8 bytes
   - KERNEL_CODE_ENTRY_BYTE_OFFSET
-  - Byte offset (possibly
-    negative) from base
-    address of kernel
-    descriptor to kernel's
-    entry point instruction
-    which must be 256 byte
-    aligned.
+  - Byte offset (possibly negative) from base address of kernel descriptor to kernel's entry point instruction which must be 256 byte aligned.
 * - 351:192
-  - 20
-    bytes
+  - 20 bytes
   -
   - Reserved, must be 0.
 * - 383:352
@@ -8361,75 +7196,37 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX90A, GFX942
-    : Compute Shader (CS)
-      program settings used by
-      CP to set up
-      `COMPUTE_PGM_RSRC3`
-      configuration
-      register. See
-      {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+    : Compute Shader (CS) program settings used by CP to set up `COMPUTE_PGM_RSRC3` configuration register.
+      See {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
 
     GFX10-GFX11
-    : Compute Shader (CS)
-      program settings used by
-      CP to set up
-      `COMPUTE_PGM_RSRC3`
-      configuration
-      register. See
-      {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+    : Compute Shader (CS) program settings used by CP to set up `COMPUTE_PGM_RSRC3` configuration register.
+      See {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
 
     GFX12
-    : Compute Shader (CS)
-      program settings used by
-      CP to set up
-      `COMPUTE_PGM_RSRC3`
-      configuration
-      register. See
-      {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
+    : Compute Shader (CS) program settings used by CP to set up `COMPUTE_PGM_RSRC3` configuration register.
+      See {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
 * - 415:384
   - 4 bytes
   - COMPUTE_PGM_RSRC1
-  - Compute Shader (CS)
-    program settings used by
-    CP to set up
-    `COMPUTE_PGM_RSRC1`
-    configuration
-    register. See
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - Compute Shader (CS) program settings used by CP to set up `COMPUTE_PGM_RSRC1` configuration register.
+    See {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - 447:416
   - 4 bytes
   - COMPUTE_PGM_RSRC2
-  - Compute Shader (CS)
-    program settings used by
-    CP to set up
-    `COMPUTE_PGM_RSRC2`
-    configuration
-    register. See
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Compute Shader (CS) program settings used by CP to set up `COMPUTE_PGM_RSRC2` configuration register.
+    See {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - 458:448
   - 7 bits
   - *See separate bits below.*
-  - Enable the setup of the
-    SGPR user data registers
-    (see
-    {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - Enable the setup of the SGPR user data registers (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    The total number of SGPR
-    user data registers
-    requested must not exceed
-    16 and match value in
-    `compute_pgm_rsrc2.user_sgpr.user_sgpr_count`.
-    Any requests beyond 16
-    will be ignored.
+    The total number of SGPR user data registers requested must not exceed 16 and match value in `compute_pgm_rsrc2.user_sgpr.user_sgpr_count`.
+    Any requests beyond 16 will be ignored.
 * - \>448
   - 1 bit
   - ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER
-  - If the *Target Properties*
-    column of
-    {ref}`amdgpu-processor-table`
-    specifies *Architected flat
-    scratch* then not supported
-    and must be 0,
+  - If the *Target Properties* column of {ref}`amdgpu-processor-table` specifies *Architected flat scratch* then not supported and must be 0,
 * - \>449
   - 1 bit
   - ENABLE_SGPR_DISPATCH_PTR
@@ -8449,12 +7246,7 @@ The fields used by CP for code objects before V3 also match those specified in
 * - \>453
   - 1 bit
   - ENABLE_SGPR_FLAT_SCRATCH_INIT
-  - If the *Target Properties*
-    column of
-    {ref}`amdgpu-processor-table`
-    specifies *Architected flat
-    scratch* then not supported
-    and must be 0,
+  - If the *Target Properties* column of {ref}`amdgpu-processor-table` specifies *Architected flat scratch* then not supported and must be 0,
 * - \>454
   - 1 bit
   - ENABLE_SGPR_PRIVATE_SEGMENT_SIZE
@@ -8470,19 +7262,13 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX10-GFX11
-    : - If 0 execute in
-        wavefront size 64 mode.
-      - If 1 execute in
-        native wavefront size
-        32 mode.
+    : - If 0 execute in wavefront size 64 mode.
+      - If 1 execute in native wavefront size 32 mode.
 * - 459
   - 1 bit
   - USES_DYNAMIC_STACK
-  - Indicates if the generated
-    machine code is using a
-    dynamically sized stack.
-    This is only set in code
-    object v5 and later.
+  - Indicates if the generated machine code is using a dynamically sized stack.
+    This is only set in code object v5 and later.
 * - 463:460
   - 4 bits
   -
@@ -8494,11 +7280,7 @@ The fields used by CP for code objects before V3 also match those specified in
     : - Reserved, must be 0.
 
     GFX90A, GFX942
-    : - The number of dwords from
-        the kernarg segment to preload
-        into User SGPRs before kernel
-        execution. (see
-        {ref}`amdgpu-amdhsa-kernarg-preload`).
+    : - The number of dwords from the kernarg segment to preload into User SGPRs before kernel execution. (see {ref}`amdgpu-amdhsa-kernarg-preload`).
 * - 479:471
   - 9 bits
   - KERNARG_PRELOAD_SPEC_OFFSET
@@ -8506,11 +7288,7 @@ The fields used by CP for code objects before V3 also match those specified in
     : - Reserved, must be 0.
 
     GFX90A, GFX942
-    : - An offset in dwords into the
-        kernarg segment to begin
-        preloading data into User
-        SGPRs. (see
-        {ref}`amdgpu-amdhsa-kernarg-preload`).
+    : - An offset in dwords into the kernarg segment to begin preloading data into User SGPRs. (see {ref}`amdgpu-amdhsa-kernarg-preload`).
 * - 511:480
   - 4 bytes
   -
@@ -8535,10 +7313,7 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 5:0
   - 6 bits
   - GRANULATED_WORKITEM_VGPR_COUNT
-  - Number of vector register
-    blocks used by each work-item;
-    granularity is device
-    specific:
+  - Number of vector register blocks used by each work-item; granularity is device specific:
 
     GFX6-GFX9
     : - vgprs_used 0..256
@@ -8562,32 +7337,15 @@ The fields used by CP for code objects before V3 also match those specified in
     : - max_vgpr 1..1024
       - max(0, ceil(vgprs_used / 16) - 1)
 
-    Where vgprs_used is defined
-    as the highest VGPR number
-    explicitly referenced plus
-    one.
+    Where vgprs_used is defined as the highest VGPR number explicitly referenced plus one.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.VGPRS`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.VGPRS`.
 
-    The
-    {ref}`amdgpu-assembler`
-    calculates this
-    automatically for the
-    selected processor from
-    values provided to the
-    `.amdhsa_kernel` directive
-    by the
-    `.amdhsa_next_free_vgpr`
-    nested directive (see
-    {ref}`amdhsa-kernel-directives-table`).
+    The {ref}`amdgpu-assembler` calculates this automatically for the selected processor from values provided to the `.amdhsa_kernel` directive by the `.amdhsa_next_free_vgpr` nested directive (see {ref}`amdhsa-kernel-directives-table`).
 * - 9:6
   - 4 bits
   - GRANULATED_WAVEFRONT_SGPR_COUNT
-  - Number of scalar register
-    blocks used by a wavefront;
-    granularity is device
-    specific:
+  - Number of scalar register blocks used by a wavefront; granularity is device specific:
 
     GFX6-GFX8
     : - sgprs_used 0..112
@@ -8598,228 +7356,127 @@ The fields used by CP for code objects before V3 also match those specified in
       - 2 \* max(0, ceil(sgprs_used / 16) - 1)
 
     GFX10-GFX12
-    : Reserved, must be 0.
-      (128 SGPRs always
-      allocated.)
+    : Reserved, must be 0. (128 SGPRs always allocated.)
 
-    Where sgprs_used is
-    defined as the highest
-    SGPR number explicitly
-    referenced plus one, plus
-    a target specific number
-    of additional special
-    SGPRs for VCC,
-    FLAT_SCRATCH (GFX7+) and
-    XNACK_MASK (GFX8+), and
-    any additional
-    target specific
-    limitations. It does not
-    include the 16 SGPRs added
-    if a trap handler is
-    enabled.
+    Where sgprs_used is defined as the highest SGPR number explicitly referenced plus one, plus a target specific number of additional special SGPRs for VCC, FLAT_SCRATCH (GFX7+) and XNACK_MASK (GFX8+), and any additional target specific limitations.
+    It does not include the 16 SGPRs added if a trap handler is enabled.
 
-    The target specific
-    limitations and special
-    SGPR layout are defined in
-    the hardware
-    documentation, which can
-    be found in the
-    {ref}`amdgpu-processors`
-    table.
+    The target specific limitations and special SGPR layout are defined in the hardware documentation, which can be found in the {ref}`amdgpu-processors` table.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.SGPRS`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.SGPRS`.
 
-    The
-    {ref}`amdgpu-assembler`
-    calculates this
-    automatically for the
-    selected processor from
-    values provided to the
-    `.amdhsa_kernel` directive
-    by the
-    `.amdhsa_next_free_sgpr`
-    and `.amdhsa_reserve_*`
-    nested directives (see
-    {ref}`amdhsa-kernel-directives-table`).
+    The {ref}`amdgpu-assembler` calculates this automatically for the selected processor from values provided to the `.amdhsa_kernel` directive by the `.amdhsa_next_free_sgpr` and `.amdhsa_reserve_*` nested directives (see {ref}`amdhsa-kernel-directives-table`).
 * - 11:10
   - 2 bits
   - PRIORITY
   - Must be 0.
 
-    Start executing wavefront
-    at the specified priority.
+    Start executing wavefront at the specified priority.
 
-    CP is responsible for
-    filling in
-    `COMPUTE_PGM_RSRC1.PRIORITY`.
+    CP is responsible for filling in `COMPUTE_PGM_RSRC1.PRIORITY`.
 * - 13:12
   - 2 bits
   - FLOAT_ROUND_MODE_32
-  - Wavefront starts execution
-    with specified rounding
-    mode for single (32-bit)
-    floating point
-    precision floating point
-    operations.
+  - Wavefront starts execution with specified rounding mode for single (32-bit) floating point precision floating point operations.
 
-    Floating point rounding
-    mode values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+    Floating point rounding mode values are defined in {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
 * - 15:14
   - 2 bits
   - FLOAT_ROUND_MODE_16_64
-  - Wavefront starts execution
-    with specified rounding
-    denorm mode for half/double (16
-    and 64-bit) floating point
-    precision floating point
-    operations.
+  - Wavefront starts execution with specified rounding denorm mode for half/double (16 and 64-bit) floating point precision floating point operations.
 
-    Floating point rounding
-    mode values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+    Floating point rounding mode values are defined in {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
 * - 17:16
   - 2 bits
   - FLOAT_DENORM_MODE_32
-  - Wavefront starts execution
-    with specified denorm mode
-    for single (32
-    bit) floating point
-    precision floating point
-    operations.
+  - Wavefront starts execution with specified denorm mode for single (32 bit) floating point precision floating point operations.
 
-    Floating point denorm mode
-    values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+    Floating point denorm mode values are defined in {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
 * - 19:18
   - 2 bits
   - FLOAT_DENORM_MODE_16_64
-  - Wavefront starts execution
-    with specified denorm mode
-    for half/double (16
-    and 64-bit) floating point
-    precision floating point
-    operations.
+  - Wavefront starts execution with specified denorm mode for half/double (16 and 64-bit) floating point precision floating point operations.
 
-    Floating point denorm mode
-    values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+    Floating point denorm mode values are defined in {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
+    Used by CP to set up `COMPUTE_PGM_RSRC1.FLOAT_MODE`.
 * - 20
   - 1 bit
   - PRIV
   - Must be 0.
 
-    Start executing wavefront
-    in privilege trap handler
-    mode.
+    Start executing wavefront in privilege trap handler mode.
 
-    CP is responsible for
-    filling in
-    `COMPUTE_PGM_RSRC1.PRIV`.
+    CP is responsible for filling in `COMPUTE_PGM_RSRC1.PRIV`.
 * - 21
   - 1 bit
   - ENABLE_DX10_CLAMP
 
     WG_RR_EN
   - GFX9-GFX11 (except GFX11.7)
-    : Wavefront starts execution
-      with DX10 clamp mode
-      enabled. Used by the vector
-      ALU to force DX10 style
-      treatment of NaN's (when
-      set, clamp NaN to zero,
-      otherwise pass NaN
-      through).
+    : Wavefront starts execution with DX10 clamp mode enabled.
+      Used by the vector ALU to force DX10 style treatment of NaN's (when set, clamp NaN to zero, otherwise pass NaN through).
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.DX10_CLAMP`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.DX10_CLAMP`.
 
     GFX11.7
-    : Reserved. Must be 0.
+    : Reserved.
+      Must be 0.
 
     GFX12
-    : If 1, wavefronts are scheduled
-      in a round-robin fashion with
-      respect to the other wavefronts
-      of the SIMD. Otherwise, wavefronts
-      are scheduled in oldest age order.
+    : If 1, wavefronts are scheduled in a round-robin fashion with respect to the other wavefronts of the SIMD.
+      Otherwise, wavefronts are scheduled in oldest age order.
 
-      CP is responsible for filling in
-      `COMPUTE_PGM_RSRC1.WG_RR_EN`.
+      CP is responsible for filling in `COMPUTE_PGM_RSRC1.WG_RR_EN`.
 * - 22
   - 1 bit
   - DEBUG_MODE
   - Must be 0.
 
-    Start executing wavefront
-    in single step mode.
+    Start executing wavefront in single step mode.
 
-    CP is responsible for
-    filling in
-    `COMPUTE_PGM_RSRC1.DEBUG_MODE`.
+    CP is responsible for filling in `COMPUTE_PGM_RSRC1.DEBUG_MODE`.
 * - 23
   - 1 bit
   - ENABLE_IEEE_MODE
 
     DISABLE_PERF
   - GFX9-GFX11 (except GFX11.7)
-    : Wavefront starts execution
-      with IEEE mode
-      enabled. Floating point
-      opcodes that support
-      exception flag gathering
-      will quiet and propagate
-      signaling-NaN inputs per
-      IEEE 754-2008. Min_dx10 and
-      max_dx10 become IEEE
-      754-2008 compliant due to
-      signaling-NaN propagation
-      and quieting.
+    : Wavefront starts execution with IEEE mode enabled.
+      Floating point opcodes that support exception flag gathering will quiet and propagate signaling-NaN inputs per IEEE 754-2008.
+      Min_dx10 and max_dx10 become IEEE 754-2008 compliant due to signaling-NaN propagation and quieting.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.IEEE_MODE`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.IEEE_MODE`.
 
     GFX11.7
-    : Reserved. Must be 0.
+    : Reserved.
+      Must be 0.
 
     GFX12
-    : Reserved. Must be 0.
+    : Reserved.
+      Must be 0.
 * - 24
   - 1 bit
   - BULKY
   - Must be 0.
 
-    Only one work-group allowed
-    to execute on a compute
-    unit.
+    Only one work-group allowed to execute on a compute unit.
 
-    CP is responsible for
-    filling in
-    `COMPUTE_PGM_RSRC1.BULKY`.
+    CP is responsible for filling in `COMPUTE_PGM_RSRC1.BULKY`.
 * - 25
   - 1 bit
   - CDBG_USER
   - Must be 0.
 
-    Flag that can be used to
-    control debugging code.
+    Flag that can be used to control debugging code.
 
-    CP is responsible for
-    filling in
-    `COMPUTE_PGM_RSRC1.CDBG_USER`.
+    CP is responsible for filling in `COMPUTE_PGM_RSRC1.CDBG_USER`.
 * - 26
   - 1 bit
   - FP16_OVFL
@@ -8827,21 +7484,12 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX9-GFX12
-    : Wavefront starts execution
-      with specified fp16 overflow
-      mode.
+    : Wavefront starts execution with specified fp16 overflow mode.
 
-      - If 0, fp16 overflow generates
-        +/-INF values.
-      - If 1, fp16 overflow that is the
-        result of an +/-INF input value
-        or divide by 0 produces a +/-INF,
-        otherwise clamps computed
-        overflow to +/-MAX_FP16 as
-        appropriate.
+      - If 0, fp16 overflow generates +/-INF values.
+      - If 1, fp16 overflow that is the result of an +/-INF input value or divide by 0 produces a +/-INF, otherwise clamps computed overflow to +/-MAX_FP16 as appropriate.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.FP16_OVFL`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.FP16_OVFL`.
 * - 27
   - 1 bit
   - RESERVED
@@ -8851,17 +7499,11 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX125\*
-    : 0 - Use the NV ISA as indication
-      that scratch is NV. 1 - Force
-      scratch to NV = 1, even if
-      ISA.NV == 0 if the address falls
-      into scratch space (not global).
-      This allows global.NV = 0 and
-      scratch.NV = 1 for flat ops. Other
-      threads use the ISA bit value.
+    : 0 - Use the NV ISA as indication that scratch is NV. 1 - Force scratch to NV = 1, even if ISA.NV == 0 if the address falls into scratch space (not global).
+      This allows global.NV = 0 and scratch.NV = 1 for flat ops.
+      Other threads use the ISA bit value.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.FLAT_SCRATCH_IS_NV`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.FLAT_SCRATCH_IS_NV`.
 * - 28
   - 1 bit
   - RESERVED
@@ -8873,15 +7515,12 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX10-GFX12
-    : - If 0 execute work-groups in
-        CU wavefront execution mode.
-      - If 1 execute work-groups on
-        in WGP wavefront execution mode.
+    : - If 0 execute work-groups in CU wavefront execution mode.
+      - If 1 execute work-groups on in WGP wavefront execution mode.
 
       See {ref}`amdgpu-amdhsa-memory-model`.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.WGP_MODE`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.WGP_MODE`.
 * - 30
   - 1 bit
   - MEM_ORDERED
@@ -8889,26 +7528,12 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX10-GFX12
-    : Controls the behavior of the
-      s_waitcnt's vmcnt and vscnt
-      counters.
+    : Controls the behavior of the s_waitcnt's vmcnt and vscnt counters.
 
-      - If 0 vmcnt reports completion
-        of load and atomic with return
-        out of order with sample
-        instructions, and the vscnt
-        reports the completion of
-        store and atomic without
-        return in order.
-      - If 1 vmcnt reports completion
-        of load, atomic with return
-        and sample instructions in
-        order, and the vscnt reports
-        the completion of store and
-        atomic without return in order.
+      - If 0 vmcnt reports completion of load and atomic with return out of order with sample instructions, and the vscnt reports the completion of store and atomic without return in order.
+      - If 1 vmcnt reports completion of load, atomic with return and sample instructions in order, and the vscnt reports the completion of store and atomic without return in order.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.MEM_ORDERED`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.MEM_ORDERED`.
 * - 31
   - 1 bit
   - FWD_PROGRESS
@@ -8916,14 +7541,10 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX10-GFX12
-    : - If 0 execute SIMD wavefronts
-        using oldest first policy.
-      - If 1 execute SIMD wavefronts to
-        ensure wavefronts will make some
-        forward progress.
+    : - If 0 execute SIMD wavefronts using oldest first policy.
+      - If 1 execute SIMD wavefronts to ensure wavefronts will make some forward progress.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC1.FWD_PROGRESS`.
+      Used by CP to set up `COMPUTE_PGM_RSRC1.FWD_PROGRESS`.
 * - 32
   - **Total size 4 bytes**
   -
@@ -8944,43 +7565,19 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 0
   - 1 bit
   - ENABLE_PRIVATE_SEGMENT
-  - - Enable the setup of the
-      private segment.
-    - If the *Target Properties*
-      column of
-      {ref}`amdgpu-processor-table`
-      does not specify
-      *Architected flat
-      scratch* then enable the
-      setup of the SGPR
-      wavefront scratch offset
-      system register (see
-      {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
-    - If the *Target Properties*
-      column of
-      {ref}`amdgpu-processor-table`
-      specifies *Architected
-      flat scratch* then enable
-      the setup of the
-      FLAT_SCRATCH register
-      pair (see
-      {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - - Enable the setup of the private segment.
+    - If the *Target Properties* column of {ref}`amdgpu-processor-table` does not specify *Architected flat scratch* then enable the setup of the SGPR wavefront scratch offset system register (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+    - If the *Target Properties* column of {ref}`amdgpu-processor-table` specifies *Architected flat scratch* then enable the setup of the FLAT_SCRATCH register pair (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.SCRATCH_EN`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.SCRATCH_EN`.
 * - 5:1
   - 5 bits
   - USER_SGPR_COUNT
   - GFX6-GFX120\*
-    : The total number of SGPR
-      user data
-      registers requested. This
-      number must be greater than
-      or equal to the number of user
-      data registers enabled.
+    : The total number of SGPR user data registers requested.
+      This number must be greater than or equal to the number of user data registers enabled.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC2.USER_SGPR`.
+      Used by CP to set up `COMPUTE_PGM_RSRC2.USER_SGPR`.
 * - 6
   - 1 bit
   - ENABLE_TRAP_HANDLER
@@ -8989,147 +7586,77 @@ The fields used by CP for code objects before V3 also match those specified in
   - GFX6-GFX11
     : Must be 0.
 
-      This bit represents
-      `COMPUTE_PGM_RSRC2.TRAP_PRESENT`,
-      which is set by the CP if
-      the runtime has installed a
-      trap handler.
+      This bit represents `COMPUTE_PGM_RSRC2.TRAP_PRESENT`, which is set by the CP if the runtime has installed a trap handler.
 
     GFX120\*
-    : Enables dynamic VGPR mode, where
-      each wave allocates one VGPR chunk
-      at launch and can request for
-      additional space to use during
-      execution in SQ.
+    : Enables dynamic VGPR mode, where each wave allocates one VGPR chunk at launch and can request for additional space to use during execution in SQ.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC2.DYNAMIC_VGPR`.
+      Used by CP to set up `COMPUTE_PGM_RSRC2.DYNAMIC_VGPR`.
 * - 6:1
   - 6 bits
   - USER_SGPR_COUNT
   - GFX125\*
-    : The total number of SGPR
-      user data
-      registers requested. This
-      number must be greater than
-      or equal to the number of user
-      data registers enabled.
+    : The total number of SGPR user data registers requested.
+      This number must be greater than or equal to the number of user data registers enabled.
 
-      Used by CP to set up
-      `COMPUTE_PGM_RSRC2.USER_SGPR`.
+      Used by CP to set up `COMPUTE_PGM_RSRC2.USER_SGPR`.
 * - 7
   - 1 bit
   - ENABLE_SGPR_WORKGROUP_ID_X
-  - Enable the setup of the
-    system SGPR register for
-    the work-group id in the X
-    dimension (see
-    {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - Enable the setup of the system SGPR register for the work-group id in the X dimension (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.TGID_X_EN`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.TGID_X_EN`.
 * - 8
   - 1 bit
   - ENABLE_SGPR_WORKGROUP_ID_Y
-  - Enable the setup of the
-    system SGPR register for
-    the work-group id in the Y
-    dimension (see
-    {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - Enable the setup of the system SGPR register for the work-group id in the Y dimension (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.TGID_Y_EN`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.TGID_Y_EN`.
 * - 9
   - 1 bit
   - ENABLE_SGPR_WORKGROUP_ID_Z
-  - Enable the setup of the
-    system SGPR register for
-    the work-group id in the Z
-    dimension (see
-    {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - Enable the setup of the system SGPR register for the work-group id in the Z dimension (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.TGID_Z_EN`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.TGID_Z_EN`.
 * - 10
   - 1 bit
   - ENABLE_SGPR_WORKGROUP_INFO
-  - Enable the setup of the
-    system SGPR register for
-    work-group information (see
-    {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
+  - Enable the setup of the system SGPR register for work-group information (see {ref}`amdgpu-amdhsa-initial-kernel-execution-state`).
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.TGID_SIZE_EN`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.TGID_SIZE_EN`.
 * - 12:11
   - 2 bits
   - ENABLE_VGPR_WORKITEM_ID
-  - Enable the setup of the
-    VGPR system registers used
-    for the work-item ID.
-    {ref}`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`
-    defines the values.
+  - Enable the setup of the VGPR system registers used for the work-item ID.
+    {ref}`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table` defines the values.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.TIDIG_CMP_CNT`.
+    Used by CP to set up `COMPUTE_PGM_RSRC2.TIDIG_CMP_CNT`.
 * - 13
   - 1 bit
   - ENABLE_EXCEPTION_ADDRESS_WATCH
   - Must be 0.
 
-    Wavefront starts execution
-    with address watch
-    exceptions enabled which
-    are generated when L1 has
-    witnessed a thread access
-    an *address of
-    interest*.
+    Wavefront starts execution with address watch exceptions enabled which are generated when L1 has witnessed a thread access an *address of interest*.
 
-    CP is responsible for
-    filling in the address
-    watch bit in
-    `COMPUTE_PGM_RSRC2.EXCP_EN_MSB`
-    according to what the
-    runtime requests.
+    CP is responsible for filling in the address watch bit in `COMPUTE_PGM_RSRC2.EXCP_EN_MSB` according to what the runtime requests.
 * - 14
   - 1 bit
   - ENABLE_EXCEPTION_MEMORY
   - Must be 0.
 
-    Wavefront starts execution
-    with memory violation
-    exceptions
-    enabled which are generated
-    when a memory violation has
-    occurred for this wavefront from
-    L1 or LDS
-    (write-to-read-only-memory,
-    mis-aligned atomic, LDS
-    address out of range,
-    illegal address, etc.).
+    Wavefront starts execution with memory violation exceptions enabled which are generated when a memory violation has occurred for this wavefront from L1 or LDS (write-to-read-only-memory, mis-aligned atomic, LDS address out of range, illegal address, etc.).
 
-    CP sets the memory
-    violation bit in
-    `COMPUTE_PGM_RSRC2.EXCP_EN_MSB`
-    according to what the
-    runtime requests.
+    CP sets the memory violation bit in `COMPUTE_PGM_RSRC2.EXCP_EN_MSB` according to what the runtime requests.
 * - 23:15
   - 9 bits
   - GRANULATED_LDS_SIZE
   - Must be 0.
 
-    CP uses the rounded value
-    from the dispatch packet,
-    not this value, as the
-    dispatch may contain
-    dynamically allocated group
-    segment memory. CP writes
-    directly to
-    `COMPUTE_PGM_RSRC2.LDS_SIZE`.
+    CP uses the rounded value from the dispatch packet, not this value, as the dispatch may contain dynamically allocated group segment memory.
+    CP writes directly to `COMPUTE_PGM_RSRC2.LDS_SIZE`.
 
-    Amount of group segment
-    (LDS) to allocate for each
-    work-group. Granularity is
-    device specific:
+    Amount of group segment (LDS) to allocate for each work-group.
+    Granularity is device specific:
 
     GFX6
     : roundup(lds-size / (64 \* 4))
@@ -9147,53 +7674,36 @@ The fields used by CP for code objects before V3 also match those specified in
     : roundup(lds-size / (256 \* 4))
 * - 24
   - 1 bit
-  - ENABLE_EXCEPTION_IEEE_754_FP
-    \_INVALID_OPERATION
-  - Wavefront starts execution
-    with specified exceptions
-    enabled.
+  - ENABLE_EXCEPTION_IEEE_754_FP \_INVALID_OPERATION
+  - Wavefront starts execution with specified exceptions enabled.
 
-    Used by CP to set up
-    `COMPUTE_PGM_RSRC2.EXCP_EN`
-    (set from bits 0..6).
+    Used by CP to set up `COMPUTE_PGM_RSRC2.EXCP_EN` (set from bits 0..6).
 
-    IEEE 754 FP Invalid
-    Operation
+    IEEE 754 FP Invalid Operation
 * - 25
   - 1 bit
-  - ENABLE_EXCEPTION_FP_DENORMAL
-    \_SOURCE
-  - FP Denormal one or more
-    input operands is a
-    denormal number
+  - ENABLE_EXCEPTION_FP_DENORMAL \_SOURCE
+  - FP Denormal one or more input operands is a denormal number
 * - 26
   - 1 bit
-  - ENABLE_EXCEPTION_IEEE_754_FP
-    \_DIVISION_BY_ZERO
-  - IEEE 754 FP Division by
-    Zero
+  - ENABLE_EXCEPTION_IEEE_754_FP \_DIVISION_BY_ZERO
+  - IEEE 754 FP Division by Zero
 * - 27
   - 1 bit
-  - ENABLE_EXCEPTION_IEEE_754_FP
-    \_OVERFLOW
+  - ENABLE_EXCEPTION_IEEE_754_FP \_OVERFLOW
   - IEEE 754 FP FP Overflow
 * - 28
   - 1 bit
-  - ENABLE_EXCEPTION_IEEE_754_FP
-    \_UNDERFLOW
+  - ENABLE_EXCEPTION_IEEE_754_FP \_UNDERFLOW
   - IEEE 754 FP Underflow
 * - 29
   - 1 bit
-  - ENABLE_EXCEPTION_IEEE_754_FP
-    \_INEXACT
+  - ENABLE_EXCEPTION_IEEE_754_FP \_INEXACT
   - IEEE 754 FP Inexact
 * - 30
   - 1 bit
-  - ENABLE_EXCEPTION_INT_DIVIDE_BY
-    \_ZERO
-  - Integer Division by Zero
-    (rcp_iflag_f32 instruction
-    only)
+  - ENABLE_EXCEPTION_INT_DIVIDE_BY \_ZERO
+  - Integer Division by Zero (rcp_iflag_f32 instruction only)
 * - 31
   - 1 bit
   - RESERVED
@@ -9218,25 +7728,21 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 5:0
   - 6 bits
   - ACCUM_OFFSET
-  - Offset of a first AccVGPR in the unified register file. Granularity 4.
-    Value 0-63. 0 - accum-offset = 4, 1 - accum-offset = 8, ...,
-    63 - accum-offset = 256.
+  - Offset of a first AccVGPR in the unified register file.
+    Granularity 4.
+    Value 0-63. 0 - accum-offset = 4, 1 - accum-offset = 8, ..., 63 - accum-offset = 256.
 * - 15:6
-  - 10
-    bits
+  - 10 bits
   -
   - Reserved, must be 0.
 * - 16
   - 1 bit
   - TG_SPLIT
-  - - If 0 the waves of a work-group are
-      launched in the same CU.
-    - If 1 the waves of a work-group can be
-      launched in different CUs. The waves
-      cannot use S_BARRIER or LDS.
+  - - If 0 the waves of a work-group are launched in the same CU.
+    - If 1 the waves of a work-group can be launched in different CUs.
+      The waves cannot use S_BARRIER or LDS.
 * - 31:17
-  - 15
-    bits
+  - 15 bits
   -
   - Reserved, must be 0.
 * - 32
@@ -9259,10 +7765,9 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 3:0
   - 4 bits
   - SHARED_VGPR_COUNT
-  - Number of shared VGPR blocks when executing in subvector mode. For
-    wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
-    of 8), such that (compute_pgm_rsrc1.vgprs +1)\*4 + shared_vgpr_count\*8 does
-    not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
+  - Number of shared VGPR blocks when executing in subvector mode.
+    For wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity of 8), such that (compute_pgm_rsrc1.vgprs +1)\*4 + shared_vgpr_count\*8 does not exceed 256.
+    For wavefront size 32 shared_vgpr_count must be 0.
 * - 9:4
   - 6 bits
   - INST_PREF_SIZE
@@ -9270,9 +7775,8 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX11
-    : Number of instruction bytes to prefetch, starting at the kernel's entry
-      point instruction, before wavefront starts execution. The value is 0..63
-      with a granularity of 128 bytes.
+    : Number of instruction bytes to prefetch, starting at the kernel's entry point instruction, before wavefront starts execution.
+      The value is 0..63 with a granularity of 128 bytes.
 * - 10
   - 1 bit
   - TRAP_ON_START
@@ -9284,9 +7788,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
       If 1, wavefront starts execution by trapping into the trap handler.
 
-      CP is responsible for filling in the trap on start bit in
-      `COMPUTE_PGM_RSRC3.TRAP_ON_START` according to what the runtime
-      requests.
+      CP is responsible for filling in the trap on start bit in `COMPUTE_PGM_RSRC3.TRAP_ON_START` according to what the runtime requests.
 * - 11
   - 1 bit
   - TRAP_ON_END
@@ -9298,8 +7800,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
       If 1, wavefront execution terminates by trapping into the trap handler.
 
-      CP is responsible for filling in the trap on end bit in
-      `COMPUTE_PGM_RSRC3.TRAP_ON_END` according to what the runtime requests.
+      CP is responsible for filling in the trap on end bit in `COMPUTE_PGM_RSRC3.TRAP_ON_END` according to what the runtime requests.
 * - 30:12
   - 19 bits
   -
@@ -9311,14 +7812,10 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX11
-    : If 1, the kernel execution contains image instructions. If executed as
-      part of a graphics pipeline, image read instructions will stall waiting
-      for any necessary `WAIT_SYNC` fence to be performed in order to
-      indicate that earlier pipeline stages have completed writing to the
-      image.
+    : If 1, the kernel execution contains image instructions.
+      If executed as part of a graphics pipeline, image read instructions will stall waiting for any necessary `WAIT_SYNC` fence to be performed in order to indicate that earlier pipeline stages have completed writing to the image.
 
-      Not used for compute kernels that are not part of a graphics pipeline and
-      must be 0.
+      Not used for compute kernels that are not part of a graphics pipeline and must be 0.
 * - 32
   - **Total size 4 bytes.**
   -
@@ -9343,9 +7840,8 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 11:4
   - 8 bits
   - INST_PREF_SIZE
-  - Number of instruction bytes to prefetch, starting at the kernel's entry
-    point instruction, before wavefront starts execution. The value is 0..255
-    with a granularity of 128 bytes.
+  - Number of instruction bytes to prefetch, starting at the kernel's entry point instruction, before wavefront starts execution.
+    The value is 0..255 with a granularity of 128 bytes.
 * - 12
   - 1 bit
   - RESERVED
@@ -9363,8 +7859,8 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX125\*
-    : Number of named barriers to alloc for each workgroup, in granularity of
-      4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
+    : Number of named barriers to alloc for each workgroup, in granularity of 4.
+      Range is from 0-4 allocating 0, 4, 8, 12, 16.
 * - 17
   - 1 bit
   - RESERVED
@@ -9374,9 +7870,7 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX125\*
-    : Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
-      at launch and can request for additional space to use during
-      execution in SQ.
+    : Enables dynamic VGPR mode, where each wave allocates one VGPR chunk at launch and can request for additional space to use during execution in SQ.
 
       Used by CP to set up `COMPUTE_PGM_RSRC3.DYNAMIC_VGPR`.
 * - 20:18
@@ -9388,9 +7882,7 @@ The fields used by CP for code objects before V3 also match those specified in
     : Reserved, must be 0.
 
     GFX125\*
-    : Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
-      2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
-      5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
+    : Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB 2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB 5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
 * - 21
   - 1 bit
   - RESERVED
@@ -9408,14 +7900,10 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 31
   - 1 bit
   - IMAGE_OP
-  - If 1, the kernel execution contains image instructions. If executed as
-    part of a graphics pipeline, image read instructions will stall waiting
-    for any necessary `WAIT_SYNC` fence to be performed in order to
-    indicate that earlier pipeline stages have completed writing to the
-    image.
+  - If 1, the kernel execution contains image instructions.
+    If executed as part of a graphics pipeline, image read instructions will stall waiting for any necessary `WAIT_SYNC` fence to be performed in order to indicate that earlier pipeline stages have completed writing to the image.
 
-    Not used for compute kernels that are not part of a graphics pipeline and
-    must be 0.
+    Not used for compute kernels that are not part of a graphics pipeline and must be 0.
 * - 32
   - **Total size 4 bytes.**
   -
@@ -9517,16 +8005,13 @@ Denormal flushing is sign respecting, i.e., the behavior expected by
   - Description
 * - SYSTEM_VGPR_WORKITEM_ID_X
   - 0
-  - Set work-item X dimension
-    ID.
+  - Set work-item X dimension ID.
 * - SYSTEM_VGPR_WORKITEM_ID_X_Y
   - 1
-  - Set work-item X and Y
-    dimensions ID.
+  - Set work-item X and Y dimensions ID.
 * - SYSTEM_VGPR_WORKITEM_ID_X_Y_Z
   - 2
-  - Set work-item X, Y and Z
-    dimensions ID.
+  - Set work-item X, Y and Z dimensions ID.
 * - SYSTEM_VGPR_WORKITEM_ID_UNDEFINED
   - 3
   - Undefined.
@@ -9563,136 +8048,70 @@ SGPR register initial state is defined in
 :widths: auto
 
 * - SGPR Order
-  - Name
-    (kernel descriptor enable
-    field)
-  - Number
-    of
-    SGPRs
+  - Name (kernel descriptor enable field)
+  - Number of SGPRs
   - Description
 * - First
-  - Private Segment Buffer
-    (enable_sgpr_private
-    \_segment_buffer)
+  - Private Segment Buffer (enable_sgpr_private \_segment_buffer)
   - 4
-  - See
-    {ref}`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`.
+  - See {ref}`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`.
 * - then
-  - Dispatch Ptr
-    (enable_sgpr_dispatch_ptr)
+  - Dispatch Ptr (enable_sgpr_dispatch_ptr)
   - 2
-  - 64-bit address of AQL dispatch
-    packet for kernel dispatch
-    actually executing.
+  - 64-bit address of AQL dispatch packet for kernel dispatch actually executing.
 * - then
-  - Queue Ptr
-    (enable_sgpr_queue_ptr)
+  - Queue Ptr (enable_sgpr_queue_ptr)
   - 2
-  - 64-bit address of amd_queue_t
-    object for AQL queue on which
-    the dispatch packet was
-    queued.
+  - 64-bit address of amd_queue_t object for AQL queue on which the dispatch packet was queued.
 * - then
-  - Kernarg Segment Ptr
-    (enable_sgpr_kernarg
-    \_segment_ptr)
+  - Kernarg Segment Ptr (enable_sgpr_kernarg \_segment_ptr)
   - 2
-  - 64-bit address of Kernarg
-    segment. This is directly
-    copied from the
-    kernarg_address in the kernel
-    dispatch packet.
+  - 64-bit address of Kernarg segment.
+    This is directly copied from the kernarg_address in the kernel dispatch packet.
 
-    Having CP load it once avoids
-    loading it at the beginning of
-    every wavefront.
+    Having CP load it once avoids loading it at the beginning of every wavefront.
 * - then
-  - Dispatch Id
-    (enable_sgpr_dispatch_id)
+  - Dispatch Id (enable_sgpr_dispatch_id)
   - 2
-  - 64-bit Dispatch ID of the
-    dispatch packet being
-    executed.
+  - 64-bit Dispatch ID of the dispatch packet being executed.
 * - then
-  - Flat Scratch Init
-    (enable_sgpr_flat_scratch
-    \_init)
+  - Flat Scratch Init (enable_sgpr_flat_scratch \_init)
   - 2
-  - See
-    {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+  - See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
 * - then
-  - Private Segment Size
-    (enable_sgpr_private
-    \_segment_size)
+  - Private Segment Size (enable_sgpr_private \_segment_size)
   - 1
-  - The 32-bit byte size of a
-    single work-item's memory
-    allocation. This is the
-    value from the kernel
-    dispatch packet Private
-    Segment Byte Size rounded up
-    by CP to a multiple of
-    DWORD.
+  - The 32-bit byte size of a single work-item's memory allocation.
+    This is the value from the kernel dispatch packet Private Segment Byte Size rounded up by CP to a multiple of DWORD.
 
-    Having CP load it once avoids
-    loading it at the beginning of
-    every wavefront.
+    Having CP load it once avoids loading it at the beginning of every wavefront.
 
-    This is not used for
-    GFX7-GFX8 since it is the same
-    value as the second SGPR of
-    Flat Scratch Init. However, it
-    may be needed for GFX9-GFX11 which
-    changes the meaning of the
-    Flat Scratch Init value.
+    This is not used for GFX7-GFX8 since it is the same value as the second SGPR of Flat Scratch Init.
+    However, it may be needed for GFX9-GFX11 which changes the meaning of the Flat Scratch Init value.
 * - then
-  - Preloaded Kernargs
-    (kernarg_preload_spec
-    \_length)
+  - Preloaded Kernargs (kernarg_preload_spec \_length)
   - N/A
-  - See
-    {ref}`amdgpu-amdhsa-kernarg-preload`.
+  - See {ref}`amdgpu-amdhsa-kernarg-preload`.
 * - then
-  - Work-Group Id X
-    (enable_sgpr_workgroup_id
-    \_X)
+  - Work-Group Id X (enable_sgpr_workgroup_id \_X)
   - 1
-  - 32-bit work-group id in X
-    dimension of grid for
-    wavefront.
+  - 32-bit work-group id in X dimension of grid for wavefront.
 * - then
-  - Work-Group Id Y
-    (enable_sgpr_workgroup_id
-    \_Y)
+  - Work-Group Id Y (enable_sgpr_workgroup_id \_Y)
   - 1
-  - 32-bit work-group id in Y
-    dimension of grid for
-    wavefront.
+  - 32-bit work-group id in Y dimension of grid for wavefront.
 * - then
-  - Work-Group Id Z
-    (enable_sgpr_workgroup_id
-    \_Z)
+  - Work-Group Id Z (enable_sgpr_workgroup_id \_Z)
   - 1
-  - 32-bit work-group id in Z
-    dimension of grid for
-    wavefront.
+  - 32-bit work-group id in Z dimension of grid for wavefront.
 * - then
-  - Work-Group Info
-    (enable_sgpr_workgroup
-    \_info)
+  - Work-Group Info (enable_sgpr_workgroup \_info)
   - 1
-  - {first_wavefront, 14'b0000,
-    ordered_append_term\[10:0\],
-    threadgroup_size_in_wavefronts\[5:0\]}
+  - {first_wavefront, 14'b0000, ordered_append_term\[10:0\], threadgroup_size_in_wavefronts\[5:0\]}
 * - then
-  - Scratch Wavefront Offset
-    (enable_sgpr_private
-    \_segment_wavefront_offset)
+  - Scratch Wavefront Offset (enable_sgpr_private \_segment_wavefront_offset)
   - 1
-  - See
-    {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
-    and
-    {ref}`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`.
+  - See {ref}`amdgpu-amdhsa-kernel-prolog-flat-scratch`. and {ref}`amdgpu-amdhsa-kernel-prolog-private-segment-buffer`.
 :::
 
 The order of the VGPR registers is defined, but the compiler can specify which
@@ -9719,36 +8138,21 @@ There are different methods used for the VGPR initial state:
   :header-rows: 1
 
   * - VGPR Order
-    - Name
-      (kernel descriptor enable
-      field)
-    - Number
-      of
-      VGPRs
+    - Name (kernel descriptor enable field)
+    - Number of VGPRs
     - Description
   * - First
-    - Work-Item Id X
-      (Always initialized)
+    - Work-Item Id X (Always initialized)
     - 1
-    - 32-bit work-item id in X
-      dimension of work-group for
-      wavefront lane.
+    - 32-bit work-item id in X dimension of work-group for wavefront lane.
   * - then
-    - Work-Item Id Y
-      (enable_vgpr_workitem_id
-      \> 0)
+    - Work-Item Id Y (enable_vgpr_workitem_id \> 0)
     - 1
-    - 32-bit work-item id in Y
-      dimension of work-group for
-      wavefront lane.
+    - 32-bit work-item id in Y dimension of work-group for wavefront lane.
   * - then
-    - Work-Item Id Z
-      (enable_vgpr_workitem_id
-      \> 1)
+    - Work-Item Id Z (enable_vgpr_workitem_id \> 1)
     - 1
-    - 32-bit work-item id in Z
-      dimension of work-group for
-      wavefront lane.
+    - 32-bit work-item id in Z dimension of work-group for wavefront lane.
   :::
 
 %
@@ -9765,29 +8169,21 @@ There are different methods used for the VGPR initial state:
 * - 0:9
   - 10 bits
   - Work-Item Id X
-  - Work-item id in X
-    dimension of work-group for
-    wavefront lane.
+  - Work-item id in X dimension of work-group for wavefront lane.
 
     Always initialized.
 * - 10:19
   - 10 bits
   - Work-Item Id Y
-  - Work-item id in Y
-    dimension of work-group for
-    wavefront lane.
+  - Work-item id in Y dimension of work-group for wavefront lane.
 
-    Initialized if enable_vgpr_workitem_id >
-    0, otherwise set to 0.
+    Initialized if enable_vgpr_workitem_id > 0, otherwise set to 0.
 * - 20:29
   - 10 bits
   - Work-Item Id Z
-  - Work-item id in Z
-    dimension of work-group for
-    wavefront lane.
+  - Work-item id in Z dimension of work-group for wavefront lane.
 
-    Initialized if enable_vgpr_workitem_id >
-    1, otherwise set to 0.
+    Initialized if enable_vgpr_workitem_id > 1, otherwise set to 0.
 * - 30:31
   - 2 bits
   -
@@ -10173,29 +8569,16 @@ table
 * - monotonic
   - *none*
 * - acquire
-  - - If a load atomic/atomicrmw then no following load/load
-      atomic/store/store atomic/atomicrmw/fence instruction can be
-      moved before the acquire.
-    - If a fence then same as load atomic, plus no preceding
-      associated fence-paired-atomic can be moved after the fence.
+  - - If a load atomic/atomicrmw then no following load/load atomic/store/store atomic/atomicrmw/fence instruction can be moved before the acquire.
+    - If a fence then same as load atomic, plus no preceding associated fence-paired-atomic can be moved after the fence.
 * - release
-  - - If a store atomic/atomicrmw then no preceding load/load
-      atomic/store/store atomic/atomicrmw/fence instruction can be
-      moved after the release.
-    - If a fence then same as store atomic, plus no following
-      associated fence-paired-atomic can be moved before the
-      fence.
+  - - If a store atomic/atomicrmw then no preceding load/load atomic/store/store atomic/atomicrmw/fence instruction can be moved after the release.
+    - If a fence then same as store atomic, plus no following associated fence-paired-atomic can be moved before the fence.
 * - acq_rel
   - Same constraints as both acquire and release.
 * - seq_cst
-  - - If a load atomic then same constraints as acquire, plus no
-      preceding sequentially consistent load atomic/store
-      atomic/atomicrmw/fence instruction can be moved after the
-      seq_cst.
-    - If a store atomic then the same constraints as release, plus
-      no following sequentially consistent load atomic/store
-      atomic/atomicrmw/fence instruction can be moved before the
-      seq_cst.
+  - - If a load atomic then same constraints as acquire, plus no preceding sequentially consistent load atomic/store atomic/atomicrmw/fence instruction can be moved after the seq_cst.
+    - If a store atomic then the same constraints as release, plus no following sequentially consistent load atomic/store atomic/atomicrmw/fence instruction can be moved before the seq_cst.
     - If an atomicrmw/fence then same constraints as acq_rel.
 :::
 
@@ -10374,15 +8757,10 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX6-GFX9
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX6-GFX9
 * - **Non-Atomic**
   -
   -
@@ -10400,25 +8778,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         glc=1 slc=1
+      1. buffer/global/flat_load glc=1 slc=1
     - volatile
 
-      1. buffer/global/flat_load
-         glc=1
+      1. buffer/global/flat_load glc=1
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -10436,24 +8803,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
       1. buffer/global/flat_store
     - !volatile & nontemporal
 
-      1. buffer/global/flat_store
-         glc=1 slc=1
+      1. buffer/global/flat_store glc=1 slc=1
     - volatile
 
       1. buffer/global/flat_store
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -10499,8 +8856,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     - system
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
 * - store atomic
   - monotonic
   - - singlethread
@@ -10562,76 +8918,39 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 * - load atomic
   - acquire
   - - agent
     - system
   - - global
-  - 1. buffer/global_load
-       glc=1
+  - 1. buffer/global_load glc=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the load has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - agent
     - system
   - - generic
   - 1. flat_load glc=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the flat_load has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -10654,18 +8973,8 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local atomicrmw value being acquired.
 * - atomicrmw
   - acquire
   - - agent
@@ -10674,57 +8983,29 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - agent
     - system
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acquire
   - - singlethread
@@ -10737,110 +9018,31 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - *none*
   - 1. s_waitcnt lgkmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   value read by the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the value read by the fence-paired-atomic.
 * - fence
   - acquire
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. buffer_wbinvl1_vol
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - **Release Atomic**
   -
   -
@@ -10862,22 +9064,9 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - 1. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to local have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - store atomic
@@ -10891,46 +9080,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to memory have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to memory have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - atomicrmw
@@ -10949,22 +9106,9 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - 1. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to local have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - atomicrmw
@@ -10978,44 +9122,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - fence
@@ -11030,94 +9144,26 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - *none*
   - 1. s_waitcnt lgkmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations to local have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -11138,22 +9184,9 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - 1. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to local have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
 * - atomicrmw
@@ -11164,18 +9197,8 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -11183,176 +9206,65 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - 1. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to local have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
     3. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - agent
     - system
   - - global
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     4. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - agent
     - system
   - - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    3. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     4. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acq_rel
   - - singlethread
@@ -11365,165 +9277,38 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - *none*
   - 1. s_waitcnt lgkmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit.
-    > - However,
-    >   since LLVM
-    >   currently has no
-    >   address space on
-    >   the fence need to
-    >   conservatively
-    >   always generate
-    >   (see comment for
-    >   previous fence).
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to local have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If OpenCL and address space is not generic, omit.
+    > - However, since LLVM currently has no address space on the fence need to conservatively always generate (see comment for previous fence).
+    > - Must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations to local have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 * - fence
   - acq_rel
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the cache. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the cache.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     2. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -11536,11 +9321,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -11548,175 +9329,40 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     - generic
   - 1. s_waitcnt lgkmcnt(0)
 
-    > - Must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
   - - local
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - agent
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0)
-    >   and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -11727,11 +9373,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -11742,11 +9384,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -11755,11 +9393,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx90a)=
@@ -11913,15 +9547,10 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX90A
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX90A
 * - **Non-Atomic**
   -
   -
@@ -11939,25 +9568,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         glc=1 slc=1
+      1. buffer/global/flat_load glc=1 slc=1
     - volatile
 
-      1. buffer/global/flat_load
-         glc=1
+      1. buffer/global/flat_load glc=1
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -11975,24 +9593,14 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
       1. buffer/global/flat_store
     - !volatile & nontemporal
 
-      1. buffer/global/flat_store
-         glc=1 slc=1
+      1. buffer/global/flat_store glc=1 slc=1
     - volatile
 
       1. buffer/global/flat_store
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -12035,20 +9643,16 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - workgroup
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
 
-    > - If not TgSplit execution
-    >   mode, omit glc=1.
+    > - If not TgSplit execution mode, omit glc=1.
 * - load atomic
   - monotonic
   - - singlethread
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_load
 * - load atomic
@@ -12056,15 +9660,13 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - agent
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
 * - load atomic
   - monotonic
   - - system
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
 * - store atomic
   - monotonic
   - - singlethread
@@ -12086,9 +9688,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - atomicrmw
@@ -12112,9 +9712,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - **Acquire Atomic**
@@ -12136,221 +9734,111 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - global
   - 1. buffer/global_load glc=1
 
-    > - If not TgSplit execution
-    >   mode, omit glc=1.
+    > - If not TgSplit execution mode, omit glc=1.
 
     2. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before the
-    >   following buffer_wbinvl1_vol.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_wbinvl1_vol.
 
     3. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_load
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - load atomic
   - acquire
   - - workgroup
   - - generic
   - 1. flat_load glc=1
 
-    > - If not TgSplit execution
-    >   mode, omit glc=1.
+    > - If not TgSplit execution mode, omit glc=1.
 
     2. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol and any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following buffer_wbinvl1_vol and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - agent
   - - global
-  - 1. buffer/global_load
-       glc=1
+  - 1. buffer/global_load glc=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the load has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - system
   - - global
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the load has completed before invalidating the cache.
 
-    3. buffer_invl2;
-       buffer_wbinvl1_vol
+    3. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - load atomic
   - acquire
   - - agent
   - - generic
   - 1. flat_load glc=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the flat_load has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - system
   - - generic
   - 1. flat_load glc=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
-    3. buffer_invl2;
-       buffer_wbinvl1_vol
+    3. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -12363,9 +9851,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -12375,52 +9861,27 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before the
-    >   following buffer_wbinvl1_vol.
-    > - Ensures the atomicrmw
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -12428,34 +9889,15 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - 1. flat_atomic
     2. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following buffer_wbinvl1_vol and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local atomicrmw value being acquired.
 
     3. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - agent
@@ -12463,26 +9905,13 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - system
@@ -12490,103 +9919,47 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    3. buffer_invl2;
-       buffer_wbinvl1_vol
+    3. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - atomicrmw
   - acquire
   - - agent
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - system
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    3. buffer_invl2;
-       buffer_wbinvl1_vol
+    3. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - fence
   - acquire
   - - singlethread
@@ -12599,227 +9972,60 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   value read by the
-    >   fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/ atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_wbinvl1_vol and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the value read by the fence-paired-atomic.
 
     2. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acquire
   - - agent
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. buffer_wbinvl1_vol
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acquire
   - - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
-    2. buffer_invl2;
-       buffer_wbinvl1_vol
+    2. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - **Release Atomic**
   -
   -
@@ -12837,9 +10043,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - store atomic
@@ -12849,43 +10053,19 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - store atomic
   - release
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - store atomic
@@ -12893,48 +10073,15 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - agent
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to memory have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to memory have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - store atomic
@@ -12944,57 +10091,18 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - generic
   - 1. buffer_wbl2
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after any
-    >   preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after any
-    >   preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to memory and the L2
-    >   writeback have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to memory and the L2 writeback have completed before performing the store that is being released.
 
     3. buffer/global/flat_store
 * - atomicrmw
@@ -13009,9 +10117,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -13021,44 +10127,19 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - atomicrmw
   - release
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -13066,46 +10147,15 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - agent
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - atomicrmw
@@ -13115,55 +10165,18 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - generic
   - 1. buffer_wbl2
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to memory and the L2
-    >   writeback have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to memory and the L2 writeback have completed before performing the store that is being released.
 
     3. buffer/global/flat_atomic
 * - fence
@@ -13178,185 +10191,50 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - system
   - *none*
   - 1. buffer_wbl2
 
-    > - If OpenCL and
-    >   address space is
-    >   local, omit.
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - If OpenCL and address space is local, omit.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -13374,9 +10252,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -13385,470 +10261,174 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - global
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   atomicrmw value
-    >   being acquired.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures any following global data read is no older than the atomicrmw value being acquired.
 
     4. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - workgroup
   - - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    3. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit vmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - If not TgSplit execution mode, omit vmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before the following buffer_wbinvl1_vol and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - agent
   - - global
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     4. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - system
   - - global
   - 1. buffer_wbl2
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and L2 writeback
-    >   have completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and L2 writeback have completed before performing the atomicrmw that is being released.
 
     3. buffer/global_atomic
     4. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    5. buffer_invl2;
-       buffer_wbinvl1_vol
+    5. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - atomicrmw
   - acq_rel
   - - agent
   - - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    3. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     4. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - system
   - - generic
   - 1. buffer_wbl2
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and L2 writeback
-    >   have completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and L2 writeback have completed before performing the atomicrmw that is being released.
 
     3. flat_atomic
-    4. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    4. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    5. buffer_invl2;
-       buffer_wbinvl1_vol
+    5. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - fence
   - acq_rel
   - - singlethread
@@ -13861,317 +10441,78 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - However,
-    >   since LLVM
-    >   currently has no
-    >   address space on
-    >   the fence need to
-    >   conservatively
-    >   always generate
-    >   (see comment for
-    >   previous fence).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   acquire-fence-paired
-    >   atomic has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   acquire-fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - However, since LLVM currently has no address space on the fence need to conservatively always generate (see comment for previous fence).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures that the acquire-fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the acquire-fence-paired-atomic.
 
     2. buffer_wbinvl1_vol
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acq_rel
   - - agent
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the cache. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_wbinvl1_vol.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the cache.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     2. buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 * - fence
   - acq_rel
   - - system
   - *none*
   - 1. buffer_wbl2
 
-    > - If OpenCL and
-    >   address space is
-    >   local, omit.
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - If OpenCL and address space is local, omit.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following buffer_invl2 and
-    >   buffer_wbinvl1_vol.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the cache. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_invl2 and buffer_wbinvl1_vol.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the cache.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
-    3. buffer_invl2;
-       buffer_wbinvl1_vol
+    3. buffer_invl2; buffer_wbinvl1_vol
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale L1 global data,
-    >   nor see stale L2 MTYPE
-    >   NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale in L2 due to
-    >   the memory probes.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale L1 global data, nor see stale L2 MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale in L2 due to the memory probes.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -14184,11 +10525,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -14196,201 +10533,46 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - s_waitcnt lgkmcnt(0) must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global/local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global/local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
-    *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+    *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - agent
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0)
-    >   and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -14401,11 +10583,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -14416,11 +10594,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -14429,11 +10603,7 @@ in table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx942)=
@@ -14589,15 +10759,10 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX942
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX942
 * - **Non-Atomic**
   -
   -
@@ -14615,25 +10780,14 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         nt=1
+      1. buffer/global/flat_load nt=1
     - volatile
 
-      1. buffer/global/flat_load
-         sc0=1 sc1=1
+      1. buffer/global/flat_load sc0=1 sc1=1
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -14653,25 +10807,14 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - !volatile & nontemporal
 
       1. GFX942
-         : buffer/global/flat_store
-           nt=1
+         : buffer/global/flat_store nt=1
     - volatile
 
-      1. buffer/global/flat_store
-         sc0=1 sc1=1
+      1. buffer/global/flat_store sc0=1 sc1=1
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -14714,17 +10857,14 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - workgroup
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       sc0=1
+  - 1. buffer/global/flat_load sc0=1
 * - load atomic
   - monotonic
   - - singlethread
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_load
 * - load atomic
@@ -14732,15 +10872,13 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - agent
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       sc1=1
+  - 1. buffer/global/flat_load sc1=1
 * - load atomic
   - monotonic
   - - system
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       sc0=1 sc1=1
+  - 1. buffer/global/flat_load sc0=1 sc1=1
 * - store atomic
   - monotonic
   - - singlethread
@@ -14753,31 +10891,26 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - workgroup
   - - global
     - generic
-  - 1. buffer/global/flat_store
-       sc0=1
+  - 1. buffer/global/flat_store sc0=1
 * - store atomic
   - monotonic
   - - agent
   - - global
     - generic
-  - 1. buffer/global/flat_store
-       sc1=1
+  - 1. buffer/global/flat_store sc1=1
 * - store atomic
   - monotonic
   - - system
   - - global
     - generic
-  - 1. buffer/global/flat_store
-       sc0=1 sc1=1
+  - 1. buffer/global/flat_store sc0=1 sc1=1
 * - store atomic
   - monotonic
   - - singlethread
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - atomicrmw
@@ -14794,17 +10927,14 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - system
   - - global
     - generic
-  - 1. buffer/global/flat_atomic
-       sc1=1
+  - 1. buffer/global/flat_atomic sc1=1
 * - atomicrmw
   - monotonic
   - - singlethread
     - wavefront
     - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - **Acquire Atomic**
@@ -14827,49 +10957,26 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - 1. buffer/global_load sc0=1
     2. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before the
-    >   following buffer_inv.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_inv.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_load
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - load atomic
   - acquire
   - - workgroup
@@ -14877,155 +10984,77 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - 1. flat_load sc0=1
     2. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_inv and any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following buffer_inv and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - agent
   - - global
-  - 1. buffer/global_load
-       sc1=1
+  - 1. buffer/global_load sc1=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - Must happen before following buffer_inv.
+    > - Ensures the load has completed before invalidating the cache.
 
     3. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - system
   - - global
-  - 1. buffer/global/flat_load
-       sc0=1 sc1=1
+  - 1. buffer/global/flat_load sc0=1 sc1=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - Must happen before following buffer_inv.
+    > - Ensures the load has completed before invalidating the cache.
 
     3. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - load atomic
   - acquire
   - - agent
   - - generic
   - 1. flat_load sc1=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before following buffer_inv.
+    > - Ensures the flat_load has completed before invalidating the cache.
 
     3. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - system
   - - generic
   - 1. flat_load sc0=1 sc1=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before the following buffer_inv.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
     3. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -15038,9 +11067,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -15050,52 +11077,27 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before the
-    >   following buffer_inv.
-    > - Ensures the atomicrmw
-    >   has completed
-    >   before invalidating
-    >   the cache.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -15103,34 +11105,15 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - 1. flat_atomic
     2. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_inv and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following buffer_inv and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local atomicrmw value being acquired.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - agent
@@ -15138,124 +11121,61 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - system
   - - global
-  - 1. buffer/global_atomic
-       sc1=1
+  - 1. buffer/global_atomic sc1=1
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     3. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - atomicrmw
   - acquire
   - - agent
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     3. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - system
   - - generic
   - 1. flat_atomic sc1=1
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     3. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - fence
   - acquire
   - - singlethread
@@ -15268,221 +11188,59 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_inv and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   value read by the
-    >   fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/ atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_inv and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the value read by the fence-paired-atomic.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acquire
   - - agent
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_inv.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. buffer_inv sc1=1
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acquire
   - - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_inv.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - **Release Atomic**
   -
   -
@@ -15501,9 +11259,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - store atomic
@@ -15513,45 +11269,20 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
     > - If OpenCL, omit lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     2. GFX942
-       : buffer/global/flat_store
-         sc0=1
+       : buffer/global/flat_store sc0=1
 * - store atomic
   - release
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_store
 * - store atomic
@@ -15561,60 +11292,21 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. buffer_wbl2 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to memory have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to memory have completed before performing the store that is being released.
 
     3. GFX942
-       : buffer/global/flat_store
-         sc1=1
+       : buffer/global/flat_store sc1=1
 * - store atomic
   - release
   - - system
@@ -15622,60 +11314,20 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after any
-    >   preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after any
-    >   preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   to memory and the L2
-    >   writeback have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations to memory and the L2 writeback have completed before performing the store that is being released.
 
-    3. buffer/global/flat_store
-       sc0=1 sc1=1
+    3. buffer/global/flat_store sc0=1 sc1=1
 * - atomicrmw
   - release
   - - singlethread
@@ -15688,9 +11340,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -15700,44 +11350,19 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic sc0=1
 * - atomicrmw
   - release
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -15747,54 +11372,18 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. buffer_wbl2 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     3. buffer/global/flat_atomic sc1=1
 * - atomicrmw
@@ -15804,58 +11393,20 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to memory and the L2
-    >   writeback have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to memory and the L2 writeback have completed before performing the store that is being released.
 
-    3. buffer/global/flat_atomic
-       sc0=1 sc1=1
+    3. buffer/global/flat_atomic sc0=1 sc1=1
 * - fence
   - release
   - - singlethread
@@ -15868,195 +11419,55 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
   - *none*
   - 1. buffer_wbl2 sc1=1
 
-    > - If OpenCL and
-    >   address space is
-    >   local, omit.
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - If OpenCL and address space is local, omit.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - system
   - *none*
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -16074,9 +11485,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - singlethread
     - wavefront
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
 * - atomicrmw
@@ -16085,485 +11494,184 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - global
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   atomicrmw value
-    >   being acquired.
+    > - If not TgSplit execution mode, omit.
+    > - Must happen before the following buffer_inv.
+    > - Ensures any following global data read is no older than the atomicrmw value being acquired.
 
     4. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
     1. ds_atomic
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - workgroup
   - - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    3. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If not TgSplit execution
-    >   mode, omit vmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_inv and
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - If not TgSplit execution mode, omit vmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before the following buffer_inv and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - agent
   - - global
   - 1. buffer_wbl2 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     3. buffer/global_atomic
     4. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     5. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - system
   - - global
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and L2 writeback
-    >   have completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and L2 writeback have completed before performing the atomicrmw that is being released.
 
-    3. buffer/global_atomic
-       sc1=1
+    3. buffer/global_atomic sc1=1
     4. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     5. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - atomicrmw
   - acq_rel
   - - agent
   - - generic
   - 1. buffer_wbl2 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     3. flat_atomic
-    4. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    4. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   cache.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the cache.
 
     5. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - system
   - - generic
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and L2 writeback
-    >   have completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and L2 writeback have completed before performing the atomicrmw that is being released.
 
     3. flat_atomic sc1=1
-    4. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    4. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before following buffer_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     5. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - fence
   - acq_rel
   - - singlethread
@@ -16576,327 +11684,84 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - *none*
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0).
-    > - However,
-    >   since LLVM
-    >   currently has no
-    >   address space on
-    >   the fence need to
-    >   conservatively
-    >   always generate
-    >   (see comment for
-    >   previous fence).
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/
-    >   load atomic/store atomic/
-    >   atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures that the
-    >   acquire-fence-paired
-    >   atomic has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   acquire-fence-paired-atomic.
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0).
+    > - However, since LLVM currently has no address space on the fence need to conservatively always generate (see comment for previous fence).
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/ load atomic/store atomic/ atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
+    > - Must happen before the following buffer_inv.
+    > - Ensures that the acquire-fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the acquire-fence-paired-atomic.
 
     3. buffer_inv sc0=1
 
-    > - If not TgSplit execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If not TgSplit execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acq_rel
   - - agent
   - *none*
   - 1. buffer_wbl2 sc1=1
 
-    > - If OpenCL and
-    >   address space is
-    >   local, omit.
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at agent scope.
+    > - If OpenCL and address space is local, omit.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at agent scope.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the cache. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_inv.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the cache.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     3. buffer_inv sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 * - fence
   - acq_rel
   - - system
   - *none*
   - 1. buffer_wbl2 sc0=1 sc1=1
 
-    > - If OpenCL and
-    >   address space is
-    >   local, omit.
-    > - Must happen before
-    >   following s_waitcnt.
-    > - Performs L2 writeback to
-    >   ensure previous
-    >   global/generic
-    >   store/atomicrmw are
-    >   visible at system scope.
+    > - If OpenCL and address space is local, omit.
+    > - Must happen before following s_waitcnt.
+    > - Performs L2 writeback to ensure previous global/generic store/atomicrmw are visible at system scope.
 
-    1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and
-    >   s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   buffer_inv.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the cache. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/store/load atomic/store atomic/atomicrmw.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_inv.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the cache.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     2. buffer_inv sc0=1 sc1=1
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   MTYPE NC global data.
-    >   MTYPE RW and CC memory will
-    >   never be stale due to the
-    >   memory probes.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale MTYPE NC global data.
+    >   MTYPE RW and CC memory will never be stale due to the memory probes.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -16909,11 +11774,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -16921,201 +11782,46 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - generic
   - 1. s_waitcnt lgkm/vmcnt(0)
 
-    > - Use lgkmcnt(0) if not
-    >   TgSplit execution mode
-    >   and vmcnt(0) if TgSplit
-    >   execution mode.
-    > - s_waitcnt lgkmcnt(0) must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global/local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Use lgkmcnt(0) if not TgSplit execution mode and vmcnt(0) if TgSplit execution mode.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global/local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
   - - local
-  - *If TgSplit execution mode,
-    local address space cannot
-    be used.*
+  - *If TgSplit execution mode, local address space cannot be used.*
 
-    *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+    *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - agent
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If TgSplit execution mode,
-    >   omit lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0)
-    >   and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If TgSplit execution mode, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -17126,11 +11832,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -17141,11 +11843,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -17154,11 +11852,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx10-gfx11)=
@@ -17302,15 +11996,10 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX10-GFX11
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX10-GFX11
 * - **Non-Atomic**
   -
   -
@@ -17328,27 +12017,16 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         slc=1 dlc=1
+      1. buffer/global/flat_load slc=1 dlc=1
 
       > - If GFX10, omit dlc=1.
     - volatile
 
-      1. buffer/global/flat_load
-         glc=1 dlc=1
+      1. buffer/global/flat_load glc=1 dlc=1
       2. s_waitcnt vmcnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -17366,30 +12044,19 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
       1. buffer/global/flat_store
     - !volatile & nontemporal
 
-      1. buffer/global/flat_store
-         glc=1 slc=1 dlc=1
+      1. buffer/global/flat_store glc=1 slc=1 dlc=1
 
       > - If GFX10, omit dlc=1.
     - volatile
 
-      1. buffer/global/flat_store
-         dlc=1
+      1. buffer/global/flat_store dlc=1
 
       > - If GFX10, omit dlc=1.
 
       2. s_waitcnt vscnt(0)
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -17432,11 +12099,9 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - workgroup
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1
+  - 1. buffer/global/flat_load glc=1
 
-    > - If CU wavefront execution
-    >   mode, omit glc=1.
+    > - If CU wavefront execution mode, omit glc=1.
 * - load atomic
   - monotonic
   - - singlethread
@@ -17450,8 +12115,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
     - system
   - - global
     - generic
-  - 1. buffer/global/flat_load
-       glc=1 dlc=1
+  - 1. buffer/global/flat_load glc=1 dlc=1
 
     > - If GFX11, omit dlc=1.
 * - store atomic
@@ -17507,29 +12171,17 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - global
   - 1. buffer/global_load glc=1
 
-    > - If CU wavefront execution
-    >   mode, omit glc=1.
+    > - If CU wavefront execution mode, omit glc=1.
 
     2. s_waitcnt vmcnt(0)
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Must happen before
-    >   the following buffer_gl0_inv
-    >   and before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - If CU wavefront execution mode, omit.
+    > - Must happen before the following buffer_gl0_inv and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
@@ -17538,98 +12190,51 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following buffer_gl0_inv
-    >   and before any following
-    >   global/generic load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following buffer_gl0_inv and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
+    > - If CU wavefront execution mode, omit.
     > - If OpenCL, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
   - - generic
   - 1. flat_load glc=1
 
-    > - If CU wavefront execution
-    >   mode, omit glc=1.
+    > - If CU wavefront execution mode, omit glc=1.
 
-    2. s_waitcnt lgkmcnt(0) &
-       vmcnt(0)
+    2. s_waitcnt lgkmcnt(0) & vmcnt(0)
 
-    > - If CU wavefront execution
-    >   mode, omit vmcnt(0).
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv and any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - If CU wavefront execution mode, omit vmcnt(0).
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen before the following buffer_gl0_inv and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - agent
     - system
   - - global
-  - 1. buffer/global_load
-       glc=1 dlc=1
+  - 1. buffer/global_load glc=1 dlc=1
 
     > - If GFX11, omit dlc=1.
 
     2. s_waitcnt vmcnt(0)
 
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_inv.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following buffer_gl\*\_inv.
+    > - Ensures the load has completed before invalidating the caches.
 
-    3. buffer_gl1_inv;
-       buffer_gl0_inv
+    3. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - agent
@@ -17639,31 +12244,16 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
 
     > - If GFX11, omit dlc=1.
 
-    2. s_waitcnt vmcnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vmcnt(0) & lgkmcnt(0)
 
-    > - If OpenCL omit
-    >   lgkmcnt(0).
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_invl.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - If OpenCL omit lgkmcnt(0).
+    > - Must happen before following buffer_gl\*\_invl.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
-    3. buffer_gl1_inv;
-       buffer_gl0_inv
+    3. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -17679,27 +12269,14 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vm/vscnt(0)
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   the following buffer_gl0_inv
-    >   and before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - If CU wavefront execution mode, omit.
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before the following buffer_gl0_inv and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -17708,55 +12285,30 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
     2. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 
     3. buffer_gl0_inv
 
     > - If OpenCL omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - workgroup
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt lgkmcnt(0) &
-       vm/vscnt(0)
+    2. s_waitcnt lgkmcnt(0) & vm/vscnt(0)
 
-    > - If CU wavefront execution
-    >   mode, omit vm/vscnt(0).
+    > - If CU wavefront execution mode, omit vm/vscnt(0).
     > - If OpenCL, omit lgkmcnt(0).
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local
-    >   atomicrmw value
-    >   being acquired.
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures any following global data read is no older than a local atomicrmw value being acquired.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - agent
@@ -17765,65 +12317,31 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. buffer/global_atomic
     2. s_waitcnt vm/vscnt(0)
 
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before following buffer_gl\*\_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    3. buffer_gl1_inv;
-       buffer_gl0_inv
+    3. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - agent
     - system
   - - generic
   - 1. flat_atomic
-    2. s_waitcnt vm/vscnt(0) &
-       lgkmcnt(0)
+    2. s_waitcnt vm/vscnt(0) & lgkmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before following buffer_gl\*\_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    3. buffer_gl1_inv;
-       buffer_gl0_inv
+    3. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acquire
   - - singlethread
@@ -17834,186 +12352,46 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - acquire
   - - workgroup
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If CU wavefront execution
-    >   mode, omit vmcnt(0) and
-    >   vscnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If CU wavefront execution mode, omit vmcnt(0) and vscnt(0).
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acquire
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   buffer_gl\*\_inv.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   caches. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following buffer_gl\*\_inv.
+    > - Ensures that the fence-paired atomic has completed before invalidating the caches.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
-    2. buffer_gl1_inv;
-       buffer_gl0_inv
+    2. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - **Release Atomic**
   -
   -
@@ -18032,50 +12410,15 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - workgroup
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - store atomic
@@ -18085,36 +12428,11 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. s_waitcnt vmcnt(0) & vscnt(0)
 
     > - If OpenCL, omit.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and s_waitcnt
-    >   vscnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt vscnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following store.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_store
 * - store atomic
@@ -18123,52 +12441,15 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt vscnt(0)
-    >   and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     2. buffer/global/flat_store
 * - atomicrmw
@@ -18184,49 +12465,15 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - workgroup
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
     > - If OpenCL, omit lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - atomicrmw
@@ -18236,36 +12483,11 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. s_waitcnt vmcnt(0) & vscnt(0)
 
     > - If OpenCL, omit.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and s_waitcnt
-    >   vscnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt vscnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following store.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
 * - atomicrmw
@@ -18277,46 +12499,13 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. s_waitcnt lgkmcnt(0) &
        : vmcnt(0) & vscnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 * - fence
@@ -18329,130 +12518,33 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - release
   - - workgroup
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -18470,81 +12562,28 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - acq_rel
   - - workgroup
   - - global
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0), and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0), and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vm/vscnt(0)
 
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   atomicrmw value
-    >   being acquired.
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures any following global data read is no older than the atomicrmw value being acquired.
 
     4. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -18552,289 +12591,103 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - 1. s_waitcnt vmcnt(0) & vscnt(0)
 
     > - If OpenCL, omit.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and s_waitcnt
-    >   vscnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before
-    >   the following
-    >   store.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt vscnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following store.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
     3. s_waitcnt lgkmcnt(0)
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 
     4. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
+    > - If CU wavefront execution mode, omit.
     > - If OpenCL omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
   - - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
     > - If OpenCL, omit lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+    3. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If atomic with return, omit
-    >   vscnt(0), if atomic with
-    >   no-return, omit vmcnt(0).
+    > - If atomic with return, omit vscnt(0), if atomic with no-return, omit vmcnt(0).
     > - If OpenCL, omit lgkmcnt(0).
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures any following global data read is no older than the load atomic value being acquired.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - agent
     - system
   - - global
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
     3. s_waitcnt vm/vscnt(0)
 
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before following buffer_gl\*\_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    4. buffer_gl1_inv;
-       buffer_gl0_inv
+    4. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - agent
     - system
   - - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0), and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0), and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
-    3. s_waitcnt vm/vscnt(0) &
-       lgkmcnt(0)
+    3. s_waitcnt vm/vscnt(0) & lgkmcnt(0)
 
-    > - If OpenCL, omit
-    >   lgkmcnt(0).
-    > - Use vmcnt(0) if atomic with
-    >   return and vscnt(0) if
-    >   atomic with no-return.
-    > - Must happen before
-    >   following
-    >   buffer_gl\*\_inv.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If OpenCL, omit lgkmcnt(0).
+    > - Use vmcnt(0) if atomic with return and vscnt(0) if atomic with no-return.
+    > - Must happen before following buffer_gl\*\_inv.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
-    4. buffer_gl1_inv;
-       buffer_gl0_inv
+    4. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acq_rel
   - - singlethread
@@ -18845,231 +12698,54 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - acq_rel
   - - workgroup
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - However,
-    >   since LLVM
-    >   currently has no
-    >   address space on
-    >   the fence need to
-    >   conservatively
-    >   always generate
-    >   (see comment for
-    >   previous fence).
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
-    > - Must happen before
-    >   the following
-    >   buffer_gl0_inv.
-    > - Ensures that the
-    >   acquire-fence-paired
-    >   atomic has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   acquire-fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - However, since LLVM currently has no address space on the fence need to conservatively always generate (see comment for previous fence).
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
+    > - Must happen before the following buffer_gl0_inv.
+    > - Ensures that the acquire-fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the acquire-fence-paired-atomic.
 
     3. buffer_gl0_inv
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acq_rel
   - - agent
     - system
   - *none*
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   lgkmcnt(0).
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   vmcnt(0) and vscnt(0).
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - s_waitcnt vscnt(0)
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   buffer_gl\*\_inv.
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the caches. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If OpenCL and address space is not generic, omit lgkmcnt(0).
+    > - If OpenCL and address space is local, omit vmcnt(0) and vscnt(0).
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - s_waitcnt vscnt(0) must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - s_waitcnt lgkmcnt(0) must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following buffer_gl\*\_inv.
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the caches.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
-    2. buffer_gl1_inv;
-       buffer_gl0_inv
+    2. buffer_gl1_inv; buffer_gl0_inv
 
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -19082,329 +12758,68 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0), and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt lgkmcnt(0) must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vscnt(0)
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vscnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global/local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0), and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vscnt(0) Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vscnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global/local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
   - - local
   - 1. s_waitcnt vmcnt(0) & vscnt(0)
 
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0) and s_waitcnt
-    >   vscnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt vmcnt(0)
-    >   Must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vscnt(0)
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vscnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Could be split into separate s_waitcnt vmcnt(0) and s_waitcnt vscnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt vmcnt(0) Must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vscnt(0) Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vscnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - agent
     - system
   - - global
     - generic
-  - 1. s_waitcnt lgkmcnt(0) &
-       vmcnt(0) & vscnt(0)
+  - 1. s_waitcnt lgkmcnt(0) & vmcnt(0) & vscnt(0)
 
-    > - Could be split into
-    >   separate s_waitcnt
-    >   vmcnt(0), s_waitcnt
-    >   vscnt(0) and s_waitcnt
-    >   lgkmcnt(0) to allow
-    >   them to be
-    >   independently moved
-    >   according to the
-    >   following rules.
-    > - s_waitcnt lgkmcnt(0)
-    >   must happen after
-    >   preceding
-    >   local load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   lgkmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vmcnt(0)
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vmcnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - s_waitcnt vscnt(0)
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own s_waitcnt
-    >   vscnt(0) and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   s_waitcnt of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the s_waitcnt be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - Could be split into separate s_waitcnt vmcnt(0), s_waitcnt vscnt(0) and s_waitcnt lgkmcnt(0) to allow them to be independently moved according to the following rules.
+    > - s_waitcnt lgkmcnt(0) must happen after preceding local load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt lgkmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vmcnt(0) must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vmcnt(0) and so do not need to be considered.)
+    > - s_waitcnt vscnt(0) Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own s_waitcnt vscnt(0) and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the s_waitcnt of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the s_waitcnt be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -19415,11 +12830,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -19430,11 +12841,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -19443,11 +12850,7 @@ table {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx12)=
@@ -19654,12 +13057,8 @@ the instruction in the code sequence that references the table.
 :widths: auto
 
 * - LLVM syncscope
-  - CU wavefront
-    execution
-    mode
-  - WGP wavefront
-    execution
-    mode
+  - CU wavefront execution mode
+  - WGP wavefront execution mode
 * - *none*
   - `scope:SCOPE_SYS`
   - `scope:SCOPE_SYS`
@@ -19704,15 +13103,10 @@ the instruction in the code sequence that references the table.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX12
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX12
 * - **Non-Atomic**
   -
   -
@@ -19730,25 +13124,14 @@ the instruction in the code sequence that references the table.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         `th:TH_LOAD_NT`
+      1. buffer/global/flat_load `th:TH_LOAD_NT`
     - volatile
 
-      1. buffer/global/flat_load
-         `scope:SCOPE_SYS`
+      1. buffer/global/flat_load `scope:SCOPE_SYS`
       2. `s_wait_loadcnt 0x0`
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -19766,25 +13149,14 @@ the instruction in the code sequence that references the table.
       1. buffer/global/flat_store
     - !volatile & nontemporal
 
-      1. buffer/global/flat_store
-         `th:TH_STORE_NT`
+      1. buffer/global/flat_store `th:TH_STORE_NT`
     - volatile
 
-      1. buffer/global/flat_store
-         `scope:SCOPE_SYS`
+      1. buffer/global/flat_store `scope:SCOPE_SYS`
       2. `s_wait_storecnt 0x0`
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -19895,24 +13267,13 @@ the instruction in the code sequence that references the table.
 
     2. `s_wait_loadcnt 0x0`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Must happen before
-    >   the following `global_inv`
-    >   and before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - If CU wavefront execution mode, omit.
+    > - Must happen before the following `global_inv` and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 
     3. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
@@ -19921,27 +13282,13 @@ the instruction in the code sequence that references the table.
     2. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following `global_inv`
-    >   and before any following
-    >   global/generic load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following `global_inv` and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 
     3. `global_inv scope:SCOPE_SE`
 
-    > - If OpenCL or CU wavefront
-    >   execution mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If OpenCL or CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - workgroup
@@ -19956,28 +13303,13 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   the following
-    >   `global_inv` and any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following `global_inv` and any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 
     3. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - load atomic
   - acquire
   - - agent
@@ -19989,26 +13321,14 @@ the instruction in the code sequence that references the table.
 
     2. `s_wait_loadcnt 0x0`
 
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - agent
@@ -20022,26 +13342,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -20057,32 +13365,20 @@ the instruction in the code sequence that references the table.
   - 1. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     2. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Must happen before
-    >   the following `global_inv`
-    >   and before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - If CU wavefront execution mode, omit.
+    > - Must happen before the following `global_inv` and before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 
     3. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -20091,25 +13387,14 @@ the instruction in the code sequence that references the table.
     2. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following `global_inv`.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 
     3. `global_inv scope:SCOPE_SE`
 
     > - If OpenCL omit.
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -20117,8 +13402,7 @@ the instruction in the code sequence that references the table.
   - 1. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     2. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -20127,30 +13411,15 @@ the instruction in the code sequence that references the table.
        `s_wait_storecnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If CU wavefront execution mode,
-    >   omit all for atomics without
-    >   return, and only emit
-    >   `s_wait_dscnt 0x0` for atomics
-    >   with return.
+    > - If CU wavefront execution mode, omit all for atomics without return, and only emit `s_wait_dscnt 0x0` for atomics with return.
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following `global_inv`.
+    > - Ensures any following global data read is no older than a local atomicrmw value being acquired.
 
     3. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acquire
   - - agent
@@ -20159,34 +13428,21 @@ the instruction in the code sequence that references the table.
   - 1. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     2. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   following `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - agent
@@ -20195,8 +13451,7 @@ the instruction in the code sequence that references the table.
   - 1. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     2. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -20206,27 +13461,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit dscnt
-    > - Must happen before
-    >   following
-    >   global_inv
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following global_inv
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acquire
   - - singlethread
@@ -20244,82 +13486,21 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - If OpenCL and address space is local,
-    >   omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Note: we don't have to use
-    >   `s_wait_samplecnt 0x0` or
-    >   `s_wait_bvhcnt 0x0` because
-    >   there are no atomic sample or
-    >   BVH instructions that the fence
-    >   could pair with.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Note: we don't have to use `s_wait_samplecnt 0x0` or `s_wait_bvhcnt 0x0` because there are no atomic sample or BVH instructions that the fence could pair with.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following `global_inv`.
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acquire
   - - agent
@@ -20329,80 +13510,21 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and address space is
-    >   local, omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - Note: we don't have to use
-    >   `s_wait_samplecnt 0x0` or
-    >   `s_wait_bvhcnt 0x0` because
-    >   there are no atomic sample or
-    >   BVH instructions that the fence
-    >   could pair with.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   `global_inv`
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating the
-    >   caches. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - Note: we don't have to use `s_wait_samplecnt 0x0` or `s_wait_bvhcnt 0x0` because there are no atomic sample or BVH instructions that the fence could pair with.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following `global_inv`
+    > - Ensures that the fence-paired atomic has completed before invalidating the caches.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - **Release Atomic**
   -
   -
@@ -20428,39 +13550,11 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     3. buffer/global/flat_store
 
@@ -20476,34 +13570,11 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following store.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following store.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     3. ds_store
 * - store atomic
@@ -20522,43 +13593,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     3. buffer/global/flat_store
 
@@ -20583,43 +13623,13 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and CU wavefront
-    >   execution mode, omit all.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL and CU wavefront execution mode, omit all.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomic.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global/flat_atomic
 
@@ -20635,34 +13645,11 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit all.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following atomic.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
 * - atomicrmw
@@ -20682,42 +13669,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomic.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     3. buffer/global/flat_atomic
 
@@ -20739,56 +13696,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and
-    >   address space is
-    >   local, omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
@@ -20810,55 +13725,14 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`
 
     > - If OpenCl, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and address space is local,
-    >   omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -20883,78 +13757,31 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   atomicrmw value
-    >   being acquired.
+    > - Must happen before the following `global_inv`.
+    > - Ensures any following global data read is no older than the atomicrmw value being acquired.
 
     4. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -20966,59 +13793,24 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
        - If OpenCL, omit.
-       - The waits can be
-         independently moved
-         according to the
-         following rules:
-       - `s_wait_loadcnt 0x0`,
-         `s_wait_samplecnt 0x0` and
-         `s_wait_bvhcnt 0x0`
-         must happen after
-         any preceding
-         global/generic load/load
-         atomic/
-         atomicrmw-with-return-value.
-       - `s_wait_storecnt 0x0`
-         must happen after
-         any preceding
-         global/generic
-         store/store
-         atomic/
-         atomicrmw-no-return-value.
-       - Must happen before
-         the following
-         store.
-       - Ensures that all
-         global memory
-         operations have
-         completed before
-         performing the
-         store that is being
-         released.
+       - The waits can be independently moved according to the following rules:
+       - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+       - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+       - Must happen before the following store.
+       - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
     3. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following `global_inv`.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 
     4. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
+    > - If CU wavefront execution mode, omit.
     > - If OpenCL omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -21030,48 +13822,17 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_loadcnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     3. **Atomic without return:**\
        `s_wait_dscnt 0x0`\
@@ -21083,24 +13844,13 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before the following `global_inv`.
+    > - Ensures any following global data read is no older than the load atomic value being acquired.
 
     4. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - atomicrmw
   - acq_rel
   - - agent
@@ -21116,78 +13866,32 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     3. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     4. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     5. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acq_rel
   - - agent
@@ -21203,50 +13907,18 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     3. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     4. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -21255,29 +13927,15 @@ the instruction in the code sequence that references the table.
        `s_wait_storecnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`.
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     5. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - fence
   - acq_rel
   - - singlethread
@@ -21294,115 +13952,27 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   `s_wait_dscnt 0x0`
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   all but `s_wait_dscnt 0x0`.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
-    > - Must happen before
-    >   the following
-    >   `global_inv`.
-    > - Ensures that the
-    >   acquire-fence-paired
-    >   atomic has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   acquire-fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit `s_wait_dscnt 0x0`
+    > - If OpenCL and address space is local, omit all but `s_wait_dscnt 0x0`.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
+    > - Must happen before the following `global_inv`.
+    > - Ensures that the acquire-fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the acquire-fence-paired-atomic.
 
     2. `global_inv scope:SCOPE_SE`
 
-    > - If CU wavefront execution
-    >   mode, omit.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - If CU wavefront execution mode, omit.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acq_rel
   - - agent
@@ -21418,100 +13988,25 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   `s_wait_dscnt 0x0`
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   all but `s_wait_dscnt 0x0`.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` if present, or
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   `global_inv`
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the caches. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If OpenCL and address space is not generic, omit `s_wait_dscnt 0x0`
+    > - If OpenCL and address space is local, omit all but `s_wait_dscnt 0x0`.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following `global_inv`
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the caches.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     3. `global_inv scope:`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -21524,11 +14019,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -21540,106 +14031,21 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_dscnt 0x0` must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_dscnt 0x0`
-    >   and so do not need to be
-    >   considered.)
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own waits and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_storecnt 0x0`
-    >   and so do not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global/local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The `s_wait`s
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_dscnt 0x0` must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_dscnt 0x0` and so do not need to be considered.)
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own waits and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global/local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The `s_wait`s could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -21651,90 +14057,18 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit all.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait`s and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_storecnt 0x0`
-    >   and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` Must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait`s and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - agent
@@ -21747,108 +14081,21 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   preceding
-    >   local load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_dscnt 0x0`
-    >   and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_loadcnt 0x0`,
-    >   `s_wait_samplecnt 0x0` and
-    >   `s_wait_bvhcnt 0x0`
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait`s and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own
-    >   `s_wait_storecnt 0x0` and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The `s_wait`s
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_dscnt 0x0` must happen after preceding local load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_dscnt 0x0` and so do not need to be considered.)
+    > - `s_wait_loadcnt 0x0`, `s_wait_samplecnt 0x0` and `s_wait_bvhcnt 0x0` must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait`s and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The `s_wait`s could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -21859,11 +14106,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -21874,11 +14117,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -21887,11 +14126,7 @@ the instruction in the code sequence that references the table.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx125x)=
@@ -22128,15 +14363,10 @@ the instruction in the code sequence that references the table.
 :widths: auto
 
 * - LLVM Instr
-  - LLVM Memory
-    Ordering
-  - LLVM Memory
-    Sync Scope
-  - AMDGPU
-    Address
-    Space
-  - AMDGPU Machine Code
-    GFX125x
+  - LLVM Memory Ordering
+  - LLVM Memory Sync Scope
+  - AMDGPU Address Space
+  - AMDGPU Machine Code GFX125x
 * - **Non-Atomic**
   -
   -
@@ -22154,25 +14384,14 @@ the instruction in the code sequence that references the table.
       1. buffer/global/flat_load
     - !volatile & nontemporal
 
-      1. buffer/global/flat_load
-         `th:TH_LOAD_NT`
+      1. buffer/global/flat_load `th:TH_LOAD_NT`
     - volatile
 
-      1. buffer/global/flat_load
-         `scope:SCOPE_SYS`
+      1. buffer/global/flat_load `scope:SCOPE_SYS`
       2. `s_wait_loadcnt 0x0`
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - load
   - *none*
   - *none*
@@ -22190,25 +14409,14 @@ the instruction in the code sequence that references the table.
       1. buffer/global/flat_store
     - !volatile & nontemporal
 
-      1. buffer/global/flat_store
-         `th:TH_STORE_NT`
+      1. buffer/global/flat_store `th:TH_STORE_NT`
     - volatile
 
-      1. buffer/global/flat_store
-         `scope:SCOPE_SYS`
+      1. buffer/global/flat_store `scope:SCOPE_SYS`
       2. `s_wait_storecnt 0x0`
 
-      > - Must happen before
-      >   any following volatile
-      >   global/generic
-      >   load/store.
-      > - Ensures that
-      >   volatile
-      >   operations to
-      >   different
-      >   addresses will not
-      >   be reordered by
-      >   hardware.
+      > - Must happen before any following volatile global/generic load/store.
+      > - Ensures that volatile operations to different addresses will not be reordered by hardware.
 * - store
   - *none*
   - *none*
@@ -22332,11 +14540,7 @@ the instruction in the code sequence that references the table.
 
     2. `s_wait_loadcnt 0x0`
 
-    > - Must happen before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 * - load atomic
   - acquire
   - - workgroup
@@ -22345,16 +14549,8 @@ the instruction in the code sequence that references the table.
     2. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Must happen before any following
-    >   global/generic load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - load atomic
   - acquire
   - - workgroup
@@ -22367,17 +14563,8 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before any
-    >   following global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than a local load
-    >   atomic value being
-    >   acquired.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures any following global data read is no older than a local load atomic value being acquired.
 * - load atomic
   - acquire
   - - cluster
@@ -22388,26 +14575,14 @@ the instruction in the code sequence that references the table.
 
     2. `s_wait_loadcnt 0x0`
 
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - agent
@@ -22419,31 +14594,16 @@ the instruction in the code sequence that references the table.
 
     2. `s_wait_loadcnt 0x0`
 
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    4. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    4. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - load atomic
   - acquire
   - - cluster
@@ -22456,26 +14616,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - load atomic
   - acquire
   - - agent
@@ -22489,31 +14637,16 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the flat_load
-    >   has completed
-    >   before invalidating
-    >   the caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the flat_load has completed before invalidating the caches.
 
     3. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    4. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    4. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - atomicrmw
   - acquire
   - - singlethread
@@ -22539,19 +14672,14 @@ the instruction in the code sequence that references the table.
     2. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -22560,12 +14688,7 @@ the instruction in the code sequence that references the table.
     2. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 * - atomicrmw
   - acquire
   - - workgroup
@@ -22577,8 +14700,7 @@ the instruction in the code sequence that references the table.
     2. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -22588,12 +14710,7 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local
-    >   atomicrmw value
-    >   being acquired.
+    > - Ensures any following global data read is no older than the local atomicrmw value being acquired.
 * - atomicrmw
   - acquire
   - - cluster
@@ -22606,34 +14723,21 @@ the instruction in the code sequence that references the table.
     2. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   following `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     4. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - agent
@@ -22647,38 +14751,23 @@ the instruction in the code sequence that references the table.
     2. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   following `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     4. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    5. `s_wait_loadcnt 0x0`
-       `global_inv` and before
-       subsequent memory operations.
+    5. `s_wait_loadcnt 0x0` `global_inv` and before subsequent memory operations.
 * - atomicrmw
   - acquire
   - - cluster
@@ -22690,8 +14779,7 @@ the instruction in the code sequence that references the table.
     2. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -22701,27 +14789,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit dscnt
-    > - Must happen before
-    >   following
-    >   global_inv
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following global_inv
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     4. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 * - atomicrmw
   - acquire
   - - agent
@@ -22734,8 +14809,7 @@ the instruction in the code sequence that references the table.
     2. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`
 
     3. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -22745,32 +14819,16 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit dscnt
-    > - Must happen before
-    >   following
-    >   global_inv
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following global_inv
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     4. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    5. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    5. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - fence
   - acquire
   - - singlethread
@@ -22786,64 +14844,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - If OpenCL and address space is local,
-    >   omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that the fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 * - fence
   - acquire
   - - cluster
@@ -22853,74 +14861,20 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and address space is
-    >   local, omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   `global_inv`
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating the
-    >   caches. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following `global_inv`
+    > - Ensures that the fence-paired atomic has completed before invalidating the caches.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 * - fence
   - acquire
   - - agent
@@ -22931,79 +14885,22 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and address space is
-    >   local, omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   atomicrmw-no-return-value
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Must happen before
-    >   the following
-    >   `global_inv`
-    > - Ensures that the
-    >   fence-paired atomic
-    >   has completed
-    >   before invalidating the
-    >   caches. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load atomic/ atomicrmw-with-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic atomicrmw-no-return-value with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Must happen before the following `global_inv`
+    > - Ensures that the fence-paired atomic has completed before invalidating the caches.
+    >   Therefore any following locations read must be no older than the value read by the fence-paired-atomic.
 
     2. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Ensures that
-    >   following
-    >   loads will not see
-    >   stale data.
+    > - Ensures that following loads will not see stale data.
 
-    3. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    3. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - **Release Atomic**
   -
   -
@@ -23033,39 +14930,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     2. `s_wait_xcnt 0x0`
 
@@ -23084,32 +14954,11 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following store.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following store.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_store
 * - store atomic
@@ -23121,31 +14970,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
 
@@ -23155,41 +14985,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following store.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following store.
+    > - Ensures that all memory operations have completed before performing the store that is being released.
 
     4. `s_wait_xcnt 0x0`
 
@@ -23223,39 +15024,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomic.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. `s_wait_xcnt 0x0`
 
@@ -23274,32 +15048,11 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit all.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   global memory
-    >   operations have
-    >   completed before
-    >   performing the
-    >   store that is being
-    >   released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following atomic.
+    > - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
 * - atomicrmw
@@ -23311,31 +15064,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
 
@@ -23346,40 +15080,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before the
-    >   following atomic.
-    > - Ensures that all
-    >   memory operations
-    >   to global and local
-    >   have completed
-    >   before performing
-    >   the atomicrmw that
-    >   is being released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomic.
+    > - Ensures that all memory operations to global and local have completed before performing the atomicrmw that is being released.
 
     4. `s_wait_xcnt 0x0`
 
@@ -23405,54 +15111,14 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and
-    >   address space is
-    >   local, omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - fence
   - release
   - - agent
@@ -23461,31 +15127,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
 
@@ -23499,53 +15146,14 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`
 
     > - If OpenCl, omit `s_wait_dscnt 0x0`.
-    > - If OpenCL and address space is local,
-    >   omit all.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb` or
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   any following store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   fence-paired-atomic).
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   following
-    >   fence-paired-atomic.
+    > - If OpenCL and address space is local, omit all.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb` or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before any following store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the fence-paired-atomic).
+    > - Ensures that all memory operations have completed before performing the following fence-paired-atomic.
 * - **Acquire-Release Atomic**
   -
   -
@@ -23574,46 +15182,13 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`.
-    > - Must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - Must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. `s_wait_xcnt 0x0`
 
@@ -23623,20 +15198,14 @@ the instruction in the code sequence that references the table.
     3. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     4. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the
-    >   atomicrmw value
-    >   being acquired.
+    > - Ensures any following global data read is no older than the atomicrmw value being acquired.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -23646,44 +15215,17 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
        - If OpenCL, omit.
-       - The waits can be
-         independently moved
-         according to the
-         following rules:
-       - `s_wait_loadcnt 0x0`
-         must happen after
-         any preceding
-         global/generic load/load
-         atomic/
-         atomicrmw-with-return-value.
-       - `s_wait_storecnt 0x0`
-         must happen after
-         any preceding
-         global/generic
-         store/store
-         atomic/
-         atomicrmw-no-return-value.
-       - Must happen before
-         the following
-         store.
-       - Ensures that all
-         global memory
-         operations have
-         completed before
-         performing the
-         store that is being
-         released.
+       - The waits can be independently moved according to the following rules:
+       - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+       - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+       - Must happen before the following store.
+       - Ensures that all global memory operations have completed before performing the store that is being released.
 
     2. ds_atomic
     3. `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit.
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the local load
-    >   atomic value being
-    >   acquired.
+    > - Ensures any following global data read is no older than the local load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - workgroup
@@ -23694,40 +15236,12 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_loadcnt 0x0`.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store
-    >   atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     2. `s_wait_xcnt 0x0`
 
@@ -23736,8 +15250,7 @@ the instruction in the code sequence that references the table.
     3. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return,
-    >   use `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     4. **Atomic without return:**\
        `s_wait_dscnt 0x0`\
@@ -23747,12 +15260,7 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit `s_wait_dscnt 0x0`
-    > - Ensures any
-    >   following global
-    >   data read is no
-    >   older than the load
-    >   atomic value being
-    >   acquired.
+    > - Ensures any following global data read is no older than the load atomic value being acquired.
 * - atomicrmw
   - acq_rel
   - - agent
@@ -23761,31 +15269,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
 
@@ -23795,38 +15284,13 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb`.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   to global have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb`.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations to global have completed before performing the atomicrmw that is being released.
 
     4. `s_wait_xcnt 0x0`
 
@@ -23836,40 +15300,23 @@ the instruction in the code sequence that references the table.
     6. buffer/global_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     6. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
        **Atomic without return:**\
        `s_wait_storecnt 0x0`
 
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     7. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    8. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    8. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - atomicrmw
   - acq_rel
   - - agent
@@ -23878,31 +15325,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
        : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
@@ -23910,38 +15338,13 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load atomic
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb`.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing the
-    >   atomicrmw that is
-    >   being released.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb`.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following atomicrmw.
+    > - Ensures that all memory operations have completed before performing the atomicrmw that is being released.
 
     4. `s_wait_xcnt 0x0`
 
@@ -23950,8 +15353,7 @@ the instruction in the code sequence that references the table.
     5. flat_atomic
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - If atomic with return, use
-    >   `th:TH_ATOMIC_RETURN`.
+    > - If atomic with return, use `th:TH_ATOMIC_RETURN`.
 
     6. **Atomic with return:**\
        `s_wait_loadcnt 0x0`\
@@ -23960,34 +15362,17 @@ the instruction in the code sequence that references the table.
        `s_wait_storecnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`.
-    > - Must happen before
-    >   following
-    >   `global_inv`.
-    > - Ensures the
-    >   atomicrmw has
-    >   completed before
-    >   invalidating the
-    >   caches.
+    > - If OpenCL, omit `s_wait_dscnt 0x0`.
+    > - Must happen before following `global_inv`.
+    > - Ensures the atomicrmw has completed before invalidating the caches.
 
     7. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data.
+    > - Must happen before any following global/generic load/load atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
 
-    8. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    8. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - fence
   - acq_rel
   - - singlethread
@@ -24003,101 +15388,21 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   `s_wait_dscnt 0x0`
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   all but `s_wait_dscnt 0x0`.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   store/store atomic/
-    >   atomicrmw-no-return-value.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store atomic/
-    >   atomicrmw.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that all
-    >   memory operations
-    >   have
-    >   completed before
-    >   performing any
-    >   following global
-    >   memory operations.
-    > - Ensures that the
-    >   preceding
-    >   local/generic load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before following
-    >   global memory
-    >   operations. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   local/generic store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
-    > - Ensures that the
-    >   acquire-fence-paired
-    >   atomic has completed
-    >   before invalidating
-    >   the
-    >   cache. Therefore
-    >   any following
-    >   locations read must
-    >   be no older than
-    >   the value read by
-    >   the
-    >   acquire-fence-paired-atomic.
+    > - If OpenCL and address space is not generic, omit `s_wait_dscnt 0x0`
+    > - If OpenCL and address space is local, omit all but `s_wait_dscnt 0x0`.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/ atomicrmw.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that all memory operations have completed before performing any following global memory operations.
+    > - Ensures that the preceding local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before following global memory operations.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
+    > - Ensures that the acquire-fence-paired atomic has completed before invalidating the cache.
+    >   Therefore any following locations read must be no older than the value read by the acquire-fence-paired-atomic.
 * - fence
   - acq_rel
   - - agent
@@ -24106,31 +15411,12 @@ the instruction in the code sequence that references the table.
   - 1. `s_wait_loadcnt 0x0`\
        `s_wait_storecnt 0x0`
 
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
+    > - The waits can be independently moved according to the following rules:
     >
-    >   - `s_wait_loadcnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     atomicrmw-with-return-value.
-    >   - `s_wait_storecnt 0x0`
-    >     must happen after
-    >     any preceding
-    >     global/generic
-    >     store/store
-    >     atomic/
-    >     atomicrmw-no-return-value.
-    > - Must happen before the
-    >   following `global_wb`.
-    > - Ensures that all
-    >   global memory store/rmw
-    >   operations have
-    >   completed before
-    >   their data is written
-    >   back.
+    >   - `s_wait_loadcnt 0x0` must happen after any preceding global/generic atomicrmw-with-return-value.
+    >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
+    > - Must happen before the following `global_wb`.
+    > - Ensures that all global memory store/rmw operations have completed before their data is written back.
 
     2. `global_wb`
        : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
@@ -24138,99 +15424,27 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL and
-    >   address space is
-    >   not generic, omit
-    >   `s_wait_dscnt 0x0`
-    > - If OpenCL and
-    >   address space is
-    >   local, omit
-    >   all but `s_wait_dscnt 0x0`.
-    > - See {ref}`amdgpu-fence-as` for
-    >   more details on fencing specific
-    >   address spaces.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   global/generic
-    >   load/load
-    >   atomic/
-    >   atomicrmw-with-return-value.
-    > - `s_wait_storecnt 0x0`
-    >   must happen after
-    >   `global_wb`.
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   any preceding
-    >   local/generic
-    >   load/store/load
-    >   atomic/store
-    >   atomic/atomicrmw.
-    > - Must happen before
-    >   the following
-    >   `global_inv`
-    > - Ensures that the
-    >   preceding
-    >   global/local/generic
-    >   load
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   acquire-fence-paired-atomic)
-    >   has completed
-    >   before invalidating
-    >   the caches. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
-    > - Ensures that all
-    >   previous memory
-    >   operations have
-    >   completed before a
-    >   following
-    >   global/local/generic
-    >   store
-    >   atomic/atomicrmw
-    >   with an equal or
-    >   wider sync scope
-    >   and memory ordering
-    >   stronger than
-    >   unordered (this is
-    >   termed the
-    >   release-fence-paired-atomic).
-    >   This satisfies the
-    >   requirements of
-    >   release.
+    > - If OpenCL and address space is not generic, omit `s_wait_dscnt 0x0`
+    > - If OpenCL and address space is local, omit all but `s_wait_dscnt 0x0`.
+    > - See {ref}`amdgpu-fence-as` for more details on fencing specific address spaces.
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after any preceding global/generic load/load atomic/ atomicrmw-with-return-value.
+    > - `s_wait_storecnt 0x0` must happen after `global_wb`.
+    > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
+    > - Must happen before the following `global_inv`
+    > - Ensures that the preceding global/local/generic load atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the acquire-fence-paired-atomic) has completed before invalidating the caches.
+    >   This satisfies the requirements of acquire.
+    > - Ensures that all previous memory operations have completed before a following global/local/generic store atomic/atomicrmw with an equal or wider sync scope and memory ordering stronger than unordered (this is termed the release-fence-paired-atomic).
+    >   This satisfies the requirements of release.
 
     4. `global_inv`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
-    > - Must happen before
-    >   any following
-    >   global/generic
-    >   load/load
-    >   atomic/store/store
-    >   atomic/atomicrmw.
-    > - Ensures that
-    >   following loads
-    >   will not see stale
-    >   global data. This
-    >   satisfies the
-    >   requirements of
-    >   acquire.
+    > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
+    > - Ensures that following loads will not see stale global data.
+    >   This satisfies the requirements of acquire.
 
-    5. `s_wait_loadcnt 0x0`
-       must happen after
-       `global_inv` and before
-       subsequent memory operations.
+    5. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
 * - **Sequential Consistent Atomic**
   -
   -
@@ -24243,11 +15457,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    load atomic acquire,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -24257,104 +15467,21 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_dscnt 0x0` must
-    >   happen after
-    >   preceding
-    >   local/generic load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_dscnt 0x0`
-    >   and so do not need to be
-    >   considered.)
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own waits and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_storecnt 0x0`
-    >   and so do not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global/local
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The `s_wait`s
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_dscnt 0x0` must happen after preceding local/generic load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_dscnt 0x0` and so do not need to be considered.)
+    > - `s_wait_loadcnt 0x0` must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own waits and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global/local memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The `s_wait`s could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - workgroup
@@ -24364,88 +15491,18 @@ the instruction in the code sequence that references the table.
        `s_wait_dscnt 0x0`
 
     > - If OpenCL, omit all.
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait`s and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_storecnt 0x0`
-    >   and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The s_waitcnt
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_loadcnt 0x0` must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait`s and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The s_waitcnt could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - load atomic
   - seq_cst
   - - cluster
@@ -24457,106 +15514,21 @@ the instruction in the code sequence that references the table.
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
 
-    > - If OpenCL, omit
-    >   `s_wait_dscnt 0x0`
-    > - The waits can be
-    >   independently moved
-    >   according to the
-    >   following rules:
-    > - `s_wait_dscnt 0x0`
-    >   must happen after
-    >   preceding
-    >   local load
-    >   atomic/store
-    >   atomic/atomicrmw
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait_dscnt 0x0`
-    >   and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_loadcnt 0x0`
-    >   must happen after
-    >   preceding
-    >   global/generic load
-    >   atomic/
-    >   atomicrmw-with-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own `s_wait`s and so do
-    >   not need to be
-    >   considered.)
-    > - `s_wait_storecnt 0x0`
-    >   Must happen after
-    >   preceding
-    >   global/generic store
-    >   atomic/
-    >   atomicrmw-no-return-value
-    >   with memory
-    >   ordering of seq_cst
-    >   and with equal or
-    >   wider sync scope.
-    >   (Note that seq_cst
-    >   fences have their
-    >   own
-    >   `s_wait_storecnt 0x0` and so do
-    >   not need to be
-    >   considered.)
-    > - Ensures any
-    >   preceding
-    >   sequential
-    >   consistent global
-    >   memory instructions
-    >   have completed
-    >   before executing
-    >   this sequentially
-    >   consistent
-    >   instruction. This
-    >   prevents reordering
-    >   a seq_cst store
-    >   followed by a
-    >   seq_cst load. (Note
-    >   that seq_cst is
-    >   stronger than
-    >   acquire/release as
-    >   the reordering of
-    >   load acquire
-    >   followed by a store
-    >   release is
-    >   prevented by the
-    >   `s_wait`s of
-    >   the release, but
-    >   there is nothing
-    >   preventing a store
-    >   release followed by
-    >   load acquire from
-    >   completing out of
-    >   order. The `s_wait`s
-    >   could be placed after
-    >   seq_store or before
-    >   the seq_load. We
-    >   choose the load to
-    >   make the `s_wait`s be
-    >   as late as possible
-    >   so that the store
-    >   may have already
-    >   completed.)
+    > - If OpenCL, omit `s_wait_dscnt 0x0`
+    > - The waits can be independently moved according to the following rules:
+    > - `s_wait_dscnt 0x0` must happen after preceding local load atomic/store atomic/atomicrmw with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_dscnt 0x0` and so do not need to be considered.)
+    > - `s_wait_loadcnt 0x0` must happen after preceding global/generic load atomic/ atomicrmw-with-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait`s and so do not need to be considered.)
+    > - `s_wait_storecnt 0x0` Must happen after preceding global/generic store atomic/ atomicrmw-no-return-value with memory ordering of seq_cst and with equal or wider sync scope.
+    >   (Note that seq_cst fences have their own `s_wait_storecnt 0x0` and so do not need to be considered.)
+    > - Ensures any preceding sequential consistent global memory instructions have completed before executing this sequentially consistent instruction.
+    >   This prevents reordering a seq_cst store followed by a seq_cst load.
+    >   (Note that seq_cst is stronger than acquire/release as the reordering of load acquire followed by a store release is prevented by the `s_wait`s of the release, but there is nothing preventing a store release followed by load acquire from completing out of order.
+    >   The `s_wait`s could be placed after seq_store or before the seq_load.
+    >   We choose the load to make the `s_wait`s be as late as possible so that the store may have already completed.)
 
-    2. *Following
-       instructions same as
-       corresponding load
-       atomic acquire,
-       except must generate
-       all instructions even
-       for OpenCL.*
+    2. *Following instructions same as corresponding load atomic acquire, except must generate all instructions even for OpenCL.*
 * - store atomic
   - seq_cst
   - - singlethread
@@ -24568,11 +15540,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    store atomic release,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding store atomic release, except must generate all instructions even for OpenCL.*
 * - atomicrmw
   - seq_cst
   - - singlethread
@@ -24584,11 +15552,7 @@ the instruction in the code sequence that references the table.
   - - global
     - local
     - generic
-  - *Same as corresponding
-    atomicrmw acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding atomicrmw acq_rel, except must generate all instructions even for OpenCL.*
 * - fence
   - seq_cst
   - - singlethread
@@ -24598,11 +15562,7 @@ the instruction in the code sequence that references the table.
     - agent
     - system
   - *none*
-  - *Same as corresponding
-    fence acq_rel,
-    except must generate
-    all instructions even
-    for OpenCL.*
+  - *Same as corresponding fence acq_rel, except must generate all instructions even for OpenCL.*
 :::
 
 (amdgpu-amdhsa-memory-model-gfx125x-cooperative-atomics)=
@@ -24672,8 +15632,7 @@ supports the `s_trap` instruction. For usage see:
 
   * - Usage
     - Code Sequence
-    - Trap Handler
-      Inputs
+    - Trap Handler Inputs
     - Description
   * - reserved
     - `s_trap 0x00`
@@ -24686,32 +15645,21 @@ supports the `s_trap` instruction. For usage see:
 
       `VGPR0`:
       : `arg`
-    - Reserved for Finalizer HSA `debugtrap`
-      intrinsic (not implemented).
+    - Reserved for Finalizer HSA `debugtrap` intrinsic (not implemented).
   * - `llvm.trap`
     - `s_trap 0x02`
     - `SGPR0-1`:
       : `queue_ptr`
-    - Causes wave to be halted with the PC at
-      the trap instruction. The associated
-      queue is signalled to put it into the
-      error state. When the queue is put in
-      the error state, the waves executing
-      dispatches on the queue will be
-      terminated.
+    - Causes wave to be halted with the PC at the trap instruction.
+      The associated queue is signalled to put it into the error state.
+      When the queue is put in the error state, the waves executing dispatches on the queue will be terminated.
   * - `llvm.debugtrap`
     - `s_trap 0x03`
     - *none*
-    - - If debugger not enabled then behaves
-        as a no-operation. The trap handler
-        is entered and immediately returns to
-        continue execution of the wavefront.
-      - If the debugger is enabled, causes
-        the debug trap to be reported by the
-        debugger and the wavefront is put in
-        the halt state with the PC at the
-        instruction. The debugger must
-        increment the PC and resume the wave.
+    - - If debugger not enabled then behaves as a no-operation.
+        The trap handler is entered and immediately returns to continue execution of the wavefront.
+      - If the debugger is enabled, causes the debug trap to be reported by the debugger and the wavefront is put in the halt state with the PC at the instruction.
+        The debugger must increment the PC and resume the wave.
   * - reserved
     - `s_trap 0x04`
     -
@@ -24751,8 +15699,7 @@ supports the `s_trap` instruction. For usage see:
 
 * - Usage
   - Code Sequence
-  - Trap Handler
-    Inputs
+  - Trap Handler Inputs
   - Description
 * - reserved
   - `s_trap 0x00`
@@ -24761,36 +15708,23 @@ supports the `s_trap` instruction. For usage see:
 * - debugger breakpoint
   - `s_trap 0x01`
   - *none*
-  - Reserved for debugger to use for
-    breakpoints. Causes wave to be halted
-    with the PC at the trap instruction.
-    The debugger is responsible to resume
-    the wave, including the instruction
-    that the breakpoint overwrote.
+  - Reserved for debugger to use for breakpoints.
+    Causes wave to be halted with the PC at the trap instruction.
+    The debugger is responsible to resume the wave, including the instruction that the breakpoint overwrote.
 * - `llvm.trap`
   - `s_trap 0x02`
   - `SGPR0-1`:
     : `queue_ptr`
-  - Causes wave to be halted with the PC at
-    the trap instruction. The associated
-    queue is signalled to put it into the
-    error state. When the queue is put in
-    the error state, the waves executing
-    dispatches on the queue will be
-    terminated.
+  - Causes wave to be halted with the PC at the trap instruction.
+    The associated queue is signalled to put it into the error state.
+    When the queue is put in the error state, the waves executing dispatches on the queue will be terminated.
 * - `llvm.debugtrap`
   - `s_trap 0x03`
   - *none*
-  - - If debugger not enabled then behaves
-      as a no-operation. The trap handler
-      is entered and immediately returns to
-      continue execution of the wavefront.
-    - If the debugger is enabled, causes
-      the debug trap to be reported by the
-      debugger and the wavefront is put in
-      the halt state with the PC at the
-      instruction. The debugger must
-      increment the PC and resume the wave.
+  - - If debugger not enabled then behaves as a no-operation.
+      The trap handler is entered and immediately returns to continue execution of the wavefront.
+    - If the debugger is enabled, causes the debug trap to be reported by the debugger and the wavefront is put in the halt state with the PC at the instruction.
+      The debugger must increment the PC and resume the wave.
 * - reserved
   - `s_trap 0x04`
   -
@@ -24842,38 +15776,25 @@ supports the `s_trap` instruction. For usage see:
   - `s_trap 0x01`
   - *none*
   - *none*
-  - Reserved for debugger to use for
-    breakpoints. Causes wave to be halted
-    with the PC at the trap instruction.
-    The debugger is responsible to resume
-    the wave, including the instruction
-    that the breakpoint overwrote.
+  - Reserved for debugger to use for breakpoints.
+    Causes wave to be halted with the PC at the trap instruction.
+    The debugger is responsible to resume the wave, including the instruction that the breakpoint overwrote.
 * - `llvm.trap`
   - `s_trap 0x02`
   - `SGPR0-1`:
     : `queue_ptr`
   - *none*
-  - Causes wave to be halted with the PC at
-    the trap instruction. The associated
-    queue is signalled to put it into the
-    error state. When the queue is put in
-    the error state, the waves executing
-    dispatches on the queue will be
-    terminated.
+  - Causes wave to be halted with the PC at the trap instruction.
+    The associated queue is signalled to put it into the error state.
+    When the queue is put in the error state, the waves executing dispatches on the queue will be terminated.
 * - `llvm.debugtrap`
   - `s_trap 0x03`
   - *none*
   - *none*
-  - - If debugger not enabled then behaves
-      as a no-operation. The trap handler
-      is entered and immediately returns to
-      continue execution of the wavefront.
-    - If the debugger is enabled, causes
-      the debug trap to be reported by the
-      debugger and the wavefront is put in
-      the halt state with the PC at the
-      instruction. The debugger must
-      increment the PC and resume the wave.
+  - - If debugger not enabled then behaves as a no-operation.
+      The trap handler is entered and immediately returns to continue execution of the wavefront.
+    - If the debugger is enabled, causes the debug trap to be reported by the debugger and the wavefront is put in the halt state with the PC at the instruction.
+      The debugger must increment the PC and resume the wave.
 * - reserved
   - `s_trap 0x04`
   -
@@ -25403,18 +16324,15 @@ within a map that has been added by the same *vendor-name*.
   - Required?
   - Description
 * - "amdpal.version"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - PAL code object metadata (major, minor) version. The current values
-    are defined by *Util::Abi::PipelineMetadata(Major|Minor)Version*.
+  - PAL code object metadata (major, minor) version.
+    The current values are defined by *Util::Abi::PipelineMetadata(Major|Minor)Version*.
 * - "amdpal.pipelines"
-  - sequence of
-    map
+  - sequence of map
   - Required
-  - Per-pipeline metadata. See
-    {ref}`amdgpu-amdpal-code-object-pipeline-metadata-map-table` for the
-    definition of the keys included in that map.
+  - Per-pipeline metadata.
+    See {ref}`amdgpu-amdpal-code-object-pipeline-metadata-map-table` for the definition of the keys included in that map.
 :::
 
 %
@@ -25435,7 +16353,8 @@ within a map that has been added by the same *vendor-name*.
 * - ".type"
   - string
   -
-  - Pipeline type, e.g. VsPs. Values include:
+  - Pipeline type, e.g. VsPs.
+    Values include:
 
     > - "VsPs"
     > - "Gs"
@@ -25445,82 +16364,60 @@ within a map that has been added by the same *vendor-name*.
     > - "GsTess"
     > - "NggTess"
 * - ".internal_pipeline_hash"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - Internal compiler hash for this pipeline. Lower
-    64 bits is the "stable" portion of the hash, used
-    for e.g. shader replacement lookup. Upper 64 bits
-    is the "unique" portion of the hash, used for
-    e.g. pipeline cache lookup. The value is
-    implementation defined, and can not be relied on
-    between different builds of the compiler.
+  - Internal compiler hash for this pipeline.
+    Lower 64 bits is the "stable" portion of the hash, used for e.g. shader replacement lookup.
+    Upper 64 bits is the "unique" portion of the hash, used for e.g. pipeline cache lookup.
+    The value is implementation defined, and can not be relied on between different builds of the compiler.
 * - ".shaders"
   - map
   -
-  - Per-API shader metadata. See
-    {ref}`amdgpu-amdpal-code-object-shader-map-table`
-    for the definition of the keys included in that
-    map.
+  - Per-API shader metadata.
+    See {ref}`amdgpu-amdpal-code-object-shader-map-table` for the definition of the keys included in that map.
 * - ".hardware_stages"
   - map
   -
-  - Per-hardware stage metadata. See
-    {ref}`amdgpu-amdpal-code-object-hardware-stage-map-table`
-    for the definition of the keys included in that
-    map.
+  - Per-hardware stage metadata.
+    See {ref}`amdgpu-amdpal-code-object-hardware-stage-map-table` for the definition of the keys included in that map.
 * - ".shader_functions"
   - map
   -
-  - Per-shader function metadata. See
-    {ref}`amdgpu-amdpal-code-object-shader-function-map-table`
-    for the definition of the keys included in that
-    map.
+  - Per-shader function metadata.
+    See {ref}`amdgpu-amdpal-code-object-shader-function-map-table` for the definition of the keys included in that map.
 * - ".registers"
   - map
   - Required
-  - Hardware register configuration. See
-    {ref}`amdgpu-amdpal-code-object-register-map-table`
-    for the definition of the keys included in that
-    map.
+  - Hardware register configuration.
+    See {ref}`amdgpu-amdpal-code-object-register-map-table` for the definition of the keys included in that map.
 * - ".user_data_limit"
   - integer
   -
-  - Number of user data entries accessed by this
-    pipeline.
+  - Number of user data entries accessed by this pipeline.
 * - ".spill_threshold"
   - integer
   -
-  - The user data spill threshold. 0xFFFF for
-    NoUserDataSpilling.
+  - The user data spill threshold. 0xFFFF for NoUserDataSpilling.
 * - ".uses_viewport_array_index"
   - boolean
   -
-  - Indicates whether or not the pipeline uses the
-    viewport array index feature. Pipelines which use
-    this feature can render into all 16 viewports,
-    whereas pipelines which do not use it are
-    restricted to viewport #0.
+  - Indicates whether or not the pipeline uses the viewport array index feature.
+    Pipelines which use this feature can render into all 16 viewports, whereas pipelines which do not use it are restricted to viewport #0.
 * - ".es_gs_lds_size"
   - integer
   -
-  - Size in bytes of LDS space used internally for
-    handling data-passing between the ES and GS
-    shader stages. This can be zero if the data is
-    passed using off-chip buffers. This value should
-    be used to program all user-SGPRs which have been
-    marked with "UserDataMapping::EsGsLdsSize"
-    (typically only the GS and VS HW stages will ever
-    have a user-SGPR so marked).
+  - Size in bytes of LDS space used internally for handling data-passing between the ES and GS shader stages.
+    This can be zero if the data is passed using off-chip buffers.
+    This value should be used to program all user-SGPRs which have been marked with "UserDataMapping::EsGsLdsSize" (typically only the GS and VS HW stages will ever have a user-SGPR so marked).
 * - ".nggSubgroupSize"
   - integer
   -
-  - Explicit maximum subgroup size for NGG shaders
-    (maximum number of threads in a subgroup).
+  - Explicit maximum subgroup size for NGG shaders (maximum number of threads in a subgroup).
 * - ".num_interpolants"
   - integer
   -
-  - Graphics only. Number of PS interpolants.
+  - Graphics only.
+    Number of PS interpolants.
 * - ".mesh_scratch_memory_size"
   - integer
   -
@@ -25532,10 +16429,8 @@ within a map that has been added by the same *vendor-name*.
 * - ".api_create_info"
   - binary
   -
-  - Graphics API shader create info binary blob. Can
-    be defined by the driver using the compiler if
-    they want to be able to correlate API-specific
-    information used during creation at a later time.
+  - Graphics API shader create info binary blob.
+    Can be defined by the driver using the compiler if they want to be able to correlate API-specific information used during creation at a later time.
 :::
 
 %
@@ -25555,8 +16450,7 @@ within a map that has been added by the same *vendor-name*.
     - ".geometry"
     - ".pixel"
   - map
-  - See {ref}`amdgpu-amdpal-code-object-api-shader-metadata-map-table`
-    for the definition of the keys included in that map.
+  - See {ref}`amdgpu-amdpal-code-object-api-shader-metadata-map-table` for the definition of the keys included in that map.
 :::
 
 %
@@ -25571,18 +16465,15 @@ within a map that has been added by the same *vendor-name*.
   - Required?
   - Description
 * - ".api_shader_hash"
-  - sequence of
-    2 integers
+  - sequence of 2 integers
   - Required
-  - Input shader hash, typically passed in from the client. The value
-    is implementation defined, and can not be relied on between
-    different builds of the compiler.
+  - Input shader hash, typically passed in from the client.
+    The value is implementation defined, and can not be relied on between different builds of the compiler.
 * - ".hardware_mapping"
-  - sequence of
-    string
+  - sequence of string
   - Required
-  - Flags indicating the HW stages this API shader maps to. Values
-    include:
+  - Flags indicating the HW stages this API shader maps to.
+    Values include:
 
     > - ".ls"
     > - ".hs"
@@ -25611,8 +16502,7 @@ within a map that has been added by the same *vendor-name*.
     - ".ps"
     - ".cs"
   - map
-  - See {ref}`amdgpu-amdpal-code-object-hardware-stage-metadata-map-table`
-    for the definition of the keys included in that map.
+  - See {ref}`amdgpu-amdpal-code-object-hardware-stage-metadata-map-table` for the definition of the keys included in that map.
 :::
 
 %
@@ -25657,23 +16547,18 @@ within a map that has been added by the same *vendor-name*.
 * - ".dynamic_vgpr_saved_count"
   - integer
   - No
-  - Number of dynamic VGPRs that can be stored in scratch by the
-    CWSR trap handler. Only used on GFX12+.
+  - Number of dynamic VGPRs that can be stored in scratch by the CWSR trap handler.
+    Only used on GFX12+.
 * - ".vgpr_limit"
   - integer
   -
-  - If non-zero, indicates the shader was compiled with a
-    directive to instruct the compiler to limit the VGPR usage to
-    be less than or equal to the specified value (only set if
-    different from HW default).
+  - If non-zero, indicates the shader was compiled with a directive to instruct the compiler to limit the VGPR usage to be less than or equal to the specified value (only set if different from HW default).
 * - ".sgpr_limit"
   - integer
   -
-  - SGPR count upper limit (only set if different from HW
-    default).
+  - SGPR count upper limit (only set if different from HW default).
 * - ".threadgroup_dimensions"
-  - sequence of
-    3 integers
+  - sequence of 3 integers
   -
   - Thread-group X/Y/Z dimensions (Compute only).
 * - ".wavefront_size"
@@ -25699,8 +16584,7 @@ within a map that has been added by the same *vendor-name*.
 * - ".uses_append_consume"
   - boolean
   -
-  - The shader uses append and/or consume operations, either
-    memory or GDS.
+  - The shader uses append and/or consume operations, either memory or GDS.
 * - ".uses_prim_id"
   - boolean
   -
@@ -25719,9 +16603,9 @@ within a map that has been added by the same *vendor-name*.
   - Description
 * - *symbol name*
   - map
-  - *symbol name* is the ELF symbol name of the shader function code
-    entry address. The value is the function's metadata. See
-    {ref}`amdgpu-amdpal-code-object-shader-function-metadata-map-table`.
+  - *symbol name* is the ELF symbol name of the shader function code entry address.
+    The value is the function's metadata.
+    See {ref}`amdgpu-amdpal-code-object-shader-function-metadata-map-table`.
 :::
 
 %
@@ -25735,11 +16619,9 @@ within a map that has been added by the same *vendor-name*.
   - Value Type
   - Description
 * - ".api_shader_hash"
-  - sequence of
-    2 integers
-  - Input shader hash, typically passed in from the client. The value
-    is implementation defined, and can not be relied on between
-    different builds of the compiler.
+  - sequence of 2 integers
+  - Input shader hash, typically passed in from the client.
+    The value is implementation defined, and can not be relied on between different builds of the compiler.
 * - ".scratch_memory_size"
   - integer
   - Size in bytes of scratch memory used by the shader.
@@ -25757,7 +16639,8 @@ within a map that has been added by the same *vendor-name*.
   - Amount of stack size used by the shader.
 * - ".shader_subtype"
   - string
-  - Shader subtype/kind. Values include:
+  - Shader subtype/kind.
+    Values include:
 
     > - "Unknown"
 :::
@@ -25774,17 +16657,12 @@ within a map that has been added by the same *vendor-name*.
   - Description
 * - `reg offset`
   - 32-bit integer
-  - `reg offset` is the dword offset into the GFXIP register space of
-    a GRBM register (i.e., driver accessible GPU register number, not
-    shader GPR register number). The driver is required to program each
-    specified register to the corresponding specified value when
-    executing this pipeline. Typically, the `reg offsets` are the
-    `uint16_t` offsets to each register as defined by the hardware
-    chip headers. The register is set to the provided value. However, a
-    `reg offset` that specifies a user data register (e.g.,
-    COMPUTE_USER_DATA_0) needs special treatment. See
-    {ref}`amdgpu-amdpal-code-object-user-data-section` section for more
-    information.
+  - `reg offset` is the dword offset into the GFXIP register space of a GRBM register (i.e., driver accessible GPU register number, not shader GPR register number).
+    The driver is required to program each specified register to the corresponding specified value when executing this pipeline.
+    Typically, the `reg offsets` are the `uint16_t` offsets to each register as defined by the hardware chip headers.
+    The register is set to the provided value.
+    However, a `reg offset` that specifies a user data register (e.g., COMPUTE_USER_DATA_0) needs special treatment.
+    See {ref}`amdgpu-amdpal-code-object-user-data-section` section for more information.
 :::
 
 (amdgpu-amdpal-code-object-user-data-section)=
@@ -25837,69 +16715,61 @@ register* 1 must always be programmed to the address of the PerShaderTable.
   - 32-bit value of user_data_entry\[N\] as specified via *CmdSetUserData()*
 * - 0x10000000
   - GlobalTable
-  - 32-bit pointer to GPU memory containing the global internal table (should
-    always point to *user data register* 0).
+  - 32-bit pointer to GPU memory containing the global internal table (should always point to *user data register* 0).
 * - 0x10000001
   - PerShaderTable
-  - 32-bit pointer to GPU memory containing the per-shader internal table. See
-    {ref}`amdgpu-amdpal-code-object-metadata-user-data-per-shader-table-section`
-    for more detail (should always point to *user data register* 1).
+  - 32-bit pointer to GPU memory containing the per-shader internal table.
+    See {ref}`amdgpu-amdpal-code-object-metadata-user-data-per-shader-table-section` for more detail (should always point to *user data register* 1).
 * - 0x10000002
   - SpillTable
-  - 32-bit pointer to GPU memory containing the user data spill table. See
-    {ref}`amdgpu-amdpal-code-object-metadata-user-data-spill-table-section` for
-    more detail.
+  - 32-bit pointer to GPU memory containing the user data spill table.
+    See {ref}`amdgpu-amdpal-code-object-metadata-user-data-spill-table-section` for more detail.
 * - 0x10000003
   - BaseVertex
-  - Vertex offset (32-bit unsigned integer). Not needed if the pipeline doesn't
-    reference the draw index in the vertex shader. Only supported by the first
-    stage in a graphics pipeline.
+  - Vertex offset (32-bit unsigned integer).
+    Not needed if the pipeline doesn't reference the draw index in the vertex shader.
+    Only supported by the first stage in a graphics pipeline.
 * - 0x10000004
   - BaseInstance
-  - Instance offset (32-bit unsigned integer). Only supported by the first stage in
-    a graphics pipeline.
+  - Instance offset (32-bit unsigned integer).
+    Only supported by the first stage in a graphics pipeline.
 * - 0x10000005
   - DrawIndex
-  - Draw index (32-bit unsigned integer). Only supported by the first stage in a
-    graphics pipeline.
+  - Draw index (32-bit unsigned integer).
+    Only supported by the first stage in a graphics pipeline.
 * - 0x10000006
   - Workgroup
-  - Thread group count (32-bit unsigned integer). Low half of a 64-bit address of
-    a buffer containing the grid dimensions for a Compute dispatch operation. The
-    high half of the address is stored in the next sequential user-SGPR. Only
-    supported by compute pipelines.
+  - Thread group count (32-bit unsigned integer).
+    Low half of a 64-bit address of a buffer containing the grid dimensions for a Compute dispatch operation.
+    The high half of the address is stored in the next sequential user-SGPR.
+    Only supported by compute pipelines.
 * - 0x1000000A
   - EsGsLdsSize
-  - Indicates that PAL will program this user-SGPR to contain the amount of LDS
-    space used for the ES/GS pseudo-ring-buffer for passing data between shader
-    stages.
+  - Indicates that PAL will program this user-SGPR to contain the amount of LDS space used for the ES/GS pseudo-ring-buffer for passing data between shader stages.
 * - 0x1000000B
   - ViewId
-  - View id (32-bit unsigned integer) identifies a view of graphic
-    pipeline instancing.
+  - View id (32-bit unsigned integer) identifies a view of graphic pipeline instancing.
 * - 0x1000000C
   - StreamOutTable
-  - 32-bit pointer to GPU memory containing the stream out target SRD table. This
-    can only appear for one shader stage per pipeline.
+  - 32-bit pointer to GPU memory containing the stream out target SRD table.
+    This can only appear for one shader stage per pipeline.
 * - 0x1000000D
   - PerShaderPerfData
   - 32-bit pointer to GPU memory containing the per-shader performance data buffer.
 * - 0x1000000F
   - VertexBufferTable
-  - 32-bit pointer to GPU memory containing the vertex buffer SRD table. This can
-    only appear for one shader stage per pipeline.
+  - 32-bit pointer to GPU memory containing the vertex buffer SRD table.
+    This can only appear for one shader stage per pipeline.
 * - 0x10000010
   - UavExportTable
-  - 32-bit pointer to GPU memory containing the UAV export SRD table. This can
-    only appear for one shader stage per pipeline (PS). These replace color targets
-    and are completely separate from any UAVs used by the shader. This is optional,
-    and only used by the PS when UAV exports are used to replace color-target
-    exports to optimize specific shaders.
+  - 32-bit pointer to GPU memory containing the UAV export SRD table.
+    This can only appear for one shader stage per pipeline (PS).
+    These replace color targets and are completely separate from any UAVs used by the shader.
+    This is optional, and only used by the PS when UAV exports are used to replace color-target exports to optimize specific shaders.
 * - 0x10000011
   - NggCullingData
-  - 64-bit pointer to GPU memory containing the hardware register data needed by
-    some NGG pipelines to perform culling. This value contains the address of the
-    first of two consecutive registers which provide the full GPU address.
+  - 64-bit pointer to GPU memory containing the hardware register data needed by some NGG pipelines to perform culling.
+    This value contains the address of the first of two consecutive registers which provide the full GPU address.
 * - 0x10000015
   - FetchShaderPtr
   - 64-bit pointer to GPU memory containing the fetch shader subroutine.
@@ -25963,8 +16833,7 @@ instructions are handled as follows:
   - Causes wavefront to be terminated.
 * - llvm.debugtrap
   - *none*
-  - Compiler warning given that there is no
-    trap handler installed.
+  - Compiler warning given that there is no trap handler installed.
 :::
 
 ## Core file format
@@ -26088,14 +16957,12 @@ The content of the note is defined in table
   -
 * - `agents_info`
   - `kfd_dbg_device_info_entry[n_agents]`
-  - `n_agents *
-    agent_info_entry_size`
+  - `n_agents * agent_info_entry_size`
   - 8
   -
 * - `queues_info`
   - `kfd_queue_snapshot_entry[n_queues]`
-  - `n_queues *
-    queue_info_entry_size`
+  - `n_queues * queue_info_entry_size`
   - 8
   -
 :::
@@ -26142,10 +17009,8 @@ When the language is OpenCL the following differences occur:
 :widths: auto
 
 * - Position
-  - Byte
-    Size
-  - Byte
-    Alignment
+  - Byte Size
+  - Byte Alignment
   - Description
 * - 1
   - 8
@@ -26166,18 +17031,15 @@ When the language is OpenCL the following differences occur:
 * - 5
   - 8
   - 8
-  - OpenCL address of virtual queue used by
-    enqueue_kernel.
+  - OpenCL address of virtual queue used by enqueue_kernel.
 * - 6
   - 8
   - 8
-  - OpenCL address of AqlWrap struct used by
-    enqueue_kernel.
+  - OpenCL address of AqlWrap struct used by enqueue_kernel.
 * - 7
   - 8
   - 8
-  - Pointer argument used for Multi-gird
-    synchronization.
+  - Pointer argument used for Multi-gird synchronization.
 :::
 
 (amdgpu-hcc)=
@@ -26694,301 +17556,214 @@ terminated by an `.end_amdhsa_kernel` directive.
 * - `.amdhsa_group_segment_fixed_size`
   - 0
   - GFX6-GFX12
-  - Controls GROUP_SEGMENT_FIXED_SIZE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls GROUP_SEGMENT_FIXED_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_private_segment_fixed_size`
   - 0
   - GFX6-GFX12
-  - Controls PRIVATE_SEGMENT_FIXED_SIZE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls PRIVATE_SEGMENT_FIXED_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_kernarg_size`
   - 0
   - GFX6-GFX12
-  - Controls KERNARG_SIZE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls KERNARG_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_count`
   - 0
   - GFX6-GFX12
-  - Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
+  - Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2 {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
 * - `.amdhsa_user_sgpr_private_segment_buffer`
   - 0
-  - GFX6-GFX10
-    (except
-    GFX942)
-  - Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - GFX6-GFX10 (except GFX942)
+  - Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_dispatch_ptr`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_DISPATCH_PTR in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_SGPR_DISPATCH_PTR in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_queue_ptr`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_QUEUE_PTR in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_SGPR_QUEUE_PTR in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_kernarg_segment_ptr`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_dispatch_id`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_DISPATCH_ID in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_SGPR_DISPATCH_ID in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_flat_scratch_init`
   - 0
-  - GFX6-GFX10
-    (except
-    GFX942)
-  - Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - GFX6-GFX10 (except GFX942)
+  - Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_private_segment_size`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_wavefront_size32`
-  - Target
-    Feature
-    Specific
-    (wavefrontsize64)
+  - Target Feature Specific (wavefrontsize64)
   - GFX10-GFX12
-  - Controls ENABLE_WAVEFRONT_SIZE32 in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_WAVEFRONT_SIZE32 in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_uses_dynamic_stack`
   - 0
   - GFX6-GFX12
-  - Controls USES_DYNAMIC_STACK in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls USES_DYNAMIC_STACK in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_named_barrier_count`
   - 0
   - GFX1250+
-  - Controls NAMED_BAR_CNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
+  - Controls NAMED_BAR_CNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
 * - `.amdhsa_system_sgpr_private_segment_wavefront_offset`
   - 0
-  - GFX6-GFX10
-    (except
-    GFX942)
-  - Controls ENABLE_PRIVATE_SEGMENT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - GFX6-GFX10 (except GFX942)
+  - Controls ENABLE_PRIVATE_SEGMENT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_enable_private_segment`
   - 0
-  - GFX942,
-    GFX11-GFX12
-  - Controls ENABLE_PRIVATE_SEGMENT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - GFX942, GFX11-GFX12
+  - Controls ENABLE_PRIVATE_SEGMENT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_system_sgpr_workgroup_id_x`
   - 1
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_WORKGROUP_ID_X in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_SGPR_WORKGROUP_ID_X in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_system_sgpr_workgroup_id_y`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_WORKGROUP_ID_Y in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_SGPR_WORKGROUP_ID_Y in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_system_sgpr_workgroup_id_z`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_WORKGROUP_ID_Z in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_SGPR_WORKGROUP_ID_Z in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_system_sgpr_workgroup_info`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_SGPR_WORKGROUP_INFO in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_SGPR_WORKGROUP_INFO in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_system_vgpr_workitem_id`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_VGPR_WORKITEM_ID in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
-    Possible values are defined in
-    {ref}`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
+  - Controls ENABLE_VGPR_WORKITEM_ID in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+    Possible values are defined in {ref}`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
 * - `.amdhsa_next_free_vgpr`
   - Required
   - GFX6-GFX12
   - Maximum VGPR number explicitly referenced, plus one.
-    Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_next_free_sgpr`
   - Required
   - GFX6-GFX12
   - Maximum SGPR number explicitly referenced, plus one.
-    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_accum_offset`
   - Required
-  - GFX90A,
-    GFX942
+  - GFX90A, GFX942
   - Offset of a first AccVGPR in the unified register file.
-    Used to calculate ACCUM_OFFSET in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+    Used to calculate ACCUM_OFFSET in {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
 * - `.amdhsa_reserve_vcc`
   - 1
   - GFX6-GFX12
   - Whether the kernel may use the special VCC SGPR.
-    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_reserve_flat_scratch`
   - 1
-  - GFX7-GFX10
-    (except
-    GFX942)
-  - Whether the kernel may use flat instructions to access
-    scratch memory. Used to calculate
-    GRANULATED_WAVEFRONT_SGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - GFX7-GFX10 (except GFX942)
+  - Whether the kernel may use flat instructions to access scratch memory.
+    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_reserve_xnack_mask`
-  - Target
-    Feature
-    Specific
-    (xnack)
+  - Target Feature Specific (xnack)
   - GFX8-GFX10
   - Whether the kernel may trigger XNACK replay.
-    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_float_round_mode_32`
   - 0
   - GFX6-GFX12
-  - Controls FLOAT_ROUND_MODE_32 in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-    Possible values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+  - Controls FLOAT_ROUND_MODE_32 in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Possible values are defined in {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
 * - `.amdhsa_float_round_mode_16_64`
   - 0
   - GFX6-GFX12
-  - Controls FLOAT_ROUND_MODE_16_64 in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-    Possible values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+  - Controls FLOAT_ROUND_MODE_16_64 in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Possible values are defined in {ref}`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
 * - `.amdhsa_float_denorm_mode_32`
   - 0
   - GFX6-GFX12
-  - Controls FLOAT_DENORM_MODE_32 in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-    Possible values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+  - Controls FLOAT_DENORM_MODE_32 in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Possible values are defined in {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
 * - `.amdhsa_float_denorm_mode_16_64`
   - 3
   - GFX6-GFX12
-  - Controls FLOAT_DENORM_MODE_16_64 in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-    Possible values are defined in
-    {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+  - Controls FLOAT_DENORM_MODE_16_64 in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+    Possible values are defined in {ref}`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
 * - `.amdhsa_dx10_clamp`
   - 1
-  - GFX6-GFX11
-    (except
-    GFX11.7)
-  - Controls ENABLE_DX10_CLAMP in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - GFX6-GFX11 (except GFX11.7)
+  - Controls ENABLE_DX10_CLAMP in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_ieee_mode`
   - 1
-  - GFX6-GFX11
-    (except
-    GFX11.7)
-  - Controls ENABLE_IEEE_MODE in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - GFX6-GFX11 (except GFX11.7)
+  - Controls ENABLE_IEEE_MODE in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_round_robin_scheduling`
   - 0
   - GFX12
-  - Controls ENABLE_WG_RR_EN in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - Controls ENABLE_WG_RR_EN in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_fp16_overflow`
   - 0
   - GFX9-GFX12
-  - Controls FP16_OVFL in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - Controls FP16_OVFL in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_tg_split`
-  - Target
-    Feature
-    Specific
-    (tgsplit)
-  - GFX90A,
-    GFX942,
-    GFX11-GFX12
-  - Controls TG_SPLIT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+  - Target Feature Specific (tgsplit)
+  - GFX90A, GFX942, GFX11-GFX12
+  - Controls TG_SPLIT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
 * - `.amdhsa_workgroup_processor_mode`
-  - Target
-    Feature
-    Specific
-    (cumode)
+  - Target Feature Specific (cumode)
   - GFX10-GFX12
-  - Controls ENABLE_WGP_MODE in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - Controls ENABLE_WGP_MODE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_memory_ordered`
   - 1
   - GFX10-GFX12
-  - Controls MEM_ORDERED in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - Controls MEM_ORDERED in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_forward_progress`
   - 1
   - GFX10-GFX12
-  - Controls FWD_PROGRESS in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+  - Controls FWD_PROGRESS in {ref}`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
 * - `.amdhsa_shared_vgpr_count`
   - 0
   - GFX10-GFX11
-  - Controls SHARED_VGPR_COUNT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+  - Controls SHARED_VGPR_COUNT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
 * - `.amdhsa_inst_pref_size`
   - 0
   - GFX11-GFX12
-  - Controls INST_PREF_SIZE in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
+  - Controls INST_PREF_SIZE in {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or {ref}`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
 * - `.amdhsa_exception_fp_ieee_invalid_op`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_fp_denorm_src`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_fp_ieee_div_zero`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_fp_ieee_overflow`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_fp_ieee_underflow`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_fp_ieee_inexact`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_exception_int_div_zero`
   - 0
   - GFX6-GFX12
-  - Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
-    {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+  - Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in {ref}`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
 * - `.amdhsa_user_sgpr_kernarg_preload_length`
   - 0
-  - GFX90A,
-    GFX942
-  - Controls KERNARG_PRELOAD_SPEC_LENGTH in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - GFX90A, GFX942
+  - Controls KERNARG_PRELOAD_SPEC_LENGTH in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_user_sgpr_kernarg_preload_offset`
   - 0
-  - GFX90A,
-    GFX942
-  - Controls KERNARG_PRELOAD_SPEC_OFFSET in
-    {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+  - GFX90A, GFX942
+  - Controls KERNARG_PRELOAD_SPEC_OFFSET in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 :::
 
 ##### .amdgpu_metadata
