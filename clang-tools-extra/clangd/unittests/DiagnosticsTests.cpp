@@ -893,7 +893,7 @@ TEST(DiagnosticTest, ClangTidyRelativeInput) {
   auto Inputs = TU.inputs(FS);
   Inputs.CompileCommand.Directory = testPath("project");
   // Configuration lookup must use the requested file, not the frontend input.
-  for (auto InputFile : {"src/./test.cpp", "../other/test.cpp"}) {
+  for (const auto *InputFile : {"src/./test.cpp", "../other/test.cpp"}) {
     SCOPED_TRACE(InputFile);
     IgnoringDiagConsumer Diags;
     auto CI = buildCompilerInvocation(Inputs, Diags);
