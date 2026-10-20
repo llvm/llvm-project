@@ -32,19 +32,19 @@
 .attribute arch, "rv64y0p910_zca_zcmp"
 # ATTR: error: invalid arch name 'rv64y0p910_zca_zcmp', 'zcmp' is incompatible with rv64y base
 
-## FIXME: resetToArch updates C/Zce implications as each extension is enabled
-## alphabetically and before Feature64Bit is updated, causing 'c' + 'd' on
-## rv64y to enable 'zcd' and 'c' + 'f' on rv64i (when switching from rv32) to
-## enable 'zcf'.
+## Check that resetToArch does not enable 'zcd' on rv64y or 'zcf' on rv64i.
 .attribute arch, "rv64y0p910_c_d"
-## FIXME: Should be rejected because 'zcd' is not enabled on rv64y.
 c.fld fa0, 0(a0)
+# ATTR: :[[#@LINE-1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions){{$}}
 .option arch, +m
-# ATTR: :[[#@LINE-1]]:16: error: 'zcd' is incompatible with rv64y base
+
+.option arch, rv64y0p910_c_d
+c.fld fa0, 0(a0)
+# ATTR: :[[#@LINE-1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions){{$}}
+.option arch, +m
 
 .attribute arch, "rv32i"
 .attribute arch, "rv64icf"
 c.flw fa0, 0(a0)
-# ATTR: :[[#@LINE-1]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+# ATTR: :[[#@LINE-1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions), RV32I Base Instruction Set{{$}}
 .option arch, +m
-# ATTR: :[[#@LINE-1]]:16: error: 'zcf' is only supported for 'rv32'
