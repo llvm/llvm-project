@@ -15,10 +15,6 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=OPENMP,OPENMP-COFF
 
-/// Check that -mllvm options apply to the wrapper module's code generation.
-// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu --linker-path=/usr/bin/ld -mllvm -print-isel-input %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=MLLVM
-// MLLVM: *** Final LLVM Code input to ISel ***
-
 //      OPENMP-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // OPENMP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // OPENMP-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"

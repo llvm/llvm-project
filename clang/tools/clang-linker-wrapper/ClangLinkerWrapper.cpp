@@ -690,7 +690,6 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
 
   auto Options =
       codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
-  Options.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -782,8 +781,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 /// Creates the object file containing the device image and runtime
 /// registration code from the device images stored in \p Images.
 Expected<StringRef>
-wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
-                 ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
+wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
@@ -797,7 +795,6 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
         ArrayRef<char>(Buffer->getBufferStart(), Buffer->getBufferSize()));
 
   LLVMContext Context;
-  Context.getLibraryOptions().assign(LibraryOptions);
   Module M("offload.wrapper.module", Context);
   Triple TheTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
@@ -1100,8 +1097,7 @@ Error handleOverrideImages(
 /// be registered by the runtime. If NeedsWrapping is false, writes bundled
 /// output directly without wrapping or host linking.
 Expected<SmallVector<StringRef>>
-linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
-                       ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
+linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
                        const InputArgList &Args, char **Argv, int Argc,
                        bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
@@ -1233,8 +1229,7 @@ linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
     }
 
     OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
-    auto OutputOrErr = wrapDeviceImages(LibraryOptions, *BundledImagesOrErr,
-                                        Args, WrapperKind);
+    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
@@ -1618,8 +1613,8 @@ int main(int Argc, char **Argv) {
 
     // Link and process the device images. The function may emit a direct fat
     // binary if --emit-fatbin-only is specified.
-    auto FilesOrErr = linkAndWrapDeviceFiles(LibraryOptions, *DeviceInputFiles,
-                                             Args, Argv, Argc, !EmitFatbinOnly);
+    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv,
+                                             Argc, !EmitFatbinOnly);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
