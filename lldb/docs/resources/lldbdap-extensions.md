@@ -8,8 +8,8 @@ Conventions:
 
 - New requests should be prefixed with `__lldb_`.
 - Added properties on standard messages are prefixed with `$__lldb_` if the field
-  is LLDB-specific (e.g. `$__lldb_version`); otherwise, they use plain names
-  (e.g. `compileUnitId`).
+  would not make sense for any other debugger (e.g. `$__lldb_version`);
+  otherwise, they use plain names (e.g. `compileUnitId`).
 
 ## Custom Requests
 
