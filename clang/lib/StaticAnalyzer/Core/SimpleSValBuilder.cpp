@@ -288,8 +288,8 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
 }
 
 // Simplify "(LSym + LInt) Op (RSym + RInt)" when all values are of the
-// same signed integral type and no overflows occurs. Returns the simplified
-// value or std::nullopt when the the preconditions are not satisfied or the
+// same signed integral type and no overflow occurs. Returns the simplified
+// value or std::nullopt when the preconditions are not satisfied or the
 // symbol complexity limit is reached.
 static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
                                           BinaryOperator::Opcode Op, NonLoc Lhs,
@@ -319,7 +319,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
   }
 
-  // Rearrange signed symbolic expressions only
+  // Rearrange signed symbolic expressions only.
   // FIXME: This should also handle unsigned, at least for additive operations.
   if (!CommonTy->isSignedIntegerOrEnumerationType())
     return std::nullopt;
