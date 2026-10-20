@@ -1550,6 +1550,10 @@ defm MeshViewCountNV : BuiltInOperand<5280, 0, 0, [], [MeshShadingNV]>;
 defm MeshViewIndices : BuiltInOperand<5281, 0, 0, [], [MeshShadingNV]>;
 defm BaryCoordKHR : BuiltInOperand<5286, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
 defm BaryCoordNoPerspKHR : BuiltInOperand<5287, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
+// NV aliases keep their names recognized. Requirements are looked up by value,
+// so they come from the KHR records above.
+defm BaryCoordNV : BuiltInOperand<5286, 0, 0, [], []>;
+defm BaryCoordNoPerspNV : BuiltInOperand<5287, 0, 0, [], []>;
 defm FragSizeEXT : BuiltInOperand<5292, 0, 0, [], [FragmentDensityEXT]>;
 defm FragInvocationCountEXT : BuiltInOperand<5293, 0, 0, [], [FragmentDensityEXT]>;
 defm LaunchIdNV : BuiltInOperand<5319, 0, 0, [], [RayTracingNV]>;
