@@ -1246,7 +1246,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // Parse lambda-declarator[opt].
   DeclSpec DS(AttrFactory);
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::LambdaExpr);
-  llvm::SaveAndRestore<unsigned> SavedTemplateDepth(TemplateParameterDepth);
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  const unsigned Depth = TemplateParameterDepth;
 
   ParseScope LambdaScope(this, Scope::LambdaScope | Scope::DeclScope |
                                    Scope::FunctionDeclarationScope |
@@ -1286,7 +1287,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     SmallVector<NamedDecl*, 4> TemplateParams;
     SourceLocation LAngleLoc, RAngleLoc;
-    if (ParseTemplateParameters(TemplateParamScope, TemplateParameterDepth,
+    if (ParseTemplateParameters(TemplateParamScope,
+                                CurTemplateDepthTracker.getDepth(),
                                 TemplateParams, LAngleLoc, RAngleLoc)) {
       Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
       return ExprError();
@@ -1305,7 +1307,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       // This way, abbreviated generic lambdas could have different template
       // depths, avoiding substitution into the wrong template parameters during
       // constraint satisfaction check.
-      ++TemplateParameterDepth;
+      ++CurTemplateDepthTracker;
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
         RequiresClause =
@@ -1359,9 +1361,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     LParenLoc = T.getOpenLocation();
 
     if (Tok.isNot(tok::r_paren)) {
-      Actions.RecordParsingTemplateParameterDepth(SavedTemplateDepth.get());
+      Actions.RecordParsingTemplateParameterDepth(Depth);
 
-      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc);
+      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc,
+                                      CurTemplateDepthTracker);
     }
 
     T.consumeClose();
@@ -3228,12 +3231,14 @@ ExprResult Parser::ParseRequiresExpression() {
                                     Scope::DeclScope);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
       ParsedAttributes FirstArgAttrs(getAttrFactory());
       SourceLocation EllipsisLoc;
       llvm::SmallVector<DeclaratorChunk::ParamInfo, 2> LocalParameters;
       ParseParameterDeclarationClause(DeclaratorContext::RequiresExpr,
                                       FirstArgAttrs, LocalParameters,
-                                      EllipsisLoc);
+                                      EllipsisLoc, CurTemplateDepthTracker);
       if (EllipsisLoc.isValid())
         Diag(EllipsisLoc, diag::err_requires_expr_parameter_list_ellipsis);
       for (auto &ParamInfo : LocalParameters)

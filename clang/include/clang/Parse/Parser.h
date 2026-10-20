@@ -1055,6 +1055,7 @@ private:
   void SkipFunctionBody();
 
   struct ParsedTemplateInfo;
+  class TemplateParameterDepthRAII;
 
   /// ParseFunctionDefinition - We parsed and verified that the specified
   /// Declarator is well formed.  If this is a K&R-style function, read the
@@ -2814,9 +2815,9 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc, TemplateParameterDepthRAII &TemplateDepth) {
     return ParseParameterDeclarationClause(
-        D.getContext(), attrs, ParamInfo, EllipsisLoc,
+        D.getContext(), attrs, ParamInfo, EllipsisLoc, TemplateDepth,
         D.getCXXScopeSpec().isSet() &&
             D.isFunctionDeclaratorAFunctionDeclaration());
   }
@@ -2859,7 +2860,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, TemplateParameterDepthRAII &TemplateDepth,
+      bool IsACXXFunctionDeclaration = false);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
