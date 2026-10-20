@@ -385,6 +385,16 @@ func.func @atan2_fold_vec() -> (vector<4xf32>) {
   return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: @atan2_fold_signed_zero
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, -0.000000e+00, 3.14{{[0-9]+}}, -3.14{{[0-9]+}}]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @atan2_fold_signed_zero() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.0, -0.0, 0.0, -0.0]> : vector<4xf32>
+  %v2 = arith.constant dense<[0.0, 0.0, -0.0, -0.0]> : vector<4xf32>
+  %0 = math.atan2 %v1, %v2 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @cos_fold
 // CHECK-NEXT: %[[cst:.+]] = arith.constant 0.54{{[0-9]+}} : f32
 // CHECK-NEXT:   return %[[cst]]
