@@ -68,7 +68,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {{{.*}}nothrow, optnone} {
+// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {{{.*}}no_trapping_math, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
 // CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>

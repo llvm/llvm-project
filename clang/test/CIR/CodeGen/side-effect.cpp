@@ -30,15 +30,15 @@ __attribute__((const)) int const_flattened(TwoLong t);
 
 // FIXME: We should figure out how to better print this on functions in the
 // future.
-// CIR: cir.func{{.*}}@pure_func() -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, willreturn, memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} {
+// CIR: cir.func{{.*}}@pure_func() -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, stack_protector_buffer_size = 8 : i32, willreturn, memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} {
 __attribute__((pure))
 int pure_func() { return 2;}
 
-// CIR: cir.func{{.*}}@const_func() -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, willreturn, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
+// CIR: cir.func{{.*}}@const_func() -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, stack_protector_buffer_size = 8 : i32, willreturn, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
 __attribute__((const))
 int const_func() { return 1;}
 
-// CIR: cir.func{{.*}}@noalias_func(%{{[^,)]+}}: !cir.ptr<!s32i> {llvm.noundef}{{.*}}) -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = readwrite, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
+// CIR: cir.func{{.*}}@noalias_func(%{{[^,)]+}}: !cir.ptr<!s32i> {llvm.noundef}{{.*}}) -> !s32i attributes {{{.*}}nothrow, nounwind, optnone, stack_protector_buffer_size = 8 : i32, memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = readwrite, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
 __declspec(noalias)
 int noalias_func(int *p) { return *p; }
 
