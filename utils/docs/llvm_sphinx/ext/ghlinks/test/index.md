@@ -1,8 +1,6 @@
 
-GHLink Tests
-============
+# GHLink Tests
 
-.. toctree::
-
-   rest
-   markdown
+```{toctree}
+rest
+markdown

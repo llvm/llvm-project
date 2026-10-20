@@ -1,8 +1,7 @@
-Absolute Link Tests
-===================
+# Absolute Link Tests
 
-.. toctree::
-
-   rest
-   markdown
-   target
+```{toctree}
+rest
+markdown
+reST-source
+target

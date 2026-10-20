@@ -1,19 +1,17 @@
-
-GHLink reST Test
-================
+# GHLink reST Test
 
 A paragraph links #GH123 and #GH456.
 
 No leading zero link #GH0123.
 
-Inline literal ``#GH333`` stays text.
+Inline code `#GH333` stays text.
 
-Existing link `#GH666 <https://example.com/rst>`_ stays existing.
+Existing link [#GH666](https://example.com/rst) stays existing.
 
-Code block::
+```text
+#GH777
+```
 
-  #GH777
-
-.. raw:: html
-
-   <span>#GH888</span>
+```{raw} html
+<span>#GH888</span>
+```
