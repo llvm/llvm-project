@@ -44,3 +44,12 @@ entry:
   %r = call { i16, i16, i8 } asm sideeffect "", "={ax},={dx},={@ccz},~{eax},~{edx},~{flags}"()
   ret { i16, i16, i8 } %r
 }
+
+;; The clobber is the same register as the output def, so it is not dead.
+; CHECK-LABEL: name: same_output_clobber
+; CHECK: INLINEASM &"", sideeffect attdialect, regdef, implicit-def $eax, clobber, implicit-def early-clobber $eax
+define i32 @same_output_clobber() {
+entry:
+  %r = call i32 asm sideeffect "", "={eax},~{eax}"()
+  ret i32 %r
+}
