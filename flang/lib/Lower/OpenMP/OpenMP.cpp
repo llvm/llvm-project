@@ -3564,21 +3564,27 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerivedNonAllocatable(const semantics::Symbol &sym) {
+static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
   const auto &ultimate = sym.GetUltimate();
   const auto *type = ultimate.GetType();
-  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate);
+  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
+         !semantics::IsPointer(ultimate);
 }
 
-static bool isNonDerivedNonAllocatableItem(const semantics::Symbol &sym) {
+static bool isNonDerivedNonPointer(const mlir::Value &variable) {
+  return !fir::isAllocatableType(variable.getType()) &&
+         !fir::isa_derived(fir::getFortranElementType(variable.getType()));
+}
+
+static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
   const auto &ultimate = sym.GetUltimate();
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
     return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerivedNonAllocatable(*member);
+      return isNonDerivedNonPointer(*member);
     });
   }
-  return isNonDerivedNonAllocatable(ultimate);
+  return isNonDerivedNonPointer(ultimate);
 }
 
 static mlir::omp::SectionsOp
@@ -3679,7 +3685,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
   if (!privateSyms.empty() &&
       llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
-        return isNonDerivedNonAllocatableItem(*sym);
+        return isNonDerivedNonPointerItem(*sym);
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
@@ -3688,10 +3694,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
-        return variable == lpAlloca ||
-               (!fir::isAllocatableType(variable.getType()) &&
-                !fir::isa_derived(
-                    fir::getFortranElementType(variable.getType())));
+        return variable == lpAlloca || isNonDerivedNonPointer(variable);
       }))
     sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
