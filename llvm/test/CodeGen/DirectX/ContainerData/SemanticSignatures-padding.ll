@@ -4,6 +4,10 @@
 ; RUN: llc -filetype=obj %t/16.ll -o %t/16.dxbc
 ; RUN: obj2yaml %t/16.dxbc | FileCheck %s --check-prefixes=CHECK,UNPADDED
 ; RUN: llc -filetype=obj %t/17.ll -o - | obj2yaml | FileCheck %s --check-prefixes=CHECK,PADDED
+
+; Round trip the unpadded container through yaml2obj to check that the
+; explicit (unpadded) part sizes are preserved and that the following,
+; unaligned, PSV0 part is still readable.
 ; RUN: obj2yaml %t/16.dxbc | yaml2obj | obj2yaml | FileCheck %s --check-prefixes=CHECK,UNPADDED
 
 ; Validator 1.7 pads signature parts to a four-byte boundary but older versions
