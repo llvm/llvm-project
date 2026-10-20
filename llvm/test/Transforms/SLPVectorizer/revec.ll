@@ -634,3 +634,26 @@ define void @trunc_as_icmp_ne_and_mixed_preds(<2 x i8> %x, <2 x i8> %y, ptr %p) 
   store <2 x i8> %z3, ptr %p3, align 1
   ret void
 }
+
+define void @trunc_as_icmp_eq_and(<2 x i8> %x, <2 x i8> %y, ptr %p) {
+; CHECK-LABEL: @trunc_as_icmp_eq_and(
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[Y:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <2 x i8> [[M]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i8>
+; CHECK-NEXT:    store <2 x i8> [[TMP9]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i8>, ptr [[P]], i64 1
+; CHECK-NEXT:    store <2 x i8> [[TMP11]], ptr [[P1]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc <2 x i8> %x to <2 x i1>
+  %m = and <2 x i8> %y, splat (i8 2)
+  %c = icmp eq <2 x i8> %m, zeroinitializer
+  %z0 = zext <2 x i1> %t to <2 x i8>
+  %z1 = zext <2 x i1> %c to <2 x i8>
+  store <2 x i8> %z0, ptr %p, align 1
+  %p1 = getelementptr inbounds <2 x i8>, ptr %p, i64 1
+  store <2 x i8> %z1, ptr %p1, align 1
+  ret void
+}
