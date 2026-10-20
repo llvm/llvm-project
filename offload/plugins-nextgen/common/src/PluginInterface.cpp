@@ -92,6 +92,20 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                               AsyncInfoWrapperTy &AsyncInfoWrapper,
                               GenericProfilerTy *ProfilerPtr) const {
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
+
+  {
+    std::string StackTrace;
+    if (GenericDevice.OMPX_TrackNumKernelLaunches) {
+      llvm::raw_string_ostream OS(StackTrace);
+      llvm::sys::PrintStackTrace(OS);
+    }
+
+    auto KernelTraceInfoRecord =
+        GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    (*KernelTraceInfoRecord)
+        .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+  }
+
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
                                      LaunchArgs.UserThreadLimit[1],
                                      LaunchArgs.UserThreadLimit[2]};
@@ -729,35 +743,6 @@ Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
   return Err;
 }
 
-Error GenericDeviceTy::launchKernel(void *EntryPtr,
-                                    KernelLaunchArgsTy &LaunchArgs,
-                                    __tgt_async_info *AsyncInfo,
-                                    GenericProfilerTy *ProfilerPtr) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
-
-  GenericKernelTy &GenericKernel =
-      *reinterpret_cast<GenericKernelTy *>(EntryPtr);
-
-  {
-    std::string StackTrace;
-    if (OMPX_TrackNumKernelLaunches) {
-      llvm::raw_string_ostream OS(StackTrace);
-      llvm::sys::PrintStackTrace(OS);
-    }
-
-    auto KernelTraceInfoRecord = KernelLaunchTraces.getExclusiveAccessor();
-    (*KernelTraceInfoRecord)
-        .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
-  }
-
-  auto Err =
-      GenericKernel.launch(*this, LaunchArgs, AsyncInfoWrapper, ProfilerPtr);
-
-  AsyncInfoWrapper.finalize(Err);
-
-  return Err;
-}
-
 Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
                                      __tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
@@ -1275,21 +1260,6 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
              << ") to device (" << DstDeviceId
              << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
              << ", size = " << Size << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                                       KernelLaunchArgsTy &LaunchArgs,
-                                       __tgt_async_info *AsyncInfoPtr,
-                                       GenericProfilerTy *ProfilerPtr) {
-  auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs,
-                                              AsyncInfoPtr, ProfilerPtr);
-  if (Err) {
-    REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
-             << DeviceId << ": " << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
 
