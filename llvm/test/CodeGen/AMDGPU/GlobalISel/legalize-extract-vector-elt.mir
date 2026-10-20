@@ -3,6 +3,7 @@
 
 ---
 name: extract_vector_elt_0_v2i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -21,6 +22,7 @@ body: |
 ...
 ---
 name: extract_vector_elt_1_v2i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -39,6 +41,7 @@ body: |
 ...
 ---
 name: extract_vector_elt_2_v2i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -57,6 +60,7 @@ body: |
 ...
 ---
 name: extract_vector_elt_0_v3i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -75,6 +79,7 @@ body: |
 ...
 ---
 name: extract_vector_elt_0_v4i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -94,6 +99,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v5i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -113,6 +119,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v6i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -132,6 +139,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v7i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -151,6 +159,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v8i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -170,6 +179,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v16i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -189,6 +199,7 @@ body: |
 
 ---
 name: extract_vector_elt_var_v2i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -208,6 +219,7 @@ body: |
 
 ---
 name: extract_vector_elt_var_v8i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -228,6 +240,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v2i8_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -245,6 +258,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v2i16_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -264,6 +278,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v2i1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -281,6 +296,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v2i1_i1
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -299,6 +315,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s8_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -325,6 +342,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s8_constidx_0_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -348,6 +366,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s8_constidx_1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -373,6 +392,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s4_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -403,6 +423,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s8_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -425,6 +446,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s8_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -450,6 +472,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s8_constidx_0_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -472,6 +495,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s8_constidx_1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -494,6 +518,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s8_constidx_2_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -516,6 +541,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s8_constidx_3_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -540,6 +566,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -571,6 +598,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_0_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -595,6 +623,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -619,6 +648,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_3_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -643,6 +673,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_4_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -667,6 +698,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_5_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -691,6 +723,7 @@ body: |
 
 ---
 name: extract_vector_elt_v8s8_constidx_7_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -715,6 +748,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s16_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -741,6 +775,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s16_idx0_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -763,6 +798,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s16_idx1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -785,6 +821,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s16_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -807,6 +844,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s16_idx0_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -829,6 +867,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s16_idx1_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -851,6 +890,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s16_idx2_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -873,6 +913,7 @@ body: |
 
 ---
 name: extract_vector_elt_v4s16_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -901,6 +942,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2s128_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -931,6 +973,7 @@ body: |
 
 ---
 name: extract_vector_elt_v2i32_varidx_i64
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -952,6 +995,7 @@ body: |
 ...
 ---
 name: extract_vector_elt_0_v2i64
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -972,6 +1016,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v8i64
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -991,6 +1036,7 @@ body: |
 
 ---
 name: extract_vector_elt_0_v16i64
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1011,6 +1057,7 @@ body: |
 # Make sure we look through casts looking for a constant index.
 ---
 name: extract_vector_elt_look_through_trunc_0_v4i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1031,6 +1078,7 @@ body: |
 
 ---
 name: extract_vector_elt_7_v64s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1053,6 +1101,7 @@ body: |
 
 ---
 name: extract_vector_elt_33_v64s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1078,6 +1127,7 @@ body: |
 # Test handling of out of bounds indexes
 ---
 name: extract_vector_elt_64_65_v64s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1100,6 +1150,7 @@ body: |
 
 ---
 name: extract_vector_elt_33_v64p3
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1125,6 +1176,7 @@ body: |
 
 ---
 name: extract_vector_elt_varidx_v64s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1356,6 +1408,7 @@ body: |
 
 ---
 name: extract_vector_elt_v32s1_varidx_i32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1382,6 +1435,7 @@ body: |
 
 ---
 name: extract_vector_elt_v12s8_varidx_s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1409,6 +1463,7 @@ body: |
 
 ---
 name: extract_vector_elt_v3s8_varidx_s32
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -1436,6 +1491,7 @@ body: |
 
 ---
 name: extract_vector_elt_v32i1_bitcast_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0

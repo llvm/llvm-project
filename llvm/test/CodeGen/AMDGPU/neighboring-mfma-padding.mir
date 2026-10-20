@@ -15,6 +15,7 @@
 
 ---
 name: mfma_padding_2_pass
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass
@@ -74,6 +75,7 @@ body: |
 
 ---
 name: mfma_padding_2_pass_1_intervening_valu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass_1_intervening_valu
@@ -142,6 +144,7 @@ body: |
 
 ---
 name: mfma_padding_2_pass_dbg
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass_dbg
@@ -213,6 +216,7 @@ body: |
 
 ---
 name: mfma_padding_8_pass
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_8_pass
@@ -272,6 +276,7 @@ body: |
 
 ---
 name: mfma_padding_8_pass_2_intervening_valu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_8_pass_2_intervening_valu
@@ -354,6 +359,7 @@ body: |
 
 ---
 name: mfma_padding_16_pass
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass
@@ -413,6 +419,7 @@ body: |
 
 ---
 name: mfma_padding_16_pass_4_intervening_valu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_4_intervening_valu
@@ -519,6 +526,7 @@ body: |
 
 ---
 name: mfma_padding_16_pass_16_intervening_valu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_16_intervening_valu
@@ -762,6 +770,7 @@ body: |
 
 ---
 name: mfma_padding_16_pass_occ_1
+tracksRegLiveness: false
 machineFunctionInfo:
   occupancy: 1
 body: |
@@ -815,6 +824,7 @@ body: |
 
 ---
 name: mfma_padding_16_pass_2_preds
+tracksRegLiveness: false
 body: |
   ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-DEFAULT: bb.0:

@@ -18,6 +18,7 @@
 ...
 ---
 name:            foo
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:

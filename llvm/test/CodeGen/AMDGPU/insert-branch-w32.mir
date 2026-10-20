@@ -9,6 +9,7 @@
 # CHECK: S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
 
 name:            _amdgpu_cs_main
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_MOV_B32_e32 1050, implicit $exec
@@ -30,6 +31,7 @@ body:             |
 # CHECK: S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc_lo
 ---
 name:            _amdgpu_cs_main_undef
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_MOV_B32_e32 1050, implicit $exec

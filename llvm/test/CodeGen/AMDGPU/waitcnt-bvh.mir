@@ -3,6 +3,7 @@
 
 ---
 name: waitcnt-check-inorder
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: waitcnt-check-inorder
@@ -16,6 +17,7 @@ body: |
 ...
 ---
 name: waitcnt-check-vs-vmem
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: waitcnt-check-vs-vmem
@@ -32,6 +34,7 @@ body: |
 ...
 ---
 name: waitcnt-check-vs-mimg-samp
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: waitcnt-check-vs-mimg-samp
@@ -48,6 +51,7 @@ body: |
 ...
 ---
 name: waitcnt-check-vs-vmem-reverse
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: waitcnt-check-vs-vmem-reverse
@@ -64,6 +68,7 @@ body: |
 ...
 ---
 name: waitcnt-check-vs-mimg-samp-reverse
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: waitcnt-check-vs-mimg-samp-reverse

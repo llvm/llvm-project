@@ -29,6 +29,7 @@
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop_remove_kill0
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rdi
@@ -46,6 +47,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop_remove_kill1
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rdi
@@ -63,6 +65,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop_remove_kill2
+tracksRegLiveness: false
 body: |
   bb.0:
     $ax = COPY $di
@@ -80,6 +83,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop0
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rdi
@@ -96,6 +100,7 @@ body: |
 # CHECK-NEXT: NOOP implicit $rax
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop1
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rdi
@@ -112,6 +117,7 @@ body: |
 # CHECK-NOT: $rax = COPY $rdi
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
 name: copyprop2
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rdi
@@ -168,6 +174,7 @@ body: |
 # CHECK-NEXT: $rbp = COPY $rax
 # CHECK-NEXT: NOOP implicit $rax, implicit $rbp
 name: nocopyprop0
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rbp
@@ -185,6 +192,7 @@ body: |
 # CHECK-NEXT: $rax = COPY $rbp
 # CHECK-NEXT: NOOP implicit $rax, implicit $rbp
 name: nocopyprop1
+tracksRegLiveness: false
 body: |
   bb.0:
     $rbp = COPY $rax
@@ -202,6 +210,7 @@ body: |
 # CHECK-NEXT: $rax = COPY $rbp
 # CHECK-NEXT: NOOP implicit $rax, implicit $rbp
 name: nocopyprop2
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rbp
@@ -219,6 +228,7 @@ body: |
 # CHECK-NEXT: $rbp = COPY $rax
 # CHECK-NEXT: NOOP implicit $rax, implicit $rbp
 name: nocopyprop3
+tracksRegLiveness: false
 body: |
   bb.0:
     $rbp = COPY $rax
@@ -235,6 +245,7 @@ body: |
 # CHECK-NEXT: $rax = COPY $rip
 # CHECK-NEXT: NOOP implicit $rax
 name: nocopyprop4
+tracksRegLiveness: false
 body: |
   bb.0:
     $rax = COPY $rip
@@ -250,6 +261,7 @@ body: |
 # CHECK-NEXT: $rip = COPY $rax
 # CHECK-NEXT: $rip = COPY $rax
 name: nocopyprop5
+tracksRegLiveness: false
 body: |
   bb.0:
     $rip = COPY $rax
@@ -262,6 +274,7 @@ body: |
 # CHECK: bb.0:
 # CHECK-NEXT: $rbx = frame-setup COPY $rax
 name: nocopyprop_frame_setup
+tracksRegLiveness: false
 body: |
   bb.0:
     $rbx = frame-setup COPY $rax
@@ -271,6 +284,7 @@ body: |
 # CHECK: bb.0:
 # CHECK-NEXT: $rbx = frame-destroy COPY $rax
 name: nocopyprop_frame_destroy
+tracksRegLiveness: false
 body: |
   bb.0:
     $rbx = frame-destroy COPY $rax

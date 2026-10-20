@@ -9,6 +9,7 @@
 ...
 ---
 name:            b
+tracksRegLiveness: false
 frameInfo:
   savePoint:
     - point:           '%bb.0'

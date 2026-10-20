@@ -3,6 +3,7 @@
 
 ---
 name: f
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: f

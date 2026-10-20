@@ -5,6 +5,7 @@
 name:            direct
 alignment:       4
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: direct
@@ -24,6 +25,7 @@ body:             |
 name:            fed_by_load
 alignment:       4
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fed_by_load
@@ -47,6 +49,7 @@ body:             |
 name:            create_copy
 alignment:       4
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: create_copy

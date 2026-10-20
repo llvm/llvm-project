@@ -92,6 +92,7 @@
 ...
 ---
 name:            push_pop_same
+tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
@@ -104,6 +105,7 @@ body:             |
 ...
 ---
 name:            push_pop_different
+tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
@@ -119,6 +121,7 @@ body:             |
 ...
 ---
 name:            push_add
+tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
 
