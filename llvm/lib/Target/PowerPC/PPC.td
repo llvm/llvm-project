@@ -276,27 +276,27 @@ def FeatureISAFuture : SubtargetFeature<"isa-future-instructions",
                                         "Enable instructions for Future ISA.",
                                         [FeatureISA3_1]>;
 
-def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
+def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8AltivecDoNotUse", "true",
                                         "Enable POWER8 Altivec instructions",
                                         [FeatureISA2_07, FeatureAltivec]>;
-def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
+def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8CryptoDoNotUse", "true",
                                        "Enable POWER8 Crypto instructions",
                                        [FeatureP8Altivec]>;
-def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
+def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8VectorDoNotUse", "true",
                                         "Enable POWER8 vector instructions",
                                         [FeatureVSX, FeatureP8Altivec]>;
-def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
+def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9AltivecDoNotUse", "true",
                                         "Enable POWER9 Altivec instructions",
                                         [FeatureISA3_0, FeatureP8Altivec]>;
-def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
+def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9VectorDoNotUse", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
-                                         FeatureP9Altivec]>;
-def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
+                                         FeatureP9Altivec, FeatureVSX]>;
+def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10VectorDoNotUse",
                                          "true",
                                          "Enable POWER10 vector instructions",
                                          [FeatureISA3_1, FeatureP9Vector]>;
-def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVector",
+def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVectorDoNotUse",
                                            "true",
                                            "Enable Future vector instructions",
                                            [FeatureISAFuture, FeatureP10Vector]>;
