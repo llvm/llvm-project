@@ -241,3 +241,20 @@ TEST_F(SourceMgrDiagnosticVerifierTest, BuffersWithSameName) {
             MatchResult::Matched);
   EXPECT_FALSE(Verifier.verify());
 }
+
+TEST_F(SourceMgrDiagnosticVerifierTest, BufferAddedLater) {
+  addBuffer("op\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS);
+  // E.g. an included file without any diagnostics.
+  addBuffer("op\n# expected-error@-1 {{missing}}\n", "inc.s");
+
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_NE(StringRef(Output).find(
+                "error: expected error \"missing\" was not produced"),
+            StringRef::npos);
+
+  // Calling verify() again does not report the same directives again.
+  std::string FirstOutput = Output;
+  EXPECT_FALSE(Verifier.verify());
+  EXPECT_EQ(Output, FirstOutput);
+}

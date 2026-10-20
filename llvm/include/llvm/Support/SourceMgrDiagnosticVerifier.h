@@ -63,8 +63,8 @@ public:
   };
 
   /// Scans all buffers currently registered with \p mgr for expected
-  /// diagnostics. Buffers added later are scanned the first time a
-  /// diagnostic is reported in them. Verifier errors (near misses, unmatched
+  /// diagnostics. Buffers added later are scanned when they are first needed,
+  /// at the latest by \c verify(). Verifier errors (near misses, unmatched
   /// expected diagnostics, malformed directives) are printed to \p os,
   /// bypassing \p mgr's diagnostic handler.
   ///
