@@ -467,7 +467,7 @@ int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   if (auto Res = olMemcpy(Queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
-                          PM->getHostDevice(), Size)) {
+                          /*Src=*/nullptr, Size)) {
     REPORT() << "Failure to copy data from host to device. Pointers: host "
              << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
              << ", size = " << Size << ": " << Res->Details;
@@ -516,7 +516,7 @@ DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  if (auto Res = olMemcpy(Queue, HstPtrBegin, PM->getHostDevice(), TgtPtrBegin,
+  if (auto Res = olMemcpy(Queue, HstPtrBegin, /*Dst=*/nullptr, TgtPtrBegin,
                           DeviceHandle, Size)) {
     REPORT() << "Failure to copy data from device to host. Pointers: host "
              << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
