@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
 
 ; A callee-pop function can pop more bytes than ret's 16-bit immediate holds. On
 ; 64-bit targets that is done by popping the return address, dropping the bytes

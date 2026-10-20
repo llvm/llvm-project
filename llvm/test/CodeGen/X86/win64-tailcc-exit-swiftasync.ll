@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
 
 ; On Win64 there is no extended Swift async frame (the async context stored just
 ; below the saved frame pointer): the context is kept in an ordinary stack slot.

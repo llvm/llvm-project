@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: Can't handle guaranteed tail calls that change the stack argument size in a function with EH funclets under win64 yet
 

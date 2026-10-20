@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
 
 ; A byval argument whose destination covers the caller's return-address slot is
 ; split: the 8 bytes that land on that slot are copied with a volatile store, so
