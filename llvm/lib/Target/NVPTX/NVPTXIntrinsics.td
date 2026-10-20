@@ -3366,7 +3366,7 @@ class AtomicSDNodeXForm<SDNode atomic> {
     unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
     NVPTXMemCacheHintAccess Access{
         NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
-        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+        /*NumElts=*/1, EltWidth, getMemOrder(MN)};
     return getMemCacheHintOperands(MN, Access, SDLoc(N),
                                    /*EmitDiagnostics=*/true)
         .EvictionAndPrefetchHint;
@@ -3377,7 +3377,7 @@ class AtomicSDNodeXForm<SDNode atomic> {
     unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
     NVPTXMemCacheHintAccess Access{
         NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
-        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+        /*NumElts=*/1, EltWidth, getMemOrder(MN)};
     return getMemCacheHintOperands(MN, Access, SDLoc(N),
                                    /*EmitDiagnostics=*/false)
         .CachePolicyReg;
@@ -3447,8 +3447,51 @@ defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add", "u64", 
 
 defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz", "f16", atomic_load_fadd, [SM70, PTX63]>;
 defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90]>;
+defm INT_PTX_ATOM_ADD_F16X2 : F_ATOMIC_2<F16X2RT, atomic_load_fadd, "add.noftz", "f16x2", atomic_load_fadd, [SM60, PTX62]>;
+defm INT_PTX_ATOM_ADD_BF16X2 : F_ATOMIC_2<BF16X2RT, atomic_load_fadd, "add.noftz", "bf16x2", atomic_load_fadd, [SM90, PTX78]>;
 defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add", "f32", atomic_load_fadd>;
 defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add", "f64", atomic_load_fadd, [hasAtomAddF64]>;
+
+// Native vector atomics use one register per f32 element or packed pair of
+// f16/bf16 elements. Two-element f16/bf16 min/max use two 16-bit registers.
+class F_ATOMIC_VECTOR<RegTyInfo T, int N, string Op, string Type> :
+  NVPTXInst<
+    !dag(outs, !listsplat(T.RC, N),
+         !foreach(I, !range(N), "dst" # I)),
+    !con((ins ADDR:$addr),
+         !dag(ins, !listsplat(T.RC, N),
+              !foreach(I, !range(N), "src" # I)),
+         (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+              EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+              CachePolicy:$policy)),
+    "atom${sem:sem}${scope:scope}${addsp:addsp}." # Op #
+    "${evictionAndPrefetchHint:l2}.v" # N # "." # Type # " \t{{" #
+    !interleave(!foreach(I, !range(N), "$dst" # I), ", ") #
+    "}}, [$addr], {{" #
+    !interleave(!foreach(I, !range(N), "$src" # I), ", ") #
+    "}}${policy};"> {
+  let mayLoad = true;
+  let mayStore = true;
+  let hasSideEffects = true;
+  let Predicates = [SM90, PTX81];
+}
+
+foreach N = [2, 4] in {
+  def ATOM_ADD_V # N # _F32 : F_ATOMIC_VECTOR<F32RT, N, "add", "f32">;
+  let Predicates = [SM90, PTX94] in
+    def ATOM_ADD_NOFTZ_V # N # _F32 :
+      F_ATOMIC_VECTOR<F32RT, N, "add.noftz", "f32">;
+  foreach T = [F16X2RT, BF16X2RT] in {
+    foreach Op = ["add", "min", "max"] in
+      def ATOM_ # !toupper(Op) # _V # N # _ # !toupper(T.PtxType) :
+        F_ATOMIC_VECTOR<T, N, Op # ".noftz", T.PtxType>;
+  }
+}
+foreach T = [F16RT, BF16RT] in {
+  foreach Op = ["min", "max"] in
+    def ATOM_ # !toupper(Op) # _V2_ # !toupper(T.PtxType) :
+      F_ATOMIC_VECTOR<T, 2, Op # ".noftz", T.PtxType>;
+}
 
 // atom_swap
 defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch", "b32", atomic_swap>;
