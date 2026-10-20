@@ -1370,7 +1370,10 @@ define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 
 define i24 @ctlz_pow2_non_pow2_width(i24 %x) {
 ; CHECK-LABEL: @ctlz_pow2_non_pow2_width(
-; CHECK-NEXT:    [[R:%.*]] = call range(i24 0, 25) i24 @llvm.cttz.i24(i24 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[N:%.*]] = sub i24 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i24 [[X]], [[N]]
+; CHECK-NEXT:    [[Z:%.*]] = call range(i24 0, 25) i24 @llvm.ctlz.i24(i24 [[A]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor i24 [[Z]], 23
 ; CHECK-NEXT:    ret i24 [[R]]
 ;
   %n = sub i24 0, %x
@@ -1384,7 +1387,8 @@ define i33 @cttz_pow2_non_pow2_width(i33 %x, i33 %y) {
 ; CHECK-LABEL: @cttz_pow2_non_pow2_width(
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw i33 1, [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact i33 [[S]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call range(i33 0, 34) i33 @llvm.ctlz.i33(i33 [[D]], i1 true)
+; CHECK-NEXT:    [[Z:%.*]] = call range(i33 0, 34) i33 @llvm.cttz.i33(i33 [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor i33 [[Z]], 32
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
   %s = shl i33 1, %x
@@ -1398,7 +1402,8 @@ define <2 x i24> @cttz_pow2_non_pow2_width_vec(<2 x i24> %x, <2 x i24> %y) {
 ; CHECK-LABEL: @cttz_pow2_non_pow2_width_vec(
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i24> splat (i24 1), [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i24> [[S]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call range(i24 0, 25) <2 x i24> @llvm.ctlz.v2i24(<2 x i24> [[D]], i1 true)
+; CHECK-NEXT:    [[Z:%.*]] = call range(i24 0, 25) <2 x i24> @llvm.cttz.v2i24(<2 x i24> [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i24> [[Z]], splat (i24 23)
 ; CHECK-NEXT:    ret <2 x i24> [[R]]
 ;
   %s = shl <2 x i24> <i24 1, i24 1>, %x
