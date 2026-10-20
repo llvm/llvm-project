@@ -96,6 +96,13 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
     unsigned NumElts = VecTy->getNumElements();
     unsigned EltBits = EltTy->getBitWidth();
 
+    auto *PackedTy =
+        FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
+    const auto *TLI = ST->getTargetLowering();
+    if (!TLI->isTypeLegal(TLI->getValueType(*DL, VecTy)) ||
+        !TLI->isTypeLegal(TLI->getValueType(*DL, PackedTy)))
+      continue;
+
     if (EltBits == 1 || EltBits >= XLen || NumElts * EltBits != XLen ||
         Extracts.size() != NumElts)
       continue;
@@ -124,8 +131,6 @@ bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
                             return E0->comesBefore(E1);
                           });
     IRBuilder<> Builder(FirstExt);
-    auto *PackedTy =
-        FixedVectorType::get(IntegerType::get(BB.getContext(), XLen), 1);
     if (!isGuaranteedNotToBeUndefOrPoison(ExtractedVec))
       ExtractedVec = Builder.CreateFreeze(ExtractedVec);
 
