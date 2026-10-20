@@ -134,11 +134,11 @@ func.func @invariant_code_inside_affine_if() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.apply #map{{[0-9]*}}(%arg0)
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[add]]
   // CHECK-NEXT: }
 
 
@@ -283,10 +283,10 @@ func.func @invariant_affine_if() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: }
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[add]]
   // CHECK-NEXT: }
 
 
@@ -310,11 +310,11 @@ func.func @invariant_affine_if2() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT:   arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT:   affine.store %[[add]]
   // CHECK-NEXT: }
   // CHECK-NEXT: }
 
@@ -341,13 +341,13 @@ func.func @invariant_affine_nested_if() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg1]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg1]]] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -377,15 +377,15 @@ func.func @invariant_affine_nested_if_else() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: } else {
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg1]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg1]]] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -419,12 +419,12 @@ func.func @invariant_affine_nested_if_else2() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: }
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: } else {
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: }
@@ -455,9 +455,9 @@ func.func @invariant_affine_nested_if2() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: }
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.if
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
@@ -487,13 +487,13 @@ func.func @invariant_affine_for_inside_affine_if() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[add:.*]] = arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.for %[[arg2:.*]] = 0 to 10 {
-  // CHECK-NEXT: affine.store {{.*}}[%[[arg2]]] : memref<10xf32>
+  // CHECK-NEXT: affine.store %[[add]], %{{.*}}[%[[arg2]]] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -1009,4 +1009,94 @@ func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
   // CHECK-NEXT: }
   %r = affine.load %alloc[0] : memref<1xi32>
   return %r : i32
+}
+
+// -----
+
+// Pure loop-invariant ops are hoisted out of an affine.if that itself stays in
+// the loop.
+
+#set = affine_set<(d0) : (d0 - 4 >= 0)>
+
+// CHECK-LABEL: func @hoist_invariant_op_from_affine_if
+func.func @hoist_invariant_op_from_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
+  // CHECK:      %[[MUL:.*]] = arith.muli %arg0, %arg1 : i32
+  // CHECK-NEXT: affine.for %[[IV:.*]] = 0 to 16 {
+  // CHECK-NEXT:   affine.if
+  // CHECK-NEXT:     affine.store %[[MUL]], %{{.*}}[%[[IV]]]
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+  affine.for %i = 0 to 16 {
+    affine.if #set(%i) {
+      %0 = arith.muli %arg0, %arg1 : i32
+      affine.store %0, %m[%i] : memref<16xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Chains of invariant ops are hoisted from nested affine.if ops and else
+// regions, while ops depending on the loop IV stay in place.
+
+#set = affine_set<(d0) : (d0 - 4 >= 0)>
+
+// CHECK-LABEL: func @hoist_invariant_chain_from_nested_affine_if
+func.func @hoist_invariant_chain_from_nested_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
+  // CHECK:      %[[MUL:.*]] = arith.muli %arg0, %arg1 : i32
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addi %[[MUL]], %arg0 : i32
+  // CHECK-NEXT: %[[SUB:.*]] = arith.subi %[[ADD]], %arg1 : i32
+  // CHECK-NEXT: %[[XOR:.*]] = arith.xori %arg0, %arg1 : i32
+  // CHECK-NEXT: affine.for %[[IV:.*]] = 0 to 16 {
+  // CHECK-NEXT:   affine.if
+  // CHECK-NEXT:     affine.if
+  // CHECK-NEXT:       affine.store %[[SUB]]
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     %[[CAST:.*]] = arith.index_cast %[[IV]] : index to i32
+  // CHECK-NEXT:     %[[VAR:.*]] = arith.addi %[[ADD]], %[[CAST]] : i32
+  // CHECK-NEXT:     affine.store %[[VAR]]
+  // CHECK-NEXT:   } else {
+  // CHECK-NEXT:     affine.store %[[XOR]]
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+  affine.for %i = 0 to 16 {
+    affine.if #set(%i) {
+      %0 = arith.muli %arg0, %arg1 : i32
+      %1 = arith.addi %0, %arg0 : i32
+      affine.if #set(%i) {
+        %2 = arith.subi %1, %arg1 : i32
+        affine.store %2, %m[%i] : memref<16xi32>
+      }
+      %3 = arith.index_cast %i : index to i32
+      %4 = arith.addi %1, %3 : i32
+      affine.store %4, %m[%i] : memref<16xi32>
+    } else {
+      %5 = arith.xori %arg0, %arg1 : i32
+      affine.store %5, %m[%i] : memref<16xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Non-speculatable ops must not be hoisted out of an affine.if, since the
+// condition may guard against undefined behavior (e.g. division by zero).
+
+#set = affine_set<(d0) : (d0 - 4 >= 0)>
+
+// CHECK-LABEL: func @no_hoist_non_speculatable_op_from_affine_if
+func.func @no_hoist_non_speculatable_op_from_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
+  // CHECK:      affine.for
+  // CHECK-NEXT:   affine.if
+  // CHECK-NEXT:     arith.divsi
+  // CHECK-NEXT:     affine.store
+  affine.for %i = 0 to 16 {
+    affine.if #set(%i) {
+      %0 = arith.divsi %arg0, %arg1 : i32
+      affine.store %0, %m[%i] : memref<16xi32>
+    }
+  }
+  return
 }
