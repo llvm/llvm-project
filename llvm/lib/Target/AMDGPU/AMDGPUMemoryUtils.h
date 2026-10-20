@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/IR/DebugLoc.h"
 #include <optional>
 
 namespace llvm {
@@ -152,11 +153,12 @@ std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I);
 /// Parses the values for the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
 /// \p none, otherwise returns the address spaces specified by the MD.
-/// If an unexpected suffix for the MMRA tag is found, \p Diag is called with
-/// an error message.
+/// If \p DiagFn is non-null, unexpected suffixes for the MMRA tag are reported
+/// as warnings to \p DiagFn's context, located at \p DL.
 std::optional<SIAtomicAddrSpace>
 getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
-                        function_ref<void(StringRef)> Diag);
+                        const Function *DiagFn = nullptr,
+                        const DebugLoc &DL = {});
 
 } // end namespace AMDGPU
 
