@@ -68,7 +68,10 @@ protected:
 
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
-      HasLoadAcqStoreRel, HasGotox, HasHmul;
+      HasLoadAcqStoreRel, HasGotox;
+
+  // whether cpu v5 insns are enabled.
+  bool HasHmul;
 
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;

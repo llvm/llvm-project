@@ -93,7 +93,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasAlu32 = true;
     return;
   }
-  if (CPU == "v4") {
+  if (CPU == "v4" || CPU == "v5") {
     HasJmpExt = true;
     HasJmp32 = true;
     HasAlu32 = true;
@@ -105,7 +105,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasStoreImm = !Disable_StoreImm;
     HasLoadAcqStoreRel = !Disable_load_acq_store_rel;
     HasGotox = !Disable_gotox;
-    HasHmul = !Disable_hmul;
+    HasHmul = CPU == "v5" && !Disable_hmul;
     return;
   }
 }
