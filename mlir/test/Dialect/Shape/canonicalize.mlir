@@ -1690,12 +1690,29 @@ func.func @extract_from_shape_of_memref_no_fold(%arg0: memref<?xf32>) -> index {
 
 // Regression tests for https://github.com/llvm/llvm-project/issues/226067:
 // several shape folders used to crash with an unchecked cast when an operand
-// was ub.poison (a non-DenseIntElementsAttr attribute). The folds must bail
-// out gracefully instead.
+// was ub.poison (a non-DenseIntElementsAttr attribute). They now fold to
+// poison when the result depends entirely on the poison operand, and leave
+// the op alone otherwise.
+
+// With only one poison operand, the other extents are still known: no fold.
 // CHECK-LABEL: func @concat_poison
 func.func @concat_poison() -> tensor<4xindex> {
   // CHECK: shape.concat
   %lhs = shape.const_shape [0, 1] : tensor<2xindex>
+  %rhs = ub.poison : tensor<2xindex>
+  %0 = shape.concat %lhs, %rhs : tensor<2xindex>, tensor<2xindex> -> tensor<4xindex>
+  return %0 : tensor<4xindex>
+}
+
+// -----
+
+// concat of two poison shapes is poison.
+// CHECK-LABEL: func @concat_both_poison
+// CHECK-NOT: shape.concat
+// CHECK: %[[P:.*]] = ub.poison : tensor<4xindex>
+// CHECK: return %[[P]]
+func.func @concat_both_poison() -> tensor<4xindex> {
+  %lhs = ub.poison : tensor<2xindex>
   %rhs = ub.poison : tensor<2xindex>
   %0 = shape.concat %lhs, %rhs : tensor<2xindex>, tensor<2xindex> -> tensor<4xindex>
   return %0 : tensor<4xindex>
@@ -1716,10 +1733,12 @@ func.func @cstr_broadcastable_poison(%arg : tensor<?x4xf32>) {
 
 // -----
 
-// A poison operand must not crash the folder.
+// num_elements of a poison shape is poison.
 // CHECK-LABEL: func @num_elements_poison
+// CHECK-NOT: shape.num_elements
+// CHECK: %[[P:.*]] = ub.poison : index
+// CHECK: return %[[P]]
 func.func @num_elements_poison() -> index {
-  // CHECK: shape.num_elements
   %s = ub.poison : tensor<2xindex>
   %n = shape.num_elements %s : tensor<2xindex> -> index
   return %n : index
@@ -1727,9 +1746,11 @@ func.func @num_elements_poison() -> index {
 
 // -----
 
-// A poison operand must not crash the folder.
+// Splitting a poison shape gives two poison halves.
 // CHECK-LABEL: func @split_at_poison_shape
-// CHECK: shape.split_at
+// CHECK-NOT: shape.split_at
+// CHECK: %[[P:.*]] = ub.poison : !shape.shape
+// CHECK: return %[[P]], %[[P]]
 func.func @split_at_poison_shape() -> (!shape.shape, !shape.shape) {
   %c2 = arith.constant 2 : index
   %0 = ub.poison : !shape.shape
@@ -1739,9 +1760,11 @@ func.func @split_at_poison_shape() -> (!shape.shape, !shape.shape) {
 
 // -----
 
-// A poison operand must not crash the folder.
+// Splitting at a poison index gives two poison halves.
 // CHECK-LABEL: func @split_at_poison_index
-// CHECK: shape.split_at
+// CHECK-NOT: shape.split_at
+// CHECK: %[[P:.*]] = ub.poison : !shape.shape
+// CHECK: return %[[P]], %[[P]]
 func.func @split_at_poison_index() -> (!shape.shape, !shape.shape) {
   %c2 = ub.poison : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
@@ -1751,9 +1774,11 @@ func.func @split_at_poison_index() -> (!shape.shape, !shape.shape) {
 
 // -----
 
-// A poison operand must not crash the folder.
+// to_extent_tensor of a poison shape is poison.
 // CHECK-LABEL: func @to_extent_tensor_poison
-// CHECK: shape.to_extent_tensor
+// CHECK-NOT: shape.to_extent_tensor
+// CHECK: %[[P:.*]] = ub.poison : tensor<2xindex>
+// CHECK: return %[[P]]
 func.func @to_extent_tensor_poison() -> tensor<2xindex> {
   %cs = ub.poison : !shape.shape
   %0 = shape.to_extent_tensor %cs : !shape.shape -> tensor<2xindex>

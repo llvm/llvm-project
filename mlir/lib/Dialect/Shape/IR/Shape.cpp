@@ -877,6 +877,10 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
+  // concat(poison, poison) is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getLhs()) &&
+      isa_and_present<ub::PoisonAttr>(adaptor.getRhs()))
+    return ub::PoisonAttr::get(getContext());
   auto lhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getLhs());
   auto rhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getRhs());
   if (!lhs || !rhs)
@@ -1571,6 +1575,9 @@ LogicalResult shape::RankOp::verify() { return verifySizeOrIndexOp(*this); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult NumElementsOp::fold(FoldAdaptor adaptor) {
+  // num_elements of poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getShape()))
+    return ub::PoisonAttr::get(getContext());
 
   // Fold only when argument constant.
   auto shape =
@@ -1916,6 +1923,15 @@ LogicalResult shape::YieldOp::verify() {
 
 LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
                               SmallVectorImpl<OpFoldResult> &results) {
+  // Splitting a poison shape, or at a poison index, gives two poison halves.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getOperand()) ||
+      isa_and_present<ub::PoisonAttr>(adaptor.getIndex())) {
+    auto poison = ub::PoisonAttr::get(getContext());
+    results.push_back(poison);
+    results.push_back(poison);
+    return success();
+  }
+
   auto shapeAttr =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getOperand());
   auto indexAttr = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
@@ -1942,6 +1958,10 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ToExtentTensorOp::fold(FoldAdaptor adaptor) {
+  // to_extent_tensor of a poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getInput()))
+    return ub::PoisonAttr::get(getContext());
+
   auto inputAttr =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput());
   if (!inputAttr)
