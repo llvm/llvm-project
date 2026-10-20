@@ -122,15 +122,16 @@ TEST_F(SourceMgrDiagnosticVerifierTest, InstalledAsDiagHandler) {
   EXPECT_FALSE(Verifier.verify());
 }
 
-TEST_F(SourceMgrDiagnosticVerifierTest, CustomPrefixes) {
+TEST_F(SourceMgrDiagnosticVerifierTest, CustomPrefixesAndCommentScoping) {
   const MemoryBuffer *Buf =
       addBuffer("op\n"
                 "// check-error@-1 {{first prefix}}\n"
                 "# alt-warning@-2 {{second prefix}}\n"
                 "// uncheck-error@-3 {{longer prefix ignored}}\n"
                 "// other-check-error@-4 {{hyphenated prefix ignored}}\n"
-                "// expected-error@-5 {{default prefix ignored}}\n");
-  SourceMgrDiagnosticVerifier Verifier(SM, OS, {"check", "alt"});
+                "// expected-error@-5 {{default prefix ignored}}\n"
+                "op check-error {{outside comment ignored}}\n");
+  SourceMgrDiagnosticVerifier Verifier(SM, OS, {"check", "alt"}, {"//", "#"});
 
   EXPECT_EQ(
       Verifier.process(getMessage(Buf, SourceMgr::DK_Error, "first prefix")),
