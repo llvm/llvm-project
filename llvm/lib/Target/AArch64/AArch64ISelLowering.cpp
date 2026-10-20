@@ -19341,9 +19341,9 @@ struct deinterleaving_tbl_match {
     if (Start->countLeadingOnes() != ResSize - SrcSize)
       return false;
 
-    // The start of the valid indices must be between 0 and 3, for the 4
-    // subvectors we're extracting.
-    Idx = Start->getZExtValue() & SrcSize - 1;
+    // For a deinterleave of 4, the start of the valid indices must be between
+    // 0 and 3.
+    Idx = Start->getZExtValue() & (SrcSize - 1);
     return Idx < 4;
   }
 };
@@ -19456,9 +19456,7 @@ static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
   IRBuilder<> Builder(PreHeader->getTerminator());
 
   // Create a splat of (Invalid | ElementCnt(SrcTy))
-  Value *EltCnt = Builder.CreateVScale(EltTy);
-  EltCnt = Builder.CreateNUWMul(
-      EltCnt, ConstantInt::get(EltTy, AArch64::SVEBitsPerBlock / SrcBits));
+  Value *EltCnt = Builder.CreateElementCount(EltTy, SrcTy->getElementCount());
   Value *StartVal = Builder.CreateOr(EltCnt, ConstantInt::get(EltTy, Invalid));
   StartVal = Builder.CreateVectorSplat(EC, StartVal);
 
