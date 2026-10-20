@@ -138,3 +138,22 @@ row_major bool2x3 boolMatrix(row_major bool2x3 m : BIN) : BOUT {
 // CHECK-DAG: !{i32 2, !"SINGLE", i32 4, i32 0, !{{[0-9]+}}, i32 1, i32 1, i8 3,
 // CHECK-DAG: !{i32 3, !"COL", i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 3,
 // CHECK-DAG: !{i32 3, !"COL", i32 9, i32 0, !{{[0-9]+}}, i32 2, i32 1, i8 3,
+
+// Implicit semantic indices continue after every matrix row.
+struct ImplicitIndices {
+  row_major float2x3 r;
+  column_major float2x3 c;
+  float tail;
+};
+
+[shader("vertex")]
+float implicitMatrixIndex(ImplicitIndices input : TEXCOORD0) : OUT {
+  return input.tail;
+}
+
+// CHECK-DAG: !{i32 0, !"TEXCOORD", i32 9, i32 0, ![[TR:[0-9]+]], i32 0, i32 2, i8 3,
+// CHECK-DAG: ![[TR]] = !{i32 0, i32 1}
+// CHECK-DAG: !{i32 1, !"TEXCOORD", i32 9, i32 0, ![[TC:[0-9]+]], i32 0, i32 3, i8 2,
+// CHECK-DAG: ![[TC]] = !{i32 2, i32 3, i32 4}
+// CHECK-DAG: !{i32 2, !"TEXCOORD", i32 9, i32 0, ![[TT:[0-9]+]], i32 0, i32 1, i8 1,
+// CHECK-DAG: ![[TT]] = !{i32 5}
