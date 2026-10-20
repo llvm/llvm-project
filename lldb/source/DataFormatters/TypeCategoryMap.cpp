@@ -18,8 +18,8 @@ using namespace lldb_private;
 TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
     : m_map_mutex(), listener(lst), m_map(), m_active_categories() {
   constexpr llvm::StringRef default_category_name("default");
-  lldb::TypeCategoryImplSP default_sp = std::make_shared<TypeCategoryImpl>(
-      listener, ConstString(default_category_name));
+  lldb::TypeCategoryImplSP default_sp =
+      std::make_shared<TypeCategoryImpl>(listener, default_category_name.str());
   Add(default_category_name, default_sp);
   Enable(default_category_name, First);
 }
