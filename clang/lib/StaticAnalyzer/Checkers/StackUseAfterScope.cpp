@@ -10,21 +10,21 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class DanglingPtrDeref : public Checker<check::Location, check::PostCall> {
+class StackUseAfterScope : public Checker<check::Location, check::PostCall> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, const Stmt *S,
                            ExplodedNode *N, CheckerContext &C) const;
-  const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
+  const BugType BugMsg{this, "StackUseAfterScope", "LifetimeBound"};
 };
 
-class DanglingPtrDerefBRVisitor : public BugReporterVisitor {
+class StackUseAfterScopeBRVisitor : public BugReporterVisitor {
   const MemRegion *SourceRegion;
 
 public:
-  explicit DanglingPtrDerefBRVisitor(const MemRegion *Source)
+  explicit StackUseAfterScopeBRVisitor(const MemRegion *Source)
       : SourceRegion(Source) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
@@ -38,7 +38,7 @@ public:
 
 } // namespace
 
-void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
+void StackUseAfterScope::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
@@ -50,7 +50,7 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
-void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
+void StackUseAfterScope::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   // Only check calls arguments if it is not inlined by the engine. In case a
@@ -66,7 +66,7 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
   }
 }
 
-void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
+void StackUseAfterScope::reportUseAfterScope(const MemRegion *Region,
                                            const Stmt *S, ExplodedNode *N,
                                            CheckerContext &C) const {
   ProgramStateRef ReportedState =
@@ -79,7 +79,7 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
       (llvm::Twine("Use of ") + lifetime_modeling::getRegionName(Region) +
        " after its lifetime ended."),
       N);
-  BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
+  BR->addVisitor<StackUseAfterScopeBRVisitor>(Region);
   if (S) {
     if (const Expr *DerefExpr = bugreporter::getDerefExpr(S))
       bugreporter::trackExpressionValue(N, DerefExpr, *BR);
@@ -89,9 +89,9 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
 }
 
 PathDiagnosticPieceRef
-DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
-                                     BugReporterContext &BRC,
-                                     PathSensitiveBugReport &BR) {
+StackUseAfterScopeBRVisitor::VisitNode(const ExplodedNode *N,
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &BR) {
   using lifetime_modeling::isDeallocated;
   const ExplodedNode *Pred = N->getFirstPred();
   if (!Pred)
@@ -115,10 +115,10 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       true);
 }
 
-void ento::registerDanglingPtrDeref(CheckerManager &Mgr) {
-  Mgr.registerChecker<DanglingPtrDeref>();
+void ento::registerStackUseAfterScope(CheckerManager &Mgr) {
+  Mgr.registerChecker<StackUseAfterScope>();
 }
 
-bool ento::shouldRegisterDanglingPtrDeref(const CheckerManager &Mgr) {
+bool ento::shouldRegisterStackUseAfterScope(const CheckerManager &Mgr) {
   return true;
 }

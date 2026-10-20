@@ -159,12 +159,11 @@ void simpleMoveCtorTest() {
     clang_analyzer_printState();
 
 // CHECK:      "checker_messages": [
-// CHECK-NEXT:   { "checker": "cplusplus.Move", "messages": [
+// CHECK:        { "checker": "cplusplus.Move", "messages": [
 // CHECK-NEXT:     "Moved-from objects :",
 // CHECK:          "a: moved",
 // CHECK:          ""
 // CHECK-NEXT:   ]}
-// CHECK-NEXT: ]
 #endif
 
     a.foo(); // peaceful-warning {{Method called on moved-from object 'a'}}
