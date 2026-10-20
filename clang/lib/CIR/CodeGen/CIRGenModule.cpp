@@ -1023,8 +1023,8 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
     return LangAS::cuda_device;
   }
 
-  if (langOpts.OpenMP)
-    errorNYI("OpenMP global address space");
+  if (langOpts.OpenMP && d && d->hasAttr<OMPAllocateDeclAttr>())
+    errorNYI(d->getSourceRange(), "OpenMP global address space");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
@@ -1253,7 +1253,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     assert(!cir::MissingFeatures::opGlobalWeakRef());
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
-    assert(!cir::MissingFeatures::openMP());
+
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd && d)
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     if (entry.getSymType() == ty &&
         cir::normalizeDefaultAddressSpace(entryCIRAS) ==
@@ -1329,8 +1331,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // Handle things which are present even on external declarations.
   if (d) {
     if (langOpts.OpenMP && !langOpts.OpenMPSimd)
-      errorNYI(d->getSourceRange(),
-               "getOrCreateCIRGlobal: OpenMP target global variable");
+      getOpenMPRuntime().registerTargetGlobalVariable(d);
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
 
