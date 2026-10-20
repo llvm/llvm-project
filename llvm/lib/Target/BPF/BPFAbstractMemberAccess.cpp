@@ -308,31 +308,30 @@ static DIDerivedType *getDIRecordField(const DICompositeType *CTy,
     return nullptr;
   auto *Field = dyn_cast<DIDerivedType>(Elements[AccessIndex]);
   if (!Field || Field->getTag() != dwarf::DW_TAG_member ||
-      Field->isStaticMember())
+      !isBTFRecordElement(Field))
     return nullptr;
   return Field;
 }
 
 /// Return the position of the element at DI index AccessIndex among the BTF
-/// members of record CTy, ordered as getBTFRecordElements() orders them,
-/// without building that list for every access.
+/// members of record CTy, in the order BTFDebug emits them: union members in
+/// DI order, struct members stably sorted by offset.
 static uint64_t getBTFMemberIndex(const DICompositeType *CTy,
                                   uint64_t AccessIndex) {
   DINodeArray Elements = CTy->getElements();
-  bool IsStruct = isStructTag(CTy->getTag());
-  uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
   uint64_t BTFIndex = 0;
+  if (!isBTFStructTag(CTy->getTag())) {
+    for (unsigned I = 0; I < AccessIndex; ++I)
+      BTFIndex += isBTFRecordElement(Elements[I]);
+    return BTFIndex;
+  }
+  uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
   for (unsigned I = 0; I < Elements.size(); ++I) {
     if (!isBTFRecordElement(Elements[I]))
       continue;
-    // Union members keep their DI order, struct members are stably sorted by
-    // offset.
-    bool Before = I < AccessIndex;
-    if (IsStruct) {
-      uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
-      Before = ElementOffset < Offset || (ElementOffset == Offset && Before);
-    }
-    BTFIndex += Before;
+    uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+    BTFIndex +=
+        ElementOffset < Offset || (ElementOffset == Offset && I < AccessIndex);
   }
   return BTFIndex;
 }
@@ -550,11 +549,11 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   assert(PTy && CTy && "ParentType or ChildType is null or not composite");
 
   uint32_t PTyTag = PTy->getTag();
-  assert(PTyTag == dwarf::DW_TAG_array_type || isStructTag(PTyTag) ||
+  assert(PTyTag == dwarf::DW_TAG_array_type || isBTFStructTag(PTyTag) ||
          PTyTag == dwarf::DW_TAG_union_type);
 
   uint32_t CTyTag = CTy->getTag();
-  assert(CTyTag == dwarf::DW_TAG_array_type || isStructTag(CTyTag) ||
+  assert(CTyTag == dwarf::DW_TAG_array_type || isBTFStructTag(CTyTag) ||
          CTyTag == dwarf::DW_TAG_union_type);
 
   // Multi dimensional arrays, base element should be the same
@@ -723,7 +722,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
                   (EltTy->getSizeInBits() >> 3);
-    } else if (isStructTag(Tag)) {
+    } else if (isBTFStructTag(Tag)) {
       auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
@@ -958,7 +957,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
       }
 
       unsigned CTag = CTy->getTag();
-      if (isStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) {
+      if (isBTFStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) {
         TypeName = std::string(CTy->getName());
       } else {
         if (HasPreserveFieldInfoCall(CallStack))
@@ -1008,7 +1007,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     // For a record, use the position of the field among its BTF members, and
     // use an array index as is.
     uint64_t BTFIndex = AccessIndex;
-    if (isStructTag(CTy->getTag()) ||
+    if (isBTFStructTag(CTy->getTag()) ||
         CTy->getTag() == dwarf::DW_TAG_union_type) {
       if (!getDIRecordField(CTy, AccessIndex)) {
         Call->getContext().diagnose(DiagnosticInfoUnsupported(

@@ -252,11 +252,35 @@ static bool canUseNocallOptimizedSignature(
   return true;
 }
 
-/// Return the BTF name of a type. Released kernels only accept identifiers as
-/// type names, so a C++ template specialization is named without its template
-/// arguments, as with -gsimple-template-names.
+/// Return the name to emit for a named BTF type. Released kernels only accept
+/// identifiers as type names, so a C++ template specialization is named without
+/// its template arguments, as with -gsimple-template-names. Type identity and
+/// fixups keep using the DI name.
 static StringRef getBTFTypeName(StringRef Name) {
   return Name.take_front(Name.find('<'));
+}
+
+/// Whether a DI derived type tag becomes a BTF pointer: a pointer, or a C++
+/// reference, which BTF has no kind for.
+static bool isBTFPointerTag(unsigned Tag) {
+  return Tag == dwarf::DW_TAG_pointer_type ||
+         Tag == dwarf::DW_TAG_reference_type ||
+         Tag == dwarf::DW_TAG_rvalue_reference_type;
+}
+
+/// Return the BTF members of a record in BTF order: structure members by
+/// offset (BTF requires nondecreasing offsets), stable for equal offsets.
+static SmallVector<const DINode *, 8>
+getBTFRecordElements(const DICompositeType *CTy) {
+  SmallVector<const DINode *, 8> Elements;
+  for (const DINode *Element : CTy->getElements())
+    if (isBTFRecordElement(Element))
+      Elements.push_back(Element);
+  if (isBTFStructTag(CTy->getTag()))
+    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
+      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+    });
+  return Elements;
 }
 
 /// Emit a BTF common type.
@@ -271,7 +295,7 @@ void BTFTypeBase::emitType(MCStreamer &OS) {
 
 BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
                                bool NeedsFixup)
-    : DTy(DTy), NeedsFixup(NeedsFixup), Name(getBTFTypeName(DTy->getName())) {
+    : DTy(DTy), NeedsFixup(NeedsFixup), Name(DTy->getName()) {
   switch (Tag) {
   case dwarf::DW_TAG_pointer_type:
     Kind = BTF::BTF_KIND_PTR;
@@ -333,7 +357,7 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     BTFType.NameOff = 0;
     break;
   default:
-    BTFType.NameOff = BDebug.addString(Name);
+    BTFType.NameOff = BDebug.addString(getBTFTypeName(Name));
     break;
   }
 
@@ -359,8 +383,7 @@ void BTFTypeDerived::setPointeeType(uint32_t PointeeType) {
 }
 
 /// Represent a struct/union forward declaration.
-BTFTypeFwd::BTFTypeFwd(StringRef Name, bool IsUnion)
-    : Name(getBTFTypeName(Name)) {
+BTFTypeFwd::BTFTypeFwd(StringRef Name, bool IsUnion) : Name(Name) {
   Kind = BTF::BTF_KIND_FWD;
   BTFType.Info = IsUnion << 31 | Kind << 24;
   BTFType.Type = 0;
@@ -371,7 +394,7 @@ void BTFTypeFwd::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(Name);
+  BTFType.NameOff = BDebug.addString(getBTFTypeName(Name));
 }
 
 void BTFTypeFwd::emitType(MCStreamer &OS) { BTFTypeBase::emitType(OS); }
@@ -1137,7 +1160,7 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
     if (CTy->isForwardDecl())
       visitFwdDeclType(CTy, Tag == dwarf::DW_TAG_union_type, TypeId);
     else
-      visitStructType(CTy, isStructTag(Tag), TypeId);
+      visitStructType(CTy, isBTFStructTag(Tag), TypeId);
     break;
   case dwarf::DW_TAG_array_type:
     visitArrayType(CTy, TypeId);
@@ -1153,7 +1176,7 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
 bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
   if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
     auto CTag = CTy->getTag();
-    if ((isStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) &&
+    if ((isBTFStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) &&
         !CTy->getName().empty() && !CTy->isForwardDecl())
       return true;
   }
@@ -1164,11 +1187,9 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
 /// types.
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
-  unsigned Tag = DTy->getTag();
   // BTF has no references; a C++ reference is represented as a pointer.
-  if (Tag == dwarf::DW_TAG_reference_type ||
-      Tag == dwarf::DW_TAG_rvalue_reference_type)
-    Tag = dwarf::DW_TAG_pointer_type;
+  unsigned Tag = isBTFPointerTag(DTy->getTag()) ? dwarf::DW_TAG_pointer_type
+                                                : DTy->getTag();
 
   if (Tag == dwarf::DW_TAG_atomic_type)
     return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
@@ -1199,8 +1220,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef) {
     int TmpTypeId = genBTFTypeTags(DTy, -1);
     if (TmpTypeId >= 0) {
-      auto TypeDEntry = std::make_unique<BTFTypeDerived>(
-          TmpTypeId, Tag, getBTFTypeName(DTy->getName()));
+      auto TypeDEntry =
+          std::make_unique<BTFTypeDerived>(TmpTypeId, Tag, DTy->getName());
       TypeId = addType(std::move(TypeDEntry), DTy);
     } else {
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
@@ -1277,7 +1298,7 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
-            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
+            if (CheckPointer && isBTFPointerTag(DTy->getTag()) &&
                 !DTy->getAnnotations()) {
               SeenPointer = true;
               if (IsForwardDeclCandidate(BaseTy))

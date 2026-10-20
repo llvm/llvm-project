@@ -315,11 +315,11 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     VBase = nullptr; // we no longer have a virtual step
   }
 
-  // A CO-RE relocation is relative to the record that has the field, so the
-  // offset of its base subobject would not be relocated.
-  if (IsInPreservedAIRegion && (VBase || !NonVirtualOffset.isZero())) {
-    CGM.Error(Loc, "CO-RE access through a virtual base or a base at a "
-                   "non-zero offset not supported");
+  // A BPF CO-RE relocation is relative to the record that has the field, so
+  // the offset of the base subobject, which may differ in the target, would not
+  // be relocated.
+  if (IsInPreservedAIRegion && getTarget().getTriple().isBPF()) {
+    CGM.Error(Loc, "CO-RE access through a base class not supported");
     return Value.withElementType(ConvertType((PathEnd[-1])->getType()));
   }
 
