@@ -119,8 +119,7 @@ protected:
       : dl(dl), modOp(modOp), typeMapper(dl) {}
 
   /// The library classifier for a function whose recorded target features
-  /// may refine the ABI rules, or for the module's rules when
-  /// \p featureSource is null.
+  /// may refine the ABI rules.
   virtual const llvm::abi::TargetInfo &
   getTargetInfo(cir::FuncOp featureSource) = 0;
 

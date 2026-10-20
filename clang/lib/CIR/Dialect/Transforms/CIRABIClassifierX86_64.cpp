@@ -64,7 +64,8 @@ private:
 const llvm::abi::TargetInfo &
 X86_64ABIClassifier::getTargetInfo(cir::FuncOp featureSource) {
   llvm::abi::X86AVXABILevel level = baseAvxLevel;
-  if (allowsTargetAttrAvx && featureSource)
+  assert(featureSource && "function required for getTargetInfo");
+  if (allowsTargetAttrAvx)
     level = funcAvxLevel(featureSource, baseAvxLevel);
   assert(static_cast<unsigned>(level) < numAvxLevels &&
          "a new X86AVXABILevel must move X86AVXABILevel::Last");
