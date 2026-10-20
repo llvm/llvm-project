@@ -151,7 +151,6 @@ private:
   std::string nameData;
   std::string payload;
 };
-
 } // namespace wasm
 } // namespace lld
 

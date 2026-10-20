@@ -112,8 +112,7 @@ static bool isUsedInGlobalInitializer(const Value &V) {
     if (const auto *GV = dyn_cast<GlobalVariable>(U)) {
       // llvm.used and llvm.compiler.used only keep symbols alive; their
       // contents are never dereferenced.
-      if (GV->getName() == "llvm.used" ||
-          GV->getName() == "llvm.compiler.used")
+      if (GV->getName() == "llvm.used" || GV->getName() == "llvm.compiler.used")
         continue;
       return true;
     }
@@ -126,9 +125,9 @@ static bool isUsedInGlobalInitializer(const Value &V) {
   return false;
 }
 
-static bool containsTaggedGlobal(
-    const Constant *C,
-    const DenseSet<const GlobalVariable *> &TaggedGlobals) {
+static bool
+containsTaggedGlobal(const Constant *C,
+                     const DenseSet<const GlobalVariable *> &TaggedGlobals) {
   if (const auto *G = dyn_cast<GlobalVariable>(C))
     return TaggedGlobals.contains(G);
   for (const Value *Op : C->operands())

@@ -16,8 +16,8 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
 
@@ -354,6 +354,5 @@ void MemtagGlobalsSection::writeTo(uint8_t *buf) {
   buf += nameData.size();
   memcpy(buf, payload.data(), payload.size());
 }
-
 } // namespace wasm
 } // namespace lld
