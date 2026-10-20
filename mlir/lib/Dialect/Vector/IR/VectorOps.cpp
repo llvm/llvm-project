@@ -7181,35 +7181,32 @@ public:
       // stride product and the count of trailing scalable dimensions.
       VectorType broadcastVectorType = broadcastOp.getResultVectorType();
 
-      // Iterate from the innermost (trailing) dimension outward. `llvm::zip`
-      // stops once all `src` dimensions are visited, aligning each `src`
-      // dimension with the corresponding trailing dimension of `broadcast` and
-      // `dst`.
+      // Iterate from the innermost (trailing) dimension outward, aligning each
+      // `src` dimension with the corresponding trailing dimension of
+      // `broadcast` and `dst`.
       int64_t bcastStride = 1, dstStride = 1;
       int64_t bcastScalableDims = 0, dstScalableDims = 0;
-      for (auto [srcDim, isSrcScalable, bcastDim, isBcastScalable, dstDim,
-                 isDstScalable] :
-           llvm::zip(llvm::reverse(srcVectorType.getShape()),
-                     llvm::reverse(srcVectorType.getScalableDims()),
-                     llvm::reverse(broadcastVectorType.getShape()),
-                     llvm::reverse(broadcastVectorType.getScalableDims()),
-                     llvm::reverse(dstVectorType.getShape()),
-                     llvm::reverse(dstVectorType.getScalableDims()))) {
+      for (int64_t i = 0, e = srcVectorType.getRank(); i < e; ++i) {
+        int64_t srcDim = srcVectorType.getRank() - 1 - i;
+        int64_t bcastDim = broadcastVectorType.getRank() - 1 - i;
+        int64_t dstDim = dstVectorType.getRank() - 1 - i;
+
         // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
         // not unit) only ever have index 0, so their stride does not contribute
         // to the linear element offset. For non-unit dimensions, verify that
         // both the static stride factor and the `vscale` exponent accumulated
         // from the more minor (trailing) dimensions match.
-        bool isUnitDim = srcDim == 1 && !isSrcScalable;
+        bool isUnitDim = srcVectorType.getDimSize(srcDim) == 1 &&
+                         !srcVectorType.getScalableDims()[srcDim];
         if (!isUnitDim && (bcastStride != dstStride ||
                            bcastScalableDims != dstScalableDims)) {
           return failure();
         }
 
-        bcastStride *= bcastDim;
-        dstStride *= dstDim;
-        bcastScalableDims += isBcastScalable;
-        dstScalableDims += isDstScalable;
+        bcastStride *= broadcastVectorType.getDimSize(bcastDim);
+        dstStride *= dstVectorType.getDimSize(dstDim);
+        bcastScalableDims += broadcastVectorType.getScalableDims()[bcastDim];
+        dstScalableDims += dstVectorType.getScalableDims()[dstDim];
       }
     }
 
