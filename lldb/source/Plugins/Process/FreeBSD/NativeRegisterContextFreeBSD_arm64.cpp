@@ -16,8 +16,8 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 // clang-format off
 #include <sys/param.h>

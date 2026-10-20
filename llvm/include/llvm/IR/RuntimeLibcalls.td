@@ -125,6 +125,8 @@ def isArch64Bit : RuntimeLibcallAvailability<(all_of IsArch64Bit)>;
 // IR type there regardless of the C long double format.
 def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 
+def isAArch64 : RuntimeLibcallAvailability<(all_of IsAArch64)>;
+
 def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
 def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
 def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
@@ -453,12 +455,15 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defm LOG2 : VectorMathLibcall<S, VT, [VT]>;
   defm LOGB : VectorMathLibcall<S, VT, [VT]>;
   defm MODF : VectorMathLibcall<S, VT, [VT, Ptr]>;
+  defm MODF_STRET : VectorMathLibcall<S>;
   defm NEXTAFTER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW : VectorMathLibcall<S, VT, [VT, VT]>;
   defm POW_FINITE : VectorMathLibcall<S, VT, [VT, VT]>;
   defm REMAINDER : VectorMathLibcall<S, VT, [VT, VT]>;
   defm SINCOS : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOS_STRET : VectorMathLibcall<S>;
   defm SINCOSPI : VectorMathLibcall<S, Void, [VT, Ptr, Ptr]>;
+  defm SINCOSPI_STRET : VectorMathLibcall<S>;
   defm SIN : VectorMathLibcall<S, VT, [VT]>;
   defm SINH : VectorMathLibcall<S, VT, [VT]>;
   defm SINPI : VectorMathLibcall<S, VT, [VT]>;
@@ -3950,17 +3955,33 @@ class LibmvecLibcall<RuntimeLibcall P>
 defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVbN2v___exp_finite : LibmvecLibcall<EXP_FINITE_V2F64>;
   def LIBMVEC__ZGVbN2v___log_finite : LibmvecLibcall<LOG_FINITE_V2F64>;
+  def LIBMVEC__ZGVbN2v_acosh : LibmvecLibcall<ACOSH_V2F64>;
+  def LIBMVEC__ZGVbN2v_asinh : LibmvecLibcall<ASINH_V2F64>;
+  def LIBMVEC__ZGVbN2v_atanh : LibmvecLibcall<ATANH_V2F64>;
+  def LIBMVEC__ZGVbN2v_cbrt : LibmvecLibcall<CBRT_V2F64>;
   def LIBMVEC__ZGVbN2v_cos : LibmvecLibcall<COS_V2F64>;
+  def LIBMVEC__ZGVbN2v_erf : LibmvecLibcall<ERF_V2F64>;
+  def LIBMVEC__ZGVbN2v_erfc : LibmvecLibcall<ERFC_V2F64>;
   def LIBMVEC__ZGVbN2v_exp : LibmvecLibcall<EXP_V2F64>;
+  def LIBMVEC__ZGVbN2v_expm1 : LibmvecLibcall<EXPM1_V2F64>;
   def LIBMVEC__ZGVbN2v_log : LibmvecLibcall<LOG_V2F64>;
+  def LIBMVEC__ZGVbN2v_log1p : LibmvecLibcall<LOG1P_V2F64>;
   def LIBMVEC__ZGVbN2v_sin : LibmvecLibcall<SIN_V2F64>;
   def LIBMVEC__ZGVbN2v_tan : LibmvecLibcall<TAN_V2F64>;
   def LIBMVEC__ZGVbN2vv___pow_finite : LibmvecLibcall<POW_FINITE_V2F64>;
   def LIBMVEC__ZGVbN2vv_pow : LibmvecLibcall<POW_V2F64>;
   def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F32>;
+  def LIBMVEC__ZGVbN4v_acoshf : LibmvecLibcall<ACOSH_V4F32>;
+  def LIBMVEC__ZGVbN4v_asinhf : LibmvecLibcall<ASINH_V4F32>;
+  def LIBMVEC__ZGVbN4v_atanhf : LibmvecLibcall<ATANH_V4F32>;
+  def LIBMVEC__ZGVbN4v_cbrtf : LibmvecLibcall<CBRT_V4F32>;
   def LIBMVEC__ZGVbN4v_cosf : LibmvecLibcall<COS_V4F32>;
+  def LIBMVEC__ZGVbN4v_erfcf : LibmvecLibcall<ERFC_V4F32>;
+  def LIBMVEC__ZGVbN4v_erff : LibmvecLibcall<ERF_V4F32>;
   def LIBMVEC__ZGVbN4v_expf : LibmvecLibcall<EXP_V4F32>;
+  def LIBMVEC__ZGVbN4v_expm1f : LibmvecLibcall<EXPM1_V4F32>;
+  def LIBMVEC__ZGVbN4v_log1pf : LibmvecLibcall<LOG1P_V4F32>;
   def LIBMVEC__ZGVbN4v_logf : LibmvecLibcall<LOG_V4F32>;
   def LIBMVEC__ZGVbN4v_sinf : LibmvecLibcall<SIN_V4F32>;
   def LIBMVEC__ZGVbN4v_tanf : LibmvecLibcall<TAN_V4F32>;
@@ -3968,17 +3989,33 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVbN4vv_powf : LibmvecLibcall<POW_V4F32>;
   def LIBMVEC__ZGVdN4v___exp_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4v___log_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
+  def LIBMVEC__ZGVdN4v_acosh : LibmvecLibcall<ACOSH_V4F64>;
+  def LIBMVEC__ZGVdN4v_asinh : LibmvecLibcall<ASINH_V4F64>;
+  def LIBMVEC__ZGVdN4v_atanh : LibmvecLibcall<ATANH_V4F64>;
+  def LIBMVEC__ZGVdN4v_cbrt : LibmvecLibcall<CBRT_V4F64>;
   def LIBMVEC__ZGVdN4v_cos : LibmvecLibcall<COS_V4F64>;
+  def LIBMVEC__ZGVdN4v_erf : LibmvecLibcall<ERF_V4F64>;
+  def LIBMVEC__ZGVdN4v_erfc : LibmvecLibcall<ERFC_V4F64>;
   def LIBMVEC__ZGVdN4v_exp : LibmvecLibcall<EXP_V4F64>;
+  def LIBMVEC__ZGVdN4v_expm1 : LibmvecLibcall<EXPM1_V4F64>;
   def LIBMVEC__ZGVdN4v_log : LibmvecLibcall<LOG_V4F64>;
+  def LIBMVEC__ZGVdN4v_log1p : LibmvecLibcall<LOG1P_V4F64>;
   def LIBMVEC__ZGVdN4v_sin : LibmvecLibcall<SIN_V4F64>;
   def LIBMVEC__ZGVdN4v_tan : LibmvecLibcall<TAN_V4F64>;
   def LIBMVEC__ZGVdN4vv___pow_finite : LibmvecLibcall<POW_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4vv_pow : LibmvecLibcall<POW_V4F64>;
   def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F32>;
+  def LIBMVEC__ZGVdN8v_acoshf : LibmvecLibcall<ACOSH_V8F32>;
+  def LIBMVEC__ZGVdN8v_asinhf : LibmvecLibcall<ASINH_V8F32>;
+  def LIBMVEC__ZGVdN8v_atanhf : LibmvecLibcall<ATANH_V8F32>;
+  def LIBMVEC__ZGVdN8v_cbrtf : LibmvecLibcall<CBRT_V8F32>;
   def LIBMVEC__ZGVdN8v_cosf : LibmvecLibcall<COS_V8F32>;
+  def LIBMVEC__ZGVdN8v_erfcf : LibmvecLibcall<ERFC_V8F32>;
+  def LIBMVEC__ZGVdN8v_erff : LibmvecLibcall<ERF_V8F32>;
   def LIBMVEC__ZGVdN8v_expf : LibmvecLibcall<EXP_V8F32>;
+  def LIBMVEC__ZGVdN8v_expm1f : LibmvecLibcall<EXPM1_V8F32>;
+  def LIBMVEC__ZGVdN8v_log1pf : LibmvecLibcall<LOG1P_V8F32>;
   def LIBMVEC__ZGVdN8v_logf : LibmvecLibcall<LOG_V8F32>;
   def LIBMVEC__ZGVdN8v_sinf : LibmvecLibcall<SIN_V8F32>;
   def LIBMVEC__ZGVdN8v_tanf : LibmvecLibcall<TAN_V8F32>;
@@ -4580,6 +4617,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_svlog_f64_x : RuntimeLibcallImpl<LOG_MASKED_NXV2F64>;
   def armpl_svmodf_f32_x : RuntimeLibcallImpl<MODF_MASKED_NXV4F32>;
   def armpl_svmodf_f64_x : RuntimeLibcallImpl<MODF_MASKED_NXV2F64>;
+  def armpl_svmodf_f32_stret_x : RuntimeLibcallImpl<MODF_STRET_MASKED_NXV4F32>;
+  def armpl_svmodf_f64_stret_x : RuntimeLibcallImpl<MODF_STRET_MASKED_NXV2F64>;
   def armpl_svnextafter_f32_x : RuntimeLibcallImpl<NEXTAFTER_MASKED_NXV4F32>;
   def armpl_svnextafter_f64_x : RuntimeLibcallImpl<NEXTAFTER_MASKED_NXV2F64>;
   def armpl_svpow_f32_x : RuntimeLibcallImpl<POW_MASKED_NXV4F32>;
@@ -4590,6 +4629,10 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_svsincos_f64_x : RuntimeLibcallImpl<SINCOS_MASKED_NXV2F64>;
   def armpl_svsincospi_f32_x : RuntimeLibcallImpl<SINCOSPI_MASKED_NXV4F32>;
   def armpl_svsincospi_f64_x : RuntimeLibcallImpl<SINCOSPI_MASKED_NXV2F64>;
+  def armpl_svcexpi_f32_x : RuntimeLibcallImpl<SINCOS_STRET_MASKED_NXV4F32>;
+  def armpl_svcexpi_f64_x : RuntimeLibcallImpl<SINCOS_STRET_MASKED_NXV2F64>;
+  def armpl_svcexpipi_f32_x : RuntimeLibcallImpl<SINCOSPI_STRET_MASKED_NXV4F32>;
+  def armpl_svcexpipi_f64_x : RuntimeLibcallImpl<SINCOSPI_STRET_MASKED_NXV2F64>;
   def armpl_svsinh_f32_x : RuntimeLibcallImpl<SINH_MASKED_NXV4F32>;
   def armpl_svsinh_f64_x : RuntimeLibcallImpl<SINH_MASKED_NXV2F64>;
   def armpl_svsinpi_f32_x : RuntimeLibcallImpl<SINPI_MASKED_NXV4F32>;
@@ -4666,6 +4709,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vlogq_f64 : RuntimeLibcallImpl<LOG_V2F64>;
   def armpl_vmodfq_f32 : RuntimeLibcallImpl<MODF_V4F32>;
   def armpl_vmodfq_f64 : RuntimeLibcallImpl<MODF_V2F64>;
+  def armpl_vmodfq_f32_stret : RuntimeLibcallImpl<MODF_STRET_V4F32>;
+  def armpl_vmodfq_f64_stret : RuntimeLibcallImpl<MODF_STRET_V2F64>;
   def armpl_vnextafterq_f32 : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
   def armpl_vnextafterq_f64 : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
   def armpl_vpowq_f32 : RuntimeLibcallImpl<POW_V4F32>;
@@ -4674,6 +4719,10 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vsincospiq_f64 : RuntimeLibcallImpl<SINCOSPI_V2F64>;
   def armpl_vsincosq_f32 : RuntimeLibcallImpl<SINCOS_V4F32>;
   def armpl_vsincosq_f64 : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def armpl_vcexpiq_f32 : RuntimeLibcallImpl<SINCOS_STRET_V4F32>;
+  def armpl_vcexpiq_f64 : RuntimeLibcallImpl<SINCOS_STRET_V2F64>;
+  def armpl_vcexpipiq_f32 : RuntimeLibcallImpl<SINCOSPI_STRET_V4F32>;
+  def armpl_vcexpipiq_f64 : RuntimeLibcallImpl<SINCOSPI_STRET_V2F64>;
   def armpl_vsinhq_f32 : RuntimeLibcallImpl<SINH_V4F32>;
   def armpl_vsinhq_f64 : RuntimeLibcallImpl<SINH_V2F64>;
   def armpl_vsinpiq_f32 : RuntimeLibcallImpl<SINPI_V4F32>;
@@ -4696,6 +4745,7 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
 
 defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
+  def amd_vrd2_asin : RuntimeLibcallImpl<ASIN_V2F64>;
   def amd_vrd2_atan : RuntimeLibcallImpl<ATAN_V2F64>;
   def amd_vrd2_atan2 : RuntimeLibcallImpl<ATAN2_V2F64>;
   def amd_vrd2_cbrt : RuntimeLibcallImpl<CBRT_V2F64>;
@@ -4715,6 +4765,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
   def amd_vrd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
   def amd_vrd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
+  def amd_vrd4_asin : RuntimeLibcallImpl<ASIN_V4F64>;
   def amd_vrd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
   def amd_vrd4_atan2 : RuntimeLibcallImpl<ATAN2_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
@@ -4753,6 +4804,12 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd2_erfcinv : RuntimeLibcallImpl<ERFCINV_V2F64>;
   def amd_vrd4_erfcinv : RuntimeLibcallImpl<ERFCINV_V4F64>;
   def amd_vrd8_erfcinv : RuntimeLibcallImpl<ERFCINV_V8F64>;
+  def amd_vrd2_erfc : RuntimeLibcallImpl<ERFC_V2F64>;
+  def amd_vrd4_erfc : RuntimeLibcallImpl<ERFC_V4F64>;
+  def amd_vrd8_erfc : RuntimeLibcallImpl<ERFC_V8F64>;
+  def amd_vrs4_erfcf : RuntimeLibcallImpl<ERFC_V4F32>;
+  def amd_vrs8_erfcf : RuntimeLibcallImpl<ERFC_V8F32>;
+  def amd_vrs16_erfcf : RuntimeLibcallImpl<ERFC_V16F32>;
   def amd_vrs16_acosf : RuntimeLibcallImpl<ACOS_V16F32>;
   def amd_vrs16_asinf : RuntimeLibcallImpl<ASIN_V16F32>;
   def amd_vrs16_atanf : RuntimeLibcallImpl<ATAN_V16F32>;
@@ -4821,3 +4878,42 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
   def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }
+
+//===----------------------------------------------------------------------===//
+// Vector math libraries
+//===----------------------------------------------------------------------===//
+
+def SLEEFGNUABIAArch64Library : LibcallLibrary<"sleefgnuabi",
+  (add SLEEFGNUABI_VF2_VECFUNCS, SLEEFGNUABI_VF4_VECFUNCS,
+       SLEEFGNUABI_SCALABLE_VECFUNCS), isAArch64>;
+
+def SLEEFGNUABIRISCVLibrary : LibcallLibrary<"sleefgnuabi",
+  (add SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV), isRISCV64>;
+
+def ArmPLLibrary : LibcallLibrary<"armpl",
+  (add LibcallsWithCC<(add !filter(entry, ARMPL_VECFUNCS,
+                                   !match(entry.LibCallFuncName, "^armpl_v"))),
+                      AARCH64_VECTORCALL>,
+       !filter(entry, ARMPL_VECFUNCS,
+               !match(entry.LibCallFuncName, "^armpl_sv"))), isAArch64>;
+
+def AMDLIBMLibrary : LibcallLibrary<"amdlibm", (add AMDLIBM_VECFUNCS)>;
+
+def AccelerateLibrary : LibcallLibrary<"accelerate", (add ACCELERATE_VECFUNCS)>;
+
+def DarwinLibSystemMLibrary : LibcallLibrary<"darwin_libsystem_m",
+  (add DARWIN_LIBSYSTEM_M_VECFUNCS)>;
+
+def LIBMVECX86Library : LibcallLibrary<"libmvec",
+  (add LIBMVEC_X86_VECFUNCS), isX86>;
+
+def LIBMVECAArch64Library : LibcallLibrary<"libmvec",
+  (add LibcallsWithCC<(add !filter(entry, LIBMVEC_AARCH64_VECFUNCS,
+                                   !match(entry.LibCallFuncName, "^_ZGVnN"))),
+                      AARCH64_VECTORCALL>,
+       !filter(entry, LIBMVEC_AARCH64_VECFUNCS,
+               !match(entry.LibCallFuncName, "^_ZGVsMx"))), isAArch64>;
+
+def MASSVLibrary : LibcallLibrary<"massv", (add MASSV_VECFUNCS)>;
+
+def SVMLLibrary : LibcallLibrary<"svml", (add SVML_VECFUNCS)>;

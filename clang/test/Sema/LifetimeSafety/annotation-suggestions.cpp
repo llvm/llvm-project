@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
@@ -257,6 +257,20 @@ struct ReturnsSelf {
     return *this;                  // expected-note {{param returned here}}
   }
 };
+
+template <class C> struct SelfCapturingIter {
+  C *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIter(C &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+template <class T> struct AutoReturnSelf {
+  auto make() { return SelfCapturingIter<AutoReturnSelf>(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+auto test_auto_return_implicit_this() {
+  AutoReturnSelf<char> b;
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
+}
 
 struct ReturnThisAnnotated {
   const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
