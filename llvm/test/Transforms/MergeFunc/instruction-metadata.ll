@@ -568,10 +568,10 @@ define void @calls(ptr %p, i64 %n, float %v) {
 !9 = !{ptr @callee}
 !10 = !{!11}
 !11 = distinct !{!11, !12, !"scope"}
-!12 = distinct !{!12, !"domain"}
+!12 = distinct !{!12, i1 false, !"domain"}
 !13 = !{!14}
 !14 = distinct !{!14, !15, !"scope"}
-!15 = distinct !{!15, !"domain"}
+!15 = distinct !{!15, i1 false, !"domain"}
 !16 = distinct !{!16, !30, !31, !17}
 !17 = !{!"llvm.loop.mustprogress"}
 !18 = distinct !{!18, !33, !34, !17}
@@ -597,7 +597,7 @@ define void @calls(ptr %p, i64 %n, float %v) {
 !38 = distinct !{!38}
 !39 = distinct !{!39}
 !40 = distinct !{!40}
-!41 = distinct !{!41, !"domain"}
+!41 = distinct !{!41, i1 false, !"domain"}
 !42 = distinct !{!42, !41, !"scope"}
 !43 = distinct !{!43, !41, !"other scope"}
 !44 = !{!42}
@@ -618,7 +618,7 @@ define void @calls(ptr %p, i64 %n, float %v) {
 ; CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"other scope"}
-; CHECK: [[META10]] = distinct !{[[META10]], !"domain"}
+; CHECK: [[META10]] = distinct !{[[META10]], i1 false, !"domain"}
 ; CHECK: [[DBG11]] = distinct !DISubprogram(name: "fn_loop", scope: [[META1]], file: [[META1]], line: 1, type: [[META12:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
 ; CHECK: [[META12]] = !DISubroutineType(types: [[META4]])
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
