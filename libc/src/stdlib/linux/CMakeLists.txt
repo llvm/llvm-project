@@ -122,11 +122,9 @@ add_entrypoint_object(
     libc.src.__support.error_or
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
-    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.OSUtil.linux.shell_fork
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigaction
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
-    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
     libc.src.signal.linux.signal_utils
 )
 
