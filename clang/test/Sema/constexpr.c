@@ -476,4 +476,30 @@ constexpr int *p = (int*){y};
 
 const int g1 = 1;
 constexpr int g2 = g1; // expected-error{{constexpr variable 'g2' must be initialized by a constant expression}}
-constexpr int g3 = (int){g1}; // expected-error{{constexpr variable 'g3' must be initialized by a constant expression}}
+constexpr int g3 = (int){g1}; // expected-error{{initializer element is not a compile-time constant}}
+
+// gh121694
+const int a = 0;
+struct C { const int *p; };
+constexpr struct C c1 = {&a}; // expected-error{{constexpr pointer initializer is not null}}
+constexpr struct C c2 = (struct C){&a}; // expected-error{{constexpr variable 'c2' must be initialized by a constant expression}}
+constexpr struct C c3 = (struct C){nullptr};
+
+union U { const int *p; int x; };
+constexpr union U u1 = {.p = &a}; // expected-error{{constexpr pointer initializer is not null}}
+constexpr union U u2 = (union U){.p = &a}; // expected-error{{constexpr variable 'u2' must be initialized by a constant expression}}
+constexpr union U u3 = {.x = 1};
+constexpr union U u4 = (union U){.x = 1};
+
+void f() {
+  constexpr int *p2 = &a; // expected-error{{constexpr pointer initializer is not null}}
+}
+
+typedef typeof(nullptr) nullptr_t;
+
+constexpr nullptr_t woo1 = nullptr;
+constexpr struct C c4 = { woo1 };
+
+const nullptr_t woo2 = nullptr;
+constexpr struct C c5 = { woo2 };
+
