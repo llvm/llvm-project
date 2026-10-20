@@ -700,6 +700,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(agx_kernel);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(wasm_emscripten_invokecc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);

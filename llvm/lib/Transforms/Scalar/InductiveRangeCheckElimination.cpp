@@ -861,7 +861,8 @@ IntersectUnsignedRange(ScalarEvolution &SE,
 }
 
 PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   // There are no loops in the function. Return before computing other expensive

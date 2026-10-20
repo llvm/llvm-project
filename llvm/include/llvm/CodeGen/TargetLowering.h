@@ -1016,11 +1016,11 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
-  /// Return the ValueType for comparison libcalls. Comparison libcalls include
-  /// floating point comparison calls, and Ordered/Unordered check calls on
-  /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  /// Return the integer type returned by comparison libcalls. Comparison
+  /// libcalls include floating point comparison calls, and Ordered/Unordered
+  /// check calls on floating point numbers.
+  virtual IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const {
+    return Type::getInt32Ty(Ctx);
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
@@ -2541,9 +2541,12 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand.
+  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
+  /// floating-point operations use are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+    if (RMW->isElementwise())
+      return AtomicExpansionKind::Expand;
     if (RMW->isFloatingPointOperation())
       return AtomicExpansionKind::CmpXChg;
     if (RMW->getType()->isVectorTy())
@@ -3201,6 +3204,8 @@ public:
     case ISD::UREM:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
+    case ISD::AVGSUBFLOORS:
+    case ISD::AVGSUBFLOORU:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -5894,6 +5899,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand GET_ACTIVE_LANE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandGetActiveLaneMask(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand LOOP_DEPENDENCE_MASK nodes
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
@@ -6071,6 +6081,14 @@ public:
   /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_INTERLEAVE without introducing wider vector types.
+  void expandVectorInterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                              SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_DEINTERLEAVE without introducing wider vector types.
+  void expandVectorDeinterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                SelectionDAG &DAG) const;
 
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.

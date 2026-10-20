@@ -1308,6 +1308,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
 
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor({{v8s8, s8},
+                 {v8s8, s32},
+                 {v16s8, s8},
+                 {v16s8, s32},
+                 {v4s16, s16},
+                 {v4s16, s32},
+                 {v8s16, s16},
+                 {v8s16, s32},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64},
+                 {v2p0, p0}});
+
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &DstTy = Query.Types[0];

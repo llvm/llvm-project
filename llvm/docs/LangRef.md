@@ -2744,6 +2744,14 @@ fn -> other_fn -> other_fn ; fn is norecurse
 :   This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
 
+(attr_speculative_load_oracle)=
+
+`"oracle-function"`
+:   This attribute indicates that the function is an oracle function of
+    '`llvm.speculative.load`'. A function with this attribute must have local
+    linkage, and it may only be used as the oracle argument of
+    '`llvm.speculative.load`' calls.
+
 `speculative_load_hardening`
 :   This attribute indicates that
     [Speculative Load Hardening](SpeculativeLoadHardening.md)
@@ -3778,8 +3786,8 @@ can also be created by means not recognized by LLVM, e.g., by directly calling
 `mmap`. Those allocated objects are allowed to grow to the right (i.e.,
 keeping the same base address, but increasing their size) while maintaining the
 validity of existing pointers, as long as they always satisfy the properties
-described above. Currently, allocated objects are not permitted to grow to the
-left or to shrink, nor can they have holes.
+described above. Allocated objects are not permitted to grow to the left or to
+shrink, nor can they have holes.
 
 (objectlifetime)=
 
@@ -21542,6 +21550,8 @@ Takes one argument which must be an i1 vector, and returns a vector of the same 
 
 When the input is all zeroes, the result is all ones.
 
+If any element in the input vector is poison, the result is poison.
+
 ##### Examples:
 
 ```llvm
@@ -24415,6 +24425,8 @@ directly. In the **oracle form**, the third argument must be a direct
 reference to a non-variadic function returning `i64` that is `nounwind`,
 `nosync` and `willreturn` and may only read memory through its arguments;
 the remaining arguments are forwarded to it, and its return value is `N`.
+The oracle function must have the
+{ref}`"oracle-function" <attr_speculative_load_oracle>` attribute.
 
 ##### Semantics:
 
