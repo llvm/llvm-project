@@ -247,9 +247,9 @@ lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
   return m_interface_sp->GetSyntheticValue();
 }
 
-ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
+std::string ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
   if (!m_interface_sp)
-    return ConstString();
+    return std::string();
 
   return m_interface_sp->GetSyntheticTypeName();
 }
