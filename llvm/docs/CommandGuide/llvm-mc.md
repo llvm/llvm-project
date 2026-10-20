@@ -163,7 +163,7 @@ printing them, similar to Clang's `-verify`. `<prefixes>` is a comma-separated
 list of directive prefixes (default: `expected`). A directive has the form
 
 ```text
-<prefix>-<kind>[-re][@<offset>] {{<text>}}
+<prefix>-<kind>[-re][@<offset>][:<col>] {{<text>}}
 ```
 
 where `<kind>` is `error`, `warning`, `note` or `remark`, and `<text>` must be
@@ -171,10 +171,13 @@ a substring of the diagnostic message (with `-re`, `{{...}}` blocks inside
 `<text>` are regular expressions). Without `@<offset>`, the directive applies
 to its own line; `@+N` and `@-N` refer to the line `N` lines below or above,
 `@above` and `@below` to the nearest non-directive line, and `@unknown` to
-diagnostics without a location. For example:
+diagnostics without a location. `:<col>` additionally requires the diagnostic
+to be at the given 1-based column (note that in Clang, `@<file>:<line>` instead
+refers to a line in another file). For example:
 
 ```asm
 .foo # expected-error {{unknown directive}}
+.bar # expected-error:1 {{unknown directive}}
 ```
 
 Directives are only recognized in single-line comments, at most one per line.

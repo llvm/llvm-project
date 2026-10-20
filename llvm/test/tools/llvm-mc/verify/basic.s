@@ -4,8 +4,15 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 ## Matching directives: a substring match, a '-re' regex match, '@+N' and
-## '@-N' offsets, '@above'/'@below', and directives in '#' and '//' comments.
+## '@-N' offsets, '@above'/'@below', ':<col>' columns, and directives in '#'
+## and '//' comments.
 # RUN: llvm-mc --triple=riscv32 --verify match.s
+
+## A directive with the wrong column, or an invalid column, fails.
+# RUN: not llvm-mc --triple=riscv32 --verify wrong-column.s 2>&1 \
+# RUN:   | FileCheck wrong-column.s
+# RUN: not llvm-mc --triple=riscv32 --verify invalid-column.s 2>&1 \
+# RUN:   | FileCheck invalid-column.s
 
 ## Custom prefixes are recognized instead of 'expected', but not as the suffix
 ## of a longer word such as 'uncheck'.
@@ -80,6 +87,7 @@
 
 .qux_directive # expected-error {{unknown directive}}
 .quux_directive // expected-error {{unknown directive}}
+.col_directive # expected-error:1 {{unknown directive}}
 
 ## A diagnostic that is reported twice on a line needs two directives.
 .dup_directive; .dup_directive
@@ -87,9 +95,21 @@
 # expected-error@-2 {{unknown directive}}
 
 sfence.vma a0, 0x10
-# expected-error@-1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-2 {{unexpected extra operand for instruction}}
-# expected-note@-3 {{register must be a GPR}}
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:16 {{unexpected extra operand for instruction}}
+# expected-note@-3:16 {{register must be a GPR}}
+
+#--- wrong-column.s
+.foo_directive # expected-error:2 {{unknown directive}}
+# CHECK: error: unknown directive
+# CHECK: error: expected error "unknown directive" was not produced
+
+#--- invalid-column.s
+addi a0, a0, 1
+# expected-error@-1:0 {{never happens}}
+# expected-error@unknown:1 {{never happens}}
+# CHECK: error: invalid column ':0'
+# CHECK: error: cannot specify a column with '@unknown'
 
 #--- custom-prefix.s
 .foo_directive
