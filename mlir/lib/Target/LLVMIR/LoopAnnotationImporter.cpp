@@ -24,11 +24,12 @@ struct LoopMetadataConversion {
 
 private:
   LoopMetadataConversion(
-      const llvm::MDNode *node, Location loc,
+      const llvm::MDNode *node, Location loc, DistinctAttr id,
       LoopAnnotationImporter &loopAnnotationImporter,
       llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes)
-      : node(node), loc(loc), loopAnnotationImporter(loopAnnotationImporter),
-        ctx(loc->getContext()), activeNodes(activeNodes) {}
+      : node(node), loc(loc), id(id),
+        loopAnnotationImporter(loopAnnotationImporter), ctx(loc->getContext()),
+        activeNodes(activeNodes) {}
 
   /// Converts a follow-up using the current recursion state.
   LoopAnnotationAttr convertFollowup(const llvm::MDNode *followup);
@@ -73,6 +74,7 @@ private:
   llvm::StringMap<const llvm::MDNode *> propertyMap;
   const llvm::MDNode *node;
   Location loc;
+  DistinctAttr id;
   LoopAnnotationImporter &loopAnnotationImporter;
   MLIRContext *ctx;
   llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes;
@@ -258,16 +260,22 @@ static bool isEmptyOrNull(const SmallVectorImpl<T> &vec) {
   return vec.empty();
 }
 
+/// Helper function that returns true if any of the argument conversions failed
+/// or if all of them are null or empty.
+template <typename... P>
+static bool anyFailedOrAllEmpty(const P &...args) {
+  bool anyFailed = (failed(args) || ...);
+  if (anyFailed)
+    return true;
+
+  return (isEmptyOrNull(*args) && ...);
+}
+
 /// Helper function that only creates and attribute of type T if all argument
 /// conversion were successfull and at least one of them holds a non-null value.
 template <typename T, typename... P>
 static T createIfNonNull(MLIRContext *ctx, const P &...args) {
-  bool anyFailed = (failed(args) || ...);
-  if (anyFailed)
-    return {};
-
-  bool allEmpty = (isEmptyOrNull(*args) && ...);
-  if (allEmpty)
+  if (anyFailedOrAllEmpty(args...))
     return {};
 
   return T::get(ctx, *args...);
@@ -430,7 +438,8 @@ LoopMetadataConversion::convert(const llvm::MDNode *node, Location loc,
   }
 
   llvm::SmallPtrSet<const llvm::MDNode *, 4> activeNodes;
-  return LoopMetadataConversion(node, loc, importer, activeNodes)
+  DistinctAttr id = DistinctAttr::create(UnitAttr::get(loc->getContext()));
+  return LoopMetadataConversion(node, loc, id, importer, activeNodes)
       .convertProperties();
 }
 
@@ -447,8 +456,8 @@ LoopMetadataConversion::convertFollowup(const llvm::MDNode *followup) {
     return LoopAnnotationAttr::get(ctx, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
                                    {}, {}, {}, {}, {}, {});
 
-  return LoopMetadataConversion(followup, loc, loopAnnotationImporter,
-                                activeNodes)
+  return LoopMetadataConversion(followup, loc, /*id=*/{},
+                                loopAnnotationImporter, activeNodes)
       .convertProperties();
 }
 
@@ -488,14 +497,19 @@ LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
 
   FailureOr<FusedLoc> startLoc = convertStartLoc();
   FailureOr<FusedLoc> endLoc = convertEndLoc();
-  // Imported nodes have no id, the metadata node itself is the identity.
-  FailureOr<DistinctAttr> id = DistinctAttr();
 
-  return createIfNonNull<LoopAnnotationAttr>(
-      ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
-      unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, peeledAttr,
-      unswitchAttr, mustProgress, isVectorized, startLoc, endLoc, id,
-      parallelAccesses);
+  // LoopID doesn't participate in 'failure', so check everything except it.
+  if (anyFailedOrAllEmpty(disableNonForced, vecAttr, interleaveAttr, unrollAttr,
+                          unrollAndJamAttr, licmAttr, distributeAttr,
+                          pipelineAttr, peeledAttr, unswitchAttr, mustProgress,
+                          isVectorized, startLoc, endLoc, parallelAccesses))
+    return {};
+
+  return LoopAnnotationAttr::get(
+      ctx, *disableNonForced, *vecAttr, *interleaveAttr, *unrollAttr,
+      *unrollAndJamAttr, *licmAttr, *distributeAttr, *pipelineAttr, *peeledAttr,
+      *unswitchAttr, *mustProgress, *isVectorized, *startLoc, *endLoc, id,
+      *parallelAccesses);
 }
 
 LoopAnnotationAttr
