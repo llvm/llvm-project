@@ -192,8 +192,7 @@ def ApplyFoldReshapeOpsByExpansionPatternsOp : Op<Transform_Dialect,
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collects patterns that fold reshape operations into their producers or
-    consumers by expanding dimensions, including patterns for Linalg and
-    tensor.pad operations.
+    consumers by expanding dimensions.
 
     If `fold_single_use_only` is true, folding is restricted to cases where the
     defining producer operation of the operand being fused has exactly one use.
