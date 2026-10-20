@@ -902,6 +902,9 @@ PRAGMA_ANNOTATION(pragma_attribute)
 // Annotation for C/C++ #pragma export(ident)
 PRAGMA_ANNOTATION(pragma_export)
 
+// Annotation for #pragma csect(ident, str lit)
+PRAGMA_ANNOTATION(pragma_csect)
+
 // Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
 PRAGMA_ANNOTATION(pragma_riscv)
 

@@ -395,6 +395,12 @@ struct PragmaExportHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaCsectHandler : public PragmaHandler {
+  PragmaCsectHandler() : PragmaHandler("csect") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override;
+};
+
 struct PragmaRISCVHandler : public PragmaHandler {
   PragmaRISCVHandler(Sema &Actions)
       : PragmaHandler("riscv"), Actions(Actions) {}
@@ -562,6 +568,8 @@ void Parser::initializePragmaHandlers() {
   if (getLangOpts().ZOSExt) {
     ExportHandler = std::make_unique<PragmaExportHandler>();
     PP.AddPragmaHandler(ExportHandler.get());
+    CsectHandler = std::make_unique<PragmaCsectHandler>();
+    PP.AddPragmaHandler(CsectHandler.get());
   }
 
   if (getTargetInfo().getTriple().isRISCV()) {
@@ -702,6 +710,8 @@ void Parser::resetPragmaHandlers() {
   if (getLangOpts().ZOSExt) {
     PP.RemovePragmaHandler(ExportHandler.get());
     ExportHandler.reset();
+    PP.RemovePragmaHandler(CsectHandler.get());
+    CsectHandler.reset();
   }
 
   if (getTargetInfo().getTriple().isRISCV()) {
@@ -1462,6 +1472,19 @@ void Parser::HandlePragmaExport() {
   assert(Tok.is(tok::annot_pragma_export));
 
   zOSHandlePragmaHelper(tok::annot_pragma_export);
+}
+
+void Parser::HandlePragmaCsect() {
+  assert(Tok.is(tok::annot_pragma_csect));
+  StringRef *SectionName = static_cast<StringRef *>(Tok.getAnnotationValue());
+  assert(SectionName);
+  SourceLocation PragmaLoc = Tok.getLocation();
+
+  ConsumeAnnotationToken();
+
+  llvm::StringRef SectionKind = Tok.getIdentifierInfo()->getName();
+  ConsumeToken();
+  Actions.ActOnPragmaCsect(SectionKind, PragmaLoc, *SectionName);
 }
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
@@ -4258,4 +4281,91 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
   else if (II->isStr("andes_vector"))
     Actions.RISCV().DeclareAndesVectorBuiltins = true;
+}
+
+/// Handle #pragma csect.
+void PragmaCsectHandler::HandlePragma(Preprocessor &PP,
+                                      PragmaIntroducer Introducer, Token &Tok) {
+  SourceLocation CSectLoc = Tok.getLocation();
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::l_paren)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen) << "csect";
+    return;
+  }
+
+  PP.LexUnexpandedToken(Tok);
+  bool ValidPragma = false;
+  bool AcceptAndIgnore = false;
+  switch (Tok.getKind()) {
+  case tok::kw_static:
+    ValidPragma = true;
+    break;
+  case tok::identifier: {
+    assert(Tok.getIdentifierInfo());
+    StringRef Section = Tok.getIdentifierInfo()->getName();
+    AcceptAndIgnore = Section.equals_insensitive("test");
+    if (AcceptAndIgnore || Section.equals_insensitive("code") ||
+        Section.equals_insensitive("static"))
+      ValidPragma = true;
+    break;
+  }
+  default:
+    break;
+  }
+  if (!ValidPragma) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+        << "csect";
+    return;
+  }
+  Token SectionKind = Tok;
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::comma)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_comma) << "csect";
+    return;
+  }
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::string_literal)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_string) << "csect";
+    return;
+  }
+
+  std::string SectionName;
+  if (!PP.FinishLexStringLiteral(Tok, SectionName, "pragma csect",
+                                 /*AllowMacroExpansion*/ false)) {
+    return;
+  }
+
+  if (Tok.isNot(tok::r_paren)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen) << "csect";
+    return;
+  }
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "csect";
+    return;
+  }
+
+  if (AcceptAndIgnore) {
+    // accept and ignore #pragma csect(test, "STRING LITERAL");
+    return;
+  }
+
+  auto *SectionNameRef = new (PP.getPreprocessorAllocator())
+      StringRef(StringRef(SectionName).copy(PP.getPreprocessorAllocator()));
+
+  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(2),
+                              2);
+  Toks[0].startToken();
+  Toks[0].setKind(tok::annot_pragma_csect);
+  Toks[0].setLocation(CSectLoc);
+  Toks[0].setAnnotationValue(static_cast<void *>(SectionNameRef));
+  Toks[1] = SectionKind;
+
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
 }
