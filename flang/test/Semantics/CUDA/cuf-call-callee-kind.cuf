@@ -12,28 +12,28 @@ contains
   end subroutine
 
   attributes(device) subroutine device_caller()
-    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call grid_kernel<<<1,1>>>()
-    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call grid_generic<<<1,1>>>()
     !ERROR: not yet implemented: CUDA dynamic parallelism
     call global_kernel<<<1,1>>>()
   end subroutine
 
   attributes(global) subroutine global_caller()
-    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call grid_kernel<<<1,1>>>()
   end subroutine
 
   attributes(grid_global) subroutine grid_caller()
-    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call grid_kernel<<<1,1>>>()
   end subroutine
 
   attributes(host,device) subroutine both_caller()
-    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, may not be called from HOST,DEVICE code
     call grid_kernel<<<1,1>>>()
-    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, may not be called from HOST,DEVICE code
     call grid_generic<<<1,1>>>()
   end subroutine
 
@@ -47,7 +47,7 @@ module imported_callee_kind
   use callee_kinds, only: renamed_kernel => grid_kernel
 contains
   attributes(device) subroutine imported_caller()
-    !ERROR: 'renamed_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'renamed_kernel', a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call renamed_kernel<<<1,1>>>()
   end subroutine
 end module

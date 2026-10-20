@@ -21,18 +21,18 @@ contains
   end function
 
   attributes(device) subroutine dev_caller()
-    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, can't be called from device code.
+    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, may not be called from device code
     call k<<<1,1>>>()
   end subroutine
 
   attributes(host,device) subroutine hd_caller(n, x)
     integer :: n
     real :: x
-    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, may not be called from HOST,DEVICE code
     call k<<<1,1>>>()
-    !ERROR: 'mixed' (specific procedure 'mixed_host'), a procedure with the HOST attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'mixed' (specific procedure 'mixed_host'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     n = mixed(n)
-    !ERROR: 'mixed' (specific procedure 'mixed_dev'), a procedure with the DEVICE attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'mixed' (specific procedure 'mixed_dev'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     x = mixed(x)
   end subroutine
 
@@ -55,14 +55,14 @@ contains
 
   attributes(host,device) function f(n) result(r)
     integer, value :: n
-    !ERROR: 'host_len', a procedure with the HOST attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     character(host_len(n)) :: r
     r = ''
   end function
 
   attributes(host,device) subroutine s(n, a)
     integer, value :: n
-    !ERROR: 'host_len', a procedure with the HOST attribute, can't be called from HOST,DEVICE code.
+    !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     real :: a(host_len(n))
     a = 0
   end subroutine

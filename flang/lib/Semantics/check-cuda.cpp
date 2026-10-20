@@ -212,12 +212,12 @@ private:
               : proc.GetName()};
       if (*generic != specificName) {
         return parser::MessageFormattedText(
-            "'%s' (specific procedure '%s'), a procedure with the %s attribute, can't be called from %s code."_err_en_US,
+            "'%s' (specific procedure '%s'), a procedure with the %s attribute, may not be called from %s code"_err_en_US,
             *generic, specificName, procedureType, codeContext);
       }
     }
     return parser::MessageFormattedText(
-        "'%s', a procedure with the %s attribute, can't be called from %s code."_err_en_US,
+        "'%s', a procedure with the %s attribute, may not be called from %s code"_err_en_US,
         proc.GetName(), procedureType, codeContext);
   }
 };
