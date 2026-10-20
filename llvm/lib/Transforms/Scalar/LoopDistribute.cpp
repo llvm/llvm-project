@@ -958,7 +958,8 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
         Worklist.push_back(L);
 
   // Now walk the identified inner loops.
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
   for (Loop *L : Worklist) {
     LoopDistributeForLoop LDL(Opts, L, &F, LI, DT, SE, LAIs, ORE);

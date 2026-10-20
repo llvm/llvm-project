@@ -2071,11 +2071,10 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-LABEL: test_concat_v2i1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; SKX-NEXT:    vcvtph2ps %xmm0, %ymm0
-; SKX-NEXT:    vcmpltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k0
 ; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; SKX-NEXT:    vcmpltps %ymm0, %ymm1, %k1
-; SKX-NEXT:    kandw %k1, %k0, %k1
+; SKX-NEXT:    vcmpltps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1 {%k1}
 ; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vmovd %xmm0, (%rdx)

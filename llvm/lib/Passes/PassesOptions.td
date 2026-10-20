@@ -96,6 +96,8 @@ defm : BoolField<"opt-pipeline-trigger-crash", "false",
   "Trigger crash in optimization pipeline">;
 defm : ValueField<"preinline-threshold", "int", "75",
   "Control the amount of inlining in pre-instrumentation inliner (default = 75)">;
+defm : BoolField<"enable-profcheck-in-pipeline", "false",
+  "Adds profile verification to the pipeline, erroring if profile information is dropped.">;
 
 // RunCodeGen.cpp
 defm : OptionalBoolField<"force-new-pm-codegen",

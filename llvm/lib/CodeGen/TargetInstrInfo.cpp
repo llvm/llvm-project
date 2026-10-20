@@ -1854,6 +1854,23 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   return DefCycle && DefCycle <= 1U;
 }
 
+bool TargetInstrInfo::isFunctionSafeToOutlineFrom(
+    MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
+  const Function &F = MF.getFunction();
+
+  // Can F be deduplicated by the linker? If it can, don't outline from it.
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
+    return false;
+
+  // Allow outlining from named section functions if the target can place the
+  // outlined function in the   same section.
+  if (F.hasSection() && !supportsSectionAwareOutlining())
+    return false;
+
+  // It's safe to outline from MF.
+  return true;
+}
+
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // TODO: We don't split functions where a section attribute has been set
   // since the split part may not be placed in a contiguous region. It may also
@@ -1933,13 +1950,20 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (MI.getNumExplicitDefs() != 1)
       return std::nullopt;
 
+    // DW_OP_deref_size needs a known, fixed size that fits in its one-byte
+    // operand and is no larger than the size of an address.
+    if (!MMO->getSize().hasValue() || MMO->getSize().isScalable() ||
+        !isUInt<8>(MMO->getSize().getValue().getFixedValue()) ||
+        MMO->getSize().getValue().getFixedValue() >
+            MF->getDataLayout().getPointerSize())
+      return std::nullopt;
+
     // TODO: In what way do we need to take Reg into consideration here?
 
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
     Ops.push_back(dwarf::DW_OP_deref_size);
-    Ops.push_back(MMO->getSize().hasValue() ? MMO->getSize().getValue()
-                                            : ~UINT64_C(0));
+    Ops.push_back(MMO->getSize().getValue().getFixedValue());
     Expr = DIExpression::prependOpcodes(Expr, Ops);
     return ParamLoadedValue(*BaseOp, Expr);
   }

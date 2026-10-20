@@ -955,6 +955,10 @@ let Predicates = [BPFNoALU32] in {
             (XADDW ADDRri:$addr, GPR:$val)>;
   def : Pat<(atomic_load_add_i64 ADDRri:$addr, GPR:$val),
             (XADDD ADDRri:$addr, GPR:$val)>;
+  // No atomic fetch on non-ALU32 CPUs: lower a used-result relaxed sub to plain
+  // XADDD rather than the ALU32-only XFADDD.
+  def : Pat<(atomic_load_sub_i64_monotonic ADDRri:$addr, GPR:$val),
+            (XADDD ADDRri:$addr, (NEG_64 GPR:$val))>;
 }
 
 // Atomic Fetch-and-<add, and, or, xor> operations
@@ -1008,67 +1012,8 @@ let Constraints = "$dst = $val" in {
   def XFXORD : XFALU64<BPF_DW, BPF_XOR, "u64", "xor">;
 }
 
-let Predicates = [BPFHasALU32] in {
-    foreach P = [// add
-                 [atomic_load_add_i32_monotonic,  XADDW32],
-                 [atomic_load_add_i32_acquire,   XFADDW32],
-                 [atomic_load_add_i32_release,   XFADDW32],
-                 [atomic_load_add_i32_acq_rel,   XFADDW32],
-                 [atomic_load_add_i32_seq_cst,   XFADDW32],
-                 // and
-                 [atomic_load_and_i32_monotonic,  XANDW32],
-                 [atomic_load_and_i32_acquire,   XFANDW32],
-                 [atomic_load_and_i32_release,   XFANDW32],
-                 [atomic_load_and_i32_acq_rel,   XFANDW32],
-                 [atomic_load_and_i32_seq_cst,   XFANDW32],
-                 // or
-                 [atomic_load_or_i32_monotonic,   XORW32],
-                 [atomic_load_or_i32_acquire,    XFORW32],
-                 [atomic_load_or_i32_release,    XFORW32],
-                 [atomic_load_or_i32_acq_rel,    XFORW32],
-                 [atomic_load_or_i32_seq_cst,    XFORW32],
-                 // xor
-                 [atomic_load_xor_i32_monotonic,  XXORW32],
-                 [atomic_load_xor_i32_acquire,   XFXORW32],
-                 [atomic_load_xor_i32_release,   XFXORW32],
-                 [atomic_load_xor_i32_acq_rel,   XFXORW32],
-                 [atomic_load_xor_i32_seq_cst,   XFXORW32],
-                ] in {
-      def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, GPR32:$val)>;
-    }
-
-    // atomic_load_sub can be represented as a neg followed
-    // by an atomic_load_add.
-    foreach P = [[atomic_load_sub_i32_monotonic,  XADDW32],
-                 [atomic_load_sub_i32_acquire,   XFADDW32],
-                 [atomic_load_sub_i32_release,   XFADDW32],
-                 [atomic_load_sub_i32_acq_rel,   XFADDW32],
-                 [atomic_load_sub_i32_seq_cst,   XFADDW32],
-                ] in {
-      def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, (NEG_32 GPR32:$val))>;
-    }
-
-    foreach P = [// add
-                 [atomic_load_add_i64_monotonic,  XADDD],
-                 [atomic_load_add_i64_acquire,   XFADDD],
-                 [atomic_load_add_i64_release,   XFADDD],
-                 [atomic_load_add_i64_acq_rel,   XFADDD],
-                 [atomic_load_add_i64_seq_cst,   XFADDD],
-                ] in {
-      def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, GPR:$val)>;
-    }
-}
-
-foreach P = [[atomic_load_sub_i64_monotonic,  XADDD],
-             [atomic_load_sub_i64_acquire,   XFADDD],
-             [atomic_load_sub_i64_release,   XFADDD],
-             [atomic_load_sub_i64_acq_rel,   XFADDD],
-             [atomic_load_sub_i64_seq_cst,   XFADDD],
-            ] in {
-  def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, (NEG_64 GPR:$val))>;
-}
-
-// Borrow the idea from X86InstrFragments.td
+// Borrow the idea from X86InstrFragments.td: split each monotonic atomic RMW
+// pattern on whether its result value is used.
 class binop_no_use<SDPatternOperator operator>
       : PatFrag<(ops node:$A, node:$B),
                 (operator node:$A, node:$B),
@@ -1079,11 +1024,82 @@ class binop_has_use<SDPatternOperator operator>
                 (operator node:$A, node:$B),
                 [{ return !SDValue(N, 0).use_empty(); }]>;
 
-foreach op = [add, and, or, xor] in {
+foreach op = [add, sub, and, or, xor] in {
 def atomic_load_ # op # _i64_monotonic_nu:
     binop_no_use <!cast<SDPatternOperator>("atomic_load_"#op# _i64_monotonic)>;
 def atomic_load_ # op # _i64_monotonic_hu:
     binop_has_use<!cast<SDPatternOperator>("atomic_load_"#op# _i64_monotonic)>;
+def atomic_load_ # op # _i32_monotonic_nu:
+    binop_no_use <!cast<SDPatternOperator>("atomic_load_"#op# _i32_monotonic)>;
+def atomic_load_ # op # _i32_monotonic_hu:
+    binop_has_use<!cast<SDPatternOperator>("atomic_load_"#op# _i32_monotonic)>;
+}
+
+let Predicates = [BPFHasALU32] in {
+    foreach P = [// add
+                 [atomic_load_add_i32_monotonic_nu, XADDW32],
+                 [atomic_load_add_i32_monotonic_hu, XFADDW32],
+                 [atomic_load_add_i32_acquire,   XFADDW32],
+                 [atomic_load_add_i32_release,   XFADDW32],
+                 [atomic_load_add_i32_acq_rel,   XFADDW32],
+                 [atomic_load_add_i32_seq_cst,   XFADDW32],
+                 // and
+                 [atomic_load_and_i32_monotonic_nu, XANDW32],
+                 [atomic_load_and_i32_monotonic_hu, XFANDW32],
+                 [atomic_load_and_i32_acquire,   XFANDW32],
+                 [atomic_load_and_i32_release,   XFANDW32],
+                 [atomic_load_and_i32_acq_rel,   XFANDW32],
+                 [atomic_load_and_i32_seq_cst,   XFANDW32],
+                 // or
+                 [atomic_load_or_i32_monotonic_nu,  XORW32],
+                 [atomic_load_or_i32_monotonic_hu, XFORW32],
+                 [atomic_load_or_i32_acquire,    XFORW32],
+                 [atomic_load_or_i32_release,    XFORW32],
+                 [atomic_load_or_i32_acq_rel,    XFORW32],
+                 [atomic_load_or_i32_seq_cst,    XFORW32],
+                 // xor
+                 [atomic_load_xor_i32_monotonic_nu, XXORW32],
+                 [atomic_load_xor_i32_monotonic_hu, XFXORW32],
+                 [atomic_load_xor_i32_acquire,   XFXORW32],
+                 [atomic_load_xor_i32_release,   XFXORW32],
+                 [atomic_load_xor_i32_acq_rel,   XFXORW32],
+                 [atomic_load_xor_i32_seq_cst,   XFXORW32],
+                ] in {
+      def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, GPR32:$val)>;
+    }
+
+    // atomic_load_sub can be represented as a neg followed
+    // by an atomic_load_add.
+    foreach P = [[atomic_load_sub_i32_monotonic_nu, XADDW32],
+                 [atomic_load_sub_i32_monotonic_hu, XFADDW32],
+                 [atomic_load_sub_i32_acquire,   XFADDW32],
+                 [atomic_load_sub_i32_release,   XFADDW32],
+                 [atomic_load_sub_i32_acq_rel,   XFADDW32],
+                 [atomic_load_sub_i32_seq_cst,   XFADDW32],
+                ] in {
+      def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, (NEG_32 GPR32:$val))>;
+    }
+
+    foreach P = [// add
+              [atomic_load_add_i64_monotonic_nu, XADDD],
+              [atomic_load_add_i64_monotonic_hu, XFADDD],
+              [atomic_load_add_i64_acquire,   XFADDD],
+              [atomic_load_add_i64_release,   XFADDD],
+              [atomic_load_add_i64_acq_rel,   XFADDD],
+              [atomic_load_add_i64_seq_cst,   XFADDD],
+            ] in {
+    def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, GPR:$val)>;
+  }
+}
+
+foreach P = [[atomic_load_sub_i64_monotonic_nu, XADDD],
+             [atomic_load_sub_i64_monotonic_hu, XFADDD],
+             [atomic_load_sub_i64_acquire,   XFADDD],
+             [atomic_load_sub_i64_release,   XFADDD],
+             [atomic_load_sub_i64_acq_rel,   XFADDD],
+             [atomic_load_sub_i64_seq_cst,   XFADDD],
+            ] in {
+  def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, (NEG_64 GPR:$val))>;
 }
 
 foreach P = [// and
