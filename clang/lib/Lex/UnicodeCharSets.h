@@ -10,15 +10,6 @@
 
 #include "llvm/Support/UnicodeCharRanges.h"
 
-namespace clang {
-extern const llvm::sys::UnicodeCharSet::CharRanges GeneratedXIDStartRanges;
-extern const llvm::sys::UnicodeCharSet::CharRanges GeneratedXIDContinueRanges;
-extern const llvm::sys::UnicodeCharSet::CharRanges
-    GeneratedMathematicalNotationProfileIDStartRanges;
-extern const llvm::sys::UnicodeCharSet::CharRanges
-    GeneratedMathematicalNotationProfileIDContinueRanges;
-} // namespace clang
-
 // C11 D.1, C++11 [charname.allowed]
 static const llvm::sys::UnicodeCharRange C11AllowedIDCharRanges[] = {
   // 1
