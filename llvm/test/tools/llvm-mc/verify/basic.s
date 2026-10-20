@@ -30,6 +30,10 @@
 # RUN: not llvm-mc --triple=riscv32 --verify missing.s 2>&1 \
 # RUN:   | FileCheck missing.s
 
+## Each directive matches only one diagnostic.
+# RUN: not llvm-mc --triple=riscv32 --verify duplicate.s 2>&1 \
+# RUN:   | FileCheck duplicate.s --implicit-check-not=error:
+
 ## A file without diagnostics or directives passes.
 # RUN: llvm-mc --triple=riscv32 --verify no-diagnostics.s
 
@@ -77,6 +81,11 @@
 .qux_directive # expected-error {{unknown directive}}
 .quux_directive // expected-error {{unknown directive}}
 
+## A diagnostic that is reported twice on a line needs two directives.
+.dup_directive; .dup_directive
+# expected-error@-1 {{unknown directive}}
+# expected-error@-2 {{unknown directive}}
+
 sfence.vma a0, 0x10
 # expected-error@-1 {{invalid instruction, any one of the following would fix this:}}
 # expected-note@-2 {{unexpected extra operand for instruction}}
@@ -117,6 +126,11 @@ addi a0, a0, 1
 # expected-error@-1 {{this will never happen}}
 # CHECK: error: expected error "this will never happen" was not produced
 
+#--- duplicate.s
+.dup_directive; .dup_directive
+# expected-error@-1 {{unknown directive}}
+# CHECK: duplicate.s:1:17: error: unknown directive
+
 #--- no-diagnostics.s
 addi a0, a0, 1
 
@@ -132,4 +146,4 @@ f:
   .cfi_endproc
 
 #--- disassemble.txt
-0x00 0x00 0x00 0x00 # expected-warning {{invalid instruction encoding}}
+0x00 0x00 # expected-warning {{invalid instruction encoding}}

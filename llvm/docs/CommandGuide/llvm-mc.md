@@ -178,10 +178,10 @@ diagnostics without a location. For example:
 ```
 
 Directives are only recognized in single-line comments, at most one per line.
-The exit status is 0 if every diagnostic matches a directive and every
-directive matches at least one diagnostic. Unlike Clang, directives take no
-count and match any number of identical diagnostics on their line, and
-`expected-no-diagnostics` is not needed.
+Each directive matches exactly one diagnostic, so a diagnostic that is reported
+twice needs two directives. The exit status is 0 if every diagnostic matches a
+directive and every directive matches a diagnostic. Unlike Clang, directives
+take no count and `expected-no-diagnostics` is not needed.
 :::
 
 ## EXIT STATUS

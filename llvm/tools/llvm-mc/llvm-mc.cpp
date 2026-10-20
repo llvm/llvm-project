@@ -547,7 +547,8 @@ int main(int argc, char **argv) {
     } else {
       CommentPrefixes.push_back("#");
     }
-    Verifier.emplace(SrcMgr, errs(), VerifyPrefixes, CommentPrefixes);
+    Verifier.emplace(SrcMgr, errs(), VerifyPrefixes, CommentPrefixes,
+                     /*OneDiagPerDirective=*/true);
     // Most diagnostics are reported through SrcMgr, but some (e.g. from the
     // CFI checker) are only reported through Ctx, so route both to Ctx.
     Ctx.setDiagnosticHandler([&](const SMDiagnostic &Diag, bool,
