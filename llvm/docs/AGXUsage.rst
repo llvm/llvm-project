@@ -261,12 +261,12 @@ refer to the addresses of other globals have relocations in
 ``.rela.agx.globals``, against symbols defined in ``.agx.globals``; the loader
 computes S + A with S the variable's address in the placed buffer:
 
-==============  =====  ================================
-Type            Value  Field
-==============  =====  ================================
-``R_AGX_ABS64``  1     64-bit word, S + A
-``R_AGX_ABS32``  2     32-bit word, S + A (truncated)
-==============  =====  ================================
+=================  =====  ================================
+Type               Value  Field
+=================  =====  ================================
+``R_AGX_ABS64``    1      64-bit word, S + A
+``R_AGX_ABS32``    2      32-bit word, S + A (truncated)
+=================  =====  ================================
 
 There are no relocations in ``.text``, and references to globals of other
 objects are not supported.
