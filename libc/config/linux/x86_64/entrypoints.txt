@@ -72,6 +72,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.net.if_indextoname
     libc.src.net.if_nametoindex
 
+    # netinet/ether.h entrypoints
+    libc.src.netinet.ether.ether_ntoa
+    libc.src.netinet.ether.ether_ntoa_r
+
     # netinet/in.h entrypoints
     libc.src.netinet.in6addr_any
     libc.src.netinet.in6addr_loopback

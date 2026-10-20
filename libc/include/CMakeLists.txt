@@ -1136,6 +1136,15 @@ add_header_macro(
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
 
 add_header_macro(
+  net_ethernet
+  ../libc/include/net/ethernet.yaml
+  net/ethernet.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   net_if
   ../libc/include/net/if.yaml
   net/if.h
@@ -1148,6 +1157,15 @@ add_header_macro(
 
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_ether
+  ../libc/include/netinet/ether.yaml
+  netinet/ether.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
 
 add_header_macro(
   netinet_in
