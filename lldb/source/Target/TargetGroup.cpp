@@ -49,6 +49,11 @@ llvm::Error TargetGroup::AddTarget(const TargetSP &target_sp, Role role) {
         "target is already in the group with a different role");
   }
 
+  if (m_target_validator) {
+    if (llvm::Error error = m_target_validator(*this, target_sp, role))
+      return error;
+  }
+
   m_entries.push_back({target_sp, role});
   target_sp->AddTargetGroup(shared_from_this());
   return llvm::Error::success();

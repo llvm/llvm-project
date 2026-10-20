@@ -40,7 +40,11 @@ public:
   TargetGroupList(TargetGroupList &&) = delete;
   TargetGroupList &operator=(TargetGroupList &&) = delete;
 
-  lldb::TargetGroupSP CreateTargetGroup(llvm::StringRef description);
+  /// Create and register a target group. If supplied, \p validator controls
+  /// which target additions the group accepts.
+  lldb::TargetGroupSP
+  CreateTargetGroup(llvm::StringRef description,
+                    TargetGroup::TargetValidator validator = nullptr);
 
   /// Remove \p group_sp from this list. Other shared references, including
   /// target membership lists, remain valid.

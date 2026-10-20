@@ -2077,10 +2077,6 @@ public:
   /// Return the target groups this target belongs to.
   std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
 
-  /// Return the target groups in which this target has \p role.
-  std::vector<lldb::TargetGroupSP>
-  GetTargetGroups(TargetGroup::Role role) const;
-
 protected:
   friend class TargetGroup;
   friend class TargetGroupList;

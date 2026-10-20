@@ -34,6 +34,14 @@ public:
     Accelerator,
   };
 
+  /// Validate adding a target to a group. AddTarget calls the validator while
+  /// holding the membership lock, before changing the group's membership. The
+  /// validator may inspect the group's existing members. Success accepts the
+  /// addition; an error rejects it without modifying the group. Removing a
+  /// target is not validated.
+  using TargetValidator = llvm::Error (*)(const TargetGroup &,
+                                          const lldb::TargetSP &, Role);
+
   /// Target groups have identity and maintain backlinks in their member
   /// targets, so they cannot be copied or moved. Create one with
   /// Debugger::GetTargetGroupList().CreateTargetGroup().
@@ -44,6 +52,11 @@ public:
   ~TargetGroup();
 
   llvm::StringRef GetDescription() const { return m_description; }
+
+  /// Return true if this group uses \p validator.
+  bool UsesTargetValidator(TargetValidator validator) const {
+    return validator && m_target_validator == validator;
+  }
 
   /// Add \p target_sp to the group with \p role. Adding an existing member
   /// succeeds only when its role matches \p role.
@@ -70,13 +83,15 @@ private:
   };
 
   TargetGroup(const lldb::DebuggerSP &debugger_sp, llvm::StringRef description,
-              std::shared_ptr<std::recursive_mutex> mutex)
+              std::shared_ptr<std::recursive_mutex> mutex,
+              TargetValidator target_validator)
       : m_debugger_wp(debugger_sp), m_description(description),
-        m_mutex(std::move(mutex)) {}
+        m_mutex(std::move(mutex)), m_target_validator(target_validator) {}
 
   lldb::DebuggerWP m_debugger_wp;
   std::string m_description;
   std::shared_ptr<std::recursive_mutex> m_mutex;
+  TargetValidator m_target_validator;
   /// Targets are weakly held so membership does not extend their lifetime.
   std::vector<Entry> m_entries;
 };
