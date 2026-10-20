@@ -16,18 +16,18 @@
   "waits": 1
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
-  "bytes": 804,
+  "bytes": 698,
   "cycles": 109.0,
-  "gprs": 48,
-  "instructions": 114,
+  "gprs": 39,
+  "instructions": 105,
   "uniform_halves": 22,
   "waits": 2
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
-  "bytes": 804,
+  "bytes": 698,
   "cycles": 109.0,
-  "gprs": 48,
-  "instructions": 114,
+  "gprs": 39,
+  "instructions": 105,
   "uniform_halves": 22,
   "waits": 2
  },

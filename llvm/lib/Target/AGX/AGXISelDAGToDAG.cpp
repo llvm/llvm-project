@@ -340,13 +340,25 @@ bool AGXDAGToDAGISel::SelectLocalAddr(SDValue Addr, SDValue &Base,
   SDLoc DL(Addr);
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t Offset = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    SDValue B = Addr.getOperand(0);
     if (Offset > 0 && Offset % Unit == 0 && isUInt<15>(Offset / Unit)) {
-      SDValue B = Addr.getOperand(0);
       Base = isNullConstant(B)
                  ? CurDAG->getTargetConstant(0, DL, MVT::i16)
                  : CurDAG->getTargetExtractSubreg(AGX::lo16, DL, MVT::i16, B);
       Index = CurDAG->getTargetConstant(Offset / Unit, DL, MVT::i16);
       return true;
+    }
+    // base + (Offset % Unit) is already computed for another access: reuse
+    // it with the rest of the offset in the index.
+    if (Offset > int64_t(Unit) && isUInt<15>(Offset / Unit)) {
+      SDValue Rem = CurDAG->getConstant(Offset % Unit, DL, MVT::i32);
+      if (SDNode *N = CurDAG->getNodeIfExists(
+              ISD::ADD, CurDAG->getVTList(MVT::i32), {B, Rem})) {
+        Base = CurDAG->getTargetExtractSubreg(AGX::lo16, DL, MVT::i16,
+                                              SDValue(N, 0));
+        Index = CurDAG->getTargetConstant(Offset / Unit, DL, MVT::i16);
+        return true;
+      }
     }
   }
   if (isNullConstant(Addr))

@@ -45,3 +45,19 @@ define agx_kernel void @unaligned(ptr addrspace(1) %out) {
   store i32 %x, ptr addrspace(1) %out
   ret void
 }
+
+; base + 20 reuses the register of base + 4 with index 1.
+; CHECK-LABEL: remainder:
+; CHECK-DAG:     threadgroup_load i32, x, {{r[0-9]+}}, [[R:r[0-9]+l]], 0
+; CHECK-DAG:     threadgroup_load i32, x, {{r[0-9]+}}, [[R]], 1
+define agx_kernel void @remainder(ptr addrspace(1) %out) {
+  %t = call i32 @llvm.agx.thread.position.in.threadgroup.x()
+  %b = getelementptr [256 x i32], ptr addrspace(3) @tg, i32 0, i32 %t
+  %p4 = getelementptr i8, ptr addrspace(3) %b, i32 4
+  %p20 = getelementptr i8, ptr addrspace(3) %b, i32 20
+  %x = load i32, ptr addrspace(3) %p4
+  %y = load i32, ptr addrspace(3) %p20
+  %s = add i32 %x, %y
+  store i32 %s, ptr addrspace(1) %out
+  ret void
+}
