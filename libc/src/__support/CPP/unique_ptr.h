@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UNIQUE_PTR_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UNIQUE_PTR_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"

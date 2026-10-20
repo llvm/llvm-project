@@ -220,6 +220,7 @@ add_header_library(
     .new
     .type_traits
     .utility
+    libc.hdr.types.size_t
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

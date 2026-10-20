@@ -46,7 +46,7 @@ TEST(LlvmLibcUniquePtrTest, Basic) {
 TEST(LlvmLibcUniquePtrTest, Nullptr) {
   unique_ptr<int> ptr(nullptr);
   ASSERT_FALSE(static_cast<bool>(ptr));
-  ASSERT_EQ(ptr.get(), static_cast<int *>(nullptr));
+  ASSERT_EQ(ptr.get(), nullptr);
 }
 
 // Test move construction transferring ownership.
