@@ -29,7 +29,8 @@ SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
   // Don't match 'expected' inside a longer word such as 'unexpected'.
   expected = Regex("(^|[^[:alnum:]_-])(" + prefixAlt +
                    ")-(error|note|remark|warning)(-re)?"
-                   " *(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+                   " *(@([+-][0-9]+|above|below|unknown))?(:([0-9]+))?"
+                   " *{{(.*)}}$");
 
   for (StringRef prefix : commentPrefixes) {
     assert(!prefix.empty() && "comment prefixes must be non-empty");
@@ -168,11 +169,18 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(const MemoryBuffer *buf) {
       assert(matches[3] == "note");
       kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[7]);
+    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[9]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
     if (!matches[4].empty() && !computeRegex(record))
       continue;
+
+    // Parse the optional ':<col>'.
+    if (!matches[8].empty() &&
+        (matches[8].getAsInteger(10, record.colNo) || record.colNo == 0)) {
+      emitError(record, "invalid column '" + matches[7] + "'");
+      continue;
+    }
 
     StringRef offsetMatch = matches[5];
     if (!offsetMatch.empty()) {
@@ -188,6 +196,10 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(const MemoryBuffer *buf) {
         else
           record.lineNo -= offset;
       } else if (offsetMatch.consume_front("unknown")) {
+        if (record.colNo != 0) {
+          emitError(record, "cannot specify a column with '@unknown'");
+          continue;
+        }
         // This is matching unknown locations.
         record.fileLoc = SMLoc();
         expectedUnknownLocDiags.emplace_back(std::move(record));
@@ -240,6 +252,9 @@ SourceMgrDiagnosticVerifier::process(SourceMgr::DiagKind kind,
     // File line must match (unless it's an unknown location).
     if (loc && e.lineNo != loc->lineNo)
       continue;
+    // The column only needs to match if the directive specified one.
+    if (loc && e.colNo != 0 && e.colNo != loc->colNo)
+      continue;
     // A directive that already matched a diagnostic is used up.
     if (oneDiagPerDirective && e.matched)
       continue;
@@ -279,7 +294,10 @@ SourceMgrDiagnosticVerifier::process(const SMDiagnostic &diag,
     const MemoryBuffer *buf = nullptr;
     if (unsigned id = mgr.FindBufferContainingLoc(diag.getLoc()))
       buf = mgr.getMemoryBuffer(id);
-    loc = Location{buf, static_cast<unsigned>(diag.getLineNo())};
+    // SMDiagnostic columns are 0-based, but printed (and written in
+    // directives) as 1-based.
+    loc = Location{buf, static_cast<unsigned>(diag.getLineNo()),
+                   static_cast<unsigned>(diag.getColumnNo()) + 1};
   }
   MatchResult result =
       process(diag.getKind(), loc, diag.getMessage(), reportUnexpected);
