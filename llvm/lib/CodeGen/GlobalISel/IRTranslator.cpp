@@ -3630,7 +3630,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3850,8 +3850,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
