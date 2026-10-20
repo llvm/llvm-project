@@ -28,6 +28,7 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSETCC64(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift64(SDValue Op, SelectionDAG &DAG) const;

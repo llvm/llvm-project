@@ -1092,7 +1092,9 @@ multiclass AGXAtomicPats<SDPatternOperator node, int op> {
 }
 
 defm agx_atomic_add : AGXAtomicPats<atomic_load_add, AOP_ADD>;
-defm agx_atomic_sub : AGXAtomicPats<atomic_load_sub, AOP_SUB>;
+// Atomic sub is lowered as an add of the negated value (lowerATOMIC_LOAD_SUB):
+// with the coherency bit of multi-die parts set, the sub opcode is a float add
+// on G14.
 defm agx_atomic_xchg : AGXAtomicPats<atomic_swap, AOP_XCHG>;
 defm agx_atomic_umin : AGXAtomicPats<atomic_load_umin, AOP_UMIN>;
 defm agx_atomic_imin : AGXAtomicPats<atomic_load_min, AOP_IMIN>;
@@ -1101,6 +1103,18 @@ defm agx_atomic_imax : AGXAtomicPats<atomic_load_max, AOP_IMAX>;
 defm agx_atomic_and : AGXAtomicPats<atomic_load_and, AOP_AND>;
 defm agx_atomic_or : AGXAtomicPats<atomic_load_or, AOP_OR>;
 defm agx_atomic_xor : AGXAtomicPats<atomic_load_xor, AOP_XOR>;
+
+def agx_atomic_fadd_device
+    : PatFrag<(ops node:$ptr, node:$val), (atomic_load_fadd node:$ptr, node:$val)> {
+  let IsAtomic = 1;
+  let MemoryVT = f32;
+  let AddressSpaces = DeviceAS;
+}
+
+// The float32 add is the sub opcode with bit 45 (the coherent operand) set.
+let Predicates = [HasDeviceAtomicFAdd] in
+def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
+          (DEVICE_ATOMIC AOP_SUB, 0, $ptr, (i32 0), 0, $val, 1)>;
 
 def agx_cmpxchg_device : AtomicCmpSwapFrag<DeviceAS>;
 def agx_cmpxchg_local : AtomicCmpSwapFrag<LocalAS>;

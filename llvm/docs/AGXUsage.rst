@@ -148,6 +148,9 @@ another.
                                   (multi-cluster G13 parts and two-die parts).
    ``threadgroup-atomics``        Threadgroup memory atomics.
    ``device-atomics``             Device memory atomics.
+   ``device-atomic-fadd``         A float32 device atomic add (G14; rounds to
+                                  nearest even and flushes denormals, like
+                                  PTX ``atom.add.f32``).
    ``stack-access``               Per-thread stack loads and stores.
    ``dynamic-caching``            Registers and threadgroup memory are
                                   allocated dynamically (G15 and later).

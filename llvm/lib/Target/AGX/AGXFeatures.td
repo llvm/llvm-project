@@ -92,6 +92,14 @@ def FeatureMultiDieCoherency : SubtargetFeature<"multi-die-coherency",
   "Device atomics must set the coherency bit (multi-cluster G13 and two-die parts)"
 >;
 
+// G14C (M2 Max): the device atomic sub with bit 45 is a float32 add that
+// rounds to nearest even and flushes denormals, PTX's atom.add.f32
+// (Apple-M2-Playground novel-results 2026-10-17-atomic-variants).
+def FeatureDeviceAtomicFAdd : SubtargetFeature<"device-atomic-fadd",
+  "HasDeviceAtomicFAdd", "true",
+  "Device atomics include a float32 add"
+>;
+
 def FeatureThreadgroupAtomics : SubtargetFeature<"threadgroup-atomics",
   "HasThreadgroupAtomics", "true",
   "Has threadgroup memory atomics"
@@ -163,7 +171,8 @@ def FeatureG14 : AGXSubtargetFeatureGeneration<"G14", "g14",
   [FeatureAGX2Encoding, FeatureFP16Arith, FeatureInt64Add, FeatureSIMDShuffle,
    FeatureSIMDReduce, FeatureSIMDBallot, FeatureSIMDMatrix,
    FeatureQuadShuffleIndexMerge, FeatureThreadgroupAtomics,
-   FeatureDeviceAtomics, FeatureStackAccess, FeatureMaxGPRs128]
+   FeatureDeviceAtomics, FeatureDeviceAtomicFAdd, FeatureStackAccess,
+   FeatureMaxGPRs128]
 >;
 
 // No public instruction set documentation exists for G15. It is assumed to
@@ -206,3 +215,4 @@ def HasFP16Arith : Predicate<"Subtarget->hasFP16Arith()">;
 def HasInt64Add : Predicate<"Subtarget->hasInt64Add()">;
 def HasThreadgroupAtomics : Predicate<"Subtarget->hasThreadgroupAtomics()">;
 def HasDeviceAtomics : Predicate<"Subtarget->hasDeviceAtomics()">;
+def HasDeviceAtomicFAdd : Predicate<"Subtarget->hasDeviceAtomicFAdd()">;

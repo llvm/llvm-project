@@ -79,6 +79,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                      MVT::Other, Custom);
   // Fences become the barrier sequences measured for their scope and ordering.
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
   // llvm.agx.simd.ballot takes an i1, which is promoted by custom lowering.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
   setTargetDAGCombine(ISD::BRCOND);
@@ -222,6 +223,12 @@ AGXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
       break;
     }
   }
+  // A native float add on device memory where the chip has one; the
+  // threadgroup atomic has none.
+  if (RMW->getOperation() == AtomicRMWInst::FAdd && RMW->getType()->isFloatTy() &&
+      ST.hasDeviceAtomicFAdd() &&
+      RMW->getPointerAddressSpace() != AGX::THREADGROUP_ADDRESS)
+    return AtomicExpansionKind::None;
   return AtomicExpansionKind::CmpXChg;
 }
 
@@ -368,6 +375,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
     return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::ATOMIC_FENCE:
     return lowerATOMIC_FENCE(Op, DAG);
+  case ISD::ATOMIC_LOAD_SUB:
+    return lowerATOMIC_LOAD_SUB(Op, DAG);
   case ISD::BRCOND:
     return lowerBRCOND(Op, DAG);
   case ISD::SETCC:
@@ -578,6 +587,19 @@ Instruction *AGXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
             : AtomicOrdering::Acquire,
         getAtomicSyncScopeID(Inst).value_or(SyncScope::System));
   return nullptr;
+}
+
+SDValue AGXTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  // x - v is x + (-v). The add keeps the meaning of the opcode with the
+  // coherency bit set, which turns the sub opcode into a float add on G14.
+  auto *N = cast<AtomicSDNode>(Op.getNode());
+  SDLoc DL(Op);
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), N->getVal());
+  return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, N->getMemoryVT(),
+                       N->getChain(), N->getBasePtr(), Neg,
+                       N->getMemOperand());
 }
 
 SDValue AGXTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
