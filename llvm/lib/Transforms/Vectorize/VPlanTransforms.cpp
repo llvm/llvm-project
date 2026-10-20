@@ -4768,8 +4768,7 @@ void VPlanTransforms::materializeFirstOrderRecurrenceStartValue(
     // poison, start value] for vector VF plans.
     VPValue *StartV = FOR.getStartValue();
     DebugLoc DL = FOR.getDebugLoc();
-    VPValue *Poison =
-        Plan.getOrAddLiveIn(PoisonValue::get(StartV->getScalarType()));
+    VPValue *Poison = Plan.getPoison(StartV->getScalarType());
     // TODO: Use the type of runtimeVF as index type.
     Type *IdxTy = Type::getInt32Ty(Plan.getContext());
     VPValue *RuntimeVF =
