@@ -94,13 +94,6 @@ completely separate as modern LLVM bitcode evolves.
 
 ### DirectX Backend Flow
 
-Before operation lowering, *DXILLegalize* promotes unsupported scalar integer
-SSA widths to i32 or i64 carriers. It preserves the original low bits and
-normalizes operands when signed or unsigned consumers require it. The same
-legalization handles i8 arithmetic; byte-addressed memory uses retain their
-separate storage legalization. Fixed intrinsic immediate operands, such as the
-i8 direction of `llvm.dx.resource.updatecounter`, retain their ABI types.
-
 The code generation flow for DXIL is broken into a series of passes. The passes
 are grouped into two flows:
 
@@ -164,3 +157,4 @@ DXIL reading path.
 As soon as we are able, we will also want to round trip using the DXIL
 writing and reading paths in order to ensure self consistency and to
 get test coverage when *dxil-dis* isn't available.
+

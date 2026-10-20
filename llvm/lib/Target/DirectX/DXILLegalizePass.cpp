@@ -39,7 +39,7 @@ static IntegerType *getLegalIntegerType(Type *Ty) {
   if (Width > 64)
     reportFatalUsageError(
         "DXIL does not support integer types wider than 64 bits");
-  return IntegerType::get(Ty->getContext(), Width < 32 ? 32 : 64);
+  return IntegerType::get(Ty->getContext(), Width <= 32 ? 32 : 64);
 }
 
 enum class IntegerExtension { None, Zero, Sign };
@@ -75,7 +75,6 @@ static bool legalizeInteger(Instruction &I,
     else
       ReplacedValues[&I] = V;
     ToRemove.push_back(&I);
-    return true;
   };
 
   if (auto *BC = dyn_cast<BitCastInst>(&I)) {
@@ -105,7 +104,8 @@ static bool legalizeInteger(Instruction &I,
         Unpacked = B.CreateInsertElement(Unpacked, Elt, B.getInt32(Idx));
       }
     }
-    return replace(Dst ? Packed : Unpacked);
+    replace(Dst ? Packed : Unpacked);
+    return true;
   }
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     if (!getLegalIntegerType(I.getType()))
