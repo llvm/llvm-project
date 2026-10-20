@@ -458,9 +458,11 @@ func.func private @insert_slice_leading_unit_dim_dropped_non_zero_offset(
 
 // -----
 
-/// Dim 1 is dropped, so the vector is written to result dims 0 and 2. The
-/// vector fits in both from their indices (4 <= 8 - 2, 4 <= 8 - 0), so the
-/// write needs no mask. The index of the dropped dim (6) does not matter.
+/// The slice's unit dim 1 is dropped (sizes [4, 1, 4], source 4x4), so the
+/// vector is written to result dims 0 and 2. It fits in both from their
+/// indices (4 <= 8 - 2, 4 <= 8 - 0), so the write needs no mask. Result dim 1
+/// has size 8, so its index can be non-zero (6); that index must not affect
+/// the mask.
 
 func.func private @insert_slice_non_leading_unit_dim_dropped_non_zero_offsets(
     %source: tensor<4x4xi32>, %dest: tensor<8x8x8xi32>) -> tensor<8x8x8xi32> {
