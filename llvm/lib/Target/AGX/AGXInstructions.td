@@ -217,6 +217,20 @@ defm ISUB_I32 : IAddPseudos<ISUB_g13, GPR32, Src32Op, i32,
 defm ISUB_I64 : IAddPseudos<ISUB_g13, GPR64, Src64Op, i64,
                             AGXIntSrc64, sub, [WriteALU64]>;
 
+// Adding a small negative constant subtracts its magnitude, which fits the
+// 8-bit immediate source, instead of materializing the constant.
+def agx_neg_imm8 : ImmLeaf<i32, [{ return Imm < 0 && Imm >= -255; }]>;
+def agx_neg_imm8_16 : ImmLeaf<i16, [{ return Imm < 0 && Imm >= -255; }]>;
+def agx_neg_imm8_64 : ImmLeaf<i64, [{ return Imm < 0 && Imm >= -255; }]>;
+def AGXNegImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N), N->getValueType(0));
+}]>;
+let AddedComplexity = 10 in {
+def : Pat<(i32 (add i32:$a, agx_neg_imm8:$c)), (ISUB_I32 0, $a, 0, (i32 (AGXNegImm $c)), 0)>;
+def : Pat<(i16 (add i16:$a, agx_neg_imm8_16:$c)), (ISUB_I16 0, $a, 0, (i16 (AGXNegImm $c)), 0)>;
+def : Pat<(i64 (add i64:$a, agx_neg_imm8_64:$c)), (ISUB_I64 0, $a, 0, (i64 (AGXNegImm $c)), 0)>;
+}
+
 // Saturating add and subtract. Signedness comes from the sign extension
 // flags of the sources.
 def IADD_SAT_I32 : AGXALUPseudo<IADD_SAT_g13, (outs GPR32:$dst),
@@ -574,21 +588,21 @@ def : Pat<(i64 (select i32:$c, i64:$x, i64:$y)),
                          0, (EXTRACT_SUBREG $x, sub1)), sub1)>;
 
 // Integer min/max.
-def : Pat<(i32 (smin i32:$a, i32:$b)),
+def : Pat<(i32 (smin i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_SLT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (smax i32:$a, i32:$b)),
+def : Pat<(i32 (smax i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_SGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (umin i32:$a, i32:$b)),
+def : Pat<(i32 (umin i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_ULT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i32 (umax i32:$a, i32:$b)),
+def : Pat<(i32 (umax i32:$a, AGXIntSrc32:$b)),
           (ICMPSEL_I32 IC_UGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (smin i16:$a, i16:$b)),
+def : Pat<(i16 (smin i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_SLT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (smax i16:$a, i16:$b)),
+def : Pat<(i16 (smax i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_SGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (umin i16:$a, i16:$b)),
+def : Pat<(i16 (umin i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_ULT, 0, $a, 0, $b, 0, $a, 0, $b)>;
-def : Pat<(i16 (umax i16:$a, i16:$b)),
+def : Pat<(i16 (umax i16:$a, AGXIntSrc16:$b)),
           (ICMPSEL_I16 IC_UGT, 0, $a, 0, $b, 0, $a, 0, $b)>;
 
 // Float min/max: the "n" conditions return the other operand for a NaN.

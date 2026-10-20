@@ -80,18 +80,18 @@
   "waits": 1
  },
  "stencil.ll:stencil:agx-g13g": {
-  "bytes": 216,
-  "cycles": 99.4,
-  "gprs": 9,
-  "instructions": 32,
+  "bytes": 198,
+  "cycles": 96.1,
+  "gprs": 8,
+  "instructions": 29,
   "uniform_halves": 16,
   "waits": 1
  },
  "stencil.ll:stencil:agx-g14c": {
-  "bytes": 216,
-  "cycles": 99.4,
-  "gprs": 9,
-  "instructions": 32,
+  "bytes": 198,
+  "cycles": 96.1,
+  "gprs": 8,
+  "instructions": 29,
   "uniform_halves": 16,
   "waits": 1
  },
