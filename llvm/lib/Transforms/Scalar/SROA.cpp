@@ -4947,8 +4947,10 @@ class SliceSplitter {
   IRBuilderTy &IRB;
   const DataLayout &DL;
 
-  /// The split points that the slice is being split at. There's also an
-  /// implicit split point at the start and end of the slice.
+  /// The split points that the slice is being split at. These are byte offsets
+  /// within the slice, and are used to form the start/end offsets of the slices
+  /// that we generate, plus the implicit offsets from the start and end of the
+  /// slice that's being split.
   const std::vector<uint64_t> &Splits;
 
   /// The size of the slice that's being split.
@@ -5033,6 +5035,8 @@ public:
       PtrIdx = SI->getPointerOperandIndex();
     else
       llvm_unreachable("Slice must be for a load or store");
+    // BaseOffset is the offset of the original slice within the alloca, so the
+    // start and end offsets of this slice are offset from that.
     Slice S(BaseOffset + It.getOffset(),
             BaseOffset + It.getOffset() + It.getSize(),
             &I->getOperandUse(PtrIdx), /*IsSplittable*/ false);
