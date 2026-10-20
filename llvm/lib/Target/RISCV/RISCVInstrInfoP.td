@@ -1925,6 +1925,12 @@ def riscv_pm2waddu
     : RVSDNode<"PM2WADDU", SDT_RISCVPackedWideningHorizontalAdd>;
 def riscv_pm2waddsu
     : RVSDNode<"PM2WADDSU", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wadd_x
+    : RVSDNode<"PM2WADD_X", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wsub
+    : RVSDNode<"PM2WSUB", SDT_RISCVPackedWideningHorizontalAdd>;
+def riscv_pm2wsub_x
+    : RVSDNode<"PM2WSUB_X", SDT_RISCVPackedWideningHorizontalAdd>;
 
 // Packed widening multiply-accumulate operations.
 def SDT_RISCVPackedWideningAcc
@@ -2736,6 +2742,12 @@ let append Predicates = [IsRV32] in {
             (PM2WADDU_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2waddsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PM2WADDSU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wadd_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WADD_HX GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUB_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2wsub_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PM2WSUB_HX GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiplication with widening horizontal addition and accumulate
   // patterns.
