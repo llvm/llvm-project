@@ -596,12 +596,12 @@ let isCodeGenOnly = 1, isPseudo = 1,
   // Use timing class of L2_loadrb_pci.
   def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_5ceb2f9e>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_L2_loadbsw2_pci>;
 
   // Use timing class of L2_loadrb_pcr.
   def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, CircRegs:$CSMu2),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_075c8dd8>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_L2_loadbsw2_pbr>;
 }
 }
 
@@ -619,12 +619,12 @@ let isCodeGenOnly = 1, isPseudo = 1,
   // Use timing class of S2_storerb_pci.
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, CircRegs:$CSMu2, RC:$Rt32),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_b4dc7630>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_S2_storerb_pci>;
 
   // Use timing class of S2_storerb_pcr.
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, CircRegs:$CSMu2, RC:$Rt32),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_a2b365d2>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_S2_storerb_pbr>;
 }
 }
 
@@ -653,7 +653,7 @@ def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
 
 // This is actual trap1 instruction from before v65. It's here since it is
 // no longer included in DepInstrInfo.td.
-def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,
+def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_J2_trap1,
                      TypeJ>, Enc_a51a9a, Requires<[HasPreV65]> {
   let Inst{1-0} = 0b00;
   let Inst{7-5} = 0b000;

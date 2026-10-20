@@ -17,47 +17,45 @@ namespace llvm {
 
 inline bool is_TC1(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_112d30d6:
-  case Hexagon::Sched::tc_151bf368:
-  case Hexagon::Sched::tc_1c2c7a4a:
-  case Hexagon::Sched::tc_1d41f8b7:
-  case Hexagon::Sched::tc_23708a21:
-  case Hexagon::Sched::tc_24f426ab:
-  case Hexagon::Sched::tc_2f573607:
-  case Hexagon::Sched::tc_388f9897:
-  case Hexagon::Sched::tc_3d14a17b:
-  case Hexagon::Sched::tc_3fbf1042:
-  case Hexagon::Sched::tc_407e96f9:
-  case Hexagon::Sched::tc_42ff66ba:
-  case Hexagon::Sched::tc_4a55d03c:
-  case Hexagon::Sched::tc_5502c366:
-  case Hexagon::Sched::tc_55b33fda:
-  case Hexagon::Sched::tc_56a124a7:
-  case Hexagon::Sched::tc_57a55b54:
-  case Hexagon::Sched::tc_59a7822c:
-  case Hexagon::Sched::tc_5b347363:
-  case Hexagon::Sched::tc_5da50c4b:
-  case Hexagon::Sched::tc_60e324ff:
-  case Hexagon::Sched::tc_651cbe02:
-  case Hexagon::Sched::tc_6fc5dbea:
-  case Hexagon::Sched::tc_711c805f:
-  case Hexagon::Sched::tc_713b66bf:
-  case Hexagon::Sched::tc_9124c04f:
-  case Hexagon::Sched::tc_9c52f549:
-  case Hexagon::Sched::tc_9e27f2f9:
-  case Hexagon::Sched::tc_9f6cd987:
-  case Hexagon::Sched::tc_a1297125:
-  case Hexagon::Sched::tc_a7a13fac:
-  case Hexagon::Sched::tc_b837298f:
-  case Hexagon::Sched::tc_c57d9f39:
-  case Hexagon::Sched::tc_d33e5eee:
-  case Hexagon::Sched::tc_decdde8a:
-  case Hexagon::Sched::tc_e60def48:
-  case Hexagon::Sched::tc_ed03645c:
-  case Hexagon::Sched::tc_eeda4109:
-  case Hexagon::Sched::tc_ef921005:
-  case Hexagon::Sched::tc_f97707c1:
-  case Hexagon::Sched::tc_f999c66e:
+  case Hexagon::Sched::tc_A2_add:
+  case Hexagon::Sched::tc_A2_addp:
+  case Hexagon::Sched::tc_A2_aslh:
+  case Hexagon::Sched::tc_A2_negp:
+  case Hexagon::Sched::tc_A2_nop:
+  case Hexagon::Sched::tc_A2_paddf:
+  case Hexagon::Sched::tc_A2_vcmpbeq:
+  case Hexagon::Sched::tc_A4_addp_c:
+  case Hexagon::Sched::tc_A4_cmpbeqi:
+  case Hexagon::Sched::tc_A4_ext:
+  case Hexagon::Sched::tc_C2_all8:
+  case Hexagon::Sched::tc_C2_and:
+  case Hexagon::Sched::tc_C2_cmpeq:
+  case Hexagon::Sched::tc_C2_cmpeqi:
+  case Hexagon::Sched::tc_C2_tfrrp:
+  case Hexagon::Sched::tc_C2_vmux:
+  case Hexagon::Sched::tc_C4_and_and:
+  case Hexagon::Sched::tc_J2_endloop0:
+  case Hexagon::Sched::tc_J2_jump:
+  case Hexagon::Sched::tc_J2_jumpf:
+  case Hexagon::Sched::tc_J2_jumpfnew:
+  case Hexagon::Sched::tc_J2_jumpr:
+  case Hexagon::Sched::tc_J2_jumprf:
+  case Hexagon::Sched::tc_J2_jumprfnew:
+  case Hexagon::Sched::tc_J2_jumprgtez:
+  case Hexagon::Sched::tc_J2_jumprh:
+  case Hexagon::Sched::tc_J4_cmpeq_fp0_jump_nt:
+  case Hexagon::Sched::tc_J4_cmpeqi_fp0_jump_nt:
+  case Hexagon::Sched::tc_J4_hintjumpr:
+  case Hexagon::Sched::tc_J4_jumpseti:
+  case Hexagon::Sched::tc_J4_jumpsetr:
+  case Hexagon::Sched::tc_J4_tstbit0_fp0_jump_nt:
+  case Hexagon::Sched::tc_SA1_addi:
+  case Hexagon::Sched::tc_SA1_addsp:
+  case Hexagon::Sched::tc_SA1_clrf:
+  case Hexagon::Sched::tc_SA1_cmpeqi:
+  case Hexagon::Sched::tc_dup_A2_add:
+  case Hexagon::Sched::tc_dup_A2_sxtb:
+  case Hexagon::Sched::tc_dup_C2_cmpeqi:
     return true;
   default:
     return false;
@@ -66,30 +64,27 @@ inline bool is_TC1(unsigned SchedClass) {
 
 inline bool is_TC2(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_01d44cb2:
-  case Hexagon::Sched::tc_0dfac0a7:
-  case Hexagon::Sched::tc_1fcb8495:
-  case Hexagon::Sched::tc_20131976:
-  case Hexagon::Sched::tc_2c13e7f5:
-  case Hexagon::Sched::tc_3edca78f:
-  case Hexagon::Sched::tc_5e4cf0e8:
-  case Hexagon::Sched::tc_65279839:
-  case Hexagon::Sched::tc_7401744f:
-  case Hexagon::Sched::tc_84a7500d:
-  case Hexagon::Sched::tc_8a825db2:
-  case Hexagon::Sched::tc_8b5bd4f5:
-  case Hexagon::Sched::tc_95a33176:
-  case Hexagon::Sched::tc_9b3c0462:
-  case Hexagon::Sched::tc_a08b630b:
-  case Hexagon::Sched::tc_a4e22bbd:
-  case Hexagon::Sched::tc_a7bdb22c:
-  case Hexagon::Sched::tc_bb831a7c:
-  case Hexagon::Sched::tc_c20701f0:
-  case Hexagon::Sched::tc_d3632d88:
-  case Hexagon::Sched::tc_d61dfdc3:
-  case Hexagon::Sched::tc_e3d699e3:
-  case Hexagon::Sched::tc_f098b237:
-  case Hexagon::Sched::tc_f34c1c21:
+  case Hexagon::Sched::tc_A2_abs:
+  case Hexagon::Sched::tc_A2_addh_h16_hh:
+  case Hexagon::Sched::tc_A2_addh_h16_sat_hh:
+  case Hexagon::Sched::tc_A2_addh_l16_hl:
+  case Hexagon::Sched::tc_A2_addsat:
+  case Hexagon::Sched::tc_A2_svavgh:
+  case Hexagon::Sched::tc_A2_svavghs:
+  case Hexagon::Sched::tc_A2_vavgh:
+  case Hexagon::Sched::tc_A2_vavghcr:
+  case Hexagon::Sched::tc_A2_vavghr:
+  case Hexagon::Sched::tc_A6_vminub_RdP:
+  case Hexagon::Sched::tc_C4_addipc:
+  case Hexagon::Sched::tc_F2_dfimm_n:
+  case Hexagon::Sched::tc_F2_sfmax:
+  case Hexagon::Sched::tc_M2_acci:
+  case Hexagon::Sched::tc_M2_xor_xacc:
+  case Hexagon::Sched::tc_S2_brev:
+  case Hexagon::Sched::tc_S2_extractu_rp:
+  case Hexagon::Sched::tc_S2_insert:
+  case Hexagon::Sched::tc_S2_vrndpackwh:
+  case Hexagon::Sched::tc_S5_popcountp:
     return true;
   default:
     return false;
@@ -98,9 +93,65 @@ inline bool is_TC2(unsigned SchedClass) {
 
 inline bool is_TC2early(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_33e7e673:
-  case Hexagon::Sched::tc_45f9d1be:
-  case Hexagon::Sched::tc_a4ee89db:
+  case Hexagon::Sched::tc_J2_trap0:
+  case Hexagon::Sched::tc_J2_unpause:
+  case Hexagon::Sched::tc_SL2_jumpr31:
+  case Hexagon::Sched::tc_Y2_icdataw:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TC2latepred(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_A2_paddfnew:
+  case Hexagon::Sched::tc_A2_tfrpfnew:
+  case Hexagon::Sched::tc_SA1_clrfnew:
+  case Hexagon::Sched::tc_dup_C2_cmovenewif:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TC3(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_J2_call:
+  case Hexagon::Sched::tc_J2_callf:
+  case Hexagon::Sched::tc_J2_callr:
+  case Hexagon::Sched::tc_J2_callrf:
+  case Hexagon::Sched::tc_J2_callrh:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TC3stall(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_A2_tfrcrr:
+  case Hexagon::Sched::tc_A2_tfrrcr:
+  case Hexagon::Sched::tc_A4_tlbmatch:
+  case Hexagon::Sched::tc_J2_pause:
+  case Hexagon::Sched::tc_J2_rte:
+  case Hexagon::Sched::tc_J2_trap1:
+  case Hexagon::Sched::tc_S2_storew_locked:
+  case Hexagon::Sched::tc_Y2_break:
+  case Hexagon::Sched::tc_Y2_dckill:
+  case Hexagon::Sched::tc_Y2_dctagr:
+  case Hexagon::Sched::tc_Y2_dctagw:
+  case Hexagon::Sched::tc_Y2_icdatar:
+  case Hexagon::Sched::tc_Y2_icinva:
+  case Hexagon::Sched::tc_Y2_ickill:
+  case Hexagon::Sched::tc_Y2_ictagw:
+  case Hexagon::Sched::tc_Y2_tlbp:
+  case Hexagon::Sched::tc_Y2_tlbpp:
+  case Hexagon::Sched::tc_Y2_tlbw:
+  case Hexagon::Sched::tc_Y4_l2fetch:
+  case Hexagon::Sched::tc_Y5_ctlbw:
+  case Hexagon::Sched::tc_Y5_l2locka:
+  case Hexagon::Sched::tc_Y5_tlbasidi:
     return true;
   default:
     return false;
@@ -109,31 +160,28 @@ inline bool is_TC2early(unsigned SchedClass) {
 
 inline bool is_TC3x(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_01e1be3b:
-  case Hexagon::Sched::tc_1248597c:
-  case Hexagon::Sched::tc_197dce51:
-  case Hexagon::Sched::tc_27106296:
-  case Hexagon::Sched::tc_28e55c6f:
-  case Hexagon::Sched::tc_2c3e17fc:
-  case Hexagon::Sched::tc_38382228:
-  case Hexagon::Sched::tc_38e0bae9:
-  case Hexagon::Sched::tc_4abdbdc6:
-  case Hexagon::Sched::tc_503ce0f3:
-  case Hexagon::Sched::tc_556f6577:
-  case Hexagon::Sched::tc_5a4b5e58:
-  case Hexagon::Sched::tc_6ae3426b:
-  case Hexagon::Sched::tc_6d861a95:
-  case Hexagon::Sched::tc_788b1d09:
-  case Hexagon::Sched::tc_7dc63b5c:
-  case Hexagon::Sched::tc_7f8ae742:
-  case Hexagon::Sched::tc_9406230a:
-  case Hexagon::Sched::tc_a154b476:
-  case Hexagon::Sched::tc_a38c45dc:
-  case Hexagon::Sched::tc_c21d7447:
-  case Hexagon::Sched::tc_d7718fbe:
-  case Hexagon::Sched::tc_db596beb:
-  case Hexagon::Sched::tc_f0cdeccf:
-  case Hexagon::Sched::tc_fae9dfa5:
+  case Hexagon::Sched::tc_A2_vraddub:
+  case Hexagon::Sched::tc_A2_vraddub_acc:
+  case Hexagon::Sched::tc_A4_vrmaxh:
+  case Hexagon::Sched::tc_A5_ACS:
+  case Hexagon::Sched::tc_G4_tfrgcpp:
+  case Hexagon::Sched::tc_G4_tfrgpcp:
+  case Hexagon::Sched::tc_J2_loop0i:
+  case Hexagon::Sched::tc_J2_loop0r:
+  case Hexagon::Sched::tc_J2_ploop1si:
+  case Hexagon::Sched::tc_J2_ploop1sr:
+  case Hexagon::Sched::tc_M2_macsin:
+  case Hexagon::Sched::tc_M2_mpysin:
+  case Hexagon::Sched::tc_M4_mpyri_addr_u2:
+  case Hexagon::Sched::tc_M7_dcmpyiw:
+  case Hexagon::Sched::tc_M7_dcmpyiw_acc:
+  case Hexagon::Sched::tc_S2_cabacdecbin:
+  case Hexagon::Sched::tc_S4_vrcrotate:
+  case Hexagon::Sched::tc_S4_vrcrotate_acc:
+  case Hexagon::Sched::tc_Y2_ciad:
+  case Hexagon::Sched::tc_Y2_crswap0:
+  case Hexagon::Sched::tc_Y4_crswap10:
+  case Hexagon::Sched::tc_Y6_diag0:
     return true;
   default:
     return false;
@@ -142,14 +190,134 @@ inline bool is_TC3x(unsigned SchedClass) {
 
 inline bool is_TC4x(unsigned SchedClass) {
   switch (SchedClass) {
-  case Hexagon::Sched::tc_02fe1c65:
-  case Hexagon::Sched::tc_0a195f2c:
-  case Hexagon::Sched::tc_7f7f45f5:
-  case Hexagon::Sched::tc_9783714b:
-  case Hexagon::Sched::tc_9e72dc89:
-  case Hexagon::Sched::tc_9edb7c77:
-  case Hexagon::Sched::tc_f0e8e832:
-  case Hexagon::Sched::tc_f7569068:
+  case Hexagon::Sched::tc_F2_conv_d2df:
+  case Hexagon::Sched::tc_F2_dfadd:
+  case Hexagon::Sched::tc_F2_dfmpyhh:
+  case Hexagon::Sched::tc_F2_sfadd:
+  case Hexagon::Sched::tc_F2_sffma:
+  case Hexagon::Sched::tc_F2_sffma_sc:
+  case Hexagon::Sched::tc_F2_sfinvsqrta:
+  case Hexagon::Sched::tc_F2_sfrecipa:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TClatepredldaia(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_L2_ploadrbfnew_pi:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TClatepredstaia(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_S2_pstorerbfnew_pi:
+  case Hexagon::Sched::tc_S2_pstorerbnewfnew_pi:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TCld(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_L2_deallocframe:
+  case Hexagon::Sched::tc_L2_loadalignb_io:
+  case Hexagon::Sched::tc_L2_loadalignb_pbr:
+  case Hexagon::Sched::tc_L2_loadalignb_pci:
+  case Hexagon::Sched::tc_L2_loadbsw2_io:
+  case Hexagon::Sched::tc_L2_loadbsw2_pbr:
+  case Hexagon::Sched::tc_L2_loadbsw2_pci:
+  case Hexagon::Sched::tc_L2_loadrbgp:
+  case Hexagon::Sched::tc_L2_loadw_locked:
+  case Hexagon::Sched::tc_L4_loadalignb_ap:
+  case Hexagon::Sched::tc_L4_loadalignb_ur:
+  case Hexagon::Sched::tc_L4_loadbsw2_ap:
+  case Hexagon::Sched::tc_L4_loadbsw2_ur:
+  case Hexagon::Sched::tc_L4_loadrb_rr:
+  case Hexagon::Sched::tc_L4_loadw_phys:
+  case Hexagon::Sched::tc_L4_ploadrbf_abs:
+  case Hexagon::Sched::tc_L4_ploadrbf_rr:
+  case Hexagon::Sched::tc_L4_ploadrbfnew_rr:
+  case Hexagon::Sched::tc_L6_memcpy:
+  case Hexagon::Sched::tc_S2_allocframe:
+  case Hexagon::Sched::tc_SL2_deallocframe:
+  case Hexagon::Sched::tc_SS2_allocframe:
+  case Hexagon::Sched::tc_Y2_dcfetch:
+  case Hexagon::Sched::tc_Y2_dcfetchbo:
+  case Hexagon::Sched::tc_dup_L2_deallocframe:
+  case Hexagon::Sched::tc_dup_L2_loadrb_io:
+  case Hexagon::Sched::tc_dup_S2_allocframe:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TCnewvjump(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_J4_cmpeq_f_jumpnv_nt:
+  case Hexagon::Sched::tc_J4_cmpeqi_f_jumpnv_nt:
+  case Hexagon::Sched::tc_J4_cmplt_f_jumpnv_nt:
+  case Hexagon::Sched::tc_J4_tstbit0_f_jumpnv_nt:
+  case Hexagon::Sched::tc_L4_return:
+  case Hexagon::Sched::tc_L4_return_f:
+  case Hexagon::Sched::tc_L4_return_fnew_pnt:
+  case Hexagon::Sched::tc_L4_return_map_to_raw_t:
+  case Hexagon::Sched::tc_L4_return_map_to_raw_tnew_pnt:
+  case Hexagon::Sched::tc_SL2_return:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool is_TCst(unsigned SchedClass) {
+  switch (SchedClass) {
+  case Hexagon::Sched::tc_L4_add_memopb_io:
+  case Hexagon::Sched::tc_L4_iadd_memopb_io:
+  case Hexagon::Sched::tc_PS_storerbabs:
+  case Hexagon::Sched::tc_PS_storerbnewabs:
+  case Hexagon::Sched::tc_S2_pstorerbf_io:
+  case Hexagon::Sched::tc_S2_pstorerbf_pi:
+  case Hexagon::Sched::tc_S2_pstorerbf_pi_nt:
+  case Hexagon::Sched::tc_S2_pstorerbnewf_io:
+  case Hexagon::Sched::tc_S2_pstorerbnewf_pi:
+  case Hexagon::Sched::tc_S2_storerb_io:
+  case Hexagon::Sched::tc_S2_storerb_pbr:
+  case Hexagon::Sched::tc_S2_storerb_pci:
+  case Hexagon::Sched::tc_S2_storerb_pi_nt:
+  case Hexagon::Sched::tc_S2_storerbnew_io:
+  case Hexagon::Sched::tc_S2_storerbnew_pbr:
+  case Hexagon::Sched::tc_S2_storerbnew_pci:
+  case Hexagon::Sched::tc_S2_storew_rl_at_vi:
+  case Hexagon::Sched::tc_S4_pstorerbf_abs:
+  case Hexagon::Sched::tc_S4_pstorerbf_rr:
+  case Hexagon::Sched::tc_S4_pstorerbfnew_abs:
+  case Hexagon::Sched::tc_S4_pstorerbfnew_rr:
+  case Hexagon::Sched::tc_S4_pstorerbnewf_abs:
+  case Hexagon::Sched::tc_S4_pstorerbnewf_rr:
+  case Hexagon::Sched::tc_S4_pstorerbnewfnew_abs:
+  case Hexagon::Sched::tc_S4_pstorerbnewfnew_rr:
+  case Hexagon::Sched::tc_S4_storeirb_io:
+  case Hexagon::Sched::tc_S4_storeirbf_io:
+  case Hexagon::Sched::tc_S4_storeirbfnew_io:
+  case Hexagon::Sched::tc_S4_storerb_rr:
+  case Hexagon::Sched::tc_S4_storerb_ur:
+  case Hexagon::Sched::tc_S4_storerbnew_rr:
+  case Hexagon::Sched::tc_S4_storerbnew_ur:
+  case Hexagon::Sched::tc_SS2_storebi0:
+  case Hexagon::Sched::tc_Y2_barrier:
+  case Hexagon::Sched::tc_Y2_dccleana:
+  case Hexagon::Sched::tc_Y4_l2tagw:
+  case Hexagon::Sched::tc_Y6_dmpause:
+  case Hexagon::Sched::tc_Y6_l2gcleaninvpa:
+  case Hexagon::Sched::tc_dup_S2_storerb_io:
+  case Hexagon::Sched::tc_dup_S4_storeirb_io:
     return true;
   default:
     return false;
