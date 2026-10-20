@@ -23,6 +23,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -5555,30 +5556,26 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return 1;
 }
 
-/// Check whether Opcode1 has less throughput according to the scheduling
-/// model than Opcode2.
+/// Check whether Inst1 has less throughput according to the scheduling
+/// model than Inst2.
 bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
-    unsigned Opcode1, unsigned Opcode2) const {
+    const MCInst &Inst1, const MCInst &Inst2) const {
   const MCSchedModel &Sched = ST->getSchedModel();
   const TargetInstrInfo *TII = ST->getInstrInfo();
   if (!Sched.hasInstrSchedModel())
     return false;
 
   const MCSchedClassDesc *SCD1 =
-      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
+      Sched.getSchedClassDesc(TII->get(Inst1.getOpcode()).getSchedClass());
   const MCSchedClassDesc *SCD2 =
-      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
-  // We cannot handle variant scheduling classes without an MI. If we need to
-  // support them for any of the instructions we query the information of we
-  // might need to add a way to resolve them without a MI or not use the
-  // scheduling info.
-  assert(!SCD1->isVariant() && !SCD2->isVariant() &&
-         "Cannot handle variant scheduling classes without an MI");
+      Sched.getSchedClassDesc(TII->get(Inst2.getOpcode()).getSchedClass());
   if (!SCD1->isValid() || !SCD2->isValid())
     return false;
 
-  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
-         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+  // Variant scheduling classes are resolved using the operands of the
+  // instructions.
+  return Sched.getReciprocalThroughput(*ST, *TII, Inst1) >
+         Sched.getReciprocalThroughput(*ST, *TII, Inst2);
 }
 
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
@@ -5681,8 +5678,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
     if (isa<ScalableVectorType>(ValTy) &&
         CostKind == TTI::TCK_RecipThroughput &&
-        hasKnownLowerThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
-                                                   AArch64::FCMEQv4f32))
+        hasKnownLowerThroughputFromSchedulingModel(
+            MCInstBuilder(AArch64::FCMEQ_PPzZZ_S),
+            MCInstBuilder(AArch64::FCMEQv4f32)))
       Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
@@ -5718,7 +5716,13 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   // pipelines than the Neon compares on some cores.
   if (Opcode == Instruction::ICmp && isa<ScalableVectorType>(ValTy) &&
       CostKind == TTI::TCK_RecipThroughput &&
-      ST->hasLimitedSVEIntCmpBandwidth())
+      hasKnownLowerThroughputFromSchedulingModel(
+          MCInstBuilder(AArch64::CMPEQ_PPzZZ_S)
+              .addReg(AArch64::P0)
+              .addReg(AArch64::P1)
+              .addReg(AArch64::Z0)
+              .addReg(AArch64::Z1),
+          MCInstBuilder(AArch64::CMEQv4i32)))
     Cost *= 2;
   return Cost;
 }

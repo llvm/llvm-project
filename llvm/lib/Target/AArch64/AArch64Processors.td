@@ -400,8 +400,7 @@ def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureUseFixedOverScalableIfEqualCost,
-                                   FeatureMaxInterleaveFactor4,
-                                   FeatureLimitedSVEIntCmpBandwidth]>;
+                                   FeatureMaxInterleaveFactor4]>;
 
 def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     "Apple A7 (the CPU formerly known as Cyclone)",
@@ -608,8 +607,7 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureDisableLatencySchedHeuristic,
                                       FeatureMaxInterleaveFactor4,
-                                      FeatureDontPreferPredicatedLD1R,
-                                      FeatureLimitedSVEIntCmpBandwidth]>;
+                                      FeatureDontPreferPredicatedLD1R]>;
 
 def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
                                       "Neoverse V3 ARM processors", [

@@ -1040,11 +1040,6 @@ def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
     [], InlineIgnore>;
 
-def FeatureLimitedSVEIntCmpBandwidth : SubtargetFeature<
-    "has-limited-sve-int-cmp-bandwidth", "HasLimitedSVEIntCmpBandwidth", "true",
-    "Has limited SVE integer compare bandwidth compared to Neon compare",
-    [], InlineIgnore>;
-
 def FeatureUseReciprocalFDivCombineThreshold2 : SubtargetFeature<
     "use-reciprocal-fdiv-combine-threshold-2", "UseReciprocalFDivCombineThreshold2", "true",
     "Set the reciprocal FDiv combine threshold to 2 (from the default 3)",
