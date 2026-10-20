@@ -20228,8 +20228,10 @@ static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
-// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
-// being inserted only sets known zero bits.
+// Generate a QC_INSB/QC_INSBI from either
+// 'or (and X, MaskImm), OrImm' or
+// 'or (and X, MaskImm), (shl Y, ShAmt)' when the inserted value only sets
+// bits known to be zero in X.
 static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                             const RISCVSubtarget &Subtarget) {
   // Supported only in Xqcibm for now.
@@ -20238,38 +20240,52 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
 
-  SDValue Inserted;
-  APInt MaskImm, OrImm;
-  if (!sd_match(
-          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
-                                                        m_ConstInt(MaskImm))),
-                                         m_ConstInt(OrImm)))))
+  SDValue And, Base, Shl, ShiftSrc;
+  APInt OrImm, ShiftImm;
+  bool IsImmediate = sd_match(
+      N, m_SpecificVT(
+             MVT::i32,
+             m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                  m_ConstInt(OrImm))));
+
+  if (!IsImmediate &&
+      !sd_match(
+          N,
+          m_SpecificVT(
+              MVT::i32,
+              m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                   m_OneUse(m_Value(
+                       Shl, m_Shl(m_Value(ShiftSrc), m_ConstInt(ShiftImm))))))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
   // cases than just looking for AND with imm.
-  KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
-
-  // The bits being inserted must only set those bits that are known to be
-  // zero.
-  if (!OrImm.isSubsetOf(Known.Zero)) {
-    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
-    // currently handle this case.
-    return SDValue();
-  }
-
+  KnownBits Known = DAG.computeKnownBits(And);
   unsigned ShAmt, Width;
   // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
   if (!Known.Zero.isShiftedMask(ShAmt, Width))
     return SDValue();
 
+  SDValue Source;
+  if (IsImmediate) {
+    // The bits being inserted must only set those bits that are known to be
+    // zero.
+    if (!OrImm.isSubsetOf(Known.Zero))
+      // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we
+      // don't currently handle this case.
+      return SDValue();
+    Source = DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, SDLoc(N),
+                                   MVT::i32);
+  } else {
+    if (ShiftImm.ugt(31) || ShiftImm.getZExtValue() != ShAmt ||
+        !DAG.MaskedValueIsZero(Shl, ~Known.Zero))
+      return SDValue();
+    Source = ShiftSrc;
+  }
+
   // QC_INSB(I) dst, src, #width, #shamt.
   SDLoc DL(N);
-
-  SDValue ImmNode =
-      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
-
-  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+  SDValue Ops[] = {Base, Source, DAG.getConstant(Width, DL, MVT::i32),
                    DAG.getConstant(ShAmt, DL, MVT::i32)};
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
