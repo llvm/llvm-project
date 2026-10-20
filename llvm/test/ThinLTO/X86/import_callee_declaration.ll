@@ -18,12 +18,7 @@
 ;   large* functions and their aliasees will be 'declaration'.
 ;
 ; The test will disassemble combined summaries and check the import type is
-; correct. Right now postlink optimizer pipeline doesn't do anything (e.g.,
-; import the declaration or de-serialize summary attributes yet) so there is
-; nothing to test more than the summary content.
-;
-; TODO: Extend this test case to test IR once postlink optimizer makes use of
-; the import type for declarations.
+; correct, and verify that declarations are imported into the IR.
 ;
 ; RUN: llvm-lto2 run \
 ; RUN:   -debug-only=function-import \
@@ -111,8 +106,6 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 ; RUN:   -r=lib.bc,large_indirect_bar_alias,px \
 ; RUN:   -r=lib.bc,calleeAddrs,px -r=lib.bc,calleeAddrs2,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
 
-; TODO: Extend this test case to test IR once postlink optimizer makes use of
-; the import type for declarations.
 ; IMPORTDUMP-DAG: Not importing function 11825436545918268459 callee from lib.cc
 ; IMPORTDUMP-DAG: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
 ; IMPORTDUMP-DAG: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
@@ -132,10 +125,16 @@ MAIN-IMPORT: @read_write_global_vars = external dso_local global [1 x ptr]
 ; IMPORT-DAG: declare void @large_func
 ; Tests that dso_local attribute is applied on a global var from its summary.
 ; IMPORT-DAG: @read_write_global_vars = external dso_local global [1 x ptr]
-; IMPORT-NOT: large_indirect_callee
-; IMPORT-NOT: large_indirect_callee_alias
-; IMPORT-NOT: large_indirect_bar
-; IMPORT-NOT: large_indirect_bar_alias
+;; Functions and aliases imported as declarations are declared in the importing
+;; module, with their attributes and original GUID recorded.
+; IMPORT-DAG: declare !guid ![[GUID1:[0-9]+]] void @large_indirect_callee() #[[ATTR:[0-9]+]]
+; IMPORT-DAG: declare !guid ![[GUID2:[0-9]+]] void @large_indirect_callee_alias() #[[ATTR]]
+; IMPORT-DAG: declare !guid ![[GUID3:[0-9]+]] void @large_indirect_bar_alias() #[[ATTR]]
+; IMPORT-NOT: @large_indirect_bar(
+; IMPORT: attributes #[[ATTR]] = { norecurse }
+; IMPORT-DAG: ![[GUID1]] = !{i64 -4103303287044860482}
+; IMPORT-DAG: ![[GUID2]] = !{i64 -1716570130084201147}
+; IMPORT-DAG: ![[GUID3]] = !{i64 -4855792300234638301}
 
 ; INTERNALIZE: define internal void @callee()
 
