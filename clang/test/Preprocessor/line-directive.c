@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -std=c99 -fsyntax-only -verify -pedantic %s
-// RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:92:2: error: ABC'
-// RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:93:2: error: DEF'
-// RUN: not %clang_cc1 -E %s 2>&1 | grep 'line-directive.c:11:2: error: MAIN7'
-// RUN: not %clang_cc1 -E %s 2>&1 | grep 'enter-1:118:2: error: ENTER1'
-// RUN: not %clang_cc1 -E %s 2>&1 | grep 'main:121:2: error: MAIN2'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:98:2: error: ABC'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'blonk.c:99:2: error: DEF'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'line-directive.c:26:2: error: MAIN7'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'enter-1:244:2: error: ENTER1'
+// RUN: not %clang_cc1 -E %s 2>&1 | grep 'main:250:2: error: MAIN2'
 
 // expected-error@+1{{cannot pop empty include stack}}
-# 20 "" 2
+# 18 "" 2
 
 // a push/pop before any other line control
-# 10 "enter-0" 1 // expected-warning {{this style of line directive is a GNU extension}}
-# 11 "" 2 // pop to main file: expected-warning {{this style of line directive is a GNU extension}}
+# 24 "enter-0" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 26 "" 2 // pop to main file: expected-warning {{this style of line directive is a GNU extension}}
 #error MAIN7
 // expected-error@-1{{MAIN7}}
 
@@ -19,64 +19,64 @@
 #line 00             // expected-warning {{#line directive with zero argument is a GNU extension}}
 #line 2147483648     // expected-warning {{C requires #line number to be less than 2147483648, allowed as extension}}
 #line 42             // ok
-#line 42 'a'         // expected-error {{invalid filename for #line directive}}
-#line 42 "foo/bar/baz.h"  // ok
+#line 44 'a'         // expected-error {{invalid filename for #line directive}}
+#line 46 "foo/bar/baz.h"  // ok
 
 
 // #line directives expand macros.
-#define A 42 "foo"
+#define A 54 "foo"
 #line A
 
-# 42 // expected-warning {{this style of line directive is a GNU extension}}
-# 42 "foo" // expected-warning {{this style of line directive is a GNU extension}}
-# 42 "foo" 2 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
+# 60 // expected-warning {{this style of line directive is a GNU extension}}
+# 62 "foo" // expected-warning {{this style of line directive is a GNU extension}}
+# 64 "foo" 2 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
 // The next two lines do not get diagnosed because they are considered to be
 // within the system header, where diagnostics are suppressed.
-# 42 "foo" 1 3  // enter
-# 42 "foo" 2 3  // exit
-# 42 "foo" 2 3 4 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
-# 42 "foo" 3 4 // expected-warning {{this style of line directive is a GNU extension}}
+# 70 "foo" 1 3  // enter expected-warning {{this style of line directive is a GNU extension}}
+# 72 "foo" 2 3  // exit
+# 74 "foo" 2 3 4 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
+# 76 "foo" 3 4
 
 # 'a'            // expected-error {{invalid preprocessing directive}}
-# 42 'f'         // expected-error {{invalid filename for line marker directive}}
-# 42 1 3         // expected-error {{invalid filename for line marker directive}}
-# 42 "foo" 3 1   // expected-error {{invalid flag line marker directive}}
-# 42 "foo" 42    // expected-error {{invalid flag line marker directive}}
-# 42 "foo" 1 2   // expected-error {{invalid flag line marker directive}}
-# 42a33          // expected-error {{GNU line marker directive requires a simple digit sequence}}
+# 82 'f'         // expected-error {{invalid filename for line marker directive}}
+# 84 1 3         // expected-error {{invalid filename for line marker directive}}
+# 86 "foo" 3 1   // expected-error {{invalid flag line marker directive}}
+# 88 "foo" 42    // expected-error {{invalid flag line marker directive}}
+# 90 "foo" 1 2   // expected-error {{invalid flag line marker directive}}
+# 92a33          // expected-error {{GNU line marker directive requires a simple digit sequence}}
 
 // These are checked by the RUN line.
-#line 92 "blonk.c"
+#line 98 "blonk.c"
 #error ABC
 #error DEF
 // expected-error@-2 {{ABC}}
-#line 150
+#line 106
 // expected-error@-3 {{DEF}}
 
 
 // Verify that linemarker diddling of the system header flag works.
-
-# 192 "glomp.h" // not a system header.: expected-warning {{this style of line directive is a GNU extension}}
+# 116 "" 3 4
+# 118 "glomp.h" // in a system header.
 typedef int x;  // expected-note {{previous definition is here}}
 typedef int x;  // expected-warning {{redefinition of typedef 'x' is a C11 feature}}
 
-# 192 "glomp.h" 3 // System header.
+# 126 "glomp.h" 3 // not in a system header. expected-warning {{this style of line directive is a GNU extension}}
 typedef int y;  // ok
 typedef int y;  // ok
 
 typedef int q;  // q is in system header.
 
-#line 42 "blonk.h"  // doesn't change system headerness.
+#line 138 "blonk.h"  // doesn't change system headerness.
 
 typedef int z;  // ok
 typedef int z;  // ok
 
-# 97     // doesn't change system headerness.
+# 148     // doesn't change system headerness.
 
 typedef int z1;  // ok
 typedef int z1;  // ok
 
-# 42 "blonk.h"  // DOES change system headerness.
+# 158 "blonk.h"  // DOES change system headerness.
 
 typedef int w;  // expected-note {{previous definition is here}}
 typedef int w;  // expected-warning {{redefinition of typedef 'w' is a C11 feature}}
@@ -86,12 +86,12 @@ typedef int q;  // original definition in system header, should not diagnose.
 // This should not produce an "extra tokens at end of #line directive" warning,
 // because #line is allowed to contain expanded tokens.
 #define EMPTY()
-#line 2 "foo.c" EMPTY( )
-#line 2 "foo.c" NONEMPTY( )  // expected-warning{{extra tokens at end of #line directive}}
+#line 178 "foo.c" EMPTY( )
+#line 180 "foo.c" NONEMPTY( )  // expected-warning{{extra tokens at end of #line directive}}
 
 // PR3940
 #line 0xf  // expected-error {{#line directive requires a simple digit sequence}}
-#line 42U  // expected-error {{#line directive requires a simple digit sequence}}
+#line 198U  // expected-error {{#line directive requires a simple digit sequence}}
 
 
 // Line markers are digit strings interpreted as decimal numbers, this is
@@ -116,26 +116,26 @@ _LINE__ == 52 ? 1: -1];  /* line marker is location of first _ */
 #line 0 "line-directive.c" // expected-warning {{#line directive with zero argument is a GNU extension}}
 undefined t; // expected-error {{unknown type name 'undefined'}}
 
-# 115 "main" // expected-warning {{this style of line directive is a GNU extension}}
-# 116 "enter-1" 1 // expected-warning {{this style of line directive is a GNU extension}}
-# 117 "enter-2" 1 // expected-warning {{this style of line directive is a GNU extension}}
-# 118 "" 2 // pop to enter-1: expected-warning {{this style of line directive is a GNU extension}}
+# 238 "main" // expected-warning {{this style of line directive is a GNU extension}}
+# 240 "enter-1" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 242 "enter-2" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 244 "" 2 // pop to enter-1: expected-warning {{this style of line directive is a GNU extension}}
 #error ENTER1
 // expected-error@-1{{ENTER1}}
-# 121 "" 2 // pop to "main": expected-warning {{this style of line directive is a GNU extension}}
+# 250 "" 2 // pop to "main": expected-warning {{this style of line directive is a GNU extension}}
 #error MAIN2
 // expected-error@-1{{MAIN2}}
 
-#line 129 L"wide" // expected-error {{invalid filename for #line directive}}
-#line 130 "\x12"
-# 131 U"hello" // expected-error {{invalid filename for line marker directive}}
-# 132 "\x13" // expected-warning {{this style of line directive is a GNU extension}}
+#line 258 L"wide" // expected-error {{invalid filename for #line directive}}
+#line 260 "\x12"
+# 262 U"hello" // expected-error {{invalid filename for line marker directive}}
+# 264 "\x13" // expected-warning {{this style of line directive is a GNU extension}}
 
-#line 0 // expected-warning {{#line directive with zero argument is a GNU extension}}
+#line 273
 // #UNTERMINATED
-#line 1 "foo\""
+#line 274 "foo\""
 // expected-warning@#UNTERMINATED {{missing terminating '"' character}}
 // expected-warning@#UNTERMINATED {{extra tokens at end of #line directive}}
 
-#line 1 <> // expected-error {{invalid filename for #line directive}}
-#line 1 <foo> // expected-error {{invalid filename for #line directive}}
+#line 280 <> // expected-error {{invalid filename for #line directive}}
+#line 282 <foo> // expected-error {{invalid filename for #line directive}}
