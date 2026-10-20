@@ -1789,7 +1789,7 @@ struct TestLegalizePatternDriver
 // ConversionPatternRewriter.
 namespace {
 struct TestRemapValueTypeConverter : public TypeConverter {
-  using TypeConverter::TypeConverter;
+  using Base::Base;
 
   TestRemapValueTypeConverter() {
     addConversion(

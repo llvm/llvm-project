@@ -336,7 +336,7 @@ public:
 
 class PadConverter : public OpConversionPattern<tosa::PadOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(tosa::PadOp padOp, OpAdaptor adaptor,
