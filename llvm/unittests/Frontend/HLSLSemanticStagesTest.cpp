@@ -67,7 +67,8 @@ constexpr SemanticKind SupportedKinds[] = {
     SemanticKind::InsideTessFactor, SemanticKind::DispatchThreadID,
     SemanticKind::GroupID,          SemanticKind::GroupIndex,
     SemanticKind::GroupThreadID,    SemanticKind::InstanceID,
-    SemanticKind::ShadingRate,      SemanticKind::Barycentrics};
+    SemanticKind::ShadingRate,      SemanticKind::Barycentrics,
+    SemanticKind::StartVertexLocation};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -162,6 +163,15 @@ TEST(HLSLSemanticStagesTest, BarycentricsSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked},
   };
   expectOnlySignaturePoints(SemanticKind::Barycentrics, Valid);
+}
+
+// SV_StartVertexLocation is read with a dedicated operation and is never placed
+// in a signature. Valid only on vertex inputs.
+TEST(HLSLSemanticStagesTest, StartVertexLocationSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+  };
+  expectOnlySignaturePoints(SemanticKind::StartVertexLocation, Valid);
 }
 
 } // namespace
