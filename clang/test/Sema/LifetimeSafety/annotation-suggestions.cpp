@@ -267,9 +267,9 @@ template <class T> struct AutoReturnSelf {
   auto make() { return SelfCapturingIter<AutoReturnSelf>(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
 };
 
-void test_auto_return_implicit_this() {
+auto test_auto_return_implicit_this() {
   AutoReturnSelf<char> b;
-  (void)b.make();
+  return b.make();
 }
 
 struct ReturnThisAnnotated {
