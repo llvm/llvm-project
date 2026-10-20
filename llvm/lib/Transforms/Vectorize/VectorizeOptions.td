@@ -274,6 +274,8 @@ defm : ValueField<"slp-reassociate-reorder-limit", "unsigned", "32",
   "Max flattened operand columns for which associative-chain reordering runs the full operand reorder">;
 defm : ValueField<"slp-recursion-max-depth", "unsigned", "12",
   "Limit the recursion depth when building a vectorizable tree">;
+defm : ValueField<"slp-reduction-budget", "unsigned", "65536",
+  "Limit the number of scalars in the rejected trees of the same reduction">;
 defm : BoolField<"slp-revec", "false",
   "Enable vectorization for wider vector utilization">;
 // The runtime checks and the guard branch execute on both the vector and the

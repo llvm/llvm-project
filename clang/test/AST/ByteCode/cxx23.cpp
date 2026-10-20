@@ -702,4 +702,16 @@ namespace InvalidRecord {
 
   static_assert(foo(B{1, 2, 3}), "");
 }
+
+namespace WithinLifetime {
+  struct S {};
+  constexpr int f(int n) {
+    S *s = new S[n]; // all-note {{declared here}}
+    if (__builtin_is_within_lifetime(s)) { // all-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                           // all-note {{read of non-constexpr variable 's' is not allowed in a constant expression}}
+    }
+  } // all-note {{control reached end of constexpr function}}
+  static_assert(f(42), ""); // all-error {{not an integral constant expression}} \
+                            // all-note {{in call to}}
+}
 #endif
