@@ -147,6 +147,7 @@ define void @caller_maxnum() {
 ; CHECK-NEXT:    [[I3_I:%.*]] = fmul float [[I2_I]], 0.000000e+00
 ; CHECK-NEXT:    [[I4_I:%.*]] = call float @llvm.maxnum.f32(float [[I3_I]], float 0.000000e+00)
 ; CHECK-NEXT:    [[I5_I:%.*]] = call float @llvm.maxnum.f32(float [[I4_I]], float [[I2_I]])
+; CHECK-NEXT:    [[I6_I:%.*]] = fcmp olt float [[I5_I]], 0.000000e+00
 ; CHECK-NEXT:    ret void
 ;
 bb:

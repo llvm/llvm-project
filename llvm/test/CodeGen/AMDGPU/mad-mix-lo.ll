@@ -992,21 +992,21 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; SDAG-GFX1100-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
 ; SDAG-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt:
-; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mov_b32_e32 v0, v3
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt:
-; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_mov_b32_e32 v0, v3
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; SDAG-VI:       ; %bb.0:
@@ -1059,20 +1059,41 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; GISEL-VI:       ; %bb.0:
@@ -1160,25 +1181,25 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_nosnan(<2 x half> %src0.arg, <2
 ; SDAG-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
 ; SDAG-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
-; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_pk_max_f16 v3, v0, v0
-; GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX900-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX900-NEXT:    v_mad_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v3, v0, v0
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v2, v2, v2
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
-; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_pk_max_f16 v3, v0, v0
-; GFX906-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX906-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_pk_max_f16 v3, v0, v0
+; SDAG-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1
+; SDAG-GFX906-NEXT:    v_pk_max_f16 v2, v2, v2
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
 ; SDAG-VI:       ; %bb.0:
@@ -1250,24 +1271,54 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_nosnan(<2 x half> %src0.arg, <2
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v3, v0, v0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v3, 0
 ; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v3, v0, v0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v3, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v2f32_clamp_postcvt_nosnan:
 ; GISEL-VI:       ; %bb.0:
@@ -1367,25 +1418,25 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; SDAG-GFX1100-FAKE16-NEXT:    v_mov_b32_e32 v0, v6
 ; SDAG-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt:
-; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
-; GFX900-NEXT:    v_mov_b32_e32 v0, v3
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt:
-; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
-; GFX906-NEXT:    v_mov_b32_e32 v0, v3
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; SDAG-VI:       ; %bb.0:
@@ -1461,25 +1512,50 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v6, 0
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
-; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_mov_b32_e32 v0, v6
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; GISEL-VI:       ; %bb.0:
@@ -1728,65 +1804,75 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt_nosnan(<3 x half> %src0.arg, <3
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v3f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v3, v3, v3
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v5, v5, v5
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v6, v0, v0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v4, v4, v4
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v6, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v6, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v5, v5
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v6, 0
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v0 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v2, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v3f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v2, v2, v2
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v4, v4, v4
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v5, v5, v5
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v5, v5
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v6, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v2, v6, 0
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v0 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v0, v6, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v2, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt_nosnan:
 ; GISEL-GFX900:       ; %bb.0:
 ; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v1, v1
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v3, v3
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v3, v4, v4
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v4, v5, v5
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX900-NEXT:    v_pk_max_f16 v2, v2, v2
-; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, v4 op_sel_hi:[1,1,1]
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v0, v0 clamp
-; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v0, v6, v2, v3 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v0, v6, v2, v3 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v4, v4, v4
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v5, v5, v5
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt_nosnan:
 ; GISEL-GFX906:       ; %bb.0:
 ; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v1, v1
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v3, v3
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v3, v4, v4
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v4, v5, v5
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GISEL-GFX906-NEXT:    v_pk_max_f16 v2, v2, v2
-; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v4 op_sel_hi:[1,1,1]
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v0, v0 clamp
-; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v0, v6, v2, v3 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v0, v6, v2, v3 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v4, v4, v4
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v5, v5, v5
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v3f32_clamp_postcvt_nosnan:
@@ -1906,27 +1992,27 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 ; SDAG-GFX1100-FAKE16-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
 ; SDAG-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_mad_mix_v4f32_clamp_postcvt:
-; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mad_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    v_mov_b32_e32 v0, v6
-; GFX900-NEXT:    v_mov_b32_e32 v1, v2
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX900-LABEL: v_mad_mix_v4f32_clamp_postcvt:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v6
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: v_mad_mix_v4f32_clamp_postcvt:
-; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    v_mov_b32_e32 v0, v6
-; GFX906-NEXT:    v_mov_b32_e32 v1, v2
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: v_mad_mix_v4f32_clamp_postcvt:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v6
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_v4f32_clamp_postcvt:
 ; SDAG-VI:       ; %bb.0:
@@ -2026,26 +2112,59 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v4f32_clamp_postcvt:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v6
-; GISEL-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v1, v2
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v6, 0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v0, 0
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v1, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v1, v2, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v4f32_clamp_postcvt:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-FAKE16-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_v4f32_clamp_postcvt:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_v4f32_clamp_postcvt:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v4f32_clamp_postcvt:
 ; GISEL-VI:       ; %bb.0:
@@ -2349,64 +2468,84 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt_nosnan(<4 x half> %src0.arg, <4
 ; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_v4f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-TRUE16:       ; %bb.0:
 ; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v7, v1, v1
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v2, v2
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v4, v4
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v4, v4, v4
 ; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v3, v3, v3
-; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v4, v5, v5
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v5, v5, v5
 ; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v6, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v6, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v1, v7, v3, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v7, v3, v4 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v6, 0
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v2, v0, 0
+; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v0, v1, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX1100-TRUE16-NEXT:    v_pk_min_f16 v1, v2, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v4f32_clamp_postcvt_nosnan:
 ; GISEL-GFX1100-FAKE16:       ; %bb.0:
 ; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v7, v1, v1
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v4, v4, v4
 ; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v5, v5, v5
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v0, v6, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v1, v7, v3, v5 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v0, v6, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v1, v7, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX1100-FAKE16-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_v4f32_clamp_postcvt_nosnan:
 ; GISEL-GFX900:       ; %bb.0:
 ; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v7, v1, v1
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v2, v2
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v2, v3, v3
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v3, v4, v4
-; GISEL-GFX900-NEXT:    v_pk_max_f16 v4, v5, v5
-; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v0, v6, v1, v3 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v0, v6, v1, v3 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v1, v7, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v1, v7, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v4, v4, v4
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v5, v5, v5
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX906-LABEL: v_mad_mix_v4f32_clamp_postcvt_nosnan:
 ; GISEL-GFX906:       ; %bb.0:
 ; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v6, v0, v0
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v7, v1, v1
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v2, v2
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v2, v3, v3
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v3, v4, v4
-; GISEL-GFX906-NEXT:    v_pk_max_f16 v4, v5, v5
-; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v0, v6, v1, v3 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v0, v6, v1, v3 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v1, v7, v2, v4 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v1, v7, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v0, v0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v2, v2, v2
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v3, v3, v3
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v4, v4, v4
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v5, v5, v5
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v6, 0
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v7, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v4f32_clamp_postcvt_nosnan:
