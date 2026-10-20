@@ -950,8 +950,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       auto prefix = cir::ConstArrayAttr::get(
           cir::ArrayType::get(arrayTy.getElementType(), arrayAttr.size()),
           arrayAttr);
-      return mlir::LLVM::InsertValueOp::create(rewriter, loc, result,
-                                               visit(prefix), int64_t{0});
+      return mlir::LLVM::InsertValueOp::create(
+          rewriter, loc, result, visit(prefix), llvm::ArrayRef<int64_t>{0});
     }
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
       mlir::Value init = visit(elt);
