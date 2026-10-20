@@ -35,6 +35,9 @@ public:
 
   ValueUniformity getValueUniformity(const Value *V) const override;
 
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
+
   unsigned getFlatAddressSpace() const override {
     return AGX::GENERIC_ADDRESS;
   }

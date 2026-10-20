@@ -33,6 +33,7 @@
 #include "AGXSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
@@ -372,6 +373,7 @@ bool AGXCodeGenPrepare::unifyExits(Function &F) {
 ///
 ///   r = shuffle(v, idx & ~3); r = idx & 3 == k ? shuffle(v, idx & ~3 | k) : r
 ///
+/// leaving out the positions that the known bits of the index exclude.
 /// Quad shuffles take the four immediate positions instead. Relative
 /// shuffles with divergent deltas become shuffles of the computed thread;
 /// threads whose source is outside the SIMD-group (or quad) keep their own
@@ -450,8 +452,16 @@ bool AGXCodeGenPrepare::lowerDivergentShuffles(Function &F,
         return B.getInt32(K);
       return K ? B.CreateOr(Base, K) : Base;
     };
-    Value *Result = B.CreateIntrinsic(Shuffle, {Ty}, {V, Position(0)});
-    for (unsigned K = 1; K < 4; ++K) {
+    // Positions the low bits cannot take need no shuffle.
+    KnownBits Known = computeKnownBits(Idx, F.getDataLayout());
+    SmallVector<unsigned, 4> Positions;
+    for (unsigned K = 0; K < 4; ++K)
+      if ((K & Known.Zero.getZExtValue() & 3) == 0 &&
+          (~K & Known.One.getZExtValue() & 3) == 0)
+        Positions.push_back(K);
+    Value *Result =
+        B.CreateIntrinsic(Shuffle, {Ty}, {V, Position(Positions[0])});
+    for (unsigned K : drop_begin(Positions)) {
       Value *R = B.CreateIntrinsic(Shuffle, {Ty}, {V, Position(K)});
       Result = B.CreateSelect(B.CreateICmpEQ(Low, B.getInt32(K)), R, Result);
     }

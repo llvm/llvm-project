@@ -51,6 +51,7 @@ add_llvm_target(AGXCodeGen
   CodeGenTypes
   Core
   IPO
+  InstCombine
   MC
   Passes
   Scalar

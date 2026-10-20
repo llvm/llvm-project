@@ -73,3 +73,22 @@ define agx_kernel void @relative(ptr addrspace(1) %out, float %x) {
 ; NOMERGE-COUNT-1: simd_shuffle
 ; NOMERGE-NOT:   simd_shuffle
 ; NOMERGE:       stop
+
+; Positions that the known bits of the index exclude are left out: with bit 0
+; set, only positions 1 and 3 remain; with both low bits known, one shuffle
+; reads the thread.
+; CHECK-LABEL: known_bits:
+; CHECK-COUNT-3: simd_shuffle {{r[0-9]+}}, {{[ru][0-9]+}}, r0h
+; CHECK-NOT:     simd_shuffle
+; CHECK:         stop
+define agx_kernel void @known_bits(ptr addrspace(1) %out, float %x) {
+  %lane = call i32 @llvm.agx.thread.index.in.simdgroup()
+  %t = shl i32 %lane, 1
+  %idx = or i32 %t, 1
+  %r = call float @llvm.agx.simd.shuffle.f32(float %x, i32 %idx)
+  %idx2 = shl i32 %lane, 2
+  %r2 = call float @llvm.agx.simd.shuffle.f32(float %r, i32 %idx2)
+  %p = getelementptr float, ptr addrspace(1) %out, i32 %lane
+  store float %r2, ptr addrspace(1) %p
+  ret void
+}
