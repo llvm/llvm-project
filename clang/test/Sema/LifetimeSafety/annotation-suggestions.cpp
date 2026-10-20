@@ -269,7 +269,7 @@ template <class T> struct AutoReturnSelf {
 
 auto test_auto_return_implicit_this() {
   AutoReturnSelf<char> b;
-  return b.make();
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
 }
 
 struct ReturnThisAnnotated {
