@@ -431,25 +431,31 @@ public:
 
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override {
+    // Moving a block can change the context of every operation it contains.
+    for (Operation &op : *block)
+      cache.invalidate(&op);
     if (previous)
       if (Operation *parent = previous->getParentOp())
-        cache.invalidate(parent);
+        cache.invalidateAncestors(parent);
     if (Operation *parent = block->getParentOp())
-      cache.invalidate(parent);
+      cache.invalidateAncestors(parent);
     ForwardingListener::notifyBlockInserted(block, previous, previousIt);
   }
 
   void notifyBlockErased(Block *block) override {
     if (Operation *parent = block->getParentOp())
-      cache.invalidate(parent);
+      cache.invalidateAncestors(parent);
     ForwardingListener::notifyBlockErased(block);
   }
 
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override {
+    // The old parent loses a child, but its remaining descendants are
+    // unchanged. Scanning them for every move would make block merging
+    // quadratic.
     if (previous.isSet())
       if (Operation *parent = previous.getBlock()->getParentOp())
-        cache.invalidate(parent);
+        cache.invalidateAncestors(parent);
     cache.invalidate(op);
     ForwardingListener::notifyOperationInserted(op, previous);
   }
@@ -1234,10 +1240,8 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
     worklist.clear();
 
     // `OperationFolder` CSE's constant ops (and may move them into parents
-    // regions to enable more aggressive CSE'ing). It must notify the
-    // reachability listener, which forwards to the driver, so that the
-    // reachability cache sees every CFG change.
-    OperationFolder folder(ctx, &reachabilityListener);
+    // regions to enable more aggressive CSE'ing).
+    OperationFolder folder(ctx, rewriter.getListener());
     auto insertKnownConstant = [&](Operation *op) {
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.
