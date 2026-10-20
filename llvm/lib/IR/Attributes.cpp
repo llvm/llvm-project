@@ -1775,6 +1775,15 @@ AttributeList AttributeList::addAttributesAtIndex(LLVMContext &C,
   return setAttributesAtIndex(C, Index, AttributeSet::get(C, Merged));
 }
 
+AttributeList
+AttributeList::addAttributesAtIndex(LLVMContext &C, unsigned Index,
+                                    ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+  return setAttributesAtIndex(C, Index,
+                              getAttributes(Index).addAttributes(C, Attrs));
+}
+
 AttributeList AttributeList::addParamAttribute(LLVMContext &C,
                                                ArrayRef<unsigned> ArgNos,
                                                Attribute A) const {
@@ -2386,23 +2395,15 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
   return *this;
 }
 
-AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
-  if (B.Attrs.empty())
-    return *this;
-
-  if (Attrs.empty()) {
-    Attrs = B.Attrs;
-    return *this;
-  }
-
-  // Both lists are already sorted by kind. An attribute in B replaces
-  // the attribute of the same kind in this builder.
-  SmallVector<Attribute, 8> Merged;
-  Merged.reserve(Attrs.size() + B.Attrs.size());
+/// Merge \p B into \p A, both sorted by kind, into \p Merged. An attribute
+/// in \p B replaces the attribute of the same kind in \p A.
+static void mergeSortedAttrs(ArrayRef<Attribute> A, ArrayRef<Attribute> B,
+                             SmallVectorImpl<Attribute> &Merged) {
+  Merged.reserve(A.size() + B.size());
   AttributeComparator Less;
-  auto *I = Attrs.begin(), *E = Attrs.end();
+  auto *I = A.begin(), *E = A.end();
 
-  for (Attribute BAttr : B.Attrs) {
+  for (Attribute BAttr : B) {
     while (I != E && Less(*I, BAttr))
       Merged.push_back(*I++);
 
@@ -2413,8 +2414,37 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   }
 
   Merged.append(I, E);
+}
+
+AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
+  if (B.Attrs.empty())
+    return *this;
+
+  if (Attrs.empty()) {
+    Attrs = B.Attrs;
+    return *this;
+  }
+
+  // Both lists are already sorted by kind.
+  SmallVector<Attribute, 8> Merged;
+  mergeSortedAttrs(Attrs, B.Attrs, Merged);
   Attrs = std::move(Merged);
   return *this;
+}
+
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+
+  assert(adjacent_find(Attrs,
+                       [](Attribute A0, Attribute A1) {
+                         return !AttributeComparator()(A0, A1);
+                       }) == Attrs.end() &&
+         "Expected attributes sorted by kind, with distinct kinds");
+  SmallVector<Attribute, 32> Merged;
+  mergeSortedAttrs(ArrayRef(begin(), end()), Attrs, Merged);
+  return AttributeSet(AttributeSetNode::getSorted(C, Merged));
 }
 
 AttrBuilder &AttrBuilder::remove(const AttributeMask &AM) {

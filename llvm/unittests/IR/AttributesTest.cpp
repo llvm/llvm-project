@@ -851,4 +851,41 @@ TEST(Attributes, BuilderMerge) {
   EXPECT_EQ(Empty, B);
 }
 
+TEST(Attributes, SetAddAttributesArray) {
+  LLVMContext C;
+  Attribute NoUnwind = Attribute::get(C, Attribute::NoUnwind);
+  Attribute NoReturn = Attribute::get(C, Attribute::NoReturn);
+  Attribute Align4 = Attribute::getWithAlignment(C, Align(4));
+  Attribute Align8 = Attribute::getWithAlignment(C, Align(8));
+  Attribute A1 = Attribute::get(C, "a", "1");
+  Attribute B2 = Attribute::get(C, "b", "2");
+  Attribute C1 = Attribute::get(C, "c", "1");
+  Attribute C2 = Attribute::get(C, "c", "2");
+  AttributeSet AS = AttributeSet::get(C, {NoUnwind, Align4, A1, C1});
+
+  // Sorted: attributes replace those of the same kind.
+  EXPECT_EQ(AS.addAttributes(C, {NoReturn, Align8, B2, C2}),
+            AttributeSet::get(C, {NoUnwind, NoReturn, Align8, A1, B2, C2}));
+
+  EXPECT_EQ(AttributeSet().addAttributes(C, {A1, B2}),
+            AttributeSet::get(C, {A1, B2}));
+  EXPECT_EQ(AS.addAttributes(C, ArrayRef<Attribute>()), AS);
+
+  AttributeList AL;
+  AL = AL.addAttributesAtIndex(C, AttributeList::FunctionIndex, {NoReturn, B2});
+  EXPECT_EQ(AL.getFnAttrs(), AttributeSet::get(C, {NoReturn, B2}));
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+TEST(Attributes, SetAddAttributesArrayUnsorted) {
+  LLVMContext C;
+  Attribute A1 = Attribute::get(C, "a", "1");
+  Attribute B1 = Attribute::get(C, "b", "1");
+  EXPECT_DEATH(AttributeSet().addAttributes(C, {B1, A1}),
+               "Expected attributes sorted by kind");
+}
+#endif
+#endif
+
 } // end anonymous namespace
