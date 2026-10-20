@@ -1130,7 +1130,8 @@ public:
             (S.getMainOp()->getNumOperands() <= 2 || !MainAltOps.empty() ||
              !S.isAltShuffle()) &&
             all_of(make_isa_range<Instruction>(Ops), [&S](Instruction *I) {
-              return I->getNumOperands() == S.getMainOp()->getNumOperands();
+              return I->getNumOperands() == S.getMainOp()->getNumOperands() ||
+                     (S.getOpcode() == Instruction::ICmp && isa<TruncInst>(I));
             }))
           return S.isAltShuffle() ? LookAheadHeuristics::ScoreAltOpcodes
                                   : LookAheadHeuristics::ScoreSameOpcode;
@@ -10908,6 +10909,25 @@ class InstructionsCompatibilityAnalysis {
         Op = LI->getPointerOperand();
       }
       return;
+    case Instruction::ICmp:
+      // With trunc X to i1 lanes the node is the bit tests of and A, B: the
+      // compares give the operands of their ands, trunc X gives X and 1.
+      if (any_of(VL, IsaPred<TruncInst>)) {
+        Type *Ty = VL0->getOperand(0)->getType();
+        Operands.assign(2, {VL.size(), PoisonValue::get(Ty)});
+        for (auto [Idx, V] : enumerate(VL)) {
+          if (auto *TI = dyn_cast<TruncInst>(V)) {
+            Operands[0][Idx] = TI->getOperand(0);
+            Operands[1][Idx] = ConstantInt::get(Ty, 1);
+          } else if (auto *CI = dyn_cast<ICmpInst>(V)) {
+            auto *And = cast<BinaryOperator>(CI->getOperand(0));
+            Operands[0][Idx] = And->getOperand(0);
+            Operands[1][Idx] = And->getOperand(1);
+          }
+        }
+        return;
+      }
+      [[fallthrough]];
     case Instruction::ZExt:
     case Instruction::SExt:
     case Instruction::FPToUI:
@@ -10921,7 +10941,6 @@ class InstructionsCompatibilityAnalysis {
     case Instruction::Trunc:
     case Instruction::FPTrunc:
     case Instruction::BitCast:
-    case Instruction::ICmp:
     case Instruction::FCmp:
     case Instruction::FNeg:
     case Instruction::Add:
@@ -12335,8 +12354,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return;
 
   // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
-  // try the split by the original predicates, like the alternate nodes.
-  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle()) {
+  // try the split by the original predicates, like the alternate nodes. The
+  // trunc X to i1 lanes have no original predicate.
+  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() &&
+      none_of(VL, IsaPred<TruncInst>)) {
     auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
       return CI->getPredicate() == P ||
              CI->getPredicate() == CmpInst::getSwappedPredicate(P);
@@ -12864,6 +12885,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                                    ReuseShuffleIndices);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CmpInst).\n";
                  TE->dump());
+      // The ands of the bit tests are peeled into the operands of the node.
+      if (any_of(VL, IsaPred<TruncInst>)) {
+        for (ICmpInst *CI : make_isa_range<ICmpInst>(VL))
+          ReassocScalars.push_back(CI->getOperand(0));
+        RegisterReassocScalars(TE);
+      }
 
       VLOperands Ops(VL, Operands, S, *this);
       if (cast<CmpInst>(VL0)->isCommutative()) {
@@ -12880,7 +12907,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // already have their operands adjusted, no need to commute them.
         for (auto [Idx, V] :
              make_filter_range(enumerate(VL), [](const auto &P) {
-               return !isa<PoisonValue>(P.value());
+               return isa<CmpInst>(P.value());
              })) {
           auto *Cmp = cast<CmpInst>(V);
           if (Cmp->getPredicate() != P0 &&
@@ -17274,13 +17301,21 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       SwappedVecPred = VecPred = ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
+    // The bit tests of trunc X to i1 lanes compare and A, B with a constant.
+    const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
-      if (!isa<SelectInst>(UniqueValues[Idx]))
-        return TTI->getInstructionCost(cast<Instruction>(UniqueValues[Idx]),
-                                       CostKind);
+      if (!isa<SelectInst>(UniqueValues[Idx])) {
+        auto *I = cast<Instruction>(UniqueValues[Idx]);
+        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
+        // The and of the bit test is erased with the compare.
+        if (IsBitTest && isa<ICmpInst>(I))
+          Cost += TTI->getInstructionCost(cast<Instruction>(I->getOperand(0)),
+                                          CostKind);
+        return Cost;
+      }
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
       CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
@@ -17383,6 +17418,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             TTI::getOperandInfo(
                 E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
             VL0);
+        if (IsBitTest)
+          VecCost +=
+              TTI->getArithmeticInstrCost(Instruction::And, VecTy, CostKind);
         if (isa<SelectInst>(VL0)) {
           unsigned CondNumElements = getNumElements(MaskTy);
           unsigned VecTyNumElements = getNumElements(VecTy);
@@ -24249,12 +24287,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       bool SignFlip =
           !SignChange &&
           any_of(make_isa_range<ICmpInst>(E->Scalars), [&](ICmpInst *LaneCI) {
-            auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
-            if (!OrigC)
-              return false;
-            ConstantInt *AdjC =
+            const APInt *OrigC, *AdjC;
+            Constant *Adj =
                 CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
-            return AdjC && AdjC->isNegative() != OrigC->isNegative();
+            return Adj && match(LaneCI->getOperand(1), m_APInt(OrigC)) &&
+                   match(Adj, m_APInt(AdjC)) &&
+                   AdjC->isNegative() != OrigC->isNegative();
           });
       if (SignChange || SignFlip)
         ICmp->setSameSign(/*B=*/false);
@@ -24668,6 +24706,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      // The bit tests compare and L, R with 0, the eq bit tests compare the
+      // trunc X to i1 lanes with 1, exactly in the narrowed type.
+      const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
+      if (IsBitTest) {
+        L = Builder.CreateAnd(L, R);
+        const bool IsEq =
+            CmpSamePredicateHelper::canConvertTo(VL0, CmpInst::ICMP_EQ);
+        P0 = IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+        Type *EltTy = L->getType()->getScalarType();
+        SmallVector<Constant *> Consts;
+        for (Value *V : E->Scalars)
+          Consts.append(getNumElements(VL0->getType()),
+                        ConstantInt::get(EltTy, IsEq && isa<TruncInst>(V)));
+        R = ConstantVector::get(Consts);
+      }
       // A compare with both operands narrowed to the same type preserves the
       // result only if the predicate matches the operand signedness: signed
       // predicates need both operands sign-extended from the narrow type,
@@ -24678,7 +24731,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       auto *LTy = cast<FixedVectorType>(L->getType());
       auto *OrigOpTy =
           dyn_cast<IntegerType>(VL0->getOperand(0)->getType()->getScalarType());
-      if (OrigOpTy && L->getType() == R->getType() &&
+      if (!IsBitTest && OrigOpTy && L->getType() == R->getType() &&
           LTy->getElementType()->getIntegerBitWidth() <
               OrigOpTy->getBitWidth()) {
         bool IsSigned0 = GetOperandSignedness(0);
