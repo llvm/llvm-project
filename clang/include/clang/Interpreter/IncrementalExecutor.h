@@ -56,8 +56,10 @@ public:
   /// lldMain call because lld resets all cl options for test-isolation
   /// purposes.
   std::vector<std::string> LLVMArgs;
+#ifndef __EMSCRIPTEN__
   /// An optional external orc jit builder
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+#endif
   /// A default callback that can be used in the IncrementalCompilerBuilder to
   /// retrieve the path to the orc runtime.
   std::function<llvm::Error(const driver::Compilation &)>

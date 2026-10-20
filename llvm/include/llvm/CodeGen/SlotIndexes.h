@@ -637,10 +637,13 @@ class raw_ostream;
       assert(unsigned(mbb->getAnalysisNumber()) == MBBRanges.size() &&
              "Blocks must be added in order");
       MBBRanges.push_back(std::make_pair(startIdx, endIdx));
-      idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      llvm::sort(idx2MBBMap, less_first());
+      auto InsertPt =
+          llvm::partition_point(idx2MBBMap, [=](const IdxMBBPair &IM) {
+            return IM.first < startIdx;
+          });
+      idx2MBBMap.insert(InsertPt, IdxMBBPair(startIdx, mbb));
     }
 
     /// Inverse of insertMBBInMaps: merge \p MBB's slot range into its layout

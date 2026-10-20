@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(ptr %fptr) {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.fptr.kernarg.offset1, align 16, addrspace 4)
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY9]](p4)
@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(ptr %fptr) {
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[LOAD]](p0), 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void %fptr()
   ret void
@@ -64,11 +64,11 @@ define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(ptr %fptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]](<4 x s32>)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[MV]](p0), 0, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   SI_RETURN
   call amdgpu_gfx void %fptr()
   ret void

@@ -5,6 +5,8 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @sve_truncs() {
 ; CHECK-LABEL: 'sve_truncs'
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %trunc_nxv1i64_to_i32 = trunc <vscale x 1 x i64> poison to <vscale x 1 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %trunc_nxv1i32_to_i1 = trunc <vscale x 1 x i32> poison to <vscale x 1 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i8_to_i1 = trunc <vscale x 2 x i8> poison to <vscale x 2 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i16_to_i1 = trunc <vscale x 2 x i16> poison to <vscale x 2 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %trunc_nxv2i32_to_i1 = trunc <vscale x 2 x i32> poison to <vscale x 2 x i1>
@@ -39,6 +41,9 @@ define void @sve_truncs() {
 ; CHECK-NEXT:  Cost Model: Found costs of 7 for: %trunc_nxv16i64_to_i8 = trunc <vscale x 16 x i64> poison to <vscale x 16 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+  %trunc_nxv1i64_to_i32 = trunc <vscale x 1 x i64> poison to <vscale x 1 x i32>
+  %trunc_nxv1i32_to_i1 = trunc <vscale x 1 x i32> poison to <vscale x 1 x i1>
+
   %trunc_nxv2i8_to_i1   = trunc <vscale x 2 x i8>  poison to <vscale x 2 x i1>
   %trunc_nxv2i16_to_i1  = trunc <vscale x 2 x i16> poison to <vscale x 2 x i1>
   %trunc_nxv2i32_to_i1  = trunc <vscale x 2 x i32> poison to <vscale x 2 x i1>

@@ -1,6 +1,8 @@
 // RUN: cir-opt %s -cir-goto-solver --verify-roundtrip -o - | FileCheck %s
 
 !void = !cir.void
+!s64i = !cir.int<s, 64>
+!rec_S = !cir.struct<"S" {data !s64i, data !cir.ptr<!void>}>
 
 cir.func @a(){
   %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
@@ -87,4 +89,67 @@ cir.func @d() {
 // CHECK: ^[[IGB]](%[[DEST:.*]]: !cir.ptr<!void>{{.*}}):
 // CHECK:   cir.indirect_br %[[DEST]] : !cir.ptr<!void>, [
 // CHECK:   ^[[L1BB]]
+// CHECK:   ]
+
+cir.func @e() {
+  %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
+  %1 = cir.block_address <@e, "a"> : !cir.ptr<!void>
+  %2 = cir.const #cir.block_addr_info<@e, "b"> : !cir.ptr<!void>
+  cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  cir.store align(8) %2, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  %3 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  cir.indirect_goto %3 : !cir.ptr<!void>
+^bb1:
+  cir.label "a"
+  cir.return
+^bb2:
+  cir.label "b"
+  cir.return
+}
+
+// Attribute-carried labels precede cir.block_address labels: the constant's
+// "b" sorts before the block_address op's "a" in the successor list.
+// CHECK: cir.func @e()
+// CHECK: ^[[ABB:bb[0-9]+]]:
+// CHECK:   cir.label "a"
+// CHECK: ^[[BBB:bb[0-9]+]]:
+// CHECK:   cir.label "b"
+// CHECK: ^[[EIGB:bb[0-9]+]](%{{.*}}: !cir.ptr<!void>{{.*}}):
+// CHECK:   cir.indirect_br {{.*}} : !cir.ptr<!void>, [
+// CHECK:   ^[[BBB]]
+// CHECK:   ^[[ABB]]
+// CHECK:   ]
+
+cir.global internal @f.s = #cir.const_record<{#cir.block_addr_diff<@f, "b", "c"> : !s64i, #cir.block_addr_info<@f, "a"> : !cir.ptr<!void>}> : !rec_S
+
+cir.func @f() {
+  %g = cir.get_global @f.s : !cir.ptr<!rec_S>
+  %m = cir.get_member %g[1] {name = "target"} : !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!void>>
+  %t = cir.load align(8) %m : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  cir.indirect_goto %t : !cir.ptr<!void>
+^bb1:
+  cir.label "a"
+  cir.return
+^bb2:
+  cir.label "b"
+  cir.return
+^bb3:
+  cir.label "c"
+  cir.return
+}
+
+// Mixed attribute kinds in one initializer follow attribute order: the
+// diff's "b", "c" precede the info's "a".
+// CHECK: cir.func @f()
+// CHECK: ^[[FABB:bb[0-9]+]]:
+// CHECK:   cir.label "a"
+// CHECK: ^[[FBBB:bb[0-9]+]]:
+// CHECK:   cir.label "b"
+// CHECK: ^[[FCBB:bb[0-9]+]]:
+// CHECK:   cir.label "c"
+// CHECK: ^[[FIGB:bb[0-9]+]](%{{.*}}: !cir.ptr<!void>{{.*}}):
+// CHECK:   cir.indirect_br {{.*}} : !cir.ptr<!void>, [
+// CHECK:   ^[[FBBB]]
+// CHECK:   ^[[FCBB]]
+// CHECK:   ^[[FABB]]
 // CHECK:   ]

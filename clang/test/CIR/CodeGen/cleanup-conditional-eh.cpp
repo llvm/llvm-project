@@ -712,9 +712,9 @@ void test_flag_cleared_before_cond_cleanup() {
 // CIR:   }
 
 // LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
-// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.Payload
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.Guard
 // LLVM:   %[[ACTIVE:.*]] = alloca i8
+// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.Payload
 // LLVM:   call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[COND:.*]] = invoke {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
 // The clear dominates the arms, so both landingpads see an initialized flag.

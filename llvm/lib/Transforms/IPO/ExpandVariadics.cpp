@@ -702,7 +702,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       // The va_arg lowering loads through a pointer. Set up an alloca to aim
       // that pointer at.
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       Value *CallerCopy =
           Builder.CreateAlloca(UnderlyingType, nullptr, "IndirectAlloca");
 
@@ -768,7 +768,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   Builder.SetInsertPointPastAllocas(CBF);
 
   // SetCurrentDebugLocation when the builder SetInsertPoint method does not
-  Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+  Builder.SetCurrentDebugLocation(CB->getDebugLoc());
 
   // The awkward construction here is to set the alignment on the instance
   AllocaInst *Alloced = Builder.Insert(
@@ -792,7 +792,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     if (!ABI->vaListPassedInSSARegister()) {
       Type *VaListTy = ABI->vaListType(Ctx);
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
       Builder.CreateLifetimeStart(VaList);

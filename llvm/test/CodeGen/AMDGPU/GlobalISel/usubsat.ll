@@ -641,7 +641,7 @@ define i32 @v_usubsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v2, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
 ; GFX10-NEXT:    v_and_b32_e32 v3, 0xff, v0
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
-; GFX10-NEXT:    v_and_or_b32 v1, 0xff, v1, v2
+; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xff, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX10-NEXT:    v_or3_b32 v0, v1, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -672,7 +672,7 @@ define i32 @v_usubsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 0xff, v3
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v1, 0xff, v2, v1
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xff, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
 ; GFX11-TRUE16-NEXT:    v_or3_b32 v0, v1, v0, v2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -704,7 +704,7 @@ define i32 @v_usubsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
-; GFX11-FAKE16-NEXT:    v_and_or_b32 v1, 0xff, v1, v2
+; GFX11-FAKE16-NEXT:    v_and_or_b32 v1, v1, 0xff, v2
 ; GFX11-FAKE16-NEXT:    v_or3_b32 v0, v1, v3, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %lhs = bitcast i32 %lhs.arg to <4 x i8>

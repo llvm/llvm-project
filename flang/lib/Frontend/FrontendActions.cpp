@@ -180,6 +180,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
+  llvmCtx->getLibraryOptions().assign(ci.getLibraryOptions());
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -974,14 +975,16 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager builder.
   llvm::PassInstrumentationCallbacks pic;
-  llvm::PipelineTuningOptions pto;
+  const llvm::cl::LibraryOptionsContext &libraryOptions =
+      llvmModule->getContext().getLibraryOptions();
+  llvm::PipelineTuningOptions pto(&libraryOptions);
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {
     // -fprofile-generate.
     pgoOpt = llvm::PGOOptions(
         opts.InstrProfileOutput.empty()
-            ? llvm::driver::getDefaultProfileGenName()
+            ? llvm::driver::getDefaultProfileGenName(libraryOptions)
             : opts.InstrProfileOutput,
         "", "", opts.MemoryProfileUsePath, llvm::PGOOptions::IRInstr,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
@@ -1108,7 +1111,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested. In this case, don't run the passes. This mimics the behavior of
   // clang.
-  if (llvm::PrintPipelinePasses) {
+  if (pb.getPrintPipelinePasses()) {
     mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
       auto passName = pic.getPassNameForClassName(className);
       return passName.empty() ? className : passName;

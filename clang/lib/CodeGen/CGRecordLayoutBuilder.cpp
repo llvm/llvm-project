@@ -21,8 +21,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -223,6 +223,11 @@ void CGRecordLowering::setBitFieldInfo(
   Info.StorageOffset = StartOffset;
   if (Info.Size > Info.StorageSize)
     Info.Size = Info.StorageSize;
+  // CGBitFieldInfo::MakeInfo does the same clamp
+  llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
+  unsigned FieldTypeSize = DataLayout.getTypeAllocSizeInBits(FieldType);
+  if (Info.Size > FieldTypeSize)
+    Info.Size = FieldTypeSize;
   // Reverse the bit offsets for big endian machines. Because we represent
   // a bitfield as a single large integer load, we can imagine the bits
   // counting from the most-significant-bit instead of the

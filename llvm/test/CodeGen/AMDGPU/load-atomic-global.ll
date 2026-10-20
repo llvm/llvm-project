@@ -1313,7 +1313,7 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-GISEL-LABEL: atomic_load_f32x2_monotonic_agent_offset_max:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc dlc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1457,7 +1457,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ;
 ; GFX10-GISEL-LABEL: atomic_load_i16x2_monotonic_agent_offset_max:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0xfff
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    global_load_dword v0, v[0:1], off glc dlc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1548,6 +1548,114 @@ define amdgpu_cs void @atomic_load_i32x2_monotonic_agent(ptr addrspace(1) %p, pt
   %num2 = extractelement <2 x i32> %a0, i32 1
   %res = add i32 %num1, %num2
   store i32 %res, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_load_bf16x2_monotonic_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX6-SDAG-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX6-SDAG:       ; %bb.0:
+; GFX6-SDAG-NEXT:    s_mov_b32 s2, 0
+; GFX6-SDAG-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-SDAG-NEXT:    s_mov_b32 s0, s2
+; GFX6-SDAG-NEXT:    s_mov_b32 s1, s2
+; GFX6-SDAG-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-SDAG-NEXT:    buffer_store_dword v0, v[2:3], s[0:3], 0 addr64
+; GFX6-SDAG-NEXT:    s_endpgm
+;
+; GFX6-GISEL-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX6-GISEL:       ; %bb.0:
+; GFX6-GISEL-NEXT:    s_mov_b32 s2, 0
+; GFX6-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX6-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
+; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-GISEL-NEXT:    buffer_store_dword v0, v[2:3], s[0:3], 0 addr64
+; GFX6-GISEL-NEXT:    s_endpgm
+;
+; GFX9-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_load_bf16x2_monotonic_agent:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
+  %a0 = load atomic <2 x bfloat>, ptr addrspace(1) %p syncscope("agent") monotonic, align 4
+  store <2 x bfloat> %a0, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_load_bf16x4_monotonic_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX6-SDAG-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX6-SDAG:       ; %bb.0:
+; GFX6-SDAG-NEXT:    s_mov_b32 s2, 0
+; GFX6-SDAG-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-SDAG-NEXT:    s_mov_b32 s0, s2
+; GFX6-SDAG-NEXT:    s_mov_b32 s1, s2
+; GFX6-SDAG-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[0:3], 0 addr64 glc
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], v[2:3], s[0:3], 0 addr64
+; GFX6-SDAG-NEXT:    s_endpgm
+;
+; GFX6-GISEL-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX6-GISEL:       ; %bb.0:
+; GFX6-GISEL-NEXT:    s_mov_b32 s2, 0
+; GFX6-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-GISEL-NEXT:    s_mov_b64 s[0:1], 0
+; GFX6-GISEL-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[0:3], 0 addr64 glc
+; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], v[2:3], s[0:3], 0 addr64
+; GFX6-GISEL-NEXT:    s_endpgm
+;
+; GFX9-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_load_bf16x4_monotonic_agent:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX12-NEXT:    s_endpgm
+  %a0 = load atomic <4 x bfloat>, ptr addrspace(1) %p syncscope("agent") monotonic, align 8
+  store <4 x bfloat> %a0, ptr addrspace(1) %out, align 8
   ret void
 }
 

@@ -39,7 +39,7 @@ public:
         BinaryFunction *BF = nullptr;
         if (Rel.Symbol)
           BF = BC.getFunctionForSymbol(Rel.Symbol);
-        else if (Relocation::isRelative(Rel.Type))
+        else if (BC.getRelocationHandler().isRelative(Rel.Type))
           BF = BC.getBinaryFunctionContainingAddress(Rel.Addend);
 
         if (!BF) {
