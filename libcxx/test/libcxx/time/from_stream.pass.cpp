@@ -24,7 +24,7 @@
 
 template <class CharT>
 void test_read_digits() {
-  using Traits = std::char_traits<CharT>;
+  using Traits             = std::char_traits<CharT>;
   constexpr auto max_value = std::numeric_limits<std::uint64_t>::max();
   struct TestCase {
     std::basic_string<CharT> input;
@@ -80,11 +80,11 @@ void test_read_digits() {
 
 template <class CharT>
 void test_read_signed() {
-  using Traits = std::char_traits<CharT>;
-  constexpr int sentinel = 42;
+  using Traits            = std::char_traits<CharT>;
+  constexpr int sentinel  = 42;
   constexpr int min_value = std::numeric_limits<int>::min();
   constexpr int max_value = std::numeric_limits<int>::max();
-  const auto make_input = [](std::int64_t value) {
+  const auto make_input   = [](std::int64_t value) {
     const auto input = std::to_string(value);
     return std::basic_string<CharT>(input.begin(), input.end());
   };
@@ -118,7 +118,7 @@ void test_read_signed() {
   };
   for (const auto& c : cases) {
     std::basic_istringstream<CharT> stream{c.input};
-    int result = sentinel;
+    int result                   = sentinel;
     std::ios_base::iostate state = std::ios_base::goodbit;
     std::chrono::__from_stream_parser<CharT, Traits> parser{stream, state};
     parser.__read_signed(std::numeric_limits<unsigned>::max(), result);

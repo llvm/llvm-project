@@ -347,9 +347,7 @@ void test_modifier_O() {
   check(STR("2026-07-20 12 PM"), STR("%F %OI %p"), sys_time<hours>{date} + 12h);
 
   // Parse fractional seconds with a colon-separated UTC offset.
-  check(STR("2026-07-20 13:45:30.125 +4:30"),
-        STR("%F %H:%M:%OS %Oz"),
-        date + 13h + 45min + 30s + 125ms - 4h - 30min);
+  check(STR("2026-07-20 13:45:30.125 +4:30"), STR("%F %H:%M:%OS %Oz"), date + 13h + 45min + 30s + 125ms - 4h - 30min);
 
   // This date has week number 29 with either Sunday or Monday as the first day.
   for (const auto& format : {STR("%Y %OU %w"), STR("%Y %OW %w")})
