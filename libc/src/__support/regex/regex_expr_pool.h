@@ -162,7 +162,7 @@ public:
   /// Creates or returns an existing Literal node for the given character.
   ErrorOr<ExprId> make_lit(char c);
   /// Creates or returns an existing Anchor node for the given AnchorKind mask.
-  ErrorOr<ExprId> make_anchor(uint16_t mask);
+  ErrorOr<ExprId> make_anchor(uint8_t mask);
   /// Creates or returns an existing node for the given 256-bit character set.
   ErrorOr<ExprId> make_byte_set(const ByteSet &bs);
   /// Normalizing factory for Concatenation (L · R).

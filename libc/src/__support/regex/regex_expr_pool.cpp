@@ -229,7 +229,7 @@ ErrorOr<ExprId> ExprPool::empty_str() {
 ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
-ErrorOr<ExprId> ExprPool::make_anchor(uint16_t mask) {
+ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
   return intern(Expr::make_anchor(mask));
 }
 

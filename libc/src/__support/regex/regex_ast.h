@@ -34,7 +34,7 @@ inline constexpr size_t BYTE_SET_BITS = size_t(1) << CHAR_BIT;
 using ByteSet = cpp::bitset<BYTE_SET_BITS>;
 
 /// Bitmask flags identifying zero-width boundary assertions.
-enum AnchorKind : uint16_t {
+enum AnchorKind : uint8_t {
   ANCHOR_BOL = 1 << 0,
   ANCHOR_EOL = 1 << 1,
 };
@@ -82,7 +82,7 @@ struct Expr {
     /// Index into ExprPool::byte_sets for ByteSet nodes.
     uint32_t byte_set_id;
     /// Bitmask of AnchorKind flags for Anchor nodes.
-    uint16_t anchor_mask;
+    uint8_t anchor_mask;
   };
 
   /// Default constructor creates an EmptySet node.
@@ -94,7 +94,7 @@ private:
   constexpr Expr(ExprKind k, bool is_null, char c = '\0')
       : kind(k), nullable(is_null), has_anchors(false), ch(c) {}
   /// Create an Anchor node.
-  constexpr Expr(uint16_t mask)
+  constexpr Expr(uint8_t mask)
       : kind(ExprKind::Anchor), nullable(false), has_anchors(true),
         anchor_mask(mask) {}
   /// Create a ByteSet node.
@@ -115,7 +115,7 @@ public:
   static constexpr Expr make_literal(char c) {
     return Expr(ExprKind::Literal, false, c);
   }
-  static constexpr Expr make_anchor(uint16_t mask) { return Expr(mask); }
+  static constexpr Expr make_anchor(uint8_t mask) { return Expr(mask); }
   static constexpr Expr make_byte_set(uint32_t bs_id) { return Expr(bs_id); }
   static constexpr Expr make_concat(ExprId l, ExprId r, bool is_null = false,
                                     bool anchors = false) {
