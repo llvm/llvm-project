@@ -1016,9 +1016,7 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
-- Fixed a crash preprocessor conditional expression evaluation caused by reading
-  IdentifierInfo from annotation tokens produced by `_Pragma` or `__pragma`.
-  Clang now diagnoses these tokens as invalid expression tokens.
+- Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
   source file. (#GH222310)
