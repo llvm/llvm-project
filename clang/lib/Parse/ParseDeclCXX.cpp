@@ -4580,11 +4580,15 @@ bool Parser::ParseCXX11AttributeArgs(
                                  : AttributeCommonInfo::Syntax::AS_C23,
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
     // Eat the left paren, then skip to the ending right paren.
+    unsigned SavedParenCount = ParenCount;
+    unsigned SavedBracketCount = BracketCount;
+    unsigned SavedBraceCount = BraceCount;
     ConsumeParen();
-    if (!SkipUntil(tok::r_paren, StopAtUnbalanced)) {
+    if (!SkipUntil(tok::r_paren, StopAtUnbalanced))
       Diag(Tok, diag::ext_unbalanced_attribute_args);
-      SkipUntil(tok::r_paren, StopAtSemi);
-    }
+    ParenCount = SavedParenCount;
+    BracketCount = SavedBracketCount;
+    BraceCount = SavedBraceCount;
     return false;
   }
 
