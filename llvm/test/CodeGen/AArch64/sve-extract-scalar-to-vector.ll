@@ -188,11 +188,3 @@ define <1 x i64> @extract_variable_i64(<vscale x 2 x i64> %v, i64 %idx) {
   %r = insertelement <1 x i64> poison, i64 %x, i64 0
   ret <1 x i64> %r
 }
-
-declare i64 @llvm.vector.reduce.smin.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.smax.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.umin.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.umax.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.and.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64>)
-declare double @llvm.vector.reduce.fmin.nxv2f64(<vscale x 2 x double>)
