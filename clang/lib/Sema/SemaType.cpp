@@ -409,6 +409,14 @@ processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
                  CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
 
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex);
+
+static void
+BuildTypeCoupledDecls(Expr *E,
+                      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls);
+
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type, CUDAFunctionTarget CFT);
 
@@ -1512,6 +1520,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // are never distributed.
     processTypeAttrs(state, Result, TAL_DeclSpec, SlidingAttrs);
     processTypeAttrs(state, Result, TAL_DeclSpec, DS.getAttributes());
+
+    // Process the late attributes that appeared after the type name
+    processLateTypeAttrs(state, Result, DS.getLateAttributes(),
+                         state.getDeclarator().getNumTypeObjects());
   }
 
   // Apply const/volatile/restrict qualifiers to T.
@@ -4747,6 +4759,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     state.setCurrentChunkIndex(chunkIndex);
     DeclaratorChunk &DeclType = D.getTypeObject(chunkIndex);
     IsQualifiedFunction &= DeclType.Kind == DeclaratorChunk::Paren;
+
     switch (DeclType.Kind) {
     case DeclaratorChunk::Paren:
       if (i == 0)
@@ -5514,6 +5527,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));
 
+    processLateTypeAttrs(state, T, DeclType.LateAttrList, chunkIndex);
+
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
         S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
@@ -5693,6 +5708,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
   processTypeAttrs(state, T, TAL_DeclName, NonSlidingAttrs);
   processTypeAttrs(state, T, TAL_DeclName, D.getAttributes());
+
+  // Attributes after the declarator apply to the declared type itself.
+  processLateTypeAttrs(state, T, D.getLateAttributes(), /*chunkIndex=*/0);
 
   // Diagnose any ignored type attributes.
   state.diagnoseIgnoredTypeAttrs(T);
@@ -9152,29 +9170,68 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
   CurType = NewType;
 }
 
-bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
-  // A DeclSpec attribute runs this once per declarator, as in
-  // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
-  // node is left without a count.
-  if (LA.TypeToComplete) {
-    QT = QualType(LA.TypeToComplete, 0);
-    return true;
-  }
-
-  // Nesting is checked once the enclosing declarator chunks wrap the node.
-  BoundsAttrFlags Flags;
-  if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
-                                             SourceRange(LA.NameLoc),
-                                             /*PointerNestLevel=*/0,
-                                             /*OnReturnType=*/false, Flags))
+bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT,
+                                     unsigned PointerNestLevel,
+                                     bool OnReturnType) {
+  // An attribute already rejected for an earlier declarator was diagnosed then,
+  // so skip it silently.
+  if (LA.Invalid)
     return false;
 
-  // The argument isn't parsed yet, so build the type without a count.
-  CountAttributedType *CATy = getASTContext().getIncompleteCountAttributedType(
-      QT, Flags.CountInBytes, Flags.OrNull);
+  // A DeclSpec attribute runs this once per declarator, as in
+  // `IP __counted_by(n) a, b;`. Check the type it applies to once, and build
+  // one node for every declarator to share, as the eager path does, so no node
+  // is left without a count.
+  if (!LA.TypeToComplete) {
+    BoundsAttrFlags Flags;
+    // The position is checked per declarator below, so skip it here.
+    if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
+                                               SourceRange(LA.NameLoc),
+                                               /*PointerNestLevel=*/0,
+                                               /*OnReturnType=*/false, Flags)) {
+      LA.Invalid = true;
+      return false;
+    }
+
+    // The argument isn't parsed yet, so build the type without a count.
+    LA.TypeToComplete = getASTContext().getIncompleteCountAttributedType(
+        QT, Flags.CountInBytes, Flags.OrNull);
+  }
+
+  // The position depends on the declarator, as in `IP __counted_by(n) a, *b;`.
+  // Reject the attribute for this declarator only, leaving its type unwrapped,
+  // and record that so the parser doesn't pair its field with the attribute.
+  // Other declarators sharing the node may still use it.
+  CountAttributedType *CATy = cast<CountAttributedType>(LA.TypeToComplete);
+  if (!ValidateBoundsAttrPosition(CATy->getKind(), LA.NameLoc,
+                                  SourceRange(LA.NameLoc), PointerNestLevel,
+                                  OnReturnType)) {
+    markLateParsedBoundsTypeRejected(CATy);
+    return false;
+  }
+
   QT = QualType(CATy, 0);
-  LA.TypeToComplete = CATy;
   return true;
+}
+
+/// Process the late-parsed type attributes \p LateAttrs on chunk \p chunkIndex
+/// of the declarator, or on its declaration specifier if \p chunkIndex is the
+/// number of chunks.
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex) {
+  if (LateAttrs.empty())
+    return;
+
+  Sema &S = state.getSema();
+  const Declarator &D = state.getDeclarator();
+  unsigned PointerNestLevel = getPointerNestLevel(D, chunkIndex);
+  bool OnReturnType = isOnFunctionReturnType(D, chunkIndex);
+
+  // Process every attribute even if one is rejected, as processTypeAttrs does,
+  // so each one is diagnosed.
+  for (auto *LA : LateAttrs)
+    S.ProcessLateParsedTypeAttr(LA, type, PointerNestLevel, OnReturnType);
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
@@ -9419,15 +9476,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_CountedBy:
     case ParsedAttr::AT_CountedByOrNull:
     case ParsedAttr::AT_SizedBy:
-    case ParsedAttr::AT_SizedByOrNull: {
-      // XXX: The late-parsing path hasn't been switched to the new mechanism to
-      // properly support type-position attributes yet.
-      if (!state.getSema().getLangOpts().ExperimentalLateParseAttributes) {
-        HandleCountedByAttrOnType(state, type, attr);
-        attr.setUsedAsTypeAttr();
-      }
+    case ParsedAttr::AT_SizedByOrNull:
+      HandleCountedByAttrOnType(state, type, attr);
+      attr.setUsedAsTypeAttr();
       break;
-    }
 
     MS_TYPE_ATTRS_CASELIST:
       if (!handleMSPointerTypeQualifierAttr(state, attr, type))

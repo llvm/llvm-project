@@ -142,6 +142,8 @@ class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
 enum class LangAS : unsigned int;
+struct LateParsedAttribute;
+struct LateParsedTypeAttribute;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
@@ -2577,31 +2579,31 @@ public:
                                   SourceLocation AttrLoc, SourceRange AttrRange,
                                   unsigned PointerNestLevel, bool OnReturnType);
 
-  /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to FieldDecl \p FD is semantically valid. If
-  /// semantically invalid diagnostics will be emitted explaining the problems.
+  /// Perform semantic validation on a FieldDecl with a "counted_by" family
+  /// attribute. This is called after the attribute has been attached to the
+  /// field's type (as a CountAttributedType) to validate the attribute is
+  /// correctly applied.
   ///
-  /// \param FD The FieldDecl to apply the attribute to
-  /// \param E The count expression on the attribute
-  /// \param CountInBytes If true the attribute is from the "sized_by" family of
-  ///                     attributes. If the false the attribute is from
-  ///                     "counted_by" family of attributes.
-  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
-  ///               of attributes. If false the attribute does not have the
-  ///               suffix.
+  /// This performs declaration-level checks that require the FieldDecl to
+  /// exist, complementing the type-level checks performed in
+  /// HandleCountedByAttrOnType during type processing.
   ///
-  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
-  /// \p CountInBytes and \p OrNull both being true indicates the
-  /// `counted_by_or_null` attribute.
+  /// \param FD The FieldDecl with the attribute
+  /// \param E The count expression from the attribute
+  /// \param CountInBytes If true the attribute is from the "sized_by" family.
+  ///                     If false the attribute is from the "counted_by"
+  ///                     family.
+  /// \param OrNull If true the attribute has the "_or_null" suffix.
   ///
   /// \returns false iff semantically valid.
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /// Late-parsed bounds types dropped while their declarator was built. The
-  /// attribute has already been diagnosed and its node is no longer part of
-  /// any type, so the completion pass must skip it rather than parse its
-  /// argument and complete it.
+  /// Late-parsed bounds types rejected for the current declarator, such as one
+  /// nested under another pointer. The attribute has already been diagnosed and
+  /// the node is not part of this declarator's type, so the parser must not
+  /// pair the declarator's field with the attribute. Other declarators sharing
+  /// the node may still use it.
   llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
@@ -2609,14 +2611,24 @@ public:
     RejectedLateParsedBoundsTypes.insert(BATy);
   }
 
-  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
-    return RejectedLateParsedBoundsTypes.contains(BATy);
+  /// Return true if \p BATy was rejected for the current declarator, and clear
+  /// the mark for the next declarator.
+  bool takeLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    return RejectedLateParsedBoundsTypes.erase(BATy);
   }
 
   /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
   /// CountAttributedType with no count yet, recorded on \p LA for later
   /// completion. Returns false if \p LA is invalid.
-  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+  
+  /// Validate the late-parsed type attribute \p LA and wrap \p type in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. \p PointerNestLevel and \p OnReturnType describe where the
+  /// attribute sits in the current declarator (see
+  /// ValidateBoundsAttrTypeForTypePosition). Ignores other attributes. Returns
+  /// false if \p LA is invalid, or is rejected for the current declarator.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT,
+                                 unsigned PointerNestLevel, bool OnReturnType);
 
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
   /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
