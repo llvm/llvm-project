@@ -10,8 +10,8 @@
 
 #include "lldb/lldb-defines.h"
 
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 
 using namespace lldb_private;
 

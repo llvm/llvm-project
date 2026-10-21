@@ -5607,6 +5607,24 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
 
+    // C++26 [dcl.type.auto.deduct]p3:
+    //   If the placeholder-type-specifier is of the form type-constraint_opt
+    //   auto, [...] If E is a value synthesized for a constant template
+    //   parameter of type decltype(auto) ([temp.func.order]), the declaration
+    //   is ill-formed.
+    auto isUndeducedAuto = [](QualType T, bool DecltypeAuto) {
+      if (T.isNull())
+        return false;
+      const AutoType *AT = T->getContainedAutoType();
+      return AT && AT->isDecltypeAuto() == DecltypeAuto &&
+             AT->getDeducedType().isNull();
+    };
+    if (CTAI.PartialOrdering &&
+        isUndeducedAuto(NTTPType, /*DecltypeAuto=*/false) &&
+        isUndeducedAuto(getTypeOfConstantTemplateParameter(Arg),
+                        /*DecltypeAuto=*/true))
+      return true;
+
     if (NTTPType->isInstantiationDependentType()) {
       // Do substitution on the type of the non-type template parameter.
       InstantiatingTemplate Inst(*this, TemplateLoc, Template, NTTP,
@@ -5861,11 +5879,10 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 }
 
 /// Diagnose a missing template argument.
-template<typename TemplateParmDecl>
-static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
+template <typename TemplateParmDecl>
+static void diagnoseMissingArgument(Sema &S, SourceLocation Loc,
                                     TemplateDecl *TD,
-                                    const TemplateParmDecl *D,
-                                    TemplateArgumentListInfo &Args) {
+                                    const TemplateParmDecl *D) {
   // Dig out the most recent declaration of the template parameter; there may be
   // declarations of the template that are more recent than TD.
   D = cast<TemplateParmDecl>(cast<TemplateDecl>(TD->getMostRecentDecl())
@@ -5880,7 +5897,7 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
                             D->getDefaultArgumentLoc(), Modules,
                             Sema::MissingImportKind::DefaultArgument,
                             /*Recover*/true);
-    return true;
+    return;
   }
 
   // FIXME: If there's a more recent default argument that *is* visible,
@@ -5893,7 +5910,6 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
     << (int)S.getTemplateNameKindForDiagnostics(TemplateName(TD))
     << TD;
   S.NoteTemplateLocation(*TD, Params->getSourceRange());
-  return true;
 }
 
 /// Check that the given template argument list is well-formed
@@ -6169,16 +6185,13 @@ bool Sema::CheckTemplateArgumentList(
 
     if (Arg.getArgument().isNull()) {
       if (!HasDefaultArg) {
-        if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(*Param))
-          return diagnoseMissingArgument(*this, TemplateLoc, Template, TTP,
-                                         NewArgs);
-        if (NonTypeTemplateParmDecl *NTTP =
-                dyn_cast<NonTypeTemplateParmDecl>(*Param))
-          return diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP,
-                                         NewArgs);
-        return diagnoseMissingArgument(*this, TemplateLoc, Template,
-                                       cast<TemplateTemplateParmDecl>(*Param),
-                                       NewArgs);
+        if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(*Param))
+          diagnoseMissingArgument(*this, TemplateLoc, Template, TTP);
+        else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*Param))
+          diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP);
+        else
+          diagnoseMissingArgument(*this, TemplateLoc, Template,
+                                  cast<TemplateTemplateParmDecl>(*Param));
       }
       return true;
     }
