@@ -363,10 +363,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+rva23s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rvb23u64 %s -o - | FileCheck --check-prefix=RVB23U64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rvb23s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rva23p1s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23p1s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rva23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVA23P1S64-OPTIONS %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVB23P1S64-OPTIONS %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23p1s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23p1s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVA23P1S64-OPTIONS %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVB23P1S64-OPTIONS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-rvm23u32 %s -o - | FileCheck --check-prefix=RVM23U32 %s
 
 ; CHECK: .attribute 4, 16
