@@ -6059,10 +6059,11 @@ void fir::registerSymbol(mlir::SymbolTable *symbolTable,
   if (!symbolTable)
     return;
   mlir::StringAttr name = mlir::SymbolTable::getSymbolName(symbol);
-  if (mlir::Operation *existing = symbolTable->lookup(name)) {
-    // SymbolTable::insert would rename the new operation. Leave the duplicate
-    // definition in place for the verifier to report instead.
-    assert(existing == symbol && "duplicate symbol definition");
+  if (symbolTable->lookup(name)) {
+    // Semantics does not diagnose every pair of entities that share a global
+    // identifier, so lowering can create a second symbol with this name.
+    // SymbolTable::insert would rename it; leave the duplicate definition in
+    // place for the verifier to report instead.
     return;
   }
   symbolTable->insert(symbol);
