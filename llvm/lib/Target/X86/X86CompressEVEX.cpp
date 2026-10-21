@@ -43,6 +43,7 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -54,6 +55,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include <atomic>
 #include <cassert>
@@ -350,15 +352,15 @@ static bool isCompressibleMaskedBlendUse(unsigned BlendOpc, unsigned UseOpc) {
   }
 }
 
-// Collect debug users reached from MBB before MaskReg is redefined. Return
+// Collect debug users reached from DefMI before MaskReg is redefined. Return
 // false if an ordinary use is reached, since the transformation would change
-// its value.
+// its value. On a backedge, inspect only the instructions before DefMI.
 static bool collectReachableMaskDebugUsers(
-    Register MaskReg, MachineBasicBlock &MBB, const TargetRegisterInfo *TRI,
+    Register MaskReg, MachineInstr &DefMI, const TargetRegisterInfo *TRI,
     SmallVectorImpl<MachineInstr *> &MaskDebugUsers) {
+  MachineBasicBlock &MBB = *DefMI.getParent();
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> Worklist;
-  Visited.insert(&MBB);
   for (MachineBasicBlock *Succ : MBB.successors())
     Worklist.push_back(Succ);
 
@@ -367,8 +369,10 @@ static bool collectReachableMaskDebugUsers(
     if (!Visited.insert(UseMBB).second)
       continue;
 
-    bool ReachesSuccessors = true;
-    for (MachineInstr &UseMI : *UseMBB) {
+    MachineBasicBlock::iterator End =
+        UseMBB == &MBB ? MachineBasicBlock::iterator(DefMI) : UseMBB->end();
+    bool ReachesSuccessors = UseMBB != &MBB;
+    for (MachineInstr &UseMI : llvm::make_range(UseMBB->begin(), End)) {
       if (UseMI.isDebugInstr()) {
         if (UseMI.readsRegister(MaskReg, TRI))
           MaskDebugUsers.push_back(&UseMI);
@@ -563,17 +567,29 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
   }
 
-  bool HasCrossBlockDebugUsers = false;
-  for (MachineInstr &UseMI : MRI->use_instructions(MaskReg)) {
-    if (UseMI.getParent() == &MBB)
-      continue;
-    if (!UseMI.isDebugInstr())
-      return false;
-    HasCrossBlockDebugUsers = true;
+  bool HasPreDefMaskUsers = false;
+  for (MachineInstr &UseMI :
+       llvm::make_range(MBB.begin(), MachineBasicBlock::iterator(MI))) {
+    if (UseMI.readsRegister(MaskReg, TRI)) {
+      HasPreDefMaskUsers = true;
+      break;
+    }
   }
 
-  if (MaskRegReachesSuccessors && HasCrossBlockDebugUsers &&
-      !collectReachableMaskDebugUsers(MaskReg, MBB, TRI, MaskDebugUsers))
+  bool HasCrossBlockDebugUsers = false;
+  for (MCRegAliasIterator Alias(MaskReg, TRI, true); Alias.isValid(); ++Alias) {
+    for (MachineInstr &UseMI : MRI->use_instructions(*Alias)) {
+      if (UseMI.getParent() == &MBB)
+        continue;
+      if (!UseMI.isDebugInstr())
+        return false;
+      HasCrossBlockDebugUsers = true;
+    }
+  }
+
+  if (MaskRegReachesSuccessors &&
+      (HasPreDefMaskUsers || HasCrossBlockDebugUsers) &&
+      !collectReachableMaskDebugUsers(MaskReg, MI, TRI, MaskDebugUsers))
     return false;
 
   // Apply the transformation
@@ -628,9 +644,10 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
   // The compressed sequence no longer defines MaskReg. Invalidate its debug
   // users rather than leaving them referring to a stale physical register.
   for (MachineInstr *DebugMI : MaskDebugUsers) {
-    if (DebugMI->isDebugPHI())
-      ToErase.push_back(DebugMI);
-    else {
+    if (DebugMI->isDebugPHI()) {
+      if (!llvm::is_contained(ToErase, DebugMI))
+        ToErase.push_back(DebugMI);
+    } else {
       assert(DebugMI->isDebugValue() && "Unexpected mask debug user");
       DebugMI->setDebugValueUndef();
     }

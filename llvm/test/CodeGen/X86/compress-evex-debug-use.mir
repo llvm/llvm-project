@@ -14,6 +14,10 @@
   define void @cross_block_redefinition() { ret void }
   define void @same_block_redefinition() { ret void }
   define void @call_clobber() { ret void }
+  define i32 @loop_backedge_debug_phi() !dbg !14 { ret i32 0 }
+  define i32 @loop_backedge_ordinary_use() { ret i32 0 }
+  define i32 @cross_block_alias_ordinary_use() { ret i32 0 }
+  define i32 @cross_block_alias_debug_phi() { ret i32 0 }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
@@ -32,6 +36,10 @@
   !11 = !DILocalVariable(name: "mask", scope: !10, file: !1, line: 2, type: !8)
   !12 = !{!11}
   !13 = !DILocation(line: 2, column: 1, scope: !10)
+  !14 = distinct !DISubprogram(name: "loop_backedge_debug_phi", scope: !1, file: !1, line: 3, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !15)
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "mask", scope: !14, file: !1, line: 3, type: !8)
+  !17 = !DILocation(line: 3, column: 1, scope: !14)
 ...
 ---
 name:            same_block_debug_use
@@ -209,4 +217,114 @@ body:             |
 
     DBG_PHI $k0, 400000
     RET64 $eax
+...
+---
+name:            loop_backedge_debug_phi
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: loop_backedge_debug_phi
+  ; CHECK: bb.1:
+  ; CHECK-NOT: DBG_PHI
+  ; CHECK: DBG_VALUE $noreg, $noreg
+  ; CHECK-NEXT: $eax = VMOVMSKPSrr $xmm0
+  ; CHECK-NOT: DBG_PHI
+  ; CHECK: bb.2:
+  bb.0:
+    successors: %bb.1
+    liveins: $xmm0, $edi
+
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $xmm0, $edi
+
+    DBG_VALUE $k0, $noreg, !16, !DIExpression(), debug-location !17
+    DBG_PHI $k0, 500000
+    $k0 = VPMOVD2MZ128kr $xmm0
+    $eax = KMOVDrk killed $k0
+    TEST32rr $edi, $edi, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
+
+  bb.2:
+    liveins: $eax
+
+    RET64 $eax
+...
+---
+name:            loop_backedge_ordinary_use
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: loop_backedge_ordinary_use
+  ; CHECK: bb.1:
+  ; CHECK: $ecx = KMOVDrk $k0
+  ; CHECK-NEXT: $k0 = VPMOVD2MZ128kr $xmm0
+  ; CHECK-NEXT: $eax = KMOVDrk $k0
+  bb.0:
+    successors: %bb.1
+    liveins: $xmm0, $edi, $k0
+
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $xmm0, $edi, $k0
+
+    $ecx = KMOVDrk $k0
+    $k0 = VPMOVD2MZ128kr $xmm0
+    $eax = KMOVDrk $k0
+    TEST32rr $edi, $edi, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
+
+  bb.2:
+    liveins: $eax, $ecx
+
+    RET64 implicit $eax, implicit $ecx
+...
+---
+name:            cross_block_alias_ordinary_use
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cross_block_alias_ordinary_use
+  ; CHECK: $k0 = VPMOVD2MZ128kr $xmm0
+  ; CHECK-NEXT: $eax = KMOVDrk $k0
+  ; CHECK: RET64 implicit $eax, implicit $k0_k1
+  bb.0:
+    successors: %bb.1
+    liveins: $xmm0, $k1
+
+    $k0 = VPMOVD2MZ128kr $xmm0
+    $eax = KMOVDrk $k0
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $eax, $k0_k1
+
+    RET64 implicit $eax, implicit $k0_k1
+...
+---
+name:            cross_block_alias_debug_phi
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: cross_block_alias_debug_phi
+  ; CHECK: $eax = VMOVMSKPSrr $xmm0
+  ; CHECK-NEXT: $ecx = VMOVMSKPSrr $xmm1
+  ; CHECK: bb.1:
+  ; CHECK-NOT: DBG_PHI
+  ; CHECK: RET64 implicit $eax, implicit $ecx
+  bb.0:
+    successors: %bb.1
+    liveins: $xmm0, $xmm1
+
+    $k0 = VPMOVD2MZ128kr $xmm0
+    $eax = KMOVDrk $k0
+    $k1 = VPMOVD2MZ128kr $xmm1
+    $ecx = KMOVDrk $k1
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    DBG_PHI $k0_k1, 600000
+    RET64 implicit $eax, implicit $ecx
 ...
