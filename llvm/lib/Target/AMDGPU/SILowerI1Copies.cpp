@@ -449,44 +449,6 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
   return Changed;
 }
 
-static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
-  Def = false;
-  Use = false;
-
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
-      if (MO.isUse())
-        Use = true;
-      else
-        Def = true;
-    }
-  }
-}
-
-/// Return true when the value is consumed by control flow or exec-state
-/// bookkeeping instead of by ordinary per-lane boolean data.
-static bool isControlLikeUse(const MachineInstr &MI) {
-  if (MI.isPHI() || MI.isTerminator() || MI.isBranch())
-    return true;
-
-  bool DefSCC, UseSCC;
-  instrDefsUsesSCC(MI, DefSCC, UseSCC);
-  return DefSCC || UseSCC;
-}
-
-static bool isControlPhi(Register Reg, const MachineRegisterInfo &MRI,
-                         const MachineBasicBlock &LoopHeader) {
-  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
-    if (UseMI.isBranch() || UseMI.isTerminator() || isControlLikeUse(UseMI))
-      return true;
-
-    if (UseMI.isPHI() && UseMI.getParent() == &LoopHeader)
-      return true;
-  }
-
-  return false;
-}
-
 AMDGPU::PhiLoweringHelper::PhiLoweringHelper(MachineFunction &MF,
                                              MachineDominatorTree &DT,
                                              MachinePostDominatorTree &PDT)
@@ -607,27 +569,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     PhiRegisters.insert(DstReg);
 #endif
 
-    // The deciding factor is the actual consumers of this PHI, not whether we
-    // happened to find a loop level. A control PHI that feeds branch or EXEC
-    // bookkeeping must bypass the normal lane-mask merge path even when the
-    // loop-level heuristic is not the direct trigger.
-    bool IsControlPhiValue = isControlPhi(DstReg, *MRI, MBB);
-
     MachineIDFSSAUpdater SSAUpdater(DT, MF, DstReg);
-
-    if (IsControlPhiValue) {
-      SSAUpdater.addUseBlock(&MBB);
-      for (const auto &Incoming : Incomings)
-        SSAUpdater.addAvailableValue(Incoming.Block, Incoming.Reg);
-      Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
-      if (NewReg != DstReg) {
-        replaceDstReg(NewReg, DstReg, &MBB);
-        MI->eraseFromParent();
-      }
-      Incomings.clear();
-      continue;
-    }
-
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
@@ -756,6 +698,20 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
   return false;
 }
 
+static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
+  Def = false;
+  Use = false;
+
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
+      if (MO.isUse())
+        Use = true;
+      else
+        Def = true;
+    }
+  }
+}
+
 /// Return a point at the end of the given \p MBB to insert SALU instructions
 /// for lane mask calculation. Take terminators and SCC into account.
 MachineBasicBlock::iterator
@@ -828,11 +784,82 @@ void Vreg1LoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
   MRI->replaceRegWith(NewReg, OldReg);
 }
 
+// Resolve only aliases whose value is unambiguous: copies without subregisters
+// and PHIs whose incoming values are all defined and resolve to the same root.
+// Cycles and undef values conservatively remain unresolved. Other definitions
+// are treated as unique roots without looking through them.
+static Register getEquivalentLaneMaskRoot(
+    Register Reg, const MachineRegisterInfo &MRI,
+    DenseSet<Register> &Visiting) {
+
+  // Physical registers have no virtual SSA definition to resolve.
+  if (!Reg.isVirtual())
+    return Register();
+
+  // A cycle does not establish a unique alias root.
+  if (!Visiting.insert(Reg).second)
+    return Register();
+
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  Register Root = Def ? Reg : Register();
+  if (!Def || Def->getOpcode() == AMDGPU::IMPLICIT_DEF) {
+    Root = Register();
+  } else if (Def->getOpcode() == AMDGPU::COPY) {
+    const MachineOperand &Src = Def->getOperand(1);
+    Root = Src.isUndef() || Src.getSubReg() ? Register()
+                         : getEquivalentLaneMaskRoot(Src.getReg(), MRI,
+                                                     Visiting);
+  } else if (Def->isPHI()) {
+    Register CommonRoot;
+    bool IsEquivalent = true;
+    for (unsigned I = 1; I < Def->getNumOperands(); I += 2) {
+      const MachineOperand &Incoming = Def->getOperand(I);
+      if (Incoming.isUndef()) {
+        IsEquivalent = false;
+        break;
+      }
+
+      Register IncomingRoot =
+          getEquivalentLaneMaskRoot(Incoming.getReg(), MRI, Visiting);
+      if (!IncomingRoot || (CommonRoot && CommonRoot != IncomingRoot)) {
+        IsEquivalent = false;
+        break;
+      }
+      CommonRoot = IncomingRoot;
+    }
+
+    Root = IsEquivalent ? CommonRoot : Register();
+  }
+
+  Visiting.erase(Reg);
+  return Root;
+}
+
+// Registers with the same resolved root carry the same lane-mask value. Do
+// not resolve physical registers or cycles; direct register equality remains
+// safe and is handled here first.
+static bool areEquivalentLaneMasks(Register LHS, Register RHS,
+                                   const MachineRegisterInfo &MRI) {
+  if (LHS == RHS)
+    return true;
+
+  DenseSet<Register> Visiting;
+  Register LHSRoot = getEquivalentLaneMaskRoot(LHS, MRI, Visiting);
+  Visiting.clear();
+  Register RHSRoot = getEquivalentLaneMaskRoot(RHS, MRI, Visiting);
+  return LHSRoot && LHSRoot == RHSRoot;
+}
+
 void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
                                               MachineBasicBlock::iterator I,
                                               const DebugLoc &DL,
                                               Register DstReg, Register PrevReg,
                                               Register CurReg) {
+  if (areEquivalentLaneMasks(PrevReg, CurReg, *MRI)) {
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
+    return;
+  }
+
   bool PrevVal = false;
   bool PrevConstant = isConstantLaneMask(PrevReg, PrevVal);
   bool CurVal = false;
