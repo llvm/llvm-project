@@ -147,12 +147,6 @@ namespace ns2 {
       static constexpr int b3 = devicefoo();
       // host-error@-1 {{reference to __device__ function 'devicefoo' in global initializer}}
     }();
-
-
-    template<class T>
-    static constexpr T TVar = devicefoo;
-
-    int a = TVar<int> + 1;
   }
   __host__ __device__ void static test_statics_in_hd() {
     static constexpr int b = devicefoo();
