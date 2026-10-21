@@ -27,5 +27,43 @@ void inside(void) {
   base_inside();
 }
 
+// Device weights also count only from the innermost TARGET. KIND is worth 2
+// with only TARGET in the context and loses to the vendor score of 3. With
+// PARALLEL inside TARGET, it is worth 4 and wins.
+
+#ifdef __NVPTX__
+#define KIND gpu
+#else
+#define KIND cpu
+#endif
+
+int kind_outside(void);
+int vendor_outside(void);
+#pragma omp declare variant(kind_outside) match(device={kind(KIND)})
+#pragma omp declare variant(vendor_outside)                                    \
+    match(implementation={vendor(score(3): llvm)})
+int weight_outside(void);
+
+int kind_inside(void);
+int vendor_inside(void);
+#pragma omp declare variant(kind_inside) match(device={kind(KIND)})
+#pragma omp declare variant(vendor_inside)                                     \
+    match(implementation={vendor(score(3): llvm)})
+int weight_inside(void);
+
+void outside_weight(void) {
+#pragma omp parallel
+#pragma omp target
+  weight_outside();
+}
+
+void inside_weight(void) {
+#pragma omp target
+#pragma omp parallel
+  weight_inside();
+}
+
 // CHECK-DAG: call{{.*}} @base_outside(
 // CHECK-DAG: call{{.*}} @parallel_inside(
+// CHECK-DAG: call{{.*}} @vendor_outside(
+// CHECK-DAG: call{{.*}} @kind_inside(
