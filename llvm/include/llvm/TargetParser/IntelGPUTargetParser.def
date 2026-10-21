@@ -25,7 +25,7 @@
 //
 //   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
 //     A compatibility name that covers several minor versions, e.g. "xe-dg2",
-//     which covers every xe-dg2-* and xe-acm-* platform. These names have no
+//     which covers every xe-acm-* platform. These names have no
 //     GPU IP version of their own, so no device reports one and the
 //     offload-arch utility never prints one, but they are legal --offload-arch
 //     values. The columns mean the same as above.
