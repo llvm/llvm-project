@@ -38,7 +38,6 @@
 ...
 ---
 # A write of LO right after a mflo: two nops.
-# FIXME: no nop is inserted.
 name:            mflo_mtlo
 tracksRegLiveness: true
 body:             |
@@ -49,6 +48,8 @@ body:             |
     ; CHECK: liveins: $r4, $ac0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2 = MFLO implicit $ac0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: MTLO killed $r4, implicit-def $lo0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2 {
     ; CHECK-NEXT:   $r0 = SLL $r0, 0
@@ -61,7 +62,6 @@ body:             |
 ...
 ---
 # A write of HI one instruction after a mfhi: one nop.
-# FIXME: no nop is inserted.
 name:            mfhi_mthi
 tracksRegLiveness: true
 body:             |
@@ -73,6 +73,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2 = MFHI implicit $ac0
     ; CHECK-NEXT: $r3 = ADDu $r4, $r5
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: MTHI killed $r4, implicit-def $hi0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2, implicit $r3 {
     ; CHECK-NEXT:   $r0 = SLL $r0, 0
@@ -86,7 +87,6 @@ body:             |
 ...
 ---
 # A write of both HI and LO right after a mfhi: two nops.
-# FIXME: no nop is inserted.
 name:            mfhi_mtlohi
 tracksRegLiveness: true
 body:             |
@@ -97,6 +97,8 @@ body:             |
     ; CHECK: liveins: $r4, $r5, $ac0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2 = MFHI implicit $ac0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: MTHI killed $r4, implicit-def $hi0
     ; CHECK-NEXT: MTLO killed $r5, implicit-def $lo0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2 {
@@ -111,7 +113,6 @@ body:             |
 ...
 ---
 # The window starts again at the second of two back-to-back reads: one nop.
-# FIXME: no nop is inserted.
 name:            mflo_mfhi_mult
 tracksRegLiveness: true
 body:             |
@@ -124,6 +125,7 @@ body:             |
     ; CHECK-NEXT: $r3 = MFLO implicit $ac0
     ; CHECK-NEXT: $r2 = MFHI implicit $ac0
     ; CHECK-NEXT: $r2 = ADDiu killed $r2, 1
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: $ac0 = PseudoMULT killed $r2, killed $r5
     ; CHECK-NEXT: $r2 = MFLO implicit killed $ac0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2, implicit $r3 {
@@ -140,7 +142,6 @@ body:             |
 ...
 ---
 # The read ends a block that falls through to the writer: two nops.
-# FIXME: no nop is inserted.
 name:            mflo_fallthrough_multu
 tracksRegLiveness: true
 body:             |
@@ -154,6 +155,8 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $r4, $r5, $r3
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = SLL $r0, 0
+  ; CHECK-NEXT:   $r0 = SLL $r0, 0
   ; CHECK-NEXT:   $ac0 = PseudoMULTu killed $r4, killed $r5
   ; CHECK-NEXT:   $r2 = MFLO implicit killed $ac0
   ; CHECK-NEXT:   PseudoReturn undef $r31, implicit $r2, implicit $r3 {
@@ -177,7 +180,6 @@ body:             |
 ---
 # The writer sits in the delay slot of the branch after the read: one nop
 # before the branch.
-# FIXME: no nop is inserted.
 name:            mflo_mult_in_delay_slot
 tracksRegLiveness: true
 body:             |
@@ -187,6 +189,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $r4, $r5, $ac0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r3 = MFLO implicit $ac0
+  ; CHECK-NEXT:   $r0 = SLL $r0, 0
   ; CHECK-NEXT:   BEQ $r4, $r0, %bb.2, implicit-def $r1 {
   ; CHECK-NEXT:     $ac0 = PseudoMULT $r4, $r5
   ; CHECK-NEXT:   }
@@ -270,13 +273,12 @@ body:             |
   ; CHECK-NEXT:   liveins: $r4, $r5, $ac0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r3 = MFLO implicit $ac0
-  ; CHECK-NEXT:   $r2 = ADDu $r4, $r5 {
-  ; CHECK-NEXT:     $r0 = SLL $r0, 0
-  ; CHECK-NEXT:   }
+  ; CHECK-NEXT:   $r2 = ADDu $r4, $r5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $r2, $r3, $r5
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r0 = SLL $r0, 0
   ; CHECK-NEXT:   $ac0 = PseudoMULT killed $r2, killed $r5
   ; CHECK-NEXT:   $r2 = MFLO implicit killed $ac0
   ; CHECK-NEXT:   PseudoReturn undef $r31, implicit $r2, implicit $r3 {
@@ -300,7 +302,6 @@ body:             |
 ...
 ---
 # Debug and KILL instructions issue nothing and do not count: one nop.
-# FIXME: no nop is inserted.
 name:            mflo_transient_between_mult
 tracksRegLiveness: true
 body:             |
@@ -315,6 +316,7 @@ body:             |
     ; CHECK-NEXT: KILL $r4
     ; CHECK-NEXT: $r2 = ADDu $r4, $r5
     ; CHECK-NEXT: DBG_VALUE $r2, $noreg, !6, !DIExpression(), debug-location !DILocation(line: 1, scope: !3)
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: $ac0 = PseudoMULT killed $r2, killed $r5
     ; CHECK-NEXT: $r2 = MFLO implicit killed $ac0
     ; CHECK-NEXT: PseudoReturn undef $r31, implicit $r2, implicit $r3 {
@@ -409,7 +411,6 @@ body:             |
 ---
 # On MIPS I, the load-delay nop counts toward the distance: no HI/LO nop.
 # On MIPS II to IV, which have no load delay, one HI/LO nop.
-# FIXME: MIPS1 has one redundant nop.
 name:            mflo_load_mult
 tracksRegLiveness: true
 body:             |
@@ -422,7 +423,6 @@ body:             |
     ; MIPS1-NEXT: $r3 = MFLO implicit $ac0
     ; MIPS1-NEXT: $r2 = LW killed $r4, 0 {
     ; MIPS1-NEXT:   $r0 = SLL $r0, 0
-    ; MIPS1-NEXT:   $r0 = SLL $r0, 0
     ; MIPS1-NEXT: }
     ; MIPS1-NEXT: $ac0 = PseudoMULT killed $r2, killed $r5
     ; MIPS1-NEXT: $r2 = MFLO implicit killed $ac0
@@ -434,9 +434,8 @@ body:             |
     ; MIPS2-4: liveins: $r4, $r5, $ac0
     ; MIPS2-4-NEXT: {{  $}}
     ; MIPS2-4-NEXT: $r3 = MFLO implicit $ac0
-    ; MIPS2-4-NEXT: $r2 = LW killed $r4, 0 {
-    ; MIPS2-4-NEXT:   $r0 = SLL $r0, 0
-    ; MIPS2-4-NEXT: }
+    ; MIPS2-4-NEXT: $r2 = LW killed $r4, 0
+    ; MIPS2-4-NEXT: $r0 = SLL $r0, 0
     ; MIPS2-4-NEXT: $ac0 = PseudoMULT killed $r2, killed $r5
     ; MIPS2-4-NEXT: $r2 = MFLO implicit killed $ac0
     ; MIPS2-4-NEXT: PseudoReturn undef $r31, implicit $r2, implicit $r3 {

@@ -49,7 +49,6 @@ entry:
   ret i32 %mul1
 }
 
-; FIXME: MIPS2 lacks the nops between a mflo and the next multu or mtlo.
 define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
 ; MIPS2-LABEL: mul_i64:
 ; MIPS2:       # %bb.0: # %entry
@@ -62,6 +61,8 @@ define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    mult $5, $6
 ; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $5, $7
 ; MIPS2-NEXT:    mflo $3
 ; MIPS2-NEXT:    sw $3, 8($sp) # 8-byte Folded Spill
@@ -74,6 +75,8 @@ define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
 ; MIPS2-NEXT:    lw $2, 36($sp)
 ; MIPS2-NEXT:    mult $1, $2
 ; MIPS2-NEXT:    mflo $1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    mtlo $3
 ; MIPS2-NEXT:    lw $3, 12($sp) # 8-byte Folded Reload
 ; MIPS2-NEXT:    mthi $3
@@ -82,6 +85,8 @@ define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    mult $3, $4
 ; MIPS2-NEXT:    mflo $4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $3, $2
 ; MIPS2-NEXT:    mfhi $2
 ; MIPS2-NEXT:    mflo $3
@@ -135,12 +140,13 @@ entry:
 }
 
 ; The high word of an unsigned product feeds a second unsigned product.
-; FIXME: MIPS2 and MIPS3 lack the two nops before the second multu.
 define i32 @mulhu_chain_i32(i32 %a, i32 %b, i32 %c) {
 ; MIPS2-LABEL: mulhu_chain_i32:
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    multu $4, $5
 ; MIPS2-NEXT:    mfhi $1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $6, $1
 ; MIPS2-NEXT:    mfhi $2
 ; MIPS2-NEXT:    jr $ra
@@ -161,6 +167,8 @@ define i32 @mulhu_chain_i32(i32 %a, i32 %b, i32 %c) {
 ; MIPS3-NEXT:    multu $2, $1
 ; MIPS3-NEXT:    sll $2, $6, 0
 ; MIPS3-NEXT:    mfhi $1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:    nop
 ; MIPS3-NEXT:    multu $2, $1
 ; MIPS3-NEXT:    mfhi $2
 ; MIPS3-NEXT:    jr $ra
@@ -189,19 +197,23 @@ entry:
 }
 
 ; The high doubleword of an unsigned product feeds a second unsigned product.
-; FIXME: MIPS2 and MIPS3 lack the nops between a mfhi or mflo and the next
-; multu or dmultu.
 define i64 @mulhu_chain_i64(i64 %a, i64 %b, i64 %c) {
 ; MIPS2-LABEL: mulhu_chain_i64:
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    multu $4, $6
 ; MIPS2-NEXT:    mfhi $1
 ; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $5, $6
 ; MIPS2-NEXT:    mflo $3
 ; MIPS2-NEXT:    mfhi $6
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $5, $7
 ; MIPS2-NEXT:    mfhi $5
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $4, $7
 ; MIPS2-NEXT:    mflo $7
 ; MIPS2-NEXT:    mfhi $4
@@ -222,12 +234,18 @@ define i64 @mulhu_chain_i64(i64 %a, i64 %b, i64 %c) {
 ; MIPS2-NEXT:    multu $1, $5
 ; MIPS2-NEXT:    mflo $2
 ; MIPS2-NEXT:    mfhi $3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $1, $4
 ; MIPS2-NEXT:    mflo $1
 ; MIPS2-NEXT:    mfhi $7
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $6, $5
 ; MIPS2-NEXT:    mfhi $5
 ; MIPS2-NEXT:    mflo $8
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    multu $6, $4
 ; MIPS2-NEXT:    mfhi $4
 ; MIPS2-NEXT:    addu $4, $1, $4
@@ -300,6 +318,8 @@ define i64 @mulhu_chain_i64(i64 %a, i64 %b, i64 %c) {
 ; MIPS3:       # %bb.0: # %entry
 ; MIPS3-NEXT:    dmultu $4, $5
 ; MIPS3-NEXT:    mfhi $1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:    nop
 ; MIPS3-NEXT:    dmultu $6, $1
 ; MIPS3-NEXT:    mfhi $2
 ; MIPS3-NEXT:    jr $ra
@@ -326,7 +346,6 @@ entry:
 
 ; Both halves of a product are read back to back, then the high word feeds a
 ; multiply.
-; FIXME: MIPS2 lacks the nop before the mult.
 define i32 @consecutive_reads_then_mult(i32 %a, i32 %b, i32 %c) {
 ; MIPS2-LABEL: consecutive_reads_then_mult:
 ; MIPS2:       # %bb.0: # %entry
@@ -334,6 +353,7 @@ define i32 @consecutive_reads_then_mult(i32 %a, i32 %b, i32 %c) {
 ; MIPS2-NEXT:    mfhi $2
 ; MIPS2-NEXT:    mflo $1
 ; MIPS2-NEXT:    addiu $2, $2, 1
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    mult $2, $6
 ; MIPS2-NEXT:    mflo $2
 ; MIPS2-NEXT:    jr $ra

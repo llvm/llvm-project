@@ -589,8 +589,10 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
 }
 
 bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
-  if (IsDIVMULT(MI.getOpcode()))
-    return false;
+  // Also catches the 64-bit and accumulator super-registers.
+  for (MCRegister Reg : {Mips::HI0, Mips::LO0})
+    if (MI.definesRegister(Reg, &getRegisterInfo()))
+      return false;
 
   return true;
 }

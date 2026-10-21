@@ -24,10 +24,9 @@ body:             |
     ; CHECK-LABEL: name: mflo64_dudiv
     ; CHECK: liveins: $r4_64, $r5_64, $ac0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $r1_64 = MFLO64 implicit $ac0_64 {
-    ; CHECK-NEXT:   $r0 = SLL $r0, 0
-    ; CHECK-NEXT:   $r0 = SLL $r0, 0
-    ; CHECK-NEXT: }
+    ; CHECK-NEXT: $r1_64 = MFLO64 implicit $ac0_64
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: $ac0_64 = PseudoDUDIV killed $r1_64, killed $r5_64
     ; CHECK-NEXT: $r2_64 = MFLO64 implicit killed $ac0_64
     ; CHECK-NEXT: PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
@@ -42,7 +41,6 @@ body:             |
 ...
 ---
 # A doubleword write of HI right after a mfhi: two nops.
-# FIXME: no nop is inserted.
 name:            mfhi64_mthi64
 tracksRegLiveness: true
 body:             |
@@ -53,6 +51,8 @@ body:             |
     ; CHECK: liveins: $r4_64, $ac0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2_64 = MFHI64 implicit $ac0_64
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: MTHI64 killed $r4_64, implicit-def $hi0_64
     ; CHECK-NEXT: PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
     ; CHECK-NEXT:   $r0 = SLL $r0, 0
@@ -65,7 +65,6 @@ body:             |
 ...
 ---
 # A doubleword write of LO one instruction after a mflo: one nop.
-# FIXME: no nop is inserted.
 name:            mflo64_one_apart_mtlo64
 tracksRegLiveness: true
 body:             |
@@ -77,6 +76,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r2_64 = MFLO64 implicit $ac0_64
     ; CHECK-NEXT: $r3_64 = DADDu $r4_64, $r5_64
+    ; CHECK-NEXT: $r0 = SLL $r0, 0
     ; CHECK-NEXT: MTLO64 killed $r4_64, implicit-def $lo0_64
     ; CHECK-NEXT: PseudoReturn64 undef $r31_64, implicit killed $r2_64, implicit killed $r3_64 {
     ; CHECK-NEXT:   $r0 = SLL $r0, 0
@@ -91,7 +91,6 @@ body:             |
 ---
 # On MIPS III, the FPU delay nop counts toward the distance: no HI/LO nop.
 # On MIPS IV, which has no FPU delay, one HI/LO nop.
-# FIXME: MIPS3 has one redundant nop.
 name:            mflo64_dmfc1_dmult
 tracksRegLiveness: true
 body:             |
@@ -104,7 +103,6 @@ body:             |
     ; MIPS3-NEXT: $r3_64 = MFLO64 implicit $ac0_64
     ; MIPS3-NEXT: $r2_64 = DMFC1 killed $d12_64 {
     ; MIPS3-NEXT:   $r0 = SLL $r0, 0
-    ; MIPS3-NEXT:   $r0 = SLL $r0, 0
     ; MIPS3-NEXT: }
     ; MIPS3-NEXT: $ac0_64 = PseudoDMULT killed $r2_64, killed $r5_64
     ; MIPS3-NEXT: $r2_64 = MFLO64 implicit killed $ac0_64
@@ -116,9 +114,8 @@ body:             |
     ; MIPS4: liveins: $d12_64, $r5_64, $ac0_64
     ; MIPS4-NEXT: {{  $}}
     ; MIPS4-NEXT: $r3_64 = MFLO64 implicit $ac0_64
-    ; MIPS4-NEXT: $r2_64 = DMFC1 killed $d12_64 {
-    ; MIPS4-NEXT:   $r0 = SLL $r0, 0
-    ; MIPS4-NEXT: }
+    ; MIPS4-NEXT: $r2_64 = DMFC1 killed $d12_64
+    ; MIPS4-NEXT: $r0 = SLL $r0, 0
     ; MIPS4-NEXT: $ac0_64 = PseudoDMULT killed $r2_64, killed $r5_64
     ; MIPS4-NEXT: $r2_64 = MFLO64 implicit killed $ac0_64
     ; MIPS4-NEXT: PseudoReturn64 undef $r31_64, implicit $r2_64, implicit $r3_64 {
