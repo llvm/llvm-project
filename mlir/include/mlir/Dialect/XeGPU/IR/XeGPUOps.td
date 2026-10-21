@@ -732,10 +732,13 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `contiguity`: [optional] the number of neighbouring elements in the
-      innermost dimension that are contiguous in memory. It is an upper bound,
-      not the final access width: `xegpu-propagate-layout` turns it into
-      `lane_data`, capped by what one lane can access in one instruction. It
-      must be at least 2 and must divide the innermost offsets dimension.
+      innermost dimension that are contiguous in memory, in aligned runs. It
+      is not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data` by picking a per-lane chunk that tiles the runs (a power of
+      two that divides `contiguity`) and that one lane can access in one
+      instruction. A smaller chunk that does not divide `contiguity` can cross
+      the end of a run, so it is not safe. It must be at least 2 and must
+      divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
@@ -868,10 +871,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `contiguity`: [optional] the number of neighbouring elements in the
-      innermost dimension that are contiguous in memory. It is an upper bound,
-      not the final access width: `xegpu-propagate-layout` turns it into
-      `lane_data`, capped by what one lane can access in one instruction. It
-      must be at least 2 and must divide the innermost offsets dimension.
+      innermost dimension that are contiguous in memory, in aligned runs. It
+      is not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data` by picking a per-lane chunk that tiles the runs (a power of
+      two that divides `contiguity`) and that one lane can access in one
+      instruction. A smaller chunk that does not divide `contiguity` can cross
+      the end of a run, so it is not safe. It must be at least 2 and must
+      divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
@@ -1363,9 +1369,11 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
         Only valid at workgroup and subgroup levels.
      - `contiguity`: [optional] the number of neighbouring elements in the innermost
         dimension of the result that are contiguous in SLM, in aligned runs. It comes
-        from the `mem_desc` memory layout and the innermost offset. It is an upper
-        bound, not the final access width: `xegpu-propagate-layout` turns it into
-        `lane_data`, capped by what one lane can access in one instruction. It must be
+        from the `mem_desc` memory layout and the innermost offset. It is not the final
+        access width: `xegpu-propagate-layout` turns it into `lane_data` by picking a
+        per-lane chunk that tiles the runs (a power of two that divides `contiguity`)
+        and that one lane can access in one instruction. A smaller chunk that does not
+        divide `contiguity` can cross the end of a run, so it is not safe. It must be
         at least 2 and must divide the innermost result dimension.
 
     Results:
@@ -1453,10 +1461,12 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
         the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
      - `contiguity`: [optional] the number of neighbouring elements in the innermost
         dimension of `data` that are contiguous in SLM, in aligned runs. It comes from
-        the `mem_desc` memory layout and the innermost offset. It is an upper bound, not
-        the final access width: `xegpu-propagate-layout` turns it into `lane_data`,
-        capped by what one lane can access in one instruction. It must be at least 2
-        and must divide the innermost `data` dimension.
+        the `mem_desc` memory layout and the innermost offset. It is not the final
+        access width: `xegpu-propagate-layout` turns it into `lane_data` by picking a
+        per-lane chunk that tiles the runs (a power of two that divides `contiguity`)
+        and that one lane can access in one instruction. A smaller chunk that does not
+        divide `contiguity` can cross the end of a run, so it is not safe. It must be
+        at least 2 and must divide the innermost `data` dimension.
 
     Example (1D):
     ```mlir
