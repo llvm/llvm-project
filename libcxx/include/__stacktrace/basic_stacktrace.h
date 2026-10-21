@@ -305,7 +305,7 @@ _LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.6)
-// Hash support [stacktrace.basic.__hash_code]
+// Hash support [stacktrace.basic.hash]
 
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
