@@ -35,3 +35,14 @@ define i1 @gep_idx_explicit_truncate(ptr %dst, i64 %off) {
   %cmp = icmp ule ptr %dst, %gep.off
   ret i1 %cmp
 }
+
+define i1 @gep_nuw_scale_exceeds_signed_range(ptr %dst, i32 %off) {
+; CHECK-LABEL: @gep_nuw_scale_exceeds_signed_range(
+; CHECK-NEXT:    [[GEP_OFF:%.*]] = getelementptr nuw [2147483649 x i8], ptr [[DST:%.*]], i32 [[OFF:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP_OFF]], [[DST]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep.off = getelementptr nuw [2147483649 x i8], ptr %dst, i32 %off
+  %cmp = icmp ule ptr %gep.off, %dst
+  ret i1 %cmp
+}

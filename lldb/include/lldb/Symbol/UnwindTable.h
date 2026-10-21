@@ -43,6 +43,11 @@ public:
   GetFuncUnwindersContainingAddress(const Address &addr,
                                     const SymbolContext &sc);
 
+  /// Return the start of the function containing \p addr according to the
+  /// object file's own unwind info (the .pdata RUNTIME_FUNCTION on PE/COFF
+  /// x64), or an invalid address if there is none.
+  Address GetFunctionStartFromObjectFileUnwindInfo(const Address &addr);
+
   bool GetAllowAssemblyEmulationUnwindPlans();
 
   // Normally when we create a new FuncUnwinders object we track it in this

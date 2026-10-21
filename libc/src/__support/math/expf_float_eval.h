@@ -24,6 +24,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/check/exp_exceptions.h"
 #include "src/__support/math/exp2f_float_utils.h"
 #include "src/__support/math/expf_float_utils.h"
 
@@ -33,13 +34,15 @@ namespace float_eval {
 
 LIBC_INLINE float expf(float x) {
   using FPBits = fputil::FPBits<float>;
+  using FPBounds = math::check::exp_internal::Bounds<float>;
+
   FPBits xbits(x);
 
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
-  // When |x| >= 89, |x| < 2^-25, or x is nan
-  if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
+  // When |x| >= log(2^127 * (2 - 2^-23)), |x| < 2^-25, or x is nan
+  if (LIBC_UNLIKELY(x_abs >= FPBounds::UPPER_BITS || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
     if (xbits.get_biased_exponent() <= 101) {
       return 1.0f + x;
@@ -61,8 +64,8 @@ LIBC_INLINE float expf(float x) {
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
-    // x >= 89 or nan
-    if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
+    // x >= log(2^127 * (2 - 2^-23)) or nan
+    if (xbits.is_pos() && (xbits.uintval() >= FPBounds::UPPER_BITS)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -125,6 +128,8 @@ LIBC_INLINE float expf(float x) {
 // or floating-point exception reporting.
 LIBC_INLINE float cr_expf_rn(float x) {
   using FPBits = fputil::FPBits<float>;
+  using FPBounds = math::check::exp_internal::Bounds<float>;
+
   FPBits x_bits(x);
 
   uint32_t x_u = x_bits.uintval();
@@ -133,8 +138,8 @@ LIBC_INLINE float cr_expf_rn(float x) {
   // |x| <= 2^-25
   bool is_tiny = x_abs_u <= 0x3300'0000U;
 
-  // x > log(2^128) or x is nan
-  bool should_overflow = x_u > 0x42b1'7217U && x_u < 0x8000'0000U;
+  // x >= log(2^127 * (2 - 2^-23)) or x is nan
+  bool should_overflow = x_u >= FPBounds::UPPER_BITS && x_u < 0x8000'0000U;
 
   // x <= log(2^-150) or x is nan
   bool should_underflow = x_u >= 0xc2cf'f1b5U;
@@ -143,7 +148,7 @@ LIBC_INLINE float cr_expf_rn(float x) {
   bool is_neg_nan = should_underflow && x_bits.is_nan();
 
   // log(2^-150) < x < log(2^-126)
-  bool produces_subnormal = x_u >= 0xc2ae'ac50U && !should_underflow;
+  bool produces_subnormal = x_u >= FPBounds::LOWER_BITS && !should_underflow;
 
   // Use x_safe for range reduction to keep the conversion to int defined
   float x_safe = (should_underflow || should_overflow) ? 0.0f : x;

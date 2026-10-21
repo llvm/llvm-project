@@ -235,10 +235,6 @@ public:
 
   LLVM_ABI static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
 
-  /// Return true if the provided string matches the IR name of an attribute.
-  /// example: "noalias" return true but not "NoAlias"
-  LLVM_ABI static bool isExistingAttribute(StringRef Name);
-
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//

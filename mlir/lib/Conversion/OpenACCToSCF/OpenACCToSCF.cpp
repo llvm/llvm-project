@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Matchers.h"
@@ -65,6 +66,11 @@ void mlir::populateOpenACCToSCFConversionPatterns(RewritePatternSet &patterns) {
 namespace {
 struct ConvertOpenACCToSCFPass
     : public impl::ConvertOpenACCToSCFPassBase<ConvertOpenACCToSCFPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override;
 };
 } // namespace
