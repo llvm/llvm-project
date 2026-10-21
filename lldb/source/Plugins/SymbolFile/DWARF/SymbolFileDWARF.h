@@ -519,7 +519,10 @@ protected:
   void BuildCuTranslationTable();
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
-  StandaloneDWARFLineTableInfo &GetStandaloneLineTableInfo();
+  bool MissingDebugInfo();
+
+  /// This may return nullptr if this DWARF file has .debug_info.
+  StandaloneDWARFLineTableInfo *GetStandaloneLineTableInfo();
 
   void FindDwpSymbolFile();
 
