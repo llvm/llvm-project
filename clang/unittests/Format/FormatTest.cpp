@@ -8307,6 +8307,13 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "             3};\n"
                "}",
                Style);
+  verifyFormat("int main() {\n"
+               "  MyFunc(&a,\n"
+               "         &b,\n"
+               "         (uint8_t *)c,\n"
+               "         d);\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
