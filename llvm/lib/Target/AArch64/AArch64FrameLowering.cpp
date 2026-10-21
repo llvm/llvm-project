@@ -1918,7 +1918,6 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     [[maybe_unused]] bool RegsOrdered =
         all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
           return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
-
                  CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
         });
     assert(RegsOrdered && "Out of order callee saved regs!");
