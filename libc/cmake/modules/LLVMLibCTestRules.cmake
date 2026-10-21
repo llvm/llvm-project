@@ -802,6 +802,15 @@ function(add_integration_test test_name)
   endif()
 endfunction()
 
+# Sets `result` to TRUE if the given benchmark targets include GPU.
+function(is_gpu_benchmark result)
+  if("GPU" IN_LIST ARGN)
+    set(${result} TRUE PARENT_SCOPE)
+  else()
+    set(${result} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Rule to add a hermetic program. A hermetic program is one whose executable is fully
 # statically linked and consists of pieces drawn only from LLVM's libc. Nothing,
 # including the startup objects, come from the system libc.
@@ -822,6 +831,7 @@ endfunction()
 #     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #     STARTUP <startup object target used when internal startup is disabled>
+#     BENCHMARK_TARGET <list of benchmark targets, such as GPU>
 #   )
 function(add_libc_hermetic test_name)
   get_fq_target_name(${test_name} fq_target_name)
@@ -829,9 +839,9 @@ function(add_libc_hermetic test_name)
 
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
+    "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD;STARTUP" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS;BENCHMARK_TARGET" # Multi-value arguments
     ${ARGN}
   )
 
@@ -1178,7 +1188,8 @@ function(add_libc_hermetic test_name)
   endif()
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
-  if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})
+  is_gpu_benchmark(is_benchmark ${HERMETIC_TEST_BENCHMARK_TARGET})
+  if(NOT is_benchmark)
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
