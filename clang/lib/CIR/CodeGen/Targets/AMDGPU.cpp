@@ -59,13 +59,13 @@ handleAMDGPUFlatWorkGroupSizeAttr(const FunctionDecl *fd, cir::FuncOp func,
     if (min != 0) {
       assert(min <= max && "Min must be less than or equal Max");
       std::string attrVal = llvm::utostr(min) + "," + llvm::utostr(max);
-      func->setAttr("cir.amdgpu-flat-work-group-size",
+      func->setAttr(cir::CIRDialect::getAMDGPUFlatWorkGroupSizeAttrName(),
                     builder.getStringAttr(attrVal));
     } else {
       assert(max == 0 && "Max must be zero");
     }
   } else if (lbMaxThreads > 0) {
-    func->setAttr("cir.amdgpu-flat-work-group-size",
+    func->setAttr(cir::CIRDialect::getAMDGPUFlatWorkGroupSizeAttrName(),
                   builder.getStringAttr("1," + llvm::utostr(lbMaxThreads)));
   } else if (isOpenCLKernel || isHIPKernel) {
     // By default, restrict the maximum size to a value specified by
@@ -76,7 +76,7 @@ handleAMDGPUFlatWorkGroupSizeAttr(const FunctionDecl *fd, cir::FuncOp func,
                        : cgm.getLangOpts().GPUMaxThreadsPerBlock;
     std::string attrVal =
         std::string("1,") + llvm::utostr(defaultMaxWorkGroupSize);
-    func->setAttr("cir.amdgpu-flat-work-group-size",
+    func->setAttr(cir::CIRDialect::getAMDGPUFlatWorkGroupSizeAttrName(),
                   builder.getStringAttr(attrVal));
   }
 }
@@ -90,7 +90,7 @@ static void handleAMDGPUWavesPerEUAttr(const FunctionDecl *fd, cir::FuncOp func,
   if (!attr) {
     // HIP maps __launch_bounds__ min blocks to min waves per EU.
     if (lbMinWaves > 0)
-      func->setAttr("cir.amdgpu-waves-per-eu",
+      func->setAttr(cir::CIRDialect::getAMDGPUWavesPerEUAttrName(),
                     builder.getStringAttr(llvm::utostr(lbMinWaves)));
     return;
   }
@@ -107,7 +107,8 @@ static void handleAMDGPUWavesPerEUAttr(const FunctionDecl *fd, cir::FuncOp func,
     std::string attrVal = llvm::utostr(min);
     if (max != 0)
       attrVal = attrVal + "," + llvm::utostr(max);
-    func->setAttr("cir.amdgpu-waves-per-eu", builder.getStringAttr(attrVal));
+    func->setAttr(cir::CIRDialect::getAMDGPUWavesPerEUAttrName(),
+                  builder.getStringAttr(attrVal));
   } else {
     assert(max == 0 && "Max must be zero");
   }
