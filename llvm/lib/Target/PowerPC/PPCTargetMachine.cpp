@@ -49,29 +49,31 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableBranchCoalescing(
+    "ppc-branch-coalesce", cl::Hidden,
+    cl::desc("enable coalescing of duplicate branches for PPC"));
+static cl::opt<bool> EnableCTRLoops("ppc-ctr-loops",
+                                    cl::desc("Enable CTR loops for PPC"),
+                                    cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-    EnableBranchCoalescing("enable-ppc-branch-coalesce", cl::Hidden,
-                           cl::desc("enable coalescing of duplicate branches for PPC"));
-static cl::
-opt<bool> DisableCTRLoops("disable-ppc-ctrloops", cl::Hidden,
-                        cl::desc("Disable CTR loops for PPC"));
-
-static cl::
-opt<bool> DisableInstrFormPrep("disable-ppc-instr-form-prep", cl::Hidden,
-                            cl::desc("Disable PPC loop instr form prep"));
+    EnableInstrFormPrep("ppc-instr-form-prep",
+                        cl::desc("Enable PPC loop instr form prep"),
+                        cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-VSXFMAMutateEarly("schedule-ppc-vsx-fma-mutation-early",
-  cl::Hidden, cl::desc("Schedule VSX FMA instruction mutation early"));
+    VSXFMAMutateEarly("ppc-schedule-vsx-fma-mutation-early", cl::Hidden,
+                      cl::desc("Schedule VSX FMA instruction mutation early"));
 
-static cl::
-opt<bool> DisableVSXSwapRemoval("disable-ppc-vsx-swap-removal", cl::Hidden,
-                                cl::desc("Disable VSX Swap Removal for PPC"));
+static cl::opt<bool>
+    EnableVSXSwapRemoval("ppc-vsx-swap-removal",
+                         cl::desc("Enable VSX Swap Removal for PPC"),
+                         cl::init(true), cl::Hidden);
 
-static cl::
-opt<bool> DisableMIPeephole("disable-ppc-peephole", cl::Hidden,
-                            cl::desc("Disable machine peepholes for PPC"));
+static cl::opt<bool>
+    EnableMIPeephole("ppc-peephole",
+                     cl::desc("Enable machine peepholes for PPC"),
+                     cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnableGEPOpt("ppc-gep-opt", cl::Hidden,
@@ -79,14 +81,14 @@ EnableGEPOpt("ppc-gep-opt", cl::Hidden,
              cl::init(true));
 
 static cl::opt<bool>
-EnablePrefetch("enable-ppc-prefetching",
-                  cl::desc("enable software prefetching on PPC"),
-                  cl::init(false), cl::Hidden);
+    EnablePrefetch("ppc-prefetching",
+                   cl::desc("enable software prefetching on PPC"),
+                   cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-EnableExtraTOCRegDeps("enable-ppc-extra-toc-reg-deps",
-                      cl::desc("Add extra TOC register dependencies"),
-                      cl::init(true), cl::Hidden);
+    EnableExtraTOCRegDeps("ppc-extra-toc-reg-deps",
+                          cl::desc("Add extra TOC register dependencies"),
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnableMachineCombinerPass("ppc-machine-combiner",
@@ -99,7 +101,7 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 cl::opt<bool> EnablePPCGenScalarMASSEntries(
-    "enable-ppc-gen-scalar-mass", cl::init(false),
+    "ppc-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
     cl::Hidden);
@@ -450,10 +452,10 @@ bool PPCPassConfig::addPreISel() {
     addPass(createGlobalMergePass(TM, GlobalMergeMaxOffset, false, false, true,
                                   true));
 
-  if (!DisableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableInstrFormPrep && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCLoopInstrFormPrepPass(getPPCTargetMachine()));
 
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createHardwareLoopsLegacyPass());
 
   return false;
@@ -473,7 +475,7 @@ bool PPCPassConfig::addInstSelector() {
   addPass(createPPCISelDag(getPPCTargetMachine(), getOptLevel()));
 
 #ifndef NDEBUG
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCCTRLoopsVerify());
 #endif
 
@@ -484,7 +486,7 @@ bool PPCPassConfig::addInstSelector() {
 void PPCPassConfig::addMachineSSAOptimization() {
   // Run CTR loops pass before any cfg modification pass to prevent the
   // canonical form of hardware loop from being destroied.
-  if (!DisableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
+  if (EnableCTRLoops && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCCTRLoopsPass());
 
   // PPCBranchCoalescingPass need to be done before machine sinking
@@ -495,14 +497,14 @@ void PPCPassConfig::addMachineSSAOptimization() {
   // For little endian, remove where possible the vector swap instructions
   // introduced at code generation to normalize vector element order.
   if (TM->getTargetTriple().getArch() == Triple::ppc64le &&
-      !DisableVSXSwapRemoval)
+      EnableVSXSwapRemoval)
     addPass(createPPCVSXSwapRemovalPass());
   // Reduce the number of cr-logical ops.
   if (ReduceCRLogical && getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCReduceCRLogicalsPass());
   // Target-specific peephole cleanups performed after instruction
   // selection.
-  if (!DisableMIPeephole) {
+  if (EnableMIPeephole) {
     addPass(createPPCMIPeepholePass());
     addPass(&DeadMachineInstructionElimID);
   }

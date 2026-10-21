@@ -3428,8 +3428,9 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  if (!DataFlowSanitizer(InstrumentationOptions::Global, ABIListFiles, FS)
-           .runImpl(M, GetTLI))
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  if (!DataFlowSanitizer(Opts, ABIListFiles, FS).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

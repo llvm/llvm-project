@@ -79,13 +79,12 @@ Tests are more accessible and future proof when simplified:
   as well with default values. Typical candidates for this are: `alignment:`,
   `exposesReturnsTwice`, `legalized`, `regBankSelected`, `selected`.
   The whole `frameInfo` section is often unnecessary if there is no special
-  frame usage in the function. `tracksRegLiveness` on the other hand is often
-  necessary for some passes that care about block livein lists.
+  frame usage in the function.
 
 - The (global) `liveins:` list is typically only interesting for early
   instruction selection passes and can be removed when testing later passes.
-  The per-block `liveins:` on the other hand are necessary if
-  `tracksRegLiveness` is true.
+  The per-block `liveins:` on the other hand are necessary unless you
+  explicitly set `tracksRegLiveness` to false.
 
 - Branch probability data in block `successors:` lists can be dropped if the
   test doesn't depend on it. Example:
@@ -173,7 +172,6 @@ of such a YAML document:
 ```text
  ---
  name:            inc
- tracksRegLiveness: true
  liveins:
    - { reg: '$rdi' }
  callSites:

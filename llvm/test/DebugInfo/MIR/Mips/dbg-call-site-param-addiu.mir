@@ -21,16 +21,16 @@
 # CHECK: DW_TAG_GNU_call_site
 # CHECK-NEXT: DW_AT_abstract_origin {{.*}} "fn1"
 # CHECK: DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:   DW_AT_location      (DW_OP_reg5 A1_64)
-# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+0)
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg5 R5_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 R16_64+0)
 # CHECK-EMPTY: 
 # CHECK-NEXT: DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:   DW_AT_location      (DW_OP_reg4 A0_64)
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg4 R4_64)
 # CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_constu 0x2c)
 # CHECK-EMPTY: 
 # CHECK-NEXT: DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:   DW_AT_location      (DW_OP_reg6 A2_64)
-# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+10)
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg6 R6_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 R16_64+10)
 --- |
   ; ModuleID = 'm.ll'
   source_filename = "m.c"
@@ -89,44 +89,44 @@
 name:            fn2
 alignment:       4
 liveins:
-  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '' }
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
   - { bb: 0, offset: 8, fwdArgRegs: [] }
   - { bb: 0, offset: 12, fwdArgRegs: 
-      - { arg: 0, reg: '$a0' }
-      - { arg: 1, reg: '$a1' }
-      - { arg: 2, reg: '$a2' } }
+      - { arg: 0, reg: '$r4' }
+      - { arg: 1, reg: '$r5' }
+      - { arg: 2, reg: '$r6' } }
 body:             |
   bb.0.entry:
-    DBG_VALUE $a0, $noreg, !16, !DIExpression(), debug-location !18
-    $sp = ADDiu $sp, -24
+    DBG_VALUE $r4, $noreg, !16, !DIExpression(), debug-location !18
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    SW killed $s0, $sp, 16 :: (store (s32) into %stack.1)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s0_64, -8
-    DBG_VALUE $s0, $noreg, !16, !DIExpression(), debug-location !18
-    JAL @clobber, csr_o32, implicit-def dead $ra, implicit-def $sp, debug-location !18 {
-      $s0 = OR $a0, $zero
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    SW killed $r16, $r29, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r16_64, -8
+    DBG_VALUE $r16, $noreg, !16, !DIExpression(), debug-location !18
+    JAL @clobber, csr_o32, implicit-def dead $r31, implicit-def $r29, debug-location !18 {
+      $r16 = OR $r4, $r0
     }
-    renamable $a2 = nsw ADDiu renamable $s0, 10, debug-location !18
-    $a0 = ADDiu $zero, 44, debug-location !18
-    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit killed $a1, implicit $a2, implicit-def $sp, implicit-def $v0, debug-location !18 {
-      $a1 = OR killed $s0, $zero, debug-location !18
+    renamable $r6 = nsw ADDiu renamable $r16, 10, debug-location !18
+    $r4 = ADDiu $r0, 44, debug-location !18
+    JAL @fn1, csr_o32, implicit-def dead $r31, implicit $r4, implicit killed $r5, implicit $r6, implicit-def $r29, implicit-def $r2, debug-location !18 {
+      $r5 = OR killed $r16, $r0, debug-location !18
     }
-    DBG_VALUE $v0, $noreg, !17, !DIExpression(), debug-location !18
-    renamable $at = SLTi renamable $v0, 11, debug-location !18
-    renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !18
-    renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !18
-    $s0 = LW $sp, 16, debug-location !18 :: (load (s32) from %stack.1)
-    $ra = LW $sp, 20, debug-location !18 :: (load (s32) from %stack.0)
-    PseudoReturn undef $ra, implicit $v0, debug-location !18 {
-      $sp = ADDiu $sp, 24
+    DBG_VALUE $r2, $noreg, !17, !DIExpression(), debug-location !18
+    renamable $r1 = SLTi renamable $r2, 11, debug-location !18
+    renamable $r3 = nsw ADDiu renamable $r2, 10, debug-location !18
+    renamable $r2 = MOVZ_I_I killed renamable $r3, killed renamable $r1, killed renamable $r2, debug-location !18
+    $r16 = LW $r29, 16, debug-location !18 :: (load (s32) from %stack.1)
+    $r31 = LW $r29, 20, debug-location !18 :: (load (s32) from %stack.0)
+    PseudoReturn undef $r31, implicit $r2, debug-location !18 {
+      $r29 = ADDiu $r29, 24
     }

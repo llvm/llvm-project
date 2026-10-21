@@ -67,8 +67,6 @@ class SimpleStreamChecker : public Checker<check::PostCall,
   void reportLeaks(ArrayRef<SymbolRef> LeakedStreams, CheckerContext &C,
                    ExplodedNode *ErrNode) const;
 
-  bool guaranteedNotToCloseFile(const CallEvent &Call) const;
-
 public:
   /// Process fopen.
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -195,21 +193,6 @@ void SimpleStreamChecker::reportLeaks(ArrayRef<SymbolRef> LeakedStreams,
   }
 }
 
-bool SimpleStreamChecker::guaranteedNotToCloseFile(const CallEvent &Call) const{
-  // If it's not in a system header, assume it might close a file.
-  if (!Call.isInSystemHeader())
-    return false;
-
-  // Handle cases where we know a buffer's /address/ can escape.
-  if (Call.argumentsMayEscape())
-    return false;
-
-  // Note, even though fclose closes the file, we do not list it here
-  // since the checker is modeling the call.
-
-  return true;
-}
-
 // If the pointer we are tracking escaped, do not track the symbol as
 // we cannot reason about it anymore.
 ProgramStateRef
@@ -218,7 +201,7 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
                                         const CallEvent *Call,
                                         PointerEscapeKind Kind) const {
   // If we know that the call cannot close a file, there is nothing to do.
-  if (Kind == PSK_DirectEscapeOnCall && guaranteedNotToCloseFile(*Call)) {
+  if (Kind == PSK_DirectEscapeOnCall && Call->isInSystemHeader()) {
     return State;
   }
 

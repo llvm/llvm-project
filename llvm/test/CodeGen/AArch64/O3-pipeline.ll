@@ -118,7 +118,6 @@
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
-; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer

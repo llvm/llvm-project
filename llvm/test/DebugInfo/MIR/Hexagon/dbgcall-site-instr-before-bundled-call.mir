@@ -163,7 +163,7 @@ body:             |
       $d12 = L2_loadrd_io $r29, 24, debug-location !21 :: (load (s64) from %fixed-stack.1)
       $d13 = L2_loadrd_io killed $r29, 16, debug-location !21 :: (load (s64) from %fixed-stack.0)
     }
-    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
+    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
 
 ...
 

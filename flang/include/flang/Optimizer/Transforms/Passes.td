@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 
@@ -584,7 +589,8 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
   let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
-    from function entry to just before their first use. This defers
+    from function entry to just before their first use, but never into a block
+    on a CFG cycle, where the alloc would run on every trip. This defers
     cudaMallocManaged calls so that users can call cudaSetDevice before any
     CUDA context is created.
   }];
@@ -664,10 +670,15 @@ def CUFSharedTypeInfo : Pass<"cuf-shared-type-info", "mlir::ModuleOp"> {
     descriptor address from them in device code. The `acc.declare` attribute
     is dropped so OpenACC does not copy the type information to the device.
 
+    Each translation unit defining such type information also ends the
+    section with a page-aligned global, so that the registered pages hold
+    nothing but type information.
+
     Device code then sees the host binding tables, so type-bound procedures
     cannot be called from device code.
   }];
-  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect"];
+  let dependentDialects = ["mlir::gpu::GPUDialect", "cuf::CUFDialect",
+                           "mlir::LLVM::LLVMDialect"];
 }
 
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
