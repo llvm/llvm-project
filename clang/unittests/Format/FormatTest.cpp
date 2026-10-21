@@ -16693,6 +16693,18 @@ TEST_F(FormatTest, CountsCharactersInMultilineRawStringLiterals) {
                " R\"(single line raw string)\" + bbbbbb);");
 }
 
+TEST_F(FormatTest, MultilineRawStringWidthWithCRLF) {
+  auto Style = getLLVMStyleWithColumns(23);
+
+  // The raw string's first line reaches ColumnLimit; CR must not add a column.
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\n"
+                 ")\");",
+                 Style);
+  verifyNoChange("fffffffffff(R\"(aaaaaaaa\r\n"
+                 ")\");",
+                 Style);
+}
+
 TEST_F(FormatTest, SkipsUnknownStringLiterals) {
   verifyFormat("string a = \"unterminated;");
   verifyFormat("function(\"unterminated,\n"

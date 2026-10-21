@@ -56,8 +56,8 @@ int foo() {
 // IR-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[J]], ptr [[J_ADDR]], align 8
 // IR-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR]], align 8
-// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[J_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8
+// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[J_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[SUM1]], i32 0, i32 0, i32 0
 // IR-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 100
 // IR-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -146,7 +146,7 @@ int foo() {
 // IR-NEXT:    store ptr [[SUM1]], ptr [[TMP23]], align 8
 // IR-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// IR-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// IR-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP26]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -167,7 +167,7 @@ int foo() {
 // IR-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP27]]
 // IR-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
 // IR:       omp.arraycpy.done18:
-// IR-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
+// IR-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR:       .omp.reduction.case2:
 // IR-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -183,6 +183,7 @@ int foo() {
 // IR-NEXT:    [[OMP_ARRAYCPY_DONE25:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT23]], [[TMP30]]
 // IR-NEXT:    br i1 [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_BODY20]]
 // IR:       omp.arraycpy.done26:
+// IR-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR:       .omp.reduction.default:
 // IR-NEXT:    ret void
@@ -252,8 +253,8 @@ int foo() {
 // IR-PCH-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[J]], ptr [[J_ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[J_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[J_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[SUM1]], i32 0, i32 0, i32 0
 // IR-PCH-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 100
 // IR-PCH-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -342,7 +343,7 @@ int foo() {
 // IR-PCH-NEXT:    store ptr [[SUM1]], ptr [[TMP23]], align 8
 // IR-PCH-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// IR-PCH-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// IR-PCH-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP26]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
@@ -363,7 +364,7 @@ int foo() {
 // IR-PCH-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP27]]
 // IR-PCH-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
 // IR-PCH:       omp.arraycpy.done18:
-// IR-PCH-NEXT:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
+// IR-PCH-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR-PCH:       .omp.reduction.case2:
 // IR-PCH-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -379,6 +380,7 @@ int foo() {
 // IR-PCH-NEXT:    [[OMP_ARRAYCPY_DONE25:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT23]], [[TMP30]]
 // IR-PCH-NEXT:    br i1 [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_BODY20]]
 // IR-PCH:       omp.arraycpy.done26:
+// IR-PCH-NEXT:    call void @__kmpc_end_reduce(ptr @[[GLOB2]], i32 [[TMP25]], ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // IR-PCH:       .omp.reduction.default:
 // IR-PCH-NEXT:    ret void
