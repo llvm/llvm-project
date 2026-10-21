@@ -639,9 +639,8 @@ define i1 @cmp_load_shifted_index(i32 %X) {
 
 define i1 @trunc_load_from_indexed_global(i32 %idx) {
 ; CHECK-LABEL: @trunc_load_from_indexed_global(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i8], ptr @G16, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[V:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[V]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 189, [[IDX:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %gep = getelementptr inbounds i16, ptr @G16, i32 %idx
