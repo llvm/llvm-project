@@ -30931,8 +30931,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType(),
-                              Opts->slp_revec))
+      Type *ValTy = SI->getValueOperand()->getType();
+      if (isa<StructType>(ValTy) || !isValidElementType(ValTy, Opts->slp_revec))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
