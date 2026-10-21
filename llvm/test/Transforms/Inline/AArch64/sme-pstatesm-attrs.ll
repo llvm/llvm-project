@@ -539,15 +539,33 @@ entry:
   ret i64 %res
 }
 
+; FIXME: This function should be inlined, but we're currently cautious around
+; inlining target intrinsics.
+define i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> %unused) alwaysinline {
+; CHECK-LABEL: define i64 @normal_callee_with_intrinsic_call_alwaysinline
+; CHECK-SAME: (<vscale x 4 x i32> [[UNUSED:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.aarch64.sve.cntb(i32 4)
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %res = call i64 @llvm.aarch64.sve.cntb(i32 4)
+  ret i64 %res
+}
+
 define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline()  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @normal_callee_with_intrinsic_call()
+; CHECK-NEXT:    [[RES1:%.*]] = call i64 @normal_callee_with_intrinsic_call()
+; CHECK-NEXT:    [[RES2:%.*]] = call i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RES:%.*]] = add i64 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  %res = call i64 @normal_callee_with_intrinsic_call()
+  %res1 = call i64 @normal_callee_with_intrinsic_call()
+  %res2 = call i64 @normal_callee_with_intrinsic_call_alwaysinline(<vscale x 4 x i32> zeroinitializer)
+  %res = add i64 %res1, %res2
   ret i64 %res
 }
 
@@ -654,7 +672,7 @@ define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompat
 
 define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline() alwaysinline {
 ; CHECK-LABEL: define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline
-; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
 ;
