@@ -171,6 +171,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
+* Added the `llvm.sdiv.poison`, `llvm.udiv.poison`, `llvm.srem.poison` and
+  `llvm.urem.poison` intrinsics. They behave like the corresponding
+  instructions, except that a zero divisor and, for the signed forms, the
+  minimum value divided by -1 give a poison result (element-wise for vectors)
+  instead of undefined behavior, so they are speculatable and a `freeze` of
+  their result is an arbitrary but fixed value. NVPTX and AMDGPU, whose integer
+  division does not trap, select them as the plain operations for types up to
+  64 bits; other targets, and wider types, replace a zero divisor (and, signed,
+  `MIN / -1`) with a safe one first.
 
 ### Changes to LLVM infrastructure
 

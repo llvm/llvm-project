@@ -7782,6 +7782,42 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                               Op1, Op2, Op3, DAG, TLI));
     return;
   }
+  // The division and remainder intrinsics that return poison instead of having
+  // undefined behavior are the plain operations. Only the calls that
+  // TargetLowering::canSelectIntDivRemPoison accepts get this far;
+  // PreISelIntrinsicLowering expanded every other call into a guarded
+  // instruction.
+  case Intrinsic::sdiv_poison:
+  case Intrinsic::udiv_poison:
+  case Intrinsic::srem_poison:
+  case Intrinsic::urem_poison: {
+    unsigned Opc = Intrinsic == Intrinsic::sdiv_poison   ? ISD::SDIV
+                   : Intrinsic == Intrinsic::udiv_poison ? ISD::UDIV
+                   : Intrinsic == Intrinsic::srem_poison ? ISD::SREM
+                                                         : ISD::UREM;
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    EVT VT = Op1.getValueType();
+    EVT EltVT = VT.getScalarType();
+    assert(TLI.canSelectIntDivRemPoison(EltVT) &&
+           "poison div/rem requires a selectable element type");
+    if (VT.isVector()) {
+      // A zero divisor lane must not make the whole vector undefined.
+      SmallVector<SDValue> Elts;
+      for (unsigned N = 0, E = VT.getVectorNumElements(); N != E; ++N) {
+        SDValue Index = DAG.getVectorIdxConstant(N, sdl);
+        SDValue Dividend =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, EltVT, Op1, Index);
+        SDValue Divisor =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, EltVT, Op2, Index);
+        Elts.push_back(DAG.getNode(Opc, sdl, EltVT, Dividend, Divisor));
+      }
+      setValue(&I, DAG.getBuildVector(VT, sdl, Elts));
+    } else {
+      setValue(&I, DAG.getNode(Opc, sdl, VT, Op1, Op2));
+    }
+    return;
+  }
   case Intrinsic::smax: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));

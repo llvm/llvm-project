@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
@@ -35,6 +36,25 @@ STATISTIC(NumHoisted, "Number of instructions hoisted");
 STATISTIC(NumDecomposed, "Number of instructions decomposed");
 DEBUG_COUNTER(DRPCounter, "div-rem-pairs-transform",
               "Controls transformations in div-rem-pairs pass");
+
+/// Classify poison-returning intrinsics like their instruction counterparts.
+static unsigned getDivRemOpcode(const Instruction &I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::sdiv_poison:
+      return Instruction::SDiv;
+    case Intrinsic::udiv_poison:
+      return Instruction::UDiv;
+    case Intrinsic::srem_poison:
+      return Instruction::SRem;
+    case Intrinsic::urem_poison:
+      return Instruction::URem;
+    default:
+      break;
+    }
+  }
+  return I.getOpcode();
+}
 
 namespace {
 struct ExpandedMatch {
@@ -54,18 +74,22 @@ static std::optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
 
   Value *Divisor;
   Instruction *Div;
-  // Look for  ((X / Y) * Y)
-  if (!match(
-          XroundedDownToMultipleOfY,
-          m_c_Mul(m_CombineAnd(m_IDiv(m_Specific(Dividend), m_Value(Divisor)),
-                               m_Instruction(Div)),
-                  m_Deferred(Divisor))))
+  // Look for ((X / Y) * Y), including the poison-returning intrinsics.
+  if (!match(XroundedDownToMultipleOfY,
+             m_c_Mul(
+                 m_CombineAnd(
+                     m_CombineOr(m_IDiv(m_Specific(Dividend), m_Value(Divisor)),
+                                 m_Intrinsic<Intrinsic::sdiv_poison>(
+                                     m_Specific(Dividend), m_Value(Divisor)),
+                                 m_Intrinsic<Intrinsic::udiv_poison>(
+                                     m_Specific(Dividend), m_Value(Divisor))),
+                     m_Instruction(Div)),
+                 m_Deferred(Divisor))))
     return std::nullopt;
 
   ExpandedMatch M;
-  M.Key.SignedOp = Div->getOpcode() == Instruction::SDiv;
-  M.Key.Dividend = Dividend;
-  M.Key.Divisor = Divisor;
+  M.Key = DivRemMapKey(getDivRemOpcode(*Div) == Instruction::SDiv, Dividend,
+                       Divisor, isa<IntrinsicInst>(Div));
   M.Value = &I;
   return M;
 }
@@ -83,8 +107,8 @@ struct DivRemPairWorklistEntry {
 
   DivRemPairWorklistEntry(Instruction *DivInst_, Instruction *RemInst_)
       : DivInst(DivInst_), RemInst(RemInst_) {
-    assert((DivInst->getOpcode() == Instruction::UDiv ||
-            DivInst->getOpcode() == Instruction::SDiv) &&
+    assert((getDivRemOpcode(*DivInst) == Instruction::UDiv ||
+            getDivRemOpcode(*DivInst) == Instruction::SDiv) &&
            "Not a division.");
     assert(DivInst->getType() == RemInst->getType() && "Types should match.");
     // We can't check anything else about remainder instruction,
@@ -95,14 +119,19 @@ struct DivRemPairWorklistEntry {
   Type *getType() const { return DivInst->getType(); }
 
   /// Is this pair signed or unsigned?
-  bool isSigned() const { return DivInst->getOpcode() == Instruction::SDiv; }
+  bool isSigned() const {
+    return getDivRemOpcode(*DivInst) == Instruction::SDiv;
+  }
+
+  /// Is this pair formed from poison-returning intrinsics?
+  bool isPoisonIntrinsic() const { return isa<IntrinsicInst>(*DivInst); }
 
   /// In this pair, what are the divident and divisor?
   Value *getDividend() const { return DivInst->getOperand(0); }
   Value *getDivisor() const { return DivInst->getOperand(1); }
 
   bool isRemExpanded() const {
-    switch (RemInst->getOpcode()) {
+    switch (getDivRemOpcode(*RemInst)) {
     case Instruction::SRem:
     case Instruction::URem:
       return false; // single 'rem' instruction - unexpanded form.
@@ -128,15 +157,20 @@ static DivRemWorklistTy getWorklist(Function &F) {
   MapVector<DivRemMapKey, Instruction *> RemMap;
   for (auto &BB : F) {
     for (auto &I : BB) {
-      if (I.getOpcode() == Instruction::SDiv)
-        DivMap[DivRemMapKey(true, I.getOperand(0), I.getOperand(1))] = &I;
-      else if (I.getOpcode() == Instruction::UDiv)
-        DivMap[DivRemMapKey(false, I.getOperand(0), I.getOperand(1))] = &I;
-      else if (I.getOpcode() == Instruction::SRem)
-        RemMap[DivRemMapKey(true, I.getOperand(0), I.getOperand(1))] = &I;
-      else if (I.getOpcode() == Instruction::URem)
-        RemMap[DivRemMapKey(false, I.getOperand(0), I.getOperand(1))] = &I;
-      else if (auto Match = matchExpandedRem(I))
+      unsigned Opcode = getDivRemOpcode(I);
+      bool IsDiv = Opcode == Instruction::SDiv || Opcode == Instruction::UDiv;
+      bool IsRem = Opcode == Instruction::SRem || Opcode == Instruction::URem;
+      if (IsDiv || IsRem) {
+        bool IsSigned =
+            Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+        // Keep plain ops and poison-returning intrinsics in separate pairs.
+        DivRemMapKey Key(IsSigned, I.getOperand(0), I.getOperand(1),
+                         isa<IntrinsicInst>(I));
+        if (IsDiv)
+          DivMap[Key] = &I;
+        else
+          RemMap[Key] = &I;
+      } else if (auto Match = matchExpandedRem(I))
         RemMap[Match->Key] = Match->Value;
     }
   }
@@ -204,8 +238,17 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // We should recompose it first.
       Value *X = E.getDividend();
       Value *Y = E.getDivisor();
-      Instruction *RealRem = E.isSigned() ? BinaryOperator::CreateSRem(X, Y)
-                                          : BinaryOperator::CreateURem(X, Y);
+      Instruction *RealRem;
+      if (E.isPoisonIntrinsic()) {
+        Intrinsic::ID ID =
+            E.isSigned() ? Intrinsic::srem_poison : Intrinsic::urem_poison;
+        Function *Decl =
+            Intrinsic::getOrInsertDeclaration(F.getParent(), ID, {E.getType()});
+        RealRem = CallInst::Create(Decl, {X, Y});
+      } else {
+        RealRem = E.isSigned() ? BinaryOperator::CreateSRem(X, Y)
+                               : BinaryOperator::CreateURem(X, Y);
+      }
       // Note that we place it right next to the original expanded instruction,
       // and letting further handling to move it if needed.
       RealRem->setName(RemInst->getName() + ".recomposed");
@@ -296,9 +339,13 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
           all_of(predecessors(DivBB),
                  [&](BasicBlock *BB) { return BB == RemBB || BB == PredBB; })) {
         DivDominates = true;
+        if (E.isPoisonIntrinsic())
+          DivInst->dropUBImplyingAttrsAndMetadata();
         DivInst->moveBefore(PredBB->getTerminator()->getIterator());
         Changed = true;
         if (HasDivRemOp) {
+          if (E.isPoisonIntrinsic())
+            RemInst->dropUBImplyingAttrsAndMetadata();
           RemInst->moveBefore(PredBB->getTerminator()->getIterator());
           continue;
         }
@@ -314,10 +361,15 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
     if (HasDivRemOp) {
       // The target has a single div/rem operation. Hoist the lower instruction
       // to make the matched pair visible to the backend.
-      if (DivDominates)
+      if (DivDominates) {
+        if (E.isPoisonIntrinsic())
+          RemInst->dropUBImplyingAttrsAndMetadata();
         RemInst->moveAfter(DivInst);
-      else
+      } else {
+        if (E.isPoisonIntrinsic())
+          DivInst->dropUBImplyingAttrsAndMetadata();
         DivInst->moveAfter(RemInst);
+      }
       NumHoisted++;
     } else {
       // The target does not have a single div/rem operation,
@@ -364,16 +416,19 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // If the div and rem are in the same block, we do the same transform,
       // but any code movement would be within the same block.
 
-      if (!DivDominates)
+      if (!DivDominates) {
+        if (E.isPoisonIntrinsic())
+          DivInst->dropUBImplyingAttrsAndMetadata();
         DivInst->moveBefore(RemInst->getIterator());
+      }
       Mul->insertAfter(RemInst->getIterator());
       Mul->setDebugLoc(RemInst->getDebugLoc());
       Sub->insertAfter(Mul->getIterator());
       Sub->setDebugLoc(RemInst->getDebugLoc());
 
-      // If DivInst has the exact flag, remove it. Otherwise this optimization
-      // may replace a well-defined value 'X % Y' with poison.
-      DivInst->dropPoisonGeneratingFlags();
+      // Remove poison-generating annotations, such as exact or a return range.
+      // Otherwise we may replace a well-defined value 'X % Y' with poison.
+      DivInst->dropPoisonGeneratingAnnotations();
 
       // If X can be undef, X should be frozen first.
       // For example, let's assume that Y = 1 & X = undef:

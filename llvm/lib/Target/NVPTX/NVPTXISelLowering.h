@@ -141,6 +141,9 @@ public:
   // instruction, so we say that ctlz is cheap to speculate.
   bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
 
+  // PTX ISA: "Division by zero yields an unspecified, machine-specific value".
+  bool isIntDivRemTrapFree(EVT) const override { return true; }
+
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
     return AtomicExpansionKind::None;
   }

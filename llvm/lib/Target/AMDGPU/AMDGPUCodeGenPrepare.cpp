@@ -175,29 +175,34 @@ public:
 
   /// Perform same function as equivalently named function in DAGCombiner. Since
   /// we expand some divisions here, we need to perform this before obscuring.
-  bool foldBinOpIntoSelect(BinaryOperator &I) const;
+  bool foldBinOpIntoSelect(Instruction &I, Instruction::BinaryOps Opc,
+                           Value *LHS, Value *RHS) const;
+  bool foldBinOpIntoSelect(BinaryOperator &I) const {
+    return foldBinOpIntoSelect(I, I.getOpcode(), I.getOperand(0),
+                               I.getOperand(1));
+  }
 
-  bool divHasSpecialOptimization(BinaryOperator &I,
-                                 Value *Num, Value *Den) const;
-  unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
+  bool divHasSpecialOptimization(Instruction &I, Value *Num, Value *Den) const;
+  unsigned getDivNumBits(Instruction &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
   /// Expands div or rem by using floating-point operations.
   /// Operands must be in the range [-0x400000,0x3FFFFF]
-  Value *expandDivRemToFloat(IRBuilder<> &Builder, BinaryOperator &I,
-                             Value *Num, Value *Den, bool IsDiv,
-                             bool IsSigned) const;
+  Value *expandDivRemToFloat(IRBuilder<> &Builder, Instruction &I, Value *Num,
+                             Value *Den, bool IsDiv, bool IsSigned) const;
 
-  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, BinaryOperator &I,
+  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, Instruction &I,
                                  Value *Num, Value *Den, unsigned NumBits,
                                  bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
-  Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *expandDivRem32(IRBuilder<> &Builder, Instruction &I,
+                        Instruction::BinaryOps Opc, Value *Num,
+                        Value *Den) const;
 
-  Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *shrinkDivRem64(IRBuilder<> &Builder, Instruction &I,
+                        Instruction::BinaryOps Opc, Value *Num,
+                        Value *Den) const;
   void expandDivRem64(BinaryOperator &I) const;
 
   /// Widen a scalar load.
@@ -255,6 +260,8 @@ public:
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitBinaryOperator(BinaryOperator &I);
+  bool visitDivRem(Instruction &I, Instruction::BinaryOps Opc, Value *Num,
+                   Value *Den);
   bool visitLoadInst(LoadInst &I);
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
@@ -443,7 +450,10 @@ static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
   return nullptr;
 }
 
-bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
+bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(Instruction &I,
+                                                   Instruction::BinaryOps Opc,
+                                                   Value *LHS,
+                                                   Value *RHS) const {
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
   int SelOpNo = 0;
@@ -452,10 +462,10 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
 
   // TODO: Should probably try to handle some cases with multiple
   // users. Duplicating the select may be profitable for division.
-  SelectInst *Sel = findSelectThroughCast(BO.getOperand(0), CastOp);
+  SelectInst *Sel = findSelectThroughCast(LHS, CastOp);
   if (!Sel || !Sel->hasOneUse()) {
     SelOpNo = 1;
-    Sel = findSelectThroughCast(BO.getOperand(1), CastOp);
+    Sel = findSelectThroughCast(RHS, CastOp);
   }
 
   if (!Sel || !Sel->hasOneUse())
@@ -463,41 +473,39 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
 
   Constant *CT = dyn_cast<Constant>(Sel->getTrueValue());
   Constant *CF = dyn_cast<Constant>(Sel->getFalseValue());
-  Constant *CBO = dyn_cast<Constant>(BO.getOperand(SelOpNo ^ 1));
+  Constant *CBO = dyn_cast<Constant>(SelOpNo ? LHS : RHS);
   if (!CBO || !CT || !CF)
     return false;
 
   if (CastOp) {
     if (!CastOp->hasOneUse())
       return false;
-    CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, BO.getType(), DL);
-    CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, BO.getType(), DL);
+    CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, I.getType(), DL);
+    CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, I.getType(), DL);
   }
 
   // TODO: Handle special 0/-1 cases DAG combine does, although we only really
   // need to handle divisions here.
-  Constant *FoldedT =
-      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, DL)
-              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, DL);
+  Constant *FoldedT = SelOpNo ? ConstantFoldBinaryOpOperands(Opc, CBO, CT, DL)
+                              : ConstantFoldBinaryOpOperands(Opc, CT, CBO, DL);
   if (!FoldedT || isa<ConstantExpr>(FoldedT))
     return false;
 
-  Constant *FoldedF =
-      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, DL)
-              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, DL);
+  Constant *FoldedF = SelOpNo ? ConstantFoldBinaryOpOperands(Opc, CBO, CF, DL)
+                              : ConstantFoldBinaryOpOperands(Opc, CF, CBO, DL);
   if (!FoldedF || isa<ConstantExpr>(FoldedF))
     return false;
 
-  IRBuilder<> Builder(&BO);
-  Builder.SetCurrentDebugLocation(BO.getDebugLoc());
-  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&BO))
+  IRBuilder<> Builder(&I);
+  Builder.SetCurrentDebugLocation(I.getDebugLoc());
+  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&I))
     Builder.setFastMathFlags(FPOp->getFastMathFlags());
 
   Value *NewSelect = Builder.CreateSelect(Sel->getCondition(),
                                           FoldedT, FoldedF);
-  NewSelect->takeName(&BO);
-  BO.replaceAllUsesWith(NewSelect);
-  DeadVals.push_back(&BO);
+  NewSelect->takeName(&I);
+  I.replaceAllUsesWith(NewSelect);
+  DeadVals.push_back(&I);
   if (CastOp)
     DeadVals.push_back(CastOp);
   DeadVals.push_back(Sel);
@@ -1026,7 +1034,7 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 /// \p MaxDivBits is an optimization hint to bypass the second
 /// ComputeNumSignBits/computeKnownBits call if the first one is
 /// insufficient.
-unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
+unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(Instruction &I, Value *Num,
                                                  Value *Den,
                                                  unsigned MaxDivBits,
                                                  bool IsSigned) const {
@@ -1062,9 +1070,8 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
-                                                     BinaryOperator &I,
-                                                     Value *Num, Value *Den,
-                                                     bool IsDiv,
+                                                     Instruction &I, Value *Num,
+                                                     Value *Den, bool IsDiv,
                                                      bool IsSigned) const {
   unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
@@ -1075,7 +1082,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
-    IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
+    IRBuilder<> &Builder, Instruction &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
@@ -1157,7 +1164,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
 // than the general expansion we do here.
 
 // TODO: It would be better to just directly handle those optimizations here.
-bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
+bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(Instruction &I,
                                                          Value *Num,
                                                          Value *Den) const {
   if (Constant *C = dyn_cast<Constant>(Den)) {
@@ -1201,9 +1208,9 @@ static Value *getSign32(Value *V, IRBuilder<> &Builder, const DataLayout DL) {
 }
 
 Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *X,
-                                                Value *Y) const {
-  Instruction::BinaryOps Opc = I.getOpcode();
+                                                Instruction &I,
+                                                Instruction::BinaryOps Opc,
+                                                Value *X, Value *Y) const {
   assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SDiv);
 
@@ -1325,12 +1332,11 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
 }
 
 Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *Num,
-                                                Value *Den) const {
+                                                Instruction &I,
+                                                Instruction::BinaryOps Opc,
+                                                Value *Num, Value *Den) const {
   if (!ExpandDiv64InIR && divHasSpecialOptimization(I, Num, Den))
     return nullptr;  // Keep it for later optimization.
-
-  Instruction::BinaryOps Opc = I.getOpcode();
 
   bool IsDiv = Opc == Instruction::SDiv || Opc == Instruction::UDiv;
   bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
@@ -1348,7 +1354,7 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     // Otherwise 32-bit division cannot be used safely.
     // -2147483648/1 and -2147483648/-1 are not equal,
     // but they produce the same lower 32-bit result.
-    Narrowed = expandDivRem32(Builder, I, Num, Den);
+    Narrowed = expandDivRem32(Builder, I, Opc, Num, Den);
   }
 
   if (Narrowed) {
@@ -1455,22 +1461,34 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
   if (tryNarrowMathIfNoOverflow(&I))
     return true;
 
-  bool Changed = false;
   Instruction::BinaryOps Opc = I.getOpcode();
+  if (Opc != Instruction::URem && Opc != Instruction::UDiv &&
+      Opc != Instruction::SRem && Opc != Instruction::SDiv)
+    return false;
+  return visitDivRem(I, Opc, I.getOperand(0), I.getOperand(1));
+}
+
+bool AMDGPUCodeGenPrepareImpl::visitDivRem(Instruction &I,
+                                           Instruction::BinaryOps Opc,
+                                           Value *Num, Value *Den) {
+  bool Changed = false;
   Type *Ty = I.getType();
   Value *NewDiv = nullptr;
   unsigned ScalarSize = Ty->getScalarSizeInBits();
 
   SmallVector<BinaryOperator *, 8> Div64ToExpand;
 
-  if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
-       Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      ScalarSize <= 64 &&
-      !DisableIDivExpand) {
-    Value *Num = I.getOperand(0);
-    Value *Den = I.getOperand(1);
+  if (ScalarSize <= 64 && !DisableIDivExpand) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Intrinsic::ID IID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
+    auto CreateDivRem = [&](Value *X, Value *Y) -> Value * {
+      if (IID != Intrinsic::not_intrinsic)
+        return Builder.CreateBinaryIntrinsic(IID, X, Y);
+      return Builder.CreateBinOp(Opc, X, Y);
+    };
 
     if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
       NewDiv = PoisonValue::get(VT);
@@ -1481,20 +1499,20 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
         Value *NewElt;
         if (ScalarSize <= 32) {
-          NewElt = expandDivRem32(Builder, I, NumEltN, DenEltN);
+          NewElt = expandDivRem32(Builder, I, Opc, NumEltN, DenEltN);
           if (!NewElt)
-            NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
+            NewElt = CreateDivRem(NumEltN, DenEltN);
         } else {
           // See if this 64-bit division can be shrunk to 32/24-bits before
           // producing the general expansion.
-          NewElt = shrinkDivRem64(Builder, I, NumEltN, DenEltN);
+          NewElt = shrinkDivRem64(Builder, I, Opc, NumEltN, DenEltN);
           if (!NewElt) {
             // The general 64-bit expansion introduces control flow and doesn't
             // return the new value. Just insert a scalar copy and defer
             // expanding it.
-            NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
-            // CreateBinOp does constant folding. If the operands are constant,
-            // it will return a Constant instead of a BinaryOperator.
+            NewElt = CreateDivRem(NumEltN, DenEltN);
+            // CreateDivRem may constant fold or return a poison intrinsic,
+            // which the general expansion does not handle.
             if (auto *NewEltBO = dyn_cast<BinaryOperator>(NewElt))
               Div64ToExpand.push_back(NewEltBO);
           }
@@ -1507,11 +1525,16 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
       }
     } else {
       if (ScalarSize <= 32)
-        NewDiv = expandDivRem32(Builder, I, Num, Den);
+        NewDiv = expandDivRem32(Builder, I, Opc, Num, Den);
       else {
-        NewDiv = shrinkDivRem64(Builder, I, Num, Den);
-        if (!NewDiv)
-          Div64ToExpand.push_back(&I);
+        NewDiv = shrinkDivRem64(Builder, I, Opc, Num, Den);
+        if (!NewDiv) {
+          // The optional general expansion only supports BinaryOperators. Keep
+          // poison intrinsics rather than introducing a potentially UB
+          // division.
+          if (auto *BO = dyn_cast<BinaryOperator>(&I))
+            Div64ToExpand.push_back(BO);
+        }
       }
     }
 
@@ -2043,6 +2066,26 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   Intrinsic::ID IID = I.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::sdiv_poison:
+    return foldBinOpIntoSelect(I, Instruction::SDiv, I.getArgOperand(0),
+                               I.getArgOperand(1)) ||
+           visitDivRem(I, Instruction::SDiv, I.getArgOperand(0),
+                       I.getArgOperand(1));
+  case Intrinsic::udiv_poison:
+    return foldBinOpIntoSelect(I, Instruction::UDiv, I.getArgOperand(0),
+                               I.getArgOperand(1)) ||
+           visitDivRem(I, Instruction::UDiv, I.getArgOperand(0),
+                       I.getArgOperand(1));
+  case Intrinsic::srem_poison:
+    return foldBinOpIntoSelect(I, Instruction::SRem, I.getArgOperand(0),
+                               I.getArgOperand(1)) ||
+           visitDivRem(I, Instruction::SRem, I.getArgOperand(0),
+                       I.getArgOperand(1));
+  case Intrinsic::urem_poison:
+    return foldBinOpIntoSelect(I, Instruction::URem, I.getArgOperand(0),
+                               I.getArgOperand(1)) ||
+           visitDivRem(I, Instruction::URem, I.getArgOperand(0),
+                       I.getArgOperand(1));
   case Intrinsic::minnum:
   case Intrinsic::minimumnum:
   case Intrinsic::minimum:

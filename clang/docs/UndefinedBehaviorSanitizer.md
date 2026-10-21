@@ -139,7 +139,10 @@ Available checks are:
   or the original value was positive, and the new value is negative.
   Issues caught by this sanitizer are not undefined behavior,
   but are often unintentional.
-- `-fsanitize=integer-divide-by-zero`: Integer division by zero.
+- `-fsanitize=integer-divide-by-zero`: Integer division by zero. In OpenCL,
+  this check and the `INT_MIN/-1` check of `signed-integer-overflow` are
+  always recoverable (OpenCL C v3.0 s6.5.1) and are not emitted under
+  `-fsanitize-trap`.
 - `-fsanitize=implicit-bitfield-conversion`: Implicit conversion from
   integer of larger bit width to smaller bitfield, if that results in data
   loss. This includes unsigned/signed truncations and sign changes, similarly
@@ -187,7 +190,8 @@ Available checks are:
 - `-fsanitize=signed-integer-overflow`: Signed integer overflow, where the
   result of a signed integer computation cannot be represented in its type.
   This includes all the checks covered by `-ftrapv`, as well as checks for
-  signed division overflow (`INT_MIN/-1`). Note that checks are still
+  signed division overflow (`INT_MIN/-1`); in OpenCL, that one behaves as
+  described for `integer-divide-by-zero`. Note that checks are still
   added even when `-fwrapv` is enabled. This sanitizer does not check for
   lossy implicit conversions performed before the computation (see
   `-fsanitize=implicit-integer-conversion`). Both of these two issues are handled

@@ -31,20 +31,23 @@ class LoopInfo;
 class Value;
 
 struct DivRemMapKey {
-  bool SignedOp;
+  bool SignedOp = false;
+  bool PoisonOp = false;
   AssertingVH<Value> Dividend;
   AssertingVH<Value> Divisor;
 
   DivRemMapKey() = default;
 
-  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor)
-      : SignedOp(InSignedOp), Dividend(InDividend), Divisor(InDivisor) {}
+  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor,
+               bool InPoisonOp = false)
+      : SignedOp(InSignedOp), PoisonOp(InPoisonOp), Dividend(InDividend),
+        Divisor(InDivisor) {}
 };
 
 template <> struct DenseMapInfo<DivRemMapKey> {
   static bool isEqual(const DivRemMapKey &Val1, const DivRemMapKey &Val2) {
-    return Val1.SignedOp == Val2.SignedOp && Val1.Dividend == Val2.Dividend &&
-           Val1.Divisor == Val2.Divisor;
+    return Val1.SignedOp == Val2.SignedOp && Val1.PoisonOp == Val2.PoisonOp &&
+           Val1.Dividend == Val2.Dividend && Val1.Divisor == Val2.Divisor;
   }
 
   static unsigned getHashValue(const DivRemMapKey &Val) {
@@ -52,7 +55,7 @@ template <> struct DenseMapInfo<DivRemMapKey> {
                           static_cast<Value *>(Val.Dividend)) ^
                       reinterpret_cast<uintptr_t>(
                           static_cast<Value *>(Val.Divisor))) ^
-           (unsigned)Val.SignedOp;
+           (unsigned)Val.SignedOp ^ ((unsigned)Val.PoisonOp << 1);
   }
 };
 

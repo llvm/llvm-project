@@ -29,6 +29,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -42,6 +43,72 @@ using namespace llvm;
 #define DEBUG_TYPE "bypass-slow-division"
 
 namespace {
+
+/// Describe both instruction and poison-returning intrinsic forms of div/rem.
+struct DivRemOperation {
+  bool IsSigned;
+  bool IsDiv;
+  bool IsPoison;
+  Value *Dividend;
+  Value *Divisor;
+
+  static std::optional<DivRemOperation> get(Instruction *I) {
+    unsigned Opcode = I->getOpcode();
+    bool IsPoison = false;
+    Value *Dividend;
+    Value *Divisor;
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::sdiv_poison:
+        Opcode = Instruction::SDiv;
+        break;
+      case Intrinsic::udiv_poison:
+        Opcode = Instruction::UDiv;
+        break;
+      case Intrinsic::srem_poison:
+        Opcode = Instruction::SRem;
+        break;
+      case Intrinsic::urem_poison:
+        Opcode = Instruction::URem;
+        break;
+      default:
+        return std::nullopt;
+      }
+      IsPoison = true;
+      Dividend = II->getArgOperand(0);
+      Divisor = II->getArgOperand(1);
+    } else {
+      switch (Opcode) {
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+        Dividend = I->getOperand(0);
+        Divisor = I->getOperand(1);
+        break;
+      default:
+        return std::nullopt;
+      }
+    }
+    return DivRemOperation{
+        Opcode == Instruction::SDiv || Opcode == Instruction::SRem,
+        Opcode == Instruction::SDiv || Opcode == Instruction::UDiv, IsPoison,
+        Dividend, Divisor};
+  }
+
+  Value *create(IRBuilder<> &Builder, bool Signed, bool Div, Value *LHS,
+                Value *RHS) const {
+    if (IsPoison) {
+      Intrinsic::ID ID =
+          Signed ? (Div ? Intrinsic::sdiv_poison : Intrinsic::srem_poison)
+                 : (Div ? Intrinsic::udiv_poison : Intrinsic::urem_poison);
+      return Builder.CreateBinaryIntrinsic(ID, LHS, RHS);
+    }
+    if (Signed)
+      return Div ? Builder.CreateSDiv(LHS, RHS) : Builder.CreateSRem(LHS, RHS);
+    return Div ? Builder.CreateUDiv(LHS, RHS) : Builder.CreateURem(LHS, RHS);
+  }
+};
 
 struct QuotRemPair {
   Value *Quotient;
@@ -77,6 +144,7 @@ enum ValueRange {
 class FastDivInsertionTask {
   bool IsValidTask = false;
   Instruction *SlowDivOrRem = nullptr;
+  std::optional<DivRemOperation> Op;
   IntegerType *BypassType = nullptr;
   BasicBlock *MainBB = nullptr;
   DomTreeUpdater *DTU = nullptr;
@@ -93,15 +161,9 @@ class FastDivInsertionTask {
   Value *insertOperandRuntimeCheck(Value *Op1, Value *Op2);
   std::optional<QuotRemPair> insertFastDivAndRem();
 
-  bool isSignedOp() {
-    return SlowDivOrRem->getOpcode() == Instruction::SDiv ||
-           SlowDivOrRem->getOpcode() == Instruction::SRem;
-  }
+  bool isSignedOp() { return Op->IsSigned; }
 
-  bool isDivisionOp() {
-    return SlowDivOrRem->getOpcode() == Instruction::SDiv ||
-           SlowDivOrRem->getOpcode() == Instruction::UDiv;
-  }
+  bool isDivisionOp() { return Op->IsDiv; }
 
   Type *getSlowType() { return SlowDivOrRem->getType(); }
 
@@ -120,17 +182,10 @@ FastDivInsertionTask::FastDivInsertionTask(Instruction *I,
                                            DomTreeUpdater *DTU, LoopInfo *LI,
                                            BranchProbabilityInfo *BPI)
     : DTU(DTU), LI(LI), BPI(BPI) {
-  switch (I->getOpcode()) {
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::URem:
-  case Instruction::SRem:
-    SlowDivOrRem = I;
-    break;
-  default:
-    // I is not a div/rem operation.
+  Op = DivRemOperation::get(I);
+  if (!Op)
     return;
-  }
+  SlowDivOrRem = I;
 
   // Skip division on vector types. Only optimize integer instructions.
   IntegerType *SlowType = dyn_cast<IntegerType>(SlowDivOrRem->getType());
@@ -163,9 +218,9 @@ Value *FastDivInsertionTask::getReplacement(DivCacheTy &Cache) {
     return nullptr;
 
   // Then, look for a value in Cache.
-  Value *Dividend = SlowDivOrRem->getOperand(0);
-  Value *Divisor = SlowDivOrRem->getOperand(1);
-  DivRemMapKey Key(isSignedOp(), Dividend, Divisor);
+  Value *Dividend = Op->Dividend;
+  Value *Divisor = Op->Divisor;
+  DivRemMapKey Key(isSignedOp(), Dividend, Divisor, Op->IsPoison);
   auto CacheI = Cache.find(Key);
 
   if (CacheI == Cache.end()) {
@@ -292,16 +347,13 @@ QuotRemWithBB FastDivInsertionTask::createSlowBB(BasicBlock *SuccessorBB) {
   IRBuilder<> Builder(DivRemPair.BB->begin());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
-  Value *Dividend = SlowDivOrRem->getOperand(0);
-  Value *Divisor = SlowDivOrRem->getOperand(1);
+  Value *Dividend = Op->Dividend;
+  Value *Divisor = Op->Divisor;
 
-  if (isSignedOp()) {
-    DivRemPair.Quotient = Builder.CreateSDiv(Dividend, Divisor);
-    DivRemPair.Remainder = Builder.CreateSRem(Dividend, Divisor);
-  } else {
-    DivRemPair.Quotient = Builder.CreateUDiv(Dividend, Divisor);
-    DivRemPair.Remainder = Builder.CreateURem(Dividend, Divisor);
-  }
+  DivRemPair.Quotient =
+      Op->create(Builder, isSignedOp(), true, Dividend, Divisor);
+  DivRemPair.Remainder =
+      Op->create(Builder, isSignedOp(), false, Dividend, Divisor);
 
   Builder.CreateBr(SuccessorBB);
   return DivRemPair;
@@ -316,16 +368,18 @@ QuotRemWithBB FastDivInsertionTask::createFastBB(BasicBlock *SuccessorBB) {
   IRBuilder<> Builder(DivRemPair.BB->begin());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
-  Value *Dividend = SlowDivOrRem->getOperand(0);
-  Value *Divisor = SlowDivOrRem->getOperand(1);
+  Value *Dividend = Op->Dividend;
+  Value *Divisor = Op->Divisor;
   Value *ShortDivisorV =
       Builder.CreateCast(Instruction::Trunc, Divisor, BypassType);
   Value *ShortDividendV =
       Builder.CreateCast(Instruction::Trunc, Dividend, BypassType);
 
   // udiv/urem because this optimization only handles positive numbers.
-  Value *ShortQV = Builder.CreateUDiv(ShortDividendV, ShortDivisorV);
-  Value *ShortRV = Builder.CreateURem(ShortDividendV, ShortDivisorV);
+  Value *ShortQV =
+      Op->create(Builder, false, true, ShortDividendV, ShortDivisorV);
+  Value *ShortRV =
+      Op->create(Builder, false, false, ShortDividendV, ShortDivisorV);
   DivRemPair.Quotient =
       Builder.CreateCast(Instruction::ZExt, ShortQV, getSlowType());
   DivRemPair.Remainder =
@@ -378,8 +432,8 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
 /// Substitutes the div/rem instruction with code that checks the value of the
 /// operands and uses a shorter-faster div/rem instruction when possible.
 std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
-  Value *Dividend = SlowDivOrRem->getOperand(0);
-  Value *Divisor = SlowDivOrRem->getOperand(1);
+  Value *Dividend = Op->Dividend;
+  Value *Divisor = Op->Divisor;
 
   VisitedSetTy SetL;
   ValueRange DividendRange = getValueRange(Dividend, SetL);
@@ -403,8 +457,10 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     IRBuilder<> Builder(SlowDivOrRem);
     Value *TruncDividend = Builder.CreateTrunc(Dividend, BypassType);
     Value *TruncDivisor = Builder.CreateTrunc(Divisor, BypassType);
-    Value *TruncDiv = Builder.CreateUDiv(TruncDividend, TruncDivisor);
-    Value *TruncRem = Builder.CreateURem(TruncDividend, TruncDivisor);
+    Value *TruncDiv =
+        Op->create(Builder, false, true, TruncDividend, TruncDivisor);
+    Value *TruncRem =
+        Op->create(Builder, false, false, TruncDividend, TruncDivisor);
     Value *ExtDiv = Builder.CreateZExt(TruncDiv, getSlowType());
     Value *ExtRem = Builder.CreateZExt(TruncRem, getSlowType());
     return QuotRemPair(ExtDiv, ExtRem);
@@ -429,6 +485,16 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   IRBuilder<> Builder(MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
+  // Freeze the branch condition to avoid UB on poison: either path refines a
+  // poison result, while for non-poison operands known bits (and thus known
+  // short ranges) are exact and each selected path computes the intrinsic.
+  auto FreezeCondition = [&](Value *Cond) {
+    return Op->IsPoison && !isGuaranteedNotToBeUndefOrPoison(Cond, nullptr,
+                                                             SlowDivOrRem)
+               ? Builder.CreateFreeze(Cond)
+               : Cond;
+  };
+
   if (DividendShort && !isSignedOp()) {
     // If the division is unsigned and Dividend is known to be short, then
     // either
@@ -450,7 +516,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Long, SuccessorBB);
     Value *CmpV = Builder.CreateICmpUGE(Dividend, Divisor);
-    Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
+    Builder.CreateCondBr(FreezeCondition(CmpV), Fast.BB, SuccessorBB);
 
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
@@ -473,7 +539,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
   Value *CmpV = insertOperandRuntimeCheck(DividendShort ? nullptr : Dividend,
                                           DivisorShort ? nullptr : Divisor);
-  Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
+  Builder.CreateCondBr(FreezeCondition(CmpV), Fast.BB, Slow.BB);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
                        {DominatorTree::Insert, MainBB, Slow.BB},

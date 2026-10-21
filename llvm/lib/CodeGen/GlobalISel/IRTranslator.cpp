@@ -2884,6 +2884,19 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_GET_FPENV;
     case Intrinsic::get_fpmode:
       return TargetOpcode::G_GET_FPMODE;
+    // The division and remainder intrinsics that return poison instead of
+    // having undefined behavior are the plain operations. Only the calls that
+    // TargetLowering::canSelectIntDivRemPoison accepts get this far;
+    // PreISelIntrinsicLowering expanded every other call into a guarded
+    // instruction.
+    case Intrinsic::sdiv_poison:
+      return TargetOpcode::G_SDIV;
+    case Intrinsic::udiv_poison:
+      return TargetOpcode::G_UDIV;
+    case Intrinsic::srem_poison:
+      return TargetOpcode::G_SREM;
+    case Intrinsic::urem_poison:
+      return TargetOpcode::G_UREM;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -2897,6 +2910,33 @@ bool IRTranslatorImpl::translateSimpleIntrinsic(const CallInst &CI,
   // Is this a simple intrinsic?
   if (Op == Intrinsic::not_intrinsic)
     return false;
+
+  if (ID == Intrinsic::sdiv_poison || ID == Intrinsic::udiv_poison ||
+      ID == Intrinsic::srem_poison || ID == Intrinsic::urem_poison) {
+    assert(TLI->canSelectIntDivRemPoison(
+               TLI->getValueType(*DL, CI.getType()->getScalarType())) &&
+           "poison div/rem requires a selectable element type");
+    if (auto *VT = dyn_cast<FixedVectorType>(CI.getType());
+        VT && VT->getNumElements() > 1) {
+      // Match the vector extraction idiom used for shuffles. Scalar operations
+      // keep a zero divisor from making unrelated lanes undefined.
+      LLT EltTy = getLLTForType(*VT->getElementType(), *DL);
+      Register Dividend = getOrCreateVReg(*CI.getArgOperand(0));
+      Register Divisor = getOrCreateVReg(*CI.getArgOperand(1));
+      SmallVector<Register> Elts;
+      for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
+        Register Num = MRI->createGenericVirtualRegister(EltTy);
+        Register Den = MRI->createGenericVirtualRegister(EltTy);
+        Register Res = MRI->createGenericVirtualRegister(EltTy);
+        MIRBuilder.buildExtractVectorElementConstant(Num, Dividend, N);
+        MIRBuilder.buildExtractVectorElementConstant(Den, Divisor, N);
+        MIRBuilder.buildInstr(Op, {Res}, {Num, Den});
+        Elts.push_back(Res);
+      }
+      MIRBuilder.buildBuildVector(getOrCreateVReg(CI), Elts);
+      return true;
+    }
+  }
 
   // Yes. Let's translate it.
   SmallVector<llvm::SrcOp, 4> VRegs;

@@ -601,6 +601,25 @@ public:
   /// for speed or for size.
   virtual bool isIntDivCheap(EVT VT, AttributeList Attr) const { return false; }
 
+  /// Return true if lowering ISD::SDIV/UDIV/SREM/UREM and G_SDIV/G_UDIV/
+  /// G_SREM/G_UREM of type \p VT never traps and yields some value for a zero
+  /// divisor and for signed INT_MIN / -1. llvm.sdiv.poison, llvm.udiv.poison,
+  /// llvm.srem.poison and llvm.urem.poison may then be selected as those
+  /// operations: any value refines poison. This mapping also relies on generic
+  /// SelectionDAG/GlobalISel code treating division by zero only as making that
+  /// node's own result undefined, never back-propagating it to other users
+  /// (for example, to derive that the divisor is nonzero).
+  virtual bool isIntDivRemTrapFree(EVT VT) const { return false; }
+
+  /// Return true if a poison-producing div/rem intrinsic whose scalar (element)
+  /// type is \p VT can be kept until instruction selection. Wider operations
+  /// must reach ExpandIRInsts as guarded plain instructions.
+  bool canSelectIntDivRemPoison(EVT VT) const {
+    return VT.isScalarInteger() &&
+           VT.getSizeInBits() <= getMaxDivRemBitWidthSupported() &&
+           isIntDivRemTrapFree(VT);
+  }
+
   /// Return true if the target can handle a standalone remainder operation.
   virtual bool hasStandaloneRem(EVT VT) const {
     return true;
