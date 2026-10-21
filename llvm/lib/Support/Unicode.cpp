@@ -26,10 +26,10 @@ const CharProperties &charProperties(int UCS) {
 
   namespace T = CharPropertyTables;
   auto A = T::Lookup1[UCS >> 12];
-  auto B = T::Lookup2[A][(UCS >> 10) & 0x3];
-  auto C = T::Lookup3[B][(UCS >> 8) & 0xf];
-  auto D = T::Lookup4[C][(UCS >> 4) & 0xf];
-  auto E = T::Lookup5[D][UCS & 0xf];
+  auto B = T::Lookup2[A][(UCS >> 8) & 0xf];
+  auto C = T::Lookup3[B][(UCS >> 4) & 0xf];
+  auto D = T::Lookup4[C][(UCS >> 2) & 0x3];
+  auto E = T::Lookup5[D][UCS & 0x3];
   return T::Lookup6[E];
 }
 
