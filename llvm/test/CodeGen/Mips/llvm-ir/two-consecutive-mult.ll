@@ -27,13 +27,89 @@ define signext i32 @mult_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    mul $2, $1, $6
 ;
+; MIPS3-LABEL: mult_i32:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    mult $4, $5
+; MIPS3-NEXT:    mflo $1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:    mult $1, $6
+; MIPS3-NEXT:    mflo $1
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    sll $2, $1, 0
+;
+; MIPS64-LABEL: mult_i32:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    mul $1, $4, $5
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    mul $2, $1, $6
 entry:
   %mul = mul nsw i32 %a, %b
   %mul1 = mul nsw i32 %mul, %c
   ret i32 %mul1
 }
 
+; FIXME: MIPS2 lacks the nops between a mflo and the next multu or mtlo.
 define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
+; MIPS2-LABEL: mul_i64:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -16
+; MIPS2-NEXT:    .cfi_def_cfa_offset 16
+; MIPS2-NEXT:    mult $4, $7
+; MIPS2-NEXT:    lw $4, 32($sp)
+; MIPS2-NEXT:    mflo $1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    mult $5, $6
+; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    multu $5, $7
+; MIPS2-NEXT:    mflo $3
+; MIPS2-NEXT:    sw $3, 8($sp) # 8-byte Folded Spill
+; MIPS2-NEXT:    mfhi $3
+; MIPS2-NEXT:    sw $3, 12($sp) # 8-byte Folded Spill
+; MIPS2-NEXT:    mfhi $3
+; MIPS2-NEXT:    addu $2, $3, $2
+; MIPS2-NEXT:    lw $3, 8($sp) # 8-byte Folded Reload
+; MIPS2-NEXT:    addu $1, $2, $1
+; MIPS2-NEXT:    lw $2, 36($sp)
+; MIPS2-NEXT:    mult $1, $2
+; MIPS2-NEXT:    mflo $1
+; MIPS2-NEXT:    mtlo $3
+; MIPS2-NEXT:    lw $3, 12($sp) # 8-byte Folded Reload
+; MIPS2-NEXT:    mthi $3
+; MIPS2-NEXT:    mflo $3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    mult $3, $4
+; MIPS2-NEXT:    mflo $4
+; MIPS2-NEXT:    multu $3, $2
+; MIPS2-NEXT:    mfhi $2
+; MIPS2-NEXT:    mflo $3
+; MIPS2-NEXT:    addu $2, $2, $4
+; MIPS2-NEXT:    addu $2, $2, $1
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    addiu $sp, $sp, 16
+;
+; MIPS32-LABEL: mul_i64:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    multu $5, $7
+; MIPS32-NEXT:    lw $8, 20($sp)
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    multu $2, $8
+; MIPS32-NEXT:    mflo $3
+; MIPS32-NEXT:    mfhi $9
+; MIPS32-NEXT:    mul $5, $5, $6
+; MIPS32-NEXT:    mul $4, $4, $7
+; MIPS32-NEXT:    addu $1, $1, $5
+; MIPS32-NEXT:    addu $1, $1, $4
+; MIPS32-NEXT:    lw $4, 16($sp)
+; MIPS32-NEXT:    mul $1, $1, $8
+; MIPS32-NEXT:    mul $2, $2, $4
+; MIPS32-NEXT:    addu $2, $9, $2
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addu $2, $2, $1
+;
 ; MIPS3-LABEL: mul_i64:
 ; MIPS3:       # %bb.0: # %entry
 ; MIPS3-NEXT:    dmult $4, $5
@@ -52,9 +128,272 @@ define signext i64 @mul_i64(i64 signext %a, i64 signext %b, i64 signext %c) {
 ; MIPS64-NEXT:    dmult $1, $6
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    mflo $2
-;
 entry:
   %mul = mul i64 %a, %b
   %mul1 = mul i64 %mul, %c
   ret i64 %mul1
+}
+
+; The high word of an unsigned product feeds a second unsigned product.
+; FIXME: MIPS2 and MIPS3 lack the two nops before the second multu.
+define i32 @mulhu_chain_i32(i32 %a, i32 %b, i32 %c) {
+; MIPS2-LABEL: mulhu_chain_i32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    multu $4, $5
+; MIPS2-NEXT:    mfhi $1
+; MIPS2-NEXT:    multu $6, $1
+; MIPS2-NEXT:    mfhi $2
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
+; MIPS32-LABEL: mulhu_chain_i32:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    multu $4, $5
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    multu $6, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    mfhi $2
+;
+; MIPS3-LABEL: mulhu_chain_i32:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sll $1, $5, 0
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    multu $2, $1
+; MIPS3-NEXT:    sll $2, $6, 0
+; MIPS3-NEXT:    mfhi $1
+; MIPS3-NEXT:    multu $2, $1
+; MIPS3-NEXT:    mfhi $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
+;
+; MIPS64-LABEL: mulhu_chain_i32:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    sll $1, $5, 0
+; MIPS64-NEXT:    sll $2, $4, 0
+; MIPS64-NEXT:    multu $2, $1
+; MIPS64-NEXT:    sll $2, $6, 0
+; MIPS64-NEXT:    mfhi $1
+; MIPS64-NEXT:    multu $2, $1
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    mfhi $2
+entry:
+  %a64 = zext i32 %a to i64
+  %b64 = zext i32 %b to i64
+  %p0 = mul i64 %a64, %b64
+  %h0 = lshr i64 %p0, 32
+  %c64 = zext i32 %c to i64
+  %p1 = mul i64 %h0, %c64
+  %h1 = lshr i64 %p1, 32
+  %r = trunc i64 %h1 to i32
+  ret i32 %r
+}
+
+; The high doubleword of an unsigned product feeds a second unsigned product.
+; FIXME: MIPS2 and MIPS3 lack the nops between a mfhi or mflo and the next
+; multu or dmultu.
+define i64 @mulhu_chain_i64(i64 %a, i64 %b, i64 %c) {
+; MIPS2-LABEL: mulhu_chain_i64:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    multu $4, $6
+; MIPS2-NEXT:    mfhi $1
+; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    multu $5, $6
+; MIPS2-NEXT:    mflo $3
+; MIPS2-NEXT:    mfhi $6
+; MIPS2-NEXT:    multu $5, $7
+; MIPS2-NEXT:    mfhi $5
+; MIPS2-NEXT:    multu $4, $7
+; MIPS2-NEXT:    mflo $7
+; MIPS2-NEXT:    mfhi $4
+; MIPS2-NEXT:    addu $5, $7, $5
+; MIPS2-NEXT:    sltu $7, $5, $7
+; MIPS2-NEXT:    addu $5, $3, $5
+; MIPS2-NEXT:    sltu $3, $5, $3
+; MIPS2-NEXT:    addu $4, $4, $7
+; MIPS2-NEXT:    lw $5, 16($sp)
+; MIPS2-NEXT:    addu $3, $6, $3
+; MIPS2-NEXT:    addu $3, $4, $3
+; MIPS2-NEXT:    addu $6, $2, $3
+; MIPS2-NEXT:    sltu $3, $3, $4
+; MIPS2-NEXT:    lw $4, 20($sp)
+; MIPS2-NEXT:    sltu $2, $6, $2
+; MIPS2-NEXT:    addu $1, $1, $3
+; MIPS2-NEXT:    addu $1, $1, $2
+; MIPS2-NEXT:    multu $1, $5
+; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    mfhi $3
+; MIPS2-NEXT:    multu $1, $4
+; MIPS2-NEXT:    mflo $1
+; MIPS2-NEXT:    mfhi $7
+; MIPS2-NEXT:    multu $6, $5
+; MIPS2-NEXT:    mfhi $5
+; MIPS2-NEXT:    mflo $8
+; MIPS2-NEXT:    multu $6, $4
+; MIPS2-NEXT:    mfhi $4
+; MIPS2-NEXT:    addu $4, $1, $4
+; MIPS2-NEXT:    sltu $1, $4, $1
+; MIPS2-NEXT:    addu $4, $8, $4
+; MIPS2-NEXT:    sltu $4, $4, $8
+; MIPS2-NEXT:    addu $1, $7, $1
+; MIPS2-NEXT:    addu $4, $5, $4
+; MIPS2-NEXT:    addu $4, $1, $4
+; MIPS2-NEXT:    sltu $1, $4, $1
+; MIPS2-NEXT:    addu $1, $3, $1
+; MIPS2-NEXT:    addu $3, $2, $4
+; MIPS2-NEXT:    sltu $2, $3, $2
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    addu $2, $1, $2
+;
+; MIPS32-LABEL: mulhu_chain_i64:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    multu $4, $6
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    multu $5, $6
+; MIPS32-NEXT:    mflo $3
+; MIPS32-NEXT:    mfhi $6
+; MIPS32-NEXT:    multu $5, $7
+; MIPS32-NEXT:    mfhi $5
+; MIPS32-NEXT:    multu $4, $7
+; MIPS32-NEXT:    mflo $7
+; MIPS32-NEXT:    mfhi $4
+; MIPS32-NEXT:    addu $5, $7, $5
+; MIPS32-NEXT:    sltu $7, $5, $7
+; MIPS32-NEXT:    addu $5, $3, $5
+; MIPS32-NEXT:    sltu $3, $5, $3
+; MIPS32-NEXT:    addu $4, $4, $7
+; MIPS32-NEXT:    lw $5, 16($sp)
+; MIPS32-NEXT:    addu $3, $6, $3
+; MIPS32-NEXT:    addu $3, $4, $3
+; MIPS32-NEXT:    addu $6, $2, $3
+; MIPS32-NEXT:    sltu $3, $3, $4
+; MIPS32-NEXT:    lw $4, 20($sp)
+; MIPS32-NEXT:    sltu $2, $6, $2
+; MIPS32-NEXT:    addu $1, $1, $3
+; MIPS32-NEXT:    addu $1, $1, $2
+; MIPS32-NEXT:    multu $1, $5
+; MIPS32-NEXT:    mflo $2
+; MIPS32-NEXT:    mfhi $3
+; MIPS32-NEXT:    multu $1, $4
+; MIPS32-NEXT:    mflo $1
+; MIPS32-NEXT:    mfhi $7
+; MIPS32-NEXT:    multu $6, $5
+; MIPS32-NEXT:    mfhi $5
+; MIPS32-NEXT:    mflo $8
+; MIPS32-NEXT:    multu $6, $4
+; MIPS32-NEXT:    mfhi $4
+; MIPS32-NEXT:    addu $4, $1, $4
+; MIPS32-NEXT:    sltu $1, $4, $1
+; MIPS32-NEXT:    addu $4, $8, $4
+; MIPS32-NEXT:    sltu $4, $4, $8
+; MIPS32-NEXT:    addu $1, $7, $1
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    addu $4, $1, $4
+; MIPS32-NEXT:    sltu $1, $4, $1
+; MIPS32-NEXT:    addu $1, $3, $1
+; MIPS32-NEXT:    addu $3, $2, $4
+; MIPS32-NEXT:    sltu $2, $3, $2
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addu $2, $1, $2
+;
+; MIPS3-LABEL: mulhu_chain_i64:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    dmultu $4, $5
+; MIPS3-NEXT:    mfhi $1
+; MIPS3-NEXT:    dmultu $6, $1
+; MIPS3-NEXT:    mfhi $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
+;
+; MIPS64-LABEL: mulhu_chain_i64:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    dmultu $4, $5
+; MIPS64-NEXT:    mfhi $1
+; MIPS64-NEXT:    dmultu $6, $1
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    mfhi $2
+entry:
+  %a128 = zext i64 %a to i128
+  %b128 = zext i64 %b to i128
+  %p0 = mul i128 %a128, %b128
+  %h0 = lshr i128 %p0, 64
+  %c128 = zext i64 %c to i128
+  %p1 = mul i128 %h0, %c128
+  %h1 = lshr i128 %p1, 64
+  %r = trunc i128 %h1 to i64
+  ret i64 %r
+}
+
+; Both halves of a product are read back to back, then the high word feeds a
+; multiply.
+; FIXME: MIPS2 lacks the nop before the mult.
+define i32 @consecutive_reads_then_mult(i32 %a, i32 %b, i32 %c) {
+; MIPS2-LABEL: consecutive_reads_then_mult:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    multu $4, $5
+; MIPS2-NEXT:    mfhi $2
+; MIPS2-NEXT:    mflo $1
+; MIPS2-NEXT:    addiu $2, $2, 1
+; MIPS2-NEXT:    mult $2, $6
+; MIPS2-NEXT:    mflo $2
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    xor $2, $2, $1
+;
+; MIPS32-LABEL: consecutive_reads_then_mult:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    multu $4, $5
+; MIPS32-NEXT:    mfhi $2
+; MIPS32-NEXT:    mflo $1
+; MIPS32-NEXT:    addiu $2, $2, 1
+; MIPS32-NEXT:    mul $2, $2, $6
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    xor $2, $2, $1
+;
+; MIPS3-LABEL: consecutive_reads_then_mult:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    daddiu $1, $zero, 1
+; MIPS3-NEXT:    sll $3, $6, 0
+; MIPS3-NEXT:    dsll $1, $1, 32
+; MIPS3-NEXT:    daddiu $1, $1, -1
+; MIPS3-NEXT:    and $2, $5, $1
+; MIPS3-NEXT:    and $1, $4, $1
+; MIPS3-NEXT:    dmult $1, $2
+; MIPS3-NEXT:    mflo $1
+; MIPS3-NEXT:    dsrl $2, $1, 32
+; MIPS3-NEXT:    sll $1, $1, 0
+; MIPS3-NEXT:    sll $2, $2, 0
+; MIPS3-NEXT:    addiu $2, $2, 1
+; MIPS3-NEXT:    mult $2, $3
+; MIPS3-NEXT:    mflo $2
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    xor $2, $2, $1
+;
+; MIPS64-LABEL: consecutive_reads_then_mult:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    daddiu $1, $zero, 1
+; MIPS64-NEXT:    sll $3, $6, 0
+; MIPS64-NEXT:    dsll $1, $1, 32
+; MIPS64-NEXT:    daddiu $1, $1, -1
+; MIPS64-NEXT:    and $2, $5, $1
+; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    dmult $1, $2
+; MIPS64-NEXT:    mflo $1
+; MIPS64-NEXT:    dsrl $2, $1, 32
+; MIPS64-NEXT:    sll $1, $1, 0
+; MIPS64-NEXT:    sll $2, $2, 0
+; MIPS64-NEXT:    addiu $2, $2, 1
+; MIPS64-NEXT:    mul $2, $2, $3
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    xor $2, $2, $1
+entry:
+  %a64 = zext i32 %a to i64
+  %b64 = zext i32 %b to i64
+  %p = mul i64 %a64, %b64
+  %lo = trunc i64 %p to i32
+  %hi64 = lshr i64 %p, 32
+  %hi = trunc i64 %hi64 to i32
+  %inc = add i32 %hi, 1
+  %m = mul i32 %inc, %c
+  %r = xor i32 %m, %lo
+  ret i32 %r
 }
