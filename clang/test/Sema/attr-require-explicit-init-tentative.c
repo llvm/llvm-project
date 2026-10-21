@@ -10,6 +10,8 @@ struct plain {
     int a;
 };
 
+struct plain no_attribute; // no warning: no field requires explicit initialization
+
 struct ops never_completed; // expected-warning {{field in 'ops' requires explicit initialization but is not explicitly initialized}} expected-note@#SHOW {{'show' declared here}}
 static struct ops never_completed_static; // expected-warning {{field in 'ops' requires explicit initialization but is not explicitly initialized}} expected-note@#SHOW {{'show' declared here}}
 
