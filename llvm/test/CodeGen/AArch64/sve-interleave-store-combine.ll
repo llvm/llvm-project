@@ -3,39 +3,22 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -lower-interleaved-accesses=false -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IADISABLED
 
 define void @interleave_wide_nxi8_factor2(ptr %output, ptr %input0, ptr %input1) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi8_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st2b { z6.b, z7.b }, p0, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    st2b { z4.b, z5.b }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st2b { z2.b, z3.b }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi8_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2b { z0.b, z1.b }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2b { z6.b, z7.b }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2b { z4.b, z5.b }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2b { z2.b, z3.b }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi8_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z2, [x1]
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x2]
+; CHECK-NEXT:    ldr z5, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x2, #2, mul vl]
+; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st2b { z6.b, z7.b }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st2b { z4.b, z5.b }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2b { z2.b, z3.b }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 64 x i8>, ptr %input0, align 1
   %v1 = load <vscale x 64 x i8>, ptr %input1, align 1
   %interleave = call <vscale x 128 x i8> @llvm.vector.interleave2.nxv128i8(<vscale x 64 x i8> %v0, <vscale x 64 x i8> %v1)
@@ -44,39 +27,22 @@ define void @interleave_wide_nxi8_factor2(ptr %output, ptr %input0, ptr %input1)
 }
 
 define void @interleave_wide_nxi16_factor2(ptr %output, ptr %input0, ptr %input1) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi16_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st2h { z0.h, z1.h }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st2h { z6.h, z7.h }, p0, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    st2h { z4.h, z5.h }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st2h { z2.h, z3.h }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi16_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2h { z0.h, z1.h }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2h { z6.h, z7.h }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2h { z4.h, z5.h }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2h { z2.h, z3.h }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi16_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z2, [x1]
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x2]
+; CHECK-NEXT:    ldr z5, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x2, #2, mul vl]
+; CHECK-NEXT:    st2h { z0.h, z1.h }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st2h { z6.h, z7.h }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st2h { z4.h, z5.h }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2h { z2.h, z3.h }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 32 x i16>, ptr %input0, align 1
   %v1 = load <vscale x 32 x i16>, ptr %input1, align 1
   %interleave = call <vscale x 64 x i16> @llvm.vector.interleave2.nxv64i16(<vscale x 32 x i16> %v0, <vscale x 32 x i16> %v1)
@@ -85,39 +51,22 @@ define void @interleave_wide_nxi16_factor2(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi32_factor2(ptr %output, ptr %input0, ptr %input1) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi32_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi32_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi32_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z2, [x1]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x2]
+; CHECK-NEXT:    ldr z5, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x2, #2, mul vl]
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2w { z2.s, z3.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 16 x i32>, ptr %input0, align 1
   %v1 = load <vscale x 16 x i32>, ptr %input1, align 1
   %interleave = call <vscale x 32 x i32> @llvm.vector.interleave2.nxv32i32(<vscale x 16 x i32> %v0, <vscale x 16 x i32> %v1)
@@ -126,39 +75,22 @@ define void @interleave_wide_nxi32_factor2(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi64_factor2(ptr %output, ptr %input0, ptr %input1) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi64_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st2d { z0.d, z1.d }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st2d { z6.d, z7.d }, p0, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    st2d { z4.d, z5.d }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st2d { z2.d, z3.d }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi64_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2d { z0.d, z1.d }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2d { z6.d, z7.d }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2d { z4.d, z5.d }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2d { z2.d, z3.d }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi64_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z2, [x1]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x2]
+; CHECK-NEXT:    ldr z5, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x2, #2, mul vl]
+; CHECK-NEXT:    st2d { z0.d, z1.d }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st2d { z6.d, z7.d }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st2d { z4.d, z5.d }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2d { z2.d, z3.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 8 x i64>, ptr %input0, align 1
   %v1 = load <vscale x 8 x i64>, ptr %input1, align 1
   %interleave = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %v0, <vscale x 8 x i64> %v1)
@@ -167,47 +99,26 @@ define void @interleave_wide_nxi64_factor2(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi8_factor3(ptr %output, ptr %input0, ptr %input1, ptr %input2) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi8_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st3b { z0.b - z2.b }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st3b { z19.b - z21.b }, p0, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    st3b { z16.b - z18.b }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    st3b { z3.b - z5.b }, p0, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi8_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st3b { z0.b - z2.b }, p0, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    st3b { z19.b - z21.b }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st3b { z16.b - z18.b }, p0, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    st3b { z3.b - z5.b }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi8_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1]
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldr z16, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z20, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z21, [x3, #2, mul vl]
+; CHECK-NEXT:    st3b { z0.b - z2.b }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3b { z19.b - z21.b }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3b { z16.b - z18.b }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3b { z3.b - z5.b }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 64 x i8>, ptr %input0, align 1
   %v1 = load <vscale x 64 x i8>, ptr %input1, align 1
   %v2 = load <vscale x 64 x i8>, ptr %input2, align 1
@@ -217,47 +128,26 @@ define void @interleave_wide_nxi8_factor3(ptr %output, ptr %input0, ptr %input1,
 }
 
 define void @interleave_wide_nxi16_factor3(ptr %output, ptr %input0, ptr %input1, ptr %input2) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi16_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st3h { z0.h - z2.h }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st3h { z19.h - z21.h }, p0, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    st3h { z16.h - z18.h }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    st3h { z3.h - z5.h }, p0, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi16_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st3h { z0.h - z2.h }, p0, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    st3h { z19.h - z21.h }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st3h { z16.h - z18.h }, p0, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    st3h { z3.h - z5.h }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi16_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1]
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ldr z16, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z20, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z21, [x3, #2, mul vl]
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3h { z19.h - z21.h }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3h { z16.h - z18.h }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3h { z3.h - z5.h }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 32 x i16>, ptr %input0, align 1
   %v1 = load <vscale x 32 x i16>, ptr %input1, align 1
   %v2 = load <vscale x 32 x i16>, ptr %input2, align 1
@@ -267,47 +157,26 @@ define void @interleave_wide_nxi16_factor3(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi32_factor3(ptr %output, ptr %input0, ptr %input1, ptr %input2) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi32_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z0.s - z2.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z3.s - z5.s }, p0, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi32_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z0.s - z2.s }, p0, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z3.s - z5.s }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi32_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z16, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z20, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z21, [x3, #2, mul vl]
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3w { z3.s - z5.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 16 x i32>, ptr %input0, align 1
   %v1 = load <vscale x 16 x i32>, ptr %input1, align 1
   %v2 = load <vscale x 16 x i32>, ptr %input2, align 1
@@ -317,47 +186,26 @@ define void @interleave_wide_nxi32_factor3(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi64_factor3(ptr %output, ptr %input0, ptr %input1, ptr %input2) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi64_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st3d { z0.d - z2.d }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st3d { z19.d - z21.d }, p0, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    st3d { z16.d - z18.d }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    st3d { z3.d - z5.d }, p0, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi64_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st3d { z0.d - z2.d }, p0, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    st3d { z19.d - z21.d }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st3d { z16.d - z18.d }, p0, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    st3d { z3.d - z5.d }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi64_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z16, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z20, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z21, [x3, #2, mul vl]
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3d { z19.d - z21.d }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3d { z16.d - z18.d }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3d { z3.d - z5.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 8 x i64>, ptr %input0, align 1
   %v1 = load <vscale x 8 x i64>, ptr %input1, align 1
   %v2 = load <vscale x 8 x i64>, ptr %input2, align 1
@@ -367,55 +215,30 @@ define void @interleave_wide_nxi64_factor3(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi8_factor4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi8_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z22, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x4, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x4, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z23, [x4, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st4b { z0.b - z3.b }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st4b { z20.b - z23.b }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st4b { z16.b - z19.b }, p0, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    st4b { z4.b - z7.b }, p0, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi8_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z22, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x4, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x4]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x4, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z23, [x4, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st4b { z0.b - z3.b }, p0, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    st4b { z20.b - z23.b }, p0, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    st4b { z16.b - z19.b }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st4b { z4.b - z7.b }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi8_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x1]
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldr z16, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z20, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z21, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z6, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z22, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x4]
+; CHECK-NEXT:    ldr z19, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z23, [x4, #2, mul vl]
+; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    st4b { z20.b - z23.b }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    st4b { z16.b - z19.b }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4b { z4.b - z7.b }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 64 x i8>, ptr %input0, align 1
   %v1 = load <vscale x 64 x i8>, ptr %input1, align 1
   %v2 = load <vscale x 64 x i8>, ptr %input2, align 1
@@ -426,55 +249,30 @@ define void @interleave_wide_nxi8_factor4(ptr %output, ptr %input0, ptr %input1,
 }
 
 define void @interleave_wide_nxi16_factor4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi16_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z22, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x4, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x4, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z23, [x4, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st4h { z20.h - z23.h }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st4h { z16.h - z19.h }, p0, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    st4h { z4.h - z7.h }, p0, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi16_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z22, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x4, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x4]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x4, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z23, [x4, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st4h { z0.h - z3.h }, p0, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    st4h { z20.h - z23.h }, p0, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    st4h { z16.h - z19.h }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st4h { z4.h - z7.h }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi16_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x1]
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ldr z16, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z20, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z21, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z6, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z22, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x4]
+; CHECK-NEXT:    ldr z19, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z23, [x4, #2, mul vl]
+; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    st4h { z20.h - z23.h }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    st4h { z16.h - z19.h }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4h { z4.h - z7.h }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 32 x i16>, ptr %input0, align 1
   %v1 = load <vscale x 32 x i16>, ptr %input1, align 1
   %v2 = load <vscale x 32 x i16>, ptr %input2, align 1
@@ -485,55 +283,30 @@ define void @interleave_wide_nxi16_factor4(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi32_factor4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi32_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z22, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x4, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x4, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z23, [x4, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st4w { z0.s - z3.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st4w { z20.s - z23.s }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st4w { z16.s - z19.s }, p0, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    st4w { z4.s - z7.s }, p0, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi32_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z22, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x4, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x4]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x4, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z23, [x4, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st4w { z0.s - z3.s }, p0, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    st4w { z20.s - z23.s }, p0, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    st4w { z16.s - z19.s }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st4w { z4.s - z7.s }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi32_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x1]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z16, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z20, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z21, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z6, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z22, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x4]
+; CHECK-NEXT:    ldr z19, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z23, [x4, #2, mul vl]
+; CHECK-NEXT:    st4w { z0.s - z3.s }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    st4w { z20.s - z23.s }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    st4w { z16.s - z19.s }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4w { z4.s - z7.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 16 x i32>, ptr %input0, align 1
   %v1 = load <vscale x 16 x i32>, ptr %input1, align 1
   %v2 = load <vscale x 16 x i32>, ptr %input2, align 1
@@ -544,55 +317,30 @@ define void @interleave_wide_nxi32_factor4(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxi64_factor4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxi64_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z22, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x4, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x4, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z23, [x4, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z4.d - z7.d }, p0, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxi64_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z22, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x4, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x4]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x4, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z23, [x4, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z0.d - z3.d }, p0, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z4.d - z7.d }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxi64_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x1]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z16, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z20, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z21, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z6, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z22, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x4]
+; CHECK-NEXT:    ldr z19, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z23, [x4, #2, mul vl]
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4d { z4.d - z7.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 8 x i64>, ptr %input0, align 1
   %v1 = load <vscale x 8 x i64>, ptr %input1, align 1
   %v2 = load <vscale x 8 x i64>, ptr %input2, align 1
@@ -603,47 +351,26 @@ define void @interleave_wide_nxi64_factor4(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxf32_factor3(ptr %output, ptr %input0, ptr %input1, ptr %input2) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxf32_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z0.s - z2.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    st3w { z3.s - z5.s }, p0, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxf32_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z0.s - z2.s }, p0, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    st3w { z3.s - z5.s }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxf32_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z16, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z20, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z21, [x3, #2, mul vl]
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [x0, #3, mul vl]
+; CHECK-NEXT:    st3w { z19.s - z21.s }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st3w { z16.s - z18.s }, p0, [x0, #9, mul vl]
+; CHECK-NEXT:    st3w { z3.s - z5.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 16 x float>, ptr %input0, align 1
   %v1 = load <vscale x 16 x float>, ptr %input1, align 1
   %v2 = load <vscale x 16 x float>, ptr %input2, align 1
@@ -653,55 +380,30 @@ define void @interleave_wide_nxf32_factor3(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_nxf64_factor4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) #0 {
-; CHECK-IAENABLED-LABEL: interleave_wide_nxf64_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ldr z16, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z20, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z17, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z21, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x3]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x3, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z18, [x3, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z22, [x3, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x4, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z19, [x4, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z23, [x4, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    st4d { z4.d - z7.d }, p0, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_nxf64_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ldr z16, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z20, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z17, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z21, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x3, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x3]
-; CHECK-IADISABLED-NEXT:    ldr z18, [x3, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z22, [x3, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x4, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x4]
-; CHECK-IADISABLED-NEXT:    ldr z19, [x4, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z23, [x4, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z0.d - z3.d }, p0, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st4d { z4.d - z7.d }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_nxf64_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x1]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr z16, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z20, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x2]
+; CHECK-NEXT:    ldr z17, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z21, [x2, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z6, [x3]
+; CHECK-NEXT:    ldr z18, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z22, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x4]
+; CHECK-NEXT:    ldr z19, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z23, [x4, #2, mul vl]
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0, #12, mul vl]
+; CHECK-NEXT:    st4d { z20.d - z23.d }, p0, [x0, #8, mul vl]
+; CHECK-NEXT:    st4d { z16.d - z19.d }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st4d { z4.d - z7.d }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 8 x double>, ptr %input0, align 1
   %v1 = load <vscale x 8 x double>, ptr %input1, align 1
   %v2 = load <vscale x 8 x double>, ptr %input2, align 1
@@ -712,39 +414,22 @@ define void @interleave_wide_nxf64_factor4(ptr %output, ptr %input0, ptr %input1
 }
 
 define void @interleave_wide_known_vscale(ptr %output, ptr %input0, ptr %input1) #1 {
-; CHECK-IAENABLED-LABEL: interleave_wide_known_vscale:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr z0, [x1]
-; CHECK-IAENABLED-NEXT:    ldr z2, [x1, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ldr z4, [x1, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z6, [x1, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z1, [x2]
-; CHECK-IAENABLED-NEXT:    ldr z3, [x2, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z5, [x2, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ldr z7, [x2, #1, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_wide_known_vscale:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x1, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x1]
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ldr z4, [x1, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z6, [x1, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x2, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x2]
-; CHECK-IADISABLED-NEXT:    ldr z5, [x2, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z7, [x2, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_wide_known_vscale:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z2, [x1]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z6, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [x2, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x2]
+; CHECK-NEXT:    ldr z5, [x2, #1, mul vl]
+; CHECK-NEXT:    ldr z7, [x2, #2, mul vl]
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0, #6, mul vl]
+; CHECK-NEXT:    st2w { z6.s, z7.s }, p0, [x0, #4, mul vl]
+; CHECK-NEXT:    st2w { z4.s, z5.s }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    st2w { z2.s, z3.s }, p0, [x0]
+; CHECK-NEXT:    ret
   %v0 = load <vscale x 16 x i32>, ptr %input0, align 1
   %v1 = load <vscale x 16 x i32>, ptr %input1, align 1
   %interleave = call <vscale x 32 x i32> @llvm.vector.interleave2.nxv32i32(<vscale x 16 x i32> %v0, <vscale x 16 x i32> %v1)
@@ -951,3 +636,6 @@ define void @interleave_wide_fixed_offset(ptr %output, ptr %input0, ptr %input1)
 
 attributes #0 = { vscale_range(1,16) }
 attributes #1 = { vscale_range(2,2) }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

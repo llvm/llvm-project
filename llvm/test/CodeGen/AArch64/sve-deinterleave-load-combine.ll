@@ -3,39 +3,22 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -lower-interleaved-accesses=false -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IADISABLED
 
 define void @deinterleave_wide_nxi32_factor2(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi32_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi32_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi32_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z7 $z6_z7
+; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %load = load <vscale x 32 x i32>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave2.nxv32i32(<vscale x 32 x i32> %load)
   %extract0 = extractvalue { <vscale x 16 x i32>, <vscale x 16 x i32> } %deinterleave, 0
@@ -46,27 +29,16 @@ define void @deinterleave_wide_nxi32_factor2(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi8_factor2(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi8_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2b { z2.b, z3.b }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi8_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2b { z2.b, z3.b }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi8_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2b { z2.b, z3.b }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %load = load <vscale x 64 x i8>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.vector.deinterleave2.nxv64i8(<vscale x 64 x i8> %load)
   %extract0 = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } %deinterleave, 0
@@ -77,31 +49,18 @@ define void @deinterleave_wide_nxi8_factor2(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi16_factor3(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi16_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld3h { z3.h - z5.h }, p0/z, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi16_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3h { z3.h - z5.h }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi16_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3h { z3.h - z5.h }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z5 $z3_z4_z5
+; CHECK-NEXT:    // fake_use: $z2 $z0_z1_z2
+; CHECK-NEXT:    ret
   %load = load <vscale x 48 x i16>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.vector.deinterleave3.nxv48i16(<vscale x 48 x i16> %load)
   %extract0 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16> } %deinterleave, 0
@@ -114,31 +73,18 @@ define void @deinterleave_wide_nxi16_factor3(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxf32_factor3(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxf32_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxf32_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxf32_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z5 $z3_z4_z5
+; CHECK-NEXT:    // fake_use: $z2 $z0_z1_z2
+; CHECK-NEXT:    ret
   %load = load <vscale x 24 x float>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave3.nxv24f32(<vscale x 24 x float> %load)
   %extract0 = extractvalue { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } %deinterleave, 0
@@ -151,35 +97,20 @@ define void @deinterleave_wide_nxf32_factor3(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi64_factor4(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi64_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi64_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi64_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    ret
   %load = load <vscale x 16 x i64>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.vector.deinterleave4.nxv16i64(<vscale x 16 x i64> %load)
   %extract0 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64> } %deinterleave, 0
@@ -194,35 +125,20 @@ define void @deinterleave_wide_nxi64_factor4(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxf64_factor4(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxf64_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxf64_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxf64_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4d { z4.d - z7.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    ret
   %load = load <vscale x 16 x double>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave4.nxv16f64(<vscale x 16 x double> %load)
   %extract0 = extractvalue { <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double> } %deinterleave, 0
@@ -238,39 +154,22 @@ define void @deinterleave_wide_nxf64_factor4(ptr %ptr) #0 {
 
 ; Each result below spans four SVE registers, requiring repeated type splitting.
 define void @deinterleave_wide_nxi16_factor2(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi16_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2h { z2.h, z3.h }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2h { z4.h, z5.h }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2h { z6.h, z7.h }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi16_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2h { z2.h, z3.h }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2h { z4.h, z5.h }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2h { z6.h, z7.h }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi16_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld2h { z2.h, z3.h }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld2h { z4.h, z5.h }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2h { z6.h, z7.h }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z7 $z6_z7
+; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %load = load <vscale x 64 x i16>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 32 x i16>, <vscale x 32 x i16> } @llvm.vector.deinterleave2.nxv64i16(<vscale x 64 x i16> %load)
   %extract0 = extractvalue { <vscale x 32 x i16>, <vscale x 32 x i16> } %deinterleave, 0
@@ -281,39 +180,22 @@ define void @deinterleave_wide_nxi16_factor2(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi64_factor2(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi64_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2d { z4.d, z5.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2d { z6.d, z7.d }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi64_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2d { z4.d, z5.d }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2d { z6.d, z7.d }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi64_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld2d { z4.d, z5.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2d { z6.d, z7.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z7 $z6_z7
+; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %load = load <vscale x 16 x i64>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 8 x i64>, <vscale x 8 x i64> } @llvm.vector.deinterleave2.nxv16i64(<vscale x 16 x i64> %load)
   %extract0 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %deinterleave, 0
@@ -324,47 +206,26 @@ define void @deinterleave_wide_nxi64_factor2(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi8_factor3(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi8_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld3b { z3.b - z5.b }, p0/z, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3b { z16.b - z18.b }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3b { z19.b - z21.b }, p0/z, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi8_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3b { z3.b - z5.b }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3b { z16.b - z18.b }, p0/z, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3b { z19.b - z21.b }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi8_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, #9, mul vl]
+; CHECK-NEXT:    ld3b { z3.b - z5.b }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld3b { z16.b - z18.b }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3b { z19.b - z21.b }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z19
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z21 $z19_z20_z21
+; CHECK-NEXT:    // fake_use: $z18 $z16_z17_z18
+; CHECK-NEXT:    // fake_use: $z5 $z3_z4_z5
+; CHECK-NEXT:    // fake_use: $z2 $z0_z1_z2
+; CHECK-NEXT:    ret
   %load = load <vscale x 192 x i8>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8> } @llvm.vector.deinterleave3.nxv192i8(<vscale x 192 x i8> %load)
   %extract0 = extractvalue { <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8> } %deinterleave, 0
@@ -377,47 +238,26 @@ define void @deinterleave_wide_nxi8_factor3(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi32_factor3(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi32_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3w { z16.s - z18.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3w { z19.s - z21.s }, p0/z, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi32_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3w { z16.s - z18.s }, p0/z, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3w { z19.s - z21.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi32_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, #9, mul vl]
+; CHECK-NEXT:    ld3w { z3.s - z5.s }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld3w { z16.s - z18.s }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3w { z19.s - z21.s }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z19
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z21 $z19_z20_z21
+; CHECK-NEXT:    // fake_use: $z18 $z16_z17_z18
+; CHECK-NEXT:    // fake_use: $z5 $z3_z4_z5
+; CHECK-NEXT:    // fake_use: $z2 $z0_z1_z2
+; CHECK-NEXT:    ret
   %load = load <vscale x 48 x i32>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave3.nxv48i32(<vscale x 48 x i32> %load)
   %extract0 = extractvalue { <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32> } %deinterleave, 0
@@ -430,47 +270,26 @@ define void @deinterleave_wide_nxi32_factor3(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi64_factor3(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi64_factor3:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0, #3, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    ld3d { z19.d - z21.d }, p0/z, [x0, #9, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi64_factor3:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.d
-; CHECK-IADISABLED-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0, #9, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ld3d { z19.d - z21.d }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21 $z19_z20_z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18 $z16_z17_z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z3_z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2 $z0_z1_z2
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi64_factor3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0, #9, mul vl]
+; CHECK-NEXT:    ld3d { z3.d - z5.d }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld3d { z19.d - z21.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z19
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z21 $z19_z20_z21
+; CHECK-NEXT:    // fake_use: $z18 $z16_z17_z18
+; CHECK-NEXT:    // fake_use: $z5 $z3_z4_z5
+; CHECK-NEXT:    // fake_use: $z2 $z0_z1_z2
+; CHECK-NEXT:    ret
   %load = load <vscale x 24 x i64>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } @llvm.vector.deinterleave3.nxv24i64(<vscale x 24 x i64> %load)
   %extract0 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64> } %deinterleave, 0
@@ -483,55 +302,30 @@ define void @deinterleave_wide_nxi64_factor3(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi8_factor4(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi8_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.b
-; CHECK-IAENABLED-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld4b { z4.b - z7.b }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4b { z16.b - z19.b }, p0/z, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4b { z20.b - z23.b }, p0/z, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z22
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi8_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.b
-; CHECK-IADISABLED-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4b { z4.b - z7.b }, p0/z, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4b { z16.b - z19.b }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4b { z20.b - z23.b }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z22
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi8_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, #12, mul vl]
+; CHECK-NEXT:    ld4b { z4.b - z7.b }, p0/z, [x0, #8, mul vl]
+; CHECK-NEXT:    ld4b { z16.b - z19.b }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4b { z20.b - z23.b }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z21
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z22
+; CHECK-NEXT:    // fake_use: $z18
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
+; CHECK-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
+; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    ret
   %load = load <vscale x 256 x i8>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8> } @llvm.vector.deinterleave4.nxv256i8(<vscale x 256 x i8> %load)
   %extract0 = extractvalue { <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8> } %deinterleave, 0
@@ -546,55 +340,30 @@ define void @deinterleave_wide_nxi8_factor4(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi16_factor4(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi16_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.h
-; CHECK-IAENABLED-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld4h { z4.h - z7.h }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4h { z16.h - z19.h }, p0/z, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4h { z20.h - z23.h }, p0/z, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z22
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi16_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.h
-; CHECK-IADISABLED-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4h { z4.h - z7.h }, p0/z, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4h { z16.h - z19.h }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4h { z20.h - z23.h }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z22
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi16_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0, #12, mul vl]
+; CHECK-NEXT:    ld4h { z4.h - z7.h }, p0/z, [x0, #8, mul vl]
+; CHECK-NEXT:    ld4h { z16.h - z19.h }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4h { z20.h - z23.h }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z21
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z22
+; CHECK-NEXT:    // fake_use: $z18
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
+; CHECK-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
+; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    ret
   %load = load <vscale x 128 x i16>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16> } @llvm.vector.deinterleave4.nxv128i16(<vscale x 128 x i16> %load)
   %extract0 = extractvalue { <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16> } %deinterleave, 0
@@ -609,55 +378,30 @@ define void @deinterleave_wide_nxi16_factor4(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_nxi32_factor4(ptr %ptr) #0 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_nxi32_factor4:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld4w { z4.s - z7.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4w { z16.s - z19.s }, p0/z, [x0, #8, mul vl]
-; CHECK-IAENABLED-NEXT:    ld4w { z20.s - z23.s }, p0/z, [x0, #12, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z16
-; CHECK-IAENABLED-NEXT:    // fake_use: $z20
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z17
-; CHECK-IAENABLED-NEXT:    // fake_use: $z21
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z18
-; CHECK-IAENABLED-NEXT:    // fake_use: $z22
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IAENABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IAENABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_nxi32_factor4:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0, #12, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4w { z4.s - z7.s }, p0/z, [x0, #8, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4w { z16.s - z19.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld4w { z20.s - z23.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z20
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z21
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z22
-; CHECK-IADISABLED-NEXT:    // fake_use: $z18
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
-; CHECK-IADISABLED-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_nxi32_factor4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0, #12, mul vl]
+; CHECK-NEXT:    ld4w { z4.s - z7.s }, p0/z, [x0, #8, mul vl]
+; CHECK-NEXT:    ld4w { z16.s - z19.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld4w { z20.s - z23.s }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z20
+; CHECK-NEXT:    // fake_use: $z16
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z21
+; CHECK-NEXT:    // fake_use: $z17
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z22
+; CHECK-NEXT:    // fake_use: $z18
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z23 $z20_z21_z22_z23
+; CHECK-NEXT:    // fake_use: $z19 $z16_z17_z18_z19
+; CHECK-NEXT:    // fake_use: $z7 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z3 $z0_z1_z2_z3
+; CHECK-NEXT:    ret
   %load = load <vscale x 64 x i32>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave4.nxv64i32(<vscale x 64 x i32> %load)
   %extract0 = extractvalue { <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32> } %deinterleave, 0
@@ -672,39 +416,22 @@ define void @deinterleave_wide_nxi32_factor4(ptr %ptr) #0 {
 }
 
 define void @deinterleave_wide_known_vscale(ptr %ptr) #1 {
-; CHECK-IAENABLED-LABEL: deinterleave_wide_known_vscale:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s
-; CHECK-IAENABLED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IAENABLED-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z4
-; CHECK-IAENABLED-NEXT:    // fake_use: $z6
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IAENABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_wide_known_vscale:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ptrue p0.s
-; CHECK-IADISABLED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z6
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7 $z6_z7
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5 $z4_z5
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_wide_known_vscale:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0, #6, mul vl]
+; CHECK-NEXT:    ld2w { z2.s, z3.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld2w { z4.s, z5.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld2w { z6.s, z7.s }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z6
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z7 $z6_z7
+; CHECK-NEXT:    // fake_use: $z5 $z4_z5
+; CHECK-NEXT:    // fake_use: $z3 $z2_z3
+; CHECK-NEXT:    // fake_use: $z1 $z0_z1
+; CHECK-NEXT:    ret
   %load = load <vscale x 32 x i32>, ptr %ptr, align 1
   %deinterleave = call { <vscale x 16 x i32>, <vscale x 16 x i32> } @llvm.vector.deinterleave2.nxv32i32(<vscale x 32 x i32> %load)
   %extract0 = extractvalue { <vscale x 16 x i32>, <vscale x 16 x i32> } %deinterleave, 0
@@ -878,3 +605,6 @@ define void @deinterleave_fixed_offset(ptr %ptr) #0 {
 
 attributes #0 = { vscale_range(1,16) }
 attributes #1 = { vscale_range(2,2) }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}
