@@ -1663,6 +1663,7 @@ struct RegGroupInfo {
   }
 
   Register getAsMultiVectorRegister() const {
+    assert(Type == ZPR && isGrouped() && "Expected ZPR register group");
     return (isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
            (Reg2 - AArch64::Z0);
   }
