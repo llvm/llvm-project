@@ -7685,12 +7685,12 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
       // used, so a retune moves the body, the premium absorbs it, and the
       // total holds.
       //
-      // A qword-indexed shape carries that premium over a different body. It
-      // prices above its row where the wider index only grows the body --
-      // v8i64 scatter at 35 against 32, the gap between VPSCATTERQQZ and
-      // VPSCATTERDQZ -- and below it where the wider index also splits the
-      // shape across narrower rows, as the v16i32 scatter does at 45 against
-      // 47.
+      // The premium is then added to the summed body of the instructions the
+      // shape emits, so a qword-indexed shape follows its own body rather than
+      // its row. It lands above the dword form where the wider index grows the
+      // body, v8i64 scatter at 35 against 32, and below it where the wider
+      // index shrinks it, v8i32 scatter at 24 against 25. Neither of those
+      // splits. Splitting only adds further bodies to the sum.
       auto premiumFor =
           [&](unsigned NativeVF) -> std::optional<InstructionCost::CostType> {
         auto *NativeVTy = FixedVectorType::get(EltTy, NativeVF);
