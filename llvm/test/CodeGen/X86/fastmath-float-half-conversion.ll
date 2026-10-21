@@ -80,14 +80,22 @@ define half @fptrunc_afn(double %d) #0 {
 }
 
 define half @fptrunc_afn_f80(x86_fp80 %d) #0 {
-; ALL-LABEL: fptrunc_afn_f80:
-; ALL:       # %bb.0:
-; ALL-NEXT:    subq $24, %rsp
-; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
-; ALL-NEXT:    fstpt (%rsp)
-; ALL-NEXT:    callq __truncxfhf2@PLT
-; ALL-NEXT:    addq $24, %rsp
-; ALL-NEXT:    retq
+; F16C-LABEL: fptrunc_afn_f80:
+; F16C:       # %bb.0:
+; F16C-NEXT:    fldt {{[0-9]+}}(%rsp)
+; F16C-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    retq
+;
+; AVX-LABEL: fptrunc_afn_f80:
+; AVX:       # %bb.0:
+; AVX-NEXT:    subq $24, %rsp
+; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX-NEXT:    fstpt (%rsp)
+; AVX-NEXT:    callq __truncxfhf2@PLT
+; AVX-NEXT:    addq $24, %rsp
+; AVX-NEXT:    retq
   %r = fptrunc afn x86_fp80 %d to half
   ret half %r
 }
