@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <tuple>
 
 using namespace llvm;
 using namespace IntelGPU;
@@ -30,7 +31,7 @@ using namespace IntelGPU;
 // The reserved bits carry no information.
 static constexpr uint32_t GPUIPMajorShift = 22;
 static constexpr uint32_t GPUIPMinorShift = 14;
-[[maybe_unused]] static constexpr uint32_t GPUIPMajorMask = 0x3ff;
+static constexpr uint32_t GPUIPMajorMask = 0x3ff;
 static constexpr uint32_t GPUIPMinorMask = 0xff;
 static constexpr uint32_t GPUIPRevisionMask = 0x3f;
 
@@ -88,12 +89,45 @@ StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
   llvm_unreachable("invalid Intel GPU kind");
 }
 
+// Read a numeric name, e.g. "xe_12.60.7", into the GPU IP version it spells.
+// The revision may be omitted.
+static bool parseNumericArchName(StringRef Name, uint32_t &GPUIPVersion) {
+  if (!Name.consume_front("xe_"))
+    return false;
+
+  StringRef MajorStr, MinorStr, RevisionStr;
+  std::tie(MajorStr, Name) = Name.split('.');
+  // A separator with no revision after it is malformed.
+  const bool HasRevision = Name.contains('.');
+  std::tie(MinorStr, RevisionStr) = Name.split('.');
+  uint32_t Major, Minor, Revision = 0;
+  if (MajorStr.getAsInteger(10, Major) || MinorStr.getAsInteger(10, Minor))
+    return false;
+  if (HasRevision && RevisionStr.getAsInteger(10, Revision))
+    return false;
+
+  // Each field must fit its GPU IP version field.
+  if (Major > GPUIPMajorMask || Minor > GPUIPMinorMask ||
+      Revision > GPUIPRevisionMask)
+    return false;
+  GPUIPVersion = packDevice(Major, Minor) | Revision;
+  return true;
+}
+
 GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
-  return StringSwitch<GPUKind>(Name)
+  GPUKind Kind = StringSwitch<GPUKind>(Name)
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
   .Case(NAME, GK_##KIND)
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
   .Case(NAME, GK_##KIND)
+#define INTEL_GPU_ALIAS(NAME, KIND) .Case(NAME, GK_##KIND)
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-      .Default(GK_NONE);
+                     .Default(GK_NONE);
+  if (Kind != GK_NONE)
+    return Kind;
+
+  uint32_t GPUIPVersion;
+  if (parseNumericArchName(Name, GPUIPVersion))
+    return getKindForVersion(GPUIPVersion);
+  return GK_NONE;
 }
