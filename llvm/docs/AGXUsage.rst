@@ -706,9 +706,13 @@ bit for the bits dropped) is computed with integer operations, and a single
 rounding gives the result, so all operations are correctly rounded IEEE 754
 operations with denormals, in the four rounding directions (see `Rounding
 modes`_; the ``double`` rounding mode is the ``half`` field). Significands are 64-bit, with 128-bit
-products in multiplications and fused multiply-adds; division is a restoring
-division and the square root a digit by digit root, each a loop of 55
-iterations of 64-bit operations. NaN results are ``0x7fffffffffffffff`` with
+products in multiplications and fused multiply-adds. Division and the square
+root have no loop: a ``llvm.agx.rcp`` or ``llvm.agx.rsqrt`` estimate, lowered
+by 2^-19 and taken as a fixed-point value, is refined by two Newton steps on
+64-bit and 128-bit integers to a quotient or root within 2 units of the
+exact 55-bit one, which the exact remainder then corrects. The estimate may
+be off by up to about 2^-19.7 (some 10 units in the last place of ``float``)
+without changing a result. NaN results are ``0x7fffffffffffffff`` with
 ``canonical-nan``, and the first NaN operand, quieted, otherwise. Conversions
 to integers saturate, and NaN converts to 0.
 
@@ -716,9 +720,8 @@ Values that are only moved (loads, stores, ``phi``, ``select``, arguments)
 stay ``double`` and become ``i64`` in type legalization. ``frem`` and vector
 arithmetic on ``double`` are diagnosed as unsupported. The code is large: in
 instructions per operation, about 290 for an addition, 335 for a
-multiplication, 670 for a fused multiply-add, 280 for a division and 230 for
-a square root (plus their 55 loop iterations of about 10 instructions), 140
-for a conversion and 20 for a comparison.
+multiplication, 670 for a fused multiply-add, 450 for a division, 480 for a
+square root, 140 for a conversion and 20 for a comparison.
 
 Vector floating point arithmetic is scalarized before the floating point
 lowerings (the Scalarizer pass), and constrained vector operations are rounded

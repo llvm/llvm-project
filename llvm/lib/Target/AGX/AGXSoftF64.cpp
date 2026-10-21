@@ -27,10 +27,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -126,41 +128,6 @@ public:
     return {T.Sign, B.CreateTrunc(lshrSticky(T.M, S), I64), B.CreateAdd(T.E, S)};
   }
   Term widen(Term T) { return {T.Sign, B.CreateZExt(T.M, I128), T.E}; }
-
-  /// A counted loop: Count iterations of Body, which maps the iteration
-  /// number (Count - 1 down to 0) and the current values to the next ones,
-  /// starting from Init. Returns the final values.
-  SmallVector<Value *, 2>
-  loop(unsigned Count, ArrayRef<Value *> Init,
-       function_ref<SmallVector<Value *, 2>(Value *, ArrayRef<Value *>)> Body) {
-    BasicBlock *Pre = B.GetInsertBlock();
-    Instruction *At = &*B.GetInsertPoint();
-    BasicBlock *Tail = Pre->splitBasicBlock(At->getIterator(), "soft.loop.end");
-    BasicBlock *Loop = BasicBlock::Create(B.getContext(), "soft.loop", Pre->getParent(), Tail);
-    Pre->getTerminator()->setSuccessor(0, Loop);
-    B.SetInsertPoint(Loop);
-    PHINode *I = B.CreatePHI(I32, 2);
-    I->addIncoming(c32(Count - 1), Pre);
-    SmallVector<Value *, 2> Cur;
-    for (Value *V : Init) {
-      PHINode *P = B.CreatePHI(V->getType(), 2);
-      P->addIncoming(V, Pre);
-      Cur.push_back(P);
-    }
-    SmallVector<Value *, 2> Next = Body(I, Cur);
-    I->addIncoming(B.CreateSub(I, c32(1)), Loop);
-    for (auto [P, V] : zip(Cur, Next))
-      cast<PHINode>(P)->addIncoming(V, Loop);
-    B.CreateCondBr(B.CreateICmpEQ(I, c32(0)), Tail, Loop);
-    B.SetInsertPoint(At);
-    SmallVector<Value *, 2> Out;
-    for (Value *V : Next) {
-      PHINode *P = B.CreatePHI(V->getType(), 1);
-      P->addIncoming(V, Loop);
-      Out.push_back(P);
-    }
-    return Out;
-  }
 
   // Classification of bits (an i64 holding a value of format F).
   Value *magnitude(Value *Bits, Fmt F) {
@@ -347,60 +314,106 @@ public:
     return select(NaN, nanResult({X, Y, Z}, F, F), R);
   }
 
+  /// An f32 estimate of an i64 below 2^24, through an AGX approximation
+  /// (agx_rcp or agx_rsqrt, within a few units of the last place), scaled by
+  /// 2^Scale and lowered by 2^-19 so that it is below the exact value, as an
+  /// i64.
+  Value *estimate(Intrinsic::ID ID, Value *V, int Scale) {
+    Type *F32 = B.getFloatTy();
+    Value *F = B.CreateUIToFP(B.CreateTrunc(V, I32), F32);
+    Value *Est = B.CreateIntrinsic(ID, {F32}, {F});
+    Est = B.CreateFMul(Est, ConstantFP::get(F32, std::ldexp(1.0 - 0x1p-19, Scale)));
+    return B.CreateZExt(B.CreateFPToUI(Est, I32), I64);
+  }
+  Value *mulWide(Value *X, Value *Y, bool Signed = false) {
+    auto Ext = [&](Value *V, bool S) {
+      return S ? B.CreateSExt(V, I128) : B.CreateZExt(V, I128);
+    };
+    return B.CreateMul(Ext(X, false), Ext(Y, Signed));
+  }
+  Value *hi(Value *X, unsigned S, bool Signed = false) {
+    return B.CreateTrunc(Signed ? B.CreateAShr(X, S) : B.CreateLShr(X, S), I64);
+  }
+
   Value *div(Value *X, Value *Y) {
     Term TX = unpack(X, F64), TY = unpack(Y, F64);
     Value *Sign = B.CreateXor(TX.Sign, TY.Sign);
     // Both significands with their top bit at 52, the dividend doubled if it
-    // is the smaller: a restoring division gives a quotient of 55 bits.
+    // is the smaller: the quotient Q = floor(N * 2^54 / Dv) has 55 bits.
     Value *SX = B.CreateSub(c32(53), bitLength(TX.M));
     Value *SY = B.CreateSub(c32(53), bitLength(TY.M));
     Value *N = shl(TX.M, SX);
     Value *Dv = shl(TY.M, SY);
     Value *Less = B.CreateICmpULT(N, Dv);
     N = select(Less, B.CreateShl(N, 1), N);
-    SmallVector<Value *, 2> QR = loop(55, {c64(0), N}, [&](Value *, ArrayRef<Value *> V) {
-      Value *Ge = B.CreateICmpUGE(V[1], Dv);
-      Value *Q = B.CreateOr(B.CreateShl(V[0], 1), B.CreateZExt(Ge, I64));
-      Value *R = B.CreateShl(select(Ge, B.CreateSub(V[1], Dv), V[1]), 1);
-      return SmallVector<Value *, 2>{Q, R};
-    });
-    Value *Inexact = B.CreateICmpNE(QR[1], c64(0));
-    Value *M = B.CreateOr(B.CreateShl(QR[0], 1), B.CreateZExt(Inexact, I64));
+    // A reciprocal from below: Y0 ~ 2^82 / Dv to 2^-18, then two Newton
+    // steps, Z ~ 2^115 / Dv to 2^-36 and Z2 to 2^-60 (each step squares the
+    // error and stays below). Q is then at most 2 above (N * Z2) >> 61, and
+    // the exact remainder corrects it. A zero divisor gives a result that is
+    // replaced below, but not an out of range conversion.
+    Value *DvE = select(B.CreateICmpEQ(Dv, c64(0)), c64(uint64_t(1) << 52), Dv);
+    Value *Y0 = estimate(Intrinsic::agx_rcp, B.CreateLShr(DvE, 29), 53);
+    Value *E0 = B.CreateNeg(B.CreateMul(DvE, Y0)); // 2^82 - Dv * Y0
+    Value *Z = B.CreateAdd(B.CreateShl(Y0, 33), hi(mulWide(Y0, E0), 49));
+    Value *E1 = B.CreateSub(ConstantInt::get(I128, APInt::getOneBitSet(128, 115)),
+                            mulWide(DvE, Z));
+    Value *Z2 = B.CreateAdd(Z, hi(mulWide(Z, hi(E1, 16)), 99));
+    Value *Q = hi(mulWide(N, Z2), 61);
+    Value *R = B.CreateSub(B.CreateShl(N, 54), B.CreateMul(Q, DvE));
+    for (int I = 0; I < 2; ++I) {
+      Value *Ge = B.CreateICmpUGE(R, DvE);
+      Q = B.CreateAdd(Q, B.CreateZExt(Ge, I64));
+      R = select(Ge, B.CreateSub(R, DvE), R);
+    }
+    Value *Inexact = B.CreateICmpNE(R, c64(0));
+    Value *M = B.CreateOr(B.CreateShl(Q, 1), B.CreateZExt(Inexact, I64));
     Value *E = B.CreateSub(B.CreateSub(TX.E, SX), B.CreateSub(TY.E, SY));
     E = B.CreateSub(E, B.CreateAdd(c32(55), B.CreateZExt(Less, I32)));
-    Value *R = round({Sign, M, E}, F64);
+    Value *Res = round({Sign, M, E}, F64);
     Value *SignBits = select(Sign, c64(F64.signBit()), c64(0));
     Value *XZero = isZero(X, F64), *YZero = isZero(Y, F64);
     Value *XInf = isInf(X, F64), *YInf = isInf(Y, F64);
-    R = select(B.CreateOr(XZero, YInf), SignBits, R);
-    R = select(B.CreateOr(XInf, YZero), B.CreateOr(c64(F64.infBits()), SignBits), R);
+    Res = select(B.CreateOr(XZero, YInf), SignBits, Res);
+    Res = select(B.CreateOr(XInf, YZero), B.CreateOr(c64(F64.infBits()), SignBits), Res);
     Value *NaN = B.CreateOr(B.CreateOr(isNaN(X, F64), isNaN(Y, F64)),
                             B.CreateOr(B.CreateAnd(XZero, YZero), B.CreateAnd(XInf, YInf)));
-    return select(NaN, nanResult({X, Y}, F64, F64), R);
+    return select(NaN, nanResult({X, Y}, F64, F64), Res);
   }
 
   Value *sqrt(Value *X) {
     Term TX = unpack(X, F64);
-    // The radicand with its top bit at 52 or 53 and an even exponent. Its
-    // root times 2^28 has 55 bits; the bit pairs of the radicand times 2^56
-    // are produced from the top, one per iteration.
+    // The radicand with its top bit at 52 or 53 and an even exponent; the
+    // root S = floor(sqrt(N * 2^56)) has 55 bits.
     Value *S = B.CreateSub(c32(53), bitLength(TX.M));
     Value *Odd = B.CreateTrunc(B.CreateSub(TX.E, S), I1);
     S = B.CreateAdd(S, B.CreateZExt(Odd, I32));
     Value *N = shl(TX.M, S);
     Value *E = B.CreateSub(TX.E, S);
-    SmallVector<Value *, 2> RR = loop(55, {c64(0), c64(0)}, [&](Value *I, ArrayRef<Value *> V) {
-      Value *Sh = B.CreateZExt(B.CreateSub(B.CreateShl(I, 1), c32(56)), I64);
-      Value *Pair = select(B.CreateICmpUGE(I, c32(28)),
-                           B.CreateAnd(B.CreateLShr(N, Sh), c64(3)), c64(0));
-      Value *Rem = B.CreateOr(B.CreateShl(V[1], 2), Pair);
-      Value *T = B.CreateOr(B.CreateShl(V[0], 2), c64(1));
-      Value *Ge = B.CreateICmpUGE(Rem, T);
-      Value *Root = B.CreateOr(B.CreateShl(V[0], 1), B.CreateZExt(Ge, I64));
-      return SmallVector<Value *, 2>{Root, select(Ge, B.CreateSub(Rem, T), Rem)};
-    });
-    Value *Inexact = B.CreateICmpNE(RR[1], c64(0));
-    Value *M = B.CreateOr(B.CreateShl(RR[0], 1), B.CreateZExt(Inexact, I64));
+    // A reciprocal root Y0 ~ 2^57 / sqrt(N) to 2^-18, then two Newton steps
+    // (Y1 ~ 2^89 / sqrt(N) to 2^-35, Y2 to 2^-58) give S to 2 units, which
+    // the exact remainder corrects.
+    Value *NE = select(B.CreateICmpEQ(N, c64(0)), c64(uint64_t(1) << 52), N);
+    Value *Y0 = estimate(Intrinsic::agx_rsqrt, B.CreateLShr(NE, 30), 42);
+    auto Two114 = ConstantInt::get(I128, APInt::getOneBitSet(128, 114));
+    Value *D0 = B.CreateSub(Two114, mulWide(NE, B.CreateMul(Y0, Y0)));
+    Value *Y1 = B.CreateAdd(B.CreateShl(Y0, 32),
+                            hi(mulWide(Y0, hi(D0, 40, true), true), 43, true));
+    Value *D1 = B.CreateSub(Two114, mulWide(NE, hi(mulWide(Y1, Y1), 64)));
+    Value *Y2 = B.CreateAdd(Y1, hi(mulWide(Y1, hi(D1, 18, true), true), 97, true));
+    Value *Root = hi(mulWide(NE, Y2), 61);
+    Value *Rem = B.CreateSub(B.CreateShl(N, 56), B.CreateMul(Root, Root));
+    for (int I = 0; I < 2; ++I) {
+      Value *Neg = B.CreateICmpSLT(Rem, c64(0));
+      Rem = select(Neg, B.CreateAdd(Rem, B.CreateSub(B.CreateShl(Root, 1), c64(1))), Rem);
+      Root = B.CreateSub(Root, B.CreateZExt(Neg, I64));
+    }
+    for (int I = 0; I < 2; ++I) {
+      Value *Big = B.CreateICmpSGT(Rem, B.CreateShl(Root, 1));
+      Rem = select(Big, B.CreateSub(Rem, B.CreateOr(B.CreateShl(Root, 1), c64(1))), Rem);
+      Root = B.CreateAdd(Root, B.CreateZExt(Big, I64));
+    }
+    Value *Inexact = B.CreateICmpNE(Rem, c64(0));
+    Value *M = B.CreateOr(B.CreateShl(Root, 1), B.CreateZExt(Inexact, I64));
     Value *R = round({B.getFalse(), M, B.CreateSub(B.CreateAShr(E, 1), c32(29))}, F64);
     R = select(B.CreateOr(isZero(X, F64), B.CreateICmpEQ(X, c64(F64.infBits()))), X, R);
     Value *NaN = B.CreateOr(isNaN(X, F64),
