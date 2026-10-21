@@ -48,12 +48,13 @@ entry:
 }
 
 ; A compiled read followed by a write inside inline assembly.
-; FIXME: MIPS2 lacks the two nops before the inline assembly.
 define i32 @read_then_asm_write(i32 %a, i32 %b) {
 ; MIPS2-LABEL: read_then_asm_write:
 ; MIPS2:       # %bb.0: # %entry
 ; MIPS2-NEXT:    multu $4, $5
 ; MIPS2-NEXT:    mfhi $2
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:    #APP
 ; MIPS2-NEXT:    .set push
 ; MIPS2-NEXT:    .set at
