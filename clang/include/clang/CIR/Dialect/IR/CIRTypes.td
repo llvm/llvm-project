@@ -589,20 +589,20 @@ def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
 
   let parameters = (ins
     CIR_MatrixElementType:$element_type,
-    "uint64_t":$row_num,
-    "uint64_t":$column_num
+    "uint64_t":$num_rows,
+    "uint64_t":$num_columns
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$row_num, "uint64_t":$column_num
+      "mlir::Type":$element_type, "uint64_t":$num_rows, "uint64_t":$num_columns
     ), [{
-        return $_get(element_type.getContext(), element_type, row_num, column_num);
+        return $_get(element_type.getContext(), element_type, num_rows, num_columns);
     }]>,
   ];
 
   let assemblyFormat = [{
-    `<` $row_num `x` $column_num `x` $element_type `>`
+    `<` $num_rows `x` $num_columns `x` $element_type `>`
   }];
 
   let genVerifyDecl = 1;

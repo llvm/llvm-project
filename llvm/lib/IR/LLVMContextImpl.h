@@ -40,7 +40,9 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1659,6 +1661,9 @@ public:
   /// never directly.
   std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer;
 
+  /// The virtual file system used for inputs.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+
   std::unique_ptr<DiagnosticHandler> DiagHandler;
   bool RespectDiagnosticFilters = false;
   bool DiagnosticsHotnessRequested = false;
@@ -1860,11 +1865,6 @@ public:
   DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
       GlobalValueSanitizerMetadata;
 
-  /// DiscriminatorTable - This table maps file:line locations to an
-  /// integer representing the next DWARF path discriminator to assign to
-  /// instructions in different blocks at the same location.
-  DenseMap<std::pair<const char *, unsigned>, unsigned> DiscriminatorTable;
-
   /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.
   ///
@@ -1950,6 +1950,8 @@ public:
 
   std::string DefaultTargetCPU;
   std::string DefaultTargetFeatures;
+
+  cl::LibraryOptionsContext LibraryOptions;
 
   /// The next available source atom group number. The front end is responsible
   /// for assigning source atom numbers, but certain optimisations need to

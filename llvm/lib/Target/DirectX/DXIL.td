@@ -476,6 +476,7 @@ def IsInf : DXILOp<9, isSpecialFloat> {
 
 def IsFinite : DXILOp<10, isSpecialFloat> {
   let Doc = "Determines if the specified value is finite.";
+  let intrinsics = [IntrinSelect<int_dx_isfinite>];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];

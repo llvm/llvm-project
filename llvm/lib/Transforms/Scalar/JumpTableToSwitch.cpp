@@ -38,10 +38,10 @@ struct JumpTableTy {
 };
 } // anonymous namespace
 
-static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
+static std::optional<JumpTableTy> parseJumpTable(const ScalarOptions &Opts,
+                                                 GetElementPtrInst *GEP,
                                                  PointerType *PtrTy,
                                                  FunctionType *CallFTy) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
   Constant *Ptr = dyn_cast<Constant>(GEP->getPointerOperand());
   if (!Ptr)
     return std::nullopt;
@@ -194,6 +194,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   DominatorTree *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
   auto FuncToGuid = [&](const Function &Fct) {
     if (const auto MaybeGUID = Fct.getGUIDIfAssigned(); MaybeGUID)
@@ -221,7 +223,7 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         auto *PtrTy = dyn_cast<PointerType>(L->getType());
         assert(PtrTy && "call operand must be a pointer");
         std::optional<JumpTableTy> JumpTable =
-            parseJumpTable(GEP, PtrTy, Call->getFunctionType());
+            parseJumpTable(Opts, GEP, PtrTy, Call->getFunctionType());
         if (!JumpTable)
           continue;
         SplittedOutTail =

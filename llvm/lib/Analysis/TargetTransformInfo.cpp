@@ -771,10 +771,6 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
-bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
-  return TTIImpl->haveFastClmul(Ty);
-}
-
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
     const Instruction *I) const {
   return TTIImpl->isExpensiveToSpeculativelyExecute(I);
@@ -1628,12 +1624,6 @@ bool TargetTransformInfo::isProfitableToSinkOperands(
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
-}
-
-unsigned
-TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
-                                                 Type *ArrayType) const {
-  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 void TargetTransformInfo::collectKernelLaunchBounds(

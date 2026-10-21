@@ -170,6 +170,12 @@ struct OMPContext {
     addTrait(getOpenMPContextTraitSetForProperty(Property), Property);
   }
   void addTrait(TraitSet Set, TraitProperty Property) {
+    // The construct context starts at the innermost enclosing target construct.
+    if (Property == TraitProperty::construct_target_target) {
+      for (TraitProperty Construct : ConstructTraits)
+        ActiveTraits.reset(unsigned(Construct));
+      ConstructTraits.clear();
+    }
     ActiveTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
