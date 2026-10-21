@@ -348,32 +348,14 @@ Makes programs 10x faster by doing Special New Thing.
   and the memory operations access only memory through their pointer
   argument. Before, each one could read and write any memory, so loads of
   loop-invariant values weren't hoisted out of loops of tile operations.
-* A masked gather or scatter is now costed by the number of instructions
-  CodeGen emits for it, rather than by the number of legalized registers its
-  operands occupy. The two differ whenever legalization rounds the vector length
-  up to a power of two and adds a part with no live lane in it: a 24-lane
-  qword-indexed gather covers eight lanes per instruction and legalizes to four
-  registers, but only three are live. A mask known at compile time is consulted
-  too, so a part with no live lane is not counted and an operation with no live
-  lane at all is free. Every lane of the original vector is charged, where
-  dividing the length by the part count used to drop the remainder.
-
-* The index width those counts depend on is now derived on every subtarget with
-  a hardware gather, rather than only on AVX-512 at vector lengths of 16 or
-  more, and is read from the range of values the index carries rather than from
-  its declared type and extension opcode. The rules followed are the ones
-  `combineGatherScatter` applies: the GEP's stride is multiplied into the index
-  unless the scale field can apply it, the product has to fit a signed dword,
-  and narrowing still needs one of the routes the combine has. Those routes
-  depend on the subtarget, so a 16-lane stride-12 gather keeps qword indices on
-  AVX2 and narrows to dwords on AVX-512.
-
-* The index width is taken from the address space the pointers live in rather
-  than from address space 0, which on x86 affects the 32-bit address spaces 270
-  and 271.
-
-Because these are the costs the loop vectorizer compares, some loops containing
-a gather or scatter now vectorize at a wider factor than before.
+* Masked gathers and scatters are now costed by the number of instructions
+  CodeGen emits, rather than by the number of legalized registers their
+  operands occupy. The index width that count depends on is derived on every
+  subtarget with a hardware gather, and is read from the range of values the
+  index carries and from the GEP's stride, which costs nothing when the scale
+  field can apply it. The address space the pointers live in and a mask known
+  at compile time are both honoured. These costs mostly go down, so some loops
+  vectorize at a wider factor and more gathers survive at `-Os`.
 
 ### Changes to the OCaml bindings
 
