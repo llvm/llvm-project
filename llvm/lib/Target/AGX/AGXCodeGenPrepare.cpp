@@ -445,9 +445,19 @@ bool AGXCodeGenPrepare::unifyExits(Function &F) {
     if (isa<ReturnInst>(T) || isa<UnreachableInst>(T))
       Exits.push_back(T);
   }
-  if (Exits.size() <= 1)
-    return false;
   if (!F.getReturnType()->isVoidTy())
+    return false;
+  // A thread that reaches unreachable (after llvm.trap, as in __assertfail)
+  // returns: an executed trap does nothing on G14C (ptx-re-blockers B21), and
+  // the code after the block would otherwise run on.
+  if (Exits.size() == 1) {
+    if (!isa<UnreachableInst>(Exits.front()))
+      return false;
+    ReturnInst::Create(F.getContext(), nullptr, Exits.front()->getIterator());
+    Exits.front()->eraseFromParent();
+    return true;
+  }
+  if (Exits.empty())
     return false;
 
   BasicBlock *Ret = BasicBlock::Create(F.getContext(), "unified.return", &F);
