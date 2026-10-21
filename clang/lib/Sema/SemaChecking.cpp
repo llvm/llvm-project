@@ -12085,15 +12085,22 @@ static IntRange GetValueRange(llvm::APSInt &value, unsigned MaxWidth) {
   return IntRange(value.getActiveBits(), true);
 }
 
-static IntRange GetValueRange(APValue &result, QualType Ty, unsigned MaxWidth) {
+static std::optional<IntRange> GetValueRange(APValue &result, QualType Ty,
+                                             unsigned MaxWidth) {
   if (result.isInt())
     return GetValueRange(result.getInt(), MaxWidth);
 
   if (result.isVector()) {
-    IntRange R = GetValueRange(result.getVectorElt(0), Ty, MaxWidth);
+    std::optional<IntRange> R =
+        GetValueRange(result.getVectorElt(0), Ty, MaxWidth);
+    if (!R)
+      return std::nullopt;
     for (unsigned i = 1, e = result.getVectorLength(); i != e; ++i) {
-      IntRange El = GetValueRange(result.getVectorElt(i), Ty, MaxWidth);
-      R = IntRange::join(R, El);
+      std::optional<IntRange> El =
+          GetValueRange(result.getVectorElt(i), Ty, MaxWidth);
+      if (!El)
+        return std::nullopt;
+      R = IntRange::join(*R, *El);
     }
     return R;
   }
@@ -12109,8 +12116,11 @@ static IntRange GetValueRange(APValue &result, QualType Ty, unsigned MaxWidth) {
   // FIXME: The only reason we need to pass the type in here is to get
   // the sign right on this one case.  It would be nice if APValue
   // preserved this.
-  assert(result.isLValue() || result.isAddrLabelDiff());
-  return IntRange(MaxWidth, Ty->isUnsignedIntegerOrEnumerationType());
+  if (result.isLValue() || result.isAddrLabelDiff())
+    return IntRange(MaxWidth, Ty->isUnsignedIntegerOrEnumerationType());
+
+  // Unsupported APValue kinds (e.g. floating) have no integer range.
+  return std::nullopt;
 }
 
 static QualType GetExprType(const Expr *E) {
@@ -12141,15 +12151,8 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
 
   // Try a full evaluation first.
   Expr::EvalResult result;
-  if (E->EvaluateAsRValue(result, C, InConstantContext)) {
-    // GetValueRange only handles integer-like values.
-    // Return nullopt for unsupported types.
-    if (!result.Val.isInt() && !result.Val.isVector() &&
-        !result.Val.isComplexInt() && !result.Val.isLValue() &&
-        !result.Val.isAddrLabelDiff())
-      return std::nullopt;
+  if (E->EvaluateAsRValue(result, C, InConstantContext))
     return GetValueRange(result.Val, GetExprType(E), MaxWidth);
-  }
 
   // I think we only want to look through implicit casts here; if the
   // user has an explicit widening cast, we should treat the value as

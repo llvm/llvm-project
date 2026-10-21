@@ -6,13 +6,13 @@
 void test_floating_init(void) {
 #pragma omp flatten
   for (int i = 0; i < 2; ++i)
-    for (int j = 0.; j < 2; ++j)
+    for (int j = 0.0; j < 2; ++j)
       ;
 }
 
 void test_floating_bound(void) {
 #pragma omp flatten
   for (int i = 0; i < 2; ++i)
-    for (int j = 0; j < 2.; ++j)
+    for (int j = 0; j < 2.0; ++j)
       ;
 }
