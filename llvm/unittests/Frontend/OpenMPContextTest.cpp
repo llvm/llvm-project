@@ -340,4 +340,66 @@ TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
   EXPECT_EQ(Best({Subset, Superset, Other}), 1);
 }
 
+TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4), Five(64, 5);
+  VariantMatchInfo A, B;
+  A.addTrait(TraitProperty::user_condition_true, "");
+  A.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  B.addTrait(TraitProperty::user_condition_true, "");
+  B.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  B.addTrait(TraitProperty::device_kind_host, "");
+  auto Best = [&](const VariantMatchInfo &First,
+                  const VariantMatchInfo &Second) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{First, Second}, Context);
+  };
+
+  // Both score 5. Constant conditions are compared by their trait alone.
+  EXPECT_EQ(Best(A, B), 1);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // Different runtime conditions keep clause order.
+  A.UserCondition = "a";
+  B.UserCondition = "b";
+  EXPECT_EQ(Best(A, B), 0);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // The same runtime condition still makes A a strict subset of B.
+  B.UserCondition = "a";
+  EXPECT_EQ(Best(A, B), 1);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // A higher score wins regardless of the conditions.
+  B.UserCondition = "b";
+  A.ScoreMap[TraitProperty::implementation_vendor_llvm] = Five;
+  EXPECT_EQ(Best(A, B), 0);
+  EXPECT_EQ(Best(B, A), 1);
+
+  // A runtime condition left out of the traits is still compared by its key.
+  VariantMatchInfo C;
+  C.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  C.UserCondition = "a";
+  EXPECT_EQ(Best(C, B), 0);
+  EXPECT_EQ(Best(B, C), 0);
+  C.UserCondition = "b";
+  EXPECT_EQ(Best(C, B), 1);
+
+  // A constant condition is different from a runtime condition.
+  C.UserCondition = "";
+  C.addTrait(TraitProperty::user_condition_true, "");
+  EXPECT_EQ(Best(C, B), 0);
+
+  // A condition left out of the traits still counts as one, so D, which only
+  // has the key, is not a strict subset of E, which also has the trait.
+  VariantMatchInfo D, E;
+  D.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  D.UserCondition = "a";
+  E.addTrait(TraitProperty::user_condition_true, "");
+  E.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  E.UserCondition = "a";
+  EXPECT_EQ(Best(D, E), 0);
+  EXPECT_EQ(Best(E, D), 0);
+}
+
 } // namespace

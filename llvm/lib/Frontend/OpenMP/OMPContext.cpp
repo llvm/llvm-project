@@ -162,16 +162,36 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
+static bool hasUserConditionTrait(const VariantMatchInfo &VMI) {
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI.RequiredTraits.test(unsigned(Property)))
+      return true;
+  return false;
+}
+
+// A runtime condition can be left out of the traits but keep its key, so count
+// it as a trait.
+static unsigned countTraits(const VariantMatchInfo &VMI) {
+  return VMI.RequiredTraits.count() +
+         (!VMI.UserCondition.empty() && !hasUserConditionTrait(VMI));
+}
+
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
   // If all required traits are a strict subset and the ordered vectors storing
   // the construct traits, we say it is a strict subset. Note that the latter
   // relation is not required to be strict.
-  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+  if (countTraits(VMI0) >= countTraits(VMI1))
     return false;
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
+  // Different runtime conditions share a trait, so compare them as well.
+  if ((!VMI0.UserCondition.empty() || hasUserConditionTrait(VMI0)) &&
+      VMI0.UserCondition != VMI1.UserCondition)
+    return false;
   if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
     return false;
   return true;
