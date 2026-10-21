@@ -536,6 +536,24 @@ bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {
          TRI->hasStackRealignment(MF);
 }
 
+static int64_t getPushPopReservedPadding(const MachineFunction &MF) {
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->isPushable(MF))
+    return 0;
+  return RVFI->getRVPushPaddingSize();
+}
+
+static bool hasScalarLocalFrameObject(const MachineFrameInfo &MFI) {
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (MFI.isDeadObjectIndex(I) || MFI.isCalleeSavedObjectIndex(I) ||
+        MFI.isSpillSlotObjectIndex(I))
+      continue;
+    if (MFI.getStackID(I) == TargetStackID::Default)
+      return true;
+  }
+  return false;
+}
+
 // Determines the size of the frame and maximum call frame size.
 void RISCVFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -563,8 +581,10 @@ void RISCVFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   // variable section up to the RVV alignment.
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   if (RVFI->getRVVStackSize() && (!hasFP(MF) || TRI->hasStackRealignment(MF))) {
-    int ScalarLocalVarSize = FrameSize - RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize();
+    int64_t ScalarLocalVarSize = FrameSize - RVFI->getCalleeSavedStackSize() -
+                                 RVFI->getVarArgsSaveSize();
+    if (hasScalarLocalFrameObject(MFI))
+      ScalarLocalVarSize += getPushPopReservedPadding(MF);
     if (auto RVVPadding =
             offsetToAlignment(ScalarLocalVarSize, RVFI->getRVVStackAlign()))
       RVFI->setRVVPadding(RVVPadding);
@@ -1857,6 +1877,8 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     int64_t ScalarLocalVarSize =
         MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
         RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    if (hasScalarLocalFrameObject(MFI))
+      ScalarLocalVarSize += getPushPopReservedPadding(MF);
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
   return Offset;
@@ -2391,8 +2413,11 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     // want to push more than 0 registers.
     unsigned OnlyPushIfMoreThan = RVFI->useQCIInterrupt(MF) ? 2 : 0;
     if (PushedRegNum > OnlyPushIfMoreThan) {
+      unsigned PushedRegsBytes = (STI.getXLen() / 8) * PushedRegNum;
       RVFI->setRVPushRegs(PushedRegNum);
-      RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
+      RVFI->setRVPushSpillSize(PushedRegsBytes);
+      RVFI->setRVPushPaddingSize(alignTo(PushedRegsBytes, 16) -
+                                 PushedRegsBytes);
     }
   }
 
@@ -2470,9 +2495,10 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
 
   if (RVFI->isPushable(MF)) {
     int64_t QCIOffset = RVFI->useQCIInterrupt(MF) ? QCIInterruptPushAmount : 0;
-    // Allocate a fixed object that covers the full push.
-    if (int64_t PushSize = RVFI->getRVPushStackSize())
-      MFI.CreateFixedSpillStackObject(PushSize, -PushSize - QCIOffset);
+    // Allocate a fixed object that covers the registers stored by the push.
+    if (int64_t PushSpillSize = RVFI->getRVPushSpillSize())
+      MFI.CreateFixedSpillStackObject(PushSpillSize,
+                                      -PushSpillSize - QCIOffset);
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
     unsigned LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
@@ -2586,6 +2612,8 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     uint64_t ScalarLocalVarSize =
         MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
         RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    if (hasScalarLocalFrameObject(MFI))
+      ScalarLocalVarSize += getPushPopReservedPadding(*MF);
     FixedSize -= ScalarLocalVarSize;
   }
 

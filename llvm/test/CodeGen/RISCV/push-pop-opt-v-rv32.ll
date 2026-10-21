@@ -19,8 +19,8 @@ define <vscale x 2 x i32> @bar() {
 ; RV32V-NEXT:    addi s0, sp, 16
 ; RV32V-NEXT:    li a0, 1
 ; RV32V-NEXT:    vs1r.v v8, (s0)
-; RV32V-NEXT:    sw a0, 12(sp)
-; RV32V-NEXT:    addi a0, sp, 12
+; RV32V-NEXT:    sw a0, 4(sp)
+; RV32V-NEXT:    addi a0, sp, 4
 ; RV32V-NEXT:    addi a1, sp, 16
 ; RV32V-NEXT:    call foo
 ; RV32V-NEXT:    vl1re32.v v8, (s0)
@@ -41,33 +41,33 @@ define <vscale x 2 x i32> @bar() {
 define <vscale x 2 x i32> @rvv_padding() {
 ; RV32V-LABEL: rvv_padding:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    cm.push {ra, s0}, -48
-; RV32V-NEXT:    .cfi_def_cfa_offset 48
+; RV32V-NEXT:    cm.push {ra, s0}, -32
+; RV32V-NEXT:    .cfi_def_cfa_offset 32
 ; RV32V-NEXT:    .cfi_offset ra, -8
 ; RV32V-NEXT:    .cfi_offset s0, -4
-; RV32V-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
-; RV32V-NEXT:    .cfi_offset fs0, -24
+; RV32V-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
+; RV32V-NEXT:    .cfi_offset fs0, -16
 ; RV32V-NEXT:    csrr a0, vlenb
 ; RV32V-NEXT:    sub sp, sp, a0
-; RV32V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
+; RV32V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
 ; RV32V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32V-NEXT:    vmv.s.x v8, zero
 ; RV32V-NEXT:    addi s0, sp, 16
 ; RV32V-NEXT:    li a0, 1
 ; RV32V-NEXT:    vs1r.v v8, (s0)
-; RV32V-NEXT:    sw a0, 4(sp)
+; RV32V-NEXT:    sw a0, 12(sp)
 ; RV32V-NEXT:    #APP
 ; RV32V-NEXT:    #NO_APP
-; RV32V-NEXT:    addi a0, sp, 4
+; RV32V-NEXT:    addi a0, sp, 12
 ; RV32V-NEXT:    addi a1, sp, 16
 ; RV32V-NEXT:    call foo
 ; RV32V-NEXT:    vl1re32.v v8, (s0)
 ; RV32V-NEXT:    csrr a0, vlenb
 ; RV32V-NEXT:    add sp, sp, a0
-; RV32V-NEXT:    .cfi_def_cfa sp, 48
-; RV32V-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
+; RV32V-NEXT:    .cfi_def_cfa sp, 32
+; RV32V-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32V-NEXT:    .cfi_restore fs0
-; RV32V-NEXT:    cm.popret {ra, s0}, 48
+; RV32V-NEXT:    cm.popret {ra, s0}, 32
   %x = alloca <vscale x 2 x i32>, align 8
   %y = alloca i32
   %z = tail call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i32(<vscale x 2 x i32> poison, i32 0, i32 1)

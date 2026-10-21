@@ -91,12 +91,12 @@ body:             |
     ; CHECK-NEXT: frame-setup CM_PUSH 4, 16, implicit-def $x2, implicit $x2, implicit $x1
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -4
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 8 :: (store (s64) into %stack.1)
-    ; CHECK-NEXT: frame-setup SD_RV32 killed $x18_x19, $x2, 0 :: (store (s64) into %stack.2)
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -24
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x9, -20
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -32
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -28
+    ; CHECK-NEXT: frame-setup SD_RV32 killed $x8_x9, $x2, 16 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: frame-setup SD_RV32 killed $x18_x19, $x2, 8 :: (store (s64) into %stack.2)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -16
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x9, -12
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x18, -24
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -20
     ; CHECK-NEXT: $x8 = frame-setup ADDI $x2, 32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; CHECK-NEXT: renamable $x9 = COPY $x11
@@ -109,8 +109,8 @@ body:             |
     ; CHECK-NEXT: SW killed renamable $x10, killed renamable $x18, 0 :: (store (s32) into %ir.p, align 8)
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -32
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 32
-    ; CHECK-NEXT: $x8_x9 = frame-destroy LD_RV32 $x2, 8 :: (load (s64) from %stack.1)
-    ; CHECK-NEXT: $x18_x19 = frame-destroy LD_RV32 $x2, 0 :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: $x8_x9 = frame-destroy LD_RV32 $x2, 16 :: (load (s64) from %stack.1)
+    ; CHECK-NEXT: $x18_x19 = frame-destroy LD_RV32 $x2, 8 :: (load (s64) from %stack.2)
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
