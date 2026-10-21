@@ -21,3 +21,4 @@
 // NO-SUBDIRECTORIES-NOT: "-fmodulemap-allow-subdirectory-search"
 // NO-SUBDIRECTORIES-NOT: "-fno-modulemap-allow-subdirectory-search"
 // SEARCH-SUBDIRECTORIES: "-fmodulemap-allow-subdirectory-search"
+// SEARCH-SUBDIRECTORIES-NOT: "-fno-modulemap-allow-subdirectory-search"
