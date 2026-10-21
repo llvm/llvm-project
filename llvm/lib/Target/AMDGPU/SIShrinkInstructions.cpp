@@ -932,8 +932,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // signed overflow, so only shrink the OR when SCC is dead.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32 ||
-          (MI.getOpcode() == AMDGPU::S_OR_B32 && MI.allImplicitDefsAreDead() &&
-           MI.getFlag(MachineInstr::MIFlag::Disjoint))) {
+          (MI.getOpcode() == AMDGPU::S_OR_B32 &&
+           MI.getFlag(MachineInstr::MIFlag::Disjoint) &&
+           MI.allImplicitDefsAreDead())) {
         const MachineOperand *Dest = &MI.getOperand(0);
         MachineOperand *Src0 = &MI.getOperand(1);
         MachineOperand *Src1 = &MI.getOperand(2);
