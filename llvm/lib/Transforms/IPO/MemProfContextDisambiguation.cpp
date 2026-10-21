@@ -657,8 +657,9 @@ protected:
     return It != NodeToCallingFunc.end() ? It->second : nullptr;
   }
 
-  /// Functions that have at least one direct caller in the module or summary
-  /// index (populated when MemProfReportHintedSizes is enabled).
+  /// Functions that are referenced (called directly, or address-taken) in the
+  /// module or summary index (populated when MemProfReportHintedSizes is
+  /// enabled).
   DenseSet<const FuncTy *> FunctionsWithCallers;
 
   // When exporting to dot, and an allocation id is specified, contains the
@@ -2389,18 +2390,11 @@ std::string ModuleCallsiteContextGraph::getFuncName(const Function *Func,
 }
 
 void ModuleCallsiteContextGraph::populateFunctionsWithCallers() {
-  for (const auto &F : Mod) {
-    for (const auto &BB : F) {
-      for (const auto &I : BB) {
-        if (!isa<CallBase>(I))
-          continue;
-        if (const Function *Callee =
-                const_cast<ModuleCallsiteContextGraph *>(this)->getCalleeFunc(
-                    const_cast<Instruction *>(&I)))
-          FunctionsWithCallers.insert(Callee);
-      }
-    }
-  }
+  // Any use (direct call, address taken, alias, etc.) means the function is
+  // referenced and may be reached by callers above the profiled context.
+  for (const auto &F : Mod)
+    if (!F.use_empty())
+      FunctionsWithCallers.insert(&F);
 }
 
 std::string IndexCallsiteContextGraph::getFuncName(const FunctionSummary *Func,
@@ -2430,16 +2424,20 @@ void IndexCallsiteContextGraph::populateFunctionsWithCallers() {
         continue;
       if (Index.withGlobalValueDeadStripping() && !S->isLive())
         continue;
-      const auto *FS = dyn_cast<FunctionSummary>(S.get());
-      if (!FS)
-        continue;
-      for (const auto &CallEdge : FS->calls()) {
-        for (const auto &CalleeS : CallEdge.first.getSummaryList()) {
-          const GlobalValueSummary *Base = CalleeS->getBaseObject();
-          if (const auto *CalleeFS = dyn_cast<FunctionSummary>(Base))
-            FunctionsWithCallers.insert(CalleeFS);
+      auto AddReferenced = [&](ValueInfo RefVI) {
+        for (const auto &RefS : RefVI.getSummaryList()) {
+          const GlobalValueSummary *Base = RefS->getBaseObject();
+          if (const auto *RefFS = dyn_cast<FunctionSummary>(Base))
+            FunctionsWithCallers.insert(RefFS);
         }
-      }
+      };
+      // Address-taken references (e.g. from vtables or function pointers).
+      for (const auto &RefVI : S->refs())
+        AddReferenced(RefVI);
+      // Direct calls.
+      if (const auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        for (const auto &CallEdge : FS->calls())
+          AddReferenced(CallEdge.first);
     }
   }
 }
@@ -3614,11 +3612,16 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::formatContextReportSuffix(
 
       const ContextNode *ReachedAlloc =
           OrigAllocAndCloneToNode.lookup({OrigAlloc, CurClone});
+      // Report the hint actually applied to the reached allocation clone
+      // (which accounts for allocTypeToUse and MinClonedColdBytePercent),
+      // rather than the graph node's (possibly ambiguous) AllocTypes.
       std::string ReachedTypeStr;
       if (ReachedAlloc)
-        ReachedTypeStr = getAllocTypeString(ReachedAlloc->AllocTypes);
+        ReachedTypeStr = getAllocTypeString(
+            (uint8_t)getAllocationCallType(ReachedAlloc->Call));
       else if (CurClone == 0)
-        ReachedTypeStr = getAllocTypeString(OrigAlloc->AllocTypes);
+        ReachedTypeStr =
+            getAllocTypeString((uint8_t)getAllocationCallType(OrigAlloc->Call));
       else
         ReachedTypeStr = "None";
 
@@ -5666,7 +5669,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       }
     }
 
-    FuncToNumClones[Func] = std::max<unsigned>(1, FuncCloneInfos.size());
+    if (MemProfReportHintedSizes)
+      FuncToNumClones[Func] = std::max<unsigned>(1, FuncCloneInfos.size());
     if (FuncCloneInfos.size() < 2)
       continue;
 
@@ -5772,8 +5776,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           AT = AllocationType::Cold;
       }
       updateAllocationCall(Node->Call, AT);
-      OrigAllocAndCloneToNode[{Node->getOrigNode(), Node->Call.cloneNo()}] =
-          Node;
+      if (MemProfReportHintedSizes)
+        OrigAllocAndCloneToNode[{Node->getOrigNode(), Node->Call.cloneNo()}] =
+            Node;
       assert(Node->MatchingCalls.empty());
       return;
     }
@@ -5783,8 +5788,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
     auto CalleeFunc = CallsiteToCalleeFuncCloneMap[Node];
     updateCall(Node->Call, CalleeFunc);
-    OrigNodeAndCloneToCalleeClone[{Node->getOrigNode(), Node->Call.cloneNo()}] =
-        CalleeFunc.cloneNo();
+    if (MemProfReportHintedSizes)
+      OrigNodeAndCloneToCalleeClone[{
+          Node->getOrigNode(), Node->Call.cloneNo()}] = CalleeFunc.cloneNo();
     // Update all the matching calls as well.
     for (auto &Call : Node->MatchingCalls)
       updateCall(Call, CalleeFunc);
@@ -5807,8 +5813,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       // Use the original Node's CalleeFunc.
       for (auto &Call : CallVector) {
         updateCall(Call, CalleeFunc);
-        OrigNodeAndCloneToCalleeClone[{Node->getOrigNode(), Call.cloneNo()}] =
-            CalleeFunc.cloneNo();
+        if (MemProfReportHintedSizes)
+          OrigNodeAndCloneToCalleeClone[{Node->getOrigNode(), Call.cloneNo()}] =
+              CalleeFunc.cloneNo();
       }
     }
   };
@@ -6702,7 +6709,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
     check();
   }
 
-  if (MemProfReportHintedSizes || AllowExtraAnalysis)
+  // The report suffix is only printed with -memprof-report-hinted-sizes (it is
+  // not included in remarks), so avoid the extra work otherwise.
+  if (MemProfReportHintedSizes)
     capturePreCloningContextInfo();
 
   identifyClones();

@@ -5,6 +5,12 @@
 ;; 2. Unmatched callsites (missing !callsite metadata on caller).
 ;; 3. Dead / unreferenced out-of-line allocation functions (e.g. when all
 ;;    callers inlined the allocation, leaving an unreferenced out-of-line copy).
+;; 4. Address-taken allocation functions, which must not be reported as
+;;    unreferenced.
+;; 5. The "reaches" state reports the hint actually applied to the reached
+;;    allocation clone (e.g. NotCold for an ambiguous allocation by default, or
+;;    Cold with -memprof-cloning-cold-threshold), not the graph node's
+;;    possibly ambiguous alloc types.
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-report-hinted-sizes %s -S 2>&1 | FileCheck %s --check-prefix=LTO
@@ -21,15 +27,44 @@
 ; RUN:  -r=%t.o,leafC,plx \
 ; RUN:  -r=%t.o,unmatched_caller,plx \
 ; RUN:  -r=%t.o,leaf_unmatched,plx \
+; RUN:  -r=%t.o,leafD,plx \
+; RUN:  -r=%t.o,callerD,plx \
+; RUN:  -r=%t.o,fptr,plx \
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-report-hinted-sizes \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=THINLTO
+
+;; Same as above but with a cloning cold byte threshold, so that the ambiguous
+;; allocation in leafD is hinted cold.
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+; RUN:  -memprof-cloning-cold-threshold=80 \
+; RUN:  -memprof-report-hinted-sizes %s -S 2>&1 | FileCheck %s --check-prefix=PCT
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t.o,top1,plx \
+; RUN:  -r=%t.o,top2,plx \
+; RUN:  -r=%t.o,other,plx \
+; RUN:  -r=%t.o,mid,plx \
+; RUN:  -r=%t.o,helper,plx \
+; RUN:  -r=%t.o,leafA,plx \
+; RUN:  -r=%t.o,leafC,plx \
+; RUN:  -r=%t.o,unmatched_caller,plx \
+; RUN:  -r=%t.o,leaf_unmatched,plx \
+; RUN:  -r=%t.o,leafD,plx \
+; RUN:  -r=%t.o,callerD,plx \
+; RUN:  -r=%t.o,fptr,plx \
+; RUN:  -r=%t.o,_Znam, \
+; RUN:  -memprof-cloning-cold-threshold=80 \
+; RUN:  -memprof-report-hinted-sizes \
+; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=PCT
 
 source_filename = "memprof-report-hinted-sizes-detail.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare ptr @_Znam(i64)
+
+@fptr = global ptr @addr_taken_alloc
 
 define ptr @leafA() #0 {
 entry:
@@ -93,6 +128,27 @@ entry:
   ret ptr %p
 }
 
+;; Allocation whose contexts are only distinguished above an unmatched frame,
+;; so it stays ambiguous (NotColdCold) after cloning.
+define ptr @leafD() #0 {
+entry:
+  %p = call ptr @_Znam(i64 8), !memprof !40, !callsite !45
+  ret ptr %p
+}
+
+define void @callerD() #0 {
+entry:
+  %p = call ptr @leafD(), !callsite !46
+  ret void
+}
+
+;; Allocation function with no direct callers, but whose address is taken.
+define internal ptr @addr_taken_alloc() #0 {
+entry:
+  %p = call ptr @_Znam(i64 4), !memprof !50, !callsite !53
+  ret ptr %p
+}
+
 attributes #0 = { noinline }
 
 !0 = !{!1, !3}
@@ -141,12 +197,30 @@ attributes #0 = { noinline }
 !33 = !{i64 302, i64 600}
 !34 = !{i64 401, i64 700}
 
+!40 = !{!41, !43}
+!41 = !{!42, !"cold", !47}
+!42 = !{i64 41, i64 42, i64 43}
+!43 = !{!44, !"notcold", !48}
+!44 = !{i64 41, i64 42, i64 44}
+!45 = !{i64 41}
+!46 = !{i64 42}
+!47 = !{i64 501, i64 9000}
+!48 = !{i64 502, i64 1000}
+
+!50 = !{!51}
+!51 = !{!52, !"cold", !54}
+!52 = !{i64 51, i64 52}
+!53 = !{i64 51}
+!54 = !{i64 601, i64 800}
+
 ; LTO-DAG: Cold full allocation context 101 with total size 1000 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in leafA.memprof.1; pruned at frame 2 in mid; reaches Cold via mid -> helper.memprof.1 -> leafA.memprof.1, NotCold via mid.memprof.1 -> helper -> leafA]
 ; LTO-DAG: NotCold full allocation context 102 with total size 2000 is NotCold after cloning (internal context id {{[0-9]+}}) [alloc in leafA; matched 2 frames to other; reaches NotCold via other -> helper -> leafA]
 ; LTO-DAG: Cold full allocation context 201 with total size 3000 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in leafC.memprof.1; matched 3 frames to top1; reaches Cold via top1 -> mid.memprof.1 -> helper -> leafC.memprof.1]
 ; LTO-DAG: NotCold full allocation context 202 with total size 4000 is NotCold after cloning (internal context id {{[0-9]+}}) [alloc in leafC; matched 3 frames to top2; reaches NotCold via top2 -> mid -> helper.memprof.1 -> leafC]
 ; LTO-DAG: Cold full allocation context 301 with total size 500 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leaf_unmatched (no matched callers); unmatched callsite at frame 1/1 (stack id 22)]
 ; LTO-DAG: Cold full allocation context 401 with total size 700 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in dead_alloc_func (unreferenced); unmatched callsite at frame 1/1 (stack id 32)]
+; LTO-DAG: Cold full allocation context 501 with total size 9000 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 43); reaches NotCold via callerD -> leafD]
+; LTO-DAG: Cold full allocation context 601 with total size 800 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in addr_taken_alloc (no matched callers); unmatched callsite at frame 1/1 (stack id 52)]
 
 ; THINLTO-DAG: Cold full allocation context 101 with total size 1000 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in leafA.memprof.1; pruned at frame 2 in mid; reaches Cold via mid -> helper.memprof.1 -> leafA.memprof.1, NotCold via mid.memprof.1 -> helper -> leafA]
 ; THINLTO-DAG: NotCold full allocation context 102 with total size 2000 is NotCold after cloning (internal context id {{[0-9]+}}) [alloc in leafA; matched 2 frames to other; reaches NotCold via other -> helper -> leafA]
@@ -154,3 +228,8 @@ attributes #0 = { noinline }
 ; THINLTO-DAG: NotCold full allocation context 202 with total size 4000 is NotCold after cloning (internal context id {{[0-9]+}}) [alloc in leafC; matched 3 frames to top2; reaches NotCold via top2 -> mid -> helper.memprof.1 -> leafC]
 ; THINLTO-DAG: Cold full allocation context 301 with total size 500 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leaf_unmatched (no matched callers); unmatched callsite at frame 1/1 (stack id 22)]
 ; THINLTO-DAG: Cold full allocation context 401 with total size 700 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in dead_alloc_func (dead); unmatched callsite at frame 1/1 (stack id 32)]
+; THINLTO-DAG: Cold full allocation context 501 with total size 9000 is NotColdCold after cloning (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 43); reaches NotCold via callerD -> leafD]
+; THINLTO-DAG: Cold full allocation context 601 with total size 800 is Cold after cloning (internal context id {{[0-9]+}}) [alloc in addr_taken_alloc{{[^ ]*}} (no matched callers); unmatched callsite at frame 1/1 (stack id 52)]
+
+; PCT-DAG: Cold full allocation context 501 with total size 9000 is NotColdCold after cloning marked Cold due to cold byte percent (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 43); reaches Cold via callerD -> leafD]
+; PCT-DAG: NotCold full allocation context 502 with total size 1000 is NotColdCold after cloning marked Cold due to cold byte percent (internal context id {{[0-9]+}}) [alloc in leafD; unmatched callsite at frame 2/2 (stack id 44); reaches Cold via callerD -> leafD]
