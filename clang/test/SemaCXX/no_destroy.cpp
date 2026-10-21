@@ -10,16 +10,21 @@ private: ~SecretDestructor(); // expected-note + {{private}}
 };
 
 SecretDestructor sd1; // all-dtors-error{{private}}
-thread_local SecretDestructor sd2; // thread-local-dtors-error{{private}}
+thread_local SecretDestructor sd2;
 #ifdef __MVS__
   // expected-error@-2 {{thread-local storage is not supported for the current target}}
+  // expected-error@-3 {{variable of type 'SecretDestructor' has private destructor}}
+#else
+  // thread-local-dtors-error@-5 {{private}}
 #endif
 void locals() {
   static SecretDestructor sd3; // all-dtors-error{{private}}
-  thread_local SecretDestructor sd4; // thread-local-dtors-error{{private}}
+  thread_local SecretDestructor sd4;
 #ifdef __MVS__
   // expected-error@-2 {{thread-local storage is not supported for the current target}}
-  // expected-error@-3 {{private}}
+  // expected-error@-3 {{variable of type 'SecretDestructor' has private destructor}}
+#else
+  // thread-local-dtors-error@-5 {{private}}
 #endif
 }
 
