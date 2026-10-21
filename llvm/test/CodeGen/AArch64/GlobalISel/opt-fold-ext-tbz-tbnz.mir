@@ -9,7 +9,6 @@ name:            fold_zext
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_zext
   ; CHECK: bb.0:
@@ -41,7 +40,6 @@ name:            fold_anyext
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_anyext
   ; CHECK: bb.0:
@@ -73,7 +71,6 @@ name:            fold_multiple
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_multiple
   ; CHECK: bb.0:
@@ -108,7 +105,6 @@ name:            dont_fold_more_than_one_use
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_more_than_one_use
   ; CHECK: bb.0:

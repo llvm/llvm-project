@@ -4,7 +4,6 @@
 ---
 name:            xtn_v2i64_v2i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -27,7 +26,6 @@ body:             |
 ---
 name:            xtn_v2i128_v2i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -58,7 +56,6 @@ body:             |
 ---
 name:            xtn_v2i64_v2i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -81,7 +78,6 @@ body:             |
 ---
 name:            xtn_v2i128_v2i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -112,7 +108,6 @@ body:             |
 ---
 name:            xtn_v2i128_v2i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -142,7 +137,6 @@ body:             |
 ---
 name:            xtn_v2i128_v2i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -172,7 +166,6 @@ body:             |
 ---
 name:            xtn_v3i16_v3i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -207,7 +200,6 @@ body:             |
 ---
 name:            xtn_v3i32_v3i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -239,7 +231,6 @@ body:             |
 ---
 name:            xtn_v3i64_v3i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $d2
@@ -276,7 +267,6 @@ body:             |
 ---
 name:            xtn_v3i64_v3i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $d2
@@ -310,7 +300,6 @@ body:             |
 ---
 name:            xtn_v3i64_v3i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $d2
@@ -344,7 +333,6 @@ body:             |
 ---
 name:            xtn_v4i32_v4i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -367,7 +355,6 @@ body:             |
 ---
 name:            xtn_v4i64_v4i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -396,7 +383,6 @@ body:             |
 ---
 name:            xtn_v4i64_v4i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -424,7 +410,6 @@ body:             |
 ---
 name:            xtn_v4i64_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -451,7 +436,6 @@ body:             |
 ---
 name:            xtn_v8i32_v8i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -479,7 +463,6 @@ body:             |
 ---
 name:            xtn_v8i32_v8i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -506,7 +489,6 @@ body:             |
 ---
 name:            xtn_v16i16_v16i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -532,7 +514,6 @@ body:             |
 
 ---
 name:            pr81244
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0

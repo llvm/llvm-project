@@ -3,7 +3,6 @@
 
 ---
 name:            s_ashr_i64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -18,7 +17,6 @@ body:             |
 
 ---
 name:            s_lshl_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -33,7 +31,6 @@ body:             |
 
 ---
 name:            s_lshr_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -48,7 +45,6 @@ body:             |
 
 ---
 name:            s_bfe_i64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -63,7 +59,6 @@ body:             |
 
 ---
 name:            s_bfe_u64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -78,7 +73,6 @@ body:             |
 
 ---
 name:            s_bfm_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -91,7 +85,6 @@ body:             |
 
 ---
 name:            s_bitcmp0_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -108,7 +101,6 @@ body:             |
 
 ---
 name:            s_bitcmp1_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -125,7 +117,6 @@ body:             |
 
 ---
 name:            s_bitreplicate_b64_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -138,7 +129,6 @@ body:             |
 
 ---
 name:            s_bitset0_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -153,7 +143,6 @@ body:             |
 
 ---
 name:            s_bitset1_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -168,7 +157,6 @@ body:             |
 
 ---
 name:            s_ashr_i64_phys_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 

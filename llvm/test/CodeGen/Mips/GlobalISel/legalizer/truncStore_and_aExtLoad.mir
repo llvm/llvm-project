@@ -3,7 +3,6 @@
 ---
 name:            load1_s8_to_load1_s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            load2_s16_to_load2_s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4
@@ -45,7 +43,6 @@ body:             |
 ---
 name:            load_store_i1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4, $r5
@@ -71,7 +68,6 @@ body:             |
 ---
 name:            load_store_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4, $r5
@@ -94,7 +90,6 @@ body:             |
 ---
 name:            load_store_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4, $r5
@@ -117,7 +112,6 @@ body:             |
 ---
 name:            load_store_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4, $r5

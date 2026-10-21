@@ -43,7 +43,6 @@
 name:            mm_update_next_owner
 alignment:       16
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:         
   - { reg: '$x3' }
   - { reg: '$x4' }

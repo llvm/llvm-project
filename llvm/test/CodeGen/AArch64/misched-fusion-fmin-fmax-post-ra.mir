@@ -8,7 +8,6 @@
 
 ---
 name: fmax_fmax_h_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -24,7 +23,6 @@ body: |
 ...
 ---
 name: fmax_fmax_h_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -40,7 +38,6 @@ body: |
 ...
 ---
 name: fmax_fmin_h_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -56,7 +53,6 @@ body: |
 ...
 ---
 name: fmax_fmin_h_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -72,7 +68,6 @@ body: |
 ...
 ---
 name: fmin_fmax_h_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -88,7 +83,6 @@ body: |
 ...
 ---
 name: fmin_fmax_h_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -104,7 +98,6 @@ body: |
 ...
 ---
 name: fmin_fmin_h_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -120,7 +113,6 @@ body: |
 ...
 ---
 name: fmin_fmin_h_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $h2, $h3, $h4
@@ -136,7 +128,6 @@ body: |
 ...
 ---
 name: fmax_fmax_s_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -152,7 +143,6 @@ body: |
 ...
 ---
 name: fmax_fmax_s_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -168,7 +158,6 @@ body: |
 ...
 ---
 name: fmax_fmin_s_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -184,7 +173,6 @@ body: |
 ...
 ---
 name: fmax_fmin_s_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -200,7 +188,6 @@ body: |
 ...
 ---
 name: fmin_fmax_s_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -216,7 +203,6 @@ body: |
 ...
 ---
 name: fmin_fmax_s_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -232,7 +218,6 @@ body: |
 ...
 ---
 name: fmin_fmin_s_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -248,7 +233,6 @@ body: |
 ...
 ---
 name: fmin_fmin_s_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $s2, $s3, $s4
@@ -264,7 +248,6 @@ body: |
 ...
 ---
 name: fmax_fmax_d_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -280,7 +263,6 @@ body: |
 ...
 ---
 name: fmax_fmax_d_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -296,7 +278,6 @@ body: |
 ...
 ---
 name: fmax_fmin_d_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -312,7 +293,6 @@ body: |
 ...
 ---
 name: fmax_fmin_d_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -328,7 +308,6 @@ body: |
 ...
 ---
 name: fmin_fmax_d_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -344,7 +323,6 @@ body: |
 ...
 ---
 name: fmin_fmax_d_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -360,7 +338,6 @@ body: |
 ...
 ---
 name: fmin_fmin_d_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -376,7 +353,6 @@ body: |
 ...
 ---
 name: fmin_fmin_d_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -392,7 +368,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v4f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -408,7 +383,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v4f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -424,7 +398,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v4f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -440,7 +413,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v4f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -456,7 +428,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v4f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -472,7 +443,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v4f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -488,7 +458,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v4f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -504,7 +473,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v4f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -520,7 +488,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v8f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -536,7 +503,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v8f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -552,7 +518,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v8f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -568,7 +533,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v8f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -584,7 +548,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v8f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -600,7 +563,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v8f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -616,7 +578,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v8f16_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -632,7 +593,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v8f16_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -648,7 +608,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v2f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -664,7 +623,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v2f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -680,7 +638,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v2f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -696,7 +653,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v2f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -712,7 +668,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v2f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -728,7 +683,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v2f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -744,7 +698,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v2f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -760,7 +713,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v2f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1, $d2, $d3, $d4
@@ -776,7 +728,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v4f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -792,7 +743,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v4f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -808,7 +758,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v4f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -824,7 +773,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v4f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -840,7 +788,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v4f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -856,7 +803,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v4f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -872,7 +818,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v4f32_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -888,7 +833,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v4f32_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -904,7 +848,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v2f64_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -920,7 +863,6 @@ body: |
 ...
 ---
 name: fmax_fmax_v2f64_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -936,7 +878,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v2f64_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -952,7 +893,6 @@ body: |
 ...
 ---
 name: fmax_fmin_v2f64_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -968,7 +908,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v2f64_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -984,7 +923,6 @@ body: |
 ...
 ---
 name: fmin_fmax_v2f64_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -1000,7 +938,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v2f64_waw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -1016,7 +953,6 @@ body: |
 ...
 ---
 name: fmin_fmin_v2f64_nowaw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2, $q3, $q4
@@ -1034,7 +970,6 @@ body: |
 # which share physical register storage and form a WAW dependency.
 ---
 name: fmax_fmin_h_s_overlap
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $h0, $h1, $s2, $h3, $h4

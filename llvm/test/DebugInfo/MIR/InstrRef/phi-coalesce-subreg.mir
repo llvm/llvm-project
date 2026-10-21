@@ -90,7 +90,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$edi', virtual-reg: '%3' }

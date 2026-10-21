@@ -15,7 +15,6 @@
 ...
 ---
 name:            small_patchpoint_codegen
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }

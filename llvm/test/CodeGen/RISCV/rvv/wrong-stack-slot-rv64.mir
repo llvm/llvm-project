@@ -32,7 +32,6 @@
 ---
 name:            foo
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 stack:

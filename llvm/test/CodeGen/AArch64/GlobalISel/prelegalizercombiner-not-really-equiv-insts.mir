@@ -12,7 +12,6 @@
 ...
 ---
 name:            not_necessarily_equiv_loads
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -39,7 +38,6 @@ body:             |
 ...
 ---
 name:            invariant_loads
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -64,7 +62,6 @@ body:             |
 ...
 ---
 name:            both_have_to_be_invariant_1
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -87,7 +84,6 @@ body:             |
 ...
 ---
 name:            both_have_to_be_invariant_2
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -110,7 +106,6 @@ body:             |
 ...
 ---
 name:            both_have_to_have_same_size
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

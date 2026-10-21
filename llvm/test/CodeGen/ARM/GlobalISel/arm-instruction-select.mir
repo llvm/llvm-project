@@ -240,7 +240,6 @@ name:            test_trunc_and_zext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -274,7 +273,6 @@ name:            test_trunc_and_sext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -309,7 +307,6 @@ name:            test_trunc_and_anyext_s1_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -342,7 +339,6 @@ name:            test_trunc_and_zext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -377,7 +373,6 @@ name:            test_trunc_and_sext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -412,7 +407,6 @@ name:            test_trunc_and_anyext_s8_to_s16
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -445,7 +439,6 @@ name:            test_trunc_and_zext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -479,7 +472,6 @@ name:            test_trunc_and_sext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -514,7 +506,6 @@ name:            test_trunc_and_anyext_s1_to_s8
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
@@ -1278,7 +1269,6 @@ name:            test_phi_s32
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }

@@ -39,7 +39,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }

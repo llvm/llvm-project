@@ -137,7 +137,6 @@ body:             |
 name:            non_local_phi_use
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi_use
   ; CHECK: bb.0:
@@ -176,7 +175,6 @@ body:             |
 name:            non_local_phi_use_followed_by_use
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi_use_followed_by_use
   ; CHECK: bb.0:
@@ -216,7 +214,6 @@ body:             |
 name:            non_local_phi_use_followed_by_use_fi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi_use_followed_by_use_fi
   ; CHECK: bb.0:
@@ -256,7 +253,6 @@ body:             |
 name:            float_non_local_phi_use_followed_by_use_fi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: float_non_local_phi_use_followed_by_use_fi
   ; CHECK: bb.0:
@@ -298,7 +294,6 @@ body:             |
 name:            non_local_phi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi
   ; CHECK: bb.0:
@@ -337,7 +332,6 @@ body:             |
 name:            non_local_label
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_label
   ; CHECK: bb.0:
@@ -376,7 +370,6 @@ body:             |
 name:            intrablock_with_globalvalue
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: intrablock_with_globalvalue
   ; CHECK: bb.0.entry:
@@ -444,7 +437,6 @@ body:             |
 name:            adrp_add
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: adrp_add
   ; CHECK: bb.0.entry:
@@ -521,7 +513,6 @@ name:            test_inttoptr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_inttoptr
   ; CHECK: bb.0:
@@ -609,7 +600,6 @@ body:             |
 name:            non_local_phi_single_use
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi_single_use
   ; CHECK: bb.0:
@@ -654,7 +644,6 @@ body:             |
 name:            non_local_phi_three_uses
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: non_local_phi_three_uses
   ; CHECK: bb.0:

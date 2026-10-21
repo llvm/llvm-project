@@ -112,7 +112,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
 tracksDebugUserValues: true
 liveins:
@@ -154,7 +153,6 @@ body:             |
 ---
 name:            f
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

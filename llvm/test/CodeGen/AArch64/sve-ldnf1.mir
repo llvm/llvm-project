@@ -32,7 +32,6 @@
 ...
 ---
 name:            testcase_positive_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, name: dummy, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, name: object, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
@@ -91,7 +90,6 @@ body:             |
 
 ---
 name:            testcase_negative_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, name: dummy, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, name: object, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
@@ -150,7 +148,6 @@ body:             |
 
 ---
 name:            testcase_positive_offset_out_of_range
-tracksRegLiveness: true
 stack:
   - { id: 0, name: dummy, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, name: object, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
@@ -222,7 +219,6 @@ body:             |
 
 ---
 name:            testcase_negative_offset_out_of_range
-tracksRegLiveness: true
 stack:
   - { id: 0, name: dummy, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, name: object, type: default, offset: 0, size: 32, alignment: 16, stack-id: scalable-vector }

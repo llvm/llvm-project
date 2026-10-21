@@ -3,7 +3,6 @@
 
 ---
 name:            combine_or_of_and
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -23,7 +22,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -43,7 +41,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_commuted2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -62,7 +59,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_commuted3
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -81,7 +77,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_vector
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1
@@ -101,7 +96,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_vector_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1
@@ -121,7 +115,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_vector_commuted2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1
@@ -141,7 +134,6 @@ body: |
 ...
 ---
 name:            combine_or_of_and_vector_commuted3
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $d1

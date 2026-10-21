@@ -4,7 +4,6 @@
 ---
 name:            fshl_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -38,7 +37,6 @@ body:             |
 ---
 name:            fshl_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -72,7 +70,6 @@ body:             |
 ---
 name:            fshl_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -98,7 +95,6 @@ body:             |
 ---
 name:            fshl_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -124,7 +120,6 @@ body:             |
 ---
 name:            fshl_i8_const_shift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -156,7 +151,6 @@ body:             |
 ---
 name:            fshl_i8_const_overshift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -188,7 +182,6 @@ body:             |
 ---
 name:            fshl_i8_shift_by_bidwidth
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -214,7 +207,6 @@ body:             |
 ---
 name:            fshl_i16_const_shift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -246,7 +238,6 @@ body:             |
 ---
 name:            fshl_i16_const_overshift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -278,7 +269,6 @@ body:             |
 ---
 name:            fshl_i16_shift_by_bidwidth
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -304,7 +294,6 @@ body:             |
 ---
 name:            fshl_i32_const_shift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -330,7 +319,6 @@ body:             |
 ---
 name:            fshl_i32_const_overshift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -356,7 +344,6 @@ body:             |
 ---
 name:            fshl_i32_shift_by_bidwidth
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -379,7 +366,6 @@ body:             |
 ---
 name:            fshl_i64_const_shift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -405,7 +391,6 @@ body:             |
 ---
 name:            fshl_i64_const_overshift
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -431,7 +416,6 @@ body:             |
 ---
 name:            fshl_i64_shift_by_bidwidth
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1

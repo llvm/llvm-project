@@ -6,7 +6,6 @@
 
 ---
 name:            machine_combiner_subreg_verifier_error
-tracksRegLiveness: true
 isSSA:           true
 body:             |
   bb.0:

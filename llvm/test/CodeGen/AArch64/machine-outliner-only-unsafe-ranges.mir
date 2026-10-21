@@ -4,7 +4,6 @@
 ...
 ---
 name:           no_safe_range
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

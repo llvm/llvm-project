@@ -14,7 +14,6 @@
 ---
 name:            _amdgpu_ps_main
 alignment:       1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: _amdgpu_ps_main
   ; CHECK: bb.0:

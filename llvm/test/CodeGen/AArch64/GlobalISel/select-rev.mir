@@ -16,7 +16,6 @@ name:            rev64_REV64v2i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d0
@@ -38,7 +37,6 @@ name:            rev64_REV64v4i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d0
@@ -60,7 +58,6 @@ name:            rev64_REV64v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -82,7 +79,6 @@ name:            rev64_REV64v8i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -104,7 +100,6 @@ name:            rev64_REV64v8i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -126,7 +121,6 @@ name:            rev64_REV64v16i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -148,7 +142,6 @@ name:            rev32_REV32v4i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d0
@@ -170,7 +163,6 @@ name:            rev32_REV32v8i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d0
@@ -192,7 +184,6 @@ name:            rev32_REV32v8i16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -214,7 +205,6 @@ name:            rev32_REV32v16i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -236,7 +226,6 @@ name:            rev16_REV16v8i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0
@@ -260,7 +249,6 @@ name:            rev16_REV16v16i8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0

@@ -8,7 +8,6 @@
 
 ---
 name: kill_flag_use_first_bundle_inst
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

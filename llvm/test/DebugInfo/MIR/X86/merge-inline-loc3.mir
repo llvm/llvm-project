@@ -94,7 +94,6 @@
 ---
 name:            multiple_inl_funcs
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   stackSize:       8

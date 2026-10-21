@@ -4,7 +4,6 @@
 name:            sext_32_64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -24,7 +23,6 @@ body:            |
 name:            sext_inreg_64_32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     ; CHECK-LABEL: name: sext_inreg_64_32

@@ -3,7 +3,6 @@
 
 ---
 name:            soft_wait_before_s_barrier
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -59,7 +58,6 @@ body:             |
 
 ---
 name:            soft_wait_multipath_first_pred_needs_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -130,7 +128,6 @@ body:             |
 
 ---
 name:            soft_wait_second_pred_needs_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -207,7 +204,6 @@ body:             |
 # we'd lose the required VM_VSRC wait.
 ---
 name:            soft_wait_does_not_simplify_vm_vsrc
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -276,7 +272,6 @@ body:             |
 
 ---
 name:            soft_wait_no_vmsrc_simplify
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -332,7 +327,6 @@ body:             |
 
 ---
 name:            soft_wait_no_vmsrc_simplify2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -388,7 +382,6 @@ body:             |
 
 ---
 name:            soft_wait_promote_simplify
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

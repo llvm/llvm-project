@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=riscv32 -mattr=+zcmp -run-pass=riscv-move-merge -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name: mov-merge
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:             |

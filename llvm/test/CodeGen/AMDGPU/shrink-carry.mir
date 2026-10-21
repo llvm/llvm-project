@@ -5,7 +5,6 @@
 
 ---
 name:            subbrev
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name:            subb
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -55,7 +53,6 @@ body:             |
 
 ---
 name:            addc
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -80,7 +77,6 @@ body:             |
 
 ---
 name:            addc2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

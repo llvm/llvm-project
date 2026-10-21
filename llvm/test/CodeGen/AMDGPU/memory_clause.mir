@@ -12,7 +12,6 @@
 
 ---
 name:            vector_clause
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -38,7 +37,6 @@ body:             |
 
 ---
 name:            vector_clause_no_kill
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -62,7 +60,6 @@ body:             |
 
 ---
 name:            subreg_full
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -85,7 +82,6 @@ body:             |
 
 ---
 name:            subreg_part
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -107,7 +103,6 @@ body:             |
 
 ---
 name:            dead
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_128 }
@@ -131,7 +126,6 @@ body:             |
 
 ---
 name:            subreg_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -149,7 +143,6 @@ body:             |
 
 ---
 name:            kill
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -169,7 +162,6 @@ body:             |
 
 ---
 name:            indirect
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -193,7 +185,6 @@ body:             |
 
 ---
 name:            stack
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_128 }
@@ -232,7 +223,6 @@ body:             |
 
 ---
 name:            overflow_counter
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -271,7 +261,6 @@ body:             |
 
 ---
 name:            reg_pressure
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -296,7 +285,6 @@ body:             |
 
 ---
 name:            image_clause
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: sgpr_256 }
@@ -326,7 +314,6 @@ body:             |
 
 ---
 name:            mixed_clause
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: sgpr_256 }
@@ -354,7 +341,6 @@ body:             |
 
 ---
 name:            atomic
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -383,7 +369,6 @@ body:             |
 # GCN-NEXT: S_NOP 0, implicit %0
 ---
 name:            ptr_use_after_clause
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -406,7 +391,6 @@ body:             |
 # GCN-NEXT: S_NOP 0, implicit %0.sub0_sub1{{$}}
 ---
 name:            ptr_use_after_clause_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -430,7 +414,6 @@ body:             |
 # GCN-NEXT: S_NOP 0, implicit %0.sub0_sub1, implicit %0.sub5_sub6
 ---
 name:            ptr_use_after_clause_subreg_multi
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
@@ -452,7 +435,6 @@ body:             |
 # GCN-NEXT: S_NOP 0, implicit %0.sub2_sub3{{$}}
 ---
 name:            no_killed_subranges
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -476,7 +458,6 @@ body:             |
 # GCN-NEXT: S_NOP 0, implicit %0.sub2
 ---
 name:            no_killed_undef_subrange_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -500,7 +481,6 @@ body:             |
 # GCN-NEXT: KILL %0{{$}}
 ---
 name:            implicit_def_no_break
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -520,7 +500,6 @@ body:             |
 # GCN-NEXT: KILL %0.sub0_sub1_sub2, %0.sub3
 ---
 name:            kill_part_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3

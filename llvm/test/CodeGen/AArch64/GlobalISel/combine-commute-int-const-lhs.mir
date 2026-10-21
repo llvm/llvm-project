@@ -2,7 +2,6 @@
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            add
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -24,7 +23,6 @@ body:             |
 ...
 ---
 name:            mul
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            and
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -66,7 +63,6 @@ body:             |
 ...
 ---
 name:            or
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -87,7 +83,6 @@ body:             |
 ...
 ---
 name:            xor
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -108,7 +103,6 @@ body:             |
 ...
 ---
 name:            smin
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -129,7 +123,6 @@ body:             |
 ...
 ---
 name:            smax
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -150,7 +143,6 @@ body:             |
 ...
 ---
 name:            umin
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -171,7 +163,6 @@ body:             |
 ...
 ---
 name:            umax
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -192,7 +183,6 @@ body:             |
 ...
 ---
 name:            uaddo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -216,7 +206,6 @@ body:             |
 ...
 ---
 name:            saddo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -240,7 +229,6 @@ body:             |
 ...
 ---
 name:            umulo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -263,7 +251,6 @@ body:             |
 ...
 ---
 name:            smulo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -286,7 +273,6 @@ body:             |
 ...
 ---
 name:            umulh
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -307,7 +293,6 @@ body:             |
 ...
 ---
 name:            smulh
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -328,7 +313,6 @@ body:             |
 ...
 ---
 name:            uaddsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -350,7 +334,6 @@ body:             |
 ...
 ---
 name:            saddsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -372,7 +355,6 @@ body:             |
 ...
 ---
 name:            smulfix
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -393,7 +375,6 @@ body:             |
 ...
 ---
 name:            umulfix
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -414,7 +395,6 @@ body:             |
 ...
 ---
 name:            smulfixsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -435,7 +415,6 @@ body:             |
 ...
 ---
 name:            umulfixsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0

@@ -8,7 +8,6 @@
 
 ---
 name:            live_xmm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:            dead_xmm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0
@@ -38,7 +36,6 @@ body:             |
 
 ---
 name:            blendv_live_mask_vec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2
@@ -54,7 +51,6 @@ body:             |
 
 ---
 name:            blendv_dead_mask_vec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2
@@ -68,7 +64,6 @@ body:             |
 
 ---
 name:            masked_blend_live_mask_vec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2
@@ -84,7 +79,6 @@ body:             |
 
 ---
 name:            masked_blend_dead_mask_vec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2

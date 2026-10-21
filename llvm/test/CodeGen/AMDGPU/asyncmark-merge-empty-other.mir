@@ -24,7 +24,6 @@
 ---
 # Pattern 1: ASYNCMARK in then-successor, else-successor is sync.
 name:            asyncmark_in_then
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -83,7 +82,6 @@ body:             |
 # Pattern 2: ASYNCMARK in else-successor, then-successor is sync.
 # Mirror of asyncmark_in_then — exercises the opposite predecessor ordering.
 name:            asyncmark_in_else
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |

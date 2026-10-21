@@ -8,7 +8,6 @@
 
 ---
 name:            my_func
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
 body:             |

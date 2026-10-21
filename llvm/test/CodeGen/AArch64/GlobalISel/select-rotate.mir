@@ -5,7 +5,6 @@ name:            fold_ror_eor
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -39,7 +38,6 @@ name:            fold_ror_eor_rhs_only
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }

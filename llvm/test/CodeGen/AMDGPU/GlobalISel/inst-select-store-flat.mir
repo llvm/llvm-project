@@ -10,7 +10,6 @@
 
 name: store_flat_s32_to_4
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -67,7 +66,6 @@ body: |
 ---
 name: store_flat_s32_to_2
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -124,7 +122,6 @@ body: |
 ---
 name: store_flat_s32_to_1
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -182,7 +179,6 @@ body: |
 
 name: store_flat_s64
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -239,7 +235,6 @@ body: |
 
 name: store_flat_s96
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -296,7 +291,6 @@ body: |
 
 name: store_flat_s128
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -354,7 +348,6 @@ body: |
 
 name: store_flat_v2s32
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -411,7 +404,6 @@ body: |
 
 name: store_flat_v3s32
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -468,7 +460,6 @@ body: |
 
 name: store_flat_v4s32
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -526,7 +517,6 @@ body: |
 
 name: store_flat_v2s16
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -584,7 +574,6 @@ body: |
 
 name: store_flat_v4s16
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -642,7 +631,6 @@ body: |
 
 name: store_flat_v6s16
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -699,7 +687,6 @@ body: |
 
 name: store_flat_v8s16
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -757,7 +744,6 @@ body: |
 
 name: store_flat_v2s64
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -815,7 +801,6 @@ body: |
 
 name: store_flat_p1
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -873,7 +858,6 @@ body: |
 
 name: store_flat_v2p1
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -931,7 +915,6 @@ body: |
 
 name: store_flat_p3
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -989,7 +972,6 @@ body: |
 
 name: store_flat_v2p3
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -1046,7 +1028,6 @@ body: |
 
 name: store_atomic_flat_s32
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -1104,7 +1085,6 @@ body: |
 
 name: store_atomic_flat_s64
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -1162,7 +1142,6 @@ body: |
 
 name: store_flat_s32_gep_2047
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -1247,7 +1226,6 @@ body: |
 name: store_flat_s32_to_1_gep_24bit_max
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1347,7 +1325,6 @@ body: |
 name: store_flat_s32_to_1_gep_2x_24bit_max
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1455,7 +1432,6 @@ body: |
 name: store_flat_s32_to_1_gep_24bit_min
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1555,7 +1531,6 @@ body: |
 name: store_flat_s32_to_1_gep_2x_24bit_min
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

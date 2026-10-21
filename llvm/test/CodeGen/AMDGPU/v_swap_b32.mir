@@ -11,7 +11,6 @@
 # GCN-NEXT: S_SETPC_B64_return
 ---
 name:            swap_phys_condensed
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -32,7 +31,6 @@ body:             |
 # GCN-NEXT: S_SETPC_B64_return
 ---
 name:            swap_phys_sparse
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr6, $sgpr30_sgpr31
@@ -53,7 +51,6 @@ body:             |
 # GCN-NEXT: S_SETPC_B64_return
 ---
 name:            swap_phys_liveout
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -72,7 +69,6 @@ body:             |
 # GCN-NEXT: S_SETPC_B64_return
 ---
 name:            swap_phys_liveout_superreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -91,7 +87,6 @@ body:             |
 # GCN-NEXT: $vgpr1, $vgpr3 = V_SWAP_B32 $vgpr3, $vgpr1, implicit $exec
 ---
 name:            swap_phys_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -109,7 +104,6 @@ body:             |
 # GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
 ---
 name:            swap_phys_overlap_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr3_vgpr4
@@ -129,7 +123,6 @@ body:             |
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
 ---
 name:            swap_phys_clobber_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -144,7 +137,6 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_copy_condense
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -162,7 +154,6 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_copy_sparse
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -182,7 +173,6 @@ body:             |
 # GCN: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -202,7 +192,6 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_mov
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -226,7 +215,6 @@ body:             |
 
 ---
 name:            swap_virt_read_x
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -254,7 +242,6 @@ body:             |
 
 ---
 name:            swap_virt_read_t_twice
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -283,7 +270,6 @@ body:             |
 
 ---
 name:            swap_virt_clobber_y
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -309,7 +295,6 @@ body:             |
 
 ---
 name:            swap_virt_clobber_x1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -337,7 +322,6 @@ body:             |
 
 ---
 name:            swap_virt_clobber_x2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -365,7 +349,6 @@ body:             |
 
 ---
 name:            swap_virt_clobber_t
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -389,7 +372,6 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_overlap_x_full
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -413,7 +395,6 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_128, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_overlap_x_part
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_64 }
@@ -438,7 +419,6 @@ body:             |
 # GCN-NEXT: %1:vreg_64 = COPY %2
 ---
 name:            swap_virt_copy_subreg_wide_y
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -460,7 +440,6 @@ body:             |
 # GCN-NEXT: %0.sub1:vreg_64, %1.sub1:vreg_64 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
 ---
 name:            swap_virt_b64
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -484,7 +463,6 @@ body:             |
 # GCN-NEXT: %0.sub3:vreg_128, %1.sub3:vreg_128 = V_SWAP_B32 %1.sub3, %0.sub3, implicit $exec
 ---
 name:            swap_virt_b128
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -507,7 +485,6 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub0_1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -531,7 +508,6 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub2_3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
   - { id: 1, class: vreg_128 }
@@ -556,7 +532,6 @@ body:             |
 # GCN-NEXT: %1:sgpr_32 = COPY %2
 ---
 name:            swap_virt_s_to_s
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_32 }
   - { id: 1, class: sgpr_32 }
@@ -577,7 +552,6 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_impdef_super
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -603,7 +577,6 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_copy_subreg_impuse_x
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -643,7 +616,6 @@ body:             |
 
 ---
 name:            swap_exact_max_insns_apart
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -700,7 +672,6 @@ body:             |
 
 ---
 name:            swap_too_far
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -741,7 +712,6 @@ body:             |
 
 ---
 name: swap_liveness_error_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr5, $vgpr1_vgpr2
@@ -763,7 +733,6 @@ body:             |
 
 ---
 name: swap_liveness_error_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr5, $vgpr1_vgpr2
@@ -784,7 +753,6 @@ body:             |
 
 ---
 name:            swap_killed_t_early
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr6, $sgpr30_sgpr31
@@ -804,7 +772,6 @@ body:             |
 
 ---
 name:            swap_killed_t_late
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr6, $sgpr30_sgpr31
@@ -824,7 +791,6 @@ body:             |
 
 ---
 name:            swap_killed_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr6, $sgpr30_sgpr31
@@ -844,7 +810,6 @@ body:             |
 
 ---
 name:            indirect_mov_t
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -862,7 +827,6 @@ body:             |
 
 ---
 name:            indirect_mov_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -880,7 +844,6 @@ body:             |
 
 ---
 name:            indirect_mov_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -895,7 +858,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_x_swap_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -911,7 +873,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_x_swap_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -928,7 +889,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_t_swap_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
@@ -944,7 +904,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_y_swap_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
@@ -962,7 +921,6 @@ body:             |
 # GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 ---
 name:            negative_test_implicit_blocks_swap
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -995,7 +953,6 @@ body:             |
 
 ---
 name:            swap_allow_use_def_and_flexible_insertion_point
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31

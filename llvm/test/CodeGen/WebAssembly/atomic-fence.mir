@@ -22,7 +22,6 @@
 name: compiler_fence_test
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: %[[REG:[0-9]+]]:i32 = MEMORY_ATOMIC_NOTIFY_A32
@@ -46,7 +45,6 @@ body: |
 name: atomic_fence_test
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: %[[REG:[0-9]+]]:i32 = MEMORY_ATOMIC_NOTIFY_A32

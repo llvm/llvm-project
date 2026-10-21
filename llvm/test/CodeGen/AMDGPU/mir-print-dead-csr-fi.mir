@@ -8,7 +8,6 @@
 # CHECK: stack: []
 ---
 name:            csr_sgpr
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr30_sgpr31' }
 frameInfo:

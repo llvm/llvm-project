@@ -35,7 +35,6 @@
 ---
 name:            and_i1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -61,7 +60,6 @@ body:             |
 ---
 name:            and_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -87,7 +85,6 @@ body:             |
 ---
 name:            and_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -113,7 +110,6 @@ body:             |
 ---
 name:            and_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -136,7 +132,6 @@ body:             |
 ---
 name:            and_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -169,7 +164,6 @@ body:             |
 ---
 name:            or_i1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -195,7 +189,6 @@ body:             |
 ---
 name:            or_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -221,7 +214,6 @@ body:             |
 ---
 name:            or_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -247,7 +239,6 @@ body:             |
 ---
 name:            or_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -270,7 +261,6 @@ body:             |
 ---
 name:            or_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -303,7 +293,6 @@ body:             |
 ---
 name:            xor_i1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -329,7 +318,6 @@ body:             |
 ---
 name:            xor_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -355,7 +343,6 @@ body:             |
 ---
 name:            xor_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -381,7 +368,6 @@ body:             |
 ---
 name:            xor_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -404,7 +390,6 @@ body:             |
 ---
 name:            xor_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -437,7 +422,6 @@ body:             |
 ---
 name:            shl
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -460,7 +444,6 @@ body:             |
 ---
 name:            ashr
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -483,7 +466,6 @@ body:             |
 ---
 name:            lshr
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -506,7 +488,6 @@ body:             |
 ---
 name:            lshr_i64_shift_amount
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -529,7 +510,6 @@ body:             |
 ---
 name:            shlv
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -552,7 +532,6 @@ body:             |
 ---
 name:            ashrv
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -575,7 +554,6 @@ body:             |
 ---
 name:            lshrv
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -598,7 +576,6 @@ body:             |
 ---
 name:            shl_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -623,7 +600,6 @@ body:             |
 ---
 name:            ashr_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -651,7 +627,6 @@ body:             |
 ---
 name:            lshr_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -678,7 +653,6 @@ body:             |
 ---
 name:            shl_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -722,7 +696,6 @@ body:             |
 ---
 name:            ashl_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -768,7 +741,6 @@ body:             |
 ---
 name:            lshr_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7

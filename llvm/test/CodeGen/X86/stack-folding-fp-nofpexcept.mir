@@ -18,7 +18,6 @@
 ---
 name:            stack_fold_addpd
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr128 }
   - { id: 1, class: vr128 }

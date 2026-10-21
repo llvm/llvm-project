@@ -60,7 +60,6 @@ body: |
 ...
 ---
 name:            test_i318_or
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -145,7 +144,6 @@ body:             |
 ...
 ---
 name:            or_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -175,7 +173,6 @@ body:             |
 ...
 ---
 name:            or_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -213,7 +210,6 @@ body:             |
 ...
 ---
 name:            or_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -243,7 +239,6 @@ body:             |
 ...
 ---
 name:            or_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -273,7 +268,6 @@ body:             |
 ...
 ---
 name:            or_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

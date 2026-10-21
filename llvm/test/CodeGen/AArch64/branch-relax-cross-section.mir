@@ -196,7 +196,6 @@
 ...
 ---
 name:            relax_tbz
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 stack:
@@ -243,7 +242,6 @@ body:             |
 ...
 ---
 name:            tbz_hot_to_cold
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 stack:
@@ -288,7 +286,6 @@ body:             |
 ...
 ---
 name:            tbz_no_valid_tramp
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 stack:
@@ -332,7 +329,6 @@ body:             |
 ...
 ---
 name:            tbz_cold_to_hot
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 stack:
@@ -375,7 +371,6 @@ body:             |
 ...
 ---
 name:            tbz_tramp_pushed_oob
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
   - { reg: '$w1', virtual-reg: '' }
@@ -452,7 +447,6 @@ body:             |
 ...
 
 name:            x16_used_cold_to_hot
-tracksRegLiveness: true
 liveins:         []
 machineFunctionInfo:
   hasRedZone:      false
@@ -522,7 +516,6 @@ body:             |
 ...
 ---
 name:            x16_used_cold_to_hot_with_bti
-tracksRegLiveness: true
 liveins:         []
 machineFunctionInfo:
   hasRedZone:      false
@@ -599,7 +592,6 @@ body:             |
 ...
 ---
 name:            all_used_cold_to_hot
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
       stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true, 

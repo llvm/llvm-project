@@ -4,7 +4,6 @@
 
 ---
 name:            swap_phys_condensed
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_sgpr31
@@ -23,7 +22,6 @@ body:             |
 
 ---
 name:            swap_phys_sparse
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $vgpr4_lo16, $vgpr6_lo16, $sgpr30_sgpr31
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name:            swap_phys_liveout
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_sgpr31
@@ -63,7 +60,6 @@ body:             |
 
 ---
 name:            swap_phys_liveout_superreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_sgpr31
@@ -82,7 +78,6 @@ body:             |
 
 ---
 name:            swap_phys_overlap_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr3_vgpr4
@@ -100,7 +95,6 @@ body:             |
 
 ---
 name:            swap_phys_clobber_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16
@@ -121,7 +115,6 @@ body:             |
 
 ---
 name:            swap_virt_copy_vgpr_16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_16 }
   - { id: 1, class: vgpr_16 }
@@ -143,7 +136,6 @@ body:             |
 
 ---
 name:            swap_exact_max_insns_apart
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: swap_exact_max_insns_apart
@@ -190,7 +182,6 @@ body:             |
 
 ---
 name:            swap_too_far
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: swap_too_far
@@ -240,7 +231,6 @@ body:             |
 
 ---
 name: swap_liveness_error_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr5_hi16, $vgpr1_vgpr2
@@ -263,7 +253,6 @@ body:             |
 
 ---
 name: swap_liveness_error_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr5_hi16, $vgpr1_vgpr2
@@ -287,7 +276,6 @@ body:             |
 
 ---
 name:            swap_killed_t_early
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $vgpr4_lo16, $vgpr6_lo16, $sgpr30_sgpr31
@@ -310,7 +298,6 @@ body:             |
 
 ---
 name:            swap_killed_t_late
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $vgpr4_lo16, $vgpr6_lo16, $sgpr30_sgpr31
@@ -332,7 +319,6 @@ body:             |
 
 ---
 name:            swap_killed_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $vgpr4_lo16, $vgpr6_lo16, $sgpr30_sgpr31
@@ -354,7 +340,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_x_swap_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_sgpr31
@@ -373,7 +358,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_t_swap_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_sgpr31
@@ -391,7 +375,6 @@ body:             |
 
 ---
 name:            implicit_ops_mov_y_swap_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_lo16, $vgpr1_hi16, $vgpr2_lo16, $sgpr30_sgpr31

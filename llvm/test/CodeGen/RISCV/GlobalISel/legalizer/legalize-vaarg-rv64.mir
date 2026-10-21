@@ -7,7 +7,6 @@
 ---
 name:            va_arg_i64
 legalized:       false
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
       isImmutable: true, isAliased: false }
@@ -36,7 +35,6 @@ body:             |
 ---
 name:            va_arg_ptr
 legalized:       false
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
       isImmutable: true, isAliased: false }

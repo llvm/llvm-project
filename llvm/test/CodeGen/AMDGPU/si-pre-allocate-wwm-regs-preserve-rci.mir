@@ -19,7 +19,6 @@
 
 ---
 name: test_wwm_reserved
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr1

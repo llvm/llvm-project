@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=amdgpu10.10 -run-pass finalize-isel -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name: phi_use_def_before_kill
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_use_def_before_kill
   ; CHECK: bb.0:

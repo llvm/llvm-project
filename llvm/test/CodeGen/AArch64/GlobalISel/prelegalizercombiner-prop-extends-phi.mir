@@ -4,7 +4,6 @@
 # Check that we propagate the G_SEXT to the sources of the phi operand.
 ---
 name:            sext_icst_through_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sext_icst_through_phi
   ; CHECK: bb.0.entry:
@@ -61,7 +60,6 @@ body:             |
 # Check that we propagate the G_ZEXT to the sources of the phi operand.
 ---
 name:            zext_icst_through_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: zext_icst_through_phi
   ; CHECK: bb.0.entry:
@@ -118,7 +116,6 @@ body:             |
 # Don't handle vectors because of potential cost issues.
 ---
 name:            sext_load_through_phi_vector
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sext_load_through_phi_vector
   ; CHECK: bb.0.entry:
@@ -176,7 +173,6 @@ body:             |
 # AArch64 has a good chance of folding in the extend.
 ---
 name:            sext_icst_through_phi_used_by_ptradd
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sext_icst_through_phi_used_by_ptradd
   ; CHECK: bb.0.entry:
@@ -239,7 +235,6 @@ body:             |
 # it probably won't cost extra instructions if we remove it.
 ---
 name:            sext_icst_through_phi_used_by_ptradd_multiuse
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sext_icst_through_phi_used_by_ptradd_multiuse
   ; CHECK: bb.0.entry:
@@ -303,7 +298,6 @@ body:             |
 # Doing so might cause too much code bloat.
 ---
 name:            zext_icst_through_phi_too_many_incoming
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: zext_icst_through_phi_too_many_incoming
   ; CHECK: bb.0.entry:
@@ -375,7 +369,6 @@ body:             |
 # Check that we don't propagate if the extension would be of a non-allowed inst.
 ---
 name:            sext_add_through_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sext_add_through_phi
   ; CHECK: bb.0.entry:
@@ -434,7 +427,6 @@ body:             |
 # Same as above but allowed with a G_ANYEXT.
 ---
 name:            anyext_add_through_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: anyext_add_through_phi
   ; CHECK: bb.0.entry:
@@ -492,7 +484,6 @@ body:             |
 # Same as above but with a source MI with multiple destination operands.
 ---
 name:            anyext_add_through_phi_multiple_operands
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: anyext_add_through_phi_multiple_operands
   ; CHECK: bb.0.entry:

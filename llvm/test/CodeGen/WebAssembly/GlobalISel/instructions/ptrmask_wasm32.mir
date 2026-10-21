@@ -3,7 +3,6 @@
 
 ---
 name:            ptrmask_i8
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -25,7 +24,6 @@ body:             |
 
 ---
 name:            ptrmask_i16
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -47,7 +45,6 @@ body:             |
 
 ---
 name:            ptrmask_i32
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -66,7 +63,6 @@ body:             |
 
 ---
 name:            ptrmask_i64
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments

@@ -45,7 +45,6 @@
 ...
 ---
 name:            fn1
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -64,7 +63,6 @@ body:             |
 ...
 ---
 name:            fn2
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

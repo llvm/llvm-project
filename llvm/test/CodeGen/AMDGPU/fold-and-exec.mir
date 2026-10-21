@@ -6,7 +6,6 @@
 
 ---
 name: vcmp_e64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -25,7 +24,6 @@ body: |
 # The AND is commutative, so EXEC may be either operand.
 ---
 name: vcmp_e64_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -44,7 +42,6 @@ body: |
 # V_CMP_CLASS is not marked isCompare, but is still a VOPC.
 ---
 name: vcmp_class
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -63,7 +60,6 @@ body: |
 # Bitwise combinations of lane masks are still masked by EXEC.
 ---
 name: and_or_xor_tree
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -88,7 +84,6 @@ body: |
 # S_AND only needs one of its operands to be masked by EXEC.
 ---
 name: and_one_masked_operand
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -109,7 +104,6 @@ body: |
 # The AND may write a physical register, as inserted by moveToVALU.
 ---
 name: physreg_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -127,7 +121,6 @@ body: |
 # Negative test: S_OR needs both operands to be masked by EXEC.
 ---
 name: or_one_masked_operand
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -150,7 +143,6 @@ body: |
 # which EXEC mask it ran under.
 ---
 name: vcmp_in_predecessor
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vcmp_in_predecessor
   ; CHECK: bb.0:
@@ -176,7 +168,6 @@ body: |
 # Negative test: the SCC defined by the AND is used.
 ---
 name: scc_not_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -198,7 +189,6 @@ body: |
 # S_ANDN2 is masked by EXEC if its first operand is.
 ---
 name: andn2_first_operand_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -219,7 +209,6 @@ body: |
 # Negative test: the second operand of S_ANDN2 is inverted, so it does not help.
 ---
 name: andn2_second_operand_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -241,7 +230,6 @@ body: |
 # Look through a COPY of the lane mask.
 ---
 name: copy_of_vcmp
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -262,7 +250,6 @@ body: |
 # after the S_OR, so the kill flag on the S_OR must be cleared.
 ---
 name: src_used_after_kill
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1

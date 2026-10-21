@@ -3,7 +3,6 @@
 # No available group of four strided x4 registers, fall back on default allocation order
 ---
 name:            form_4x_tuple_many_live
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
       stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
@@ -89,7 +88,6 @@ body:             |
 # First multi-vector load to be allocated is not the first operand of the FORM_TRANSPOSED pseudo
 ---
 name:            form_4x_tuple_allocation_order
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
       stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
@@ -148,7 +146,6 @@ body:             |
 # Ensure we don't allocate $z23_z31 & $z0_z8 although they are consecutive
 ---
  name:            udot_form_2x_tuple_live_reg_order
- tracksRegLiveness: true
  body:             |
    bb.0.entry:
      liveins: $x0, $x1, $z16, $z17, $z18, $z19, $z20, $z21, $z22

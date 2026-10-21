@@ -5,7 +5,6 @@
 ---
 name:            same_reg
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            dont_combine_different_reg
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $w0, $w1
@@ -73,7 +71,6 @@ body:             |
 ---
 name:            dont_combine_zero
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -102,7 +99,6 @@ body:             |
 ---
 name:            dont_combine_all_ones
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -130,7 +126,6 @@ body:             |
 ---
 name:            all_zeros_pat_example
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -163,7 +158,6 @@ body:             |
 ---
 name:            all_ones_pat_example
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1

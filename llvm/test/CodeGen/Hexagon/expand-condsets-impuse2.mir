@@ -5,7 +5,6 @@
 # CHECK: %[[R:[0-9]+]]:intregs = A2_paddif killed %{{[0-9]+}}, %[[R]], 1, implicit %[[R]](tied-def 0)
 
 name: f0
-tracksRegLiveness: true
 isSSA: false
 body: |
   bb.0:

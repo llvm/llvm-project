@@ -7,7 +7,6 @@
 
 ---
 name:            mixed_early_clobber_tied_defs
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: mixed_early_clobber_tied_defs

@@ -16,7 +16,6 @@
 # CHECK-LABEL: name: test1
 name:            test1
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rax' }
@@ -37,7 +36,6 @@ body:             |
 # CHECK-LABEL: name: test3
 name:            test3
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi' }

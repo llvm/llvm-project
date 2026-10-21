@@ -59,7 +59,6 @@
 ---
 name:            _Z3fooP4Base
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

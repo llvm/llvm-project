@@ -50,7 +50,6 @@
 ...
 ---
 name:            br_aa
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: br_aa:
   bb.0.entry:
@@ -75,7 +74,6 @@ body:             |
 ...
 ---
 name:            br_aaz
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: br_aaz:
   bb.0.entry:
@@ -100,7 +98,6 @@ body:             |
 ...
 ---
 name:            br_ab
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: br_ab:
   bb.0.entry:
@@ -125,7 +122,6 @@ body:             |
 ...
 ---
 name:            br_abz
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: br_abz:
   bb.0.entry:

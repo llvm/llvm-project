@@ -6,7 +6,6 @@
 name:            add_i8_signext
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -35,7 +34,6 @@ body:             |
 name:            add_i8_zeroext
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -62,7 +60,6 @@ body:             |
 name:            add_i16_signext
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -91,7 +88,6 @@ body:             |
 name:            add_i16_zeroext
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -119,7 +115,6 @@ body:             |
 name:            add_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -143,7 +138,6 @@ body:             |
 name:            addi_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -166,7 +160,6 @@ body:             |
 name:            sub_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -190,7 +183,6 @@ body:             |
 name:            subi_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -214,7 +206,6 @@ body:             |
 name:            sll_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -238,7 +229,6 @@ body:             |
 name:            slli_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -261,7 +251,6 @@ body:             |
 name:            sra_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -285,7 +274,6 @@ body:             |
 name:            srai_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -308,7 +296,6 @@ body:             |
 name:            srl_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -332,7 +319,6 @@ body:             |
 name:            srli_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -355,7 +341,6 @@ body:             |
 name:            and_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -379,7 +364,6 @@ body:             |
 name:            andi_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -402,7 +386,6 @@ body:             |
 name:            or_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -426,7 +409,6 @@ body:             |
 name:            ori_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -449,7 +431,6 @@ body:             |
 name:            xor_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -473,7 +454,6 @@ body:             |
 name:            xori_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -496,7 +476,6 @@ body:             |
 name:            add_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12, $x13
@@ -535,7 +514,6 @@ body:             |
 name:            sub_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12, $x13

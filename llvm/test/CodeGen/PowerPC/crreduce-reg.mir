@@ -4,7 +4,6 @@
 
 ---
 name:            subreg_folding_regression
-tracksRegLiveness: true
 isSSA:           true
 body:             |
   ; CHECK-LABEL: name: subreg_folding_regression

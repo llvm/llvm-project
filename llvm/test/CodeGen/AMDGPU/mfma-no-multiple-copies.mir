@@ -10,7 +10,6 @@
 
 ---
 name: mfma_no_multiple_copies
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

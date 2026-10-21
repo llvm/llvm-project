@@ -8,7 +8,6 @@
 # CHECK: Macro fuse: SU(0) - SU(1) /  MULLD - ADD8
 ---
 name: add_mulld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -21,7 +20,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  ADD8 - AND8
 ---
 name: add_and
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -34,7 +32,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  XOR8 - SUBF8
 ---
 name: xor_subf
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -47,7 +44,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  OR8 - NAND8
 ---
 name: or_nand
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -60,7 +56,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  VAND - VAND
 ---
 name: vand_vand
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v2, $v3, $v4
@@ -73,7 +68,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  VADDUDM - VADDUDM
 ---
 name: vadd_vadd
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v2, $v3, $v4
@@ -86,7 +80,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  RLDICR - ADD8
 ---
 name: sldi_add
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -99,7 +92,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  RLDICL - XOR8
 ---
 name: rldicl_xor
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -112,7 +104,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  RLDICR - XOR8
 ---
 name: rldicr_xor
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -125,7 +116,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  ORI8 - ORIS8
 ---
 name: ori_oris
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
@@ -138,7 +128,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  LD - CMPDI
 ---
 name: load_cmp
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
@@ -151,7 +140,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  VADDUBM - VSUBUBM
 ---
 name: back2back_1
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v2, $v3, $v4
@@ -163,7 +151,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  XSABSDP - XSNEGDP
 ---
 name: back2back_2
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $f1, $f2
@@ -175,7 +162,6 @@ body:             |
 # CHECK: Macro fuse: SU(0) - SU(1) /  VMAXFP - XVMINSP
 ---
 name: back2back_3
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v2, $v3, $v4

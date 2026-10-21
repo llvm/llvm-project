@@ -3,7 +3,6 @@
 
 ---
 name: shufflevector_scalar_src
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -25,7 +24,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_0_1
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_1_0
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -77,7 +74,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_0_0
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -101,7 +97,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_undef_undef
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -124,7 +119,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_undef_0
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -149,7 +143,6 @@ body: |
 
 ---
 name: shufflevector_v2s32_0_undef
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -170,7 +163,6 @@ body: |
 
 ---
 name: shufflevector_v3s32_3_2_1
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -198,7 +190,6 @@ body: |
 
 ---
 name: shufflevector_v3s32_3_2_1_smaller
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -224,7 +215,6 @@ body: |
 
 ---
 name: shufflevector_v2s16_0_1
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -257,7 +247,6 @@ body: |
 
 ---
 name: shufflevector_v2s16_1_0
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -290,7 +279,6 @@ body: |
 
 ---
 name: shufflevector_v3s16_2_0
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -331,7 +319,6 @@ body: |
 
 ---
 name: shufflevector_cache_element
-tracksRegLiveness: true
 
 body: |
   bb.0:

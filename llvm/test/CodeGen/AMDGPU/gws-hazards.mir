@@ -8,7 +8,6 @@
 
 ---
 name: m0_gws_init0
-tracksRegLiveness: true
 body: |
 
   bb.0:
@@ -51,7 +50,6 @@ body: |
 
 ---
 name: m0_gws_init1
-tracksRegLiveness: true
 body: |
 
   bb.0:
@@ -91,7 +89,6 @@ body: |
 # through readfirstlane
 ---
 name: m0_gws_readlane
-tracksRegLiveness: true
 body: |
 
   bb.0:

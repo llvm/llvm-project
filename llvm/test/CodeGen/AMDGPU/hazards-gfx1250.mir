@@ -3,7 +3,6 @@
 
 ---
 name: ds_atomic_async_barrier_arrive_b64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -18,7 +17,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -34,7 +32,6 @@ body: |
 
 ---
 name: write_s103_read_flat_scr_base_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -50,7 +47,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_read_flat_scr_base
@@ -63,7 +59,6 @@ body: |
 
 ---
 name: write_s103_read_flat_scr_base
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: write_s103_read_flat_scr_base
@@ -76,7 +71,6 @@ body: |
 
 ---
 name: write_s102_s103_read_flat_scr_base
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_s103_read_flat_scr_base
@@ -89,7 +83,6 @@ body: |
 
 ---
 name: write_s102_getreg_flat_scr_base_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -105,7 +98,6 @@ body: |
 
 ---
 name: write_s103_getreg_flat_scr_base_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -121,7 +113,6 @@ body: |
 
 ---
 name: write_s102_s103_getreg_flat_scr_base_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_s103_getreg_flat_scr_base_hi
@@ -134,7 +125,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_9_salu_valu
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -177,7 +167,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_10_salu_valu_expired
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -221,7 +210,6 @@ body: |
 
 ---
 name: write_s103_read_flat_scr_base_hi_9_salu_valu
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -264,7 +252,6 @@ body: |
 
 ---
 name: write_s103_read_flat_scr_base_hi_10_salu_valu_expired
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -308,7 +295,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_hi_no_hazard
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -323,7 +309,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_expired_by_wait0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -342,7 +327,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_expired_by_wait_vs_sdst_sa_sdst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -361,7 +345,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_va_sdst_only
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -381,7 +364,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_not_expired_by_wait_sa_sdst_only
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -401,7 +383,6 @@ body: |
 
 ---
 name: write_s102_write_s103_read_flat_scr_base_lo_read_flat_scr_base_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -421,7 +402,6 @@ body: |
 
 ---
 name: write_s102_read_flat_scr_base_lo_cross_blocks
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: write_s102_read_flat_scr_base_lo_cross_blocks
   ; GCN: bb.0:
@@ -496,7 +476,6 @@ body: |
 
 ---
 name: s_setreg_b32_hwreg_mode
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -511,7 +490,6 @@ body: |
 
 ---
 name: s_setreg_b32_mode
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -526,7 +504,6 @@ body: |
 
 ---
 name: s_setreg_imm32_b32_hwreg_mode
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_setreg_imm32_b32_hwreg_mode
@@ -538,7 +515,6 @@ body: |
 
 ---
 name: s_setreg_imm32_b32_mode
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_setreg_imm32_b32_mode
@@ -550,7 +526,6 @@ body: |
 
 ---
 name: tensor_load_drain
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -572,7 +547,6 @@ body: |
 
 ---
 name: tensor_store_drain
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -594,7 +568,6 @@ body: |
 
 ---
 name: tensor_load_no_previous_tensor
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -609,7 +582,6 @@ body: |
 
 ---
 name: tensor_load_hazard_expired_10
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -632,7 +604,6 @@ body: |
 
 ---
 name: tensor_load_hazard_expired_9
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -655,7 +626,6 @@ body: |
 
 ---
 name: tensor_load_hazard_not_expired
-tracksRegLiveness: true
 body: |
   bb.0:
 
@@ -679,7 +649,6 @@ body: |
 
 ---
 name: tensor_load_hazard_wait_before
-tracksRegLiveness: true
 body: |
   bb.0:
 

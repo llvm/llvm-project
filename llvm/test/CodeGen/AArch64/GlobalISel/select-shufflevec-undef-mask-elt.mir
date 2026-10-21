@@ -9,7 +9,6 @@ name:            shuffle_undef_mask_elt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:

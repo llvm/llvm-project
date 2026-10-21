@@ -11,7 +11,6 @@
 # CHECK: Macro fuse: {{.*}}ADD - LB
 ---
 name: add_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -30,7 +29,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LH
 ---
 name: add_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -49,7 +47,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - SW
 ---
 name: add_sw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -67,7 +64,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - SD
 ---
 name: add_sd
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -86,7 +82,6 @@ body:             |
 # CHECK-NOT: Macro fuse: {{.*}}ADD - LB
 ---
 name: add_lb_no_fusion
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12

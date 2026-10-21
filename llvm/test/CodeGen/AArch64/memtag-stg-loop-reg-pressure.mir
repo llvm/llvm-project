@@ -43,7 +43,6 @@
 ...
 ---
 name:            test_no_free_regs_emergency_slot
-tracksRegLiveness: true
 liveins:
   - { reg: '$x22', virtual-reg: '' }
 stack:
@@ -172,7 +171,6 @@ body:             |
 ...
 ---
 name:            test_one_csr_free_no_slot
-tracksRegLiveness: true
 liveins:
   - { reg: '$x22', virtual-reg: '' }
 stack:
@@ -299,7 +297,6 @@ body:             |
 ...
 ---
 name:            test_one_csr_one_caller_free
-tracksRegLiveness: true
 liveins:
   - { reg: '$x22', virtual-reg: '' }
 stack:
@@ -424,7 +421,6 @@ body:             |
 ...
 ---
 name:            test_emergency_slot_one_caller_free
-tracksRegLiveness: true
 liveins:
   - { reg: '$x22', virtual-reg: '' }
 stack:

@@ -7,7 +7,6 @@
 name: groupstaticsize_v
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   ldsSize: 4096
 
@@ -28,7 +27,6 @@ body: |
 name: groupstaticsize_s
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   ldsSize: 1024
 

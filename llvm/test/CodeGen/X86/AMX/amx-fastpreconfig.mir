@@ -7,7 +7,6 @@
 ---
 name:            main
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64_nosp }
   - { id: 1, class: gr64 }
@@ -71,7 +70,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64, preferred-register: '' }
   - { id: 1, class: gr64_with_sub_8bit, preferred-register: '' }

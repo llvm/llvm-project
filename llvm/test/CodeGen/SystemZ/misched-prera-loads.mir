@@ -28,7 +28,6 @@
 # CHECK: fun0:%bb.1
 ---
 name:            fun0
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
@@ -89,7 +88,6 @@ body:             |
 # CHECK: fun1:%bb.1
 ---
 name:            fun1
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -187,7 +185,6 @@ body:             |
 # CHECK: fun2:%bb.1
 ---
 name:            fun2
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -269,7 +266,6 @@ body:             |
 # CHECK: fun3:%bb.1
 ---
 name:            fun3
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -374,7 +370,6 @@ body:             |
 # CHECK-NEXT: SU(46):   $f0d = LZDR
 ---
 name:            fun4
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -472,7 +467,6 @@ body:             |
 # CHECK-NEXT: SU(46):   $r2d = LGHI 0
 ---
 name:            fun5
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -563,7 +557,6 @@ body:             |
 # CHECK-NEXT: SU(37):   %L2:addr64bit = LG %0:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
 ---
 name:            fun6
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r2d, $r3d

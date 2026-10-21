@@ -6,7 +6,6 @@
 # GCN-NEXT: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mac_clamp_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -77,7 +76,6 @@ body:             |
 # GCN: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mac_omod_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -148,7 +146,6 @@ body:             |
 # GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_clamp_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -219,7 +216,6 @@ body:             |
 # GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_omod_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }

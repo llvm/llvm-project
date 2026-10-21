@@ -8,7 +8,6 @@
 
 ---
 name: instructions_after_copy_to_exec
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: instructions_after_copy_to_exec
   ; CHECK: bb.0:

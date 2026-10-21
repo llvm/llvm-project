@@ -5,7 +5,6 @@
 name:            v_s_exp_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -25,7 +24,6 @@ body:             |
 name:            v_s_exp_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -48,7 +46,6 @@ body:             |
 name:            v_s_log_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -68,7 +65,6 @@ body:             |
 name:            v_s_log_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -91,7 +87,6 @@ body:             |
 name:            v_s_rcp_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -111,7 +106,6 @@ body:             |
 name:            v_s_rcp_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -134,7 +128,6 @@ body:             |
 name:            v_s_rsq_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -154,7 +147,6 @@ body:             |
 name:            v_s_rsq_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -177,7 +169,6 @@ body:             |
 name:            v_s_sqrt_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -197,7 +188,6 @@ body:             |
 name:            v_s_sqrt_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -220,7 +210,6 @@ body:             |
 name:            v_amdgcn_sqrt_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -240,7 +229,6 @@ body:             |
 name:            v_amdgcn_sqrt_f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0

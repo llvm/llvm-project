@@ -10,7 +10,6 @@
 ...
 ---
 name:            test_anti_hints
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -50,7 +49,6 @@ body:             |
 ...
 ---
 name:            test_anti_hints_multi_mfma
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4' }

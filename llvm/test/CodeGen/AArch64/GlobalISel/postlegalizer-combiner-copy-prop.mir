@@ -5,7 +5,6 @@
 ---
 name:            postlegalize_copy_prop
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1

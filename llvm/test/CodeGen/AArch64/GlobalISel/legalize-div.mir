@@ -35,7 +35,6 @@ body:             |
 ---
 name:            sdiv_v4s32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:

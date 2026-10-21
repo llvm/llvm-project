@@ -22,7 +22,6 @@
 ...
 ---
 name:            test1
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 body: |
@@ -49,7 +48,6 @@ body: |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 body: |

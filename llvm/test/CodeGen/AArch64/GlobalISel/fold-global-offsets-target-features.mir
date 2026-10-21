@@ -30,7 +30,6 @@
 ---
 name:            test_external_linkage
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -77,7 +76,6 @@ body:             |
 ---
 name:            test_internal_linkage
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -124,7 +122,6 @@ body:             |
 ---
 name:            test_common_linkage
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -177,7 +174,6 @@ body:             |
 ---
 name:            test_extern_weak_linkage
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -197,7 +193,6 @@ body:             |
 ---
 name:            never_fold_tagged_globals
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -217,7 +212,6 @@ body:             |
 ---
 name:            test_dll_import
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

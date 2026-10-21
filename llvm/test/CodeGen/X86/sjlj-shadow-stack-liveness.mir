@@ -13,7 +13,6 @@
 name:            bar
 # CHECK-LABEL: name: bar
 alignment:       16
-tracksRegLiveness: true
 noPhis: false
 body:             |
   bb.0:

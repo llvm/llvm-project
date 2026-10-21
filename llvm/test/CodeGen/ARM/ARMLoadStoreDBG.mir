@@ -81,7 +81,6 @@
 name:            f
 alignment:       2
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }

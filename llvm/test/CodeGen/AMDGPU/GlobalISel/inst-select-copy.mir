@@ -388,7 +388,6 @@ body: |
 name:            copy_s1_to_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -422,7 +421,6 @@ body:             |
 name:            copy_s1_false_to_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -449,7 +447,6 @@ body:             |
 name:            copy_s1_true_to_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0

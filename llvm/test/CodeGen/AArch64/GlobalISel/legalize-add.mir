@@ -225,7 +225,6 @@ body:             |
 ---
 name:            add_v8i16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -249,7 +248,6 @@ body:             |
 ---
 name:            add_v16i8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -273,7 +271,6 @@ body:             |
 ---
 name:            add_v4i16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -295,7 +292,6 @@ body:             |
 ...
 ---
 name:            add_v8s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -317,7 +313,6 @@ body:             |
 ...
 ---
 name:            add_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -347,7 +342,6 @@ body:             |
 ...
 ---
 name:            add_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -381,7 +375,6 @@ body:             |
 ...
 ---
 name:            add_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -411,7 +404,6 @@ body:             |
 ...
 ---
 name:            add_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -441,7 +433,6 @@ body:             |
 ...
 ---
 name:            add_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

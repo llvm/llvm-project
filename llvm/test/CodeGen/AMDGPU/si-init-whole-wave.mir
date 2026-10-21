@@ -9,7 +9,6 @@
 name:            test_no_wwm
 alignment:       1
 exposesReturnsTwice: false
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_no_wwm
   ; CHECK: bb.0:
@@ -69,7 +68,6 @@ body:             |
 name:            test_wwm_bb1
 alignment:       1
 exposesReturnsTwice: false
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_wwm_bb1
   ; CHECK: bb.0:

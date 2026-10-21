@@ -10,7 +10,6 @@
 ---
 name: test_xxpermdi_splat_multiple_uses
 alignment: 16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vrrc }
   - { id: 28, class: vrrc }
@@ -39,7 +38,6 @@ body: |
 ---
 name: test_swap_isel_livevars
 alignment: 16
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 registers:

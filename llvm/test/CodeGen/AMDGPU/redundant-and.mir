@@ -12,7 +12,6 @@
 # Tests in this section have a parent instruction that implicitly zeros high bits.
 ---
 name: v_cvt_f16_f32_altmask
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -65,7 +64,6 @@ body:             |
 # Test we do not assume the high bits are zero
 ---
 name: wrong_mask_value
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -104,7 +102,6 @@ body:             |
 
 ---
 name: v_cvt_f16_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -148,7 +145,6 @@ body:             |
 
 ---
 name: v_cvt_f16_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -192,7 +188,6 @@ body:             |
 
 ---
 name: v_cvt_f16_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -236,7 +231,6 @@ body:             |
 
 ---
 name: v_rcp_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -279,7 +273,6 @@ body:             |
 ...
 ---
 name: v_rsq_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -322,7 +315,6 @@ body:             |
 ...
 ---
 name: v_sqrt_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -366,7 +358,6 @@ body:             |
 
 ---
 name: v_log_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -410,7 +401,6 @@ body:             |
 
 ---
 name: v_exp_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -454,7 +444,6 @@ body:             |
 
 ---
 name: v_sin_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -498,7 +487,6 @@ body:             |
 
 ---
 name: v_cos_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -542,7 +530,6 @@ body:             |
 
 ---
 name: v_floor_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -586,7 +573,6 @@ body:             |
 
 ---
 name: v_ceil_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -630,7 +616,6 @@ body:             |
 
 ---
 name: v_trunc_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -674,7 +659,6 @@ body:             |
 
 ---
 name: v_rndne_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -718,7 +702,6 @@ body:             |
 
 ---
 name: v_fract_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -762,7 +745,6 @@ body:             |
 
 ---
 name: v_frexp_mant_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -806,7 +788,6 @@ body:             |
 
 ---
 name: v_frexp_exp_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -850,7 +831,6 @@ body:             |
 
 ---
 name: v_ldexp_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -898,7 +878,6 @@ body:             |
 
 ---
 name: v_lshlrev_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -946,7 +925,6 @@ body:             |
 
 ---
 name: v_lshrrev_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -994,7 +972,6 @@ body:             |
 
 ---
 name: v_ashrrev_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1042,7 +1019,6 @@ body:             |
 
 ---
 name: v_add_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1090,7 +1066,6 @@ body:             |
 
 ---
 name: v_sub_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1138,7 +1113,6 @@ body:             |
 
 ---
 name: v_subrev_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1186,7 +1160,6 @@ body:             |
 
 ---
 name: v_mul_lo_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1234,7 +1207,6 @@ body:             |
 
 ---
 name: v_add_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1282,7 +1254,6 @@ body:             |
 
 ---
 name: v_sub_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1330,7 +1301,6 @@ body:             |
 
 ---
 name: v_subrev_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1378,7 +1348,6 @@ body:             |
 
 ---
 name: v_mul_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1426,7 +1395,6 @@ body:             |
 
 ---
 name: v_max_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1474,7 +1442,6 @@ body:             |
 
 ---
 name: v_min_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1522,7 +1489,6 @@ body:             |
 
 ---
 name: v_max_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1569,7 +1535,6 @@ body:             |
 ...
 ---
 name: v_min_u16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1617,7 +1582,6 @@ body:             |
 
 ---
 name: v_max_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1664,7 +1628,6 @@ body:             |
 ...
 ---
 name: v_min_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1712,7 +1675,6 @@ body:             |
 
 ---
 name: v_mad_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1754,7 +1716,6 @@ body:             |
 
 ---
 name: v_fma_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1796,7 +1757,6 @@ body:             |
 
 ---
 name: v_div_fixup_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1838,7 +1798,6 @@ body:             |
 
 ---
 name: v_madak_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1877,7 +1836,6 @@ body:             |
 
 ---
 name: v_madmk_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1916,7 +1874,6 @@ body:             |
 
 ---
 name: v_fmaak_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1955,7 +1912,6 @@ body:             |
 
 ---
 name: v_fmamk_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -1994,7 +1950,6 @@ body:             |
 
 ---
 name: v_mac_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2048,7 +2003,6 @@ body:             |
 
 ---
 name: v_fmac_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -2102,7 +2056,6 @@ body:             |
 
 ---
 name: no_fold_v_mad_mixlo_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -2150,7 +2103,6 @@ body:             |
 
 ---
 name: no_fold_v_mad_mixhi_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -2211,7 +2163,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_scc_dead
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2245,7 +2196,6 @@ body:             |
 ---
 ---
 name:            fold_redundant_and_imm_in_src0
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2278,7 +2228,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_mixed_imm_positions
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2311,7 +2260,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_mixed_imm_positions_2
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2344,7 +2292,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_vector_e32_e64
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2380,7 +2327,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_vector_e64_e32
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2414,7 +2360,6 @@ body:             |
 
 ---
 name:            fold_redundant_and_vector_e64_e64
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2451,7 +2396,6 @@ body:             |
 
 ---
 name: fold_redundant_and_src_subclass
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -2483,7 +2427,6 @@ body:             |
 
 ---
 name: no_fold_redundant_and_scalar_parent_vgpr_imm_child
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -2521,7 +2464,6 @@ body:             |
 
 ---
 name: no_fold_redundant_and_sgpr_into_vgpr_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $vgpr0
@@ -2567,7 +2509,6 @@ body:             |
 
 ---
 name:            no_fold_redundant_and_scc_live
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2615,7 +2556,6 @@ body:             |
 
 ---
 name:            no_fold_redundant_and_child_mask_insufficient
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2651,7 +2591,6 @@ body:             |
 
 ---
 name:            no_fold_redundant_and_undef_src
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -2672,7 +2611,6 @@ body:             |
 
 ---
 name:            no_fold_redundant_and_undef_src_commuted
-tracksRegLiveness: true
 
 body:             |
   bb.0:

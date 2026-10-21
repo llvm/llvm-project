@@ -6,7 +6,6 @@
 ---
 
 name:            merge_sgpr_spill_into_copy_from_m0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -36,7 +35,6 @@ body:             |
 ---
 
 name:            reload_sgpr_spill_into_copy_to_m0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

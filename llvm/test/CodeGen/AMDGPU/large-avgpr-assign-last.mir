@@ -13,7 +13,6 @@
 
 ---
 name:            temp_vgpr_to_agpr_should_not_undo_split_with_remat
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

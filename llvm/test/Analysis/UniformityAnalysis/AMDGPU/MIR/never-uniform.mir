@@ -3,7 +3,6 @@
 # loads from flat non uniform
 ---
 name:            flatloads
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -22,7 +21,6 @@ body:             |
 # loads from scratch non uniform
 ---
 name:            scratchloads
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -38,7 +36,6 @@ body:             |
 # Global load
 ---
 name:            globalloads
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -58,7 +55,6 @@ body:             |
 # FIXME:: ADDTID might instruction incorrectly marked uniform
 ---
 name:            dsreads
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 
@@ -75,7 +71,6 @@ body:             |
 # copy source == $sgpr => uniform, $vgpr => divergent
 ---
 name:            sgprcopy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -121,7 +116,6 @@ body:             |
 # Directly reading physical vgpr not uniform
 ---
 name:            physicalreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function:  @physicalreg

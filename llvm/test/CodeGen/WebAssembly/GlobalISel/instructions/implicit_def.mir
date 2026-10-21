@@ -4,7 +4,6 @@
 
 ---
 name:            implicit_def_i8
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -21,7 +20,6 @@ body:             |
 
 ---
 name:            implicit_def_i16
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -38,7 +36,6 @@ body:             |
 
 ---
 name:            implicit_def_i32
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -54,7 +51,6 @@ body:             |
 
 ---
 name:            implicit_def_i64
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -70,7 +66,6 @@ body:             |
 
 ---
 name:            implicit_def_f32
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -86,7 +81,6 @@ body:             |
 
 ---
 name:            implicit_def_f64
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments
@@ -102,7 +96,6 @@ body:             |
 
 ---
 name:            implicit_def_p0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $arguments

@@ -5,7 +5,6 @@
 
 ---
 name: no_erase_local_escape
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4, alignment: 4 }
   - { id: 1, size: 8, alignment: 4 }

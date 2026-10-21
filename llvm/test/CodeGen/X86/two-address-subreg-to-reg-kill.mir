@@ -6,7 +6,6 @@
 # physical $eax, which allows IMUL32rm can use %eax.
 ---
 name: subreg_to_reg_kill_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -38,7 +37,6 @@ body: |
 # Negative case: subreg_to_reg with a vreg is not hoisted.
 # The pass keeps the IMUL32rm as is and MOV32rm + IMUL32rr is emitted instead.
 name: subreg_to_reg_virtual_dst_no_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -70,7 +68,6 @@ body: |
 ---
 # Positive case: COPY to a physical register is hoisted above IMUL32rm.
 name: copy_kill_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }
@@ -101,7 +98,6 @@ body: |
 ---
 # Negative case: COPY with a vreg destination is not hoisted.
 name: copy_virtual_dst_no_hoist
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr32 }

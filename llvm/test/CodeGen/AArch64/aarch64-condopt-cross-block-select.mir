@@ -29,7 +29,6 @@
 # Output: bb.0: CMP #10 GE Bcc   -> bb.1
 #         bb.1: CMP #10 GT CSELWr   (unchanged)
 name:            bcc_head_select_true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: bcc_head_select_true
   ; CHECK: bb.0:
@@ -92,7 +91,6 @@ body:             |
 # Output: bb.0: CMP #10 GE CSELWr  (adjusted)
 #         bb.1: CMP #10 GT Bcc      (unchanged)
 name:            select_head_bcc_true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_head_bcc_true
   ; CHECK: bb.0:
@@ -164,7 +162,6 @@ body:             |
 # Output: bb.0: CMP #10 GE CSELWr  (adjusted)
 #         bb.1: CMP #10 GT CSELWr  (unchanged)
 name:            select_head_select_true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_head_select_true
   ; CHECK: bb.0:
@@ -228,7 +225,6 @@ body:             |
 #
 # Input and output are identical (no transformation expected).
 name:            select_select_nzcv_lives_out
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_select_nzcv_lives_out
   ; CHECK: bb.0:
@@ -295,7 +291,6 @@ body:             |
 # bb.0 compares %0 (traces to $w0) and bb.1 compares %1 (traces to $w1).
 # registersMatch() must reject this pair; no transformation expected.
 name:            select_select_different_regs
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_select_different_regs
   ; CHECK: bb.0:
@@ -373,7 +368,6 @@ body:             |
 # Output: bb.0: CMP #10 GE CSINCWr (adjusted)
 #         bb.1: CMP #10 GT CSINCWr (unchanged)
 name:            select_head_select_true_csinc
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_head_select_true_csinc
   ; CHECK: bb.0:
@@ -438,7 +432,6 @@ body:             |
 #
 # Input and output are identical (no transformation expected).
 name:            select_second_nzcv_reader_between_select_and_cmp
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_second_nzcv_reader_between_select_and_cmp
   ; CHECK: bb.0:
@@ -507,7 +500,6 @@ body:             |
 #
 # Input and output are identical (no transformation expected).
 name:            select_unrelated_nzcv_writer_between_select_and_cmp
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_unrelated_nzcv_writer_between_select_and_cmp
   ; CHECK: bb.0:

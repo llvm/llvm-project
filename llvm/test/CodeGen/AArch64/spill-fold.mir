@@ -106,7 +106,6 @@ body:             |
 # CHECK-LABEL: name: test_subreg_fill_fold3
 # A filled copy from a sub-register should load the whole register
 name:              test_subreg_fill_fold3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
 liveins:

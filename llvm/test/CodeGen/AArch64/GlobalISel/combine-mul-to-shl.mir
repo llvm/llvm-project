@@ -4,7 +4,6 @@
 ---
 name:            mul_to_shl
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            mul_to_shl_16
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -52,7 +50,6 @@ body:             |
 ---
 name:            mul_to_shl_vector_16
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -79,7 +76,6 @@ body:             |
 ---
 name:            mul_to_shl_non_pow2
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -103,7 +99,6 @@ body:             |
 ---
 name:            mul_to_shl_16_nuw_nsw
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -127,7 +122,6 @@ body:             |
 ---
 name:            mul_to_shl_int_min_nuw_nsw
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

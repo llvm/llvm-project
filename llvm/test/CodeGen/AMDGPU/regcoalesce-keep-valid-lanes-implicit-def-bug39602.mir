@@ -6,7 +6,6 @@
 
 ---
 name: lost_valid_lanes_maybe_erasable_implicit_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lost_valid_lanes_maybe_erasable_implicit_def
   ; CHECK: bb.0:
@@ -35,7 +34,6 @@ body:             |
 # IMPLICIT_DEF. These should both be handled the same way.
 
 name:  lost_valid_lanes_real_value
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lost_valid_lanes_real_value
   ; CHECK: bb.0:

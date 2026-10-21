@@ -91,7 +91,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0 (%ir-block.1):
@@ -136,7 +135,6 @@ body:             |
 ...
 ---
 name:            ule_negone
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ule_negone
   ; CHECK: bb.0:
@@ -196,7 +194,6 @@ body:             |
 ...
 ---
 name:            ult_zero
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ult_zero
   ; CHECK: bb.0:
@@ -256,7 +253,6 @@ body:             |
 ...
 ---
 name:            sle_zero
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: sle_zero
   ; CHECK: bb.0:
@@ -316,7 +312,6 @@ body:             |
 ...
 ---
 name:            slt_zero
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: slt_zero
   ; CHECK: bb.0:

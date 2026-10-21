@@ -13,7 +13,6 @@
 ---
 name:            adrp_add_ldr
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x21', virtual-reg: '' }
 body:             |
@@ -30,7 +29,6 @@ body:             |
 ---
 name:            adrp_add_str
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x22', virtual-reg: '' }
   - { reg: '$x21', virtual-reg: '' }

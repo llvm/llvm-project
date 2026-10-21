@@ -438,7 +438,6 @@ body: |
 ---
 name:            test_atomic
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

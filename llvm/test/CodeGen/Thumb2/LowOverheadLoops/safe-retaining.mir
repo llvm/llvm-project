@@ -87,7 +87,6 @@
 ---
 name:            test_vqrshruntq_n_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -194,7 +193,6 @@ body:             |
 ---
 name:            test_vqrshruntq_n_s16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

@@ -89,7 +89,6 @@
 ...
 ---
 name:            Process
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$rsi', virtual-reg: '%2' }
@@ -139,7 +138,6 @@ body:             |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$rsi', virtual-reg: '%2' }
@@ -188,7 +186,6 @@ body:             |
 ...
 ---
 name:            test3
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$rsi', virtual-reg: '%2' }

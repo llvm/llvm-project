@@ -16,7 +16,6 @@
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
 ---
 name:            idxen
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
@@ -168,7 +167,6 @@ body:             |
 
 ---
 name:            offen
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
@@ -320,7 +318,6 @@ body:             |
 
 ---
 name:            bothen
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
@@ -473,7 +470,6 @@ body:             |
 
 ---
 name:            addr64
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
@@ -570,7 +566,6 @@ body:             |
 
 ---
 name:            offset
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }

@@ -15,7 +15,6 @@
 ...
 ---
 name:            none
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -146,7 +145,6 @@ body:             |
 ...
 ---
 name:            copyin
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -279,7 +277,6 @@ body:             |
 ...
 ---
 name:            copyout
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

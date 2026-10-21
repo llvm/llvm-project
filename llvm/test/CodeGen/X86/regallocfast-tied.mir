@@ -34,7 +34,6 @@
 # %0 is read again in a successor: it still takes the def's register over
 # here, since the spill at its def serves the later read.
 name: tied_use_live_out
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: tied_use_live_out
   ; CHECK: bb.0:
@@ -68,7 +67,6 @@ body: |
 # %0 is defined in a predecessor: the reload at block begin lands in the def's
 # register.
 name: tied_use_live_in
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: tied_use_live_in
   ; CHECK: bb.0:
@@ -99,7 +97,6 @@ body: |
 # The tied use takes over $eax, which the ADD then overwrites, so a DBG_VALUE
 # below cannot find %0 there.
 name: tied_use_dbg_value
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -119,7 +116,6 @@ body: |
 ...
 ---
 name: tied_early_clobber_shared_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -138,7 +134,6 @@ body: |
 # A tied use reading a subregister cannot take over the def's register even
 # though it dies: the copy performs the truncation.
 name: tied_use_subreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -159,7 +154,6 @@ body: |
 # the tied def was assigned, so %0 cannot take that register over and is copied
 # into it instead.
 name: tied_use_class_mismatch
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -182,7 +176,6 @@ body: |
 # Stack realignment with a variable-sized object reserves $rbx as the base
 # pointer, so the tied use is copied into it rather than taking it over.
 name: tied_def_reserved
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 32
 stack:
@@ -206,7 +199,6 @@ body: |
 ...
 ---
 name: insert_subreg_undef_base
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -225,7 +217,6 @@ body: |
 # The base is live afterwards, so the expansion copies it into the destination
 # before writing the subregister.
 name: insert_subreg_live_base
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $esi
@@ -247,7 +238,6 @@ body: |
 # %0 is read again below, so the tied use is copied into the def's register.
 # The instruction's other read of %0 takes that register too.
 name: tied_use_read_twice
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -269,7 +259,6 @@ body: |
 # asm operands "r"(a), "0"(a). Allocating the tied use first lets both reads
 # share the def's register without a copy.
 name: untied_read_before_tied_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $eax
@@ -287,7 +276,6 @@ body: |
 # An undef tied use has no value to place; it just names the tied def's
 # register.
 name: tied_use_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -307,7 +295,6 @@ body: |
 # Both tied uses read %0, which is live below, so each is copied into its own
 # tied def's register and neither may follow the other's copy.
 name: two_tied_uses_one_value
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi

@@ -21,7 +21,6 @@ name:            test_float
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr, preferred-register: '' }
 #
@@ -66,7 +65,6 @@ name:            test_double
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 #
 #
 registers:

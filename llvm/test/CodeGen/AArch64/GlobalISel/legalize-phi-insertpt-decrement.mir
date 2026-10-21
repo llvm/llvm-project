@@ -34,7 +34,6 @@
 ---
 name:            snork
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 body:             |

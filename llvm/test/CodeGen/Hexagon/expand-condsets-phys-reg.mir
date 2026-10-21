@@ -8,7 +8,6 @@
 # CHECK: %2:intregs = A2_tfrf killed %1, killed %0, implicit %2(tied-def 0)
 
 name: fred
-tracksRegLiveness: true
 isSSA: false
 body: |
   bb.0:

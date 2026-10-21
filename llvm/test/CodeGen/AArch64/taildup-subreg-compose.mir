@@ -15,7 +15,6 @@
 
 ---
 name:            foo2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo2
   ; CHECK: bb.0.entry:

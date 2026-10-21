@@ -9,7 +9,6 @@
 # them to use physical registers.
 ---
 name:            different_vreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d2, $d4, $d7
@@ -39,7 +38,6 @@ body:             |
 # physical register for it and replace both references.
 ---
 name:            same_vreg_twice
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d2, $d4
@@ -67,7 +65,6 @@ body:             |
 # regallocfast allocates a phys reg for both %0 and %1.
 ---
 name:            partial_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
 

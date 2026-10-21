@@ -118,7 +118,6 @@
 ---
 name:            eggs
 alignment:       16
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, callee-saved-register: '$rbx' }
   - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, callee-saved-register: '$r12' }

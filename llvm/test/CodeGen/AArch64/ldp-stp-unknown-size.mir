@@ -18,7 +18,6 @@
 ---
 name:            ldp_no_size_info
 alignment:       64
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$x0' }

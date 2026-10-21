@@ -23,7 +23,6 @@
 #
 name:           test_i32
 alignment:       8
-tracksRegLiveness: true
 frameInfo:
   stackSize:       32
   maxAlignment:    4
@@ -73,7 +72,6 @@ body:             |
 #
 name:           test_i64
 alignment:       8
-tracksRegLiveness: true
 frameInfo:
   stackSize:       32
   maxAlignment:    4

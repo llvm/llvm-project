@@ -12,7 +12,6 @@
 # v15 is a granule boundary, so it may be the last VGPR the wave owns. It is
 # read by src0 of OPY, so the pair must not be formed.
 name:            fma_f64_opy_src0_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_src0_at_granule_boundary
@@ -46,7 +45,6 @@ body:             |
 ---
 # Same, but read by src1 of OPY.
 name:            fma_f64_opy_src1_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_src1_at_granule_boundary
@@ -80,7 +78,6 @@ body:             |
 ---
 # Same, but read by src2 of OPY.
 name:            fma_f64_opy_src2_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_src2_at_granule_boundary
@@ -114,7 +111,6 @@ body:             |
 ---
 # v14 can never be the last VGPR the wave owns, so the pair is fine.
 name:            fma_f64_opy_not_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_not_at_granule_boundary
@@ -148,7 +144,6 @@ body:             |
 # The rule follows the granule, not a fixed register number: v31 is rejected
 # too.
 name:            fma_f64_opy_at_second_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_at_second_granule_boundary
@@ -183,7 +178,6 @@ body:             |
 # v15 sits at a granule boundary, but v20 is in use, so the wave owns at least
 # 21 VGPRs and v15 cannot be the last one it owns. The pair is fine.
 name:            fma_f64_opy_at_granule_boundary_not_last_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opy_at_granule_boundary_not_last_vgpr
@@ -219,7 +213,6 @@ body:             |
 ---
 # Any 64-bit OPX triggers the hazard, not just V_FMA_F64.
 name:            add_f64_opy_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: add_f64_opy_at_granule_boundary
@@ -251,7 +244,6 @@ body:             |
 # The 64-bit component is the X component whichever way round the pair appears
 # in program order.
 name:            fma_f64_second_in_program_order
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_second_in_program_order
@@ -285,7 +277,6 @@ body:             |
 ---
 # Only OPY sources are affected: OPX may read a granule boundary register.
 name:            fma_f64_opx_src_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: fma_f64_opx_src_at_granule_boundary
@@ -319,7 +310,6 @@ body:             |
 # Only a 64-bit OPX is affected: with a 32-bit OPX, OPY may read a granule
 # boundary register.
 name:            mul_f32_opy_at_granule_boundary
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX125X-LABEL: name: mul_f32_opy_at_granule_boundary

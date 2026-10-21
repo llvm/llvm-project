@@ -4,7 +4,6 @@
 ---
 name: test_reassoc_infinite_loop
 legalized: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4

@@ -13,7 +13,6 @@
 
 ---
 name: qfpAdd
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -44,7 +43,6 @@ body: |
 
 ---
 name: qfpAddMix
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -75,7 +73,6 @@ body: |
 
 ---
 name: qfpAddSwapMix
-tracksRegLiveness: true
 
 body: |
   bb.0:

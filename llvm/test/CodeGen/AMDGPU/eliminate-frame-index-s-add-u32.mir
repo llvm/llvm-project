@@ -11,7 +11,6 @@
 
 ---
 name: s_add_u32__inline_imm__fi_offset0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32, alignment: 16 }
 machineFunctionInfo:
@@ -44,7 +43,6 @@ body:             |
 
 ---
 name: s_add_u32__kernel__literal__fi_offset96__offset_literal
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }
@@ -92,7 +90,6 @@ body:             |
 
 ---
 name: s_add_u32__kernel__literal__fi_offset96__offset_literal_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 96, alignment: 16 }
   - { id: 1, size: 128, alignment: 4 }

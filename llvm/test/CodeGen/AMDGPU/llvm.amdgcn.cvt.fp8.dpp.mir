@@ -6,7 +6,6 @@
 
 ---
 name:            test_cvt_f32_bf8_byte0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -28,7 +27,6 @@ body:             |
 ...
 ---
 name:            test_cvt_f32_bf8_byte2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -50,7 +48,6 @@ body:             |
 ...
 ---
 name:            test_cvt_f32_fp8_byte3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -72,7 +69,6 @@ body:             |
 ...
 ---
 name:            test_cvt_pk_bf8_f32_word0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -104,7 +100,6 @@ body:             |
 ...
 ---
 name:            test_cvt_pk_fp8_f32_word1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -136,7 +131,6 @@ body:             |
 ...
 ---
 name:            test_cvt_sr_bf8_f32_byte0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -168,7 +162,6 @@ body:             |
 ...
 ---
 name:            test_cvt_sr_fp8_f32_byte2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4

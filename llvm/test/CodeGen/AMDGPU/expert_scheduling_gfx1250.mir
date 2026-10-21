@@ -30,7 +30,6 @@ body: |
 
 ---
 name: async_global_to_lds_vaddr_raw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -49,7 +48,6 @@ body: |
 
 ---
 name: async_global_to_lds_vaddr_vsrc_war
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
@@ -71,7 +69,6 @@ body: |
 
 ---
 name: async_global_to_lds_vdst_vsrc_war
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr5
@@ -93,7 +90,6 @@ body: |
 
 ---
 name: global_load_vsrc_war
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -113,7 +109,6 @@ body: |
 
 ---
 name: buffer_load_vsrc_war
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3

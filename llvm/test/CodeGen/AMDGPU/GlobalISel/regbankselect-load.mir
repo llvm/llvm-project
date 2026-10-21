@@ -113,7 +113,6 @@
 ---
 name: load_global_v8i32_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -144,7 +143,6 @@ body: |
 ---
 name: load_global_v4i64_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -184,7 +182,6 @@ body: |
 ---
 name: load_global_v16i32_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -229,7 +226,6 @@ body: |
 ---
 name: load_global_v8i64_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -290,7 +286,6 @@ body: |
 ---
 name: load_global_v8i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -307,7 +302,6 @@ body: |
 ---
 name: load_global_v4i64_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -324,7 +318,6 @@ body: |
 ---
 name: load_global_v16i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -341,7 +334,6 @@ body: |
 ---
 name: load_global_v8i64_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -358,7 +350,6 @@ body: |
 ---
 name: load_constant_v8i32_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -389,7 +380,6 @@ body: |
 ---
 name: load_constant_i256_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -420,7 +410,6 @@ body: |
 ---
 name: load_constant_v16i16_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -452,7 +441,6 @@ body: |
 ---
 name: load_constant_v4i64_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -491,7 +479,6 @@ body: |
 ---
 name: load_constant_v16i32_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -536,7 +523,6 @@ body: |
 ---
 name: load_constant_v8i64_non_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -597,7 +583,6 @@ body: |
 ---
 name: load_constant_v8i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -614,7 +599,6 @@ body: |
 ---
 name: load_constant_v16i16_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -631,7 +615,6 @@ body: |
 ---
 name: load_constant_v4i64_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -648,7 +631,6 @@ body: |
 ---
 name: load_constant_v16i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -665,7 +647,6 @@ body: |
 ---
 name: load_constant_v8i64_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -682,7 +663,6 @@ body: |
 ---
 name: load_local_uniform
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -701,7 +681,6 @@ body: |
 ---
 name: load_region_uniform
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -720,7 +699,6 @@ body: |
 ---
 name: extload_constant_i8_to_i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -744,7 +722,6 @@ body: |
 ---
 name: extload_global_i8_to_i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -763,7 +740,6 @@ body: |
 ---
 name: extload_constant_i16_to_i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -788,7 +764,6 @@ body: |
 ---
 name: extload_global_i16_to_i32_uniform
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -807,7 +782,6 @@ body: |
 ---
 name: load_constant_i32_uniform_align4
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -824,7 +798,6 @@ body: |
 ---
 name: load_constant_i32_uniform_align2
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -843,7 +816,6 @@ body: |
 ---
 name: load_constant_i32_uniform_align1
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -862,7 +834,6 @@ body: |
 ---
 name: load_private_uniform_sgpr_i32
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -881,7 +852,6 @@ body: |
 ---
 name: load_constant_v8i32_vgpr_crash
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -903,7 +873,6 @@ body: |
 ---
 name: load_constant_v8i32_vgpr_crash_loop_phi
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; GCN-LABEL: name: load_constant_v8i32_vgpr_crash_loop_phi
@@ -944,7 +913,6 @@ body: |
 ---
 name: load_constant_v3i32_align4
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -975,7 +943,6 @@ body: |
 ---
 name: load_constant_v3i32_align8
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1006,7 +973,6 @@ body: |
 ---
 name: load_constant_v3i32_align16
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1034,7 +1000,6 @@ body: |
 ---
 name: load_constant_v6i16_align4
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1065,7 +1030,6 @@ body: |
 ---
 name: load_constant_v6i16_align8
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1096,7 +1060,6 @@ body: |
 ---
 name: load_constant_v6i16_align16
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1124,7 +1087,6 @@ body: |
 ---
 name: load_constant_i96_align4
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1155,7 +1117,6 @@ body: |
 ---
 name: load_constant_i96_align8
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1186,7 +1147,6 @@ body: |
 ---
 name: load_constant_i96_align16
 legalized: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

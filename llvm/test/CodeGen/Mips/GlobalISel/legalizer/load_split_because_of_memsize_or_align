@@ -209,7 +209,6 @@
 ---
 name:            load3align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -242,7 +241,6 @@ body:             |
 ---
 name:            load3align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -275,7 +273,6 @@ body:             |
 ---
 name:            load3align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0, $a1
@@ -308,7 +305,6 @@ body:             |
 ---
 name:            load3align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0, $a1
@@ -341,7 +337,6 @@ body:             |
 ---
 name:            load5align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -390,7 +385,6 @@ body:             |
 ---
 name:            load5align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -439,7 +433,6 @@ body:             |
 ---
 name:            load5align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -488,7 +481,6 @@ body:             |
 ---
 name:            load5align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -537,7 +529,6 @@ body:             |
 ---
 name:            load6align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -586,7 +577,6 @@ body:             |
 ---
 name:            load6align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -635,7 +625,6 @@ body:             |
 ---
 name:            load6align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -684,7 +673,6 @@ body:             |
 ---
 name:            load6align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -733,7 +721,6 @@ body:             |
 ---
 name:            load7align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -782,7 +769,6 @@ body:             |
 ---
 name:            load7align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -831,7 +817,6 @@ body:             |
 ---
 name:            load7align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -880,7 +865,6 @@ body:             |
 ---
 name:            load7align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $a0
@@ -929,7 +913,6 @@ body:             |
 ---
 name:            load_double_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_double_align1
@@ -955,7 +938,6 @@ body:             |
 ---
 name:            load_double_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_double_align2
@@ -981,7 +963,6 @@ body:             |
 ---
 name:            load_double_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_double_align4
@@ -1007,7 +988,6 @@ body:             |
 ---
 name:            load_double_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_double_align8
@@ -1029,7 +1009,6 @@ body:             |
 ---
 name:            load_i64_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i64_align1
@@ -1059,7 +1038,6 @@ body:             |
 ---
 name:            load_i64_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i64_align2
@@ -1089,7 +1067,6 @@ body:             |
 ---
 name:            load_i64_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i64_align4
@@ -1119,7 +1096,6 @@ body:             |
 ---
 name:            load_i64_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i64_align8

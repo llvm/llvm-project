@@ -4,7 +4,6 @@
 ---
 name:            test_lifetime_no_dce
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

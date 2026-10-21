@@ -8,7 +8,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 liveins:         []
 machineFunctionInfo: {}
 body:             |
@@ -68,7 +67,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 liveins:         []
 machineFunctionInfo: {}
 body:             |
@@ -126,7 +124,6 @@ name:            multiple_phis
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: multiple_phis
   ; CHECK: bb.0:

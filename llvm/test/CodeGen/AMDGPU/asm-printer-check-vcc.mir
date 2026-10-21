@@ -11,7 +11,6 @@
   @bar = external protected local_unnamed_addr addrspace(4) externally_initialized global i32, align 4
 ---
 name: foo
-tracksRegLiveness: true
 frameInfo:
   hasCalls: true
 body: |

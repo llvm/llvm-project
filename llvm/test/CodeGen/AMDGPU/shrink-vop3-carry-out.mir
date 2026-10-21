@@ -17,7 +17,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -101,7 +100,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -185,7 +183,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -268,7 +265,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -353,7 +349,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -438,7 +433,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }

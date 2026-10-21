@@ -12,7 +12,6 @@
 name: load_atomic_global_s32_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -73,7 +72,6 @@ body: |
 name: load_atomic_global_v2s16_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -134,7 +132,6 @@ body: |
 name: load_atomic_global_p3_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -195,7 +192,6 @@ body: |
 name: load_atomic_global_s64_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -256,7 +252,6 @@ body: |
 name: load_atomic_global_v2s32_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -317,7 +312,6 @@ body: |
 name: load_atomic_global_v4s16_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -378,7 +372,6 @@ body: |
 name: load_atomic_global_p1_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -439,7 +432,6 @@ body: |
 name: load_atomic_global_p0_seq_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -500,7 +492,6 @@ body: |
 name: load_atomic_global_s32_seq_cst_gep_m2048
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -587,7 +578,6 @@ body: |
 name: load_atomic_global_s32_seq_cst_gep_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -666,7 +656,6 @@ body: |
 name: load_atomic_global_s64_seq_cst_gep_m2048
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

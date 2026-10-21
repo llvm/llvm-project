@@ -4,7 +4,6 @@
 ---
 name:            fadd_v2s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0
@@ -25,7 +24,6 @@ body:             |
 ---
 name:            add_v4s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0
@@ -46,7 +44,6 @@ body:             |
 ---
 name:            fmaximum_v4s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0

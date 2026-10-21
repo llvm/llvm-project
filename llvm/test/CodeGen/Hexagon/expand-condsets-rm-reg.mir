@@ -19,7 +19,6 @@
 ---
 
 name: fred
-tracksRegLiveness: true
 isSSA: false
 registers:
   - { id: 0, class: intregs }

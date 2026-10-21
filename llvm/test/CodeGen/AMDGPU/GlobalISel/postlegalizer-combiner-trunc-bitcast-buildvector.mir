@@ -3,7 +3,6 @@
 
 ---
 name: s16_trunc_v2s16_buildvector
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -31,7 +30,6 @@ body: |
 
 ---
 name: s16_trunc_v2s16_buildvector_shift8_nofold
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -68,7 +66,6 @@ body: |
 
 ---
 name: s16_trunc_v2s16_buildvector_shift16
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -98,7 +95,6 @@ body: |
 
 ---
 name: s16_trunc_v2s32_buildvector_nofold
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -127,7 +123,6 @@ body: |
 
 ---
 name: s32_trunc_v2s32_buildvector
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -146,7 +141,6 @@ body: |
 
 ---
 name: s32_trunc_v2s32_buildvector_multiple_users
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1

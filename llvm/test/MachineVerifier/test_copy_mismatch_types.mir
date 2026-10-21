@@ -13,7 +13,6 @@
 ...
 ---
 name:            test_copy
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
 liveins:

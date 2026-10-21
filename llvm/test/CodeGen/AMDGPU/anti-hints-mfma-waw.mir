@@ -31,7 +31,6 @@
 
 ---
 name:            mfma_waw_nonxdl_2pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -89,7 +88,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_2pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -127,7 +125,6 @@ body:             |
 
 ---
 name:            mfma_waw_dgemm_4pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -165,7 +162,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_4pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -223,7 +219,6 @@ body:             |
 
 ---
 name:            mfma_waw_nonxdl_8pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -281,7 +276,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_8pass_vmem
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -344,7 +338,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_8pass_ds
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -402,7 +395,6 @@ body:             |
 
 ---
 name:            mfma_waw_dgemm_8pass
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -440,7 +432,6 @@ body:             |
 
 ---
 name:            mfma_waw_nonxdl_16pass
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       1
 liveins:
@@ -507,7 +498,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_16pass
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       1
 liveins:
@@ -574,7 +564,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_4pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -637,7 +626,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_8pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -705,7 +693,6 @@ body:             |
 
 ---
 name:            mfma_waw_nonxdl_16pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -775,7 +762,6 @@ body:             |
 
 ---
 name:            mfma_waw_dgemm_4pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -811,7 +797,6 @@ body:             |
 
 ---
 name:            mfma_waw_dgemm_8pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -868,7 +853,6 @@ body:             |
 
 ---
 name:            mfma_waw_boundary_4pass_valu
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -1063,7 +1047,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_8pass_ds_raw_between
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -1148,7 +1131,6 @@ body:             |
 
 ---
 name:            mfma_waw_xdl_8pass_valu_raw_between
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }

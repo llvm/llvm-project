@@ -26,7 +26,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
@@ -109,7 +108,6 @@ body:             |
 ...
 ---
 name:            foo2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo2
   ; CHECK: bb.0:
@@ -195,7 +193,6 @@ body:             |
 ...
 ---
 name:            foo3
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo3
   ; CHECK: bb.0:
@@ -281,7 +278,6 @@ body:             |
 ...
 ---
 name:            foo4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo4
   ; CHECK: bb.0:

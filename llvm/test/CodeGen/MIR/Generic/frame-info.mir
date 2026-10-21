@@ -43,7 +43,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 
 # CHECK: frameInfo:
 # CHECK-NEXT: isFrameAddressTaken: false
@@ -75,7 +74,6 @@ body: |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: -40, size: 8, alignment: 8 }
 

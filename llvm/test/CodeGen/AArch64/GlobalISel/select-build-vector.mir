@@ -8,7 +8,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $s1, $s2, $s3
@@ -50,7 +49,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $d2, $d3
@@ -82,7 +80,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -118,7 +115,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -148,7 +144,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -174,7 +169,6 @@ body:             |
 name:            test_v4s32_zero
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -204,7 +198,6 @@ body:             |
 name:            test_v8s8_zero
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -239,7 +232,6 @@ body:             |
 name:            undef_elts_to_subreg_to_reg
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0
@@ -264,7 +256,6 @@ body:             |
 name:            undef_elts_different_regbanks
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0

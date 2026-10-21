@@ -223,7 +223,6 @@ body:             |
 
 ---
 name:            copy_lo16_sreg32_usedby_phi
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: copy_lo16_sreg32_usedby_phi
   ; GCN: bb.0:

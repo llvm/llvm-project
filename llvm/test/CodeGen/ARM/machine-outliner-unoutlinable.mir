@@ -16,7 +16,6 @@
 ---
 
 name:           dont_outline_asm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_asm
   ; CHECK: bb.0:
@@ -45,7 +44,6 @@ body:             |
 ---
 
 name:           dont_outline_lr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_lr
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION
@@ -69,7 +67,6 @@ body:             |
 ---
 
 name:           dont_outline_lr2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_lr2
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION
@@ -95,7 +92,6 @@ body:             |
 ---
 
 name:           dont_outline_it
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_it
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION
@@ -119,7 +115,6 @@ body:             |
 ---
 
 name:           dont_outline_pic
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_pic
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION
@@ -143,7 +138,6 @@ body:             |
 ---
 
 name:           dont_outline_mve
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_mve
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION

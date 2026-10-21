@@ -5,7 +5,6 @@
 ---
 name:            CRMultiSave
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r3', virtual-reg: '' }
 body:             |
@@ -52,7 +51,6 @@ body:             |
 ---
 name:            CR3Save
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r3', virtual-reg: '' }
 body:             |

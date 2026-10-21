@@ -4,7 +4,6 @@
 ---
 name:            cc_eq
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -70,7 +69,6 @@ body:             |
 ---
 name:            cc_ne
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -136,7 +134,6 @@ body:             |
 ---
 name:            cc_hs
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -202,7 +199,6 @@ body:             |
 ---
 name:            cc_lo
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -268,7 +264,6 @@ body:             |
 ---
 name:            cc_hi
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -334,7 +329,6 @@ body:             |
 ---
 name:            cc_ls
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -400,7 +394,6 @@ body:             |
 ---
 name:            cc_ge
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -466,7 +459,6 @@ body:             |
 ---
 name:            cc_lt
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -532,7 +524,6 @@ body:             |
 ---
 name:            cc_gt
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -598,7 +589,6 @@ body:             |
 ---
 name:            cc_le
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -664,7 +654,6 @@ body:             |
 ---
 name:            cc_mixed_lo_gt
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -730,7 +719,6 @@ body:             |
 ---
 name:            head_targets_cmpbb
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -796,7 +784,6 @@ body:             |
 ---
 name:            cbb_chain
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -862,7 +849,6 @@ body:             |
 ---
 name:            cbh_chain
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -928,7 +914,6 @@ body:             |
 ---
 name:            cbb_head_zext
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -995,7 +980,6 @@ body:             |
 ---
 name:            cbh_head_sext
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -1062,7 +1046,6 @@ body:             |
 ---
 name:            cbb_cmpbb_sext_reject
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }
@@ -1132,7 +1115,6 @@ body:             |
 ---
 name:            cbh_cmpbb_zext_reject
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
 registers:
   - { id: 0, class: gpr32 }

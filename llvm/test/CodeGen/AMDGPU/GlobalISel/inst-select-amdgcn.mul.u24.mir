@@ -5,7 +5,6 @@
 name: mul_u24_vsv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -27,7 +26,6 @@ body: |
 name: mul_u24_vvs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -49,7 +47,6 @@ body: |
 name: mul_u24_vvv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

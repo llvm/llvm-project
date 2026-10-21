@@ -19,7 +19,6 @@
 ...
 ---
 name:            multi_store_spill_slot
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       2

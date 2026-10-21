@@ -8,7 +8,6 @@
 # NPM-LABEL: name: empty
 name:            empty
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -23,7 +22,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.1)
 name:            simple
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
 frameInfo:
@@ -49,7 +47,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.1) bb.2
 name:            two_latches
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -83,7 +80,6 @@ body:             |
 # CHECK:               depth=2: entries(bb.2)
 name:            nested_simple
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -120,7 +116,6 @@ body:             |
 # CHECK:               depth=2: entries(bb.2) bb.3
 name:            nested_outer_latch_in_inner_loop
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -157,7 +152,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.2)
 name:            sibling_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -195,7 +189,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.1)
 name:            serial_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -230,7 +223,6 @@ body:             |
 # CHECK:               depth=2: entries(bb.4) bb.5
 name:            nested_sibling_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr32 }
@@ -294,7 +286,6 @@ body:             |
 # CHECK:                   depth=3: entries(bb.3) bb.4
 name:            deeper_nest
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -340,7 +331,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.2 bb.1)
 name:            irreducible_basic
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -379,7 +369,6 @@ body:             |
 # CHECK:                   depth=3: entries(bb.3 bb.1) bb.4
 name:            irreducible_mess
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -454,7 +443,6 @@ body:             |
 # CHECK:           depth=1: entries(bb.2 bb.4 bb.7) bb.3 bb.5 bb.6
 name:            irreducible_into_simple_cycle
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr8 }
@@ -516,7 +504,6 @@ body:             |
 # CHECK:                   depth=3: entries(bb.8 bb.7) bb.9
 name:            irreducible_mountain_bug
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }

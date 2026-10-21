@@ -12,7 +12,6 @@
 
 ---
 name: f0
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 8 }
 body: |

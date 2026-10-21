@@ -8,7 +8,6 @@
 name: test_min_max_ValK0_K1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -39,7 +38,6 @@ body: |
 name: min_max_ValK0_K1_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -70,7 +68,6 @@ body: |
 name: test_min_K1max_ValK0__i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -101,7 +98,6 @@ body: |
 name: test_min_K1max_K0Val__i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -132,7 +128,6 @@ body: |
 name: test_max_min_ValK1_K0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -163,7 +158,6 @@ body: |
 name: test_max_min_K1Val_K0_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -194,7 +188,6 @@ body: |
 name: test_max_K0min_ValK1__i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -225,7 +218,6 @@ body: |
 name: test_max_K0min_K1Val__i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -256,7 +248,6 @@ body: |
 name: test_max_K0min_K1Val__v2i16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0
@@ -292,7 +283,6 @@ body: |
 name: test_uniform_min_max
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $sgpr2
@@ -324,7 +314,6 @@ body: |
 name: test_non_inline_constant_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $vgpr0

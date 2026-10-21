@@ -4,7 +4,6 @@
 ---
 name:            add_lhs_sub_reg
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -25,7 +24,6 @@ body:             |
 ---
 name:            add_lhs_sub_reg_wide
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -46,7 +44,6 @@ body:             |
 ---
 name:            add_lhs_sub_reg_vec
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -67,7 +64,6 @@ body:             |
 ---
 name:            add_rhs_sub_reg
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -88,7 +84,6 @@ body:             |
 ---
 name:            add_rhs_sub_reg_wide
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -109,7 +104,6 @@ body:             |
 ---
 name:            add_rhs_sub_reg_vec
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -129,7 +123,6 @@ body:             |
 ...
 ---
 name:            fadd_by_zero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -148,7 +141,6 @@ body:             |
 ---
 name:            fadd_vector_by_zero
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -172,7 +164,6 @@ body:             |
 
 ---
 name:            fadd_by_neg_zero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -189,7 +180,6 @@ body:             |
 ---
 name:            fadd_vector_by_neg_zero
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -209,7 +199,6 @@ body:             |
 ...
 ---
 name:            saddl_v8i8_v8i32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -240,7 +229,6 @@ body:             |
 
 ---
 name:            uaddl_v8i8_v8i32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -271,7 +259,6 @@ body:             |
 
 ---
 name:            ssubl_v8i8_v8i32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -302,7 +289,6 @@ body:             |
 
 ---
 name:            usubl_v8i8_v8i32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -333,7 +319,6 @@ body:             |
 
 ---
 name:            add_shl_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -361,7 +346,6 @@ body:             |
 
 ---
 name:            add_shl_neg_commuted
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -389,7 +373,6 @@ body:             |
 
 ---
 name:            add_shl_neg_wide
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $q2
@@ -417,7 +400,6 @@ body:             |
 
 ---
 name:            add_shl_neg_commuted_wide
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $q2
@@ -445,7 +427,6 @@ body:             |
 
 ---
 name:            add_shl_neg_multiple_uses
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -481,7 +462,6 @@ body: |
 
 ---
 name:            add_shl_neg_commuted_multiple_uses
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3

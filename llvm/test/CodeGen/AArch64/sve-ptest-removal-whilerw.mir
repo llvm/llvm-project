@@ -5,7 +5,6 @@
 ---
 name:            whilerw_b8_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -47,7 +46,6 @@ body:             |
 ---
 name:            whilerw_b16_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -91,7 +89,6 @@ body:             |
 ---
 name:            whilerw_b32_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -135,7 +132,6 @@ body:             |
 ---
 name:            whilerw_b64_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -183,7 +179,6 @@ body:             |
 ---
 name:            whilerw_b8_s64_keep_ptest_not_all_active
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -230,7 +225,6 @@ body:             |
 ---
 name:            whilerw_b8_s64_keep_ptest_of_halfs
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -277,7 +271,6 @@ body:             |
 ---
 name:            whilerw_b8_s64_keep_ptest_of_words
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -324,7 +317,6 @@ body:             |
 ---
 name:            whilerw_b8_s64_keep_ptest_of_doublewords
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }

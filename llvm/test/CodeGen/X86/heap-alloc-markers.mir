@@ -32,7 +32,6 @@
 ---
 name: test
 # CHECK-LABEL: {{^}}test:
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls: true

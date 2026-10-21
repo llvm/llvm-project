@@ -5,7 +5,6 @@ name:            add_B
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -36,7 +35,6 @@ name:            add_B_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -65,7 +63,6 @@ name:            add_H
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -96,7 +93,6 @@ name:            add_H_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -125,7 +121,6 @@ name:            add_S
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -152,7 +147,6 @@ name:            add_S_gpr_result
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -180,7 +174,6 @@ name:            add_S_v2i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -208,7 +201,6 @@ name:            add_D
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

@@ -179,7 +179,6 @@
 ---
 name:            shrink_test1
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$w0' }
@@ -252,7 +251,6 @@ body:             |
 ---
 name:            shrink_test2
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$w0' }
@@ -400,7 +398,6 @@ body:             |
 ---
 name:            noshrink_test1
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$w0' }
@@ -512,7 +509,6 @@ body:             |
 ---
 name:            noshrink_test2
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$w0' }
@@ -601,7 +597,6 @@ body:             |
 ---
 name:            noshrink_test3
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$w0' }
@@ -772,7 +767,6 @@ body:             |
 ...
 ---
 name:            shrink_test_ldarb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: shrink_test_ldarb
   ; CHECK: bb.0:
@@ -838,7 +832,6 @@ body:             |
 ...
 ---
 name:            shrink_test_stlrb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: shrink_test_stlrb
   ; CHECK: bb.0:

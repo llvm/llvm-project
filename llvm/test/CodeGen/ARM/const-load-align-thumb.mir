@@ -18,7 +18,6 @@
 ---
 name:            main
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   stackSize:       16
   maxAlignment:    4

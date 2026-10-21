@@ -43,7 +43,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      true
-tracksRegLiveness: true
 hasWinCFI:       true
 noPhis:          false
 isSSA:           false

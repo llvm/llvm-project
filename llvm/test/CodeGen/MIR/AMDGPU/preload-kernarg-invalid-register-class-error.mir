@@ -3,7 +3,6 @@
 ---
 # CHECK: error: {{.*}} incorrect register class for field
 name: kernarg_preload_wrong_register_class
-tracksRegLiveness: true
 machineFunctionInfo:
   explicitKernArgSize: 4
   maxKernArgAlign: 4

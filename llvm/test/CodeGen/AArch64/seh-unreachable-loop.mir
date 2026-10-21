@@ -14,7 +14,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 hasEHContTarget: false
 hasEHScopes:     true
 hasEHFunclets:   true

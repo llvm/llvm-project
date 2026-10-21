@@ -6,7 +6,6 @@
 name: deadFlagAfterCSE
 # This case tests that after the dead %3 is CSE-ed with hoisted %5 in MachineLICM
 # pass, the dead flag will be cleared for %3 if %5 has users.
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: deadFlagAfterCSE
   ; CHECK: bb.0:
@@ -47,7 +46,6 @@ body: |
 name: deadFlagAfterCSE2
 # This case tests that after the dead %3 is CSE-ed with hoisted dead %5 in
 # MachineLICM pass, the dead flag will be kept.
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: deadFlagAfterCSE2
   ; CHECK: bb.0:

@@ -36,7 +36,6 @@
 
 ---
 name:            vopd_schedule
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -96,7 +95,6 @@ body:             |
 
 ---
 name:            vopd_fmamk
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -140,7 +138,6 @@ body:             |
 
 ---
 name:            vopd_fmamk_fail
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -171,7 +168,6 @@ body:             |
 
 ---
 name:            vopd_cndmask
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -280,7 +276,6 @@ body:             |
 
 ---
 name:            vopd_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -313,7 +308,6 @@ body:             |
 
 ---
 name:            vopd_mov_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -347,7 +341,6 @@ body:             |
 
 ---
 name:            vopd_constants_fail
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -378,7 +371,6 @@ body:             |
 
 ---
 name:            vopd_constants_inlinable
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_constants_inlinable
@@ -422,7 +414,6 @@ body:             |
 
 ---
 name:            vopd_constants_same
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -466,7 +457,6 @@ body:             |
 
 ---
 name:            vopd_mov_fmaak_constants_same
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -500,7 +490,6 @@ body:             |
 
 ---
 name:            vopd_debug
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -542,7 +531,6 @@ body:             |
 
 ---
 name:            vopd_debug_at_search_position
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -589,7 +577,6 @@ body:             |
 
 ---
 name:            vopd_schedule_unconstrained
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -733,7 +720,6 @@ body:             |
 
 ---
 name:            vopd_schedule_unconstrained_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -963,7 +949,6 @@ body:             |
 
 ---
 name: vopd_mov_fixup
-tracksRegLiveness: true
 body: |
   bb.0:
     ; SCHED-LABEL: name: vopd_mov_fixup
@@ -1003,7 +988,6 @@ body: |
 
 ---
 name: vopd_mov_fixup_fail
-tracksRegLiveness: true
 body: |
   bb.0:
     ; SCHED-LABEL: name: vopd_mov_fixup_fail
@@ -1019,7 +1003,6 @@ body: |
 
 ---
 name:            vopd_dependent_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1039,7 +1022,6 @@ body:             |
 
 ---
 name:            vopd_mov_mov_same_src_bank
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1075,7 +1057,6 @@ body:             |
 # forwarding defect. VGPR1 and VGPR3 occupy different VGPR banks but have the
 # same parity, so they may only be paired on GFX11.7 and GFX12.
 name:            vopd_src0_same_parity_different_banks
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_src0_same_parity_different_banks
@@ -1108,7 +1089,6 @@ body:             |
 ---
 # Exercise the same restriction on SRC1 while SRC0 has opposite parity.
 name:            vopd_src1_same_parity_different_banks
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_src1_same_parity_different_banks
@@ -1161,7 +1141,6 @@ body:             |
 ---
 # There is no race between mov and add, they are executed at the same time
 name:            vopd_combine_opy_overwrites_opx
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_combine_opy_overwrites_opx
@@ -1194,7 +1173,6 @@ body:             |
 ---
 # OPY cannot consume value produced by OPX
 name:            vopd_no_combine_opx_overwrites_opy
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_no_combine_opx_overwrites_opy

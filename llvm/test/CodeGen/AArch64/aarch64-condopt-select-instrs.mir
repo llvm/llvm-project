@@ -10,7 +10,6 @@
 # Input:  CMP #9 GT; CMP #10 GT
 # Output: CMP #10 GE; CMP #10 GT
 name:            csel_same_direction
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4
@@ -54,7 +53,6 @@ body:             |
 # Input:  CMP #9 GT; CMP #11 LT
 # Output: CMP #10 GE; CMP #10 LE
 name:            csinv_opposite_direction
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4
@@ -97,7 +95,6 @@ body:             |
 # Input:  CMP #9 GT; CMP #10 GT
 # Output: CMP #10 GE; CMP #10 GT
 name:            csneg_same_direction
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4
@@ -141,7 +138,6 @@ body:             |
 # Input:  CMP #9 GT (CSINC); CMP #10 GT (CSEL)
 # Output: CMP #10 GE (CSINC); CMP #10 GT (CSEL)
 name:            mixed_csinc_csel
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4

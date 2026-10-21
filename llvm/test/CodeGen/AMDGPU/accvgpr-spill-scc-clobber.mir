@@ -10,7 +10,6 @@
 
 ---
 name: agpr32_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -2403,7 +2402,6 @@ body:             |
 
 ---
 name: agpr64_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -4802,7 +4800,6 @@ body:             |
 
 ---
 name: agpr96_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -7206,7 +7203,6 @@ body:             |
 
 ---
 name: agpr32_save_clobber_scc
-tracksRegLiveness: true
 
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
@@ -9600,7 +9596,6 @@ body:             |
 
 ---
 name: agpr64_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -11997,7 +11992,6 @@ body:             |
 ...
 ---
 name: agpr96_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }

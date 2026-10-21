@@ -9,7 +9,6 @@
 # needs no register live across the back edge.
 ---
 name:            move_stays_in_loop_body
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: move_stays_in_loop_body
   ; CHECK: bb.0:
@@ -50,7 +49,6 @@ body:             |
 # pair, in that same block.
 ---
 name:            unreachable_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: unreachable_use
   ; CHECK: bb.0:
@@ -80,7 +78,6 @@ body:             |
 # second instruction, which pairs with the third one for a single move.
 ---
 name:            rejected_pair_releases_second_instruction
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -101,7 +98,6 @@ body:             |
 # scalar move.
 ---
 name:            prefer_pair_without_materialization
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -121,7 +117,6 @@ body:             |
 # the first and second instructions and the third and fourth instructions.
 ---
 name:            maximize_pairs_before_minimizing_moves
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -144,7 +139,6 @@ body:             |
 # scalar register is live. The overlapping second edge can use $sgpr0.
 ---
 name:            no_free_register_edge_does_not_hide_next
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17_sgpr18_sgpr19, $sgpr20_sgpr21_sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr32_sgpr33_sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39, $sgpr40_sgpr41_sgpr42_sgpr43, $sgpr44_sgpr45_sgpr46_sgpr47, $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr52_sgpr53_sgpr54_sgpr55, $sgpr56_sgpr57_sgpr58_sgpr59, $sgpr60_sgpr61_sgpr62_sgpr63, $sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75, $sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83, $sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr104, $sgpr105, $vgpr0, $vgpr1
@@ -166,7 +160,6 @@ body:             |
 # Every adjacent edge needs two distinct immediate values, so none is eligible.
 ---
 name:            every_edge_needs_two_values
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17_sgpr18_sgpr19, $sgpr20_sgpr21_sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr32_sgpr33_sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39, $sgpr40_sgpr41_sgpr42_sgpr43, $sgpr44_sgpr45_sgpr46_sgpr47, $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr52_sgpr53_sgpr54_sgpr55, $sgpr56_sgpr57_sgpr58_sgpr59, $sgpr60_sgpr61_sgpr62_sgpr63, $sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75, $sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83, $sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr104, $sgpr105, $vgpr1
@@ -191,7 +184,6 @@ body:             |
 # value and gets a register.
 ---
 name:            two_value_edges_do_not_block_one_value_edge
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17_sgpr18_sgpr19, $sgpr20_sgpr21_sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr32_sgpr33_sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39, $sgpr40_sgpr41_sgpr42_sgpr43, $sgpr44_sgpr45_sgpr46_sgpr47, $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr52_sgpr53_sgpr54_sgpr55, $sgpr56_sgpr57_sgpr58_sgpr59, $sgpr60_sgpr61_sgpr62_sgpr63, $sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75, $sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83, $sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr104, $sgpr105, $vgpr0, $vgpr1
@@ -216,7 +208,6 @@ body:             |
 # final edge needs one value and forms.
 ---
 name:            only_one_value_edge_is_eligible
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17_sgpr18_sgpr19, $sgpr20_sgpr21_sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr32_sgpr33_sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39, $sgpr40_sgpr41_sgpr42_sgpr43, $sgpr44_sgpr45_sgpr46_sgpr47, $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr52_sgpr53_sgpr54_sgpr55, $sgpr56_sgpr57_sgpr58_sgpr59, $sgpr60_sgpr61_sgpr62_sgpr63, $sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75, $sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83, $sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr104_sgpr105, $vgpr0, $vgpr1
@@ -245,7 +236,6 @@ body:             |
 # unsigned value. They share one move.
 ---
 name:            same_value_written_two_ways
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -263,7 +253,6 @@ body:             |
 # A pair which needs two different scalar moves is rejected.
 ---
 name:            two_distinct_values_are_not_materialized
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1
@@ -281,7 +270,6 @@ body:             |
 # Disjoint pair-local ranges can reuse the same scalar register.
 ---
 name:            disjoint_pairs_reuse_register
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -304,7 +292,6 @@ body:             |
 # while the VOPD operands and destinations use encoding order.
 ---
 name:            literal_with_swapped_xy_order
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -323,7 +310,6 @@ body:             |
 # 64-bit literal is left alone, so the pair stays split.
 ---
 name:            literal64_is_not_moved
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr2, $vgpr3, $vgpr8_vgpr9
@@ -342,7 +328,6 @@ body:             |
 # value stops the case above.
 ---
 name:            scalar64_pairs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3, $vgpr8_vgpr9
@@ -362,7 +347,6 @@ body:             |
 # other scalar register is live, so the pair has to be given up.
 ---
 name:            restored_callee_saved_reg_is_live
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 stack:
@@ -388,7 +372,6 @@ body:             |
 # is dead over the range the move needs, so it is still used.
 ---
 name:            callee_saved_reg_dead_over_range
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 stack:

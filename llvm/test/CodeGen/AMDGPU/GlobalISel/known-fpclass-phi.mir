@@ -18,7 +18,6 @@
 # constants (1.0/2.0 and 3.0/4.0).  The legalizer should fully skip the NaN
 # fixup: no G_FCMP ord + G_SELECT, just G_FMINNUM_IEEE.
 name: test_fminimum_phi_both_nnan
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_fminimum_phi_both_nnan
   ; CHECK: bb.0:
@@ -86,7 +85,6 @@ body: |
 # constants; the other is an unknown COPY (potentially NaN).
 # The NaN fixup IS emitted because the COPY may be NaN.
 name: test_fminimum_phi_one_nnan
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_fminimum_phi_one_nnan
   ; CHECK: bb.0:

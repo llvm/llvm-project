@@ -5,7 +5,6 @@
 ---
 name:            cmpeq_nxv16i8
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -48,7 +47,6 @@ body:             |
 ---
 name:            cmpeq_nxv8i16
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -94,7 +92,6 @@ body:             |
 ---
 name:            cmpeq_nxv4i32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -140,7 +137,6 @@ body:             |
 ---
 name:            cmpeq_nxv2i64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -186,7 +182,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -229,7 +224,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv8i16
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -271,7 +265,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv4i32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -313,7 +306,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv2i64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -355,7 +347,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv16i8
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -398,7 +389,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv8i16
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -444,7 +434,6 @@ body:             |
 ---
 name:            cmpeq_wide_nxv4i32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -490,7 +479,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_not_all_active
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -533,7 +521,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_of_halfs
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -576,7 +563,6 @@ body:             |
 ---
 name:            cmpeq_imm_nxv16i8_ptest_with_unique_pg
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -620,7 +606,6 @@ body:             |
 ---
 name:            cmpeq_nxv16i8_ptest_with_matching_operands
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr_3b }
   - { id: 1, class: zpr }
@@ -664,7 +649,6 @@ body:             |
 ---
 name:            cmpeq_nxv16i8_ptest_with_register_class_mismatch
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr }
   - { id: 1, class: zpr }

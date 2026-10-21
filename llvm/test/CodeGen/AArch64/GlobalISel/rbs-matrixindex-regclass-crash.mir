@@ -6,7 +6,6 @@
 name:            foo
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: foo

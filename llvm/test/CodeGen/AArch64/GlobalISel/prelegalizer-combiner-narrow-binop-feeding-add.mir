@@ -4,7 +4,6 @@
 ...
 ---
 name:            add_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -29,7 +28,6 @@ body:             |
 ...
 ---
 name:            sub_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -54,7 +52,6 @@ body:             |
 ...
 ---
 name:            mul_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -79,7 +76,6 @@ body:             |
 ...
 ---
 name:            and_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -104,7 +100,6 @@ body:             |
 ...
 ---
 name:            or_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -128,7 +123,6 @@ body:             |
 ...
 ---
 name:            xor_64_mask_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -153,7 +147,6 @@ body:             |
 ...
 ---
 name:            walk_thru_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -179,7 +172,6 @@ body:             |
 ...
 ---
 name:            dont_combine_zext_not_free_add_64_mask_16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -203,7 +195,6 @@ body:             |
 ...
 ---
 name:            dont_combine_zext_not_free_add_64_mask_8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -227,7 +218,6 @@ body:             |
 ...
 ---
 name:            dont_combine_not_a_mask
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -251,7 +241,6 @@ body:             |
 ...
 ---
 name:            dont_combine_more_than_one_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -274,7 +263,6 @@ body:             |
 ...
 ---
 name:            dont_combine_vector
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -300,7 +288,6 @@ body:             |
 ...
 ---
 name:            dont_combine_add_64_mask_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -322,7 +309,6 @@ body:             |
 ...
 ---
 name:            dont_combine_copy_from_physreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1

@@ -15,7 +15,6 @@
 ---
 name:            any_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: any_i64
@@ -34,7 +33,6 @@ body:             |
 ---
 name:            any_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: any_i32
@@ -49,7 +47,6 @@ body:             |
 ---
 name:            signed_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: signed_i16
@@ -65,7 +62,6 @@ body:             |
 ---
 name:            signed_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: signed_i8
@@ -81,7 +77,6 @@ body:             |
 ---
 name:            unsigned_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: unsigned_i16
@@ -97,7 +92,6 @@ body:             |
 ---
 name:            unsigned_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: unsigned_i8
@@ -113,7 +107,6 @@ body:             |
 ---
 name:            i1_true
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: i1_true
@@ -129,7 +122,6 @@ body:             |
 ---
 name:            i1_false
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: i1_false

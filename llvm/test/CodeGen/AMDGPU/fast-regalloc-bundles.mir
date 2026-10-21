@@ -4,7 +4,6 @@
 
 ---
 name: fast_regalloc_bundle_handling
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

@@ -3,7 +3,6 @@
 
 ---
 name: couldnt_join_subrange_implicit_def_pred_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange_implicit_def_pred_block
   ; CHECK: bb.0:
@@ -38,7 +37,6 @@ body:             |
 ...
 ---
 name: couldnt_join_subrange_no_implicit_def_inst
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: couldnt_join_subrange_no_implicit_def_inst
@@ -53,7 +51,6 @@ body:             |
 ...
 ---
 name: couldnt_join_subrange0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange0
   ; CHECK: bb.0:
@@ -79,7 +76,6 @@ body:             |
 ...
 ---
 name: lanes_not_tracked_subreg_join_couldnt_join_subrange
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -99,7 +95,6 @@ body:             |
 ...
 ---
 name: couldnt_join_subrange1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: couldnt_join_subrange1
   ; CHECK: bb.0:

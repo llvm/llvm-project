@@ -70,7 +70,6 @@
 # are commuted for ADD instructions in bb.5.bb7 so that the values involved in
 # the recurrence are tied. This will remove redundant copy instruction.
 name:            foo
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr32, preferred-register: '' }
@@ -151,7 +150,6 @@ body:             |
 # prevent the case of commuting operands ties the values with overlapping live
 # ranges.
 name:            bar
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr32, preferred-register: '' }

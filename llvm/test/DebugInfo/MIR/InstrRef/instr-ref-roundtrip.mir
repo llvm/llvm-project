@@ -6,7 +6,6 @@
 # CHECK: MOV64rr $rdi, debug-instr-number 1
 ---
 name: test
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }

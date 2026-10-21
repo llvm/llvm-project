@@ -56,7 +56,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_32, preferred-register: '' }
   - { id: 1, class: sgpr_32, preferred-register: '' }
@@ -112,7 +111,6 @@ body:             |
 # Second test for awareness that s_or_saveexec_b64 clobbers SCC
 # Because entry block is treated differently.
 name:            test_strict_wwm_scc2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_strict_wwm_scc2
   ; CHECK: bb.0:
@@ -171,7 +169,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: sgpr_32, preferred-register: '' }
@@ -245,7 +242,6 @@ body:             |
 ---
 # Ensure that strict_wwm is not put around an EXEC copy
 name:            copy_exec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
@@ -294,7 +290,6 @@ body:             |
 # Check exit of WQM is still inserted correctly when SCC is live until block end.
 # Critially this tests that compilation does not fail.
 name:            scc_always_live
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: scc_always_live
   ; CHECK: bb.0:
@@ -379,7 +374,6 @@ body:             |
 # Check that unnecessary instruction do not get marked for WWM
 #
 name:            test_wwm_set_inactive_propagation
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
@@ -414,7 +408,6 @@ body:             |
 # Check that WQM marking occurs correctly through phi nodes in live range graph.
 # If not then initial V_MOV will not be in WQM.
 name:            test_wqm_lr_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_wqm_lr_phi
   ; CHECK: bb.0:
@@ -482,7 +475,6 @@ body:             |
 
 ---
 name:            no_wqm_in_cs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -505,7 +497,6 @@ body:             |
 
 ---
 name:            no_wqm_in_es
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -528,7 +519,6 @@ body:             |
 
 ---
 name:            no_wqm_in_gs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -551,7 +541,6 @@ body:             |
 
 ---
 name:            no_wqm_in_hs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -574,7 +563,6 @@ body:             |
 
 ---
 name:            no_wqm_in_ls
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -597,7 +585,6 @@ body:             |
 
 ---
 name:            no_wqm_in_vs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -622,7 +609,6 @@ body:             |
 # The live-in $vcc forces the VCC regunit ranges to be computed, so the
 # clobber introduced when lowering the kill must invalidate them.
 name:            kill_f32_cond_imm_vcc_regunit
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: kill_f32_cond_imm_vcc_regunit
   ; CHECK: bb.0:

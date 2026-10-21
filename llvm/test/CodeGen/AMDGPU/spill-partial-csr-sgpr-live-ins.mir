@@ -3,7 +3,6 @@
 
 ---
 name: spill_partial_live_csr_sgpr_test
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr50_sgpr51' }
   - { reg: '$sgpr52_sgpr53' }

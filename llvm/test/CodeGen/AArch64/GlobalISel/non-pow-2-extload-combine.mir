@@ -14,7 +14,6 @@
 ---
 name:            ld_zext_i24
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):

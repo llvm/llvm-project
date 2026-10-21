@@ -13,7 +13,6 @@
 
 ---
 name:            invalid_vop3_source_modifiers
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8 }
 body:             |

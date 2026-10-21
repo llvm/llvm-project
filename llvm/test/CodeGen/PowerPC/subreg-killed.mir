@@ -16,7 +16,6 @@
 
 ---
 name:            test
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, size: 8 }
 stack:

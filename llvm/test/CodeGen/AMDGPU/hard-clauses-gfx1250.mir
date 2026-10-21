@@ -5,7 +5,6 @@
 
 ---
 name: long_clause
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
@@ -365,7 +364,6 @@ body: |
 
 ---
 name: kill
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr4
@@ -385,7 +383,6 @@ body: |
 
 ---
 name: kill2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr4, $sgpr5
@@ -407,7 +404,6 @@ body: |
 
 ---
 name: flat_load_atomic
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -422,7 +418,6 @@ body: |
 
 ---
 name: global_load_atomic
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -437,7 +432,6 @@ body: |
 
 ---
 name: flat_global_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -452,7 +446,6 @@ body: |
 
 ---
 name: buffer_load_atomic
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0
@@ -467,7 +460,6 @@ body: |
 
 ---
 name: flat_load_store
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -482,7 +474,6 @@ body: |
 
 ---
 name: global_load_store
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -497,7 +488,6 @@ body: |
 
 ---
 name: buffer_load_store
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0
@@ -512,7 +502,6 @@ body: |
 
 ---
 name: flat_load_global_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -527,7 +516,6 @@ body: |
 
 ---
 name: global_load_buffer_store
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
@@ -542,7 +530,6 @@ body: |
 
 ---
 name: flat_prefetch_flat_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -557,7 +544,6 @@ body: |
 
 ---
 name: global_prefetch_flat_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -572,7 +558,6 @@ body: |
 
 ---
 name: async_load_async_store
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -590,7 +575,6 @@ body: |
 
 ---
 name: async_load_ds_load_tr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -605,7 +589,6 @@ body: |
 
 ---
 name: ds_load_trs_ds_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -623,7 +606,6 @@ body: |
 # Make sure we do not clause DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 with anything
 ---
 name: ds_atomic_async_barrier_arrive_b64_ds_read
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -640,7 +622,6 @@ body: |
 
 ---
 name: ds_atomic_async_barrier_arrive_b64_flat_load
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -657,7 +638,6 @@ body: |
 
 ---
 name: global_load_switching_scope
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1

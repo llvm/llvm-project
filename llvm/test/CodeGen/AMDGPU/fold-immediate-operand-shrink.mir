@@ -4,7 +4,6 @@
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -23,7 +22,6 @@ body:             |
 ---
 
 name: shrink_vgpr_scalar_imm_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -41,7 +39,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -63,7 +60,6 @@ body:             |
 # be required.
 
 name: shrink_vector_imm_sgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -82,7 +78,6 @@ body:             |
 ---
 
 name: shrink_sgpr_vector_imm_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -101,7 +96,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_live_vcc_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -122,7 +116,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_liveout_vcc_use
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_liveout_vcc_use
@@ -153,7 +146,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_liveout_vcc_lo_use
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_liveout_vcc_lo_use
@@ -186,7 +178,6 @@ body:             |
 # This is not OK to clobber because vcc_lo has a livein use.
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_livein_vcc
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_livein_vcc
@@ -217,7 +208,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_livein_vcc_hi
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_livein_vcc_hi
@@ -258,7 +248,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_sub_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -277,7 +266,6 @@ body:             |
 ---
 
 name: shrink_vgpr_scalar_imm_v_sub_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -296,7 +284,6 @@ body:             |
 ---
 
 name: shrink_scalar_imm_vgpr_v_subrev_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -315,7 +302,6 @@ body:             |
 ---
 
 name: shrink_vgpr_scalar_imm_v_subrev_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -336,7 +322,6 @@ body:             |
 # We know this is OK because vcc isn't live out of the block.
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_known_no_liveout
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_known_no_liveout
@@ -431,7 +416,6 @@ body:             |
 # though it had a defined but unused. value
 
 name: shrink_scalar_imm_vgpr_v_add_i32_e64_known_no_liveout_dead_vcc_def
-tracksRegLiveness: true
 
 body:             |
   ; GCN-LABEL: name: shrink_scalar_imm_vgpr_v_add_i32_e64_known_no_liveout_dead_vcc_def
@@ -467,7 +451,6 @@ body:             |
 # should not count against the search limit.
 
 name: vcc_liveness_dbg_value_search_before
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -544,7 +527,6 @@ body:             |
 # should not count against the search limit.
 
 name: vcc_liveness_dbg_value_search_after
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -675,7 +657,6 @@ body:             |
 
 ---
 name: shrink_add_kill_flags_src0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -694,7 +675,6 @@ body:             |
 
 ---
 name: shrink_add_kill_flags_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -713,7 +693,6 @@ body:             |
 
 ---
 name: shrink_addc_kill_flags_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vcc

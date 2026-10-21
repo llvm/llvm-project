@@ -3,7 +3,6 @@
 ---
 name:            shl_cimm_32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            shl_cimm_64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -49,7 +47,6 @@ body:             |
 ---
 name:            lshr_cimm_32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -72,7 +69,6 @@ body:             |
 ---
 name:            lshr_cimm_64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -95,7 +91,6 @@ body:             |
 ---
 name:            ashr_cimm_32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -118,7 +113,6 @@ body:             |
 ---
 name:            ashr_cimm_64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0

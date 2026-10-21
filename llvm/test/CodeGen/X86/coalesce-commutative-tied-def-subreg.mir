@@ -4,7 +4,6 @@
 # The COPY can't be removed by commuting the AND since the instruction only partially defines the register
 ---
 name: commute_tied_subreg_def_part
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: commute_tied_subreg_def_part
   ; CHECK: bb.0:
@@ -32,7 +31,6 @@ body:             |
 # The COPY can be removed by commuting the AND since the instruction defines the entire register
 ---
 name: commute_tied_subreg_def_full
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: commute_tied_subreg_def_full
   ; CHECK: bb.0:

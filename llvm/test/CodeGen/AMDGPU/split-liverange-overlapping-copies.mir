@@ -14,7 +14,6 @@
 #     }
 ---
 name: split_liverange_copy_overlap_31
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'
@@ -90,7 +89,6 @@ body:             |
 ...
 ---
 name: split_liverange_copy_overlap_30
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'

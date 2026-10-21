@@ -46,7 +46,6 @@
 ---
 name:            test_api
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: tile }
   - { id: 1, class: tile }

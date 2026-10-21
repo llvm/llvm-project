@@ -7,7 +7,6 @@
 name:            shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -31,7 +30,6 @@ body:             |
 name:            shl_and
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -57,7 +55,6 @@ body:             |
 name:            shl_and_with_simplified_mask
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -86,7 +83,6 @@ body:             |
 name:            shl_add
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -112,7 +108,6 @@ body:             |
 name:            shl_sub
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -139,7 +134,6 @@ body:             |
 name:            shl_bitwise_not
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -166,7 +160,6 @@ body:             |
 name:            shl_bitwise_not_2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -193,7 +186,6 @@ body:             |
 name:            srl_and_needed
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
@@ -220,7 +212,6 @@ body:             |
 name:            srl_and_eliminated
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x10, $x11

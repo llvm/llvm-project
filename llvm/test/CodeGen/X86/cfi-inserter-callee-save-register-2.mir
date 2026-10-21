@@ -13,7 +13,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 frameInfo:

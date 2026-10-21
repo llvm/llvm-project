@@ -10,7 +10,6 @@
 
 ---
 name: vgpr32_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -117,7 +116,6 @@ body:             |
 
 ---
 name: vgpr64_save_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -225,7 +223,6 @@ body:             |
 
 ---
 name: vgpr32_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -331,7 +328,6 @@ body:             |
 
 ---
 name: vgpr64_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -443,7 +439,6 @@ body:             |
 
 ---
 name: vgpr32_restore_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -815,7 +810,6 @@ body:             |
 
 ---
 name: vgpr64_restore_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -1193,7 +1187,6 @@ body:             |
 
 ---
 name: vgpr96_restore_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -1577,7 +1570,6 @@ body:             |
 
 ---
 name: vgpr32_save_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -1945,7 +1937,6 @@ body:             |
 
 ---
 name: vgpr64_save_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -2315,7 +2306,6 @@ body:             |
 
 ---
 name: vgpr96_save_clobber_scc_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -2687,7 +2677,6 @@ body:             |
 
 ---
 name: mubuf_load_restore_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -3050,7 +3039,6 @@ body:             |
 # TODO: We could find a free SGPR and save/restore SCC.
 ---
 name: mubuf_load_restore_clobber_scc_no_vgprs_emergency_stack_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }
@@ -3428,7 +3416,6 @@ body:             |
 
 ---
 name: v_mov_clobber_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4 }

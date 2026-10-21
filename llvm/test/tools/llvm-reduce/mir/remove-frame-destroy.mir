@@ -10,7 +10,6 @@
 
 ---
 name: frame_setup_destroy
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |

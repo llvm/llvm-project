@@ -42,7 +42,6 @@
 ---
 name:            amd64_push_arguments
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }

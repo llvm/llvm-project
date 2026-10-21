@@ -30,7 +30,6 @@
 
 ---
 name:            vop1_instructions
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -185,7 +184,6 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit $mode, implicit $exec
 
 name:            vop2_instructions
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -362,7 +360,6 @@ body:             |
 
 
 name:            vopc_instructions
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -451,7 +448,6 @@ body:             |
 
 ---
 name: preserve_flags
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -476,7 +472,6 @@ body:             |
 # 8-bit value.
 
 name: negative_v_ashrrev_i16
-tracksRegLiveness: true
 
 body:             |
   bb.0:

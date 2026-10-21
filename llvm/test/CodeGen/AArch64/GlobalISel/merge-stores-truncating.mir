@@ -3,7 +3,6 @@
 ---
 name:            trunc_i16_to_i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -36,7 +35,6 @@ body:             |
 ---
 name:            trunc_i32_to_i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -79,7 +77,6 @@ body:             |
 ---
 name:            trunc_i32_to_i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -110,7 +107,6 @@ body:             |
 ---
 name:            be_i32_to_i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -143,7 +139,6 @@ body:             |
 ---
 name:            be_i32_to_i16_order
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -176,7 +171,6 @@ body:             |
 ---
 name:            trunc_i64_to_i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -243,7 +237,6 @@ body:             |
 ---
 name:            trunc_i64_to_i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -286,7 +279,6 @@ body:             |
 ---
 name:            trunc_i64_to_i32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -317,7 +309,6 @@ body:             |
 ---
 name:            be_i64_to_i32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -350,7 +341,6 @@ body:             |
 ---
 name:            be_i64_to_i32_order
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -383,7 +373,6 @@ body:             |
 ---
 name:            merge_hole
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -421,7 +410,6 @@ body:             |
 ---
 name:            merge_hole2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -459,7 +447,6 @@ body:             |
 ---
 name:            merge_hole3
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -501,7 +488,6 @@ body:             |
 ---
 name:            merge_hole4
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -539,7 +525,6 @@ body:             |
 ---
 name:            load_between_stores
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -584,7 +569,6 @@ body:             |
 ---
 name:            invalid_shift
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -624,7 +608,6 @@ body:             |
 ---
 name:            missing_store
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -668,7 +651,6 @@ body:             |
 ---
 name:            different_base_reg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -711,7 +693,6 @@ body:             |
 ---
 name:            second_store_is_volatile
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -751,7 +732,6 @@ body:             |
 ---
 name:            wide_not_multiple_of_mem_ty
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }

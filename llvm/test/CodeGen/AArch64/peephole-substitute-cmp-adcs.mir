@@ -10,7 +10,6 @@
 
 ---
 name:            peephole_substitute_cmp_adcs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -49,7 +48,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_adcswr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -88,7 +86,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_sbcsxr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -127,7 +124,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_addwrs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -157,7 +153,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_addxrs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -187,7 +182,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_subwrs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -217,7 +211,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_subxrs
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -247,7 +240,6 @@ body:             |
 ...
 ---
 name:            peephole_substitute_cmp_sbcswr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }

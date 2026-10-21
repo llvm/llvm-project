@@ -15,7 +15,6 @@
 ...
 ---
 name:            _amdgpu_ps_main
-tracksRegLiveness: true
 registers:
   - { id: 1, class: vgpr_32, preferred-register: '' }
   - { id: 2, class: vgpr_32, preferred-register: '' }

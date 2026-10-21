@@ -2,7 +2,6 @@
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            cfb_lhs
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -27,7 +26,6 @@ body:             |
 ...
 ---
 name:            cfb_lhs_cfb_already_rhs
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -55,7 +53,6 @@ body:             |
 ---
 name:            cfb_lhs_cst_on_rhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -80,7 +77,6 @@ body:             |
 ...
 ---
 name:            cfb_lhs_smulo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -106,7 +102,6 @@ body:             |
 ...
 ---
 name:            cfb_lhs_cfb_already_rhs_smulo
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -136,7 +131,6 @@ body:             |
 ---
 name:            cfb_lhs_cst_on_rhs_smulo
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -163,7 +157,6 @@ body:             |
 ...
 ---
 name:            cfb_lhs_umulfixsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -187,7 +180,6 @@ body:             |
 ...
 ---
 name:            cfb_lhs_cfb_already_rhs_umulfixsat
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -215,7 +207,6 @@ body:             |
 ---
 name:            cfb_lhs_cst_on_rhs_umulfixsat
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0

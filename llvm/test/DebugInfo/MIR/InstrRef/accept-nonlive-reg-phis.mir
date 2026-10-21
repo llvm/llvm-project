@@ -71,7 +71,6 @@
 ---
 name:            c
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 debugInstrRef: true
 frameInfo:

@@ -4,7 +4,6 @@
 
 ---
 name:            sitofp_s16_s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -28,7 +27,6 @@ body:             |
 ...
 ---
 name:            uitofp_s16_s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -51,7 +49,6 @@ body:             |
 ...
 ---
 name:            sitofp_s16_s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -75,7 +72,6 @@ body:             |
 ...
 ---
 name:            uitofp_s16_s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -98,7 +94,6 @@ body:             |
 ...
 ---
 name:            sitofp_s16_s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -122,7 +117,6 @@ body:             |
 ...
 ---
 name:            uitofp_s16_s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -145,7 +139,6 @@ body:             |
 ...
 ---
 name:            sitofp_s16_s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -165,7 +158,6 @@ body:             |
 ...
 ---
 name:            uitofp_s16_s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10

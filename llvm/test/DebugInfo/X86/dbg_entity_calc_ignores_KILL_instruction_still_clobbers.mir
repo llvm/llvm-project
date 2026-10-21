@@ -54,7 +54,6 @@
 ---
 name:            main
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:

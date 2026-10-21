@@ -5,7 +5,6 @@ name:              test_128_fpr_truncation
 alignment:         4
 legalized:         true
 regBankSelected:   true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_128_fpr_truncation
   ; CHECK: bb.0:
@@ -40,7 +39,6 @@ name:              no_trunc
 alignment:         4
 legalized:         true
 regBankSelected:   true
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: no_trunc
   ; CHECK: bb.0:

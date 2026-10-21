@@ -64,7 +64,6 @@
 ---
 name:            fun
 alignment:       1
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false

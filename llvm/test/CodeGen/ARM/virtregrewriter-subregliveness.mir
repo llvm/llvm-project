@@ -17,7 +17,6 @@
 #
 # CHECK-LABEL: name: subregLiveThrough
 name:            subregLiveThrough
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprpair }
 body:             |
@@ -43,7 +42,6 @@ body:             |
 # the first subreg copy.
 # CHECK-LABEL: name: subregNotLiveThrough
 name:            subregNotLiveThrough
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprpair }
 body:             |
@@ -66,7 +64,6 @@ body:             |
 # through.
 # CHECK-LABEL: name: subregNotLiveThrough2
 name:            subregNotLiveThrough2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprpair }
 body:             |

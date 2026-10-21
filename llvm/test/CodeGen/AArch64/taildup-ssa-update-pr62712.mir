@@ -14,7 +14,6 @@
 # a register of correct regclass.
 ---
 name:            test1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test1
   ; CHECK: bb.0:
@@ -73,7 +72,6 @@ body:             |
 #        one with wrong register class?
 ---
 name:            test2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test2
   ; CHECK: bb.0:
@@ -130,7 +128,6 @@ body:             |
 # that we get one COPY instruction inserted for each BB where there is a use.
 ---
 name:            test3
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test3
   ; CHECK: bb.0:
@@ -200,7 +197,6 @@ body:             |
 # The register class can be constrained instead.
 ---
 name:            test4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test4
   ; CHECK: bb.0:
@@ -253,7 +249,6 @@ body:             |
 # The register class can be constrained instead.
 ---
 name:            test5
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test5
   ; CHECK: bb.0:

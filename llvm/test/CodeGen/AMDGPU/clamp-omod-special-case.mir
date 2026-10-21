@@ -5,7 +5,6 @@
 # GCN-NEXT: %21:vgpr_32 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 0, 0, implicit $mode, implicit $exec
 
 name:            v_max_self_clamp_not_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -67,7 +66,6 @@ body:             |
 # GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
 # GCN: %21:vgpr_32 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit $mode, implicit $exec
 name:            v_clamp_omod_already_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -130,7 +128,6 @@ body:             |
 # GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %21:vgpr_32 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit $mode, implicit $exec
 name:            v_omod_mul_omod_already_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -195,7 +192,6 @@ body:             |
 # GCN-NEXT: %21:vgpr_32 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit $mode, implicit $exec
 
 name:            v_omod_mul_clamp_already_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -272,7 +268,6 @@ body:             |
 # GCN: %20:vgpr_32 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %21:vgpr_32 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit $mode, implicit $exec
 name:            v_omod_add_omod_already_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -337,7 +332,6 @@ body:             |
 # GCN-NEXT: %21:vgpr_32 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit $mode, implicit $exec
 
 name:            v_omod_add_clamp_already_set_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
@@ -398,7 +392,6 @@ body:             |
 
 # Pass used to crash with immediate second operand of max
 name:            v_max_reg_imm_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -416,7 +409,6 @@ body:             |
 # GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
 name:            clamp_missing_nofpexcept_0
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
    ieee: false
@@ -438,7 +430,6 @@ body:             |
 # GCN: %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
 name:            clamp_missing_nofpexcept_1
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
    ieee: false
@@ -460,7 +451,6 @@ body:             |
 # GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = nsz V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
 name:            omod_missing_nofpexcept_0
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
    ieee: false
@@ -482,7 +472,6 @@ body:             |
 # GCN: %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
 name:            omod_missing_nofpexcept_1
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
    ieee: false
@@ -504,7 +493,6 @@ body:             |
 # GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
 # GCN-NEXT: S_ENDPGM 0, implicit %2
 name:            clamp_no_src_mods
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -522,7 +510,6 @@ body:             |
 # GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 2, killed %2, 1, 0, implicit $mode, implicit $exec
 name:            clamp_abs_src1_only
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -539,7 +526,6 @@ body:             |
 # GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 # GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
 name:            clamp_abs_src0_only
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

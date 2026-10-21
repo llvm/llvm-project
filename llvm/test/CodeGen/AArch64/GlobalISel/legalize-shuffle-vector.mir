@@ -3,7 +3,6 @@
 ---
 name:            shuffle_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            shuffle_v2i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -49,7 +47,6 @@ body:             |
 ---
 name:            shuffle_v2p0
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -75,7 +72,6 @@ body:             |
 ---
 name:            shuffle_v16i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -98,7 +94,6 @@ body:             |
 ---
 name:            shuffle_v8i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -121,7 +116,6 @@ body:             |
 ---
 name:            oversize_shuffle_v4i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3, $x0
@@ -156,7 +150,6 @@ body:             |
 ---
 name:            oversize_shuffle_v8i32_build_vector
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3, $x0
@@ -199,7 +192,6 @@ body:             |
 ---
 name:            oversize_shuffle_v6i64
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 fixedStack:
@@ -277,7 +269,6 @@ body:             |
 ---
 name:            shuffle_v4i32_v1i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1, $w2
@@ -315,7 +306,6 @@ body:             |
 ---
 name:            shuffle_v4i32_v2i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $d1
@@ -341,7 +331,6 @@ body:             |
 ---
 name:            shuffle_v8i16_v4i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -367,7 +356,6 @@ body:             |
 ---
 name:            shuffle_v16i8_v8i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1
@@ -393,7 +381,6 @@ body:             |
 ---
 name:            size_shuffle_v6i32_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $x0
@@ -452,7 +439,6 @@ body:             |
 ---
 name:            shuffle_v3i32_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -477,7 +463,6 @@ body:             |
 ---
 name:            shuffle_v2i32_v4i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -501,7 +486,6 @@ body:             |
 ---
 name:            shuffle_v4i16_v8i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -525,7 +509,6 @@ body:             |
 ---
 name:            shuffle_v8i8_v16i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1
@@ -549,7 +532,6 @@ body:             |
 ---
 name:            size_shuffle_v4i32_v6i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $s1, $s2, $s3, $s4, $s5
@@ -593,7 +575,6 @@ body:             |
 ---
 name:            shuffle_v8i1_v1i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1

@@ -7,7 +7,6 @@ name:            test_si8tofp64
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -41,7 +40,6 @@ body:             |
 name:            test_si16tofp64
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -76,7 +74,6 @@ name:            test_si32tofp64
 alignment:       4
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -111,7 +108,6 @@ name:            test_si64tofp64
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

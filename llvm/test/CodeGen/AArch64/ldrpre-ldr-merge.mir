@@ -3,7 +3,6 @@
 
 ---
 name:            1-ldrwpre-ldrwui-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$w0' }
@@ -29,7 +28,6 @@ body:             |
 
 ---
 name:            2-ldrxpre-ldrxui-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$x2' }
@@ -55,7 +53,6 @@ body:             |
 
 ---
 name:            3-ldrspre-ldrsui-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$s0' }
@@ -81,7 +78,6 @@ body:             |
 
 ---
 name:            4-ldrqdre-ldrdui-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$d0' }
@@ -108,7 +104,6 @@ body:             |
 ---
 name:            5-ldrqpre-ldrqui-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -138,7 +133,6 @@ body:             |
 ---
 name:            6-ldrqui-ldrqpre-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -169,7 +163,6 @@ body:             |
 ---
 name:            7-ldrqpre-ldrqui-max-offset-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -199,7 +192,6 @@ body:             |
 ---
 name:            8-ldrqpre-ldrqui-min-offset-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -229,7 +221,6 @@ body:             |
 ---
 name:            9-ldrspre-ldrsui-mod-base-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -263,7 +254,6 @@ body:             |
 ---
 name:            10-ldrspre-ldrsui-used-base-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -299,7 +289,6 @@ body:             |
 ---
 name:            11-ldrqpre-ldrqpre-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -337,7 +326,6 @@ body:             |
 
 ---
 name:            12-ldrspre-ldrsui-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$s0' }
@@ -367,7 +355,6 @@ body:             |
 ---
 name:            13-ldrqpre-ldrdui-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -399,7 +386,6 @@ body:             |
 ---
 name:            14-ldrqpre-strqui-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -427,7 +413,6 @@ body:             |
 ---
 name:            15-ldrqpre-ldrqui-same-dst-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -456,7 +441,6 @@ body:             |
 ---
 name:            16-ldrqpre-ldrqui-diff-base-reg-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$x2' }
@@ -488,7 +472,6 @@ body:             |
 ---
 name:            17-ldrqpre-ldurqi-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -518,7 +501,6 @@ body:             |
 ---
 name:            18-ldrqpre-ldurqi-no-merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$q0' }
@@ -548,7 +530,6 @@ body:             |
 
 ---
 name:            19-ldrspre-ldrsui-max-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$s0' }
@@ -574,7 +555,6 @@ body:             |
 
 ---
 name:            20-ldrspre-ldrsui-unaligned-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x1' }
   - { reg: '$s0' }
@@ -601,7 +581,6 @@ body:             |
 
 ---
 name:            21-ldrswpre-ldrswui-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -627,7 +606,6 @@ body:             |
 
 ---
 name:            22-ldrswpre-ldurswi-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -653,7 +631,6 @@ body:             |
 
 ---
 name:            23-ldrswui-ldrswpre-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -680,7 +657,6 @@ body:             |
 
 ---
 name:            24-ldurswi-ldrswpre-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -707,7 +683,6 @@ body:             |
 
 ---
 name:            25-ldrswpre-ldrswpre-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -742,7 +717,6 @@ body:             |
 
 ---
 name:            26-ldrswpre-ldrwui-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -769,7 +743,6 @@ body:             |
 
 ---
 name:            27-ldrwpre-ldrswui-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -796,7 +769,6 @@ body:             |
 
 ---
 name:            28-ldrswpre-ldrwpre-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x11' }
   - { reg: '$x13' }
@@ -826,7 +798,6 @@ body:             |
 
 ---
 name:            29-ldrwpre-ldrswpre-no-merge
-tracksRegLiveness: true
 liveins:
   - { reg: '$x11' }
   - { reg: '$x13' }

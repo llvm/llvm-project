@@ -21,7 +21,6 @@ name:            ptrtoint_s8
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -43,7 +42,6 @@ name:            ptrtoint_s32
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

@@ -8,7 +8,6 @@
 
 ---
 name: copy_v64_to_v64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2_vgpr3
@@ -43,7 +42,6 @@ body: |
 
 ---
 name: copy_s64_to_v64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr2_sgpr3
@@ -78,7 +76,6 @@ body: |
 
 ---
 name: copy_a64_to_v64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $agpr2_agpr3
@@ -116,7 +113,6 @@ body: |
 
 ---
 name: copy_v128_to_v128_fwd
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2_vgpr3_vgpr4_vgpr5
@@ -158,7 +154,6 @@ body: |
 
 ---
 name: copy_v128_to_v128_back
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -200,7 +195,6 @@ body: |
 
 ---
 name: copy_v96_to_v96
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr4_vgpr5_vgpr6
@@ -240,7 +234,6 @@ body: |
 
 ---
 name: copy_v64_to_v64_undef_sub0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr3
@@ -275,7 +268,6 @@ body: |
 
 ---
 name: copy_v64_to_v64_undef_sub1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -310,7 +302,6 @@ body: |
 
 ---
 name: copy_s128_to_v128_killed
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr4_sgpr5_sgpr6_sgpr7
@@ -352,7 +343,6 @@ body: |
 
 ---
 name: copy_v64_to_v64_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2_vgpr3
@@ -390,7 +380,6 @@ body: |
 
 ---
 name: copy_v64_unaligned_to_v64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr3_vgpr4
@@ -428,7 +417,6 @@ body: |
 
 ---
 name: copy_v128_to_v128_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr8_vgpr9_vgpr10_vgpr11
@@ -476,7 +464,6 @@ body: |
 
 ---
 name: copy_v128_unaligned_to_v128
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr7_vgpr8_vgpr9_vgpr10
@@ -524,7 +511,6 @@ body: |
 
 ---
 name: copy_s64_to_v64_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -562,7 +548,6 @@ body: |
 
 ---
 name: copy_s128_to_v128_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11
@@ -610,7 +595,6 @@ body: |
 
 ---
 name: copy_v96_to_v96_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr8_vgpr9_vgpr10
@@ -653,7 +637,6 @@ body: |
 
 ---
 name: copy_v96_unaligned_to_v96
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr7_vgpr8_vgpr9
@@ -696,7 +679,6 @@ body: |
 
 ---
 name: copy_vgpr96_overlap_forward
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr2_vgpr3_vgpr4
@@ -744,7 +726,6 @@ body:             |
 
 ---
 name: copy_vgpr96_overlap_backward
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2
@@ -792,7 +773,6 @@ body:             |
 
 ---
 name: copy_s96_to_v96
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2
@@ -832,7 +812,6 @@ body: |
 
 ---
 name: copy_s96_to_v96_unaligned
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2

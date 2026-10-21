@@ -14,7 +14,6 @@
 ---
 
 name:           outline_no_save_ok_arm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_no_save_ok_arm
   ; CHECK: bb.0:
@@ -41,7 +40,6 @@ body:             |
 ---
 
 name:           outline_no_save_ok_thumb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_no_save_ok_thumb
   ; CHECK: bb.0:

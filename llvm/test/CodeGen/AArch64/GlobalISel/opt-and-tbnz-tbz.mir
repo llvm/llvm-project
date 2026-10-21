@@ -44,7 +44,6 @@ name:            tbzx_and
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbzx_and
   ; CHECK: bb.0:
@@ -76,7 +75,6 @@ name:            tbnzw_and
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbnzw_and
   ; CHECK: bb.0:
@@ -108,7 +106,6 @@ name:            tbzw_and
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbzw_and
   ; CHECK: bb.0:
@@ -140,7 +137,6 @@ name:            dont_fold_and_lt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and_lt
   ; CHECK: bb.0:
@@ -173,7 +169,6 @@ name:            dont_fold_and_gt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_and_gt
   ; CHECK: bb.0:

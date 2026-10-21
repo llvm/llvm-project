@@ -4,7 +4,6 @@
 
 ---
 name: test
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 4, size: 40, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

@@ -24,7 +24,6 @@
 # clone.
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   varArgsFrameIndex: 4
   varArgsSaveSize: 12

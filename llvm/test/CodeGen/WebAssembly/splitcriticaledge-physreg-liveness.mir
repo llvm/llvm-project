@@ -9,7 +9,6 @@
 
 ---
 name:            split_physreg_terminator
-tracksRegLiveness: true
 liveins:
   - { reg: '$arguments' }
 body: |

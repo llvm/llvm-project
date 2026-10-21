@@ -11,7 +11,6 @@
 
 ---
 name: sop2_sopc
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:sreg_32_xm0 = S_ADD_I32 2011, -113, implicit-def $scc

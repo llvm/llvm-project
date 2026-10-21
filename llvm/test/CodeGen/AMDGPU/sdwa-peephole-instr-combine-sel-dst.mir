@@ -6,7 +6,6 @@
 
 ---
 name: op_select_word_1_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -25,7 +24,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -65,7 +62,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -85,7 +81,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -105,7 +100,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -125,7 +119,6 @@ body:             |
 
 ---
 name: op_select_word_1_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -145,7 +138,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_dword
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -164,7 +156,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_word_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -184,7 +175,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_word_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -204,7 +194,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -224,7 +213,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -244,7 +232,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -264,7 +251,6 @@ body:             |
 
 ---
 name: op_select_byte_3_instr_select_byte_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

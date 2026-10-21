@@ -23,7 +23,6 @@ body:             |
 ...
 ---
 name:            test_s318_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -67,7 +66,6 @@ body:             |
 ...
 ---
 name:            test_s319_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -111,7 +109,6 @@ body:             |
 ...
 ---
 name:            test_s158_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -189,7 +186,6 @@ body:             |
 ...
 ---
 name:            xor_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -219,7 +215,6 @@ body:             |
 ...
 ---
 name:            xor_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -253,7 +248,6 @@ body:             |
 ...
 ---
 name:            xor_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -283,7 +277,6 @@ body:             |
 ...
 ---
 name:            xor_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -313,7 +306,6 @@ body:             |
 ...
 ---
 name:            xor_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

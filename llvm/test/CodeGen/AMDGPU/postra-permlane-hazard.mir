@@ -7,7 +7,6 @@
 
 ---
 name: valu_vdst0_two_fillers
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: valu_vdst0_two_fillers
   ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: valu_vdst1_two_fillers
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: valu_vdst1_two_fillers
   ; CHECK: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: unrelated_valu_write
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: unrelated_valu_write
   ; CHECK: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -70,7 +67,6 @@ body: |
 
 ---
 name: valu_without_fillers
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: valu_without_fillers
   ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -89,7 +85,6 @@ body: |
 
 ---
 name: valu_with_one_filler
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: valu_with_one_filler
   ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -111,7 +106,6 @@ body: |
 
 ---
 name: vcmpx_without_fillers
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vcmpx_without_fillers
   ; CHECK: V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec

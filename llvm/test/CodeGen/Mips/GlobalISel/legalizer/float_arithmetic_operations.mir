@@ -17,7 +17,6 @@
 ---
 name:            float_add
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -46,7 +45,6 @@ body:             |
 ---
 name:            float_sub
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -75,7 +73,6 @@ body:             |
 ---
 name:            float_mul
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -104,7 +101,6 @@ body:             |
 ---
 name:            float_div
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -133,7 +129,6 @@ body:             |
 ---
 name:            double_add
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -162,7 +157,6 @@ body:             |
 ---
 name:            double_sub
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -191,7 +185,6 @@ body:             |
 ---
 name:            double_mul
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -220,7 +213,6 @@ body:             |
 ---
 name:            double_div
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7

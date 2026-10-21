@@ -10,7 +10,6 @@
 # CHECK: Macro fuse: {{.*}}AND - OR
 ---
 name: and_or
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -29,7 +28,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}XOR - AND
 ---
 name: xor_and
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -48,7 +46,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}OR - XOR
 ---
 name: or_xor
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12

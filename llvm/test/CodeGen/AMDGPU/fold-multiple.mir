@@ -19,7 +19,6 @@
 # CHECK: %4:vgpr_32 = V_AND_B32_e32 8, killed %2, implicit $exec
 
 name:            test
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: sreg_32 }

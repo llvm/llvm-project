@@ -6,7 +6,6 @@
 # Negative test: cross-block compares with different physical registers should
 # NOT be optimised. bb.0 compares $w0, bb.1 compares $w1.
 name:            cross_block_different_regs
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cross_block_different_regs
   ; CHECK: bb.0:

@@ -6,7 +6,6 @@
 
 ---
 name:            test_occ_10_max_occ_no_sink
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -158,7 +157,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_one_block_high_rp_livethrough
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -316,7 +314,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_one_block_high_rp_use_in_high_rp_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -474,7 +471,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_one_block_high_rp_minimum_sinking
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -629,7 +625,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_two_block_high_rp
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -826,7 +821,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_two_block_high_rp_minimum_sinking
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1023,7 +1017,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_high_rp_in_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1263,7 +1256,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_undef_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1418,7 +1410,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_undef_multiple_subregs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1570,7 +1561,6 @@ body:             |
 ...
 ---
 name:            test_sink_vgpr_regs_gives_8_occ_not_limited_by_sgprs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -2220,7 +2210,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_26vgprs_but_only_one_sinkable
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -2381,7 +2370,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_vgprs_and_sgprs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -2989,7 +2977,6 @@ body:             |
 ...
 ---
 name:            test_occ_8_sink_vgprs_and_sgprs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -3614,7 +3601,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_two_blocks_high_rp_but_only_one_improved
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -3814,7 +3800,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_subreg_all_defs_not_in_use_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -3966,7 +3951,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_multiple_uses
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -4127,7 +4111,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_multiple_defs_clobber
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -4370,7 +4353,6 @@ body:             |
 ...
 ---
 name:            test_occ_8_sink_for_9_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -4631,7 +4613,6 @@ body:             |
 ...
 ---
 name:            test_occ_7_sink_for_8_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -4910,7 +4891,6 @@ body:             |
 ...
 ---
 name:            test_occ_6_sink_for_7_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -5207,7 +5187,6 @@ body:             |
 ...
 ---
 name:            test_occ_5_sink_for_6_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -5449,7 +5428,6 @@ body:             |
 ...
 ---
 name:            test_occ_4_sink_for_5_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -5725,7 +5703,6 @@ body:             |
 ...
 ---
 name:            test_occ_3_sink_for_4_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -6148,7 +6125,6 @@ body:             |
 ...
 ---
 name:            test_occ_2_sink_for_3_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -6661,7 +6637,6 @@ body:             |
 ...
 ---
 name:            test_occ_1_sink_for_2_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -7372,7 +7347,6 @@ body:             |
 ...
 ---
 name:            test_occ_1_sink_for_spill
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -8265,7 +8239,6 @@ body:             |
 ...
 ---
 name:            test_no_sink_two_subregs_in_def_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -8417,7 +8390,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_not_improved
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -8572,7 +8544,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_sink_64bit_vreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -8724,7 +8695,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_sink_64bit_vreg_2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -8879,7 +8849,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_64bit_vreg_not_enough_sinkable
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9037,7 +9006,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_no_sink_64bit_vreg_not_improved
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9186,7 +9154,6 @@ body:             |
 ...
 ---
 name:            test_occ_7_sink_one_def_of_undef_subreg_for_8
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9380,7 +9347,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_sink_ignore_dbg_value_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9541,7 +9507,6 @@ body:             |
 ...
 ---
 name:            test_occ_9_crash_inline_asm
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9699,7 +9664,6 @@ body:             |
 ...
 ---
 name:            test_live_through_occ_7_sink_for_8
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -9871,7 +9835,6 @@ body:             |
 ...
 ---
 name:            test_remat_over_exec_modif
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -10066,7 +10029,6 @@ body:             |
 ...
 ---
 name:            test_remat_same_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -10251,7 +10213,6 @@ body:             |
 ...
 ---
 name:            test_rollback_remat_defregion_above_target
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -10440,7 +10401,6 @@ body:             |
 ...
 ---
 name:            test_rollback_remat_useregion_above_target
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -10634,7 +10594,6 @@ body:             |
 ...
 ---
 name:            test_rollback_remats_emptydefregion_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -10832,7 +10791,6 @@ body:             |
 ...
 ---
 name:            test_rollback_remats_emptydefregion_barrier
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -11033,7 +10991,6 @@ body:             |
 ...
 ---
 name:            test_occ_8_physreg_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -11331,7 +11288,6 @@ body:             |
 ...
 ---
 name:            test_occ_8_exec_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -11638,7 +11594,6 @@ body:             |
 ...
 ---
 name:            remat_virtual_vgpr_occ_6
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -11933,7 +11888,6 @@ body:             |
 
 ---
 name:            remat_virtual_vgpr_uses_not_available
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -12228,7 +12182,6 @@ body:             |
 
 ---
 name:            remat_virtual_vgpr_subreg_occ_6
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -12532,7 +12485,6 @@ body:             |
 
 ---
 name:            remat_virtual_vgpr_subreg_uses_not_available
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -12837,7 +12789,6 @@ body:             |
 
 ---
 name:            remat_virtual_vgpr_subreg_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -13142,7 +13093,6 @@ body:             |
 
 ---
 name:            omitted_subrange
-tracksRegLiveness: true
 body:             |
   ; GFX908-LABEL: name: omitted_subrange
   ; GFX908: bb.0:
@@ -13374,7 +13324,6 @@ body:             |
 ...
 ---
 name:            dont_remat_convergent_mis
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

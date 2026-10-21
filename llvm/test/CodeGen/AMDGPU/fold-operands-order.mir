@@ -10,7 +10,6 @@
 
 
 name: mov_in_use_list_2x
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
   - { id: 1, class: vgpr_32, preferred-register: '' }

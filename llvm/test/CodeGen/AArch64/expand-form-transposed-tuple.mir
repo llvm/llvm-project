@@ -4,7 +4,6 @@
 
 ---
 name:            expand_x4_tuples
-tracksRegLiveness: true
 isSSA: false
 body:             |
   bb.0.entry:
@@ -46,7 +45,6 @@ body:             |
 ...
 ---
 name:            expand_x2_tuples
-tracksRegLiveness: true
 isSSA: false
 body:             |
   bb.0.entry:
@@ -70,7 +68,6 @@ body:             |
 ...
 ---
 name:            expand_tuple_set_kill_flag_on_last_copy
-tracksRegLiveness: true
 isSSA: false
 body:             |
   bb.0.entry:
@@ -103,7 +100,6 @@ body:             |
 ...
 ---
 name:            expand_tuple_independent_zprs
-tracksRegLiveness: true
 isSSA: false
 body:             |
   bb.0.entry:

@@ -5,7 +5,6 @@
 # Can't narrow this; need known bits
 ---
 name: shl_s64_by_2_from_anyext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -38,7 +37,6 @@ body:             |
 # Can't narrow this; need known bits
 ---
 name: shl_s64_by_2_from_sext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -71,7 +69,6 @@ body:             |
 # Can't narrow this; need known bits
 ---
 name: shl_s64_by_2_from_zext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -103,7 +100,6 @@ body:             |
 
 ---
 name: narrow_shl_s64_by_2_from_anyext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -141,7 +137,6 @@ body:             |
 
 ---
 name: narrow_shl_s64_by_2_from_zext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -179,7 +174,6 @@ body:             |
 
 ---
 name: narrow_shl_s64_by_2_from_sext_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -217,7 +211,6 @@ body:             |
 
 ---
 name: narrow_shl_s64_by_2_from_zext_s32_lookthrough_amount
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -257,7 +250,6 @@ body:             |
 # Can't introduce a 16-bit shift before gfx8
 ---
 name: narrow_shl_s32_by_2_from_zext_s16
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -298,7 +290,6 @@ body:             |
 
 ---
 name: narrow_shl_s64_by_2_from_zext_s16
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -339,7 +330,6 @@ body:             |
 
 ---
 name: do_not_shl_s32_zero_by_16_from_zext_s16
-tracksRegLiveness: true
 legalized: true
 
 body:             |
@@ -365,7 +355,6 @@ body:             |
 
 ---
 name: do_not_shl_v2s32_zero_by_16_from_zext_v2s16
-tracksRegLiveness: true
 legalized: true
 
 body:             |
@@ -395,7 +384,6 @@ body:             |
 
 ---
 name: do_not_shl_s32_by_16_from_zext_s16
-tracksRegLiveness: true
 legalized: true
 
 body:             |

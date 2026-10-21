@@ -37,7 +37,6 @@ name:            umulh_v8s16
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -68,7 +67,6 @@ name:            umulh_v16s8
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -99,7 +97,6 @@ name:            umulh_v4s32
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -130,7 +127,6 @@ name:            smulh_v8s16
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -161,7 +157,6 @@ name:            smulh_v16s8
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -192,7 +187,6 @@ name:            smulh_v4s32
 legalized:       true
 regBankSelected: true
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |

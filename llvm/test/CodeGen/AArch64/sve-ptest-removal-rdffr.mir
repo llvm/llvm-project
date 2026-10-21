@@ -3,7 +3,6 @@
 # Test that RDFFR followed by PTEST is replaced with RDFFRS.
 ---
 name:                       substitute_rdffr_pp_with_rdffrs_pp
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ffr, $p0
@@ -27,7 +26,6 @@ body: |
 ...
 ---
 name:                       fail_to_substitute_rdffr_pp_with_rdffrs_pp_differing_mask
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ffr, $p0, $p1
@@ -54,7 +52,6 @@ body: |
 ...
 ---
 name:                       fail_to_substitute_rdffr_pp_with_rdffrs_pp_nzcv_clobbered
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ffr, $p0, $x0
@@ -81,7 +78,6 @@ body: |
 ...
 ---
 name:                       fail_to_substitute_rdffr_pp_with_rdffrs_pp_nzcv_flags_used_between
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ffr, $p0, $x0

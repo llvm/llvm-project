@@ -7,7 +7,6 @@
 
 ---
 name:           tail_duplicate_terminator
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tail_duplicate_terminator
   ; CHECK: bb.0:

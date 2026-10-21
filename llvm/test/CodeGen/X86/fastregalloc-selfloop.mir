@@ -5,7 +5,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vr128 }
 frameInfo:

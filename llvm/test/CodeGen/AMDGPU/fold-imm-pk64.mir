@@ -3,7 +3,6 @@
 
 ---
 name:            pk_add_f64_no_fold_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_no_fold_imm
@@ -23,7 +22,6 @@ body:             |
 
 ---
 name:            pk_add_f64_fold_splat_1.0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_fold_splat_1.0
@@ -43,7 +41,6 @@ body:             |
 
 ---
 name:            pk_add_f64_fold_splat_100.0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_fold_splat_100.0
@@ -63,7 +60,6 @@ body:             |
 
 ---
 name:            pk_add_f64_no_fold_splat_100.1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_no_fold_splat_100.1
@@ -83,7 +79,6 @@ body:             |
 
 ---
 name:            pk_add_f64_no_fold_splat_100
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_no_fold_splat_100
@@ -103,7 +98,6 @@ body:             |
 
 ---
 name:            pk_add_f64_fold_splat_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_f64_fold_splat_1
@@ -123,7 +117,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_no_fold_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_no_fold_imm
@@ -143,7 +136,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_fold_splat_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_fold_splat_1
@@ -163,7 +155,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_fold_splat_100
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_fold_splat_100
@@ -183,7 +174,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_no_fold_splat_0x100000000
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_no_fold_splat_0x100000000
@@ -203,7 +193,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_fold_splat_1.0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_fold_splat_1.0
@@ -223,7 +212,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_no_fold_splat_100.0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_no_fold_splat_100.0
@@ -243,7 +231,6 @@ body:             |
 
 ---
 name:            pk_add_nc_u64_no_fold_splat_100.1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX1251-LABEL: name: pk_add_nc_u64_no_fold_splat_100.1
@@ -263,7 +250,6 @@ body:             |
 
 ---
 name:            pk_add_u64_fold_imm_undef
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -287,7 +273,6 @@ body:             |
 
 ---
 name:            pk_add_u64_fold_undef_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -312,7 +297,6 @@ body:             |
 # This can be folded to IMPLICIT_DEF itself, just not immediate
 ---
 name:            pk_add_u64_no_fold_undef_undef
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3

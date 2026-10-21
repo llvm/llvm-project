@@ -21,7 +21,6 @@
 #
 name:            test_ld3
 alignment:       4
-tracksRegLiveness: true
 frameInfo: {}
 machineFunctionInfo: {}
 body:             |

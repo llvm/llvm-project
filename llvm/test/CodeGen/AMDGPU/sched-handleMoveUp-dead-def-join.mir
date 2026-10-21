@@ -16,7 +16,6 @@
 ---
 name:            rock_attention
 alignment:       4
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         false

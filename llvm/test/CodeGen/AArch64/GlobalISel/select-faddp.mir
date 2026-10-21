@@ -5,7 +5,6 @@ name:            f64_faddp
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 frameInfo:
@@ -36,7 +35,6 @@ name:            f32_faddp
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 frameInfo:

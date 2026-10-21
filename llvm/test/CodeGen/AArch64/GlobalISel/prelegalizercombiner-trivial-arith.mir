@@ -2,7 +2,6 @@
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 name:            right_ident_sub
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -22,7 +21,6 @@ body:             |
 ...
 ---
 name:            right_ident_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -42,7 +40,6 @@ body:             |
 ...
 ---
 name:            mul_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -63,7 +60,6 @@ body:             |
 
 ---
 name:            mul_0_cant_replace
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -86,7 +82,6 @@ body:             |
 
 ---
 name:            sdiv_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -106,7 +101,6 @@ body:             |
 ...
 ---
 name:            udiv_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -126,7 +120,6 @@ body:             |
 ...
 ---
 name:            srem_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -146,7 +139,6 @@ body:             |
 ...
 ---
 name:            urem_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -167,7 +159,6 @@ body:             |
 
 ---
 name:            right_ident_or
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -187,7 +178,6 @@ body:             |
 ...
 ---
 name:            right_ident_xor
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -207,7 +197,6 @@ body:             |
 ...
 ---
 name:            right_ident_shl
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -227,7 +216,6 @@ body:             |
 ...
 ---
 name:            right_ident_ashr
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -247,7 +235,6 @@ body:             |
 ...
 ---
 name:            right_ident_lshr
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -267,7 +254,6 @@ body:             |
 ...
 ---
 name:            dont_fold_sub
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -289,7 +275,6 @@ body:             |
 ...
 ---
 name:            look_through_zext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -308,7 +293,6 @@ body:             |
 ...
 ---
 name:            right_ident_ptr_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -327,7 +311,6 @@ body:             |
 ...
 ---
 name:            right_identity_rotl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -346,7 +329,6 @@ body:             |
 ...
 ---
 name:            right_identity_rotr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -452,7 +434,6 @@ body:             |
 ---
 name:            udiv_of_sext
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -476,7 +457,6 @@ body:             |
 ...
 ---
 name:            sub_to_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -497,7 +477,6 @@ body:             |
 ...
 ---
 name:            sub_to_add_nuw
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0
@@ -518,7 +497,6 @@ body:             |
 ...
 ---
 name:            sub_to_add_nsw
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0

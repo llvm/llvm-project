@@ -46,7 +46,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 callSites:
   - { bb: 1, offset: 0 }
 body:             |

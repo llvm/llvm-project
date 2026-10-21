@@ -7,7 +7,6 @@ name:            usubo_s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
@@ -35,7 +34,6 @@ name:            usubo_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0, $x1, $x2
@@ -63,7 +61,6 @@ name:            usubo_s32_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
@@ -87,7 +84,6 @@ name:            usubo_s32_shifted
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
@@ -114,7 +110,6 @@ name:            usubo_s32_neg_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
@@ -138,7 +133,6 @@ name:            usubo_arith_extended
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w0, $x0

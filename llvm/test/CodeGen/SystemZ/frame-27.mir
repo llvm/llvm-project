@@ -27,7 +27,6 @@
 # CHECK:      VL32
 ---
 name:            f1
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16 }
   - { id: 1, size: 4095 }
@@ -50,7 +49,6 @@ body:             |
 # CHECK:      VL32
 ---
 name:            f2
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16 }
   - { id: 1, size: 4095 }
@@ -75,7 +73,6 @@ body:             |
 # CHECK:      LEY
 ---
 name:            f3
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4095 }
   - { id: 1, size: 8190 }
@@ -106,7 +103,6 @@ body:             |
 # CHECK-NEXT: VL32
 ---
 name:            f4
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8190 }
   - { id: 1, size: 2047 }
@@ -144,7 +140,6 @@ body:             |
 # CHECK-NEXT: VL32
 ---
 name:            f5
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8190 }
   - { id: 1, size: 8190 }
@@ -178,7 +173,6 @@ body:             |
 # CHECK:  VST32 killed renamable $f0s, killed renamable $r2d, 0, $noreg
 ---
 name:            f6
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 300 }
   - { id: 1, size: 316 }

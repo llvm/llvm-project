@@ -4,7 +4,6 @@
 name:            redundant_zext_8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -28,7 +27,6 @@ body:             |
 name:            redundant_zext_16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0

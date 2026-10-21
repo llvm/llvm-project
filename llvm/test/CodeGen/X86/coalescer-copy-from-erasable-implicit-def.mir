@@ -9,7 +9,6 @@
 
 ---
 name: coalesce_copy_from_erasable_implicit_def
-tracksRegLiveness: true
 constants:
   - id:    0
     value: 'i32 0'
