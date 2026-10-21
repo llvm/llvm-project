@@ -93,6 +93,40 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   ASSERT_FALSE(EltCnt.isScalable());
 }
 
+TEST(ScalableVectorMVTsTest, ChangeElementCount) {
+  LLVMContext Ctx;
+
+  // MVT: scalar to fixed-length vector.
+  EXPECT_EQ(MVT(MVT::i32).changeElementCount(ElementCount::getFixed(4)),
+            MVT::v4i32);
+
+  // MVT: vector to scalar.
+  EXPECT_EQ(MVT(MVT::v4i32).changeElementCount(ElementCount::getFixed(1)),
+            MVT::i32);
+
+  // MVT: scalar to scalable vector.
+  EXPECT_EQ(MVT(MVT::i32).changeElementCount(ElementCount::getScalable(4)),
+            MVT::nxv4i32);
+
+  // EVT: scalar to fixed-length vector.
+  EVT I32 = EVT::getIntegerVT(Ctx, 32);
+  EXPECT_EQ(I32.changeElementCount(Ctx, ElementCount::getFixed(4)),
+            EVT::getVectorVT(Ctx, I32, ElementCount::getFixed(4)));
+
+  // EVT: vector to scalar.
+  EVT V4I32 = EVT::getVectorVT(Ctx, I32, ElementCount::getFixed(4));
+  EXPECT_EQ(V4I32.changeElementCount(Ctx, ElementCount::getFixed(1)), I32);
+
+  // EVT: extended scalar to vector.
+  EVT I1024 = EVT::getIntegerVT(Ctx, 1024);
+  EXPECT_EQ(I1024.changeElementCount(Ctx, ElementCount::getFixed(4)),
+            EVT::getVectorVT(Ctx, I1024, ElementCount::getFixed(4)));
+
+  // EVT: extended scalar to scalable vector.
+  EXPECT_EQ(I1024.changeElementCount(Ctx, ElementCount::getScalable(4)),
+            EVT::getVectorVT(Ctx, I1024, ElementCount::getScalable(4)));
+}
+
 TEST(ScalableVectorMVTsTest, IRToVTTranslation) {
   LLVMContext Ctx;
 
