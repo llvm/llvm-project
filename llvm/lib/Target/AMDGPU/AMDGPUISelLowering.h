@@ -237,6 +237,10 @@ public:
   bool isCheapToSpeculateCttz(Type *Ty) const override;
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
+  // No integer divide: reciprocal arithmetic; LLVM keeps COMPUTE_PGM_RSRC2
+  // EXCP_EN = 0 (including v_rcp_iflag_f32's divide-by-zero exception).
+  bool isIntDivRemTrapFree(EVT) const override { return true; }
+
   bool isSDNodeAlwaysUniform(const SDNode *N) const override;
 
   // FIXME: This hook should not exist

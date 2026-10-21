@@ -2699,7 +2699,12 @@ public:
                         : IID == Intrinsic::srem_poison ? Instruction::SRem
                                                         : Instruction::URem;
 
-      // PreISelIntrinsicLowering expands every call into the plain operation
+      if (!isa<ScalableVectorType>(RetTy) &&
+          getTLI()->canSelectIntDivRemPoison(
+              getTLI()->getValueType(DL, RetTy->getScalarType())))
+        return thisT()->getArithmeticInstrCost(Opcode, RetTy, CostKind);
+
+      // PreISelIntrinsicLowering expands other calls into the plain operation
       // on a guarded divisor, so cost both. Keep this in sync with the IR it
       // emits (the freezes are free):
       //

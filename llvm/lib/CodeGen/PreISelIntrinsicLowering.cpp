@@ -171,7 +171,10 @@ static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
 /// instruction undefined, so that the division computes x / 1 (or x % 1),
 /// which is a valid refinement of poison. The compare and the select are
 /// element-wise, so only the offending elements of a vector are guarded.
-static bool lowerDivRemPoison(Function &F) {
+/// Trap-free targets keep scalar and fixed-vector calls with selectable element
+/// types for direct instruction selection. ISel splits vectors lane-wise to
+/// preserve element-wise poison without exposing scalar calls to IR transforms.
+static bool lowerDivRemPoison(Function &F, const TargetMachine *TM) {
   Intrinsic::ID ID = F.getIntrinsicID();
   bool IsSigned = ID == Intrinsic::sdiv_poison || ID == Intrinsic::srem_poison;
   Instruction::BinaryOps Opcode;
@@ -203,7 +206,25 @@ static bool lowerDivRemPoison(Function &F) {
       return true;
     }
 
+    // For unsigned i1, the only non-poison divisor is 1.
+    if (!IsSigned && BitWidth == 1) {
+      Value *Result = ID == Intrinsic::udiv_poison ? CI->getArgOperand(0)
+                                                   : Constant::getNullValue(Ty);
+      CI->replaceAllUsesWith(Result);
+      CI->eraseFromParent();
+      return true;
+    }
+
     IRBuilder<> Builder(CI);
+    if (TM) {
+      const TargetLowering *TLI =
+          TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+      const DataLayout &DL = CI->getFunction()->getDataLayout();
+      if (!isa<ScalableVectorType>(Ty) &&
+          TLI->canSelectIntDivRemPoison(
+              TLI->getValueType(DL, Ty->getScalarType())))
+        return false;
+    }
     // The plain instruction is undefined for a poison divisor and, for the
     // signed forms, for a poison dividend with a divisor of -1, while the call
     // only returns poison. Freeze the operands that the guard inspects, so
@@ -786,7 +807,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::udiv_poison:
     case Intrinsic::srem_poison:
     case Intrinsic::urem_poison:
-      Changed |= lowerDivRemPoison(F);
+      Changed |= lowerDivRemPoison(F, TM);
       break;
     case Intrinsic::is_constant:
     case Intrinsic::objectsize:

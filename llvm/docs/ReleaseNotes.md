@@ -176,7 +176,10 @@ Makes programs 10x faster by doing Special New Thing.
   instructions, except that a zero divisor and, for the signed forms, the
   minimum value divided by -1 give a poison result (element-wise for vectors)
   instead of undefined behavior, so they are speculatable and a `freeze` of
-  their result is an arbitrary but fixed value.
+  their result is an arbitrary but fixed value. NVPTX and AMDGPU, whose integer
+  division does not trap, select them as the plain operations for types up to
+  64 bits; other targets, and wider types, replace a zero divisor (and, signed,
+  `MIN / -1`) with a safe one first.
 
 ### Changes to LLVM infrastructure
 
