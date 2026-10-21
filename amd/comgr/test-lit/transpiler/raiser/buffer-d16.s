@@ -1,32 +1,27 @@
 ; REQUIRES: comgr-has-transpiler
-; XFAIL: *
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=3 -defsym=INITIAL=0x12345678 -filetype=obj %s -o %t.any.o
 ; RUN: %ld.lld -shared %t.any.o -o %t.any.hsaco
 ; RUN: %transpile_cli %t.any.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ECC
 ; RUN: %transpile_cli %t.any.hsaco --target-isa=amdgcn-amd-amdhsa--gfx942:sramecc- --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ECC
 ; RUN: %transpile_cli %t.any.hsaco --target-isa=gfx1250 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ECC
-; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -mattr=+sramecc -defsym=EXTENT=3 -defsym=INITIAL=0x12345678 -filetype=obj %s -o %t.on.o
-; RUN: %ld.lld -shared %t.on.o -o %t.on.hsaco
-; RUN: %transpile_cli %t.on.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ECC
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=3 -defsym=INITIAL=0x12345678 -defsym=MASKED=1 -filetype=obj %s -o %t.masked.o
 ; RUN: %ld.lld -shared %t.masked.o -o %t.masked.hsaco
 ; RUN: %transpile_cli %t.masked.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=MASKED
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=0 -defsym=INITIAL=0x12345678 -filetype=obj %s -o %t.oob.o
 ; RUN: %ld.lld -shared %t.oob.o -o %t.oob.hsaco
 ; RUN: %transpile_cli %t.oob.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefixes=OOB,OOB-ACTIVE
-; RUN: %transpile_cli %t.oob.hsaco --isa=amdgcn-amd-amdhsa--gfx1250:sramecc+ --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefixes=OOB,OOB-ACTIVE
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=0 -defsym=INITIAL=0x12345678 -defsym=MASKED=1 -filetype=obj %s -o %t.masked-oob.o
 ; RUN: %ld.lld -shared %t.masked-oob.o -o %t.masked-oob.hsaco
 ; RUN: %transpile_cli %t.masked-oob.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefixes=OOB,OOB-MASKED
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=EXTENT=0 -defsym=INITIAL=0 -filetype=obj %s -o %t.zero.o
 ; RUN: %ld.lld -shared %t.zero.o -o %t.zero.hsaco
 ; RUN: %transpile_cli %t.zero.hsaco --target-isa=gfx942 --emit-ir | %opt -S -passes=instcombine,simplifycfg | %FileCheck %s --check-prefix=ZERO
-; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -mattr=-sramecc -defsym=EXTENT=3 -defsym=INITIAL=0x12345678 -filetype=obj %s -o %t.off.o
-; RUN: %ld.lld -shared %t.off.o -o %t.off.hsaco
-; RUN: not %transpile_cli %t.off.hsaco --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=OFF
-; RUN: not %transpile_cli %t.any.hsaco --isa=amdgcn-amd-amdhsa--gfx1250:sramecc- --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=OFF
-; OFF: BadInput
-; OFF-SAME: gfx1250 source does not support disabling SRAM ECC
+
+; SRAM ECC is always enabled on gfx1250; explicit source modes are invalid.
+; RUN: not %transpile_cli %t.any.hsaco --isa=amdgcn-amd-amdhsa--gfx1250:sramecc+ --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=BADISA
+; RUN: not %transpile_cli %t.any.hsaco --isa=amdgcn-amd-amdhsa--gfx1250:sramecc- --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=BADISA
+; BADISA: BadInput
+; BADISA-SAME: source ISA 'amdgcn-amd-amdhsa--gfx1250:sramecc{{[+-]}}' does not name an AMDGPU GPU
 
 .amdhsa_code_object_version 6
 .text
