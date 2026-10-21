@@ -20,6 +20,7 @@ defm : BoolField<"lib-not-in-build", "false", "Unavailable">;
 defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
 defm : OptionalValueField<"lib-limit", "unsigned", "An optional">;
 defm : ListField<"lib-list", "unsigned", "A list">;
+defm : UnsplitListField<"lib-strings", "StringRef", "An unsplit list">;
 defm : EnumField<"lib-mode", "test::Mode", "test::Mode::A", "a,b",
   ["test::Mode::A", "test::Mode::B"], "An enum">;
 defm : EnumListField<"lib-modes", "test::Mode", "a,b",

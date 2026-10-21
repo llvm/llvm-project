@@ -115,6 +115,14 @@ multiclass ListField<string name, string type, string help> {
     Field<NAME, "llvm::ArrayRef<"#type#">", "">, HelpText<help>;
 }
 
+// An llvm::opt::UnsplitList<<type>> member, an llvm::ArrayRef<<type>>. Unlike
+// in a ListField, each -<name>=<value> or -<name> <value> appends <value> whole,
+// commas included.
+multiclass UnsplitListField<string name, string type, string help> {
+  def NAME : SeparateOrEq<["-", "--"], name>,
+    Field<NAME, "llvm::opt::UnsplitList<"#type#">", "">, HelpText<help>;
+}
+
 // A ListField of the enumeration <type>, with <values> mapping to <enumerators>
 // as in EnumField.
 multiclass EnumListField<string name, string type, string values,

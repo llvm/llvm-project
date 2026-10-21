@@ -37,6 +37,7 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 3u);
   EXPECT_EQ(O.limit, std::nullopt);
   EXPECT_THAT(O.list, testing::IsEmpty());
+  EXPECT_THAT(O.strings, testing::IsEmpty());
   EXPECT_EQ(O.mode, test::Mode::A);
   EXPECT_THAT(O.modes, testing::IsEmpty());
   EXPECT_EQ(O.override, BoolOrDefault::Default);
@@ -88,6 +89,10 @@ TEST(LibraryOptionsTest, Apply) {
               testing::Each(true));
   EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
                                             test::Mode::B));
+  // Each occurrence of an unsplit list appends its whole value.
+  EXPECT_THAT(Apply({"-lib-strings=a,b", "-lib-strings", "c", "-lib-strings="}),
+              testing::Each(true));
+  EXPECT_THAT(O.strings, testing::ElementsAre("a,b", "c", ""));
 
   // A rejected value leaves the member unchanged.
   EXPECT_THAT(
@@ -133,6 +138,7 @@ TEST(LibraryOptionsTest, Parser) {
                   "lib-path|=<value>|A string",
                   "lib-print|[=<a|b>]|A flag or enum",
                   "lib-ratio|=<value>|A double",
+                  "lib-strings|=<value>|An unsplit list",
                   "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
   BumpPtrAllocator Alloc;

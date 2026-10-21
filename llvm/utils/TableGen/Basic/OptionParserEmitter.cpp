@@ -352,6 +352,10 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Support/Allocator.h\"\n";
+  if (any_of(Members, [](const Member &M) {
+        return M.Type.starts_with("llvm::opt::UnsplitList<");
+      }))
+    OS << "#include \"llvm/Option/UnsplitList.h\"\n";
   bool PerContext = Struct.getValueAsBit("PerContext");
   if (PerContext)
     OS << "#include \"llvm/Support/LibraryOptionsContext.h\"\n";

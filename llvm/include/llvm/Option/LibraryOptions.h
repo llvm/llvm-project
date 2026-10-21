@@ -22,6 +22,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/UnsplitList.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -110,6 +111,19 @@ bool parseArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc) {
   return parseArgValue(S, List, Alloc, [](StringRef Item, T &Elem) {
     return parseArgValue(Item, Elem);
   });
+}
+
+template <typename T>
+bool parseArgValue(StringRef S, UnsplitList<T> &List, BumpPtrAllocator &Alloc) {
+  static_assert(std::is_trivially_copyable_v<T>);
+  T Elem{};
+  if (!parseArgValue(S, Elem))
+    return false;
+  T *Storage = Alloc.Allocate<T>(List.size() + 1);
+  llvm::copy(List, Storage);
+  Storage[List.size()] = Elem;
+  List = UnsplitList<T>(Storage, List.size() + 1);
+  return true;
 }
 
 /// An OptTable with a public constructor, shared by every options struct.
