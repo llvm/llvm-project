@@ -7,7 +7,7 @@
 ! before any use in a descendant, so these uses must be accepted.
 
 !--- m.f90
-module m
+module procinterface07m
   abstract interface
     subroutine s_iface()
     end subroutine
@@ -20,13 +20,13 @@ module m
 end module
 
 !--- sm1.f90
-submodule (m) sm1
+submodule (procinterface07m) procinterface07sm1
   procedure(q), pointer :: r1
   procedure(s_iface), pointer :: q1
 end submodule
 
 !--- sm2.f90
-submodule (m:sm1) sm2
+submodule (procinterface07m:procinterface07sm1) procinterface07sm2
   procedure(q1), pointer :: r2
 contains
   module subroutine ms()
