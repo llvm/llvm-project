@@ -21,6 +21,10 @@ class CCIfTrue16<CCAction A> :
   CCIf<"State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
 class CCIfNotTrue16<CCAction A> :
   CCIf<"!State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
+class CCIfNotInRegTrue16<CCAction A> :
+  CCIf<"!ArgFlags.isInReg() && State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
+class CCIfNotInRegNotTrue16<CCAction A> :
+  CCIf<"!ArgFlags.isInReg() && !State.getMachineFunction().getSubtarget<GCNSubtarget>().useRealTrue16Insts()", A>;
 
 // Calling convention for SI
 def CC_SI_Gfx : CallingConv<[
@@ -37,11 +41,11 @@ def CC_SI_Gfx : CallingConv<[
     !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>>,
 
-  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+  CCIfNotInRegTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
        !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
   >>>,
 
-  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+  CCIfNotInRegNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
        !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
   >>>,
 
@@ -56,12 +60,12 @@ def RetCC_SI_Gfx : CallingConv<[
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>>,
 
-  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
-       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-31_LO16
+  CCIfNotInRegTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-135_LO16
   >>>,
 
-  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
-       !foreach(i, !range(0, 32), !cast<Register>("VGPR"#i))  // VGPR0-31
+  CCIfNotInRegNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>>,
 ]>;
 
@@ -78,11 +82,11 @@ def CC_SI_SHADER : CallingConv<[
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>>,
 
-  CCIfTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+  CCIfNotInRegTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
        !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i#"_LO16"))  // VGPR0-135_LO16
   >>>,
 
-  CCIfNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+  CCIfNotInRegNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
        !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>>,
 ]>;
@@ -224,8 +228,16 @@ def CC_AMDGPU_CS_CHAIN : CallingConv<[
     !foreach(i, !range(105), !cast<Register>("SGPR"#i))
   >>>,
 
-  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfNotInReg<CCIfType<[f32, i32, v2i16, v2f16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(8, 255), !cast<Register>("VGPR"#i))
+  >>>,
+
+  CCIfNotInRegTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(8, 255), !cast<Register>("VGPR"#i#"_LO16"))
+  >>>,
+
+  CCIfNotInRegNotTrue16<CCIfType<[i16, f16, bf16], CCAssignToReg<
+       !foreach(i, !range(8, 255), !cast<Register>("VGPR"#i))
   >>>
 ]>;
 
