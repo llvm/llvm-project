@@ -90,25 +90,22 @@ define void @minmax(ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %max
 define void @ftz_boundaries(ptr %fmul_ftz_boundary_res, ptr %fdiv_ftz_boundary_res, ptr %fma_ftz_boundary_res, ptr %fmul_ftz_boundary_negative_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: ftz_boundaries(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ftz_boundaries_param_0];
-; CHECK-NEXT:    mov.b32 %r1, 0f00800000;
-; CHECK-NEXT:    mul.rn.ftz.f32 %r2, %r1, 0f3F7FFFFF;
 ; CHECK-NEXT:    ld.param.b64 %rd2, [ftz_boundaries_param_1];
-; CHECK-NEXT:    st.b32 [%rd1], %r2;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r1, 0f00800000, 0f3F7FFFFF;
+; CHECK-NEXT:    st.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [ftz_boundaries_param_2];
-; CHECK-NEXT:    mov.b32 %r3, 0f00FFFFFF;
-; CHECK-NEXT:    mul.rn.ftz.f32 %r4, %r3, 0f3F000000;
 ; CHECK-NEXT:    ld.param.b64 %rd4, [ftz_boundaries_param_3];
-; CHECK-NEXT:    st.b32 [%rd2], %r4;
-; CHECK-NEXT:    fma.rn.ftz.f32 %r5, %r1, 0f3F7FFFFF, 0f00000000;
-; CHECK-NEXT:    st.b32 [%rd3], %r5;
-; CHECK-NEXT:    mov.b32 %r6, 0f80800000;
-; CHECK-NEXT:    mul.rn.ftz.f32 %r7, %r6, 0f3F7FFFFF;
-; CHECK-NEXT:    st.b32 [%rd4], %r7;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r2, 0f00FFFFFF, 0f3F000000;
+; CHECK-NEXT:    st.b32 [%rd2], %r2;
+; CHECK-NEXT:    fma.rn.ftz.f32 %r3, 0f00800000, 0f3F7FFFFF, 0f00000000;
+; CHECK-NEXT:    st.b32 [%rd3], %r3;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r4, 0f80800000, 0f3F7FFFFF;
+; CHECK-NEXT:    st.b32 [%rd4], %r4;
 ; CHECK-NEXT:    ret;
   %fmul_ftz_boundary = fmul float f0x00800000, f0x3F7FFFFF
   store float %fmul_ftz_boundary, ptr %fmul_ftz_boundary_res
