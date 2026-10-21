@@ -78,4 +78,34 @@ TEST(IntelGPUTargetParserTest, NumericArchName) {
       "xe_12.60.7");
 }
 
+TEST(IntelGPUTargetParserTest, KindArchNames) {
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_XE_PVC), "xe-pvc");
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_XE_DG2), "xe-dg2");
+  EXPECT_EQ(IntelGPU::getArchName(IntelGPU::GK_NONE), "");
+}
+
+TEST(IntelGPUTargetParserTest, ParseArch) {
+  // A human-friendly name and a compatibility name.
+  EXPECT_EQ(IntelGPU::parseArch("xe-pvc"), IntelGPU::GK_XE_PVC);
+  EXPECT_EQ(IntelGPU::parseArch("xe-dg2"), IntelGPU::GK_XE_DG2);
+
+  // Each device has one name, so other spellings name no device.
+  EXPECT_EQ(IntelGPU::parseArch("bmg_g21"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe-arl-u"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("xe_12.60.7"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("pvc"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch("XE-PVC"), IntelGPU::GK_NONE);
+  EXPECT_EQ(IntelGPU::parseArch(""), IntelGPU::GK_NONE);
+}
+
+TEST(IntelGPUTargetParserTest, EveryNameParses) {
+  // Every name the table declares has to be an --offload-arch value, and has to
+  // name the row it came from.
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  EXPECT_EQ(IntelGPU::parseArch(NAME), IntelGPU::GK_##KIND) << NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
 } // namespace
