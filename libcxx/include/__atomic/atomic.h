@@ -166,23 +166,23 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
     return this->__a_.__atomic_fetch_or(__op, __m);
   }
   _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_xor(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_xor(__op, __m);
   }
   _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_xor(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_xor(__op, __m);
   }
 #if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    return this->__a_.__atomic_fetch_max(__op, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+  _Tp fetch_max(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+    return this->__a_.__atomic_fetch_max(__op, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+    return this->__a_.__atomic_fetch_min(__op, __m);
   }
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+  _Tp fetch_min(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+    return this->__a_.__atomic_fetch_min(__op, __m);
   }
 #endif
 
@@ -316,22 +316,22 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
 #if _LIBCPP_STD_VER >= 26
   _Tp* fetch_max(_Tp* __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_max(__op, __m);
   }
 
   _Tp* fetch_max(_Tp* __op, memory_order __m = memory_order_seq_cst) noexcept {
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_max(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_max(__op, __m);
   }
 
   _Tp* fetch_min(_Tp* __op, memory_order __m = memory_order_seq_cst) volatile noexcept {
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_min(__op, __m);
   }
 
   _Tp* fetch_min(_Tp* __op, memory_order __m = memory_order_seq_cst) noexcept {
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_min(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_min(__op, __m);
   }
 #endif
 

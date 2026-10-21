@@ -42,24 +42,8 @@ struct __skip_amt<_Tp*> {
 // atomic_fetch_add. Force a failure rather than creating bad behavior.
 template <typename _Tp>
 struct __skip_amt<_Tp[]> {};
-template <typename _Tp, int n>
-struct __skip_amt<_Tp[n]> {};
-
-// [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
-// the default operator= in an object is not volatile, a byte-by-byte copy
-// is required.
-template <typename _Tp, typename _Tv, __enable_if_t<is_assignable<_Tp&, _Tv>::value, int> = 0>
-void __cxx_atomic_assign_volatile(_Tp& __a_value, _Tv const& __val) {
-  __a_value = __val;
-}
-template <typename _Tp, typename _Tv, __enable_if_t<is_assignable<_Tp&, _Tv>::value, int> = 0>
-void __cxx_atomic_assign_volatile(_Tp volatile& __a_value, _Tv volatile const& __val) {
-  volatile char* __to         = reinterpret_cast<volatile char*>(std::addressof(__a_value));
-  volatile char* __end        = __to + sizeof(_Tp);
-  volatile const char* __from = reinterpret_cast<volatile const char*>(std::addressof(__val));
-  while (__to != __end)
-    *__to++ = *__from++;
-}
+template <typename _Tp, int _Np>
+struct __skip_amt<_Tp[_Np]> {};
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
@@ -74,7 +58,7 @@ struct __cxx_atomic_base_impl {
 
   void __atomic_init(_Tp __val) volatile {
     std::__clear_padding_if_needed(__val);
-    __cxx_atomic_assign_volatile(__a_value, __val);
+    __atomic_assign_volatile(__a_value, __val);
   }
 
   void __atomic_init(_Tp __val) {
@@ -137,7 +121,7 @@ struct __cxx_atomic_base_impl {
   bool __atomic_compare_exchange_strong(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
     return std::__atomic_cas_with_clear_padding(
         __expected, __value, [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
-          return __atomic_compare_exchange(
+          return ::__atomic_compare_exchange(
               std::addressof(this->__a_value),
               __expected_or_copy,
               std::addressof(__value_maybe_padding_cleared),
@@ -151,7 +135,7 @@ struct __cxx_atomic_base_impl {
       _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) volatile {
     return std::__atomic_cas_with_clear_padding(
         __expected, __value, [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
-          return __atomic_compare_exchange(
+          return ::__atomic_compare_exchange(
               std::addressof(this->__a_value),
               __expected_or_copy,
               std::addressof(__value_maybe_padding_cleared),
@@ -164,7 +148,7 @@ struct __cxx_atomic_base_impl {
   bool __atomic_compare_exchange_weak(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
     return std::__atomic_cas_with_clear_padding(
         __expected, __value, [this, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
-          return __atomic_compare_exchange(
+          return ::__atomic_compare_exchange(
               std::addressof(this->__a_value),
               __expected_or_copy,
               std::addressof(__value_maybe_padding_cleared),
@@ -176,115 +160,124 @@ struct __cxx_atomic_base_impl {
 
   template <typename _Td>
   _Tp __atomic_fetch_add(_Td __delta, memory_order __order) volatile {
-    return __atomic_fetch_add(
+    return ::__atomic_fetch_add(
         std::addressof(__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
   }
 
   template <typename _Td>
   _Tp __atomic_fetch_add(_Td __delta, memory_order __order) {
-    return __atomic_fetch_add(
+    return ::__atomic_fetch_add(
         std::addressof(__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
   }
 
   template <typename _Td>
   _Tp __atomic_fetch_sub(volatile _Td __delta, memory_order __order) volatile {
-    return __atomic_fetch_sub(
+    return ::__atomic_fetch_sub(
         std::addressof(__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
   }
 
   template <typename _Td>
   _Tp __atomic_fetch_sub(_Td __delta, memory_order __order) {
-    return __atomic_fetch_sub(
+    return ::__atomic_fetch_sub(
         std::addressof(__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
   }
 
   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) volatile {
-    return __atomic_fetch_and(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+    return ::__atomic_fetch_and(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
   }
 
   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) {
-    return __atomic_fetch_and(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+    return ::__atomic_fetch_and(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
   }
 
   _Tp __atomic_fetch_or(_Tp __pattern, memory_order __order) volatile {
-    return __atomic_fetch_or(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+    return ::__atomic_fetch_or(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
   }
 
   _Tp __atomic_fetch_or(_Tp __pattern, memory_order __order) {
-    return __atomic_fetch_or(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+    return ::__atomic_fetch_or(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
   }
+
+  _Tp __atomic_fetch_xor(_Tp __pattern, memory_order __order) volatile {
+    return ::__atomic_fetch_xor(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+  }
+
+  _Tp __atomic_fetch_xor(_Tp __pattern, memory_order __order) {
+    return ::__atomic_fetch_xor(std::addressof(__a_value), __pattern, std::__to_gcc_order(__order));
+  }
+
+  _Tp __atomic_fetch_max(_Tp __val, memory_order __order) volatile {
+#if __has_builtin(__atomic_fetch_max)
+    return ::__atomic_fetch_max(std::addressof(__a_value), __val, std::__to_gcc_order(__order));
+#else
+    _Tp __ret = this->__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret > __val ? __ret : __val;
+    } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
+#endif
+  }
+
+  _Tp __atomic_fetch_max(_Tp __val, memory_order __order) {
+#if __has_builtin(__atomic_fetch_max)
+    return ::__atomic_fetch_max(std::addressof(__a_value), __val, std::__to_gcc_order(__order));
+#else
+    _Tp __ret = this->__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret > __val ? __ret : __val;
+    } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
+#endif
+  }
+
+  _Tp __atomic_fetch_min(_Tp __val, memory_order __order) volatile {
+#if __has_builtin(__atomic_fetch_min)
+    return ::__atomic_fetch_min(std::addressof(__a_value), __val, std::__to_gcc_order(__order));
+#else
+    _Tp __ret = this->__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret < __val ? __ret : __val;
+    } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
+#endif
+  }
+
+  _Tp __atomic_fetch_min(_Tp __val, memory_order __order) {
+#if __has_builtin(__atomic_fetch_min)
+    return ::__atomic_fetch_min(std::addressof(__a_value), __val, std::__to_gcc_order(__order));
+#else
+    _Tp __ret = this->__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret < __val ? __ret : __val;
+    } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
+#endif
+  }
+
+private:
+  // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
+  // the default operator= in an object is not volatile, a byte-by-byte copy
+  // is required.
+  template <typename _Tv, __enable_if_t<is_assignable<_Tp&, _Tv>::value, int> = 0>
+  static void __atomic_assign_volatile(_Tp volatile& __a_value, _Tv volatile const& __val) {
+    volatile char* __to         = reinterpret_cast<volatile char*>(std::addressof(__a_value));
+    volatile char* __end        = __to + sizeof(_Tp);
+    volatile const char* __from = reinterpret_cast<volatile const char*>(std::addressof(__val));
+    while (__to != __end)
+      *__to++ = *__from++;
+  }
+
+public:
   _Tp __a_value;
 };
 
 inline void __cxx_atomic_thread_fence(memory_order __order) { __atomic_thread_fence(std::__to_gcc_order(__order)); }
 
 inline void __cxx_atomic_signal_fence(memory_order __order) { __atomic_signal_fence(std::__to_gcc_order(__order)); }
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_xor(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-#if __has_builtin(__atomic_fetch_max)
-  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
-#else
-  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
-  _Tp __value;
-  do {
-    __value = __ret > __val ? __ret : __val;
-  } while (!__a.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-  return __ret;
-#endif
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-#if __has_builtin(__atomic_fetch_max)
-  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
-#else
-  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
-  _Tp __value;
-  do {
-    __value = __ret > __val ? __ret : __val;
-  } while (!__a.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-  return __ret;
-#endif
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-#if __has_builtin(__atomic_fetch_min)
-  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
-#else
-  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
-  _Tp __value;
-  do {
-    __value = __ret < __val ? __ret : __val;
-  } while (!__a.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-  return __ret;
-#endif
-}
-
-template <typename _Tp>
-_Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-#if __has_builtin(__atomic_fetch_min)
-  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
-#else
-  _Tp __ret = __a->__atomic_load(memory_order_relaxed);
-  _Tp __value;
-  do {
-    __value = __ret < __val ? __ret : __val;
-  } while (!__a.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-  return __ret;
-#endif
-}
 
 #define __cxx_atomic_is_lock_free(__s) __atomic_is_lock_free(__s, 0)
 

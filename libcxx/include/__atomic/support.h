@@ -18,8 +18,7 @@
 //
 // This file implements base support for atomics on the platform.
 //
-// The following operations and types must be implemented (where _Atmc
-// is __cxx_atomic_base_impl for readability):
+// The following operations and types must be implemented:
 //
 // clang-format off
 //
@@ -47,40 +46,20 @@
 //   _Tp* __atomic_fetch_sub(ptrdiff_t __delta, memory_order __order) noexcept;
 //   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) volatile noexcept;
 //   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_or(_Tp __pattern, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_or(_Tp __pattern, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_xor(_Tp __pattern, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_xor(_Tp __pattern, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_max(_Tp __pattern, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_max(_Tp __pattern, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_min(_Tp __pattern, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_min(_Tp __pattern, memory_order __order) noexcept;
 // };
 //
 // #define __cxx_atomic_is_lock_free(__size)
 //
 // void __cxx_atomic_thread_fence(memory_order __order) noexcept;
 // void __cxx_atomic_signal_fence(memory_order __order) noexcept;
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_or(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_or(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_xor(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_xor(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
-//
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
 //
 // clang-format on
 //
