@@ -29,6 +29,7 @@
 
 ; LIGHT-LTO: ,pgo-icall-prom,cgscc(attributor-light-cgscc,argpromotion,
 ; LIGHT-LTO-SAME: ,called-value-propagation,attributor-light,globalsplit,
+; LIGHT-LTO-SAME: wholeprogramdevirt,attributor-light,norecurse-lto-inference
 ; LIGHT-LTO-SAME: ,tailcallelim),cgscc(attributor-light-cgscc),
 
 ; MODULE: ,openmp-opt,attributor,ipsccp
