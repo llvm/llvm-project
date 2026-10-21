@@ -50,6 +50,7 @@
 ; O0-NEXT:     x86-fast-pre-tile-config
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     x86-fast-tile-config
 ; O0-NEXT:     x86-lower-tile-copy
 ; O0-NEXT:     x86-fp-stackifier
 ; O0-NEXT:     remove-redundant-debug-values
@@ -253,6 +254,7 @@
 ; O0-WINDOWS-NEXT:     x86-fast-pre-tile-config
 ; O0-WINDOWS-NEXT:     phi-node-elimination
 ; O0-WINDOWS-NEXT:     regallocfast
+; O0-WINDOWS-NEXT:     x86-fast-tile-config
 ; O0-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O0-WINDOWS-NEXT:     x86-fp-stackifier
 ; O0-WINDOWS-NEXT:     remove-redundant-debug-values

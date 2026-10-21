@@ -827,6 +827,7 @@ void CodeGenPassBuilder::addRegAllocPass(PassManagerWrapper &PMW,
 Error CodeGenPassBuilder::addRegAssignAndRewriteFast(PassManagerWrapper &PMW) {
   // TODO: Ensure allocator is default or fast.
   addRegAllocPass(PMW, false);
+  addPostFastRegAllocRewrite(PMW);
   return Error::success();
 }
 
