@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 
+#include <initializer_list>
 #include <unordered_map>
 
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
@@ -47,8 +48,25 @@ enum CheckCondition {
   allOf
 };
 
-using VersionedTypeInfo =
-    std::pair<SmallVector<TypeInfo>, SpecificationVersion>;
+struct TypeInfoRef {
+  const TypeInfo *ptr;
+  TypeInfoRef(const TypeInfo &info) : ptr(&info) {}
+};
+
+struct VersionedTypeInfo {
+  SmallVector<TypeInfo> first;
+  SpecificationVersion second;
+
+  VersionedTypeInfo() = default;
+  VersionedTypeInfo(std::initializer_list<TypeInfoRef> types,
+                    SpecificationVersion version);
+  VersionedTypeInfo(SmallVector<TypeInfo> types, SpecificationVersion version);
+  VersionedTypeInfo(const VersionedTypeInfo &other);
+  VersionedTypeInfo(VersionedTypeInfo &&other);
+  VersionedTypeInfo &operator=(const VersionedTypeInfo &other);
+  VersionedTypeInfo &operator=(VersionedTypeInfo &&other);
+  ~VersionedTypeInfo();
+};
 
 template <typename T>
 struct OpComplianceInfo {
@@ -57,7 +75,23 @@ struct OpComplianceInfo {
   SmallVector<T> mode;
   SmallVector<VersionedTypeInfo> operandTypeInfoSet;
   CheckCondition condition = CheckCondition::anyOf;
+
+  OpComplianceInfo() = default;
+  OpComplianceInfo(std::initializer_list<T> mode,
+                   std::initializer_list<VersionedTypeInfo> operandTypeInfoSet,
+                   CheckCondition condition = CheckCondition::anyOf);
+  OpComplianceInfo(SmallVector<T> mode,
+                   SmallVector<VersionedTypeInfo> operandTypeInfoSet,
+                   CheckCondition condition = CheckCondition::anyOf);
+  OpComplianceInfo(const OpComplianceInfo &other);
+  OpComplianceInfo(OpComplianceInfo &&other);
+  OpComplianceInfo &operator=(const OpComplianceInfo &other);
+  OpComplianceInfo &operator=(OpComplianceInfo &&other);
+  ~OpComplianceInfo();
 };
+
+extern template struct OpComplianceInfo<Profile>;
+extern template struct OpComplianceInfo<Extension>;
 
 using OperationProfileComplianceMap =
     std::unordered_map<std::string, SmallVector<OpComplianceInfo<Profile>>>;
