@@ -224,14 +224,15 @@ define void @test11(ptr nocapture %x, ptr nocapture %y, i32 %n) {
 ; CHECK-NEXT:    vldrb.u8 q0, [r12], #16
 ; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    letp lr, .LBB10_2
-; CHECK-NEXT:  .LBB10_3: @ %for.body
+; CHECK-NEXT:  .LBB10_3: @ %prehead
+; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:  .LBB10_4: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb r3, [r0], #1
 ; CHECK-NEXT:    subs r2, #2
 ; CHECK-NEXT:    strb r3, [r1], #1
-; CHECK-NEXT:    bne .LBB10_3
-; CHECK-NEXT:  @ %bb.4:
-; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:    bne .LBB10_4
+; CHECK-NEXT:  @ %bb.5: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
   %cmp6 = icmp slt i32 %n, 0

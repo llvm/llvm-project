@@ -30,6 +30,7 @@ add_mlir_library(MLIRTestIR
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRTestDialect
   )
 

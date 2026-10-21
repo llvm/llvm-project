@@ -33,10 +33,6 @@ class RuntimeLibcallAvailability<dag cond = (?)> {
   dag CondDag = cond;
 }
 
-// Predicate for whether a libcall should be used for the current
-// function/subtarget.
-class LibcallLoweringPredicate<code cond> { code Cond = cond; }
-
 def AlwaysAvailable : RuntimeLibcallAvailability;
 
 class LibcallCallingConv<code CC = [{}]> {
@@ -55,6 +51,7 @@ def AVR_BUILTIN : LibcallCallingConv<[{CallingConv::AVR_BUILTIN}]>;
 def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0}]>;
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
+def AARCH64_VECTORCALL : LibcallCallingConv<[{CallingConv::AArch64_VectorCall}]>;
 
 
 // Return type or argument type of library calls.

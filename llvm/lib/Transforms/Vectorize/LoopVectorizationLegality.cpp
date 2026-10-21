@@ -551,6 +551,19 @@ static bool canVectorizeSwiftErrorUses(Instruction &I,
   return false;
 }
 
+/// Calls with operand bundles other than llvm.assume cannot be widened.
+static bool canVectorizeOperandBundles(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB || !CB->hasOperandBundles() || isa<AssumeInst>(CB))
+    return true;
+  reportVectorizationFailure("Found a call with operand bundles",
+                             "call with operand bundles cannot be vectorized",
+                             "CantVectorizeOperandBundles", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -561,10 +574,12 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
-    // Uses of swifterror values must remain scalar.
+    // Uses of swifterror values must remain scalar. Calls with operand bundles
+    // cannot be widened.
     for (Instruction &I : *BB) {
       if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
-          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop) &&
+          canVectorizeOperandBundles(I, ORE, TheLoop))
         continue;
       if (!DoExtraAnalysis)
         return false;
@@ -892,7 +907,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     return false;
   } // end of PHI handling
 
-  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop) ||
+      !canVectorizeOperandBundles(I, ORE, TheLoop))
     return false;
 
   // We handle calls that:
@@ -1750,6 +1766,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   bool HasSideEffects = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I))
+        continue;
       if (I.mayWriteToMemory()) {
         if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
           HasSideEffects = true;
@@ -1891,6 +1909,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   for (auto *BB : TheLoop->blocks()) {
     for (auto &I : *BB) {
       if (&I == Load)
+        continue;
+
+      // Pseudo-probes are placeholders with no real memory
+      // access, so they cannot alias the exit condition load and do not need
+      // to be masked.
+      if (isa<PseudoProbeInst>(I))
         continue;
 
       if (I.mayReadOrWriteMemory()) {

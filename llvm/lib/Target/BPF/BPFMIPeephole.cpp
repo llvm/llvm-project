@@ -494,11 +494,14 @@ bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
     }
 
     const BasicBlock *TermBB = MBB->getBasicBlock();
+    // 'if r1 == r2 goto' has three operands, 'unwind_goto' has one.
+    MachineOperand &CondTarget =
+        CondJmp->getOperand(CondJmp->getNumExplicitOperands() - 1);
     int Dist;
 
     // (3). conditional jmp to another bb or follow through.
     if (!UncondJmp) {
-      CondTargetBB = CondJmp->getOperand(2).getMBB();
+      CondTargetBB = CondTarget.getMBB();
       MachineBasicBlock *FollowBB = FollowThroughBB[MBB];
       Dist = SoFarNumInsns[CondTargetBB] - CondTargetBB->size() - CurrNumInsns;
       if (in16BitRange(Dist))
@@ -527,16 +530,7 @@ bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
       MF->insert(MBB_I, New_B1);
 
       // replace B2 cond jump
-      if (CondJmp->getOperand(1).isReg())
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
-            .addReg(CondJmp->getOperand(0).getReg())
-            .addReg(CondJmp->getOperand(1).getReg())
-            .addMBB(New_B1);
-      else
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
-            .addReg(CondJmp->getOperand(0).getReg())
-            .addImm(CondJmp->getOperand(1).getImm())
-            .addMBB(New_B1);
+      CondTarget.setMBB(New_B1);
 
       // it is possible that CondTargetBB and FollowBB are the same. But the
       // above Dist checking should already filtered this case.
@@ -552,13 +546,12 @@ bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
 
       New_B0->addSuccessor(FollowBB);
       New_B1->addSuccessor(CondTargetBB);
-      CondJmp->eraseFromParent();
       Changed = true;
       continue;
     }
 
     //  (4). conditional jmp followed by an unconditional jmp.
-    CondTargetBB = CondJmp->getOperand(2).getMBB();
+    CondTargetBB = CondTarget.getMBB();
     JmpBB = UncondJmp->getOperand(0).getMBB();
 
     // We have
@@ -587,16 +580,7 @@ bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
       MF->insert(++MBB->getIterator(), New_B);
 
       // replace B2 cond jump
-      if (CondJmp->getOperand(1).isReg())
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
-            .addReg(CondJmp->getOperand(0).getReg())
-            .addReg(CondJmp->getOperand(1).getReg())
-            .addMBB(New_B);
-      else
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
-            .addReg(CondJmp->getOperand(0).getReg())
-            .addImm(CondJmp->getOperand(1).getImm())
-            .addMBB(New_B);
+      CondTarget.setMBB(New_B);
 
       if (CondTargetBB != JmpBB)
         MBB->removeSuccessor(CondTargetBB);
@@ -606,7 +590,6 @@ bool BPFMIPreEmitPeepholeImpl::adjustBranch() {
       BuildMI(New_B, CondJmp->getDebugLoc(), TII->get(BPF::JMPL)).addMBB(CondTargetBB);
 
       New_B->addSuccessor(CondTargetBB);
-      CondJmp->eraseFromParent();
       Changed = true;
     }
 
@@ -755,17 +738,18 @@ bool BPFMIPreEmitPeepholeImpl::removeMayGotoZero() {
   return Changed;
 }
 
-// If the last insn in a funciton is 'JAL &bpf_unreachable', let us add an
-// 'exit' insn after that insn. This will ensure no fallthrough at the last
+// If the last non-debug insn in a function is 'JAL &bpf_unreachable', let us
+// add an 'exit' insn after it. This will ensure no fallthrough at the last
 // insn, making kernel verification easier.
 bool BPFMIPreEmitPeepholeImpl::addExitAfterUnreachable() {
   MachineBasicBlock &MBB = MF->back();
-  MachineInstr &MI = MBB.back();
-  if (MI.getOpcode() != BPF::JAL || !MI.getOperand(0).isGlobal() ||
-      MI.getOperand(0).getGlobal()->getName() != BPF_TRAP)
+  auto MBBI = MBB.getLastNonDebugInstr(/*SkipPseudoOp=*/false);
+  if (MBBI == MBB.end() || MBBI->getOpcode() != BPF::JAL ||
+      !MBBI->getOperand(0).isGlobal() ||
+      MBBI->getOperand(0).getGlobal()->getName() != BPF_TRAP)
     return false;
 
-  BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
+  BuildMI(&MBB, MBBI->getDebugLoc(), TII->get(BPF::RET));
   return true;
 }
 
