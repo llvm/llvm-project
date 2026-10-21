@@ -7100,6 +7100,14 @@ public:
            ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument;
   }
 
+  /// Get the key used for RefsMinusAssignments, the canonical decl. Use the
+  /// canonical decl so in-class declarations and out-of-class definitions of
+  /// static data members in anonymous namespaces are tracked as a single entry.
+  ///
+  /// Handle the special case of an instantiated static data member by returning
+  /// the canonical decl of its instantiation pattern.
+  static const VarDecl *getUnusedButSetKey(const VarDecl *VD);
+
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
