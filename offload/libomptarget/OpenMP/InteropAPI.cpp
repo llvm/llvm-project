@@ -63,10 +63,110 @@ const char *getVendorIdToStr(const omp_vendor_id_t VendorId) {
 static const char *ForeignRuntimeStrTbl[] = {
     "none", "cuda", "cuda_driver", "opencl",
     "sycl", "hip",  "level_zero",  "hsa"};
-const char *getForeignRuntimeIdToStr(const tgt_foreign_runtime_id_t FrId) {
-  if (FrId < tgt_fr_none || FrId >= tgt_fr_last)
+const char *getForeignRuntimeIdToStr(const omp_foreign_runtime_id_t FrId) {
+  if (FrId < omp_fr_none || FrId >= omp_fr_last)
     return ("unknown");
   return ForeignRuntimeStrTbl[FrId];
+}
+
+constexpr interop_spec_t NoInteropSpec{omp_fr_none, {true, 0}, 0};
+
+/// Return the interop specification supported by \p Device for the given
+/// interop type, or NoInteropSpec if the device supports none.
+/// TODO: the user-provided preference list is not honored yet.
+interop_spec_t selectInteropPreference(DeviceTy &Device, int32_t InteropType,
+                                       int32_t NumPrefers,
+                                       interop_spec_t *Prefers) {
+
+  interop_spec_t SelectedSpec = NoInteropSpec;
+  switch (Device.getBackend()) {
+  case OL_PLATFORM_BACKEND_CUDA:
+    SelectedSpec.fr_id = omp_fr_cuda;
+    break;
+  case OL_PLATFORM_BACKEND_AMDGPU:
+    // TODO: update once targetsync is supported.
+    if (InteropType == kmp_interop_type_targetsync)
+      return NoInteropSpec;
+    SelectedSpec.fr_id = omp_fr_hsa;
+    break;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    SelectedSpec.fr_id = omp_fr_level_zero;
+    break;
+  default:;
+  }
+  return SelectedSpec;
+}
+
+omp_vendor_id_t getVendorForForeignRuntime(int32_t FrId) {
+  // Vendor of each foreign runtime, indexed by omp_foreign_runtime_id_t.
+  static constexpr omp_vendor_id_t VendorTbl[omp_fr_last] = {
+      /*none*/ omp_vendor_unknown,
+      /*cuda*/ omp_vendor_nvidia,
+      /*cuda_driver*/ omp_vendor_unknown,
+      /*opencl*/ omp_vendor_unknown,
+      /*sycl*/ omp_vendor_unknown,
+      /*hip*/ omp_vendor_unknown,
+      /*level_zero*/ omp_vendor_intel,
+      /*hsa*/ omp_vendor_amd};
+  if (FrId < omp_fr_none || FrId >= omp_fr_last)
+    return omp_vendor_unknown;
+  return VendorTbl[FrId];
+}
+
+/// Query a backend-native handle, returning null when the backend exposes
+/// none.
+template <typename HandleTy, typename InfoTy, typename GetInfoTy>
+void *getNativeHandle(GetInfoTy GetInfo, HandleTy Handle, InfoTy Info) {
+  void *Native = nullptr;
+  if (auto *Res = GetInfo(Handle, Info, sizeof(Native), &Native)) {
+    ODBG(ODT_Interface) << "Could not query native handle: " << Res->Details;
+    return nullptr;
+  }
+  return Native;
+}
+
+/// Build an interop object for \p Device following \p Spec. Returns
+/// omp_interop_none if it could not be created.
+omp_interop_val_t *createInterop(DeviceTy &Device, int32_t InteropType,
+                                 const interop_spec_t &Spec) {
+  auto *Interop = new omp_interop_val_t(
+      Device.DeviceID, static_cast<kmp_interop_type_t>(InteropType));
+  Interop->fr_id = static_cast<omp_foreign_runtime_id_t>(Spec.fr_id);
+  Interop->vendor_id = getVendorForForeignRuntime(Spec.fr_id);
+  Interop->attrs = Spec.attrs;
+  Interop->impl_attrs = Spec.impl_attrs;
+
+  Interop->native_device = getNativeHandle(olGetDeviceInfo, Device.DeviceHandle,
+                                           OL_DEVICE_INFO_NATIVE_HANDLE);
+  if (!Interop->native_device)
+    Interop->err_str = "the device does not expose a native handle";
+  Interop->native_platform =
+      getNativeHandle(olGetDeviceInfo, Device.DeviceHandle,
+                      OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE);
+  Interop->native_context = getNativeHandle(olGetContextInfo, Device.Context,
+                                            OL_CONTEXT_INFO_NATIVE_HANDLE);
+
+  if (InteropType == kmp_interop_type_targetsync) {
+    if (auto *Res = olCreateQueue(Device.Context, Device.DeviceHandle,
+                                  &Interop->queue)) {
+      REPORT() << "Failed to create queue for interop on device "
+               << Device.DeviceID << ": " << Res->Details;
+      delete Interop;
+      return omp_interop_none;
+    }
+    Interop->native_queue = getNativeHandle(olGetQueueInfo, Interop->queue,
+                                            OL_QUEUE_INFO_NATIVE_HANDLE);
+    if (!Interop->native_queue) {
+      REPORT() << "The queue of device " << Device.DeviceID
+               << " does not expose a native handle for targetsync";
+      if (auto *Res = olDestroyQueue(Interop->queue))
+        REPORT() << "Failed to destroy queue: " << Res->Details;
+      delete Interop;
+      return omp_interop_none;
+    }
+  }
+
+  return Interop;
 }
 
 template <typename PropertyTy>
@@ -109,16 +209,16 @@ void *getProperty<void *>(omp_interop_val_t &InteropVal,
                           omp_interop_property_t Property, int *Err) {
   switch (Property) {
   case omp_ipr_device:
-    if (InteropVal.device_info.Device)
-      return InteropVal.device_info.Device;
+    if (InteropVal.native_device)
+      return InteropVal.native_device;
     *Err = omp_irc_no_value;
     return const_cast<char *>(InteropVal.err_str);
   case omp_ipr_platform:
-    return InteropVal.device_info.Platform;
+    return InteropVal.native_platform;
   case omp_ipr_device_context:
-    return InteropVal.device_info.Context;
+    return InteropVal.native_context;
   case omp_ipr_targetsync:
-    return InteropVal.async_info ? InteropVal.async_info->Queue : nullptr;
+    return InteropVal.native_queue;
   default:;
   }
   getTypeMismatch(Property, Err);
@@ -145,8 +245,7 @@ bool getPropertyCheck(omp_interop_val_t **InteropPtr,
       *Err = omp_irc_other;
     return false;
   }
-  if ((Property == omp_ipr_device || Property == omp_ipr_device_context) &&
-      (*InteropPtr)->interop_type == kmp_interop_type_targetsync) {
+  if ((Property == omp_ipr_device || Property == omp_ipr_device_context)) {
     if (Err)
       *Err = omp_irc_other;
     return false;
@@ -227,16 +326,16 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   }
   auto &Device = *DeviceOrErr;
   omp_interop_val_t *Interop = omp_interop_none;
-  auto InteropSpec = Device.RTL->select_interop_preference(
-      DeviceNum, InteropType, NumPrefers, Prefers);
-  if (InteropSpec.fr_id == tgt_fr_none) {
+  auto InteropSpec =
+      selectInteropPreference(Device, InteropType, NumPrefers, Prefers);
+  if (InteropSpec.fr_id == omp_fr_none) {
     ODBG(ODT_Interface) << "Interop request not supported by device "
                         << DeviceNum;
     return omp_interop_none;
   }
   ODBG(ODT_Interface) << "Selected interop preference is fr_id="
                       << getForeignRuntimeIdToStr(
-                             (tgt_foreign_runtime_id_t)InteropSpec.fr_id)
+                             (omp_foreign_runtime_id_t)InteropSpec.fr_id)
                       << (InteropSpec.attrs.inorder ? " inorder" : "")
                       << " impl_attrs=" << InteropSpec.impl_attrs;
 
@@ -255,7 +354,10 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
     }
   }
 
-  Interop = Device.RTL->create_interop(DeviceNum, InteropType, &InteropSpec);
+  Interop = createInterop(Device, InteropType, InteropSpec);
+  if (Interop == omp_interop_none)
+    return omp_interop_none;
+
   ODBG(ODT_Interface) << "Created an interop " << Interop
                       << " from device number " << DeviceNum;
 
@@ -293,22 +395,11 @@ int __tgt_interop_use60(ident_t *LocRef, omp_interop_val_t *Interop,
     }
   }
 
-  auto DeviceOrErr = Interop->getDevice();
-  if (!DeviceOrErr) {
-    REPORT() << "Failed to get device for interop " << Interop << ": "
-             << toString(DeviceOrErr.takeError());
-    return OFFLOAD_FAIL;
-  }
-  auto &IOPDevice = *DeviceOrErr;
-
-  if (Interop->async_info && Interop->async_info->Queue) {
-    if (Nowait)
-      Interop->async_barrier(IOPDevice);
-    else {
-      Interop->flush(IOPDevice);
-      Interop->sync_barrier(IOPDevice);
-      Interop->markClean();
-    }
+  // A nowait use needs no barrier: the queue is in-order, so it already
+  // orders the OpenMP work against the work the foreign runtime submits.
+  if (!Nowait && Interop->queue) {
+    Interop->sync_barrier();
+    Interop->markClean();
   }
 
   return OFFLOAD_SUCCESS;
@@ -332,14 +423,7 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
     }
   }
 
-  auto DeviceOrErr = Interop->getDevice();
-  if (!DeviceOrErr) {
-    REPORT() << "Failed to get device for interop " << Interop << ": "
-             << toString(DeviceOrErr.takeError());
-    return OFFLOAD_FAIL;
-  }
-
-  return Interop->release(*DeviceOrErr);
+  return Interop->release();
 }
 
 EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
@@ -393,10 +477,6 @@ void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
 
 } // extern "C"
 
-llvm::Expected<DeviceTy &> omp_interop_val_t::getDevice() const {
-  return PM->getDevice(device_id);
-}
-
 bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
                                          const interop_spec_t &Spec) {
   if (interop_type != InteropType)
@@ -423,30 +503,31 @@ bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
   return isCompatibleWith(InteropType, Spec);
 }
 
-int32_t omp_interop_val_t::flush(DeviceTy &Device) {
-  return Device.RTL->flush_queue(this);
-}
-
-int32_t omp_interop_val_t::sync_barrier(DeviceTy &Device) {
-  if (Device.RTL->sync_barrier(this) != OFFLOAD_SUCCESS) {
-    FATAL_MESSAGE(device_id, "Interop sync barrier failed for %p object\n",
-                  this);
-  }
+int32_t omp_interop_val_t::sync_barrier() {
+  if (queue)
+    if (auto *Res = olSyncQueue(queue)) {
+      FATAL_MESSAGE(device_id,
+                    "Interop sync barrier failed for %p object: %s\n", this,
+                    Res->Details);
+    }
   ODBG(ODT_Sync) << "Calling completion callbacks for " << this;
   runCompletionCbs();
   return OFFLOAD_SUCCESS;
 }
 
-int32_t omp_interop_val_t::async_barrier(DeviceTy &Device) {
-  return Device.RTL->async_barrier(this);
-}
+int32_t omp_interop_val_t::release() {
+  if (queue && (!hasOwner() || !isClean()))
+    sync_barrier();
 
-int32_t omp_interop_val_t::release(DeviceTy &Device) {
-  if (async_info != nullptr && (!hasOwner() || !isClean())) {
-    flush(Device);
-    sync_barrier(Device);
-  }
-  return Device.RTL->release_interop(device_id, this);
+  int32_t Ret = OFFLOAD_SUCCESS;
+  if (queue)
+    if (auto *Res = olDestroyQueue(queue)) {
+      REPORT() << "Failed to destroy queue of interop " << this << ": "
+               << Res->Details;
+      Ret = OFFLOAD_FAIL;
+    }
+  delete this;
+  return Ret;
 }
 
 void syncImplicitInterops(int Gtid, void *Event) {
@@ -457,19 +538,8 @@ void syncImplicitInterops(int Gtid, void *Event) {
                  << ", event " << Event;
 
   for (auto iop : PM->InteropTbl) {
-    if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(Gtid) &&
-        !iop->isClean()) {
-
-      auto DeviceOrErr = iop->getDevice();
-      if (!DeviceOrErr) {
-        REPORT() << "Failed to get device for interop " << iop << ": "
-                 << toString(DeviceOrErr.takeError());
-        continue;
-      }
-      auto &IOPDevice = *DeviceOrErr;
-
-      iop->flush(IOPDevice);
-      iop->sync_barrier(IOPDevice);
+    if (iop->queue && iop->isOwnedBy(Gtid) && !iop->isClean()) {
+      iop->sync_barrier();
       iop->markClean();
 
       // Alternate implementation option in case using barriers is not
@@ -491,13 +561,5 @@ void syncImplicitInterops(int Gtid, void *Event) {
 
 void InteropTblTy::clear() {
   ODBG(ODT_Deinit) << "Clearing Interop Table";
-  PerThreadTable::clear([](auto &IOP) {
-    auto DeviceOrErr = IOP->getDevice();
-    if (!DeviceOrErr) {
-      REPORT() << "Failed to get device for interop " << IOP << ": "
-               << toString(DeviceOrErr.takeError());
-      return;
-    }
-    IOP->release(*DeviceOrErr);
-  });
+  PerThreadTable::clear([](auto &IOP) { IOP->release(); });
 }

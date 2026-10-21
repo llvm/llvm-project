@@ -16,6 +16,7 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
