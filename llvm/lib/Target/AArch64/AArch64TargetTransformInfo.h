@@ -34,7 +34,6 @@ class APInt;
 class Instruction;
 class IntrinsicInst;
 class Loop;
-class MCInst;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -177,10 +176,12 @@ public:
 
   bool prefersVectorizedAddressing() const override;
 
-  /// Check whether Inst1 has less throughput according to the scheduling
-  /// model than Inst2.
-  bool hasKnownLowerThroughputFromSchedulingModel(const MCInst &Inst1,
-                                                  const MCInst &Inst2) const;
+  /// Check whether Opcode1 has less throughput according to the scheduling
+  /// model than Opcode2. Returns std::nullopt if any of the opcodes has a
+  /// variant scheduling class, which cannot be resolved without an instruction.
+  std::optional<bool>
+  hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
+                                             unsigned Opcode2) const;
 
   InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
