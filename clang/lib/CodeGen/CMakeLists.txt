@@ -120,6 +120,7 @@ add_clang_library(clangCodeGen
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
   QualTypeMapper.cpp
+  RISCVLpadLabelGen.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp

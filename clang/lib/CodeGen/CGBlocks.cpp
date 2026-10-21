@@ -19,6 +19,7 @@
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
+#include "RISCVLpadLabelGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
@@ -1236,8 +1237,15 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
 
   CGCallee Callee(CGCalleeInfo(), Func, PointerAuth);
 
-  // And call the block.
-  return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke);
+  llvm::CallBase *LocalCallOrInvoke = nullptr;
+  RValue RV = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke);
+
+  // Add RISC-V landing pad label metadata for zicfilp extension
+  CGM.setRISCVLpadCallSiteMetadata(LocalCallOrInvoke, FnType, E->getExprLoc());
+
+  if (CallOrInvoke)
+    *CallOrInvoke = LocalCallOrInvoke;
+  return RV;
 }
 
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable) {
@@ -1512,6 +1520,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   llvm::Function *fn = llvm::Function::Create(
       fnLLVMType, llvm::GlobalValue::InternalLinkage, name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(blockDecl, fn, fnInfo);
+  CGM.setRISCVLpadFunctionAttr(fn, QualType(fnType, 0));
 
   if (BuildGlobalBlock) {
     auto GenVoidPtrTy = getContext().getLangOpts().OpenCL
@@ -1957,6 +1966,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
+  CGM.setRISCVLpadFunctionAttr(Fn, buildBlockCopyHelperSigTy(C));
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
@@ -2148,6 +2158,9 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
+  // Block dispose helpers share the void(void*) ABI shape with C++
+  // destructors and __cxa_atexit callbacks
+  CGM.setRISCVLpadFunctionAttr(Fn, buildDtorSigTy(C));
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   markAsIgnoreThreadCheckingAtRuntime(Fn);
 
@@ -2413,6 +2426,7 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
                            "__Block_byref_object_copy_", &CGF.CGM.getModule());
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  CGF.CGM.setRISCVLpadFunctionAttr(Fn, buildBlockCopyHelperSigTy(Context));
 
   CGF.StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
     // Create a scope with an artificial location for the body of this function.
@@ -2474,6 +2488,7 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
                            &CGF.CGM.getModule());
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  CGF.CGM.setRISCVLpadFunctionAttr(Fn, buildDtorSigTy(Context));
 
   CGF.StartFunction(GlobalDecl(), R, Fn, FI, args);
     // Create a scope with an artificial location for the body of this function.
