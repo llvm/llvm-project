@@ -1,0 +1,46 @@
+# Test echo command with all supported escape sequences.
+RUN: echo -e '.\a.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-A --match-full-lines --strict-whitespace %s < %t.out
+CHECK-A:.{{\x07}}.
+
+RUN: echo -e '.\b.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-B --match-full-lines --strict-whitespace %s < %t.out
+CHECK-B:.{{\x08}}.
+
+# Unsupported: echo -e '.\c.' (should print .)
+
+RUN: echo -e '.\f.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-F --match-full-lines --strict-whitespace %s < %t.out
+CHECK-F:.{{\x0C}}.
+
+RUN: echo -e '.\n.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-N --match-full-lines --strict-whitespace %s < %t.out
+CHECK-N:.
+CHECK-N:.
+
+RUN: echo -e '.\r.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-R --match-full-lines --strict-whitespace %s < %t.out
+CHECK-R:.{{\x0D}}.
+
+RUN: echo -e '.\t.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-T --match-full-lines --strict-whitespace %s < %t.out
+CHECK-T:.{{\x09}}.
+
+RUN: echo -e '.\v.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-V --match-full-lines --strict-whitespace %s < %t.out
+CHECK-V:.{{\x0B}}.
+
+RUN: echo -e '.\\.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-BSL --match-full-lines --strict-whitespace %s < %t.out
+CHECK-BSL:.\.
+
+# Unsupported: echo -e '.\0100.' > %t.out
+
+# Extension supported in some shells (e.g. busybox ash) and traditionally supported in llvm-lit.
+RUN: echo -e '.\100.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-100 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-100:.@.
+
+RUN: echo -e '.\200.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-200 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-200:.{{\x80}}.

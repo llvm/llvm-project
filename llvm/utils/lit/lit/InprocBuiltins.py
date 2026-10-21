@@ -1,3 +1,4 @@
+import codecs
 import getopt
 import os
 import pathlib
@@ -94,15 +95,15 @@ def executeBuiltinEcho(cmd, shenv):
 
     def maybeUnescape(arg):
         if not interpret_escapes:
-            return arg
-
-        return arg.encode("utf-8").decode("unicode_escape")
+            stdout.write(arg)
+        else:
+            stdout.buffer.write(codecs.escape_decode(arg)[0])
 
     if args:
         for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg))
+            maybeUnescape(arg)
             stdout.write(" ")
-        stdout.write(maybeUnescape(args[-1]))
+        maybeUnescape(args[-1])
     if write_newline:
         stdout.write("\n")
 
