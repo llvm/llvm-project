@@ -622,10 +622,10 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
   LLT DstTy = MRI->getType(DstReg);
   LLT SrcTy = MRI->getType(SrcReg);
   const uint64_t SrcSize = SrcTy.getSizeInBits();
-  unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  uint64_t DstSize = DstTy.getSizeInBits();
 
   // TODO: Should handle any multiple of 32 offset.
-  unsigned Offset = static_cast<unsigned>(I.getOperand(2).getImm());
+  int64_t Offset = I.getOperand(2).getImm();
   if (Offset % 32 != 0 || DstSize > 128)
     return false;
 
@@ -808,7 +808,7 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   LLT DstTy = MRI->getType(DstReg);
   LLT SrcTy = MRI->getType(MI.getOperand(1).getReg());
 
-  const unsigned SrcSize = static_cast<unsigned>(SrcTy.getSizeInBits());
+  const uint64_t SrcSize = SrcTy.getSizeInBits();
   if (SrcSize < 32) {
     // Handle s32 <- G_MERGE_VALUES s16, s16
     if (SrcSize == 16 && DstTy.getSizeInBits() == 32 &&
@@ -838,7 +838,8 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   if (!DstRC)
     return false;
 
-  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(DstRC, SrcSize / 8);
+  unsigned SrcSizeEnc = static_cast<unsigned>(SrcSize);
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(DstRC, SrcSizeEnc / 8);
   MachineInstrBuilder MIB =
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), DstReg);
   for (int I = 0, E = MI.getNumOperands() - 1; I != E; ++I) {
@@ -871,7 +872,7 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   LLT DstTy = MRI->getType(DstReg0);
   LLT SrcTy = MRI->getType(SrcReg);
 
-  const unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  const uint64_t DstSize = DstTy.getSizeInBits();
   const uint64_t SrcSize = SrcTy.getSizeInBits();
   const DebugLoc &DL = MI.getDebugLoc();
   const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, *MRI, TRI);
@@ -882,7 +883,8 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   // Note we could have mixed SGPR and VGPR destination banks for an SGPR
   // source, and this relies on the fact that the same subregister indices are
   // used for both.
-  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
+  unsigned DstSizeEnc = static_cast<unsigned>(DstSize);
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSizeEnc / 8);
   for (int I = 0, E = NumDst; I != E; ++I) {
     Register DstReg = MI.getOperand(I).getReg();
     // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
@@ -1017,7 +1019,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   LLT Src1Ty = MRI->getType(Src1Reg);
 
   uint64_t DstSize = MRI->getType(DstReg).getSizeInBits();
-  unsigned InsSize = static_cast<unsigned>(Src1Ty.getSizeInBits());
+  uint64_t InsSize = Src1Ty.getSizeInBits();
 
   int64_t Offset = I.getOperand(3).getImm();
 
@@ -1029,8 +1031,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   if (InsSize > 128)
     return false;
 
-  unsigned SubReg = TRI.getSubRegFromChannel(static_cast<unsigned>(Offset / 32),
-                                             InsSize / 32);
+  unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32, InsSize / 32);
   if (SubReg == AMDGPU::NoSubRegister)
     return false;
 
@@ -2566,7 +2567,7 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
 
   const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
 
-  unsigned DstSize = static_cast<unsigned>(DstTy.getSizeInBits());
+  uint64_t DstSize = DstTy.getSizeInBits();
   uint64_t SrcSize = SrcTy.getSizeInBits();
 
   const TargetRegisterClass *SrcRC =
@@ -2684,8 +2685,8 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
 }
 
 /// \returns true if a bitmask for \p Size bits will be an inline immediate.
-static bool shouldUseAndMask(unsigned Size, unsigned &Mask) {
-  Mask = maskTrailingOnes<unsigned>(Size);
+static bool shouldUseAndMask(uint64_t Size, unsigned &Mask) {
+  Mask = maskTrailingOnes<unsigned>(static_cast<unsigned>(Size));
   int SignedMask = static_cast<int>(Mask);
   return SignedMask >= -16 && SignedMask <= 64;
 }
@@ -2714,9 +2715,9 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
   const LLT DstTy = MRI->getType(DstReg);
   const LLT SrcTy = MRI->getType(SrcReg);
-  const unsigned SrcSize = I.getOpcode() == AMDGPU::G_SEXT_INREG
-                               ? static_cast<unsigned>(I.getOperand(2).getImm())
-                               : static_cast<unsigned>(SrcTy.getSizeInBits());
+  const uint64_t SrcSize = I.getOpcode() == AMDGPU::G_SEXT_INREG
+                               ? I.getOperand(2).getImm()
+                               : SrcTy.getSizeInBits();
   const uint64_t DstSize = DstTy.getSizeInBits();
   if (!DstTy.isScalar())
     return false;

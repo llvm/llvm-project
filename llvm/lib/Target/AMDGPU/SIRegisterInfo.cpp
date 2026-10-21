@@ -568,8 +568,8 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
-                                              unsigned NumRegs) {
+unsigned SIRegisterInfo::getSubRegFromChannel(uint64_t Channel,
+                                              uint64_t NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());
   unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
   assert(NumRegIndex && "Not implemented");
