@@ -326,6 +326,12 @@ public:
         return false; // Fall back to scalarization of masked operations.
     }
 
+    // Type legalization cannot scalarize the data of a masked load/store.
+    // Reject types that would be legalized to a scalar (e.g. <1 x half>).
+    if (isa<FixedVectorType>(DataType) &&
+        !getTypeLegalizationCost(DataType).second.isVector())
+      return false;
+
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
@@ -536,10 +542,7 @@ public:
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
 
-  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
-                             Instruction *I = nullptr,
-                             int64_t ScalableOffset = 0) const override;
+  bool LSRWithInstrQueries() const override { return true; }
 
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
@@ -570,6 +573,9 @@ public:
     return ST->enableAggressiveInterleaving();
   }
   /// @}
+
+  bool hasPossibleIncompatibleOps(const Function *F, bool ConsiderZA,
+                                  bool ConsiderZT, bool ConsiderSM) const;
 };
 
 } // end namespace llvm

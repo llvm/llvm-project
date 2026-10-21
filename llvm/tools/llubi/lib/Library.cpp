@@ -133,12 +133,13 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
     return AnyValue();
   }
 
-  if (const uint64_t Address = Ptr.address().getZExtValue();
-      Address != Obj->getAddress()) {
+  if (Ptr.address() != Obj->getAddress()) {
+    SmallString<32> AddrStr;
+    Ptr.address().toStringUnsigned(AddrStr, 16);
     Executor.reportImmediateUB()
         << "freeing a pointer that does not point to "
            "the start of an allocation. Pointer address: 0x"
-        << Twine::utohexstr(Address) << ", allocation base: 0x"
+        << AddrStr << ", allocation base: 0x"
         << Twine::utohexstr(Obj->getAddress()) << ".";
     return AnyValue();
   }
@@ -161,9 +162,8 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
   // function comes from a different family (C++ delete, etc.)
 
   if (!Ctx.free(*Obj)) {
-    Executor.reportImmediateUB()
-        << "freeing an invalid pointer at 0x"
-        << Twine::utohexstr(Ptr.address().getZExtValue()) << ".";
+    Executor.reportImmediateUB() << "freeing an invalid pointer at 0x"
+                                 << Twine::utohexstr(Obj->getAddress()) << ".";
     return AnyValue::poison();
   }
 

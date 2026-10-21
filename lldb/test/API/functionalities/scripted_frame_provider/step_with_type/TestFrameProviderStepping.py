@@ -45,6 +45,21 @@ class TestFrameProviderStepping(TestBase):
         """
         self.do_test(True)
 
+    def test_step_with_type_stacked_api(self):
+        """
+        Test that a scripted frame keeps its step plans when a provider
+        stacked on top of it passes it through, using the SB API's to step.
+        """
+        self.do_test(False, stacked=True)
+
+    def test_step_with_type_stacked_command(self):
+        """
+        Test that a scripted frame keeps its step plans when a provider
+        stacked on top of it passes it through, using the command line
+        commands to step.
+        """
+        self.do_test(True, stacked=True)
+
     def test_with_no_step(self):
         """Test that a returning an empty class name falls back to the
         standard stepping algorithms"""
@@ -57,7 +72,7 @@ class TestFrameProviderStepping(TestBase):
         # at 1
         self.assertEqual(self.g_counter.signed, 1, "We stepped once")
 
-    def common_startup(self, provider_class):
+    def common_startup(self, provider_class, stacked_provider_class=None):
         self.build()
 
         (target, _, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -78,6 +93,18 @@ class TestFrameProviderStepping(TestBase):
             error.Success(), f"Should register provider successfully: {error}"
         )
         self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        if stacked_provider_class:
+            stacked_id = target.RegisterScriptedFrameProvider(
+                stacked_provider_class,
+                lldb.SBStructuredData(),
+                error,
+            )
+            self.assertSuccess(error, "Should register stacked provider")
+            self.assertNotEqual(stacked_id, 0, "Provider ID should be non-zero")
+            # The frames come from the stacked provider, borrowed from the
+            # one below it:
+            self.assertEqual(self.thread.GetFrameAtIndex(0).GetFunctionName(), "main")
         # Now do some stepping and make sure each one goes twice:
         self.g_counter = target.FindFirstGlobalVariable("g_counter")
         self.assertSuccess(self.g_counter.error, "Got g_counter value")
@@ -95,11 +122,14 @@ class TestFrameProviderStepping(TestBase):
             self.assertTrue(step_error.fail, "Got a failure as expected")
             self.assertIn(expected_error, step_error.description, "Right error")
 
-    def do_test(
-        self,
-        use_command,
-    ):
-        self.common_startup("frame_provider.CorrectStepProvider")
+    def do_test(self, use_command, stacked=False):
+        if stacked:
+            self.common_startup(
+                "frame_provider.PrioritizedStepProvider",
+                "frame_provider.PassThroughProvider",
+            )
+        else:
+            self.common_startup("frame_provider.CorrectStepProvider")
 
         if use_command:
             self.runCmd("thread step-over")
