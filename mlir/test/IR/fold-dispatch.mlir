@@ -10,6 +10,8 @@
 //    with that attribute.
 //  - `in_place` makes the fold also change the op in place, once: the fold
 //    drops the key.
+//  - `in_place_steps = N` makes the next N folds only change the op in place:
+//    each of them decrements N.
 // Without the attribute, the fold fails.
 
 // `test.fold_dispatch_fallback` has no fold and no fold trait, so only the

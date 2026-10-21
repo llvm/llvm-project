@@ -1001,8 +1001,28 @@ DiagnosedSilenceableFailure
 mlir::test::TestFoldOp::apply(transform::TransformRewriter &rewriter,
                               transform::TransformResults &results,
                               transform::TransformState &state) {
-  for (Operation *op : state.getPayloadOps(getTarget()))
-    emitFoldRemark(op, op->fold());
+  TestFoldApi api = getApi();
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (api == TestFoldApi::Fold) {
+      emitFoldRemark(op, op->fold());
+      continue;
+    }
+    OpBuilder builder(op);
+    NormalizedOpFoldResults foldResults = builder.tryFold(op);
+    emitFoldRemark(op, foldResults);
+    if (api == TestFoldApi::TryFold)
+      continue;
+    FailureOr<SmallVector<Value>> values =
+        builder.materializeFoldResults(op, foldResults, getLiveOnly());
+    InFlightDiagnostic remark = op->emitRemark() << "materialized: ";
+    if (failed(values)) {
+      remark << "failure";
+      continue;
+    }
+    printFoldList(remark, *values, [&](Value value) -> std::string {
+      return value ? describeFoldReplacement(op, value) : "none";
+    });
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1077,6 +1097,8 @@ generatedAttributePrinter(Attribute def, AsmPrinter &printer);
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTransformDialectExtensionTypes.cpp.inc"
+
+#include "TestTransformDialectExtensionEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "TestTransformDialectExtension.cpp.inc"
