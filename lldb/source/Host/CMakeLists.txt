@@ -136,6 +136,7 @@ else()
       macosx/cfcpp/CFCMutableDictionary.cpp
       macosx/cfcpp/CFCMutableSet.cpp
       macosx/cfcpp/CFCString.cpp
+      posix/GetProcessList.cpp
       )
     if (LLDB_ENABLE_PYTHON)
       add_host_subdirectory(macosx
@@ -168,6 +169,7 @@ else()
     add_host_subdirectory(freebsd
       freebsd/Host.cpp
       freebsd/HostInfoFreeBSD.cpp
+      posix/GetProcessList.cpp
       )
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
@@ -180,6 +182,7 @@ else()
     add_host_subdirectory(openbsd
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
+      posix/GetProcessList.cpp
       )
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
