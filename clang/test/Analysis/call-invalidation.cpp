@@ -310,27 +310,27 @@ int aliasing_ptrs_via_mutable_and_const_ptrs() {
   // expected-warning@-1 {{Division by zero}} FIXME: We shouldn't report this.
 }
 
-void gh222438_opaque(int *p, const int *q);
-void gh222438_opaque_cb(int *p, const int *q, void (*cb)());
+void gh222438_opaque(int *ptr_to_mutable, const int *ptr_to_const);
+void gh222438_opaque_cb(int *ptr_to_mutable, const int *ptr_to_const, void (*cb)());
 void cb();
 
 void testNoCallbackWithConstArg() {
-  int x = 0, y = 0;
-  gh222438_opaque(&x, &y);
-  clang_analyzer_eval(x == 0); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+  int invalidated = 0, preserved = 0;
+  gh222438_opaque(&invalidated, &preserved);
+  clang_analyzer_eval(invalidated == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(preserved == 0); // expected-warning{{TRUE}}
 }
 
 void testCallbackWithConstArg() {
-  int x = 1, y = 1;
-  gh222438_opaque_cb(&x, &y, cb);
-  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
+  int invalidated = 1, preserved = 1;
+  gh222438_opaque_cb(&invalidated, &preserved, cb);
+  clang_analyzer_eval(invalidated == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(preserved == 1); // expected-warning{{TRUE}}
 }
 
 void testNullCallbackWithConstArg() {
-  int x = 1, y = 1;
-  gh222438_opaque_cb(&x, &y, 0);
-  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
+  int invalidated = 1, preserved = 1;
+  gh222438_opaque_cb(&invalidated, &preserved, 0);
+  clang_analyzer_eval(invalidated == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(preserved == 1); // expected-warning{{TRUE}}
 }
