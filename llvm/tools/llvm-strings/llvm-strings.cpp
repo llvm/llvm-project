@@ -93,6 +93,41 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
+// Ideally we would use mbrtoc32() and c32rtomb() unconditionally but there are
+// problems on most platforms, thus we introduce wrappers. On Windows,
+// mbrtoc32() ignores the locale and only converts UTF-8, but wchar_t is UTF-16
+// and is close enough, as long as we make sure to avoid it for UTF-8 locales.
+// On Apple, <uchar.h> is not available, but wchar_t is UTF-32 and is a full
+// substitute.
+// On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
+// instead it handles this case by returning 0 but setting Ch to a non-null
+// character.
+#if defined(_WIN32) || defined(__APPLE__)
+using char_t = wchar_t;
+static std::size_t mbrtoc(char_t *Ch, const char *S, size_t N,
+                          std::mbstate_t *MBState) {
+  const std::size_t Result = std::mbrtowc(Ch, S, N, MBState);
+  if (Result == 0 && *Ch)
+    Result = (std::size_t)-3;
+  return Result;
+}
+static std::size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
+  return std::wcrtomb(S, Ch, MBState);
+}
+#else
+using char_t = char32_t;
+static std::size_t mbrtoc(char_t *Ch, const char *S, size_t N,
+                          std::mbstate_t *MBState) {
+  std::size_t Result = std::mbrtoc32(Ch, S, N, MBState);
+  if (Result == 0 && *Ch)
+    Result = (std::size_t)-3;
+  return Result;
+}
+static std::size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
+  return std::c32rtomb(S, Ch, MBState);
+}
+#endif
+
 template <enum Encoding> struct Strings {
   Strings() = delete;
 
@@ -147,36 +182,14 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
 
   const char *Next = Cur;
   std::mbstate_t NextMBState = MBState;
-#if defined(_WIN32) || defined(__APPLE__)
-  wchar_t UCh;
-#else
-  char32_t UCh;
-#endif
+  char_t UCh;
   for (;;) {
     // Read one byte at a time. This is usually not the best way to use
     // mbrtoc32(), usually it would make more sense to pass the size of the
     // buffer, but the strings utility is unusual in that it is expected to
     // encounter many bytes that do not form valid characters and it is more
     // useful to optimise for this case.
-#if defined(_WIN32) || defined(__APPLE__)
-    // Workarounds:
-    // On Windows, mbrtoc32() ignores the locale and only converts UTF-8, but
-    // wchar_t is UTF-16 and is close enough, as long as we make sure to avoid
-    // it for UTF-8 locales.
-    // On Apple, <uchar.h> is not available, but wchar_t is UTF-32 and is a full
-    // substitute.
-    std::size_t BytesRead = std::mbrtowc(&UCh, Next, 1, &NextMBState);
-#else
-    std::size_t BytesRead = std::mbrtoc32(&UCh, Next, 1, &NextMBState);
-#endif
-    // Workaround:
-    // BytesRead == 0 should mean we found a null byte and should always have
-    // UCh == 0, but on glibc, it also gets returned for the case that should
-    // be indicated by (std::size_t)-3, as indicating that 0 bytes were
-    // converted. It can be detected by UCh != 0.
-    if (BytesRead == 0 && UCh) {
-      BytesRead = (std::size_t)-3;
-    }
+    const std::size_t BytesRead = mbrtoc(&UCh, Next, 1, &NextMBState);
     switch (BytesRead) {
     case 1:
       ++Next;
@@ -269,11 +282,7 @@ void Strings<Encoding::Locale>::endString(raw_ostream &OS,
   char Buf[MB_LEN_MAX];
   // Note: This is only required for stateful encodings such as the
   // ISO-2022 ones.
-#if defined(_WIN32) || defined(__APPLE__)
-  const std::size_t BytesWritten = std::wcrtomb(Buf, L'\0', &MBState);
-#else
-  const std::size_t BytesWritten = std::c32rtomb(Buf, U'\0', &MBState);
-#endif
+  const std::size_t BytesWritten = crtomb(Buf, 0, &MBState);
   assert(BytesWritten < (std::size_t)-1 &&
          "A null character must always be valid");
   Buf[BytesWritten - 1] = '\n';
