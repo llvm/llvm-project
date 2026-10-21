@@ -814,3 +814,17 @@ MLIR targets AGX the way it targets AMDGPU:
 .. code-block:: console
 
   $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(agxir-attach-target{chip=agx-g14g},gpu.module(convert-gpu-to-agxir),gpu-module-to-binary{format=isa})'
+
+Host code from ``gpu-to-llvm`` calls MLIR's GPU runtime wrappers (``mgpu*``).
+With ``-DMLIR_ENABLE_AGX_RUNNER=ON -DMLIR_AGX_LIBCUDA=<ZLUDA's
+libnvcuda_agx.so>``, ``mlir_agx_runtime`` is ``CudaRuntimeWrappers.cpp`` built
+without a CUDA toolkit (``lib/ExecutionEngine/AGXCudaCompat/cuda.h`` declares
+the part of the driver API it uses) against ZLUDA's CUDA driver for Asahi
+Linux, so ``mlir-runner --shared-libs=libmlir_agx_runtime.so`` runs
+``gpu.launch_func`` on the GPU with ZLUDA's tracing: launch records and fault
+dumps, and with ``#agxir.target<..., features = "+agx-checked">`` checked
+mode, whose reports name the ``.mlir`` lines when the kernels have debug
+locations (``-ensure-debug-info-scope-on-llvm-func`` and
+``-mlir-print-debuginfo`` between pipelines). ``test/Integration/GPU/AGX``
+needs the hardware; ``test/Integration/Dialect/AGX/checked.mlir`` runs the
+same checked kernel shape on the AGX Performance Simulator.

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -gpu-kernel-outlining \
-// RUN:   -agxir-attach-target="chip=%chip features=+agx-checked" \
+// RUN:   -agxir-attach-target="chip=%chip features=+agx-checked" -mlir-print-debuginfo \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(convert-gpu-to-agxir,reconcile-unrealized-casts),ensure-debug-info-scope-on-llvm-func,gpu-to-llvm,reconcile-unrealized-casts,gpu-module-to-binary)' \
 // RUN: | env ZLUDA_AGX_DUMP= mlir-runner --shared-libs=%mlir_agx_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils --entry-point-result=void 2>&1 \
