@@ -18,7 +18,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 char TargetGroup::ID;
-char TargetGroupCPUAndAccelerator::ID;
+char TargetGroupCPUAndAccelerators::ID;
 
 TargetGroup::TargetGroup(TargetGroupList &group_list,
                          llvm::StringRef description)
@@ -34,13 +34,13 @@ llvm::Error TargetGroup::ValidateTargetAddition(const TargetSP &, Role) const {
   return llvm::Error::success();
 }
 
-TargetGroupCPUAndAccelerator::TargetGroupCPUAndAccelerator(
+TargetGroupCPUAndAccelerators::TargetGroupCPUAndAccelerators(
     TargetGroupList &group_list, llvm::StringRef description)
     : Base(group_list, description) {}
 
 llvm::Error
-TargetGroupCPUAndAccelerator::ValidateTargetAddition(const TargetSP &,
-                                                     Role role) const {
+TargetGroupCPUAndAccelerators::ValidateTargetAddition(const TargetSP &,
+                                                      Role role) const {
   switch (role) {
   case Role::CPU:
     if (!GetTargets().empty())
@@ -54,6 +54,13 @@ TargetGroupCPUAndAccelerator::ValidateTargetAddition(const TargetSP &,
     break;
   }
   return llvm::Error::success();
+}
+
+TargetSP TargetGroupCPUAndAccelerators::GetCPUTarget() const {
+  std::vector<TargetSP> cpu_targets = GetTargets(Role::CPU);
+  assert(cpu_targets.size() <= 1 &&
+         "CPU and accelerator group contains multiple CPU targets");
+  return cpu_targets.empty() ? nullptr : cpu_targets.front();
 }
 
 llvm::Error TargetGroup::AddTarget(const TargetSP &target_sp, Role role) {

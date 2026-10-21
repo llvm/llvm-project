@@ -105,7 +105,7 @@ TEST_F(TargetGroupTest, StoresTargetRoles) {
   EXPECT_EQ(std::vector<TargetGroupSP>{group_sp}, groups.GetGroups());
 }
 
-TEST_F(TargetGroupTest, CPUAndAcceleratorValidatesTargetMembership) {
+TEST_F(TargetGroupTest, CPUAndAcceleratorsValidatesTargetMembership) {
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
 
@@ -123,7 +123,7 @@ TEST_F(TargetGroupTest, CPUAndAcceleratorValidatesTargetMembership) {
       groups.CreateTargetGroup("unrelated CPU group");
   ASSERT_TRUE(unrelated_group_sp);
   EXPECT_FALSE(
-      llvm::isa<TargetGroupCPUAndAccelerator>(unrelated_group_sp.get()));
+      llvm::isa<TargetGroupCPUAndAccelerators>(unrelated_group_sp.get()));
   EXPECT_THAT_ERROR(
       unrelated_group_sp->AddTarget(cpu_target_sp, TargetGroup::Role::CPU),
       llvm::Succeeded());
@@ -131,10 +131,15 @@ TEST_F(TargetGroupTest, CPUAndAcceleratorValidatesTargetMembership) {
                                                   TargetGroup::Role::CPU),
                     llvm::Succeeded());
 
-  auto group_sp = groups.CreateTargetGroup<TargetGroupCPUAndAccelerator>(
+  EXPECT_FALSE(
+      cpu_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>());
+
+  auto group_sp = groups.CreateTargetGroup<TargetGroupCPUAndAccelerators>(
       "CPU and accelerator targets");
   ASSERT_TRUE(group_sp);
-  EXPECT_TRUE(llvm::isa<TargetGroupCPUAndAccelerator>(group_sp.get()));
+  EXPECT_TRUE(llvm::isa<TargetGroupCPUAndAccelerators>(group_sp.get()));
+  EXPECT_FALSE(group_sp->GetCPUTarget());
 
   EXPECT_THAT_ERROR(
       group_sp->AddTarget(first_accelerator_target_sp,
@@ -146,6 +151,10 @@ TEST_F(TargetGroupTest, CPUAndAcceleratorValidatesTargetMembership) {
 
   EXPECT_THAT_ERROR(group_sp->AddTarget(cpu_target_sp, TargetGroup::Role::CPU),
                     llvm::Succeeded());
+  EXPECT_EQ(cpu_target_sp, group_sp->GetCPUTarget());
+  EXPECT_EQ(group_sp,
+            cpu_target_sp
+                ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>());
   EXPECT_EQ((std::vector<TargetGroupSP>{unrelated_group_sp, group_sp}),
             cpu_target_sp->GetTargetGroups());
   EXPECT_THAT_ERROR(

@@ -4399,23 +4399,14 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
         connect_info.platform_name, connect_info.triple);
 
   TargetSP native_target_sp = GetTarget().shared_from_this();
-  TargetGroupSP group_sp;
-  for (const TargetGroupSP &candidate_group_sp :
-       native_target_sp->GetTargetGroups()) {
-    if (!llvm::isa<TargetGroupCPUAndAccelerator>(candidate_group_sp.get()) ||
-        candidate_group_sp->GetRole(native_target_sp) != TargetGroup::Role::CPU)
-      continue;
-    if (group_sp)
-      return llvm::createStringError(
-          "native target belongs to multiple CPU and accelerator target "
-          "groups");
-    group_sp = candidate_group_sp;
-  }
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
 
   bool created_group = !group_sp;
   if (created_group) {
     group_sp = debugger.GetTargetGroupList()
-                   .CreateTargetGroup<TargetGroupCPUAndAccelerator>(
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
                        "CPU and accelerator targets");
   }
 

@@ -93,18 +93,21 @@ private:
 
 /// A group that accepts a CPU target as its first member, followed by
 /// accelerator targets.
-class TargetGroupCPUAndAccelerator final
-    : public llvm::RTTIExtends<TargetGroupCPUAndAccelerator, TargetGroup> {
-  using Base = llvm::RTTIExtends<TargetGroupCPUAndAccelerator, TargetGroup>;
+class TargetGroupCPUAndAccelerators final
+    : public llvm::RTTIExtends<TargetGroupCPUAndAccelerators, TargetGroup> {
+  using Base = llvm::RTTIExtends<TargetGroupCPUAndAccelerators, TargetGroup>;
 
 public:
   static char ID;
 
+  /// Return the CPU target, or nullptr if the group has no CPU target.
+  lldb::TargetSP GetCPUTarget() const;
+
 private:
   friend class TargetGroupList;
 
-  TargetGroupCPUAndAccelerator(TargetGroupList &group_list,
-                               llvm::StringRef description);
+  TargetGroupCPUAndAccelerators(TargetGroupList &group_list,
+                                llvm::StringRef description);
 
   llvm::Error ValidateTargetAddition(const lldb::TargetSP &target_sp,
                                      Role role) const override;
