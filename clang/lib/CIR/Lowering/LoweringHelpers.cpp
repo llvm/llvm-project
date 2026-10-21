@@ -73,7 +73,7 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
 
 mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                 mlir::DataLayout const &dataLayout,
-                                mlir::Type type) {
+                                mlir::Type type, bool isForHLSL) {
   // TODO(cir): Handle other types similarly to clang's codegen
   // convertTypeForMemory
   if (mlir::isa<cir::BoolType>(type)) {
@@ -82,10 +82,12 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   }
 
   if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
-    if (mlir::isa<cir::BoolType>(matrixTy.getElementType())) {
-      assert(!cir::MissingFeatures::hlsl());
-      llvm_unreachable(
-          "convertTypeForMemory: Matrix with bool as element type");
+    if (isForHLSL) {
+      unsigned vecLen = matrixTy.getNumRows();
+      unsigned arrayLen = matrixTy.getNumColumns();
+      mlir::Type elementType = converter.convertType(matrixTy.getElementType());
+      auto vecTy = mlir::VectorType::get(vecLen, elementType);
+      return mlir::LLVM::LLVMArrayType::get(vecTy, arrayLen);
     }
 
     uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();

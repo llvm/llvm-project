@@ -85,7 +85,7 @@ mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
 
 mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                 mlir::DataLayout const &dataLayout,
-                                mlir::Type type);
+                                mlir::Type type, bool isForHLSL = false);
 
 /// The type of a load/store's *value*, as opposed to convertTypeForMemory's
 /// type of the memory it lives in. The two are effectively identical except
