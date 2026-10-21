@@ -6040,7 +6040,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidUImm5s8:
     return Error(Loc, "immediate must be a multiple of 8 in range [0, 248].");
   case Match_InvalidUImm3s8:
-    return Error(Loc, "immediate must be a multiple of 8 in range [0, 56].");
+    return Error(Loc, "index must be a multiple of 8 in range [0, 56].");
   case Match_InvalidUImm5s4:
     return Error(Loc, "immediate must be a multiple of 4 in range [0, 124].");
   case Match_InvalidUImm5s2:
