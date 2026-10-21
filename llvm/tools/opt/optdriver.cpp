@@ -290,11 +290,6 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::list<std::string>
-    PluginArgs("plugin-arg",
-               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
-               cl::value_desc("plugin>,<arg"));
-
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
 //
@@ -470,7 +465,7 @@ optMain(int argc, char **argv,
   }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
-  if (Error E = passPluginArguments(Extensions, PluginArgs))
+  if (Error E = passPluginArguments(Extensions, &Context.getLibraryOptions()))
     reportFatalUsageError(std::move(E));
 
   // TODO: remove shouldForceLegacyPM().

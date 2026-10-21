@@ -216,11 +216,6 @@ static cl::opt<std::string> RemarksFormat(
 static cl::list<std::string> PassPlugins("load-pass-plugin",
                                          cl::desc("Load plugin library"));
 
-static cl::list<std::string>
-    PluginArgs("plugin-arg",
-               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
-               cl::value_desc("plugin>,<arg"));
-
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -418,7 +413,7 @@ extern "C" int llcMain(int argc, char **argv) {
   if (Error E = passPluginArguments(
           map_to_vector(PluginList,
                         [](const PassPlugin &P) { return P.getInfo(); }),
-          PluginArgs))
+          &Context.getLibraryOptions()))
     reportFatalUsageError(std::move(E));
 
   if (!PassPipeline.empty() && !getRunPassNames().empty()) {

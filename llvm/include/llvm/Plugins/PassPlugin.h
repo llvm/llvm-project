@@ -121,11 +121,16 @@ private:
   PassPluginLibraryInfo Info;
 };
 
-/// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
-/// callback of the extension in \p Infos with that name. Two extensions with
-/// the same name are an error.
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
+/// Passes each -plugin-arg=<PluginName>,<arg> in \p Opts, or in the global
+/// library options if \p Opts is null, to the \c ParseArguments callback of
+/// the extension in \p Infos with that name. Two extensions with the same name
+/// are an error.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
-                                   ArrayRef<std::string> Args);
+                                   const cl::LibraryOptionsContext *Opts);
 } // namespace llvm
 
 // The function returns a struct with default initializers.
