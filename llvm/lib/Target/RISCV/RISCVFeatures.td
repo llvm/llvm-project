@@ -1347,13 +1347,13 @@ def HasStdExtZbkbOrP
 //                  no longer reserved for vendor extension).
 def FeatureStdExtY
     : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)", [],
-                                 "IsRVYCapMode">;
+                                 "HasStdExtYCapMode">;
 def FeatureStdExtZyhybrid
     : RISCVExperimentalExtension<0, 910,
                                  "Hybrid Extension for RVI Compatibility">;
 
-def HasRVYInstructions
-    : Predicate<"Subtarget->hasRVYInstructions()">,
+def HasYInstructions
+    : Predicate<"Subtarget->hasYInstructions()">,
       AssemblerPredicate<(any_of FeatureStdExtY, FeatureStdExtZyhybrid),
                          "'Base Y' (CHERI) or "
                          "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
