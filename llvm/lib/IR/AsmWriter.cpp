@@ -3729,6 +3729,8 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       // emit if true to avoid unnecessary verbosity and test churn.
       if (Call.second.HasTailCall)
         Out << ", tail: 1";
+      if (Call.second.HasIndirectCall)
+        Out << ", indirect: 1";
       Out << ")";
     }
     Out << ")";

@@ -1004,6 +1004,13 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return true;
   case SemanticKind::InstanceID:
     return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::ShadingRate:
+    // Lowered to:
+    //  - ShadingRateKHR built-in for fragment input.
+    //  - PrimitiveShadingRateKHR built-in for vertex output.
+    // TODO: extend to mesh
+    return (ST == llvm::Triple::Pixel && IsInput) ||
+           (ST == llvm::Triple::Vertex && !IsInput);
   default:
     return false;
   }
@@ -1236,6 +1243,17 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
 
+  // DXIL only: SV_ShadingRate requires shader model 6.4.
+  if (Kind == SemanticKind::ShadingRate) {
+    const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
+    if (TT.isDXIL() && TT.getOSVersion() < VersionTuple(6, 4)) {
+      Diag(SemanticAttr->getLoc(),
+           diag::err_hlsl_semantic_in_wrong_shader_model)
+          << SemanticAttr->getAttrName() << "6.4";
+      return;
+    }
+  }
+
   // A system-value name can have an arbitrary interpretation, for example
   // SV_Position on a vertex input. Only the general type restrictions apply.
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
@@ -1371,8 +1389,10 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
     return;
   case SemanticKind::InstanceID:
-    // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per
-    // VUID-InstanceIndex-InstanceIndex-04265.
+  case SemanticKind::ShadingRate:
+    // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per:
+    // - VUID-InstanceIndex-InstanceIndex-04265
+    // - VUID-ShadingRateKHR-ShadingRateKHR-04492
     if (!T->isUnsignedIntegerType() ||
         !(isIntElementOfWidth(Ctx, T, 32) ||
           (!IsSPIRV && isIntElementOfWidth(Ctx, T, 16))))
@@ -2197,7 +2217,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::InsideTessFactor:
   case SemanticKind::ViewID:
   case SemanticKind::Barycentrics:
-  case SemanticKind::ShadingRate:
   case SemanticKind::CullPrimitive:
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
     return;
