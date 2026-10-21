@@ -2776,10 +2776,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
-    // If we have a low-trip-count, and the fixed-width VF is known to divide
-    // the trip count the fixed-width factor in preference to allow the
-    // generation of a non-predicated loop.
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+    // If we have a low-trip-count, or optimize for code size, and the
+    // fixed-width VF is known to divide the trip count the fixed-width factor
+    // in preference to allow the generation of a non-predicated loop.
+    if ((EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop ||
+         EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize) &&
         NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
       LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                            "remain for any chosen VF.\n");
