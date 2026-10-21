@@ -419,6 +419,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- `-Wuninitialized-explicit-init` now diagnoses C tentative definitions that are
+  never completed with an initializer, such as `struct S s;` at file scope,
+  which leave fields marked `require_explicit_initialization` zero-initialized.
+  (#GH232483)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
