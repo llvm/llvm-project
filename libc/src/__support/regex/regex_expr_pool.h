@@ -134,8 +134,11 @@ public:
     return byte_sets[id];
   }
 
-  /// O(1) nullability query for a valid ExprId.
+  /// O(1) unconditional nullability query for a valid ExprId.
   bool is_nullable(ExprId id) const { return get(id).nullable; }
+
+  /// O(1) query indicating whether the subtree at id contains an Anchor node.
+  bool has_anchors(ExprId id) const { return get(id).has_anchors; }
 
   /// Returns the number of unique AST nodes currently interned in this pool.
   size_t size() const { return node_count; }
@@ -158,6 +161,8 @@ public:
   ErrorOr<ExprId> empty_str();
   /// Creates or returns an existing Literal node for the given character.
   ErrorOr<ExprId> make_lit(char c);
+  /// Creates or returns an existing Anchor node for the given AnchorKind mask.
+  ErrorOr<ExprId> make_anchor(uint8_t mask);
   /// Creates or returns an existing node for the given 256-bit character set.
   ErrorOr<ExprId> make_byte_set(const ByteSet &bs);
   /// Normalizing factory for Concatenation (L · R).
