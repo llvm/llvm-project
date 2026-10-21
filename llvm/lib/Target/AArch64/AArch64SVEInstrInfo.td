@@ -753,6 +753,20 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
   defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", AArch64bic>;
 
+  // Select BIC when NOT's inactive values are undefined or all lanes are active.
+  multiclass SVEAndNotPats<ValueType VT, ValueType PT> {
+    def : Pat<(and VT:$a,
+                (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+    def : Pat<(and VT:$a,
+                (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+  }
+  defm : SVEAndNotPats<nxv16i8, nxv16i1>;
+  defm : SVEAndNotPats<nxv8i16, nxv8i1>;
+  defm : SVEAndNotPats<nxv4i32, nxv4i1>;
+  defm : SVEAndNotPats<nxv2i64, nxv2i1>;
+
   defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  AArch64add_m1, DestructiveBinaryComm>;
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  AArch64sub_m1, DestructiveBinaryCommWithRev, "SUBR_ZPmZ">;
   defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", AArch64subr_m1, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;

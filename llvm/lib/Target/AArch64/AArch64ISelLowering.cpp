@@ -22137,18 +22137,6 @@ static SDValue performSVEAndCombine(SDNode *N,
   assert(N->getOpcode() == ISD::AND && "Expected AND instruction");
   SelectionDAG &DAG = DCI.DAG;
 
-  // Fold AND of a predicated NOT into BIC when NOT's inactive lanes do not
-  // matter, leaving standalone NOTs available for predicated selection.
-  for (unsigned I = 0; I != 2; ++I) {
-    SDValue Not = N->getOperand(I);
-    if (getIntrinsicID(Not.getNode()) != Intrinsic::aarch64_sve_not)
-      continue;
-    if (Not.getOperand(1).isUndef() ||
-        isAllActivePredicate(DAG, Not.getOperand(2)))
-      return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
-                         N->getOperand(1 - I), Not.getOperand(3));
-  }
-
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
 
