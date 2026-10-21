@@ -127,6 +127,22 @@ static uint64_t resolveBPF(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsAGX(uint64_t Type) {
+  return Type == ELF::R_AGX_ABS64 || Type == ELF::R_AGX_ABS32;
+}
+
+static uint64_t resolveAGX(uint64_t Type, uint64_t Offset, uint64_t S,
+                           uint64_t /*LocData*/, int64_t Addend) {
+  switch (Type) {
+  case ELF::R_AGX_ABS32:
+    return (S + Addend) & 0xFFFFFFFF;
+  case ELF::R_AGX_ABS64:
+    return S + Addend;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsMips64(uint64_t Type) {
   switch (Type) {
   case ELF::R_MIPS_32:
@@ -824,6 +840,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       case Triple::bpfel:
       case Triple::bpfeb:
         return {supportsBPF, resolveBPF};
+      case Triple::agx:
+        return {supportsAGX, resolveAGX};
       case Triple::loongarch64:
         return {supportsLoongArch, resolveLoongArch};
       case Triple::mips64el:

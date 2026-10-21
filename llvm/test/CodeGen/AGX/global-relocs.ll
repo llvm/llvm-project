@@ -5,8 +5,8 @@
 ; (R_AGX_ABS64 = 1, R_AGX_ABS32 = 2), which the loader applies.
 
 ; CHECK:      Section ({{[0-9]+}}) .rela.agx.globals {
-; CHECK-NEXT:   0x28 Unknown x 0x0
-; CHECK-NEXT:   0x30 Unknown y 0x0
+; CHECK-NEXT:   0x28 R_AGX_ABS64 x 0x0
+; CHECK-NEXT:   0x30 R_AGX_ABS64 y 0x0
 ; CHECK-NEXT: }
 
 @x = addrspace(1) global i64 1

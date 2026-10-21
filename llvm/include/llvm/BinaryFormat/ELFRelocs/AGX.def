@@ -1,0 +1,7 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_AGX_NONE,  0)
+ELF_RELOC(R_AGX_ABS64, 1)
+ELF_RELOC(R_AGX_ABS32, 2)

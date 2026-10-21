@@ -228,6 +228,18 @@ benchmark kernels on ``agx-g13g`` and ``agx-g14c``): 6.0% more code (3142 to
 float atomic add becomes a compare-and-swap loop (1449.7 to 1514.4 cycles);
 on G13, which has no native float atomic, the cycles are the same.
 
+Debug information
+-----------------
+
+With debug locations, objects carry DWARF (``.debug_line`` and, for full
+debug info, ``.debug_info``); addresses are offsets in ``.text``. Debug
+sections use the two data relocations ``R_AGX_ABS32`` and ``R_AGX_ABS64``,
+which ``llvm-dwarfdump``, ``llvm-objdump -l``, ``llvm-addr2line`` and
+``llvm-symbolizer`` resolve, so these map an AGX PC to its source line. The
+ZLUDA runtime ignores the debug sections when loading; the AGX Performance
+Simulator's ``agx_run --lines`` names the source line of a faulting
+instruction.
+
 Checked mode
 ------------
 
