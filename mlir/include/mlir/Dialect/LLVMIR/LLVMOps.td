@@ -2121,9 +2121,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     ```
 
     The `function_entry_count` attribute models function-level `!prof`
-    entry-count metadata. It stores the entry count, whether the count is real
-    or synthetic, and any trailing import GUID operands in a single
-    `#llvm.function_entry_count` attribute.
+    entry-count metadata. It stores the entry count and any trailing import
+    GUID operands in a single `#llvm.function_entry_count` attribute.
   }];
 
   let arguments = (ins
