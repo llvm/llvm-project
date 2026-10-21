@@ -1,6 +1,7 @@
 ! RUN: split-file %s %t
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/source.f90 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/source.f90 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -o - %t/source.f90 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 -o - %t/source.f90 | FileCheck %s --check-prefix=LLVM
 ! RUN: %flang_fc1 -emit-llvm -fopenmp-simd -fopenmp-version=51 -o - %t/source.f90 | FileCheck %s --check-prefix=SIMD
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 %t/source.f90 | FileCheck %s --check-prefix=SYMBOLS
@@ -8,6 +9,11 @@
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE
 ! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE-LLVM
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE60
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE,SCOPE52
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE,SCOPE60
+! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=52 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE-LLVM,SCOPE52-LLVM
+! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefixes=SCOPE-LLVM,SCOPE60-LLVM
 
 !--- source.f90
 ! SIMD: target triple =
@@ -147,6 +153,46 @@ end subroutine uses_assumes_module_reload
 ! SUBMODULE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
 ! SUBMODULE-LABEL: func.func @_QPuses_assumes_module_reload() {
 
+! SUBMODULE60-LABEL: func.func @_QMassumes_modulePseparate_work() {
+! SUBMODULE60-LABEL: func.func @_QPuses_assumes_module_reload() {
+
+!--- versioned-scope.f90
+module scoped_assumes
+  implicit none
+  !$omp assumes no_openmp
+  interface
+    module subroutine independent_work() bind(C, name="independent_work")
+    end subroutine independent_work
+  end interface
+contains
+  ! SCOPE-LABEL: func.func @_QMscoped_assumesPmodule_work()
+  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  subroutine module_work()
+  end subroutine module_work
+end module scoped_assumes
+
+submodule (scoped_assumes) scoped_implementation
+contains
+  ! SCOPE52-LABEL: func.func @independent_work()
+  ! SCOPE52-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  ! SCOPE60-LABEL: func.func @independent_work()
+  ! SCOPE60-NOT: "omp_no_openmp"
+  module procedure independent_work
+    ! SCOPE: omp.parallel {
+    !$omp parallel
+      ! SCOPE: omp.barrier
+      !$omp barrier
+    !$omp end parallel
+  end procedure independent_work
+
+  ! SCOPE-LABEL: func.func @{{.*}}Plocal_work()
+  ! SCOPE-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  subroutine local_work()
+    implicit none
+    !$omp assumes no_openmp
+  end subroutine local_work
+end submodule scoped_implementation
+
 ! LLVM-LABEL: define void @assume_block_(
 ! LLVM-SAME: {{.*}}) {
 ! LLVM-LABEL: define void @_QMassumes_modulePset_value(
@@ -171,3 +217,13 @@ end subroutine uses_assumes_module_reload
 ! SUBMODULE-LLVM-SAME: #[[ATTR:[0-9]+]] {
 ! SUBMODULE-LLVM-LABEL: define void @uses_assumes_module_reload_() {
 ! SUBMODULE-LLVM: attributes #[[ATTR]] = { "llvm.assume"="omp_no_openmp" }
+
+! SCOPE-LLVM-LABEL: define void @_QMscoped_assumesPmodule_work()
+! SCOPE-LLVM-SAME: #[[SCOPE_ATTR:[0-9]+]] {
+! SCOPE52-LLVM-LABEL: define void @independent_work()
+! SCOPE52-LLVM-SAME: #[[SCOPE_ATTR]] {
+! SCOPE60-LLVM-LABEL: define void @independent_work() {
+! SCOPE-LLVM: call void {{.*}}@__kmpc_fork_call
+! SCOPE-LLVM-LABEL: define void @{{.*}}Plocal_work()
+! SCOPE-LLVM-SAME: #[[SCOPE_ATTR]] {
+! SCOPE-LLVM: attributes #[[SCOPE_ATTR]] = { "llvm.assume"="omp_no_openmp" }

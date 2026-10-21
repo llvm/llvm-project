@@ -61,6 +61,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "flang/Semantics/openmp-dsa.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -6508,9 +6509,14 @@ private:
     builder->setFPMaxminBehavior(
         bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
+    const auto &langOptions = bridge.getSemanticsContext().langOptions();
+    const auto *assumptionScopeEnd =
+        langOptions.getOpenMPVersion() >= 60
+            ? &Fortran::semantics::omp::GetProgramUnit(scope).parent()
+            : nullptr;
     for (const auto *assumptionScope = &scope;
-         !bridge.getSemanticsContext().langOptions().OpenMPSimd &&
-         !assumptionScope->IsGlobal();
+         !langOptions.OpenMPSimd && !assumptionScope->IsGlobal() &&
+         assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
       const auto *symbol = assumptionScope->symbol();
       if (!symbol ||
