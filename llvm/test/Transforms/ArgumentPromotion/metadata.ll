@@ -3,10 +3,11 @@
 
 declare void @use.i32(i32)
 declare void @use.p32(ptr)
+declare void @use.f32(float)
 
-define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10) {
+define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10, ptr %p11) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], i32 [[P2_0_VAL:%.*]], ptr [[P3_0_VAL:%.*]], ptr [[P4_0_VAL:%.*]], ptr [[P5_0_VAL:%.*]], ptr [[P6_0_VAL:%.*]], ptr [[P7_0_VAL:%.*]], ptr [[P8_0_VAL:%.*]], ptr [[P9_0_VAL:%.*]], ptr [[P10_0_VAL:%.*]]) {
+; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], i32 [[P2_0_VAL:%.*]], ptr [[P3_0_VAL:%.*]], ptr [[P4_0_VAL:%.*]], ptr [[P5_0_VAL:%.*]], ptr [[P6_0_VAL:%.*]], ptr [[P7_0_VAL:%.*]], ptr [[P8_0_VAL:%.*]], ptr [[P9_0_VAL:%.*]], ptr [[P10_0_VAL:%.*]], float [[P11_0_VAL:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[P4_0_VAL]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[P1_0_VAL]])
@@ -19,6 +20,7 @@ define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p
 ; CHECK-NEXT:    call void @use.p32(ptr [[P8_0_VAL]])
 ; CHECK-NEXT:    call void @use.p32(ptr [[P9_0_VAL]])
 ; CHECK-NEXT:    call void @use.p32(ptr [[P10_0_VAL]])
+; CHECK-NEXT:    call void @use.f32(float [[P11_0_VAL]])
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load i32, ptr %p1, !range !0
@@ -31,6 +33,7 @@ define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p
   %v8 = load ptr, ptr %p8, !align !3, !noundef !1
   %v9 = load ptr, ptr %p9, !noundef !1
   %v10 = load ptr, ptr %p10, !nontemporal !4
+  %v11 = load float, ptr %p11, !nofpclass !{i32 3}
   call void @use.i32(i32 %v1)
   call void @use.i32(i32 %v2)
   call void @use.p32(ptr %v3)
@@ -41,26 +44,28 @@ define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p
   call void @use.p32(ptr %v8)
   call void @use.p32(ptr %v9)
   call void @use.p32(ptr %v10)
+  call void @use.f32(float %v11)
   ret void
 }
 
-define void @caller(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10) {
+define void @caller(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10, ptr %p11) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
-; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]], ptr [[P5:%.*]], ptr [[P6:%.*]], ptr [[P7:%.*]], ptr [[P8:%.*]], ptr [[P9:%.*]], ptr [[P10:%.*]]) {
+; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]], ptr [[P5:%.*]], ptr [[P6:%.*]], ptr [[P7:%.*]], ptr [[P8:%.*]], ptr [[P9:%.*]], ptr [[P10:%.*]], ptr [[P11:%.*]]) {
 ; CHECK-NEXT:    [[P1_VAL:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[P2_VAL:%.*]] = load i32, ptr [[P2]], align 4, !range [[RNG0:![0-9]+]], !noundef !1
+; CHECK-NEXT:    [[P2_VAL:%.*]] = load i32, ptr [[P2]], align 4, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[P3_VAL:%.*]] = load ptr, ptr [[P3]], align 8
-; CHECK-NEXT:    [[P4_VAL:%.*]] = load ptr, ptr [[P4]], align 8, !nonnull !1, !noundef !1
-; CHECK-NEXT:    [[P5_VAL:%.*]] = load ptr, ptr [[P5]], align 8, !dereferenceable !2
-; CHECK-NEXT:    [[P6_VAL:%.*]] = load ptr, ptr [[P6]], align 8, !dereferenceable_or_null !2
+; CHECK-NEXT:    [[P4_VAL:%.*]] = load ptr, ptr [[P4]], align 8, !nonnull [[META1]], !noundef [[META1]]
+; CHECK-NEXT:    [[P5_VAL:%.*]] = load ptr, ptr [[P5]], align 8, !dereferenceable [[META2:![0-9]+]]
+; CHECK-NEXT:    [[P6_VAL:%.*]] = load ptr, ptr [[P6]], align 8, !dereferenceable_or_null [[META2]]
 ; CHECK-NEXT:    [[P7_VAL:%.*]] = load ptr, ptr [[P7]], align 8
-; CHECK-NEXT:    [[P8_VAL:%.*]] = load ptr, ptr [[P8]], align 8, !align !3, !noundef !1
-; CHECK-NEXT:    [[P9_VAL:%.*]] = load ptr, ptr [[P9]], align 8, !noundef !1
-; CHECK-NEXT:    [[P10_VAL:%.*]] = load ptr, ptr [[P10]], align 8, !nontemporal !4
-; CHECK-NEXT:    call void @callee(i32 [[P1_VAL]], i32 [[P2_VAL]], ptr [[P3_VAL]], ptr [[P4_VAL]], ptr [[P5_VAL]], ptr [[P6_VAL]], ptr [[P7_VAL]], ptr [[P8_VAL]], ptr [[P9_VAL]], ptr [[P10_VAL]])
+; CHECK-NEXT:    [[P8_VAL:%.*]] = load ptr, ptr [[P8]], align 8, !align [[META3:![0-9]+]], !noundef [[META1]]
+; CHECK-NEXT:    [[P9_VAL:%.*]] = load ptr, ptr [[P9]], align 8, !noundef [[META1]]
+; CHECK-NEXT:    [[P10_VAL:%.*]] = load ptr, ptr [[P10]], align 8, !nontemporal [[META4:![0-9]+]]
+; CHECK-NEXT:    [[P11_VAL:%.*]] = load float, ptr [[P11]], align 4
+; CHECK-NEXT:    call void @callee(i32 [[P1_VAL]], i32 [[P2_VAL]], ptr [[P3_VAL]], ptr [[P4_VAL]], ptr [[P5_VAL]], ptr [[P6_VAL]], ptr [[P7_VAL]], ptr [[P8_VAL]], ptr [[P9_VAL]], ptr [[P10_VAL]], float [[P11_VAL]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10)
+  call void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, ptr %p9, ptr %p10, ptr %p11)
   ret void
 }
 

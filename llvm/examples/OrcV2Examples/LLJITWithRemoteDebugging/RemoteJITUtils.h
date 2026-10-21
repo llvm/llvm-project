@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/Support/Error.h"
@@ -37,6 +38,7 @@ llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress);
 
 llvm::Expected<std::unique_ptr<llvm::orc::DefinitionGenerator>>
-loadDylib(llvm::orc::ExecutionSession &ES, llvm::StringRef RemotePath);
+loadDylib(llvm::orc::ExecutionSession &ES, llvm::orc::DylibManager &DylibMgr,
+          llvm::StringRef RemotePath);
 
 #endif

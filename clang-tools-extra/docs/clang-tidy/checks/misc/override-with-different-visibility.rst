@@ -5,11 +5,12 @@ misc-override-with-different-visibility
 
 Finds virtual function overrides with different visibility than the function
 in the base class. This includes for example if a virtual function declared as
-``private`` is overridden and declared as ``public`` in a subclass. The detected
-change is the modification of visibility resulting from keywords ``public``,
-``protected``, ``private`` at overridden virtual functions. The check applies to
-any normal virtual function and optionally to destructors or operators. Use of
-the ``using`` keyword is not considered as visibility change by this check.
+``private`` is overridden and declared as ``public`` in a subclass. The
+detected change is the modification of visibility resulting from keywords
+``public``, ``protected``, ``private`` at overridden virtual functions. The
+check applies to any normal virtual function and optionally to destructors or
+operators. Use of the ``using`` keyword is not considered as visibility
+change by this check.
 
 
 .. code-block:: c++
@@ -20,7 +21,7 @@ the ``using`` keyword is not considered as visibility change by this check.
   private:
     virtual void f_priv();
   };
-  
+
   class B: public A {
   public:
     void f_priv(); // warning: changed visibility from private to public

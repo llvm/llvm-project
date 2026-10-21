@@ -6,12 +6,12 @@
 
 define i64 @fuse_addis_ld() {
 entry:
-; CHECK-P8: ********** MI Scheduling **********
+; CHECK-P8: Current Schedule Region
 ; CHECK-P8-LABEL: fuse_addis_ld:%bb.0 entry
 ; CHECK-P8: Macro fuse: SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]]) /  ADDIStocHA8 - LD
 ; CHECK-P8: SU([[SU0]]):   %[[REG3:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @m
 ; CHECK-P8: SU([[SU1]]):   %{{[0-9]+}}:g8rc = LD target-flags(ppc-toc-lo) @m, %[[REG3]]
-; CHECK-P8: ********** MI Scheduling **********
+; CHECK-P8: Current Schedule Region
 ; CHECK-P8-LABEL: fuse_addis_ld:%bb.0 entry
 ; CHECK-P8: Macro fuse: SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]]) /  ADDIStocHA8 - LD
 ; CHECK-P8: SU([[SU0]]):   renamable $x[[REG3:[0-9]+]] = ADDIStocHA8 $x2, @m

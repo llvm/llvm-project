@@ -45,7 +45,7 @@ class ConcatInputSection;
 class Symbol;
 class Defined;
 class AliasSymbol;
-struct Reloc;
+struct Relocation;
 enum class RefState : uint8_t;
 
 // If --reproduce option is given, all input files are written
@@ -167,6 +167,7 @@ public:
   template <class LP> void parse();
   template <class LP>
   void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
+  void parseDeferredRelocations();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
@@ -199,6 +200,7 @@ private:
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
+  template <class LP> void parseDeferredRelocationsImpl();
   void parseDebugInfo();
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
@@ -328,6 +330,8 @@ extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 extern llvm::SmallVector<StringRef> unprocessedLCLinkerOptions;
 
 std::optional<MemoryBufferRef> readFile(StringRef path);
+
+void parseDeferredRelocations();
 
 void extract(InputFile &file, StringRef reason);
 

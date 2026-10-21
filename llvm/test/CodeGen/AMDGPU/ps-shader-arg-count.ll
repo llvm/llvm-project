@@ -1,7 +1,7 @@
-;RUN: llc -global-isel=1 < %s -mtriple=amdgcn-pal -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
-;RUN: llc -global-isel=1 < %s -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
-;RUN: llc -global-isel=0 < %s -mtriple=amdgcn-pal -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
-;RUN: llc -global-isel=0 < %s -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
+;RUN: llc -global-isel=1 < %s -mtriple=amdgpu10.10-pal | FileCheck %s --check-prefixes=CHECK
+;RUN: llc -global-isel=1 < %s -mtriple=amdgpu10.10-mesa-mesa3d | FileCheck %s --check-prefixes=CHECK
+;RUN: llc -global-isel=0 < %s -mtriple=amdgpu10.10-pal | FileCheck %s --check-prefixes=CHECK
+;RUN: llc -global-isel=0 < %s -mtriple=amdgpu10.10-mesa-mesa3d | FileCheck %s --check-prefixes=CHECK
 
 ; ;CHECK-LABEL: {{^}}_amdgpu_ps_1_arg:
 ; ;CHECK: NumVgprs: 4
@@ -359,7 +359,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   ret { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res
 }
 
-attributes #0 = { nounwind "target-features"=",+wavefrontsize64,+cumode"  }
-attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind "target-features"="+wavefrontsize64,+cumode"  }
+attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"="+wavefrontsize64,+cumode" }
+attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"="+wavefrontsize64,+cumode" }
+attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"="+wavefrontsize64,+cumode" }

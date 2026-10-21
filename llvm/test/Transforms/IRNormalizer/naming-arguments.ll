@@ -5,8 +5,8 @@ define i32 @foo(i32, i32) {
 ; CHECK-LABEL: define i32 @foo(
 ; CHECK-SAME: i32 [[A0:%.*]], i32 [[A1:%.*]]) {
 ; CHECK-NEXT:  [[BB17254:.*:]]
-; CHECK-NEXT:    %"vl20416([[A0]], [[A1]])" = mul i32 [[A0]], [[A1]]
-; CHECK-NEXT:    ret i32 %"vl20416([[A0]], [[A1]])"
+; CHECK-NEXT:    %"vl11241([[A0]], [[A1]])" = mul i32 [[A0]], [[A1]]
+; CHECK-NEXT:    ret i32 %"vl11241([[A0]], [[A1]])"
 ;
   %tmp = mul i32 %0, %1
   ret i32 %tmp

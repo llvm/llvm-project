@@ -11,7 +11,6 @@ define <vscale x 1 x i64> @masked_load_nxv1i64(ptr %a, <vscale x 1 x i1> %mask) 
   %load = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64(ptr %a, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
   ret <vscale x 1 x i64> %load
 }
-declare <vscale x 1 x i64> @llvm.masked.load.nxv1i64(ptr, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
 
 define <vscale x 2 x i64> @masked_load_nxv2i64(ptr %a, <vscale x 2 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv2i64:
@@ -22,7 +21,6 @@ define <vscale x 2 x i64> @masked_load_nxv2i64(ptr %a, <vscale x 2 x i1> %mask) 
   %load = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %a, i32 8, <vscale x 2 x i1> %mask, <vscale x 2 x i64> poison)
   ret <vscale x 2 x i64> %load
 }
-declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
 
 define <vscale x 4 x i64> @masked_load_nxv4i64(ptr %a, <vscale x 4 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv4i64:
@@ -33,7 +31,6 @@ define <vscale x 4 x i64> @masked_load_nxv4i64(ptr %a, <vscale x 4 x i1> %mask) 
   %load = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64(ptr %a, i32 8, <vscale x 4 x i1> %mask, <vscale x 4 x i64> poison)
   ret <vscale x 4 x i64> %load
 }
-declare <vscale x 4 x i64> @llvm.masked.load.nxv4i64(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i64>)
 
 define <vscale x 8 x i64> @masked_load_nxv8i64(ptr %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8i64:
@@ -44,4 +41,3 @@ define <vscale x 8 x i64> @masked_load_nxv8i64(ptr %a, <vscale x 8 x i1> %mask) 
   %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x i64> poison)
   ret <vscale x 8 x i64> %load
 }
-declare <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i64>)

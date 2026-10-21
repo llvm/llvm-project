@@ -26,23 +26,29 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   assert(Func);
   assert(FuncDecl->isThisDeclarationADefinition());
 
-  // Manually created functions that haven't been assigned proper
-  // parameters yet.
-  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
+  Func->setDefined(true);
+  // Lambda static invokers are a special case that we emit custom code for.
+  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
+                                  FuncDecl->isConstexpr() ||
+                                  FuncDecl->hasAttr<MSConstexprAttr>();
+
+  if (!IsEligibleForCompilation) {
+    Func->setIsFullyCompiled(true);
     return;
+  }
 
   // Set up lambda captures.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && isLambdaCallOperator(MD)) {
+  if (Func->isLambdaCallOperator()) {
     // Set up lambda capture to closure record field mapping.
-    const Record *R = P.getOrCreateRecord(MD->getParent());
+    const CXXRecordDecl *ParentDecl = Func->getParentDecl();
+    const Record *R = P.getOrCreateRecord(ParentDecl);
     assert(R);
     llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
     FieldDecl *LTC;
 
-    MD->getParent()->getCaptureFields(LC, LTC);
+    ParentDecl->getCaptureFields(LC, LTC);
 
-    for (auto Cap : LC) {
+    for (const auto &Cap : LC) {
       unsigned Offset = R->getField(Cap.second)->Offset;
       this->LambdaCaptures[Cap.first] = {
           Offset, Cap.second->getType()->isReferenceType()};
@@ -54,26 +60,18 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
     }
   }
 
-  // Register parameters with their offset.
-  unsigned ParamIndex = 0;
-  unsigned Drop = Func->hasRVO() +
-                  (Func->hasThisPointer() && !Func->isThisPointerExplicit());
-  for (auto ParamOffset : llvm::drop_begin(Func->ParamOffsets, Drop)) {
-    const ParmVarDecl *PD = FuncDecl->parameters()[ParamIndex];
-    OptPrimType T = Ctx.classify(PD->getType());
-    this->Params.insert({PD, {ParamOffset, T != std::nullopt}});
-    ++ParamIndex;
+  bool IsValid = !FuncDecl->isInvalidDecl();
+  // Register parameters and their index.
+  for (unsigned ParamIndex = 0, N = Func->getNumWrittenParams();
+       ParamIndex != N; ++ParamIndex) {
+    const ParmVarDecl *PD = FuncDecl->getParamDecl(ParamIndex);
+    if (PD->isInvalidDecl())
+      IsValid = false;
+    this->Params.insert({PD, {ParamIndex, Ctx.canClassify(PD->getType())}});
   }
 
-  Func->setDefined(true);
-
-  // Lambda static invokers are a special case that we emit custom code for.
-  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
-                                  FuncDecl->isConstexpr() ||
-                                  FuncDecl->hasAttr<MSConstexprAttr>();
-
   // Compile the function body.
-  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
+  if (!visitFunc(FuncDecl)) {
     Func->setIsFullyCompiled(true);
     return;
   }
@@ -86,15 +84,15 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 
   // Set the function's code.
   Func->setCode(FuncDecl, NextLocalOffset, std::move(Code), std::move(SrcMap),
-                std::move(Scopes), FuncDecl->hasBody());
+                std::move(Scopes), FuncDecl->hasBody(), IsValid);
   Func->setIsFullyCompiled(true);
 }
 
-Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
+Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
-  NextLocalOffset += align(D->getAllocSize());
-  return {Location, D};
+  NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
+  return {D, Location};
 }
 
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
@@ -131,48 +129,41 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 }
 
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
-/// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
-                 const T &Val, bool &Success) {
+static bool emit(llvm::SmallVectorImpl<std::byte> &Code, const T &Val) {
   size_t ValPos = Code.size();
   size_t Size;
 
   if constexpr (std::is_pointer_v<T>)
-    Size = align(sizeof(uint32_t));
+    Size = align(sizeof(uintptr_t));
   else
     Size = align(sizeof(T));
 
-  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
-  }
+  if (ValPos + Size > std::numeric_limits<unsigned>::max())
+    return false;
 
   // Access must be aligned!
   assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
   Code.resize_for_overwrite(ValPos + Size);
 
-  if constexpr (!std::is_pointer_v<T>) {
+  if constexpr (std::is_pointer_v<T>)
+    new (Code.data() + ValPos) uintptr_t(reinterpret_cast<uintptr_t>(Val));
+  else
     new (Code.data() + ValPos) T(Val);
-  } else {
-    uint32_t ID = P.getOrCreateNativePointer(Val);
-    new (Code.data() + ValPos) uint32_t(ID);
-  }
+  return true;
 }
 
 /// Emits a serializable value. These usually (potentially) contain
 /// heap-allocated memory and aren't trivially copyable.
 template <typename T>
-static void emitSerialized(llvm::SmallVectorImpl<std::byte> &Code, const T &Val,
-                           bool &Success) {
+static bool emitSerialized(llvm::SmallVectorImpl<std::byte> &Code,
+                           const T &Val) {
   size_t ValPos = Code.size();
   size_t Size = align(Val.bytesToSerialize());
 
-  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
-  }
+  if (ValPos + Size > std::numeric_limits<unsigned>::max())
+    return false;
 
   // Access must be aligned!
   assert(aligned(ValPos));
@@ -180,58 +171,53 @@ static void emitSerialized(llvm::SmallVectorImpl<std::byte> &Code, const T &Val,
   Code.resize_for_overwrite(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
+  return true;
 }
 
 template <>
-void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
-          const Floating &Val, bool &Success) {
-  emitSerialized(Code, Val, Success);
+bool emit(llvm::SmallVectorImpl<std::byte> &Code, const Floating &Val) {
+  return emitSerialized(Code, Val);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
-          const IntegralAP<false> &Val, bool &Success) {
-  emitSerialized(Code, Val, Success);
+bool emit(llvm::SmallVectorImpl<std::byte> &Code,
+          const IntegralAP<false> &Val) {
+  return emitSerialized(Code, Val);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
-          const IntegralAP<true> &Val, bool &Success) {
-  emitSerialized(Code, Val, Success);
+bool emit(llvm::SmallVectorImpl<std::byte> &Code, const IntegralAP<true> &Val) {
+  return emitSerialized(Code, Val);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
-          const FixedPoint &Val, bool &Success) {
-  emitSerialized(Code, Val, Success);
+bool emit(llvm::SmallVectorImpl<std::byte> &Code, const FixedPoint &Val) {
+  return emitSerialized(Code, Val);
 }
 
 template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
-  bool Success = true;
-
   // The opcode is followed by arguments. The source info is
   // attached to the address after the opcode.
-  emit(P, Code, Op, Success);
-  if (LocOverride)
-    SrcMap.emplace_back(Code.size(), *LocOverride);
-  else if (SI)
-    SrcMap.emplace_back(Code.size(), SI);
+  emit(Code, Op);
 
-  (..., emit(P, Code, Args, Success));
-  return Success;
+  SI = LocOverride.value_or(SI);
+  if (SrcMap.empty() || SrcMap.back() != SI)
+    SrcMap.push(Code.size(), SI);
+
+  return (emit(Code, Args) && ...);
 }
 
-bool ByteCodeEmitter::jumpTrue(const LabelTy &Label) {
-  return emitJt(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
+  return emitJt(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jumpFalse(const LabelTy &Label) {
-  return emitJf(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
+  return emitJf(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jump(const LabelTy &Label) {
-  return emitJmp(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  return emitJmp(getOffset(Label), SI);
 }
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {

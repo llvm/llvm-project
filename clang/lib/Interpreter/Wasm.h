@@ -17,13 +17,17 @@
 #error "This requires emscripten."
 #endif // __EMSCRIPTEN__
 
-#include "IncrementalExecutor.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
+#include "llvm/ADT/SmallString.h"
+#include <string>
+#include <vector>
 
 namespace clang {
 
 class WasmIncrementalExecutor : public IncrementalExecutor {
 public:
-  WasmIncrementalExecutor(llvm::orc::ThreadSafeContext &TSC);
+  WasmIncrementalExecutor(llvm::Error &Err, std::vector<std::string> LLVMArgs);
+  ~WasmIncrementalExecutor() override;
 
   llvm::Error addModule(PartialTranslationUnit &PTU) override;
   llvm::Error removeModule(PartialTranslationUnit &PTU) override;
@@ -32,8 +36,11 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef Name,
                    SymbolNameKind NameKind) const override;
+  llvm::Error LoadDynamicLibrary(const char *name) override;
 
-  ~WasmIncrementalExecutor() override;
+private:
+  llvm::SmallString<256> TempDir;
+  std::vector<std::string> StoredLLVMArgs;
 };
 
 } // namespace clang

@@ -7,7 +7,7 @@ program p
    ! CHECK2: fatal-errors-parsing.f90:{{.*}} error:
 continue
 end
-   
+
 subroutine s
 contains
    ! CHECK1-NOT: error:

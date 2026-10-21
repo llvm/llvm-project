@@ -20,9 +20,10 @@ using namespace llvm;
 void LanaiMCAsmInfo::anchor() {}
 
 LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple & /*TheTriple*/,
-                               const MCTargetOptions &Options) {
+                               const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   IsLittleEndian = false;
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   WeakRefDirective = "\t.weak\t";
   ExceptionsType = ExceptionHandling::DwarfCFI;
 

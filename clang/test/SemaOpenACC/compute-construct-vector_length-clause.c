@@ -8,23 +8,23 @@ void Test() {
 #pragma acc kernels vector_length(1)
   while(1);
 
-  // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'kernels' directive}}
+  // expected-error@+2{{OpenACC clause 'vector_length' cannot combine with previous 'vector_length' clause on a 'kernels' directive}}
   // expected-note@+1{{previous 'vector_length' clause is here}}
 #pragma acc kernels vector_length(1) vector_length(2)
   while(1);
 
-  // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'parallel' directive}}
+  // expected-error@+2{{OpenACC clause 'vector_length' cannot combine with previous 'vector_length' clause on a 'parallel' directive}}
   // expected-note@+1{{previous 'vector_length' clause is here}}
 #pragma acc parallel vector_length(1) vector_length(2)
   while(1);
 
-  // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'kernels' directive}}
+  // expected-error@+3{{OpenACC clause 'vector_length' cannot combine with previous 'vector_length' clause in the same 'device_type' region on a 'kernels' directive}}
   // expected-note@+2{{previous 'vector_length' clause is here}}
   // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels vector_length(1) device_type(*) vector_length(1) vector_length(2)
   while(1);
 
-  // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'parallel' directive}}
+  // expected-error@+3{{OpenACC clause 'vector_length' cannot combine with previous 'vector_length' clause in the same 'device_type' region on a 'parallel' directive}}
   // expected-note@+2{{previous 'vector_length' clause is here}}
   // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel device_type(*) vector_length(1) vector_length(2)

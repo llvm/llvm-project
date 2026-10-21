@@ -282,3 +282,24 @@
 #if __has_embed (__FILE__ limit(1) foo
 int a = __has_embed (__FILE__);
 #endif
+
+// expected-error@+2 {{expected '('}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed("" if_empty
+#endif
+
+// expected-error@+2 {{expected '('}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed("" limit
+#endif
+
+// expected-error@+2 {{missing '(' after '__has_include'}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_embed(__has_include)
+#endif
+
+// expected-error@+3 {{missing '(' after '__has_embed'}}
+// expected-error@+2 {{expected value in expression}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_embed(__has_embed)
+#endif

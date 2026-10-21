@@ -2,6 +2,8 @@ add_lldb_unittest(LLDBFormatterTests
   FormatManagerTests.cpp
   FormattersContainerTest.cpp
   FormatterBytecodeTest.cpp
+  FormatterSectionTest.cpp
+  FormattersHelpersTests.cpp
   StringPrinterTests.cpp
 
   LINK_COMPONENTS
@@ -9,7 +11,12 @@ add_lldb_unittest(LLDBFormatterTests
   LINK_LIBS
     lldbCore
     lldbInterpreter
+    lldbPluginObjectFileELF
+    lldbPluginPlatformLinux
+    lldbPluginSymbolFileSymtab
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbUtilityHelpers
+    LLVMTestingSupport
   )

@@ -8,6 +8,7 @@
 !CHECK: %[[V1:[a-z_0-9]+]] = arith.constant 2.000000e+00 : f32
 !CHECK:   = arith.mulf %[[V0]], %[[V1]] fastmath<contract> : f32
 !CHECK: omp.terminator
+!CHECK: {omp.combined}
 !CHECK-NOT: omp
 !CHECK: return
 
@@ -36,7 +37,7 @@ subroutine process_a(n, a)
   return
 
   entry process_b(n, b)
-    
+
   !$omp parallel
   do i = 1, n
     a(i) = i * i

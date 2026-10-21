@@ -23,6 +23,6 @@ namespace llvm {
 /// to AArch64TargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createAArch64MacroFusionDAGMutation();
 
-} // llvm
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_AARCH64_AARCH64MACROFUSION_H

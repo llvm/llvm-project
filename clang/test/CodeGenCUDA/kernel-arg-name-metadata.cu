@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fhip-kernel-arg-name \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fhip-kernel-arg-name \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefix=NEG %s
 

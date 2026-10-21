@@ -35,7 +35,7 @@ def IsLA64
                          "LA64 Basic Integer and Privilege Instruction Set">;
 def IsLA32
     : Predicate<"!Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of(not Feature64Bit)),
+      AssemblerPredicate<(none_of Feature64Bit),
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
@@ -171,6 +171,9 @@ def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;
 
+// Generic 32-bit processor.
+def : ProcessorModel<"loongarch32", NoSchedModel, [Feature32Bit]>;
+
 // Generic 64-bit processor with double-precision floating-point support.
 def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
                                                    FeatureUAL,
@@ -201,6 +204,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
 //===----------------------------------------------------------------------===//
+
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 def LoongArchInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;

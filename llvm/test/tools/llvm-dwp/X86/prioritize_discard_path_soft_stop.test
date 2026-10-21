@@ -1,0 +1,41 @@
+UNSUPPORTED: true
+## Manual test to illustrate overflow ordering using existing Inputs.
+## It builds two .dwo files from prepared sources and shows that the second
+## argument causes the overflow and gets discarded under soft-stop.
+## Requires large disk space and time.
+RUN: rm -rf %t && mkdir -p %t/prefix %t/other
+RUN: cp %S/../Inputs/overflow/debug_info_v4.s %t/prefix/hello_v4.s
+RUN: cp %S/../Inputs/overflow/main_v4.s %t/other/main_v4.s
+
+## Build hello and main into separate .dwo files.
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj \
+RUN:   --split-dwarf-file=%t/prefix/hello.dwo -dwarf-version=4 \
+RUN:   %t/prefix/hello_v4.s -o %t/prefix/hello.o
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj \
+RUN:   --split-dwarf-file=%t/other/main.dwo -dwarf-version=4 \
+RUN:   %t/other/main_v4.s -o %t/other/main.o
+
+## Case 1: main then hello -> overflow occurs on hello; hello is discarded; only main remains.
+RUN: llvm-dwp %t/other/main.dwo %t/prefix/hello.dwo \
+RUN:   -continue-on-cu-index-overflow=soft-stop \
+RUN:   -o %t/out1.dwp 2>&1 | FileCheck %s --check-prefix=WARN
+RUN: llvm-dwarfdump -debug-info %t/out1.dwp | FileCheck %s --check-prefix=DWO-NAME-MAIN
+
+## Case 2: hello then main -> overflow occurs on main; main is discarded; only hello remains.
+RUN: llvm-dwp %t/prefix/hello.dwo %t/other/main.dwo \
+RUN:   -continue-on-cu-index-overflow=soft-stop \
+RUN:   -o %t/out2.dwp 2>&1 | FileCheck %s --check-prefix=WARN
+RUN: llvm-dwarfdump -debug-info %t/out2.dwp | FileCheck %s --check-prefix=DWO-NAME-HELLO
+
+## Optional: demonstrate --prioritize-discard-path aligns with desired discard priority.
+RUN: llvm-dwp %t/prefix/hello.dwo %t/other/main.dwo \
+RUN:   -continue-on-cu-index-overflow=soft-stop \
+RUN:   --prioritize-discard-path=%t/prefix \
+RUN:   -o %t/out3.dwp 2>&1 | FileCheck %s --check-prefix=WARN
+RUN: llvm-dwarfdump -debug-info %t/out3.dwp | FileCheck %s --check-prefix=DWO-NAME-MAIN
+
+WARN: warning: {{.*}}overflow 4G{{.*}}
+DWO-NAME-MAIN: DW_AT_GNU_dwo_name {{.*}}"main.dwo"
+DWO-NAME-MAIN-NOT: DW_AT_GNU_dwo_name {{.*}}"hello.dwo"
+DWO-NAME-HELLO: DW_AT_GNU_dwo_name {{.*}}"hello.dwo"
+DWO-NAME-HELLO-NOT: DW_AT_GNU_dwo_name {{.*}}"main.dwo"

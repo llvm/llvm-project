@@ -521,7 +521,7 @@ contains
 end module
 
 module m21
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
   ! KIND type parameter where they both have the same value
   type t(typeParam)
@@ -647,7 +647,7 @@ contains
 end module
 
 module m24
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type with a
   ! LEN type parameter where they are both assumed
   type t(typeParam)

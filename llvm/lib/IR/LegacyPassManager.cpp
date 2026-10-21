@@ -12,6 +12,7 @@
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/PassInfo.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -632,12 +634,12 @@ AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
     AUFoldingSetNode* Node = nullptr;
     FoldingSetNodeID ID;
     AUFoldingSetNode::Profile(ID, AU);
-    void *IP = nullptr;
-    if (auto *N = UniqueAnalysisUsages.FindNodeOrInsertPos(ID, IP))
+    FoldingSetInsertToken Token;
+    if (auto *N = UniqueAnalysisUsages.lookup(ID, Token))
       Node = N;
     else {
       Node = new (AUFoldingSetNodeAllocator.Allocate()) AUFoldingSetNode(AU);
-      UniqueAnalysisUsages.InsertNode(Node, IP);
+      UniqueAnalysisUsages.insert(Node, Token);
     }
     assert(Node && "cached analysis usage must be non null");
 
@@ -903,42 +905,34 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  for (DenseMap<AnalysisID, Pass*>::iterator I = AvailableAnalysis.begin(),
-         E = AvailableAnalysis.end(); I != E; ) {
-    DenseMap<AnalysisID, Pass*>::iterator Info = I++;
-    if (Info->second->getAsImmutablePass() == nullptr &&
-        !is_contained(PreservedSet, Info->first)) {
-      // Remove this analysis
-      if (PassDebugging >= Details) {
-        Pass *S = Info->second;
-        dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-        dbgs() << S->getPassName() << "'\n";
-      }
-      AvailableAnalysis.erase(Info);
-    }
-  }
-
+  SmallVector<DenseMap<AnalysisID, Pass *> *, 8> Maps = {&AvailableAnalysis};
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
-    if (!IA)
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
+    if (IA)
+      Maps.push_back(IA);
+  // Prune every map from a single remove_if call site. The instantiated
+  // DenseMap::remove_if is a local function; sharing it across more than one
+  // call site makes the inliner emit it out of line, which adds a call in this
+  // hot per-pass path. A single call site keeps it inlined here.
+  for (DenseMap<AnalysisID, Pass *> *M : Maps) {
+    // These maps are usually empty here, but a DenseMap keeps its grown bucket
+    // array after the entries are erased, so remove_if would still scan all
+    // those empty buckets. Skip it.
+    if (M->empty())
       continue;
-
-    for (DenseMap<AnalysisID, Pass *>::iterator I = IA->begin(),
-                                                E = IA->end();
-         I != E;) {
-      DenseMap<AnalysisID, Pass *>::iterator Info = I++;
-      if (Info->second->getAsImmutablePass() == nullptr &&
-          !is_contained(PreservedSet, Info->first)) {
-        // Remove this analysis
-        if (PassDebugging >= Details) {
-          Pass *S = Info->second;
-          dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-          dbgs() << S->getPassName() << "'\n";
-        }
-        IA->erase(Info);
+    M->remove_if([&](const auto &Entry) {
+      if (Entry.second->getAsImmutablePass() != nullptr ||
+          is_contained(PreservedSet, Entry.first))
+        return false;
+      // Remove this analysis
+      if (PassDebugging >= Details) {
+        Pass *S = Entry.second;
+        dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
+        dbgs() << S->getPassName() << "'\n";
       }
-    }
+      return true;
+    });
   }
 }
 
@@ -1098,7 +1092,7 @@ void PMDataManager::initializeAnalysisImpl(Pass *P) {
 Pass *PMDataManager::findAnalysisPass(AnalysisID AID, bool SearchParent) {
 
   // Check if AvailableAnalysis map has one entry.
-  DenseMap<AnalysisID, Pass*>::const_iterator I =  AvailableAnalysis.find(AID);
+  auto I = AvailableAnalysis.find(AID);
 
   if (I != AvailableAnalysis.end())
     return I->second;
@@ -1374,7 +1368,7 @@ bool FPPassManager::runOnFunction(Function &F) {
   // Store name outside of loop to avoid redundant calls.
   const StringRef Name = F.getName();
   llvm::TimeTraceScope FunctionScope("OptFunction", Name);
-
+  SmallString<0> BeforeStr, AfterStr;
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1388,6 +1382,31 @@ bool FPPassManager::runOnFunction(Function &F) {
     dumpRequiredSet(FP);
 
     initializeAnalysisImpl(FP);
+
+    // For --print-changed, capture the IR before the pass. Skip analyses (like
+    // the new pass manager) and passes with no registry info (pass managers and
+    // unregistered infrastructure passes).
+    StringRef PassID;
+    bool ReportChanged = PrintChanged != ChangePrinter::None;
+    bool IsInteresting = false, ShouldCaptureChanged = false;
+    bool ShouldPrintChanged = false;
+    if (ReportChanged) {
+      const PassInfo *PI = Pass::lookupPassInfo(FP->getPassID());
+      if (PI && !PI->isAnalysis()) {
+        PassID = PI->getPassArgument();
+        IsInteresting = isPassInPrintList(PassID);
+        ShouldCaptureChanged = IsInteresting;
+      } else {
+        ReportChanged = false;
+      }
+    }
+    if (ShouldCaptureChanged) {
+      BeforeStr.clear();
+      AfterStr.clear();
+      raw_svector_ostream OS(BeforeStr);
+      // printIRUnit returns false if there is nothing to report.
+      ShouldPrintChanged = FP->printIRUnit(OS, F);
+    }
 
     {
       PassManagerPrettyStackEntry X(FP, F);
@@ -1420,6 +1439,14 @@ bool FPPassManager::runOnFunction(Function &F) {
         }
       }
     }
+
+    if (ShouldCaptureChanged) {
+      raw_svector_ostream OS(AfterStr);
+      ShouldPrintChanged |= FP->printIRUnit(OS, F);
+    }
+    if (ReportChanged)
+      reportChangedIR(BeforeStr, AfterStr, FP->getPassName(), PassID, Name,
+                      IsInteresting, ShouldPrintChanged);
 
     Changed |= LocalChanged;
     if (LocalChanged)
@@ -1493,6 +1520,23 @@ MPPassManager::runOnModule(Module &M) {
   if (EmitICRemark)
     InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
 
+  SmallString<0> BeforeStr, AfterStr;
+  auto PrintIR = [&M](raw_ostream &OS) {
+    if (isSourceLocFilterEmpty()) {
+      M.print(OS, /*AAW=*/nullptr);
+      return true;
+    }
+
+    bool Printed = false;
+    for (const Function &F : M) {
+      if (!shouldPrintFunction(F))
+        continue;
+      F.print(OS);
+      Printed = true;
+    }
+    return Printed;
+  };
+
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     ModulePass *MP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1501,6 +1545,27 @@ MPPassManager::runOnModule(Module &M) {
     dumpRequiredSet(MP);
 
     initializeAnalysisImpl(MP);
+
+    // As in FPPassManager, but for module passes. A function-name filter by
+    // itself does not filter module passes.
+    StringRef PassID;
+    bool ReportChanged = PrintChanged != ChangePrinter::None;
+    bool IsInteresting = false, ShouldPrintChanged = false;
+    if (ReportChanged) {
+      const PassInfo *PI = Pass::lookupPassInfo(MP->getPassID());
+      if (PI && !PI->isAnalysis()) {
+        PassID = PI->getPassArgument();
+        IsInteresting = isPassInPrintList(PassID);
+      } else {
+        ReportChanged = false;
+      }
+    }
+    if (IsInteresting) {
+      BeforeStr.clear();
+      AfterStr.clear();
+      raw_svector_ostream OS(BeforeStr);
+      ShouldPrintChanged = PrintIR(OS);
+    }
 
     {
       PassManagerPrettyStackEntry X(MP, M);
@@ -1529,6 +1594,15 @@ MPPassManager::runOnModule(Module &M) {
         }
       }
     }
+
+    if (IsInteresting) {
+      raw_svector_ostream OS(AfterStr);
+      ShouldPrintChanged |= PrintIR(OS);
+    }
+    if (ReportChanged)
+      reportChangedIR(BeforeStr, AfterStr, MP->getPassName(), PassID,
+                      M.getModuleIdentifier(), IsInteresting,
+                      ShouldPrintChanged);
 
     Changed |= LocalChanged;
     if (LocalChanged)

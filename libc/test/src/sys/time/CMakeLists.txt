@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_time_unittests)
 
-add_libc_unittest(
+add_libc_test(
   utimes_test
   SUITE
     libc_sys_time_unittests
@@ -20,13 +20,14 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   setitimer_test
   SUITE
     libc_sys_time_unittests
   SRCS
     setitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.include.signal
     libc.src.sys.time.setitimer
     libc.src.signal.sigaction
@@ -37,16 +38,30 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   getitimer_test
   SUITE
     libc_sys_time_unittests
   SRCS
     getitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.src.sys.time.getitimer
     libc.src.__support.common
     libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  gettimeofday_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    gettimeofday_test.cpp
+  DEPENDS
+    libc.src.sys.time.gettimeofday
+    libc.hdr.types.struct_timeval
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )

@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/totalordermag.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/totalordermag.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, totalordermag, (const double *x, const double *y)) {
-  return static_cast<int>(fputil::totalordermag(*x, *y));
+  return math::totalordermag(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

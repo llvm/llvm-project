@@ -873,7 +873,7 @@ define double @reassociate_adds_from_calls() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset b8, -16
@@ -888,7 +888,7 @@ define double @reassociate_adds_from_calls() {
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    fadd d1, d8, d9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    fadd d1, d1, d10
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
@@ -908,7 +908,7 @@ define double @reassociate_adds_from_calls_reassoc() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset b8, -16
@@ -923,7 +923,7 @@ define double @reassociate_adds_from_calls_reassoc() {
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    fadd d1, d8, d9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    fadd d0, d10, d0
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
@@ -943,7 +943,7 @@ define double @already_reassociated() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset b8, -16
@@ -958,7 +958,7 @@ define double @already_reassociated() {
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    fadd d1, d8, d9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    fadd d0, d10, d0
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
@@ -978,7 +978,7 @@ define double @already_reassociated_reassoc() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset b8, -16
@@ -993,7 +993,7 @@ define double @already_reassociated_reassoc() {
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    fadd d1, d8, d9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    fadd d0, d10, d0
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload

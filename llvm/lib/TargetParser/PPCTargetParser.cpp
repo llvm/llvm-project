@@ -138,9 +138,28 @@ std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
 
   // The target feature `quadword-atomics` is only supported for 64-bit
   // POWER8 and above.
-  if (Features.find("quadword-atomics") != Features.end() && !T.isArch64Bit())
-    Features["quadword-atomics"] = false;
+  if (!T.isArch64Bit()) {
+    auto It = Features.find("quadword-atomics");
+    if (It != Features.end())
+      It->second = false;
+  }
   return Features;
 }
+
+bool isValidFeatureName(StringRef Name) {
+  ArrayRef<BasicSubtargetFeatureKV> A = BasicPPCFeatureKV;
+  // Binary search the array
+  const BasicSubtargetFeatureKV *F = llvm::lower_bound(A, Name);
+  return F != A.end() && StringRef(F->Key) == Name;
+}
+
+bool canDisableFeatureOnAIX(StringRef Name) {
+  return llvm::StringSwitch<bool>(Name)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, CAN_DISABLE, ___)              \
+  .Case(FEATURE_NAME, CAN_DISABLE)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
 } // namespace PPC
 } // namespace llvm

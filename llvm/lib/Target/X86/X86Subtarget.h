@@ -20,8 +20,14 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <climits>
+#include <cstdint>
 #include <memory>
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "X86Options.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "X86GenSubtargetInfo.inc"
@@ -50,6 +56,8 @@ enum class Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
+  const X86Options &CLOpts;
+
   enum X86SSEEnum {
     NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512
   };
@@ -65,6 +73,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "X86GenSubtargetInfo.inc"
+  /// ReservedRReg R#i is not available as a general purpose register.
+  std::bitset<X86::NUM_TARGET_REGS> ReservedRReg;
+
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -98,6 +109,8 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Required vector width from function attribute.
   unsigned RequiredVectorWidth;
 
+  bool HasUserReservedRegisters;
+
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
   // X86TargetLowering needs.
@@ -114,6 +127,8 @@ public:
                unsigned PreferVectorWidthOverride,
                unsigned RequiredVectorWidth);
   ~X86Subtarget() override;
+
+  const X86Options &getCLOpts() const { return CLOpts; }
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -154,6 +169,11 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+
+  bool isRegisterReservedByUser(Register i) const override {
+    return ReservedRReg[i.id()];
+  }
+  bool hasUserReservedRegisters() const { return HasUserReservedRegisters; }
 
 private:
   /// Initialize the full set of dependencies so we can use an initializer
@@ -293,9 +313,12 @@ public:
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
   bool isTargetHurd() const { return TargetTriple.isOSHurd(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
+  bool isTargetMusl() const { return TargetTriple.isMusl(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
+
+  bool isLFI() const { return TargetTriple.isLFI(); }
 
   bool isTargetWindowsMSVC() const {
     return TargetTriple.isWindowsMSVCEnvironment();
@@ -322,6 +345,8 @@ public:
   bool isUEFI() const { return TargetTriple.isUEFI(); }
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
 
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 

@@ -49,8 +49,8 @@ body: |
     LIFETIME_START %stack.2.ap
     %0:gpr(p0) = G_FRAME_INDEX %stack.2.ap
     G_VASTART %0(p0) :: (store (s256) into %ir.ap, align 8)
-    %1:gpr(s64) = G_CONSTANT i64 28
-    %2:gpr(p0) = G_PTR_ADD %0, %1(s64)
-    %3:gpr(s32) = G_LOAD %2(p0) :: (dereferenceable load (s32) from %ir.vr_offs_p)
-    $w0 = COPY %3(s32)
+    %1:gpr(i64) = G_CONSTANT i64 28
+    %2:gpr(p0) = G_PTR_ADD %0, %1(i64)
+    %3:gpr(i32) = G_LOAD %2(p0) :: (dereferenceable load (s32) from %ir.vr_offs_p)
+    $w0 = COPY %3(i32)
 ...

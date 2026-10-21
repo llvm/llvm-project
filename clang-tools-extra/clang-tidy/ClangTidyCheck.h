@@ -458,7 +458,7 @@ public:
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::vector<NameAndValue>>
     typeEraseMapping() const {
-      ArrayRef<std::pair<T, StringRef>> Mapping =
+      const ArrayRef<std::pair<T, StringRef>> Mapping =
           OptionEnumMapping<T>::getEnumMapping();
       std::vector<NameAndValue> Result;
       Result.reserve(Mapping.size());
@@ -479,6 +479,16 @@ public:
     const ClangTidyOptions::OptionMap &CheckOptions;
     ClangTidyContext *Context;
   };
+
+  /// Returns the list of header file extensions from the context.
+  const FileExtensionsSet &getHeaderFileExtensions() const {
+    return Context->getHeaderFileExtensions();
+  }
+
+  /// Returns the list of implementation file extensions from the context.
+  const FileExtensionsSet &getImplementationFileExtensions() const {
+    return Context->getImplementationFileExtensions();
+  }
 
 private:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;

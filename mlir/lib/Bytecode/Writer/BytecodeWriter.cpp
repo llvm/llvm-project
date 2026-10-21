@@ -13,6 +13,7 @@
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -43,6 +44,9 @@ struct BytecodeWriterConfig::Impl {
   /// A flag specifying whether to elide emission of resources into the bytecode
   /// file.
   bool shouldElideResourceData = false;
+
+  /// A flag specifying whether to elide emission of locations.
+  bool shouldElideLocations = false;
 
   /// A map containing dialect version information for each dialect to emit.
   llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
@@ -100,6 +104,14 @@ void BytecodeWriterConfig::attachResourcePrinter(
 void BytecodeWriterConfig::setElideResourceDataFlag(
     bool shouldElideResourceData) {
   impl->shouldElideResourceData = shouldElideResourceData;
+}
+
+void BytecodeWriterConfig::setElideLocations(bool shouldElideLocations) {
+  impl->shouldElideLocations = shouldElideLocations;
+}
+
+bool BytecodeWriterConfig::shouldElideLocations() const {
+  return impl->shouldElideLocations;
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
@@ -460,6 +472,14 @@ public:
   void writeOwnedBlob(ArrayRef<char> blob) override {
     emitter.emitVarInt(blob.size(), "dialect blob");
     emitter.emitOwnedBlob(
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(blob.data()),
+                          blob.size()),
+        "dialect blob");
+  }
+
+  void writeUnownedBlob(ArrayRef<char> blob) override {
+    emitter.emitVarInt(blob.size(), "dialect blob");
+    emitter.emitBytes(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(blob.data()),
                           blob.size()),
         "dialect blob");
@@ -996,14 +1016,19 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getLoc()), "op location");
 
   // Emit the attributes of this operation.
-  DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+  DictionaryAttr attrs = op->getRawDictionaryAttrs();
   // Allow deployment to version <kNativePropertiesEncoding by merging inherent
   // attribute with the discardable ones. We should fail if there are any
   // conflicts. When properties are not used by the op, also store everything as
   // attributes.
-  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding ||
-      !op->getPropertiesStorage()) {
-    attrs = op->getAttrDictionary();
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding &&
+      op->getPropertiesStorage()) {
+    NamedAttrList allAttrs;
+    op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+      allAttrs.append(name, attr);
+    });
+    allAttrs.append(op->getDiscardableAttrDictionary().getValue());
+    attrs = allAttrs.getDictionary(op->getContext());
   }
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
@@ -1086,7 +1111,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
                                         uint8_t &opEncodingMask,
                                         ValueRange range) {
   // Loop over the results and store the use-list order per result index.
-  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  llvm::MapVector<unsigned, llvm::SmallVector<unsigned>> map;
   for (auto item : llvm::enumerate(range)) {
     auto value = item.value();
     // No need to store a custom use-list order if the result does not have
@@ -1139,10 +1164,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
     emitter.emitVarInt(map.size(), "custom use-list size");
   }
 
-  for (const auto &item : map) {
-    auto resultIdx = item.getFirst();
-    auto useListOrder = item.getSecond();
-
+  for (const auto &[resultIdx, useListOrder] : map) {
     // Compute the number of uses that are actually shuffled. If those are less
     // than half of the total uses, encoding the index pair `(src, dst)` is more
     // space efficient.
@@ -1352,6 +1374,16 @@ void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
 
 LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
                                         const BytecodeWriterConfig &config) {
+  // Validate before numbering the IR, which may invoke dialect writers.
+  for (const auto &entry : config.getDialectVersionMap()) {
+    Dialect *dialect = op->getContext()->getLoadedDialect(entry.getKey());
+    if (!dialect)
+      continue;
+    auto *interface =
+        dialect->getRegisteredInterface<BytecodeDialectInterface>();
+    if (interface && failed(interface->verifyVersion(op, *entry.getValue())))
+      return failure();
+  }
   BytecodeWriter writer(op, config);
   return writer.write(op, os);
 }

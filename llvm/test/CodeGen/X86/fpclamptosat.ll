@@ -337,16 +337,12 @@ define i16 @stest_f16i16(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %ecx
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32767, %edx # imm = 0x7FFF
-; CHECK-NEXT:    cmovbel %ecx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpl %edx, %eax
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -717,6 +713,18 @@ entry:
   ret i32 %conv6
 }
 
+; A zero clamp is not saturation bound, so umin(fptoui(x), 0) should fold to 0.
+define i32 @utest_f32i32_zero(float %x) nounwind {
+; CHECK-LABEL: utest_f32i32_zero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptoui float %x to i32
+  %spec.store.select = call i32 @llvm.umin.i32(i32 %conv, i32 0)
+  ret i32 %spec.store.select
+}
+
 define i32 @ustest_f32i32_mm(float %x) nounwind {
 ; CHECK-LABEL: ustest_f32i32_mm:
 ; CHECK:       # %bb.0: # %entry
@@ -925,16 +933,12 @@ define i16 @stest_f16i16_mm(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %ecx
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32767, %edx # imm = 0x7FFF
-; CHECK-NEXT:    cmovbel %ecx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpl %edx, %eax
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

@@ -43,7 +43,7 @@ AST_POLYMORPHIC_MATCHER(isObjCManagedLifetime,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(ObjCIvarRefExpr,
                                                         DeclRefExpr,
                                                         MemberExpr)) {
-  QualType QT = Node.getType();
+  const QualType QT = Node.getType();
   return QT->isScalarType() &&
          (QT->getScalarTypeKind() == Type::STK_ObjCObjectPointer ||
           QT->getScalarTypeKind() == Type::STK_BlockPointer) &&
@@ -55,12 +55,12 @@ AST_POLYMORPHIC_MATCHER(isObjCManagedLifetime,
 static std::optional<FixItHint>
 fixItHintReplacementForOwnershipString(StringRef Text, CharSourceRange Range,
                                        StringRef Ownership) {
-  size_t Index = Text.find(Ownership);
+  const size_t Index = Text.find(Ownership);
   if (Index == StringRef::npos)
     return std::nullopt;
 
-  SourceLocation Begin = Range.getBegin().getLocWithOffset(Index);
-  SourceLocation End = Begin.getLocWithOffset(Ownership.size());
+  const SourceLocation Begin = Range.getBegin().getLocWithOffset(Index);
+  const SourceLocation End = Begin.getLocWithOffset(Ownership.size());
   return FixItHint::CreateReplacement(SourceRange(Begin, End),
                                       UnsafeUnretainedText);
 }
@@ -76,7 +76,7 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
   // Currently there is no way to directly get the source range for the
   // __weak/__strong ObjC lifetime qualifiers, so it's necessary to string
   // search in the source code.
-  CharSourceRange Range = Lexer::makeFileCharRange(
+  const CharSourceRange Range = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(VD->getSourceRange()), SM, LangOpts);
   if (Range.isInvalid()) {
     // An invalid range likely means inside a macro, in which case don't supply
@@ -84,7 +84,7 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
     return std::nullopt;
   }
 
-  StringRef VarDeclText = Lexer::getSourceText(Range, SM, LangOpts);
+  const StringRef VarDeclText = Lexer::getSourceText(Range, SM, LangOpts);
   if (std::optional<FixItHint> Hint =
           fixItHintReplacementForOwnershipString(VarDeclText, Range, WeakText))
     return Hint;
@@ -125,10 +125,11 @@ void NSInvocationArgumentLifetimeCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<ObjCMessageExpr>("call");
 
-  auto Diag = diag(MatchedExpr->getArg(0)->getBeginLoc(),
-                   "NSInvocation %objcinstance0 should only pass pointers to "
-                   "objects with ownership __unsafe_unretained")
-              << MatchedExpr->getSelector();
+  const auto Diag =
+      diag(MatchedExpr->getArg(0)->getBeginLoc(),
+           "NSInvocation %objcinstance0 should only pass pointers to "
+           "objects with ownership __unsafe_unretained")
+      << MatchedExpr->getSelector();
 
   // Only provide fix-it hints for references to local variables; fixes for
   // instance variable references don't have as clear an automated fix.

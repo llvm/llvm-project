@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMJITLink
   DWARFRecordSectionSplitter.cpp
   EHFrameSupport.cpp
   JITLink.cpp
+  JITLinkDylib.cpp
   JITLinkGeneric.cpp
   JITLinkMemoryManager.cpp
 
@@ -23,9 +24,12 @@ add_llvm_component_library(LLVMJITLink
   ELFLinkGraphBuilder.cpp
   ELF_aarch32.cpp
   ELF_aarch64.cpp
+  ELF_hexagon.cpp
   ELF_loongarch.cpp
+  ELF_mips.cpp
   ELF_ppc64.cpp
   ELF_riscv.cpp
+  ELF_systemz.cpp
   ELF_x86.cpp
   ELF_x86_64.cpp
 
@@ -43,9 +47,12 @@ add_llvm_component_library(LLVMJITLink
   # Architectures:
   aarch32.cpp
   aarch64.cpp
+  hexagon.cpp
   loongarch.cpp
+  mips.cpp
   ppc64.cpp
   riscv.cpp
+  systemz.cpp
   x86.cpp
   x86_64.cpp
 

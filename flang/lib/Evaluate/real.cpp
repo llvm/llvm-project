@@ -7,12 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/real.h"
-#include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Decimal/decimal.h"
-#include "flang/Parser/characters.h"
 #include "llvm/Support/raw_ostream.h"
-#include <limits>
 
 namespace Fortran::evaluate::value {
 
@@ -463,6 +460,24 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
     }
   }
   return result;
+}
+
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::KahanSummation(
+    const Real &y, Real &correction, Rounding rounding) const {
+  Real next{y.Subtract(correction, rounding).value};
+  if (next.IsNotANumber()) {
+    // Avoid propagating an accidental NaN from Inf-Inf in corrections
+    correction = Real{}; // 0.
+    return Add(y, rounding);
+  } else {
+    auto sum{Add(next, rounding)};
+    // correction = (sum - *this) - next; algebraically zero
+    correction = sum.value.Subtract(*this, rounding)
+                     .value.Subtract(next, rounding)
+                     .value;
+    return sum;
+  }
 }
 
 template <typename W, int P>

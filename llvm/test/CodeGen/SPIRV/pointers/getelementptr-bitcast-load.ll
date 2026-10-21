@@ -7,6 +7,9 @@
 ; CHECK-DAG: %[[#PTR_VEC3:]] = OpTypePointer CrossWorkgroup %[[#VEC3]]
 ; CHECK-DAG: %[[#PTR_VEC4:]] = OpTypePointer CrossWorkgroup %[[#VEC4]]
 
+@G_loadv1 = global <4 x i8> zeroinitializer
+@G_loadv2 = global <4 x i8> zeroinitializer
+
 ; CHECK: %[[#AC1:]] = OpInBoundsPtrAccessChain %[[#PTR_VEC3]] %[[#]] %[[#]]
 ; CHECK: %[[#BC1:]] = OpBitcast %[[#PTR_VEC4]] %[[#AC1]]
 ; CHECK: %[[#LD1:]] = OpLoad %[[#VEC4]] %[[#BC1]] Aligned 4
@@ -15,6 +18,7 @@
 define spir_kernel void @foo(ptr addrspace(1) %a, i64 %b) {
   %index = getelementptr inbounds <3 x i8>, ptr addrspace(1) %a, i64 %b
   %loadv = load <4 x i8>, ptr addrspace(1) %index, align 4
+  store <4 x i8> %loadv, ptr @G_loadv1
   ret void
 }
 
@@ -29,5 +33,6 @@ define spir_kernel void @bar(ptr addrspace(1) %a, i64 %b) {
 ; from older LLVM IR with typed pointers.
   %cast = bitcast ptr addrspace(1) %index to ptr addrspace(1)
   %loadv = load <4 x i8>, ptr addrspace(1) %cast, align 4
+  store <4 x i8> %loadv, ptr @G_loadv2
   ret void
 }

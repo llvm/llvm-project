@@ -19,7 +19,6 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -48,6 +47,13 @@ public:
   /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
   /// (at least) for the given address.
   std::unique_ptr<UnwindPlan> GetUnwindPlan(const Address &addr);
+
+  /// Return an UnwindPlan based on the call frame information encoded in the
+  /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
+  /// (at least) for \a pc. \a func_start corresponds to the offset zero in the
+  /// returned UnwindPlan.
+  std::unique_ptr<UnwindPlan> GetUnwindPlan(const Address &pc,
+                                            const Address &func_start);
 
   /// Return an UnwindPlan based on the call frame information encoded in the
   /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid

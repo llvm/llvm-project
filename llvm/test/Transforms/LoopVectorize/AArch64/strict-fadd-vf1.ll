@@ -13,13 +13,13 @@ define void @foo(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src
 entry:
   br label %for.body.us
 
-for.body.us:                                      ; preds = %entry, %for.cond3
+for.body.us:
   %i.023.us = phi i64 [ %inc8.us, %for.cond3 ], [ 0, %entry ]
   %arrayidx.us = getelementptr inbounds float, ptr %dst, i64 %i.023.us
   %mul.us = mul nsw i64 %i.023.us, %N
   br label %for.body3.us
 
-for.body3.us:                                     ; preds = %for.body.us, %for.body3.us
+for.body3.us:
   %0 = phi float [ 0.000000e+00, %for.body.us ], [ %add6.us, %for.body3.us ]
   %j.021.us = phi i64 [ 0, %for.body.us ], [ %inc.us, %for.body3.us ]
   %add.us = add nsw i64 %j.021.us, %mul.us
@@ -30,13 +30,13 @@ for.body3.us:                                     ; preds = %for.body.us, %for.b
   %exitcond.not = icmp eq i64 %inc.us, %N
   br i1 %exitcond.not, label %for.cond3, label %for.body3.us
 
-for.cond3:                                        ; preds = %for.body3.us
+for.cond3:
   %add6.us.lcssa = phi float [ %add6.us, %for.body3.us ]
   store float %add6.us.lcssa, ptr %arrayidx.us, align 4
   %inc8.us = add nuw nsw i64 %i.023.us, 1
   %exitcond26.not = icmp eq i64 %inc8.us, %M
   br i1 %exitcond26.not, label %exit, label %for.body.us
 
-exit:                                             ; preds = %for.cond3
+exit:
   ret void
 }

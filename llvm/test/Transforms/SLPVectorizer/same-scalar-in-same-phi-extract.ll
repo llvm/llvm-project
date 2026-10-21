@@ -6,7 +6,7 @@ define void @test(i32 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    switch i32 0, label [[BB10:%.*]] [
@@ -15,7 +15,7 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    switch i32 0, label [[BB10]] [
 ; CHECK-NEXT:      i32 18, label [[BB7:%.*]]
@@ -24,10 +24,10 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP0]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr null, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR6:%.*]] = getelementptr i32, ptr null, i64 [[TMP6]]
 ; CHECK-NEXT:    ret void

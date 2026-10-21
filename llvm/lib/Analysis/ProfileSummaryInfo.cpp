@@ -75,8 +75,9 @@ void ProfileSummaryInfo::refresh(std::unique_ptr<ProfileSummary> &&Other) {
   computeThresholds();
 }
 
-std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
-    const CallBase &Call, BlockFrequencyInfo *BFI, bool AllowSynthetic) const {
+std::optional<uint64_t>
+ProfileSummaryInfo::getProfileCount(const CallBase &Call,
+                                    BlockFrequencyInfo *BFI) const {
   assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
   if (hasSampleProfile()) {
@@ -90,7 +91,7 @@ std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     return std::nullopt;
   }
   if (BFI)
-    return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
+    return BFI->getBlockProfileCount(Call.getParent());
   return std::nullopt;
 }
 
@@ -105,6 +106,10 @@ bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) const {
 bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   if (!F)
     return false;
+  // The hot attribute is a manual alternative to profile data, and takes
+  // precedence over it.
+  if (hasHotAttr(F))
+    return false;
   if (F->hasFnAttribute(Attribute::Cold))
     return true;
   if (!hasProfileSummary())
@@ -113,7 +118,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   // FIXME: The heuristic used below for determining coldness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isColdCount(FunctionCount->getCount());
+  return FunctionCount && isColdCount(*FunctionCount);
 }
 
 /// Compute the hot and cold thresholds.

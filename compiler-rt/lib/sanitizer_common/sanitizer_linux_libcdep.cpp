@@ -293,6 +293,10 @@ static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__powerpc64__)
   return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
+
+#    if defined(__alpha__)
+  return 1824;  // from glibc 2.43
+#    endif
 }
 #  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
@@ -503,10 +507,10 @@ __attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
   // loader places static TLS blocks this way not to waste space.
   uptr l = one;
   *align = ranges[l].align;
-  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l].align)
+  while (l != 0 && ranges[l].begin <= ranges[l - 1].end + ranges[l].align)
     *align = Max(*align, ranges[--l].align);
   uptr r = one + 1;
-  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r].align)
+  while (r != len && ranges[r].begin <= ranges[r - 1].end + ranges[r].align)
     *align = Max(*align, ranges[r++].align);
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;

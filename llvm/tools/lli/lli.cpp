@@ -56,11 +56,11 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
@@ -68,6 +68,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cerrno>
 #include <optional>
@@ -178,6 +179,10 @@ static cl::opt<char>
                       "(default = '-O2')"),
              cl::Prefix, cl::init('2'));
 
+static cl::opt<bool> HostJITTriple("host-jit-triple",
+                                   cl::desc("Print process triple and exit"),
+                                   cl::init(false));
+
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
@@ -283,7 +288,6 @@ static ExitOnError ExitOnErr;
 LLVM_ATTRIBUTE_USED static void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
@@ -372,11 +376,11 @@ private:
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
                                   const Triple &TargetTriple) {
-  IRBuilder<> Builder(Context);
-
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTriple);
+
+  IRBuilder<> Builder(*M);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -410,7 +414,8 @@ static CodeGenOptLevel getOptLevel() {
 }
 
 static Error loadDylibs();
-static int runOrcJIT(const char *ProgName);
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName);
 static void disallowOrcOptions();
 static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 
@@ -429,8 +434,14 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
+
+  if (HostJITTriple) {
+    outs() << sys::getProcessTriple() << "\n";
+    return 0;
+  }
 
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)
@@ -447,10 +458,11 @@ int main(int argc, char **argv, char * const *envp) {
   if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
     disallowOrcOptions();
   else
-    return runOrcJIT(argv[0]);
+    return runOrcJIT(LibraryOptions, argv[0]);
 
   // Old lli implementation based on ExecutionEngine and MCJIT.
   LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -513,12 +525,21 @@ int main(int argc, char **argv, char * const *envp) {
 
   TargetOptions Options =
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+      ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
+    Mod->addModuleFlag(Module::Error, "float-abi",
+                       MDString::get(Context, FloatABI::getABITypeName(ABI)));
+  }
 
   builder.setTargetOptions(Options);
 
-  std::unique_ptr<ExecutionEngine> EE(builder.create());
+  // Resolve the target the JIT will compile for and record it in the module
+  TargetMachine *TM = builder.selectTarget();
+  if (TM && Mod->getTargetTriple().empty())
+    Mod->setTargetTriple(TM->getTargetTriple());
+
+  std::unique_ptr<ExecutionEngine> EE(builder.create(TM));
   if (!EE) {
     if (!ErrorMsg.empty())
       WithColor::error(errs(), argv[0])
@@ -572,7 +593,6 @@ int main(int argc, char **argv, char * const *envp) {
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(ArOrErr.takeError(), OS);
-      OS.flush();
       errs() << Buf;
       exit(1);
     }
@@ -704,7 +724,7 @@ int main(int argc, char **argv, char * const *envp) {
     abort();
   } else {
     // else == "if (RemoteMCJIT)"
-    std::unique_ptr<orc::ExecutorProcessControl> EPC = ExitOnErr(launchRemote());
+    orc::ExecutionSession ES(ExitOnErr(launchRemote()));
 
     // Remote target MCJIT doesn't (yet) support static constructors. No reason
     // it couldn't. This is a limitation of the LLI implementation, not the
@@ -713,7 +733,7 @@ int main(int argc, char **argv, char * const *envp) {
     // Create a remote memory manager.
     auto RemoteMM = ExitOnErr(
         orc::EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
-            *EPC));
+            ES.getExecutorProcessControl()));
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
@@ -721,7 +741,7 @@ int main(int argc, char **argv, char * const *envp) {
 
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
-        ExitOnErr(RemoteResolver::Create(*EPC)));
+        ExitOnErr(RemoteResolver::Create(ES)));
     // Grab the target address of the JIT'd main function on the remote and call
     // it.
     // FIXME: argv and envp handling.
@@ -730,7 +750,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE->finalizeObject();
     LLVM_DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
                       << format("%llx", Entry.getValue()) << "\n");
-    Result = ExitOnErr(EPC->runAsMain(Entry, {}));
+    Result = ExitOnErr(ES.getExecutorProcessControl().runAsMain(Entry, {}));
 
     // Like static constructors, the remote target MCJIT support doesn't handle
     // this yet. It could. FIXME.
@@ -741,7 +761,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE.reset();
 
     // Signal the remote target that we're done JITing.
-    ExitOnErr(EPC->disconnect());
+    ExitOnErr(ES.endSession());
   }
 
   return Result;
@@ -917,11 +937,14 @@ static Error tryEnableDebugSupport(orc::LLJIT &J) {
   return Error::success();
 }
 
-static int runOrcJIT(const char *ProgName) {
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
-  orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  auto Context = std::make_unique<LLVMContext>();
+  Context->getLibraryOptions().assign(LibraryOptions);
+  orc::ThreadSafeContext TSCtx(std::move(Context));
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
   // Get TargetTriple and DataLayout from the main module if they're explicitly
@@ -954,6 +977,10 @@ static int runOrcJIT(const char *ProgName) {
       .addFeatures(codegen::getFeatureList())
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
+
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS())
+    Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
+        *EmulatedTLS;
 
   // Link process symbols unless NoProcessSymbols is set.
   Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);
@@ -1021,17 +1048,28 @@ static int runOrcJIT(const char *ProgName) {
     llvm_unreachable("Unrecognized platform value");
   }
 
-  std::unique_ptr<orc::ExecutorProcessControl> EPC = nullptr;
-  if (JITLinker == JITLinkerKind::JITLink) {
-    EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
-        std::make_shared<orc::SymbolStringPool>()));
-
+  switch (JITLinker) {
+  case JITLinkerKind::JITLink:
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::ObjectLinkingLayer>(ES);
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::ObjectLinkingLayer>(ES, MemMgr);
+        });
+    break;
+  case JITLinkerKind::RuntimeDyld:
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::RTDyldObjectLinkingLayer>(
+              ES, [](const MemoryBuffer &) {
+                return std::make_unique<SectionMemoryManager>();
+              });
+        });
+    break;
+  case JITLinkerKind::Default:
+    // Let LLJITBuilder decide
+    break;
   }
 
   auto J = ExitOnErr(Builder.create());
@@ -1161,18 +1199,10 @@ static int runOrcJIT(const char *ProgName) {
   }
 
   // Resolve and run the main function.
+  using MainFnTy = int(int, char *[]);
   auto MainAddr = ExitOnErr(J->lookup(EntryFunc));
-  int Result;
-
-  if (EPC) {
-    // ExecutorProcessControl-based execution with JITLink.
-    Result = ExitOnErr(EPC->runAsMain(MainAddr, InputArgv));
-  } else {
-    // Manual in-process execution with RuntimeDyld.
-    using MainFnTy = int(int, char *[]);
-    auto MainFn = MainAddr.toPtr<MainFnTy *>();
-    Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
-  }
+  auto MainFn = MainAddr.toPtr<MainFnTy *>();
+  int Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)
@@ -1228,15 +1258,15 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
     std::unique_ptr<char[]> ChildPath, ChildIn, ChildOut;
     {
       ChildPath.reset(new char[ChildExecPath.size() + 1]);
-      std::copy(ChildExecPath.begin(), ChildExecPath.end(), &ChildPath[0]);
+      llvm::copy(ChildExecPath, &ChildPath[0]);
       ChildPath[ChildExecPath.size()] = '\0';
       std::string ChildInStr = utostr(PipeFD[0][0]);
       ChildIn.reset(new char[ChildInStr.size() + 1]);
-      std::copy(ChildInStr.begin(), ChildInStr.end(), &ChildIn[0]);
+      llvm::copy(ChildInStr, &ChildIn[0]);
       ChildIn[ChildInStr.size()] = '\0';
       std::string ChildOutStr = utostr(PipeFD[1][1]);
       ChildOut.reset(new char[ChildOutStr.size() + 1]);
-      std::copy(ChildOutStr.begin(), ChildOutStr.end(), &ChildOut[0]);
+      llvm::copy(ChildOutStr, &ChildOut[0]);
       ChildOut[ChildOutStr.size()] = '\0';
     }
 
@@ -1254,8 +1284,8 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
 
   // Return a SimpleRemoteEPC instance connected to our end of the pipes.
   return orc::SimpleRemoteEPC::Create<orc::FDSimpleRemoteEPCTransport>(
-      std::make_unique<llvm::orc::InPlaceTaskDispatcher>(),
-      llvm::orc::SimpleRemoteEPC::Setup(), PipeFD[1][0], PipeFD[0][1]);
+      std::make_unique<llvm::orc::InPlaceTaskDispatcher>(), PipeFD[1][0],
+      PipeFD[0][1]);
 #endif
 }
 

@@ -9,6 +9,7 @@
 ; CHECK-SPIRV-DAG: %[[#GlobalIntPtr:]] = OpTypePointer CrossWorkgroup %[[#Int]]
 ; CHECK-SPIRV-DAG: %[[#PrivateIntPtr:]] = OpTypePointer Function %[[#Int]]
 ; CHECK-SPIRV-DAG: %[[#GenericIntPtr:]] = OpTypePointer Generic %[[#Int]]
+; CHECK-SPIRV-DAG: %[[#Eight:]] = OpConstant %[[#Int]] 8
 
 %id = type { %arr }
 %arr = type { [1 x i64] }
@@ -45,6 +46,12 @@ entry:
   %GE = call spir_func ptr addrspace(1) @_Z41__spirv_GenericCastToPtrExplicit_ToGlobalPvi(ptr addrspace(4) %var1, i32 5)
   %LE = call spir_func ptr addrspace(3) @_Z40__spirv_GenericCastToPtrExplicit_ToLocalPvi(ptr addrspace(4) %var2, i32 4)
   %PE = call spir_func ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi(ptr addrspace(4) %var3, i32 7)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
+  store i32 0, ptr addrspace(1) %GE, align 4
+  store i8 0, ptr addrspace(3) %LE, align 1
+  store i32 0, ptr %PE, align 4
   ret void
 }
 
@@ -70,7 +77,23 @@ entry:
   %G = call spir_func ptr addrspace(1) @_Z9to_globalPv(ptr addrspace(4) %var1)
   %L = call spir_func ptr addrspace(3) @_Z8to_localPv(ptr addrspace(4) %var2)
   %P = call spir_func ptr @_Z10to_privatePv(ptr addrspace(4) %var3)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
   ret void
+}
+
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      %[[#FencePtr:]] = OpFunctionParameter %[[#GenericCharPtr]]
+; CHECK-SPIRV:      %[[#Sem:]] = OpGenericPtrMemSemantics %[[#Int]] %[[#FencePtr]]
+; CHECK-SPIRV-NEXT: %[[#Fence:]] = OpShiftRightLogical %[[#Int]] %[[#Sem]] %[[#Eight]]
+; CHECK-SPIRV-NEXT: OpReturnValue %[[#Fence]]
+; CHECK-SPIRV:      OpFunctionEnd
+
+define spir_func i32 @test_get_fence(ptr addrspace(4) %p) {
+entry:
+  %r = call spir_func i32 @_Z9get_fencePU3AS4v(ptr addrspace(4) %p)
+  ret i32 %r
 }
 
 declare spir_func ptr addrspace(1) @_Z33__spirv_GenericCastToPtr_ToGlobalPvi(ptr addrspace(4), i32)
@@ -83,6 +106,7 @@ declare spir_func ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi(ptr add
 declare spir_func ptr addrspace(1) @_Z9to_globalPv(ptr addrspace(4))
 declare spir_func ptr addrspace(3) @_Z8to_localPv(ptr addrspace(4))
 declare spir_func ptr @_Z10to_privatePv(ptr addrspace(4))
+declare spir_func i32 @_Z9get_fencePU3AS4v(ptr addrspace(4))
 
 ; No mangling
 
@@ -114,6 +138,12 @@ entry:
   %GE = call spir_func ptr addrspace(1) @__spirv_GenericCastToPtrExplicit_ToGlobal(ptr addrspace(4) %var1, i32 5)
   %LE = call spir_func ptr addrspace(3) @__spirv_GenericCastToPtrExplicit_ToLocal(ptr addrspace(4) %var2, i32 4)
   %PE = call spir_func ptr @__spirv_GenericCastToPtrExplicit_ToPrivate(ptr addrspace(4) %var3, i32 7)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
+  store i32 0, ptr addrspace(1) %GE, align 4
+  store i8 0, ptr addrspace(3) %LE, align 1
+  store i32 0, ptr %PE, align 4
   ret void
 }
 
@@ -139,6 +169,9 @@ entry:
   %G = call spir_func ptr addrspace(1) @to_global(ptr addrspace(4) %var1)
   %L = call spir_func ptr addrspace(3) @to_local(ptr addrspace(4) %var2)
   %P = call spir_func ptr @to_private(ptr addrspace(4) %var3)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
   ret void
 }
 
@@ -152,3 +185,35 @@ declare spir_func ptr @__spirv_GenericCastToPtrExplicit_ToPrivate(ptr addrspace(
 declare spir_func ptr addrspace(1) @to_global(ptr addrspace(4))
 declare spir_func ptr addrspace(3) @to_local(ptr addrspace(4))
 declare spir_func ptr @to_private(ptr addrspace(4))
+
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#GlobalIntPtr]] %{{.*}} CrossWorkgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#LocalCharPtr]] %{{.*}} Workgroup
+; CHECK-SPIRV-NEXT: OpGenericCastToPtrExplicit %[[#PrivateIntPtr]] %{{.*}} Function
+; CHECK-SPIRV:      OpFunctionEnd
+
+define spir_kernel void @test5(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
+entry:
+  %var = alloca i32
+  %p0 = load i64, ptr %_arg_GlobalId
+  %add = getelementptr inbounds i32, ptr addrspace(1) %_arg_GlobalA, i64 %p0
+  %p2 = load i64, ptr addrspace(1) @__spirv_BuiltInGlobalInvocationId
+  %idx = getelementptr inbounds i32, ptr addrspace(1) %add, i64 %p2
+  %var1 = addrspacecast ptr addrspace(1) %idx to ptr addrspace(4)
+  %var2 = addrspacecast ptr addrspace(3) %_arg_LocalA to ptr addrspace(4)
+  %var3 = addrspacecast ptr %var to ptr addrspace(4)
+  %G = call spir_func ptr addrspace(1) @__to_global(ptr addrspace(4) %var1)
+  %L = call spir_func ptr addrspace(3) @__to_local(ptr addrspace(4) %var2)
+  %P = call spir_func ptr @__to_private(ptr addrspace(4) %var3)
+  store i32 0, ptr addrspace(1) %G, align 4
+  store i8 0, ptr addrspace(3) %L, align 1
+  store i32 0, ptr %P, align 4
+  ret void
+}
+
+declare spir_func ptr addrspace(1) @__to_global(ptr addrspace(4))
+declare spir_func ptr addrspace(3) @__to_local(ptr addrspace(4))
+declare spir_func ptr @__to_private(ptr addrspace(4))

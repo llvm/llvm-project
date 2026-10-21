@@ -175,19 +175,19 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl %ecx, %edi
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    shrdl $1, %ebx, %edi
-; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    shrl %ebx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl %ecx, %ebx
+; X86-NEXT:    shrdl $1, %esi, %ebx
+; X86-NEXT:    orl %edi, %edx
+; X86-NEXT:    shrl %esi
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    subl %edi, %eax
-; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    subl %ebx, %eax
+; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -215,19 +215,19 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl %ecx, %edi
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    shrdl $1, %ebx, %edi
-; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    shrl %ebx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl %ecx, %ebx
+; X86-NEXT:    shrdl $1, %esi, %ebx
+; X86-NEXT:    orl %edi, %edx
+; X86-NEXT:    shrl %esi
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    subl %edi, %eax
-; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    subl %ebx, %eax
+; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

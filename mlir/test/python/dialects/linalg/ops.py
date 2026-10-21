@@ -1,7 +1,8 @@
 # RUN: %PYTHON %s | FileCheck %s
 
-from mlir.dialects import arith, func, linalg, tensor, memref
+from mlir.dialects import arith, func, linalg, tensor, memref, builtin
 from mlir.dialects.linalg.opdsl.lang import *
+from mlir.extras import types as T
 from mlir.ir import *
 
 
@@ -663,12 +664,32 @@ def testPackUnPackOp():
 
                 return unpacked
 
+            @func.FuncOp.from_py_func(
+                MemRefType.get((128, 128), f32),
+                MemRefType.get((16, 16, 8, 8), f32),
+            )
+            def memref_pack(src, dst):
+                linalg.pack(src, dst, inner_dims_pos=[1, 0], inner_tiles=[8, 8])
+
+                linalg.unpack(
+                    dst,
+                    src,
+                    inner_dims_pos=[0, 1],
+                    inner_tiles=[8, 8],
+                )
+
         # CHECK-LABEL:   func.func @tensor_pack(
         # CHECK-SAME:      %[[VAL_0:.*]]: tensor<128x128xf32>, %[[VAL_1:.*]]: tensor<16x16x8x8xf32>) -> tensor<128x128xf32> {
         # CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
         # CHECK:           %[[VAL_3:.*]] = linalg.pack %[[VAL_0]] padding_value(%[[VAL_2]] : f32) inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : tensor<128x128xf32> -> tensor<16x16x8x8xf32>
         # CHECK:           %[[VAL_4:.*]] = linalg.unpack %[[VAL_3]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
+        # CHECK:         }
+        # CHECK-LABEL:   func.func @memref_pack(
+        # CHECK-SAME:      %[[VAL_0:.*]]: memref<128x128xf32>, %[[VAL_1:.*]]: memref<16x16x8x8xf32>) {
+        # CHECK:           linalg.pack %[[VAL_0]] inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : memref<128x128xf32> -> memref<16x16x8x8xf32>
+        # CHECK:           linalg.unpack %[[VAL_1]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : memref<16x16x8x8xf32> -> memref<128x128xf32>
+        # CHECK:           return
         # CHECK:         }
         print(module)
 
@@ -731,7 +752,7 @@ def testElementwiseOp():
 
                 if _inferred_affine_maps := True:
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     op1 = linalg.ElementwiseOp(
@@ -743,7 +764,7 @@ def testElementwiseOp():
                     linalg.fill_builtin_region(op1.operation)
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     linalg.elementwise(
@@ -753,7 +774,7 @@ def testElementwiseOp():
                     )
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
                     linalg.elementwise(
@@ -765,7 +786,7 @@ def testElementwiseOp():
                 if _explicit_ident_affine_maps := True:
                     # Same as above but with default identity indexing_maps explicitly provided.
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     op3 = linalg.ElementwiseOp(
@@ -778,7 +799,7 @@ def testElementwiseOp():
                     linalg.fill_builtin_region(op3.operation)
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
                     linalg.elementwise(
@@ -789,7 +810,8 @@ def testElementwiseOp():
                     )
 
                 if _ops_with_non_ident_input_maps := True:
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLine]] : tensor<8xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -802,7 +824,8 @@ def testElementwiseOp():
                     )
                     linalg.fill_builtin_region(op4.operation)
 
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <add>
                     # CHECK-SAME: indexing_maps = [#[[$IdentMap2D]], #[[$VertLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[Rect]], %[[VertLine]] : tensor<8x16xf32>, tensor<8xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -815,7 +838,8 @@ def testElementwiseOp():
                     )
                     linalg.fill_builtin_region(op4.operation)
 
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <div>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLine]], %[[HorLine]] : tensor<8xf32>, tensor<16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -838,7 +862,8 @@ def testElementwiseOp():
                         [],
                         [],
                     )
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<select>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <select>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$TransMap2D]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLineBoolsMem]], %[[HorLineMem]], %[[TransRectMem]] : memref<8xi1>, memref<16xf32>, memref<16x8xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
@@ -857,3 +882,95 @@ def testElementwiseOp():
                     )
 
         print(module)
+
+
+# CHECK-LABEL: TEST: testElementwiseOpView
+@run
+def testElementwiseOpView():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            """
+            func.func @f(%c: tensor<4x4xf32>) {
+              %0 = linalg.elementwise <add>
+                   ins(%c, %c : tensor<4x4xf32>, tensor<4x4xf32>)
+                   outs(%c : tensor<4x4xf32>) -> tensor<4x4xf32>
+              return
+            }
+            """
+        )
+        func_op = module.body.operations[0]
+        op = func_op.regions[0].blocks[0].operations[0]
+        assert isinstance(op.opview, linalg.ElementwiseOp)
+
+
+@run
+def testReduceOp():
+    with Context(), Location.unknown():
+        f32 = T.f32()
+        tensor_type = T.tensor(10, f32)
+
+        @builtin.module
+        def module():
+            @func.func(tensor_type)
+            def reduce_op(input):
+                c1 = arith.constant(f32, 1.0)
+                single_result = ir.RankedTensorType.get((), f32)
+                dims = ir.DenseI64ArrayAttr.get([0])
+                init = tensor.splat(single_result, c1, [])
+
+                @linalg.reduce(
+                    result=[single_result],
+                    inputs=[input],
+                    inits=[init],
+                    dimensions=dims,
+                )
+                def reduced(element: f32, acc: f32):
+                    return arith.mulf(acc, element)
+
+                return tensor.extract(reduced, [])
+
+        print(module)
+
+
+# CHECK-LABEL:   func.func @reduce_op(
+# CHECK-SAME:      %[[ARG0:.*]]: tensor<10xf32>) -> f32 {
+# CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
+# CHECK:           %[[SPLAT_0:.*]] = tensor.splat %[[CONSTANT_0]] : tensor<f32>
+# CHECK:           %[[REDUCE_0:.*]] = linalg.reduce { arith.mulf } ins(%[[ARG0]] : tensor<10xf32>) outs(%[[SPLAT_0]] : tensor<f32>) dimensions = [0]
+# CHECK:           %[[EXTRACT_0:.*]] = tensor.extract %[[REDUCE_0]][] : tensor<f32>
+# CHECK:           return %[[EXTRACT_0]] : f32
+# CHECK:         }
+
+
+@run
+def testMapOp():
+    with Context(), Location.unknown():
+        f32 = T.f32()
+        tensor_type = T.tensor(10, f32)
+
+        @builtin.module
+        def module():
+            @func.func(tensor_type)
+            def map_op(input):
+                empty = tensor.empty(tensor_type.shape, f32)
+
+                @linalg.map(
+                    result=[tensor_type],
+                    inputs=[input, input],
+                    init=empty,
+                )
+                def add(element: f32, acc: f32, init: f32):
+                    return arith.addf(element, acc)
+
+                return add
+
+        module.verify()
+        print(module)
+
+
+# CHECK-LABEL:   func.func @map_op(
+# CHECK-SAME:                      %[[ARG0:.*]]: tensor<10xf32>) -> tensor<10xf32> {
+# CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<10xf32>
+# CHECK:           %[[MAP_0:.*]] = linalg.map { arith.addf } ins(%[[ARG0]], %[[ARG0]] : tensor<10xf32>, tensor<10xf32>) outs(%[[EMPTY_0]] : tensor<10xf32>)
+# CHECK:           return %[[MAP_0]] : tensor<10xf32>
+# CHECK:         }

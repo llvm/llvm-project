@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1141
-! A reference to the procedure IEEE_SET_HALTING_MODE ! from the intrinsic 
+! A reference to the procedure IEEE_SET_HALTING_MODE ! from the intrinsic
 ! module IEEE_EXCEPTIONS, shall not ! appear within a DO CONCURRENT construct.
 !
 ! C1137
@@ -181,11 +181,13 @@ subroutine s6()
 
   do concurrent (i = 1:10)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
+!ERROR: Impure procedure 'move_alloc' may not be referenced in DO CONCURRENT
     call move_alloc(ca, cb)
   end do
 
   do concurrent (i = 1:10)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
+!ERROR: Impure procedure 'move_alloc' may not be referenced in DO CONCURRENT
     call move_alloc(pvar%type1_field%coarray_type0_field, qvar%type1_field%coarray_type0_field)
   end do
 end subroutine s6
@@ -211,6 +213,7 @@ subroutine s7()
   type(procTypeNotPure) :: procVarNotPure
   type(procTypePure) :: procVarPure
   integer :: ivar
+  real :: rvar
 
   procVarPure%pureProcComponent => pureFunc
 
@@ -237,6 +240,14 @@ subroutine s7()
   do concurrent (i = 1:10)
 !ERROR: Impure procedure 'ipf' may not be referenced in DO CONCURRENT
     ivar = generic()
+  end do
+
+  ! This should generate an error
+  do concurrent (i = 1:10)
+!ERROR: Impure procedure 'irand' may not be referenced in DO CONCURRENT
+    ivar = irand()
+!ERROR: Impure procedure 'rand' may not be referenced in DO CONCURRENT
+    rvar = rand()
   end do
 
   contains

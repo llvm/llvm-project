@@ -19,7 +19,7 @@ define <vscale x 4 x i1> @try_combine_svbool_binop_and_0(<vscale x 4 x i1> %a, <
 define <vscale x 8 x i1> @try_combine_svbool_binop_and_1(<vscale x 8 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_and_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.and.z.nxv8i1(<vscale x 8 x i1> [[A:%.*]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 8 x i1> [[A:%.*]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[TMP2]]
 ;
   %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
@@ -31,7 +31,7 @@ define <vscale x 8 x i1> @try_combine_svbool_binop_and_1(<vscale x 8 x i1> %a, <
 define <vscale x 4 x i1> @try_combine_svbool_binop_and_2(<vscale x 4 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_and_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.and.z.nxv4i1(<vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP2]]
 ;
   %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %a)
@@ -40,10 +40,30 @@ define <vscale x 4 x i1> @try_combine_svbool_binop_and_2(<vscale x 4 x i1> %a, <
   ret <vscale x 4 x i1> %t3
 }
 
+define <vscale x 8 x i1> @try_combine_svbool_logical_and_poison_lhs(<vscale x 16 x i1> %a) {
+; CHECK-LABEL: @try_combine_svbool_logical_and_poison_lhs(
+; CHECK-NEXT:    ret <vscale x 8 x i1> poison
+;
+  %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> poison)
+  %t2 = select <vscale x 16 x i1> %t1, <vscale x 16 x i1> %a, <vscale x 16 x i1> zeroinitializer
+  %t3 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %t2)
+  ret <vscale x 8 x i1> %t3
+}
+
+define <vscale x 8 x i1> @try_combine_svbool_logical_and_poison_rhs(<vscale x 16 x i1> %a) {
+; CHECK-LABEL: @try_combine_svbool_logical_and_poison_rhs(
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
+;
+  %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> poison)
+  %t2 = select <vscale x 16 x i1> %a, <vscale x 16 x i1> %t1, <vscale x 16 x i1> zeroinitializer
+  %t3 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %t2)
+  ret <vscale x 8 x i1> %t3
+}
+
 define <vscale x 2 x i1> @try_combine_svbool_binop_and_3(<vscale x 2 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_and_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.and.z.nxv2i1(<vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP2]]
 ;
   %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
@@ -66,9 +86,7 @@ define <vscale x 8 x i1> @try_combine_svbool_binop_bic(<vscale x 8 x i1> %a, <vs
 
 define <vscale x 8 x i1> @try_combine_svbool_binop_eor(<vscale x 8 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_eor(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.eor.z.nxv8i1(<vscale x 8 x i1> [[A:%.*]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 8 x i1> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
 ;
   %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
   %t2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.eor.z.nxv16i1(<vscale x 16 x i1> %t1, <vscale x 16 x i1> %b, <vscale x 16 x i1> %b)
@@ -115,7 +133,7 @@ define <vscale x 8 x i1> @try_combine_svbool_binop_orn(<vscale x 8 x i1> %a, <vs
 define <vscale x 8 x i1> @try_combine_svbool_binop_orr(<vscale x 8 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_orr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.orr.z.nxv8i1(<vscale x 8 x i1> [[A:%.*]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 8 x i1> [[A:%.*]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[TMP2]]
 ;
   %t1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)

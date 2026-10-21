@@ -1,5 +1,4 @@
-# RUN: %PYTHON %s pybind11 | FileCheck %s
-# RUN: %PYTHON %s nanobind | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s
 import sys
 import typing
 from typing import Union, Optional
@@ -10,26 +9,15 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
-if sys.argv[1] == "pybind11":
-    from mlir._mlir_libs._mlirPythonTestPybind11 import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+    TestAttr,
+    TestType,
+    TestTensorValue,
+    TestIntegerRankedTensorType,
+    take_module_or_operation,
+)
 
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=False)
-elif sys.argv[1] == "nanobind":
-    from mlir._mlir_libs._mlirPythonTestNanobind import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
-
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=True)
-else:
-    raise ValueError("Expected pybind11 or nanobind as argument")
+test.register_python_test_dialect(get_dialect_registry())
 
 
 def run(f):
@@ -51,17 +39,17 @@ def testAttributes():
         two = IntegerAttr.get(i32, 2)
         unit = UnitAttr.get()
 
-        # CHECK: python_test.attributed_op  {
-        # CHECK-DAG: mandatory_i32 = 1 : i32
-        # CHECK-DAG: optional_i32 = 2 : i32
+        # CHECK: python_test.attributed_op  <
+        # CHECK-DAG: mandatory_i32 = 1
+        # CHECK-DAG: optional_i32 = 2
         # CHECK-DAG: unit
-        # CHECK: }
+        # CHECK: >
         op = test.AttributedOp(one, optional_i32=two, unit=unit)
         print(f"{op}")
 
-        # CHECK: python_test.attributed_op  {
-        # CHECK: mandatory_i32 = 2 : i32
-        # CHECK: }
+        # CHECK: python_test.attributed_op  <
+        # CHECK: mandatory_i32 = 2
+        # CHECK: >
         op2 = test.AttributedOp(two)
         print(f"{op2}")
 
@@ -71,24 +59,25 @@ def testAttributes():
 
         assert "additional" not in op.attributes
 
-        # CHECK: python_test.attributed_op  {
+        # CHECK: python_test.attributed_op  <
         # CHECK-DAG: additional = 1 : i32
-        # CHECK-DAG: mandatory_i32 = 2 : i32
+        # CHECK-DAG: mandatory_i32 = 2
         # CHECK: }
         op2.attributes["additional"] = one
         print(f"{op2}")
 
-        # CHECK: python_test.attributed_op  {
+        # CHECK: python_test.attributed_op  <
         # CHECK-DAG: additional = 2 : i32
-        # CHECK-DAG: mandatory_i32 = 2 : i32
+        # CHECK-DAG: mandatory_i32 = 2
         # CHECK: }
         op2.attributes["additional"] = two
         print(f"{op2}")
 
-        # CHECK: python_test.attributed_op  {
+        # CHECK: python_test.attributed_op  <
         # CHECK-NOT: additional = 2 : i32
-        # CHECK:     mandatory_i32 = 2 : i32
-        # CHECK: }
+        # CHECK: mandatory_i32 = 2
+        # CHECK: >
+        # CHECK-NOT: additional = 2 : i32
         del op2.attributes["additional"]
         print(f"{op2}")
 
@@ -172,23 +161,23 @@ def attrBuilder():
             x_arr=[BoolAttr.get(True), StringAttr.get("x")],
             x_boolarr=[False, True],  # CHECK-DAG: x_boolarr = [false, true]
             x_bool=True,  # CHECK-DAG: x_bool = true
-            x_dboolarr=[True, False],  # CHECK-DAG: x_dboolarr = array<i1: true, false>
-            x_df16arr=[21, 22],  # CHECK-DAG: x_df16arr = array<i16: 21, 22>
-            # CHECK-DAG: x_df32arr = array<f32: 2.300000e+01, 2.400000e+01>
+            x_dboolarr=[True, False],  # CHECK-DAG: x_dboolarr = [true, false]
+            x_df16arr=[21, 22],  # CHECK-DAG: x_df16arr = [21, 22]
+            # CHECK-DAG: x_df32arr = [2.300000e+01, 2.400000e+01]
             x_df32arr=[23, 24],
-            # CHECK-DAG: x_df64arr = array<f64: 2.500000e+01, 2.600000e+01>
+            # CHECK-DAG: x_df64arr = [2.500000e+01, 2.600000e+01]
             x_df64arr=[25, 26],
-            x_di32arr=[0, 1],  # CHECK-DAG: x_di32arr = array<i32: 0, 1>
-            # CHECK-DAG: x_di64arr = array<i64: 1, 2>
+            x_di32arr=[0, 1],  # CHECK-DAG: x_di32arr = [0, 1]
+            # CHECK-DAG: x_di64arr = [1, 2]
             x_di64arr=[1, 2],
-            x_di8arr=[2, 3],  # CHECK-DAG: x_di8arr = array<i8: 2, 3>
+            x_di8arr=[2, 3],  # CHECK-DAG: x_di8arr = [2, 3]
             # CHECK-DAG: x_dictarr = [{a = false}]
             x_dictarr=[{"a": BoolAttr.get(False)}],
             x_dict={"b": BoolAttr.get(True)},  # CHECK-DAG: x_dict = {b = true}
-            x_f32=-2.25,  # CHECK-DAG: x_f32 = -2.250000e+00 : f32
+            x_f32=-2.25,  # CHECK-DAG: x_f32 = -2.250000e+00
             # CHECK-DAG: x_f32arr = [2.000000e+00 : f32, 3.000000e+00 : f32]
             x_f32arr=[2.0, 3.0],
-            x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
+            x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00
             x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
             # CHECK-DAG: x_f64elems = dense<[8.000000e+00, 1.600000e+01]> : tensor<2xf64>
             x_f64elems=[8.0, 16.0],
@@ -196,38 +185,38 @@ def attrBuilder():
             x_flatsymrefarr=["symbol1", "symbol2"],
             x_flatsymref="symbol3",  # CHECK-DAG: x_flatsymref = @symbol3
             x_i1=0,  # CHECK-DAG: x_i1 = false
-            x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
-            x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
+            x_i16=42,  # CHECK-DAG: x_i16 = 42
+            x_i32=6,  # CHECK-DAG: x_i32 = 6
             x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
             x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xi32>
-            x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
+            x_i64=9,  # CHECK-DAG: x_i64 = 9
             x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
             x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xi64>
             x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
-            x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
-            x_idx=10,  # CHECK-DAG: x_idx = 10 : index
+            x_i8=11,  # CHECK-DAG: x_i8 = 11
+            x_idx=10,  # CHECK-DAG: x_idx = 10
             # CHECK-DAG: x_idxelems = dense<[11, 12]> : tensor<2xindex>
             x_idxelems=[11, 12],
             # CHECK-DAG: x_idxlistarr = [{{\[}}13], [14, 15]]
             x_idxlistarr=[[13], [14, 15]],
-            x_si1=-1,  # CHECK-DAG: x_si1 = -1 : si1
-            x_si16=-2,  # CHECK-DAG: x_si16 = -2 : si16
-            x_si32=-3,  # CHECK-DAG: x_si32 = -3 : si32
-            x_si64=-123,  # CHECK-DAG: x_si64 = -123 : si64
-            x_si8=-4,  # CHECK-DAG: x_si8 = -4 : si8
+            x_si1=-1,  # CHECK-DAG: x_si1 = -1
+            x_si16=-2,  # CHECK-DAG: x_si16 = -2
+            x_si32=-3,  # CHECK-DAG: x_si32 = -3
+            x_si64=-123,  # CHECK-DAG: x_si64 = -123
+            x_si8=-4,  # CHECK-DAG: x_si8 = -4
             x_strarr=["hello", "world"],  # CHECK-DAG: x_strarr = ["hello", "world"]
             x_str="hello world!",  # CHECK-DAG: x_str = "hello world!"
             # CHECK-DAG: x_symrefarr = [@flatsym, @deep::@sym]
             x_symrefarr=["flatsym", ["deep", "sym"]],
             x_symref=["deep", "sym2"],  # CHECK-DAG: x_symref = @deep::@sym2
-            x_sym="symbol",  # CHECK-DAG: x_sym = "symbol"
+            x_sym="symbol",  # CHECK-DAG: x_sym = @symbol
             x_typearr=[F32Type.get()],  # CHECK-DAG: x_typearr = [f32]
             x_type=F64Type.get(),  # CHECK-DAG: x_type = f64
-            x_ui1=1,  # CHECK-DAG: x_ui1 = 1 : ui1
-            x_ui16=2,  # CHECK-DAG: x_ui16 = 2 : ui16
-            x_ui32=3,  # CHECK-DAG: x_ui32 = 3 : ui32
-            x_ui64=4,  # CHECK-DAG: x_ui64 = 4 : ui64
-            x_ui8=5,  # CHECK-DAG: x_ui8 = 5 : ui8
+            x_ui1=1,  # CHECK-DAG: x_ui1 = 1
+            x_ui16=2,  # CHECK-DAG: x_ui16 = 2
+            x_ui32=3,  # CHECK-DAG: x_ui32 = 3
+            x_ui64=4,  # CHECK-DAG: x_ui64 = 4
+            x_ui8=5,  # CHECK-DAG: x_ui8 = 5
             x_unit=True,  # CHECK-DAG: x_unit
         )
         op.verify()
@@ -554,7 +543,7 @@ def testOptionalOperandOp():
             )
             assert (
                 typing.get_type_hints(test.OptionalOperandOp.result.fget)["return"]
-                is OpResult
+                == OpResult[IntegerType]
             )
             assert type(op1.result) is OpResult
 
@@ -571,9 +560,9 @@ def testCustomAttribute():
         # CHECK: #python_test.test_attr
         print(a)
 
-        # CHECK: python_test.custom_attributed_op  {
+        # CHECK: python_test.custom_attributed_op  <
         # CHECK: #python_test.test_attr
-        # CHECK: }
+        # CHECK: >
         op2 = test.CustomAttributedOp(a)
         print(f"{op2}")
 
@@ -599,9 +588,18 @@ def testCustomAttribute():
         try:
             TestAttr(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast attribute to TestAttr (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_attr: mlir._mlir_libs._mlir.ir.Attribute) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestAttr, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -626,12 +624,6 @@ def testCustomType():
         b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
-        # Subclasses of ir.Type should not have a static_typeid
-        # CHECK: 'TestType' object has no attribute 'static_typeid'
-        try:
-            b.static_typeid
-        except AttributeError as e:
-            print(e)
 
         i8 = IntegerType.get_signless(8)
         try:
@@ -646,9 +638,18 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast type to TestType (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -660,6 +661,13 @@ def testCustomType():
             pass
         else:
             raise
+
+
+@run
+# CHECK-LABEL: TEST: testValue
+def testValue():
+    # Check that Value is a generic class at runtime.
+    assert hasattr(Value, "__class_getitem__")
 
 
 @run
@@ -848,7 +856,7 @@ def testVariadicOperandAccess():
             variadic_operands = test.SameVariadicOperandSizeOp(
                 [zero, one], two, [three, four]
             )
-            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            # CHECK: OpResult(%{{.*}} = arith.constant 2 : i32)
             print(variadic_operands.non_variadic)
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.non_variadic.fget)[
@@ -856,9 +864,9 @@ def testVariadicOperandAccess():
                 ]
                 is Value
             )
-            assert type(variadic_operands.non_variadic) is Value
+            assert type(variadic_operands.non_variadic) is OpResult
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 0 : i32)', 'OpResult(%{{.*}} = arith.constant 1 : i32)']
             print(values(variadic_operands.variadic1))
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.variadic1.fget)[
@@ -868,7 +876,7 @@ def testVariadicOperandAccess():
             )
             assert type(variadic_operands.variadic1) is OpOperandList
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 3 : i32)', 'OpResult(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
             assert type(variadic_operands.variadic2) is OpOperandList
 
@@ -1027,3 +1035,37 @@ def testVariadicAndNormalRegionOp():
 
             assert isinstance(region_op.opview, OpView)
             assert isinstance(region_op.operation.opview, OpView)
+
+
+# Regression test for the dirty-error-state crash in `NanobindAdaptors.h`
+# `from_python` type casters (#191764).
+#
+# !!! This only fails with a debug version of Python. !!!
+#
+# Uses an overloaded function: overload 1 takes `MlirOperation`, overload 2
+# takes `MlirModule`. When called with an `ir.Module`:
+#
+#   1. `nanobind` tries overload 1 (`MlirOperation`). `from_python` gets the
+#      `Module`'s `_CAPIPtr` capsule, then `mlirPythonCapsuleToOperation` calls
+#      `PyCapsule_GetPointer` with `"mlir.ir.Operation._CAPIPtr"` — but the
+#      capsule is named `"mlir.ir.Module._CAPIPtr"`. `PyCapsule_GetPointer`
+#      returns `NULL` and sets `PyErr_Occurred()`. `from_python` returns `false`.
+#
+#   2. `nanobind` tries overload 2 (`MlirModule`). `from_python` calls
+#      `mlirApiObjectToCapsule` --> `nanobind::getattr(obj, "_CAPIPtr")` -->
+#      `_PyType_LookupRef`.
+#
+# Without the fix:
+#   `_PyType_LookupRef` asserts `!PyErr_Occurred()` --> `SIGABRT`.
+#
+# With the fix (`PyErr_Clear` in `from_python` after failed capsule conversion):
+#   Overload 2 succeeds and returns `"module"`.
+# CHECK-LABEL: testOverloadWithWrongPythonCapsule
+@run
+def testOverloadWithWrongPythonCapsule():
+    with Context():
+        module = Module.parse("module {}")
+
+    # CHECK: result = module
+    result = take_module_or_operation(module)
+    print(f"result = {result}")

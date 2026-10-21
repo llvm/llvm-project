@@ -25,6 +25,15 @@ func.func @sparse_tensor_new(%file: !Filename) -> tensor<20x40xf32, #DCSR> {
   return %0 : tensor<20x40xf32, #DCSR>
 }
 
+// CHECK-LABEL: func @sparse_tensor_new_from_tensor
+// CHECK-FUNC-LABEL: func @sparse_tensor_new_from_tensor
+func.func @sparse_tensor_new_from_tensor(%arg0: tensor<20x40xf32>) -> tensor<20x40xf32, #DCSR> {
+  // CHECK: sparse_tensor.new {{.*}}
+  // CHECK-FUNC: sparse_tensor.new {{.*}}
+  %0 = sparse_tensor.new %arg0 : tensor<20x40xf32> to tensor<20x40xf32, #DCSR>
+  return %0 : tensor<20x40xf32, #DCSR>
+}
+
 // CHECK-LABEL: func @sparse_tensor_convert
 // CHECK-FUNC-LABEL: func @sparse_tensor_convert
 func.func @sparse_tensor_convert() -> tensor<20x40xf32> {

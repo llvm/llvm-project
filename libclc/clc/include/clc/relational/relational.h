@@ -43,6 +43,7 @@
 #define fcNan (__FPCLASS_SNAN | __FPCLASS_QNAN)
 #define fcInf (__FPCLASS_POSINF | __FPCLASS_NEGINF)
 #define fcNormal (__FPCLASS_POSNORMAL | __FPCLASS_NEGNORMAL)
+#define fcSubnormal (__FPCLASS_POSSUBNORMAL | __FPCLASS_NEGSUBNORMAL)
 #define fcPosFinite                                                            \
   (__FPCLASS_POSNORMAL | __FPCLASS_POSSUBNORMAL | __FPCLASS_POSZERO)
 #define fcNegFinite                                                            \

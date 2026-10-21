@@ -1,0 +1,69 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s --check-prefix=MANAGED
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s --check-prefix=UNIFIED
+
+! Under -gpu=mem:managed, only allocatable and pointer objects are
+! implicitly managed. A static host array (and a section of one) must
+! keep matching the host specific, not a device, managed, or unified dummy.
+! Under -gpu=mem:unified, every host variable is device-accessible, so the
+! same static array matches the unified specific.
+
+module m
+  integer :: global_host_static(2)
+  integer, allocatable :: global_host_alloc(:)
+  integer, pointer :: global_host_ptr(:)
+  interface gen
+    module procedure sub_host
+    module procedure sub_device
+    module procedure sub_managed
+    module procedure sub_unified
+  end interface
+contains
+  subroutine sub_host(x)
+    integer :: x(:)
+  end subroutine
+  subroutine sub_device(x)
+    integer, device :: x(:)
+  end subroutine
+  subroutine sub_managed(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine sub_unified(x)
+    integer, unified :: x(:)
+  end subroutine
+end module
+
+subroutine driver
+  use m
+  integer :: host_static(2)
+  integer, allocatable :: host_alloc(:)
+  integer, pointer :: host_ptr(:)
+  allocate(host_alloc(2), host_ptr(2))
+
+  call gen(host_static)
+  call gen(host_static(:))
+  call gen(host_alloc)
+  call gen(host_alloc(:))
+  call gen(host_ptr)
+  call gen(global_host_static)
+  call gen(global_host_alloc)
+  call gen(global_host_ptr)
+end subroutine
+
+! MANAGED-LABEL: func.func @_QPdriver
+! MANAGED: fir.call @_QMmPsub_host
+! MANAGED: fir.call @_QMmPsub_host
+! MANAGED: fir.call @_QMmPsub_managed
+! MANAGED: fir.call @_QMmPsub_managed
+! MANAGED: fir.call @_QMmPsub_managed
+! MANAGED: fir.call @_QMmPsub_host
+! MANAGED: fir.call @_QMmPsub_managed
+! MANAGED: fir.call @_QMmPsub_managed
+
+! UNIFIED-LABEL: func.func @_QPdriver
+! UNIFIED: fir.call @_QMmPsub_unified
+! UNIFIED: fir.call @_QMmPsub_unified
+! UNIFIED: fir.call @_QMmPsub_unified
+! UNIFIED: fir.call @_QMmPsub_unified
+! UNIFIED: fir.call @_QMmPsub_unified
+
+

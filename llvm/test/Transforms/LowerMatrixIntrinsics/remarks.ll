@@ -163,26 +163,26 @@ declare void @llvm.matrix.column.major.store(<9 x double>, ptr, i64, i1, i32, i3
 !19 = !DILocation(line: 10, column: 20, scope: !5)
 !20 = !DILocation(line: 10, column: 10, scope: !5)
 
-!21 = distinct !DISubprogram(name: "fn2", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!21 = distinct !DISubprogram(name: "fn2", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !22 = !DILocation(line: 30, column: 20, scope: !21)
 
-!23 = distinct !DISubprogram(name: "fn3", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!23 = distinct !DISubprogram(name: "fn3", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !24 = !DILocation(line: 40, column: 20, scope: !23)
 
-!25 = distinct !DISubprogram(name: "fn4", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!25 = distinct !DISubprogram(name: "fn4", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !26 = !DILocation(line: 50, column: 20, scope: !25)
 
-!27 = distinct !DISubprogram(name: "fn5", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!27 = distinct !DISubprogram(name: "fn5", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !28 = !DILocation(line: 60, column: 20, scope: !27)
 
-!29 = distinct !DISubprogram(name: "fn6", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!29 = distinct !DISubprogram(name: "fn6", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !30 = !DILocation(line: 70, column: 20, scope: !29)
 
-!31 = distinct !DISubprogram(name: "fn7", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!31 = distinct !DISubprogram(name: "fn7", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !32 = !DILocation(line: 80, column: 20, scope: !31)
 
-!33 = distinct !DISubprogram(name: "fn8", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!33 = distinct !DISubprogram(name: "fn8", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !34 = !DILocation(line: 90, column: 20, scope: !33)
 
-!35 = distinct !DISubprogram(name: "fn9", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!35 = distinct !DISubprogram(name: "fn9", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !36 = !DILocation(line: 100, column: 20, scope: !35)

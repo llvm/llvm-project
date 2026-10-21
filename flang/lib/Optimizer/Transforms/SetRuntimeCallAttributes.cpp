@@ -20,11 +20,10 @@
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
 #define GEN_PASS_DEF_SETRUNTIMECALLATTRIBUTES
@@ -85,7 +84,10 @@ static mlir::LLVM::MemoryEffectsAttr getGenericMemoryAttr(fir::CallOp callOp) {
         callOp->getContext(),
         {/*other=*/mlir::LLVM::ModRefInfo::NoModRef,
          /*argMem=*/mlir::LLVM::ModRefInfo::ModRef,
-         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef});
+         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef,
+         /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef});
   }
 
   return {};

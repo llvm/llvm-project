@@ -23,8 +23,6 @@
 
 #define DEBUG_TYPE "jitlink"
 
-#include <list>
-
 namespace llvm {
 namespace jitlink {
 
@@ -168,8 +166,6 @@ private:
   static uint64_t getSectionSize(const object::COFFObjectFile &Obj,
                                  const object::coff_section *Section);
   static bool isComdatSection(const object::coff_section *Section);
-  static unsigned getPointerSize(const object::COFFObjectFile &Obj);
-  static llvm::endianness getEndianness(const object::COFFObjectFile &Obj);
   static StringRef getDLLImportStubPrefix() { return "__imp_"; }
   static StringRef getDirectiveSectionName() { return ".drectve"; }
   StringRef getCOFFSectionName(COFFSectionIndex SectionIndex,
@@ -221,18 +217,6 @@ Error COFFLinkGraphBuilder::forEachRelocation(const object::SectionRef &RelSec,
   LLVM_DEBUG(dbgs() << "\n");
   return Error::success();
 }
-
-class GetImageBaseSymbol {
-public:
-  GetImageBaseSymbol(StringRef ImageBaseName = "__ImageBase")
-      : ImageBaseName(ImageBaseName) {}
-  Symbol *operator()(LinkGraph &G);
-  void reset() { ImageBase = std::nullopt; }
-
-private:
-  StringRef ImageBaseName;
-  std::optional<Symbol *> ImageBase;
-};
 
 } // end namespace jitlink
 } // end namespace llvm

@@ -1,4 +1,4 @@
-! Tests -fget-symbols-sources with BLOCK that contains same variable name as 
+! Tests -fget-symbols-sources with BLOCK that contains same variable name as
 ! another in an outer scope.
 program main
   integer :: x

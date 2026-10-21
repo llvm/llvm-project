@@ -11,5 +11,5 @@ float foo(float X) {
 // HAS_ERRNO-NOT: attributes [[ATTR]] = {{{.*}} memory(none)
 
 // NO_ERRNO: declare float @llvm.sqrt.f32(float) [[ATTR:#[0-9]+]]
-// NO_ERRNO: attributes [[ATTR]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// NO_ERRNO: attributes [[ATTR]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 

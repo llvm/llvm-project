@@ -51,7 +51,8 @@ namespace {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
+  const unsigned NH = Node.getNumHandlers();
+  for (unsigned I = 0; I < NH; ++I) {
     const CXXCatchStmt *CatchS = Node.getHandler(I);
     // Check for generic catch handler (match anything).
     if (CatchS->getCaughtType().isNull())
@@ -66,7 +67,7 @@ AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
 }
 
 AST_MATCHER(CXXNewExpr, mayThrow) {
-  FunctionDecl *OperatorNew = Node.getOperatorNew();
+  const FunctionDecl *OperatorNew = Node.getOperatorNew();
   if (!OperatorNew)
     return false;
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
@@ -82,16 +83,19 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocReferenceType = referenceType(pointee(BadAllocType));
   auto ExceptionReferenceType = referenceType(pointee(ExceptionType));
 
-  auto CatchBadAllocType =
+  const auto CatchBadAllocType =
       qualType(hasCanonicalType(anyOf(BadAllocType, BadAllocReferenceType,
                                       ExceptionType, ExceptionReferenceType)));
-  auto BadAllocCatchingTryBlock = cxxTryStmt(hasHandlerFor(CatchBadAllocType));
+  const auto BadAllocCatchingTryBlock =
+      cxxTryStmt(hasHandlerFor(CatchBadAllocType));
 
-  auto NewExprMayThrow = cxxNewExpr(mayThrow());
-  auto HasNewExpr1 = expr(anyOf(NewExprMayThrow.bind("new1"),
-                                hasDescendant(NewExprMayThrow.bind("new1"))));
-  auto HasNewExpr2 = expr(anyOf(NewExprMayThrow.bind("new2"),
-                                hasDescendant(NewExprMayThrow.bind("new2"))));
+  const auto NewExprMayThrow = cxxNewExpr(mayThrow());
+  const auto HasNewExpr1 =
+      expr(anyOf(NewExprMayThrow.bind("new1"),
+                 hasDescendant(NewExprMayThrow.bind("new1"))));
+  const auto HasNewExpr2 =
+      expr(anyOf(NewExprMayThrow.bind("new2"),
+                 hasDescendant(NewExprMayThrow.bind("new2"))));
 
   Finder->addMatcher(
       callExpr(

@@ -76,6 +76,8 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       assert(m_unit);
       m_value.uval = data.GetMaxU64(
           offset_ptr, m_unit->GetFormParams().getDwarfOffsetByteSize());
@@ -232,7 +234,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   }
     return true;
 
-  // Inlined NULL terminated C-strings
+  // Inlined null-terminated C-strings
   case DW_FORM_string:
     debug_info_data.GetCStr(offset_ptr);
     return true;
@@ -280,6 +282,8 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_line_strp:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       assert(unit);
       *offset_ptr += unit->GetFormParams().getDwarfOffsetByteSize();
       return true;
@@ -416,6 +420,13 @@ void DWARFFormValue::Dump(Stream &s) const {
                 m_unit->GetFormParams().getRefAddrByteSize());
     break;
   }
+  case DW_FORM_GNU_ref_alt:
+  case DW_FORM_GNU_strp_alt: {
+    assert(m_unit);
+    DumpAddress(s.AsRawOstream(), uvalue,
+                m_unit->GetFormParams().getDwarfOffsetByteSize());
+    break;
+  }
   case DW_FORM_ref1:
     unit_relative_offset = true;
     break;
@@ -439,6 +450,7 @@ void DWARFFormValue::Dump(Stream &s) const {
     break;
   case DW_FORM_flag_present:
     break;
+
   default:
     s.Printf("DW_FORM(0x%4.4x)", m_form);
     break;
@@ -451,13 +463,21 @@ void DWARFFormValue::Dump(Stream &s) const {
   }
 }
 
+/// PeekCStr only returns strings terminated within the section, so data() is
+/// always a valid C string.
+static const char *PeekCStr(const DWARFDataExtractor &data, uint64_t offset) {
+  if (std::optional<llvm::StringRef> str = data.PeekCStr(offset))
+    return str->data();
+  return nullptr;
+}
+
 const char *DWARFFormValue::AsCString() const {
   DWARFContext &context = m_unit->GetSymbolFileDWARF().GetDWARFContext();
 
   if (m_form == DW_FORM_string)
     return m_value.cstr;
   if (m_form == DW_FORM_strp)
-    return context.getOrLoadStrData().PeekCStr(m_value.uval);
+    return PeekCStr(context.getOrLoadStrData(), m_value.uval);
 
   if (m_form == DW_FORM_GNU_str_index || m_form == DW_FORM_strx ||
       m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
@@ -467,11 +487,11 @@ const char *DWARFFormValue::AsCString() const {
         m_unit->GetStringOffsetSectionItem(m_value.uval);
     if (!offset)
       return nullptr;
-    return context.getOrLoadStrData().PeekCStr(*offset);
+    return PeekCStr(context.getOrLoadStrData(), *offset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return context.getOrLoadLineStrData().PeekCStr(m_value.uval);
+    return PeekCStr(context.getOrLoadLineStrData(), m_value.uval);
 
   return nullptr;
 }
@@ -564,13 +584,14 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
-  if ((!IsDataForm(m_form)) || m_form == llvm::dwarf::DW_FORM_sdata)
+  if ((!IsDataForm(m_form) && !IsFlagForm(m_form)) ||
+      m_form == llvm::dwarf::DW_FORM_sdata)
     return std::nullopt;
   return m_value.uval;
 }
 
 std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
-  if ((!IsDataForm(m_form)) ||
+  if ((!IsDataForm(m_form) && !IsFlagForm(m_form)) ||
       (m_form == llvm::dwarf::DW_FORM_udata &&
        uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
     return std::nullopt;
@@ -620,6 +641,17 @@ bool DWARFFormValue::IsDataForm(const dw_form_t form) {
   llvm_unreachable("All cases handled above!");
 }
 
+bool DWARFFormValue::IsFlagForm(const dw_form_t form) {
+  switch (form) {
+  case DW_FORM_flag:
+  case DW_FORM_flag_present:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("All cases handled above!");
+}
+
 bool DWARFFormValue::FormIsSupported(dw_form_t form) {
   switch (form) {
     case DW_FORM_addr:
@@ -660,6 +692,8 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_addr_index:
     case DW_FORM_implicit_const:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       return true;
     default:
       break;

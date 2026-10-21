@@ -319,8 +319,12 @@ static inline RT_API_ATTRS void DoBesselYnX0(Descriptor &result, int32_t n1,
   // Y(n, 0.0) = -Inf, when n >= 0
   for (int j{1}; j <= n2 - n1 + 1; ++j) {
     at[0] = j;
+    // numeric_limits may not be specialized for the REAL(16) type
+    // (e.g. __float128), in which case infinity() is 0.0. A double infinity
+    // converts exactly to every floating-point type.
     *result.Element<CppTypeFor<CAT, KIND>>(at) =
-        -std::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
+        static_cast<CppTypeFor<CAT, KIND>>(
+            -common::numeric_limits<double>::infinity());
   }
 }
 
@@ -583,6 +587,26 @@ void RTDEF(CshiftVector)(Descriptor &result, const Descriptor &source,
   }
 }
 
+static RT_API_ATTRS void CheckBoundaryType(const Descriptor &array,
+    const Descriptor &boundary, Terminator &terminator) {
+  if (const auto *boundaryAddendum{boundary.Addendum()}) {
+    if (const auto *boundaryDT{boundaryAddendum->derivedType()}) {
+      if (const auto *arrayAddendum{array.Addendum()}) {
+        if (const auto *arrayDT{arrayAddendum->derivedType()}) {
+          if (boundaryDT != arrayDT) {
+            terminator.Crash("EOSHIFT: BOUNDARY= has type '%.*s' that differs "
+                             "from ARRAY= type '%.*s'",
+                static_cast<int>(boundaryDT->name().ElementBytes()),
+                boundaryDT->name().OffsetElement(),
+                static_cast<int>(arrayDT->name().ElementBytes()),
+                arrayDT->name().OffsetElement());
+          }
+        }
+      }
+    }
+  }
+}
+
 // EOSHIFT of rank > 1
 void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
     const Descriptor &shift, const Descriptor *boundary, int dim,
@@ -621,6 +645,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
         }
       }
     }
+    CheckBoundaryType(source, *boundary, terminator);
   }
   ShiftControl shiftControl{shift, terminator, dim};
   shiftControl.Init(source, "EOSHIFT");
@@ -675,13 +700,13 @@ void RTDEF(EoshiftVector)(Descriptor &result, const Descriptor &source,
   if (boundary) {
     RUNTIME_CHECK(terminator, boundary->rank() == 0);
     RUNTIME_CHECK(terminator, boundary->type() == source.type());
+    CheckBoundaryType(source, *boundary, terminator);
     if (boundary->ElementBytes() != elementLen) {
       terminator.Crash("EOSHIFT: BOUNDARY= has element byte length %zd but "
                        "ARRAY= has length %zd",
           boundary->ElementBytes(), elementLen);
     }
-  }
-  if (!boundary) {
+  } else {
     DefaultInitialize(result, terminator);
   }
   SubscriptValue lb{source.GetDimension(0).LowerBound()};

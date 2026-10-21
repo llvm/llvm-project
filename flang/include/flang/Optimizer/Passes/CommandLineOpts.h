@@ -52,11 +52,15 @@ extern llvm::codegenoptions::DebugInfoKind noDebugInfo;
 
 /// Optimizer Passes
 extern llvm::cl::opt<bool> disableCfgConversion;
-extern llvm::cl::opt<bool> disableFirAvc;
-extern llvm::cl::opt<bool> disableFirMao;
-
 extern llvm::cl::opt<bool> disableFirAliasTags;
+extern llvm::cl::opt<bool> disableFirLICM;
+extern llvm::cl::opt<bool> disableFirMao;
 extern llvm::cl::opt<bool> useOldAliasTags;
+extern llvm::cl::opt<bool> forceNoAlias;
+
+/// Experimental option to replace the stack-arrays and memory-allocation-opt
+/// passes with the unified allocation-placement pass.
+extern llvm::cl::opt<bool> enableAllocationPlacement;
 
 /// CodeGen Passes
 extern llvm::cl::opt<bool> disableCodeGenRewrite;
@@ -65,6 +69,7 @@ extern llvm::cl::opt<bool> disableDebugInfo;
 extern llvm::cl::opt<bool> disableFirToLlvmIr;
 extern llvm::cl::opt<bool> disableLlvmIrToLlvm;
 extern llvm::cl::opt<bool> disableBoxedProcedureRewrite;
+extern llvm::cl::opt<bool> enableSafeTrampoline;
 
 extern llvm::cl::opt<bool> disableExternalNameConversion;
 extern llvm::cl::opt<bool> enableConstantArgumentGlobalisation;

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class MipsEVAInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
+class MipsEVAInst : MipsInst<(outs), (ins), "", [], FrmOther>,
                     StdArch {
   let DecoderNamespace = "Mips";
   let EncodingPredicates = [HasStdEnc];
@@ -58,10 +58,9 @@ def OPGROUP_COP0_TLB   : OPGROUP<0b010000>;
 //===----------------------------------------------------------------------===//
 
 class SPECIAL3_EVA_LOAD_STORE_FM<OPCODE6 Operation> : MipsEVAInst {
-  bits<21> addr;
   bits<5> rt;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
+  bits<5> base;
+  bits<9> offset;
 
   bits<32> Inst;
 

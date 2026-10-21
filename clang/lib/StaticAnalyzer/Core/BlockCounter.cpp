@@ -21,12 +21,11 @@ using namespace ento;
 namespace {
 
 class CountKey {
-  const StackFrameContext *CallSite;
+  const StackFrame *CallSite;
   unsigned BlockID;
 
 public:
-  CountKey(const StackFrameContext *CS, unsigned ID)
-    : CallSite(CS), BlockID(ID) {}
+  CountKey(const StackFrame *CS, unsigned ID) : CallSite(CS), BlockID(ID) {}
 
   bool operator==(const CountKey &RHS) const {
     return (CallSite == RHS.CallSite) && (BlockID == RHS.BlockID);
@@ -54,8 +53,8 @@ static inline CountMap::Factory& GetFactory(void *F) {
   return *static_cast<CountMap::Factory*>(F);
 }
 
-unsigned BlockCounter::getNumVisited(const StackFrameContext *CallSite,
-                                       unsigned BlockID) const {
+unsigned BlockCounter::getNumVisited(const StackFrame *CallSite,
+                                     unsigned BlockID) const {
   CountMap M = GetMap(Data);
   CountMap::data_type* T = M.lookup(CountKey(CallSite, BlockID));
   return T ? *T : 0;
@@ -69,10 +68,9 @@ BlockCounter::Factory::~Factory() {
   delete static_cast<CountMap::Factory*>(F);
 }
 
-BlockCounter
-BlockCounter::Factory::IncrementCount(BlockCounter BC,
-                                        const StackFrameContext *CallSite,
-                                        unsigned BlockID) {
+BlockCounter BlockCounter::Factory::IncrementCount(BlockCounter BC,
+                                                   const StackFrame *CallSite,
+                                                   unsigned BlockID) {
   return BlockCounter(GetFactory(F).add(GetMap(BC.Data),
                                           CountKey(CallSite, BlockID),
                              BC.getNumVisited(CallSite, BlockID)+1).getRoot());

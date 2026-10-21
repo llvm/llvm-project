@@ -73,6 +73,7 @@ protected:
   /// DW_AT_containing_type attribute. This attribute points to a DIE that
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
+  DenseMap<DIE *, const DINode *> PropertyForwardMap;
 
   DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
@@ -111,9 +112,6 @@ public:
   llvm::dwarf::SourceLanguage getSourceLanguage() const;
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
-
-  /// Return true if this compile unit has something to write out.
-  bool hasContent() const { return getUnitDie().hasChildren(); }
 
   /// Get string containing language specific context for a global name.
   ///
@@ -216,6 +214,9 @@ public:
   void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
                 DIEBlock *Block);
 
+  /// Add an expression as block data.
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, const DIExpression *Expr);
+
   /// Add location information to specified debug information entry.
   void addSourceLine(DIE &Die, unsigned Line, unsigned Column,
                      const DIFile *File);
@@ -225,6 +226,7 @@ public:
   void addSourceLine(DIE &Die, const DILabel *L);
   void addSourceLine(DIE &Die, const DIType *Ty);
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
+  void addSourceLine(DIE &Die, const DIProperty *P);
 
   /// Add constant value entry in variable DIE.
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
@@ -276,12 +278,14 @@ public:
   /// Construct DIEs for types that contain vtables.
   void constructContainingTypeDIEs();
 
+  void constructPropertyForwardDIEs();
+
   /// Construct function argument DIEs.
   ///
   /// \returns The index of the object parameter in \c Args if one exists.
   /// Returns std::nullopt otherwise.
   std::optional<unsigned> constructSubprogramArguments(DIE &Buffer,
-                                                       DITypeRefArray Args);
+                                                       DITypeArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
@@ -314,11 +318,8 @@ public:
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
-  /// addSectionDelta - Add a label delta attribute data and value.
-  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
-                       const MCSymbol *Lo);
-
-  /// Add a Dwarf section label attribute data and value.
+  /// Add a Dwarf section label attribute data and value. If the current unit
+  /// is a DWO, this function will instead emit a section delta.
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
 
@@ -347,7 +348,7 @@ protected:
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
   bool shouldPlaceInUnitDIE(const DISubprogram *SP, bool Minimal) {
-    // Add subprogram declarations to the CU die directly.
+    // Add subprogram definitions to the CU die directly.
     return Minimal || SP->getDeclaration();
   }
 
@@ -362,6 +363,10 @@ private:
   DISourceLanguageName getLanguage() const {
     return CUNode->getSourceLanguage();
   }
+
+  /// Emit the bytes of an APInt value into an existing DIEBlock,
+  /// respecting target endianness.
+  void addIntToBlock(DIEBlock &Block, const APInt &Val);
 
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
@@ -382,6 +387,7 @@ private:
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);
+  void constructPropertyDIE(DIE &Buffer, const DIProperty *P);
   void constructTemplateTypeParameterDIE(DIE &Buffer,
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,
@@ -395,9 +401,6 @@ private:
   /// Get an anonymous type for index type.
   DIE *getIndexTyDie();
 
-  /// Set D as anonymous type for index which can be reused later.
-  void setIndexTyDie(DIE *D) { IndexTyDie = D; }
-
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
 
   virtual bool isDwoUnit() const = 0;
@@ -406,6 +409,10 @@ private:
   /// Returns 'true' if the current DwarfVersion is compatible
   /// with the specified \p Version.
   bool isCompatibleWithVersion(uint16_t Version) const;
+
+  /// addSectionDelta - Add a label delta attribute data and value.
+  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
+                       const MCSymbol *Lo);
 };
 
 class DwarfTypeUnit final : public DwarfUnit {

@@ -99,7 +99,7 @@ void Case3(float F) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (half)' lvalue Function {{.*}} 'HalfV' 'void (half)'
-  HalfV(F);
+  HalfV(F); // expected-warning{{implicit conversion loses floating-point precision: 'float' to 'half'}}
 }
 
 #if ERROR
@@ -147,7 +147,7 @@ void Case5(half3 H3, float3 F3, double3 D3, half4 H4, float4 F4, double4 D4) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float2)' lvalue Function {{.*}} 'FloatV24' 'void (float2)'
-  FloatV24(D3); // expected-warning{{implicit conversion truncates vector: 'double3' (aka 'vector<double, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  FloatV24(D3); // expected-warning{{implicit conversion truncates vector: 'double3' (aka 'vector<double, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}} expected-warning{{implicit conversion loses floating-point precision: 'double3' (aka 'vector<double, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float4)' <FunctionToPointerDecay>
@@ -162,5 +162,5 @@ void Case5(half3 H3, float3 F3, double3 D3, half4 H4, float4 F4, double4 D4) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float4)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float4)' lvalue Function {{.*}} 'FloatV24' 'void (float4)'
-  FloatV24(D4);
+  FloatV24(D4); // expected-warning{{implicit conversion loses floating-point precision: 'double4' (aka 'vector<double, 4>') to 'vector<float, 4>' (vector of 4 'float' values)}}
 }

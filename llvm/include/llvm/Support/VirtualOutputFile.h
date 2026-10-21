@@ -26,7 +26,7 @@
 
 namespace llvm::vfs {
 
-class OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
+class LLVM_ABI OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
   void anchor() override;
 
 public:
@@ -38,7 +38,7 @@ public:
   virtual raw_pwrite_stream &getOS() = 0;
 };
 
-class NullOutputFileImpl final
+class LLVM_ABI NullOutputFileImpl final
     : public RTTIExtends<NullOutputFileImpl, OutputFileImpl> {
   void anchor() override;
 

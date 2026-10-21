@@ -199,20 +199,20 @@ if.end:
 define void @test8(i64 %val1, i64 %val2, i64 %val3) {
 ; CHECK-SD-LABEL: test8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    tst x0, x1
-; CHECK-SD-NEXT:    b.pl .LBB7_3
-; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    and x8, x1, x2
-; CHECK-SD-NEXT:    tbnz x8, #63, .LBB7_3
-; CHECK-SD-NEXT:  // %bb.2: // %if.then2
+; CHECK-SD-NEXT:    and x9, x0, x1
+; CHECK-SD-NEXT:    cmn x8, #1
+; CHECK-SD-NEXT:    ccmp x9, #0, #0, gt
+; CHECK-SD-NEXT:    b.pl .LBB7_2
+; CHECK-SD-NEXT:  // %bb.1: // %if.then2
 ; CHECK-SD-NEXT:    tst x0, x1, lsl #63
-; CHECK-SD-NEXT:    b.mi .LBB7_4
-; CHECK-SD-NEXT:  .LBB7_3: // %if.end
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB7_4: // %if.then3
-; CHECK-SD-NEXT:    tst x0, x1, lsl #62
 ; CHECK-SD-NEXT:    b.mi .LBB7_3
-; CHECK-SD-NEXT:  // %bb.5: // %if.then4
+; CHECK-SD-NEXT:  .LBB7_2: // %if.end
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB7_3: // %if.then3
+; CHECK-SD-NEXT:    tst x0, x1, lsl #62
+; CHECK-SD-NEXT:    b.mi .LBB7_2
+; CHECK-SD-NEXT:  // %bb.4: // %if.then4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
@@ -586,13 +586,12 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB20_2
 ; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    tbnz wzr, #0, .LBB20_3
 ; CHECK-SD-NEXT:    b .LBB20_4
 ; CHECK-SD-NEXT:  .LBB20_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:    tbz w8, #0, .LBB20_4
-; CHECK-SD-NEXT:  .LBB20_3: // %if.else25
+; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB20_4: // %common.ret
 ; CHECK-SD-NEXT:    mov x0, xzr
@@ -600,7 +599,7 @@ define ptr @tbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ;
 ; CHECK-GI-LABEL: tbnz_wzr:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    tbz w0, #0, .LBB20_3
 ; CHECK-GI-NEXT:  // %bb.1: // %if.end10
 ; CHECK-GI-NEXT:    tbnz w8, #0, .LBB20_4
@@ -656,7 +655,7 @@ define ptr @tbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:    b .LBB21_4
 ; CHECK-SD-NEXT:  .LBB21_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    tbz wzr, #0, .LBB21_4
+; CHECK-SD-NEXT:    b .LBB21_4
 ; CHECK-SD-NEXT:  .LBB21_3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB21_4: // %common.ret
@@ -673,9 +672,8 @@ define ptr @tbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB21_3: // %opnfil.exit.thread
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
 ; CHECK-GI-NEXT:    str wzr, [x1]
-; CHECK-GI-NEXT:    tbz w8, #0, .LBB21_2
+; CHECK-GI-NEXT:    b .LBB21_2
 ; CHECK-GI-NEXT:  .LBB21_4: // %if.else25
 ; CHECK-GI-NEXT:    str wzr, [x1]
 ; CHECK-GI-NEXT:    mov x0, xzr
@@ -716,13 +714,12 @@ define ptr @cbnz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB22_2
 ; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    cbnz wzr, .LBB22_3
 ; CHECK-SD-NEXT:    b .LBB22_4
 ; CHECK-SD-NEXT:  .LBB22_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    mov w8, #10 // =0xa
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:    cbz w8, .LBB22_4
-; CHECK-SD-NEXT:  .LBB22_3: // %if.else25
+; CHECK-SD-NEXT:  // %bb.3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB22_4: // %common.ret
 ; CHECK-SD-NEXT:    mov x0, xzr
@@ -784,7 +781,7 @@ define ptr @cbz_wzr(i1 %cmp1.not.i, ptr %locflg) {
 ; CHECK-SD-NEXT:    b .LBB23_4
 ; CHECK-SD-NEXT:  .LBB23_2: // %opnfil.exit.thread
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    cbz wzr, .LBB23_4
+; CHECK-SD-NEXT:    b .LBB23_4
 ; CHECK-SD-NEXT:  .LBB23_3: // %if.else25
 ; CHECK-SD-NEXT:    str wzr, [x1]
 ; CHECK-SD-NEXT:  .LBB23_4: // %common.ret
@@ -838,31 +835,11 @@ if.then28:                                        ; preds = %if.end26
 }
 
 define i1 @avifSequenceHeaderParse() {
-; CHECK-SD-LABEL: avifSequenceHeaderParse:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    cbz w8, .LBB24_2
-; CHECK-SD-NEXT:  .LBB24_1: // %bb6
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB24_2: // %bb1
-; CHECK-SD-NEXT:    cbz w8, .LBB24_4
-; CHECK-SD-NEXT:  // %bb.3:
-; CHECK-SD-NEXT:    tbz xzr, #63, .LBB24_1
-; CHECK-SD-NEXT:    b .LBB24_5
-; CHECK-SD-NEXT:  .LBB24_4: // %bb2
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    tbz x8, #63, .LBB24_1
-; CHECK-SD-NEXT:  .LBB24_5: // %bb4
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: avifSequenceHeaderParse:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w0, wzr
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: avifSequenceHeaderParse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    ret
 entry:
   %a = icmp slt i64 0, 0
   br i1 %a, label %bb1, label %bb6

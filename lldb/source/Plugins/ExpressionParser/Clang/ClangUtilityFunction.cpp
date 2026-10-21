@@ -187,5 +187,5 @@ void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
-      nullptr);
+      nullptr, /*ignore_context_qualifiers=*/false);
 }

@@ -73,9 +73,12 @@
 
 #ifdef GTEST_OS_QNX
 #include <devctl.h>
-#include <fcntl.h>
 #include <sys/procfs.h>
 #endif  // GTEST_OS_QNX
+
+#if defined(GTEST_OS_QNX) || defined(GTEST_OS_ZOS)
+#include <fcntl.h>
+#endif
 
 #ifdef GTEST_OS_AIX
 #include <procinfo.h>
@@ -1087,7 +1090,7 @@ class CapturedStream {
     if (name_template.back() != GTEST_PATH_SEP_[0])
       name_template.push_back(GTEST_PATH_SEP_[0]);
 #else
-    name_template = "/tmp/";
+    name_template = TempDir();
 #endif
     name_template.append("gtest_captured_stream.XXXXXX");
 
@@ -1103,6 +1106,14 @@ class CapturedStream {
           << "Failed to create tmp file " << name_template
           << " for test; does the test have access to the /tmp directory?";
     }
+#ifdef GTEST_OS_ZOS
+    const struct f_cnvrt convert = {
+        SETCVTON, // cvtcmd
+        0,        // pccsid
+        1047      // fccsid
+    };
+    fcntl(captured_fd, F_CONTROL_CVT, &convert);
+#endif  // GTEST_OS_ZOS
     filename_ = std::move(name_template);
 #endif  // GTEST_OS_WINDOWS
     fflush(nullptr);

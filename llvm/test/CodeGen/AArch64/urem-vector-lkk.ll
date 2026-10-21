@@ -4,11 +4,11 @@
 define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; CHECK-LABEL: fold_urem_vec_1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #281474976579584 // =0xfffffffe0000
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    adrp x8, .LCPI0_2
 ; CHECK-NEXT:    ushl v1.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    movi d2, #0000000000000000
@@ -18,10 +18,10 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 ; CHECK-NEXT:    umull v2.4s, v3.4h, v2.4h
 ; CHECK-NEXT:    shrn v2.4h, v2.4s, #16
 ; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_2]
-; CHECK-NEXT:    adrp x8, .LCPI0_3
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_1]
+; CHECK-NEXT:    adrp x8, .LCPI0_2
 ; CHECK-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_3]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_2]
 ; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 95, i16 124, i16 98, i16 1003>
@@ -70,13 +70,13 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    mov x8, #-1688849860263936 // =0xfffa000000000000
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    adrp x8, .LCPI3_1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI3_1]
-; CHECK-NEXT:    adrp x8, .LCPI3_2
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI3_2]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI3_1]
 ; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
   %1 = urem <4 x i16> %x, <i16 64, i16 32, i16 8, i16 95>
@@ -89,9 +89,9 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    mov x8, #140737488355328 // =0x800000000000
+; CHECK-NEXT:    fmov d3, x8
 ; CHECK-NEXT:    adrp x8, .LCPI4_1
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_1]
-; CHECK-NEXT:    adrp x8, .LCPI4_2
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    sub v2.4h, v0.4h, v1.4h
@@ -99,10 +99,10 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
 ; CHECK-NEXT:    movi d3, #0x0000000000ffff
 ; CHECK-NEXT:    shrn v2.4h, v2.4s, #16
 ; CHECK-NEXT:    add v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
-; CHECK-NEXT:    adrp x8, .LCPI4_3
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_1]
+; CHECK-NEXT:    adrp x8, .LCPI4_2
 ; CHECK-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_3]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
 ; CHECK-NEXT:    bit v1.8b, v0.8b, v3.8b
 ; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret

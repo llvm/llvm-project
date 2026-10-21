@@ -20,6 +20,7 @@ def SDT_LoongArchMOVGR2FR_D_LO_HI
     : SDTypeProfile<1, 2, [SDTCisVT<0, f64>, SDTCisVT<1, i32>,
                            SDTCisSameAs<1, 2>]>;
 
+// FPR<->GPR transfer operations
 def loongarch_movgr2fr_d
     : SDNode<"LoongArchISD::MOVGR2FR_D", SDT_LoongArchMOVGR2FR_D>;
 def loongarch_movgr2fr_d_lo_hi
@@ -307,6 +308,9 @@ def : Pat<(fneg (fma FPR64:$fj, FPR64:$fk, (fneg FPR64:$fa))),
 // fnmsub.d: -fj * fk + fa (the nsz flag on the FMA)
 def : Pat<(fma_nsz (fneg FPR64:$fj), FPR64:$fk, FPR64:$fa),
           (FNMSUB_D FPR64:$fj, FPR64:$fk, FPR64:$fa)>;
+
+// ffint.d.l
+def : Pat<(loongarch_sitof FPR64:$fj), (FFINT_D_L FPR64:$fj)>;
 } // Predicates = [HasBasicD]
 
 /// Floating point constants
@@ -348,7 +352,6 @@ def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 // FP Rounding
 let Predicates = [HasBasicD, IsLA64] in {
 def : PatFpr<frint, FRINT_D, FPR64>;
-def : PatFpr<flog2, FLOGB_D, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
 /// Pseudo-instructions needed for the soft-float ABI with LA32D

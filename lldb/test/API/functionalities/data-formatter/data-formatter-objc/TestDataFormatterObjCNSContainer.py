@@ -13,6 +13,8 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nscontainers_with_run_command(self):
         """Test formatters for  NS container classes."""
         self.appkit_tester_impl(self.nscontainers_data_formatter_commands, False)

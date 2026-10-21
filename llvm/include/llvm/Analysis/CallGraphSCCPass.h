@@ -82,11 +82,10 @@ public:
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.
 class CallGraphSCC {
   const CallGraph &CG; // The call graph for this SCC.
-  void *Context; // The CGPassManager object that is vending this.
   std::vector<CallGraphNode *> Nodes;
 
 public:
-  CallGraphSCC(CallGraph &cg, void *context) : CG(cg), Context(context) {}
+  CallGraphSCC(CallGraph &cg) : CG(cg) {}
 
   void initialize(ArrayRef<CallGraphNode *> NewNodes) {
     Nodes.assign(NewNodes.begin(), NewNodes.end());
@@ -94,14 +93,6 @@ public:
 
   bool isSingular() const { return Nodes.size() == 1; }
   unsigned size() const { return Nodes.size(); }
-
-  /// ReplaceNode - This informs the SCC and the pass manager that the specified
-  /// Old node has been deleted, and New is to be used in its place.
-  LLVM_ABI void ReplaceNode(CallGraphNode *Old, CallGraphNode *New);
-
-  /// DeleteNode - This informs the SCC and the pass manager that the specified
-  /// Old node has been deleted.
-  LLVM_ABI void DeleteNode(CallGraphNode *Old);
 
   using iterator = std::vector<CallGraphNode *>::const_iterator;
 
@@ -111,18 +102,13 @@ public:
   const CallGraph &getCallGraph() { return CG; }
 };
 
-LLVM_ABI void initializeDummyCGSCCPassPass(PassRegistry &);
-
 /// This pass is required by interprocedural register allocation. It forces
 /// codegen to follow bottom up order on call graph.
 class DummyCGSCCPass : public CallGraphSCCPass {
 public:
   LLVM_ABI static char ID;
 
-  DummyCGSCCPass() : CallGraphSCCPass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeDummyCGSCCPassPass(Registry);
-  }
+  DummyCGSCCPass() : CallGraphSCCPass(ID) {}
 
   bool runOnSCC(CallGraphSCC &SCC) override { return false; }
 

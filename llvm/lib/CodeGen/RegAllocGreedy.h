@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <queue>
@@ -313,7 +312,7 @@ private:
   const LiveInterval *dequeue(PQueue &CurQueue);
 
   bool hasVirtRegAlloc();
-  BlockFrequency calcSpillCost();
+  BlockFrequency calcBlockSplitCost();
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
@@ -337,7 +336,7 @@ private:
   MCRegister tryRegionSplit(const LiveInterval &, AllocationOrder &,
                             SmallVectorImpl<Register> &);
   /// Calculate cost of region splitting around the specified register.
-  unsigned calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
+  unsigned calculateRegionSplitCostAroundReg(MCRegister PhysReg,
                                              AllocationOrder &Order,
                                              BlockFrequency &BestCost,
                                              unsigned &NumCands,
@@ -352,7 +351,7 @@ private:
                            bool HasCompact,
                            SmallVectorImpl<Register> &NewVRegs);
   /// Try to split VirtReg around physical Hint register.
-  bool trySplitAroundHintReg(MCPhysReg Hint, const LiveInterval &VirtReg,
+  bool trySplitAroundHintReg(MCRegister Hint, const LiveInterval &VirtReg,
                              SmallVectorImpl<Register> &NewVRegs,
                              AllocationOrder &Order);
   /// Check other options before using a callee-saved register for the first
@@ -361,6 +360,11 @@ private:
                                    AllocationOrder &Order, MCRegister PhysReg,
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
+  /// Return the rematerialization cost, or BlockFrequency::max() if
+  /// rematerialization is not possible.
+  BlockFrequency calcRematCost(const LiveInterval &VirtReg,
+                               AllocationOrder &Order) const;
+  BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
                            SmallVectorImpl<Register> &);
@@ -376,21 +380,21 @@ private:
                                      unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
                                SmallVirtRegSet &, RecoloringStack &, unsigned);
-  void tryHintRecoloring(const LiveInterval &);
+  void tryHintRecoloring(const LiveInterval &, DenseSet<Register> &);
   void tryHintsRecoloring();
 
   /// Model the information carried by one end of a copy.
   struct HintInfo {
-    /// The frequency of the copy.
-    BlockFrequency Freq;
+    /// The block containing the copy.
+    const MachineBasicBlock *MBB;
     /// The virtual register or physical register.
     Register Reg;
     /// Its currently assigned register.
     /// In case of a physical register Reg == PhysReg.
     MCRegister PhysReg;
 
-    HintInfo(BlockFrequency Freq, Register Reg, MCRegister PhysReg)
-        : Freq(Freq), Reg(Reg), PhysReg(PhysReg) {}
+    HintInfo(const MachineBasicBlock *MBB, Register Reg, MCRegister PhysReg)
+        : MBB(MBB), Reg(Reg), PhysReg(PhysReg) {}
   };
   using HintsInfo = SmallVector<HintInfo, 4>;
 

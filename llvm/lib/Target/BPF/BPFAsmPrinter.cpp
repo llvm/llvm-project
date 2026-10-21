@@ -20,15 +20,23 @@
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -40,11 +48,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+BPFAsmPrinter::BPFAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+    : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+
+BPFAsmPrinter::~BPFAsmPrinter() = default;
+
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
   // Only emit BTF when debuginfo available.
-  if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
+  if (MAI.doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
     Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }
@@ -74,10 +88,9 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       if (!CA)
         continue;
 
-      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
-        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
-          continue;
-      }
+      if (!all_of(CA->operands(),
+                  [](const Use &Op) { return isa<BlockAddress>(Op); }))
+        continue;
       Targets.push_back(&Global);
     }
 
@@ -85,6 +98,16 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->dropAllReferences();
       GV->eraseFromParent();
+    }
+  }
+
+  for (GlobalObject &GO : M.global_objects()) {
+    if (!GO.hasExternalWeakLinkage())
+      continue;
+
+    if (!SawTrapCall && GO.getName() == BPF_TRAP) {
+      GO.eraseFromParent();
+      break;
     }
   }
 
@@ -160,6 +183,16 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall()) {
+    for (const MachineOperand &Op : MI->operands()) {
+      if (Op.isGlobal()) {
+        if (const GlobalValue *GV = Op.getGlobal())
+          if (GV->getName() == BPF_TRAP)
+            SawTrapCall = true;
+      }
+    }
+  }
+
   BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 
@@ -195,6 +228,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
+
+  MCSection *Sec = OutStreamer->getCurrentSectionOnly();
+  MCSymbol *SecStart = Sec->getBeginSymbol();
+
   MCSection *JTS = TLOF.getSectionForJumpTable(F, TM);
   assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
   unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
@@ -207,8 +244,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
     MCSymbol *JTStart = getJTPublicSymbol(JTI);
     OutStreamer->emitLabel(JTStart);
     for (const MachineBasicBlock *MBB : JTBBs) {
-      const MCExpr *LHS = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-      OutStreamer->emitValue(LHS, EntrySize);
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext),
+          MCSymbolRefExpr::create(SecStart, OutContext), OutContext);
+      OutStreamer->emitValue(Diff, EntrySize);
     }
     const MCExpr *JTSize =
         MCConstantExpr::create(JTBBs.size() * EntrySize, OutContext);
@@ -227,4 +266,33 @@ LLVMInitializeBPFAsmPrinter() {
   RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());
+}
+
+PreservedAnalyses BPFAsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

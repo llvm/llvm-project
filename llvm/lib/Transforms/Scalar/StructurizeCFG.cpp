@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -17,7 +18,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
@@ -39,7 +39,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -61,24 +60,13 @@ const char FlowBlockName[] = "Flow";
 
 namespace {
 
-static cl::opt<bool> ForceSkipUniformRegions(
-  "structurizecfg-skip-uniform-regions",
-  cl::Hidden,
-  cl::desc("Force whether the StructurizeCFG pass skips uniform regions"),
-  cl::init(false));
-
-static cl::opt<bool>
-    RelaxedUniformRegions("structurizecfg-relaxed-uniform-regions", cl::Hidden,
-                          cl::desc("Allow relaxed uniform region checks"),
-                          cl::init(true));
-
 // Definition of the complex types used in this pass.
 
 using BBValuePair = std::pair<BasicBlock *, Value *>;
 
 using RNVector = SmallVector<RegionNode *, 8>;
 using BBVector = SmallVector<BasicBlock *, 8>;
-using BranchVector = SmallVector<BranchInst *, 8>;
+using BranchVector = SmallVector<CondBrInst *, 8>;
 using BBValueVector = SmallVector<BBValuePair, 2>;
 
 using BBSet = SmallPtrSet<BasicBlock *, 8>;
@@ -97,9 +85,7 @@ class CondBranchWeights {
   CondBranchWeights(uint32_t T, uint32_t F) : TrueWeight(T), FalseWeight(F) {}
 
 public:
-  static MaybeCondBranchWeights tryParse(const BranchInst &Br) {
-    assert(Br.isConditional());
-
+  static MaybeCondBranchWeights tryParse(const CondBrInst &Br) {
     uint64_t T, F;
     if (!extractBranchWeights(Br, T, F))
       return std::nullopt;
@@ -107,9 +93,8 @@ public:
     return CondBranchWeights(T, F);
   }
 
-  static void setMetadata(BranchInst &Br,
+  static void setMetadata(CondBrInst &Br,
                           const MaybeCondBranchWeights &Weights) {
-    assert(Br.isConditional());
     if (!Weights)
       return;
     uint32_t Arr[] = {Weights->TrueWeight, Weights->FalseWeight};
@@ -316,7 +301,7 @@ class StructurizeCFG {
 
   void analyzeLoops(RegionNode *N);
 
-  PredInfo buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
+  PredInfo buildCondition(CondBrInst *Term, unsigned Idx, bool Invert);
 
   void gatherPredicates(RegionNode *N);
 
@@ -374,46 +359,28 @@ public:
   bool makeUniformRegion(Region *R, UniformityInfo &UA);
 };
 
-class StructurizeCFGLegacyPass : public RegionPass {
+class StructurizeCFGLegacyPass : public FunctionPass {
   bool SkipUniformRegions;
 
 public:
   static char ID;
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
-      : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
-    if (ForceSkipUniformRegions.getNumOccurrences())
-      SkipUniformRegions = ForceSkipUniformRegions.getValue();
+      : FunctionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    StructurizeCFG SCFG;
-    SCFG.init(R);
-    if (SkipUniformRegions) {
-      UniformityInfo &UA =
-          getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-      if (SCFG.makeUniformRegion(R, UA))
-        return false;
-    }
-    Function *F = R->getEntry()->getParent();
-    const TargetTransformInfo *TTI =
-        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
-    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return SCFG.run(R, DT, TTI);
-  }
+  bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "Structurize control flow"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    if (SkipUniformRegions)
-      AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<RegionInfoPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    RegionPass::getAnalysisUsage(AU);
   }
 };
 
@@ -425,6 +392,7 @@ INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
@@ -478,6 +446,13 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
   BasicBlock *CommonDominator = DT->findNearestCommonDominator(ElseBB, ThenBB);
 
   if (!ElseSucc || !CommonDominator)
+    return;
+  // Only hoist in a simple if-else: ThenBB must branch directly to ElseSucc
+  // and ElseSucc must have exactly 2 predecessors (ThenBB and ElseBB).
+  // simplifyHoistedPhis assumes this exact shape; with additional predecessors
+  // the hoisted value leaks into unrelated control-flow paths.
+  if (ThenBB->getSingleSuccessor() != ElseSucc ||
+      !ElseSucc->hasNPredecessors(2))
     return;
   Instruction *Term = CommonDominator->getTerminator();
   for (PHINode &Phi : ElseSucc->phis()) {
@@ -557,30 +532,24 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 
   } else {
     // Test for successors as back edge
+    // TODO: support other terminators other than branches.
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    BranchInst *Term = cast<BranchInst>(BB->getTerminator());
-
-    for (BasicBlock *Succ : Term->successors())
-      if (Visited.count(Succ))
-        Loops[Succ] = BB;
+    if (isa<UncondBrInst, CondBrInst>(BB->getTerminator()))
+      for (BasicBlock *Succ : successors(BB))
+        if (Visited.count(Succ))
+          Loops[Succ] = BB;
   }
 }
 
 /// Build the condition for one edge
-PredInfo StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
+PredInfo StructurizeCFG::buildCondition(CondBrInst *Term, unsigned Idx,
                                         bool Invert) {
-  Value *Cond = Invert ? BoolFalse : BoolTrue;
-  MaybeCondBranchWeights Weights;
-
-  if (Term->isConditional()) {
-    Cond = Term->getCondition();
-    Weights = CondBranchWeights::tryParse(*Term);
-
-    if (Idx != (unsigned)Invert) {
-      Cond = invertCondition(Cond);
-      if (Weights)
-        Weights = Weights->invert();
-    }
+  Value *Cond = Term->getCondition();
+  auto Weights = CondBranchWeights::tryParse(*Term);
+  if (Idx != (unsigned)Invert) {
+    Cond = invertCondition(Cond);
+    if (Weights)
+      Weights = Weights->invert();
   }
   return {Cond, Weights};
 }
@@ -599,30 +568,27 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 
     Region *R = RI->getRegionFor(P);
     if (R == ParentRegion) {
-      // It's a top level block in our region
-      BranchInst *Term = cast<BranchInst>(P->getTerminator());
-      for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
-        BasicBlock *Succ = Term->getSuccessor(i);
-        if (Succ != BB)
-          continue;
-
+      if (isa<UncondBrInst>(P->getTerminator())) {
+        if (Visited.count(P))
+          Pred[P] = {BoolTrue, std::nullopt};
+        else
+          LPred[P] = {BoolFalse, std::nullopt};
+      } else if (auto *CondBr = dyn_cast<CondBrInst>(P->getTerminator())) {
+        bool Idx = CondBr->getSuccessor(0) == BB ? 0 : 1;
         if (Visited.count(P)) {
           // Normal forward edge
-          if (Term->isConditional()) {
-            // Try to treat it like an ELSE block
-            BasicBlock *Other = Term->getSuccessor(!i);
-            if (Visited.count(Other) && !Loops.count(Other) &&
-                !Pred.count(Other) && !Pred.count(P)) {
-              hoistZeroCostElseBlockPhiValues(Succ, Other);
-              Pred[Other] = {BoolFalse, std::nullopt};
-              Pred[P] = {BoolTrue, std::nullopt};
-              continue;
-            }
-          }
-          Pred[P] = buildCondition(Term, i, false);
+          // Try to treat Other like an ELSE block
+          BasicBlock *Other = CondBr->getSuccessor(!Idx);
+          if (Visited.count(Other) && !Loops.count(Other) &&
+              !Pred.count(Other) && !Pred.count(P)) {
+            hoistZeroCostElseBlockPhiValues(BB, Other);
+            Pred[Other] = {BoolFalse, std::nullopt};
+            Pred[P] = {BoolTrue, std::nullopt};
+          } else
+            Pred[P] = buildCondition(CondBr, Idx, false);
         } else {
           // Back edge
-          LPred[P] = buildCondition(Term, i, true);
+          LPred[P] = buildCondition(CondBr, Idx, true);
         }
       }
     } else {
@@ -676,9 +642,7 @@ void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
   BranchVector &Conds = Loops ? LoopConds : Conditions;
   Value *Default = Loops ? BoolTrue : BoolFalse;
 
-  for (BranchInst *Term : Conds) {
-    assert(Term->isConditional());
-
+  for (CondBrInst *Term : Conds) {
     BasicBlock *Parent = Term->getParent();
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
@@ -1031,7 +995,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
 
 /// Remove phi values from all successors and then remove the terminator.
 DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
-  Instruction *Term = BB->getTerminator();
+  Instruction *Term = BB->getTerminatorOrNull();
   if (!Term)
     return DebugLoc();
 
@@ -1080,7 +1044,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
   } else {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
     DebugLoc DL = killTerminator(BB);
-    BranchInst *Br = BranchInst::Create(NewExit, BB);
+    UncondBrInst *Br = UncondBrInst::Create(NewExit, BB);
     Br->setDebugLoc(DL);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
@@ -1142,9 +1106,8 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, PredInfo> Pred) {
-    return DT->dominates(BB, Pred.first);
-  });
+  return llvm::all_of(
+      Preds, [&](const auto &Pred) { return DT->dominates(BB, Pred.first); });
 }
 
 /// Can we predict that this node will always be called?
@@ -1189,7 +1152,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     BasicBlock *Next = needPostfix(Flow, ExitUseAllowed);
 
     // let it point to entry and next block
-    BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
+    CondBrInst *Br = CondBrInst::Create(BoolPoison, Entry, Next, Flow);
     Br->setDebugLoc(DL);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
@@ -1231,7 +1194,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   DebugLoc DL;
   std::tie(LoopEnd, DL) = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
-  BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
+  CondBrInst *Br = CondBrInst::Create(BoolPoison, Next, LoopStart, LoopEnd);
   Br->setDebugLoc(DL);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
@@ -1264,7 +1227,7 @@ void StructurizeCFG::createFlow() {
 }
 
 /// Handle a rare case where the disintegrated nodes instructions
-/// no longer dominate all their uses. Not sure if this is really necessary
+/// no longer dominate all their uses.
 void StructurizeCFG::rebuildSSA() {
   SSAUpdater Updater;
   for (BasicBlock *BB : ParentRegion->blocks())
@@ -1296,61 +1259,28 @@ void StructurizeCFG::rebuildSSA() {
     }
 }
 
-static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
-                                   const UniformityInfo &UA) {
-  // Bool for if all sub-regions are uniform.
-  bool SubRegionsAreUniform = true;
-  // Count of how many direct children are conditional.
-  unsigned ConditionalDirectChildren = 0;
-
-  for (auto *E : R->elements()) {
-    if (!E->isSubRegion()) {
-      auto Br = dyn_cast<BranchInst>(E->getEntry()->getTerminator());
-      if (!Br || !Br->isConditional())
-        continue;
-
-      if (!UA.isUniform(Br))
-        return false;
-
-      // One of our direct children is conditional.
-      ConditionalDirectChildren++;
-
-      LLVM_DEBUG(dbgs() << "BB: " << Br->getParent()->getName()
-                        << " has uniform terminator\n");
-    } else {
-      // Explicitly refuse to treat regions as uniform if they have non-uniform
-      // subregions. We cannot rely on UniformityAnalysis for branches in
-      // subregions because those branches may have been removed and re-created,
-      // so we look for our metadata instead.
-      //
-      // Warning: It would be nice to treat regions as uniform based only on
-      // their direct child basic blocks' terminators, regardless of whether
-      // subregions are uniform or not. However, this requires a very careful
-      // look at SIAnnotateControlFlow to make sure nothing breaks there.
-      for (auto *BB : E->getNodeAs<Region>()->blocks()) {
-        auto Br = dyn_cast<BranchInst>(BB->getTerminator());
-        if (!Br || !Br->isConditional())
-          continue;
-
-        if (!Br->getMetadata(UniformMDKindID)) {
-          // Early exit if we cannot have relaxed uniform regions.
-          if (!RelaxedUniformRegions)
-            return false;
-
-          SubRegionsAreUniform = false;
-          break;
-        }
-      }
-    }
-  }
-
-  // Our region is uniform if:
-  // 1. All conditional branches that are direct children are uniform (checked
-  // above).
-  // 2. And either:
-  //   a. All sub-regions are uniform.
-  //   b. There is one or less conditional branches among the direct children.
-  return SubRegionsAreUniform || (ConditionalDirectChildren <= 1);
+/// Can region \p R be left unstructurized because all of its own control flow
+/// is uniform?
+///
+/// Only the terminators of direct child blocks are checked. Sub-regions are
+/// processed before their parent, so any divergent control flow inside a
+/// sub-region has already been structurized and is self-contained: it is
+/// entered only through the sub-region's entry, and it rejoins either at Flow
+/// blocks inside the sub-region or, if the sub-region's entry dominates its
+/// exit, at the exit block itself. Uniform control flow around a sub-region
+/// therefore does not need structurizing, whatever the sub-region contains.
+/// (The branches inside sub-regions could not be checked anyway, because they
+/// may have been removed and re-created since UniformityAnalysis ran.)
+///
+/// FIXME: This does not hold for a sub-region whose entry block ends in a
+/// callbr, because run() leaves such regions unstructurized.
+static bool hasOnlyUniformBranches(Region *R, const UniformityInfo &UA) {
+  return none_of(R->elements(), [&](RegionNode *E) {
+    if (E->isSubRegion())
+      return false;
+    auto *Br = dyn_cast<CondBrInst>(E->getEntry()->getTerminator());
+    return Br && UA.isDivergentTerminator(Br);
+  });
 }
 
 void StructurizeCFG::init(Region *R) {
@@ -1370,28 +1300,21 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 
   this->UA = &UA;
 
-  // TODO: We could probably be smarter here with how we handle sub-regions.
-  // We currently rely on the fact that metadata is set by earlier invocations
-  // of the pass on sub-regions, and that this metadata doesn't get lost --
-  // but we shouldn't rely on metadata for correctness!
-  unsigned UniformMDKindID =
-      R->getEntry()->getContext().getMDKindID("structurizecfg.uniform");
-
-  if (hasOnlyUniformBranches(R, UniformMDKindID, UA)) {
+  if (hasOnlyUniformBranches(R, UA)) {
     LLVM_DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R
                       << '\n');
 
     // Mark all direct child block terminators as having been treated as
-    // uniform. To account for a possible future in which non-uniform
-    // sub-regions are treated more cleverly, indirect children are not
-    // marked as uniform.
-    MDNode *MD = MDNode::get(R->getEntry()->getParent()->getContext(), {});
+    // uniform. Indirect children must not be marked, because sub-regions may
+    // contain divergent control flow.
+    LLVMContext &Ctx = R->getEntry()->getContext();
+    unsigned UniformMDKindID = Ctx.getMDKindID("structurizecfg.uniform");
+    MDNode *MD = MDNode::get(Ctx, {});
     for (RegionNode *E : R->elements()) {
       if (E->isSubRegion())
         continue;
 
-      if (Instruction *Term = E->getEntry()->getTerminator())
-        Term->setMetadata(UniformMDKindID, MD);
+      E->getEntry()->getTerminator()->setMetadata(UniformMDKindID, MD);
     }
 
     return true;
@@ -1402,13 +1325,17 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
                          const TargetTransformInfo *TTI) {
-  if (R->isTopLevelRegion())
+  // CallBr and its corresponding direct target blocks are for now ignored by
+  // this pass. This is not a limitation for the currently intended uses cases
+  // of callbr in the AMDGPU backend.
+  // Parent and child regions are not affected by this (current) restriction.
+  // See `llvm/test/Transforms/StructurizeCFG/callbr.ll` for details.
+  if (R->isTopLevelRegion() || isa<CallBrInst>(R->getEntry()->getTerminator()))
     return false;
 
   this->DT = DT;
   this->TTI = TTI;
   Func = R->getEntry()->getParent();
-  assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
   ParentRegion = R;
 
@@ -1453,10 +1380,7 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
 }
 
 StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
-    : SkipUniformRegions(SkipUniformRegions_) {
-  if (ForceSkipUniformRegions.getNumOccurrences())
-    SkipUniformRegions = ForceSkipUniformRegions.getValue();
-}
+    : SkipUniformRegions(SkipUniformRegions_) {}
 
 void StructurizeCFGPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -1466,17 +1390,11 @@ void StructurizeCFGPass::printPipeline(
     OS << "<skip-uniform-regions>";
 }
 
-PreservedAnalyses StructurizeCFGPass::run(Function &F,
-                                          FunctionAnalysisManager &AM) {
-
+/// Structurize every region in \p RI, processing inner regions before the
+/// regions that contain them. If \p UI is non-null, skip uniform regions.
+static bool runImpl(DominatorTree &DT, RegionInfo &RI,
+                    const TargetTransformInfo &TTI, UniformityInfo *UI) {
   bool Changed = false;
-  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto &RI = AM.getResult<RegionInfoAnalysis>(F);
-  TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
-  UniformityInfo *UI = nullptr;
-  if (SkipUniformRegions)
-    UI = &AM.getResult<UniformityInfoAnalysis>(F);
-
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
@@ -1486,14 +1404,41 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
     StructurizeCFG SCFG;
     SCFG.init(R);
 
-    if (SkipUniformRegions && SCFG.makeUniformRegion(R, *UI)) {
+    if (UI && SCFG.makeUniformRegion(R, *UI)) {
       Changed = true; // May have added metadata.
       continue;
     }
 
-    Changed |= SCFG.run(R, DT, TTI);
+    Changed |= SCFG.run(R, &DT, &TTI);
   }
-  if (!Changed)
+  return Changed;
+}
+
+bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  UniformityInfo *UI = nullptr;
+  if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
+    UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return runImpl(DT, RI, TTI, UI);
+}
+
+PreservedAnalyses StructurizeCFGPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &RI = AM.getResult<RegionInfoAnalysis>(F);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  UniformityInfo *UI = nullptr;
+  if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
+  if (!runImpl(DT, RI, TTI, UI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();

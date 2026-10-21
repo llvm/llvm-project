@@ -12,6 +12,7 @@ from shutil import copy
 
 class SettingsUseSourceCacheTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_set_use_source_cache_false(self):
         """Test that after 'set use-source-cache false', files are not locked."""

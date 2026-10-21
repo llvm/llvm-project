@@ -118,6 +118,15 @@ void SystemZInstPrinterCommon::printU8ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<8>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX8ImmOperand(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<8>(MI, OpNum, O);
+  else
+    printSImmOperand<8>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printU12ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<12>(MI, OpNum, O);
@@ -133,6 +142,15 @@ void SystemZInstPrinterCommon::printU16ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<16>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX16ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<16>(MI, OpNum, O);
+  else
+    printSImmOperand<16>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printSImmOperand<32>(MI, OpNum, O);
@@ -141,6 +159,15 @@ void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
 void SystemZInstPrinterCommon::printU32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<32>(MI, OpNum, O);
+}
+
+void SystemZInstPrinterCommon::printX32ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<32>(MI, OpNum, O);
+  else
+    printSImmOperand<32>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU48ImmOperand(const MCInst *MI, int OpNum,
@@ -218,7 +245,7 @@ void SystemZInstPrinterCommon::printBDXAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   uint64_t Length = MI->getOperand(OpNum + 2).getImm();
   printOperand(DispMO, &MAI, O);
@@ -232,9 +259,9 @@ void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
-  unsigned Length = MI->getOperand(OpNum + 2).getReg();
+  MCRegister Length = MI->getOperand(OpNum + 2).getReg();
   printOperand(DispMO, &MAI, O);
   O << "(";
   printRegName(O, Length);

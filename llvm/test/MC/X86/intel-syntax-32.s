@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s
 
 // CHECK: leaw	(%bp,%si), %ax
 lea ax, [bp+si]

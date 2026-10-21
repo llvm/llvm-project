@@ -33,7 +33,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
@@ -41,7 +40,6 @@
 #include <map>
 #include <mutex>
 #include <string>
-#include <utility>
 #include <vector>
 
 #ifdef HAVE_FFI_CALL

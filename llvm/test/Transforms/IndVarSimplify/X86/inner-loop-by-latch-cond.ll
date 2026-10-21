@@ -14,7 +14,6 @@ define void @test(i64 %a) {
 ; CHECK:       outer_header:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 21, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 20, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner_header:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 1, [[OUTER_HEADER]] ], [ [[J_NEXT:%.*]], [[INNER_HEADER]] ]
@@ -23,6 +22,7 @@ define void @test(i64 %a) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[J_NEXT]], [[INDVARS_IV]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_HEADER]], label [[OUTER_LATCH]]
 ; CHECK:       outer_latch:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[I_NEXT]], 40
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[COND2]], label [[OUTER_HEADER]], label [[RETURN:%.*]]

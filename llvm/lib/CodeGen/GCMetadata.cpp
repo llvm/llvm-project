@@ -88,9 +88,7 @@ bool GCFunctionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 
 char GCModuleInfo::ID = 0;
 
-GCModuleInfo::GCModuleInfo() : ImmutablePass(ID) {
-  initializeGCModuleInfoPass(*PassRegistry::getPassRegistry());
-}
+GCModuleInfo::GCModuleInfo() : ImmutablePass(ID) {}
 
 GCFunctionInfo &GCModuleInfo::getFunctionInfo(const Function &F) {
   assert(!F.isDeclaration() && "Can only get GCFunctionInfo for a definition!");

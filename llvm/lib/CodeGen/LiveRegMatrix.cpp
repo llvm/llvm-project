@@ -12,11 +12,14 @@
 
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "RegisterCoalescer.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -76,7 +79,7 @@ void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
-    Matrix[i].clear();
+    Matrix[static_cast<MCRegUnit>(i)].clear();
     // No need to clear Queries here, since LiveIntervalUnion::Query doesn't
     // have anything important to clear and LiveRegMatrix's runOnFunction()
     // does a std::unique_ptr::reset anyways.
@@ -89,7 +92,7 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
                         Callable Func) {
   if (VRegInterval.hasSubRanges()) {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      unsigned Unit = (*Units).first;
+      MCRegUnit Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (const LiveInterval::SubRange &S : VRegInterval.subranges()) {
         if ((S.LaneMask & Mask).any()) {
@@ -115,7 +118,7 @@ void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
   VRM->assignVirt2Phys(VirtReg.reg(), PhysReg);
 
   foreachUnit(
-      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
         LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
         Matrix[Unit].unify(VirtReg, Range);
         return false;
@@ -125,18 +128,25 @@ void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void LiveRegMatrix::unassign(const LiveInterval &VirtReg) {
+void LiveRegMatrix::unassign(const LiveInterval &VirtReg,
+                             bool ClearAllReferencingSegments) {
   Register PhysReg = VRM->getPhys(VirtReg.reg());
   LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg(), TRI)
                     << " from " << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg());
 
-  foreachUnit(TRI, VirtReg, PhysReg,
-              [&](unsigned Unit, const LiveRange &Range) {
-                LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
-                Matrix[Unit].extract(VirtReg, Range);
-                return false;
-              });
+  if (!ClearAllReferencingSegments) {
+    foreachUnit(TRI, VirtReg, PhysReg,
+                [&](MCRegUnit Unit, const LiveRange &Range) {
+                  LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
+                  Matrix[Unit].extract(VirtReg, Range);
+                  return false;
+                });
+  } else {
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      Matrix[Unit].clearAllSegmentsReferencing(VirtReg);
+    }
+  }
 
   ++NumUnassigned;
   LLVM_DEBUG(dbgs() << '\n');
@@ -175,17 +185,40 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
     return false;
   CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI);
 
-  bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                                       const LiveRange &Range) {
-    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
-    return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
-  });
+  bool Result = foreachUnit(
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
+        const LiveRange &UnitRange = LIS->getRegUnit(Unit);
+        return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
+      });
   return Result;
+}
+
+bool LiveRegMatrix::checkRegMaskInterference(SlotIndex Start, SlotIndex End,
+                                             MCRegister PhysReg) {
+  ArrayRef<SlotIndex> Slots = LIS->getRegMaskSlots();
+  ArrayRef<const uint32_t *> Bits = LIS->getRegMaskBits();
+
+  // Find the first regmask slot that is not before Start.
+  auto SlotI = llvm::lower_bound(Slots, Start);
+  for (; SlotI != Slots.end() && *SlotI < End; ++SlotI) {
+    if (MachineOperand::clobbersPhysReg(Bits[SlotI - Slots.begin()], PhysReg))
+      return true;
+  }
+  return false;
+}
+
+bool LiveRegMatrix::checkRegUnitInterference(SlotIndex Start, SlotIndex End,
+                                             MCRegister PhysReg) {
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if (LIS->getRegUnit(Unit).overlaps(Start, End))
+      return true;
+  }
+  return false;
 }
 
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
                                                MCRegUnit RegUnit) {
-  LiveIntervalUnion::Query &Q = Queries[RegUnit];
+  LiveIntervalUnion::Query &Q = Queries[static_cast<unsigned>(RegUnit)];
   Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
 }
@@ -217,13 +250,21 @@ LiveRegMatrix::checkInterference(const LiveInterval &VirtReg,
 
 bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
                                       MCRegister PhysReg) {
+  // Regmask interference is the fastest check.
+  if (checkRegMaskInterference(Start, End, PhysReg))
+    return true;
+
+  // Check for fixed interference.
+  if (checkRegUnitInterference(Start, End, PhysReg))
+    return true;
+
   // Construct artificial live range containing only one segment [Start, End).
   VNInfo valno(0, Start);
   LiveRange::Segment Seg(Start, End, &valno);
   LiveRange LR;
   LR.addSegment(Seg);
 
-  // Check for interference with that segment
+  // Check the matrix for virtual register interference with that segment.
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     // LR is stack-allocated. LiveRegMatrix caches queries by a key that
     // includes the address of the live range. If (for the same reg unit) this
@@ -289,6 +330,79 @@ Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
 
   return MCRegister::NoRegister;
 }
+
+#ifndef NDEBUG
+bool LiveRegMatrix::isValid() const {
+  // Build set of all valid LiveInterval pointers from LiveIntervals.
+  DenseSet<const LiveInterval *> ValidIntervals;
+  for (unsigned RegIdx = 0, NumRegs = VRM->getRegInfo().getNumVirtRegs();
+       RegIdx < NumRegs; ++RegIdx) {
+    Register VReg = Register::index2VirtReg(RegIdx);
+    // Only track assigned registers since unassigned ones won't be in Matrix
+    if (VRM->hasPhys(VReg) && LIS->hasInterval(VReg))
+      ValidIntervals.insert(&LIS->getInterval(VReg));
+  }
+
+  // Now scan all LiveIntervalUnions in the matrix and verify each pointer
+  unsigned NumDanglingPointers = 0;
+  for (unsigned I = 0, Size = Matrix.size(); I < Size; ++I) {
+    MCRegUnit Unit = static_cast<MCRegUnit>(I);
+    for (const LiveInterval *LI : Matrix[Unit]) {
+      if (!ValidIntervals.contains(LI)) {
+        ++NumDanglingPointers;
+        dbgs() << "ERROR: LiveInterval pointer is not found in LiveIntervals:\n"
+               << "  Register Unit: " << printRegUnit(Unit, TRI) << '\n'
+               << "  LiveInterval pointer: " << LI << '\n';
+      }
+    }
+  }
+
+  // Reverse check: every VRM-assigned vreg with a non-empty live interval
+  // must have its segments present in the Matrix for its assigned phys reg.
+  unsigned NumMissing = 0;
+  for (unsigned RegIdx = 0, NumRegs = VRM->getRegInfo().getNumVirtRegs();
+       RegIdx < NumRegs; ++RegIdx) {
+    Register VReg = Register::index2VirtReg(RegIdx);
+    if (!VRM->hasPhys(VReg) || !LIS->hasInterval(VReg))
+      continue;
+    const LiveInterval &LI = LIS->getInterval(VReg);
+    if (LI.empty())
+      continue;
+    MCRegister PhysReg = VRM->getPhys(VReg);
+    // Check that the first segment of LI is present in the LiveUnion for
+    // at least one reg unit of PhysReg.
+    SlotIndex FirstStart = LI.beginIndex();
+    bool Found = false;
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      auto It = Matrix[Unit].find(FirstStart);
+      if (It.valid() && It.start() == FirstStart && It.value() == &LI) {
+        Found = true;
+        break;
+      }
+    }
+    if (!Found) {
+      ++NumMissing;
+      dbgs() << "ERROR: VirtReg " << printReg(VReg, TRI) << " assigned to "
+             << printReg(PhysReg, TRI)
+             << " in VirtRegMap but not found in LiveRegMatrix\n";
+      dbgs() << "  LiveInterval: " << LI << "\n";
+      dbgs() << "  FirstStart: " << FirstStart << "\n";
+      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+        dbgs() << "  RegUnit " << printRegUnit(Unit, TRI) << " segments: ";
+        auto It = Matrix[Unit].find(FirstStart);
+        if (It.valid())
+          dbgs() << "[" << It.start() << "," << It.stop() << ") -> "
+                 << printReg(It.value()->reg(), TRI);
+        else
+          dbgs() << "(none found)";
+        dbgs() << "\n";
+      }
+    }
+  }
+
+  return NumDanglingPointers == 0 && NumMissing == 0;
+}
+#endif
 
 AnalysisKey LiveRegMatrixAnalysis::Key;
 

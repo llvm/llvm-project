@@ -2,9 +2,12 @@
 
 template <class T> void clang_analyzer_dump(T);
 void clang_analyzer_eval(bool);
+void clang_analyzer_value(int);
 
 void usePointer(int * const *);
 void useReference(int * const &);
+
+template <typename... Ts> void opaque(Ts...);
 
 void testPointer() {
   int x;
@@ -279,4 +282,30 @@ int testNestedStdNamespacesAndRecords() {
   int x = obj.o.nested_member; // no-garbage: ctor
   int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
   return x + y;
+}
+
+struct SpecialVector {
+  SpecialVector(const void *); // Takes a const pointer!
+  int size() const {
+    return Size; // no-warning: We should not warn "uninitialized Size" because the ctor might have initialized it.
+  }
+  int Size;
+};
+
+void selfPtrPassedAsConstPointerToOpaqueCtorCall() {
+  // We construct a "SpecialVector" that takes the address of itself
+  // (or to a subobject somewhere itself) by a const-pointer.
+  // Despite the var region "buf" is mentioned via a const argument, the opaque
+  // ctor call should still take precedent and invalidate the underlying object.
+  SpecialVector buf(&buf);
+  buf.size();
+}
+
+int aliasing_ptrs_via_mutable_and_const_ptrs() {
+  int x = 1;
+  opaque<const int*, int*>(&x, &x);
+  // expected-warning@+1 {{32s:1}} FIXME: We should not be sure it's 1.
+  clang_analyzer_value(x);
+  return 100 / (x - 1);
+  // expected-warning@-1 {{Division by zero}} FIXME: We shouldn't report this.
 }

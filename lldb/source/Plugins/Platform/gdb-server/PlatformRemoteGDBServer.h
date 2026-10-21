@@ -141,7 +141,10 @@ public:
       int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
                        // process to exit
       std::string
-          *command_output, // Pass NULL if you don't want the command output
+          *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_outputerror_output, // Pass nullptr if you don't want
+                                               // the command error output
       const lldb_private::Timeout<std::micro> &timeout) override;
 
   void CalculateTrapHandlerSymbolNames() override;
@@ -179,6 +182,10 @@ protected:
 
   virtual std::string MakeUrl(const char *scheme, const char *hostname,
                               uint16_t port, const char *path);
+
+  virtual llvm::StringRef GetDefaultProcessPluginName() const {
+    return "gdb-remote";
+  }
 
 private:
   std::string MakeGdbServerUrl(const std::string &platform_scheme,

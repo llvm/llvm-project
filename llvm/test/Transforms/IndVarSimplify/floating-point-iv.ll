@@ -417,3 +417,257 @@ loop:
 exit:
   ret void
 }
+
+define void @test_fp_to_int_irrealizable_initval() {
+; CHECK-LABEL: @test_fp_to_int_irrealizable_initval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 1.000000e+08, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], -1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[IV_NEXT]], 2.500000e+01
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi float [ 1.000000e+08, %entry ], [ %iv.next, %loop ]
+  call void @opaque()
+  %iv.next = fadd float %iv, -1.700000e+01
+  %cmp = fcmp ult float %iv.next, 2.500000e+01
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_to_int_irrealizable_exitval() {
+; CHECK-LABEL: @test_fp_to_int_irrealizable_exitval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], 1.000000e+08
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi float [ 2.500000e+01, %entry ], [ %iv.next, %loop ]
+  call void @opaque()
+  %iv.next = fadd float %iv, 1.700000e+01
+  %cmp = fcmp ugt float %iv.next, 1.000000e+08
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_to_int_irrealizable_negative_exitval() {
+; CHECK-LABEL: @test_fp_to_int_irrealizable_negative_exitval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ -2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], -1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[IV_NEXT]], -1.000000e+08
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi float [ -2.500000e+01, %entry ], [ %iv.next, %loop ]
+  call void @opaque()
+  %iv.next = fadd float %iv, -1.700000e+01
+  %cmp = fcmp ult float %iv.next, -1.000000e+08
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_to_int_irrealizable_exitval_pow_2_24() {
+; CHECK-LABEL: @test_fp_to_int_irrealizable_exitval_pow_2_24(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], f0x4B800000
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi float [ 0.000000e+00, %entry ], [ %iv.next, %loop ]
+  call void @opaque()
+  %iv.next = fadd float %iv, 1.000000e+00
+  %cmp = fcmp ugt float %iv.next, 0x4170000000000000
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_to_int_irrealizable_exitval_int64_min() {
+; CHECK-LABEL: @test_fp_to_int_irrealizable_exitval_int64_min(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi double [ 2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[IV_NEXT]] = fadd double [[IV]], 1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[IV_NEXT]], f0xC3E0000000000000
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi double [ 2.500000e+01, %entry ], [ %iv.next, %loop ]
+  call void @opaque()
+  %iv.next = fadd double %iv, 1.700000e+01
+  %cmp = fcmp ult double %iv.next, 0xC3E0000000000000
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_recurrence_cmp_used_by_select() {
+; CHECK-LABEL: @test_fp_recurrence_cmp_used_by_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %fp.iv = phi double [ 0.0, %entry ], [ %fp.iv.next, %loop ]
+  %fp.iv.next = fadd double %fp.iv, 1.250000e-02
+  %cmp.fp = fcmp olt double %fp.iv.next, 2.001250e+00
+  %cond = select i1 %cmp.fp, i1 false, i1 false
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare void @opaque()
+
+define i32 @runaway_pos_stride() {
+; CHECK-LABEL: define i32 @runaway_pos_stride() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[X:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[X_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[N:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[N_NEXT]] = add nuw nsw i32 [[N]], 1
+; CHECK-NEXT:    [[BRK:%.*]] = icmp eq i32 [[N_NEXT]], 3000
+; CHECK-NEXT:    br i1 [[BRK]], label %[[BREAK:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[X_NEXT]] = fadd double [[X]], 1.000000e+06
+; CHECK-NEXT:    [[DONE:%.*]] = fcmp ult double [[X_NEXT]], 1.000000e+00
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK:       [[BREAK]]:
+; CHECK-NEXT:    call void @use.i32(i32 3000)
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    [[N_NEXT_LCSSA1:%.*]] = phi i32 [ [[N_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[N_NEXT2:%.*]] = phi i32 [ [[N_NEXT_LCSSA1]], %[[EXIT_LOOPEXIT]] ], [ 3000, %[[BREAK]] ]
+; CHECK-NEXT:    ret i32 [[N_NEXT2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x = phi double [ 0.0, %entry ], [ %x.next, %latch ]
+  %n = phi i32 [ 0, %entry ], [ %n.next, %latch ]
+  %n.next = add nuw nsw i32 %n, 1
+  %brk = icmp eq i32 %n.next, 3000
+  br i1 %brk, label %break, label %latch
+
+latch:
+  %x.next = fadd double %x, 1.000000e+06
+  %done = fcmp ult double %x.next, 1.000000e+00
+  br i1 %done, label %exit, label %loop
+
+break:
+  call void @use.i32(i32 %n.next)
+  br label %exit
+
+exit:
+  ret i32 %n.next
+}
+
+define i32 @runaway_neg_stride() {
+; CHECK-LABEL: define i32 @runaway_neg_stride() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[X:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[X_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[N:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[N_NEXT]] = add nuw nsw i32 [[N]], 1
+; CHECK-NEXT:    [[BRK:%.*]] = icmp eq i32 [[N_NEXT]], 3000
+; CHECK-NEXT:    br i1 [[BRK]], label %[[BREAK:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[X_NEXT]] = fadd double [[X]], -1.000000e+06
+; CHECK-NEXT:    [[DONE:%.*]] = fcmp ogt double [[X_NEXT]], -1.000000e+00
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK:       [[BREAK]]:
+; CHECK-NEXT:    call void @use.i32(i32 3000)
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    [[N_NEXT_LCSSA1:%.*]] = phi i32 [ [[N_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[N_NEXT2:%.*]] = phi i32 [ [[N_NEXT_LCSSA1]], %[[EXIT_LOOPEXIT]] ], [ 3000, %[[BREAK]] ]
+; CHECK-NEXT:    ret i32 [[N_NEXT2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %x = phi double [ 0.0, %entry ], [ %x.next, %latch ]
+  %n = phi i32 [ 0, %entry ], [ %n.next, %latch ]
+  %n.next = add nuw nsw i32 %n, 1
+  %brk = icmp eq i32 %n.next, 3000
+  br i1 %brk, label %break, label %latch
+
+latch:
+  %x.next = fadd double %x, -1.000000e+06
+  %done = fcmp ogt double %x.next, -1.000000e+00
+  br i1 %done, label %exit, label %loop
+
+break:
+  call void @use.i32(i32 %n.next)
+  br label %exit
+
+exit:
+  ret i32 %n.next
+}

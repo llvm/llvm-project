@@ -51,14 +51,10 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
 }
 
 Expected<std::unique_ptr<pfm::CounterGroup>>
-ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
+ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &State,
                               ArrayRef<const char *> ValidationCounters,
                               const pid_t ProcessID) const {
-  pfm::PerfEvent Event(CounterName);
-  if (!Event.valid())
-    return make_error<Failure>(Twine("Unable to create counter with name '")
-                                   .concat(CounterName)
-                                   .concat("'"));
+  const PfmCountersInfo &PCI = State.getPfmCounters();
 
   std::vector<pfm::PerfEvent> ValidationEvents;
   for (const char *ValCounterName : ValidationCounters) {
@@ -69,6 +65,38 @@ ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
               .concat(ValCounterName)
               .concat("'"));
   }
+
+  if (PCI.CycleCounterEventSelect != -1 &&
+      CounterName == StringRef(PCI.CycleCounter)) {
+    pfm::RawPerfEvent Event(PCI.CycleCounterEventSelect, PCI.CycleCounterUMask);
+    if (!Event.valid())
+      return make_error<Failure>(
+          Twine("Unable to create raw counter with EventSelect: ")
+              .concat(Twine(PCI.CycleCounterEventSelect))
+              .concat(" UMask: ")
+              .concat(Twine(PCI.CycleCounterUMask)));
+    return std::make_unique<pfm::CounterGroup>(
+        std::move(Event), std::move(ValidationEvents), ProcessID);
+  }
+
+  if (PCI.UopsCounterEventSelect != -1 &&
+      CounterName == StringRef(PCI.UopsCounter)) {
+    pfm::RawPerfEvent Event(PCI.UopsCounterEventSelect, PCI.UopsCounterUMask);
+    if (!Event.valid())
+      return make_error<Failure>(
+          Twine("Unable to create raw counter with EventSelect: ")
+              .concat(Twine(PCI.UopsCounterEventSelect))
+              .concat(" UMask: ")
+              .concat(Twine(PCI.UopsCounterUMask)));
+    return std::make_unique<pfm::CounterGroup>(
+        std::move(Event), std::move(ValidationEvents), ProcessID);
+  }
+
+  pfm::PerfEvent Event(CounterName);
+  if (!Event.valid())
+    return make_error<Failure>(Twine("Unable to create counter with name '")
+                                   .concat(CounterName)
+                                   .concat("'"));
 
   return std::make_unique<pfm::CounterGroup>(
       std::move(Event), std::move(ValidationEvents), ProcessID);
@@ -114,7 +142,8 @@ ExegesisTarget::createBenchmarkRunner(
   case Benchmark::Latency:
   case Benchmark::InverseThroughput:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
-        !PfmCounters.CycleCounter) {
+        !PfmCounters.CycleCounter &&
+        PfmCounters.CycleCounterEventSelect == -1) {
       const char *ModeName = Mode == Benchmark::Latency
                                  ? "latency"
                                  : "inverse_throughput";
@@ -132,7 +161,8 @@ ExegesisTarget::createBenchmarkRunner(
         ValidationCounters, BenchmarkRepeatCount);
   case Benchmark::Uops:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
-        !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
+        !PfmCounters.UopsCounter && !PfmCounters.IssueCounters &&
+        PfmCounters.UopsCounterEventSelect == -1)
       return make_error<Failure>(
           "can't run 'uops' mode, sched model does not define uops or issue "
           "counters. You can pass --benchmark-phase=... to skip the actual "
@@ -179,11 +209,15 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
 static_assert(std::is_trivial_v<PfmCountersInfo>,
               "We shouldn't have dynamic initialization here");
 
-const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
-                                                  0u,      nullptr, 0u};
+const PfmCountersInfo PfmCountersInfo::Default = {
+    nullptr, -1, 0, nullptr, -1, 0, nullptr, 0u, nullptr, 0u};
 const PfmCountersInfo PfmCountersInfo::Dummy = {
     pfm::PerfEvent::DummyEventString,
+    -1,
+    0,
     pfm::PerfEvent::DummyEventString,
+    -1,
+    0,
     nullptr,
     0u,
     nullptr,

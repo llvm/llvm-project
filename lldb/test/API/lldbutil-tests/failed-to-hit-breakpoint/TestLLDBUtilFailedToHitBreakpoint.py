@@ -11,7 +11,6 @@ from lldbsuite.test.decorators import *
 class LLDBUtilFailedToHitBreakpointTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"])
     def test_error_message(self):
         """
         Tests that run_to_source_breakpoint prints the right error message

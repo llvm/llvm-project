@@ -1,30 +1,32 @@
-//===-- Linux implementation of pipe --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of pipe2 for Linux.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/unistd/pipe2.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/pipe2.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_pipe2, reinterpret_cast<long>(pipefd), flags);
-  if (ret < 0) {
-    libc_errno = -ret;
+  ErrorOr<int> result = linux_syscalls::pipe2(pipefd, flags);
+  if (!result.has_value()) {
+    libc_errno = result.error();
     return -1;
   }
-  MSAN_UNPOISON(pipefd, sizeof(int) * 2);
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-suspicious-include %t -- \
 // RUN:   -config="{CheckOptions: {bugprone-suspicious-include.IgnoredRegex: 'moc_.*'}"} -- \
-// RUN:   -isystem %clang_tidy_headers -fmodules
+// RUN:   -isystem %S/../Inputs/Headers -fmodules
 
 // clang-format off
 

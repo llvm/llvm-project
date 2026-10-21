@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++11 -verify=ref,both      %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++20 -verify=ref,both      %s
 
 
 using MaxBitInt = _BitInt(128);
@@ -69,6 +69,10 @@ constexpr _BitInt(32) nope = top / bottom;  // both-error {{must be initialized 
 constexpr _BitInt(32) noooo = top % bottom; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{value 2147483648 is outside the range}}
 
+struct {
+  _BitInt(35) void : 33; // both-error {{cannot combine with previous '_BitInt' declaration specifier}}
+} s;
+
 namespace APCast {
   constexpr _BitInt(10) A = 1;
   constexpr _BitInt(11) B = A;
@@ -100,6 +104,19 @@ namespace PointerArithmeticOverflow {
   int n;
   constexpr int *p = (&n + 1) + (unsigned __int128)-1; // both-error {{constant expression}} \
                                                        // both-note {{cannot refer to element 3402}}
+}
+
+namespace BitfieldWidth {
+  struct S {
+    __int128 foo : 1234;
+#if !defined(_WIN32)
+    // both-warning@-2 {{width of bit-field 'foo' (1'234 bits) exceeds the width of its type; value will be truncated to 128 bits}}
+#else
+    // both-error@-4 {{width of bit-field 'foo' (1234 bits) exceeds the size of its type (128 bits)}}
+#endif
+  };
+  constexpr S s{100};
+  static_assert(s.foo == 100, "");
 }
 
 namespace i128 {
@@ -281,6 +298,12 @@ namespace IncDec {
 #endif
 }
 
+namespace NegShift {
+  constexpr __int128_t a = ((__int128_t)1 << 127);
+  static_assert((2 >> a) == 1, ""); // both-error {{not an integral constant expression}} \
+                                    // both-note {{negative shift count -170141183460469231731687303715884105728}}
+}
+
 #if __cplusplus >= 201402L
 const __int128_t a = ( (__int128_t)1 << 64 );
 const _BitInt(72) b = ( 1 << 72 ); // both-warning {{shift count >= width of type}}
@@ -305,6 +328,46 @@ namespace UnderlyingInt128 {
   static_assert(foo() == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{in call to}}
 }
+
+namespace CompoundAssignOperators {
+  constexpr unsigned __int128 foo() {
+    long b = 10;
+
+    b += (__int128)1;
+    b -= (__int128)1;
+    b *= (__int128)1;
+    b /= (__int128)1;
+
+    b += (unsigned __int128)1;
+    b -= (unsigned __int128)1;
+    b *= (unsigned __int128)1;
+    b /= (unsigned __int128)1;
+
+    __int128 i = 10;
+    i += (__int128)1;
+    i -= (__int128)1;
+    i *= (__int128)1;
+    i /= (__int128)1;
+    i += (unsigned __int128)1;
+    i -= (unsigned __int128)1;
+    i *= (unsigned __int128)1;
+    i /= (unsigned __int128)1;
+
+    unsigned __int128 i2 = 10;
+    i2 += (__int128)1;
+    i2 -= (__int128)1;
+    i2 *= (__int128)1;
+    i2 /= (__int128)1;
+    i2 += (unsigned __int128)1;
+    i2 -= (unsigned __int128)1;
+    i2 *= (unsigned __int128)1;
+    i2 /= (unsigned __int128)1;
+
+    return (int)b;
+  }
+  static_assert(foo() == 10);
+}
+
 #endif
 
 #endif

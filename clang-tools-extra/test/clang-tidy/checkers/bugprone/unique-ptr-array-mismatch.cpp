@@ -1,27 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-unique-ptr-array-mismatch %t
 
-namespace std {
-
-template<class T> struct default_delete {};
-template<class T> struct default_delete<T[]> {};
-
-template<class T, class Deleter = std::default_delete<T>>
-class unique_ptr {
-public:
-  explicit unique_ptr(T* p) noexcept;
-  unique_ptr(T* p, Deleter d1 ) noexcept;
-};
-
-template <class T, class Deleter>
-class unique_ptr<T[], Deleter> {
-public:
-  template<class U>
-  explicit unique_ptr(U p) noexcept;
-  template<class U>
-  unique_ptr(U p, Deleter d1) noexcept;
-};
-
-} // namespace std
+#include <memory>
 
 struct A {};
 

@@ -14,7 +14,6 @@ include "mlir/Pass/PassBase.td"
 def GpuLaunchSinkIndexComputationsPass
     : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
 def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
@@ -66,7 +65,6 @@ def GpuEliminateBarriers
     PPoPP 2023 and implementation in Polygeist.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect",
     "mlir::memref::MemRefDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -84,7 +82,7 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     `gpu.launch`.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
   ];
 }
@@ -143,10 +141,10 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/ "\"nvptx64-nvidia-cuda\"",
            "Target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
+           /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
+           /*default=*/"\"\"",
            "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
@@ -157,11 +155,17 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"ftzFlag", "ftz", "bool",
            /*default=*/"false",
            "Enable flush to zero for denormals.">,
+    Option<"compilerDiagnosticsFlag", "collect-compiler-diagnostics", "bool",
+           /*default=*/"false",
+           "Enable collection of compiler diagnostics.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
     Option<"cmdOptions", "ptxas-cmd-options", "std::string",
            /*default=*/ [{""}],
            "Command line options passed to downstream compiler">,
+    Option<"verifyTarget", "verify-target-arch", "bool",
+           /*default=*/"true",
+           "Enable verification of the target architecture">,
   ];
 }
 
@@ -187,12 +191,20 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
     Option<"moduleMatcher", "module", "std::string",
            /*default=*/ [{""}],
            "Regex used to identify the modules to attach the target to.">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"\"",
+           "Target architecture, in the spelling the conversion passes take "
+           "(e.g. gfx942, gfx90a:xnack+, amdgpu9.4-amd-amdhsa, "
+           "amdgcn-amd-amdhsa--gfx90a:xnack-). "
+           "When non-empty this supersedes 'triple' and 'chip', and its "
+           "target-ID modifiers become the module's 'rocdl.xnack' and "
+           "'rocdl.sramecc' attributes rather than target features.">,
     Option<"triple", "triple", "std::string",
            /*default=*/ "\"amdgcn-amd-amdhsa\"",
-           "Target triple.">,
+           "Target triple. Ignored when 'arch' is given.">,
     Option<"chip", "chip", "std::string",
            /*default=*/"\"gfx900\"",
-           "Target chip.">,
+           "Target chip. Ignored when 'arch' is given.">,
     Option<"features", "features", "std::string",
            /*default=*/"\"\"",
            "Target features.">,
@@ -202,9 +214,10 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
-    Option<"wave64Flag", "wave64", "bool",
-           /*default=*/"true",
-           "Use Wave64 mode.">,
+    Option<"waveSize", "wavesize", "unsigned",
+           /*default=*/"0",
+           "Wavefront size (32 or 64). 0 takes the size from the target when "
+           "'arch' is given, and Wave64 otherwise.">,
     Option<"fastFlag", "fast", "bool",
            /*default=*/"false",
            "Enable fast relaxed math opt.">,

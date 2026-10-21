@@ -1,3 +1,15 @@
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  inliner
+  llvm/Analysis
+  InlinerModels
+  "models/inline-oz-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/inline-oz-test-model-tosa.mlir"
+  MLDeps
+)
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
@@ -30,8 +42,12 @@ endif()
 # handled correctly.
 if (MSVC)
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "/fp:except")
+  # Prevent warning about mismatching compile flags.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
+  # Clang's -ftrapping-math may conflict with precompiled headers too, #183643.
+  set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 add_llvm_component_library(LLVMAnalysis
@@ -81,7 +97,6 @@ add_llvm_component_library(LLVMAnalysis
   HashRecognize.cpp
   HeatUtils.cpp
   IR2Vec.cpp
-  IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
   ImportedFunctionsInliningStatistics.cpp
@@ -89,7 +104,6 @@ add_llvm_component_library(LLVMAnalysis
   InlineCost.cpp
   InlineAdvisor.cpp
   InlineOrder.cpp
-  InlineSizeEstimatorAnalysis.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
@@ -100,6 +114,7 @@ add_llvm_component_library(LLVMAnalysis
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
   LazyValueInfo.cpp
+  LibcallLoweringInfo.cpp
   Lint.cpp
   Loads.cpp
   Local.cpp
@@ -137,6 +152,7 @@ add_llvm_component_library(LLVMAnalysis
   RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
+  RuntimeLibcallInfo.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp
@@ -145,7 +161,6 @@ add_llvm_component_library(LLVMAnalysis
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
   StructuralHash.cpp
-  SyntheticCountsUtils.cpp
   TFLiteUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
@@ -166,6 +181,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  analysis_gen
   intrinsics_gen
   ${MLDeps}
 

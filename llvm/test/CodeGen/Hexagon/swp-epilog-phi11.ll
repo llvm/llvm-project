@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon-unknown-elf -mcpu=hexagonv55 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-unknown-elf -mcpu=hexagonv55 -hexagon-initial-cfg-cleanup=0 -terminal-rule=0 < %s | FileCheck %s
 
 ; Test that the pipeliner correctly generates the operands in the
 ; epilog.

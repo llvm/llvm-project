@@ -77,7 +77,7 @@ public:
   /// The value returned is the value of the immediate shifted right
   //  arithmetically by N.
   /// Note that this function is dedicated to specific immediate types,
-  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2 and simm26_lsl2.
+  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2{,_br} and simm26_lsl2.
   template <unsigned N>
   unsigned getImmOpValueAsr(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
@@ -180,6 +180,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_ABS64_HI12:
       FixupKind = LoongArch::fixup_loongarch_abs64_hi12;
       break;
+    case ELF::R_LARCH_CALL30:
     case ELF::R_LARCH_CALL36:
     case ELF::R_LARCH_TLS_LE_HI20_R:
     case ELF::R_LARCH_TLS_LE_LO12_R:

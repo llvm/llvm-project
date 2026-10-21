@@ -33,6 +33,36 @@ struct OverloadedStar {
   T operator*();
 };
 
+struct NonComparableIterator {
+  struct iterator {
+    bool operator!=(iterator) const = delete; // expected-note {{candidate function has been explicitly deleted}}
+    Data operator*() const;
+    iterator operator++() const;
+  };
+  iterator begin(); // expected-note {{selected 'begin' function with iterator type 'iterator'}}
+  iterator end();
+};
+
+struct NonIncrementableIterator {
+  struct iterator {
+    bool operator!=(iterator) const;
+    Data operator*() const;
+    iterator operator++() const = delete; // expected-note {{candidate function has been explicitly deleted}}
+  };
+  iterator begin(); // expected-note {{selected 'begin' function with iterator type 'iterator'}}
+  iterator end();
+};
+
+struct NonDereferenceableIterator {
+  struct iterator {
+    bool operator!=(iterator) const;
+    Data operator*() const = delete; // expected-note {{candidate function has been explicitly deleted}}
+    iterator operator++() const;
+  };
+  iterator begin(); // expected-note {{selected 'begin' function with iterator type 'iterator'}}
+  iterator end();
+};
+
 void f() {
   T t;
   for (auto i : t) { }
@@ -86,4 +116,16 @@ expected-note {{when looking up 'end' function for range expression of type 'Del
   for (Data *p : pt) { } // expected-error {{invalid range expression of type 'T *'; did you mean to dereference it with '*'?}}
   // expected-error@-1 {{no viable conversion from 'Data' to 'Data *'}}
   // expected-note@4 {{selected 'begin' function with iterator type 'Data *'}}
+
+  NonComparableIterator NCI;
+  for (auto i : NCI) { } // expected-error {{overload resolution selected deleted operator '!='}}
+  // expected-note@-1 {{in implicit call to 'operator!=' for iterator of type 'iterator'}}
+
+  NonIncrementableIterator NII;
+  for (auto i : NII) { } // expected-error {{overload resolution selected deleted operator '++'}}
+  // expected-note@-1 {{in implicit call to 'operator++' for iterator of type 'iterator'}}
+
+  NonDereferenceableIterator NDI;
+  for (auto i : NDI) { } // expected-error {{overload resolution selected deleted operator '*'}}
+  // expected-note@-1 {{in implicit call to 'operator*' for iterator of type 'iterator'}}
 }

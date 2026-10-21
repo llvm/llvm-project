@@ -257,6 +257,33 @@ define <vscale x 8 x i64> @masked_sload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
   ret <vscale x 8 x i64> %res
 }
 
+define <vscale x 2 x i64> @masked_load_frozen_before_sext(ptr %a, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_load_frozen_before_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
+  %load.frozen = freeze <vscale x 2 x i8> %load
+  %ext = sext <vscale x 2 x i8> %load.frozen to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %ext
+}
+
+; A multi-use freeze effectively means the load is also multi-use.
+define <vscale x 2 x i64> @masked_load_frozen_before_sext_multiuse(ptr %a, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_load_frozen_before_sext_multiuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    sxtb z0.d, p0/m, z1.d
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
+  %load.frozen = freeze <vscale x 2 x i8> %load
+  %ext = sext <vscale x 2 x i8> %load.frozen to <vscale x 2 x i64>
+  call void (...) @llvm.fake.use(<vscale x 2 x i8> %load.frozen)
+  ret <vscale x 2 x i64> %ext
+}
 
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)

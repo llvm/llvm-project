@@ -10,8 +10,7 @@
 
 define i32 @test_Greater_than(ptr %colauths) {
 ; This testcase is for the special case of zero-vector comparisons.
-; Currently the generated code does a comparison (vcmpequh) and then a negation (xxlnor).
-; This pattern is expected to be optimized in a future patch.
+; Optimize zero-vector `vcmpequh` compares followed by negate to `vcmpgtuh`.
 ; POWERPC_64LE-LABEL: test_Greater_than:
 ; POWERPC_64LE:       # %bb.0: # %entry
 ; POWERPC_64LE-NEXT:    lfd f0, 0(r3)
@@ -19,8 +18,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_64LE-NEXT:    li r4, 0
 ; POWERPC_64LE-NEXT:    li r3, 4
 ; POWERPC_64LE-NEXT:    xxswapd v2, f0
-; POWERPC_64LE-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_64LE-NEXT:    xxlnor v2, v2, v2
+; POWERPC_64LE-NEXT:    vcmpgtuh v2, v2, v3
 ; POWERPC_64LE-NEXT:    vmrglh v3, v2, v2
 ; POWERPC_64LE-NEXT:    vextuwrx r4, r4, v2
 ; POWERPC_64LE-NEXT:    vextuwrx r3, r3, v3
@@ -42,8 +40,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_64-NEXT:    xxlxor v3, v3, v3
 ; POWERPC_64-NEXT:    li r4, 12
 ; POWERPC_64-NEXT:    li r3, 8
-; POWERPC_64-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_64-NEXT:    xxlnor v2, v2, v2
+; POWERPC_64-NEXT:    vcmpgtuh v2, v2, v3
 ; POWERPC_64-NEXT:    vmrghh v2, v2, v2
 ; POWERPC_64-NEXT:    vextuwlx r4, r4, v2
 ; POWERPC_64-NEXT:    vextuwlx r3, r3, v2
@@ -66,8 +63,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_32-NEXT:    xxlxor v3, v3, v3
 ; POWERPC_32-NEXT:    lxvwsx vs0, r3, r4
 ; POWERPC_32-NEXT:    xxmrghw v2, vs1, vs0
-; POWERPC_32-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_32-NEXT:    xxlnor v2, v2, v2
+; POWERPC_32-NEXT:    vcmpgtuh v2, v2, v3
 ; POWERPC_32-NEXT:    vmrghh v2, v2, v2
 ; POWERPC_32-NEXT:    stxv v2, -32(r1)
 ; POWERPC_32-NEXT:    lwz r3, -20(r1)

@@ -15,6 +15,8 @@
 # External return to a landing pad/entry point call continuation
 # RUN: link_fdata %s %t %t.pa-eret PREAGG-ERET
 # RUN-DISABLED: link_fdata %s %t %t.pa-plt PREAGG-PLT
+## Fall-through imputing test cases
+# RUN: link_fdata %s %t %t.pa-imp PREAGG-IMP
 
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
 # RUN: llvm-objcopy --remove-section=.eh_frame %t.strip %t.noeh
@@ -63,6 +65,11 @@
 # RUN-DISABLED:   --check-prefix=CHECK-PLT
 # CHECK-PLT: traces mismatching disassembled function contents: 0
 
+## Check --impute-trace-fall-throughs accepting duplicate branch-only traces
+# RUN: perf2bolt %t --pa -p %t.pa-imp -o %t.pa-imp.fdata --impute-trace-fall-through
+# RUN: FileCheck %s --check-prefix=CHECK-IMP --input-file %t.pa-imp.fdata
+# CHECK-IMP: 0 [unknown] 0 1 main {{.*}} 0 3
+
   .globl foo
   .type foo, %function
 foo:
@@ -102,6 +109,8 @@ Ltmp1:
 
 Ltmp4:
 	cmpl	$0x0, -0x14(%rbp)
+# PREAGG-IMP: B X:0 #Ltmp4_br# 1 0
+# PREAGG-IMP: B X:0 #Ltmp4_br# 2 0
 Ltmp4_br:
 	je	Ltmp0
 

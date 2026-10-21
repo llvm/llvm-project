@@ -16,12 +16,12 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <algorithm>
 #include <io.h>
 #include <signal.h>
 #include <stdio.h>
 
 #include "llvm/Support/Format.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/raw_ostream.h"
 
 // The Windows.h header must be after LLVM and standard headers.
@@ -550,8 +550,8 @@ void llvm::sys::CallOneShotPipeSignalHandler() {
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) {
+void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
+                                 bool NeedsPOSIXUtilitySignalHandling) {
   insertSignalHandler(FnPtr, Cookie);
   RegisterHandler();
   LeaveCriticalSection(&CriticalSection);
@@ -581,6 +581,9 @@ static void Cleanup(bool ExecuteSignalHandlers) {
 }
 
 void llvm::sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   // The interrupt handler may be called from an interrupt, but it may also be
   // called manually (such as the case of report_fatal_error with no registered
   // error handler). We must ensure that the critical section is properly
@@ -781,6 +784,9 @@ WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   LPEXCEPTION_POINTERS EP = (LPEXCEPTION_POINTERS)Context;
   // Broken pipe is not a crash.
   //
@@ -793,6 +799,9 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   Cleanup(true);
 
   // Write out the exception code.
@@ -828,6 +837,9 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
 }
 
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // We are running in our very own thread, courtesy of Windows.
   EnterCriticalSection(&CriticalSection);
   // This function is only ever called when a CTRL-C or similar control signal

@@ -42,6 +42,15 @@ class APInt;
 /// LLVM Constant Representation
 class Constant : public User {
 protected:
+  /// SubclassOptionalData bits. Low bits are used by ConstantExpr.
+  enum {
+    IsNullValue = (1 << 6),
+  };
+
+  /// Bits reserved in SubclassOptionalData, not to be used for ConstantExpr
+  /// flags.
+  static constexpr unsigned ConstantSubclassBits = IsNullValue;
+
   Constant(Type *ty, ValueTy vty, AllocInfo AllocInfo)
       : User(ty, vty, AllocInfo) {}
 
@@ -52,7 +61,7 @@ public:
   Constant(const Constant &) = delete;
 
   /// Return true if this is the value that would be returned by getNullValue.
-  LLVM_ABI bool isNullValue() const;
+  bool isNullValue() const { return SubclassOptionalData & IsNullValue; }
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;
@@ -69,15 +78,15 @@ public:
   /// getZeroValueForNegation.
   LLVM_ABI bool isNegativeZeroValue() const;
 
-  /// Return true if the value is negative zero or null value.
-  LLVM_ABI bool isZeroValue() const;
-
   /// Return true if the value is not the smallest signed value, or,
   /// for vectors, does not contain smallest signed value elements.
   LLVM_ABI bool isNotMinSignedValue() const;
 
   /// Return true if the value is the smallest signed value.
   LLVM_ABI bool isMinSignedValue() const;
+
+  /// Return true if the value is the largest signed value.
+  LLVM_ABI bool isMaxSignedValue() const;
 
   /// Return true if this is a finite and non-zero floating-point scalar
   /// constant or a fixed width vector constant with all finite and non-zero
@@ -103,23 +112,32 @@ public:
   /// lane, the constants still match.
   LLVM_ABI bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector constant that includes any undef or
-  /// poison elements. Since it is impossible to inspect a scalable vector
-  /// element- wise at compile time, this function returns true only if the
-  /// entire vector is undef or poison.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// undef or poison elements. Nested aggregates (structs, arrays and fixed
+  /// width vectors) are inspected recursively. Since it is impossible to
+  /// inspect a scalable vector element-wise at compile time, this function
+  /// returns true for a scalable vector only if the entire vector is undef or
+  /// poison.
   LLVM_ABI bool containsUndefOrPoisonElement() const;
 
-  /// Return true if this is a vector constant that includes any poison
-  /// elements.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// poison elements. Nested aggregates are inspected recursively.
   LLVM_ABI bool containsPoisonElement() const;
 
-  /// Return true if this is a vector constant that includes any strictly undef
-  /// (not poison) elements.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// strictly undef (not poison) elements. Nested aggregates are inspected
+  /// recursively.
   LLVM_ABI bool containsUndefElement() const;
 
-  /// Return true if this is a fixed width vector constant that includes
-  /// any constant expressions.
+  /// Return true if this is a fixed width vector or aggregate constant
+  /// that includes any constant expressions. Nested aggregates are inspected
+  /// recursively.
   LLVM_ABI bool containsConstantExpression() const;
+
+  /// Return true if this is a vector constant where at least one element
+  /// satisfies the given predicate. Scalable vectors are not checked.
+  LLVM_ABI bool
+  containsMatchingVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
   /// Return true if the value can vary between threads.
   LLVM_ABI bool isThreadDependent() const;

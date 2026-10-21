@@ -16,6 +16,21 @@ using namespace mlir;
 using namespace smt;
 using namespace mlir;
 
+static mlir::ParseResult
+parseDomainTypes(mlir::AsmParser &parser,
+                 llvm::SmallVectorImpl<mlir::Type> &types) {
+  return parser.parseCommaSeparatedList(
+      mlir::AsmParser::Delimiter::Paren,
+      [&]() { return parser.parseType(types.emplace_back()); });
+}
+
+static void printDomainTypes(mlir::AsmPrinter &printer,
+                             llvm::ArrayRef<mlir::Type> types) {
+  printer << '(';
+  llvm::interleaveComma(types, printer);
+  printer << ')';
+}
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/SMT/IR/SMTTypes.cpp.inc"
 
@@ -67,8 +82,6 @@ LogicalResult ArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult SMTFuncType::verify(function_ref<InFlightDiagnostic()> emitError,
                                   ArrayRef<Type> domainTypes, Type rangeType) {
-  if (domainTypes.empty())
-    return emitError() << "domain must not be empty";
   if (!llvm::all_of(domainTypes, isAnyNonFuncSMTValueType))
     return emitError() << "domain types must be any non-function SMT type";
   if (!isAnyNonFuncSMTValueType(rangeType))

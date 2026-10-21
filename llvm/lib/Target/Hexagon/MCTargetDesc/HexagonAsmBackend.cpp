@@ -13,6 +13,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -79,6 +80,21 @@ public:
     MCInst * Result = Extender;
     const_cast<HexagonAsmBackend *>(this)->Extender = nullptr;
     return Result;
+  }
+
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+    unsigned Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
+#undef ELF_RELOC
+                        .Case("BFD_RELOC_NONE", ELF::R_HEX_NONE)
+                        .Case("BFD_RELOC_8", ELF::R_HEX_8)
+                        .Case("BFD_RELOC_16", ELF::R_HEX_16)
+                        .Case("BFD_RELOC_32", ELF::R_HEX_32)
+                        .Default(-1u);
+    if (Type == -1u)
+      return std::nullopt;
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
@@ -569,9 +585,9 @@ public:
     return true;
   }
 
-  bool finishLayout(const MCAssembler &Asm) const override {
+  bool finishLayout() const override {
     SmallVector<MCFragment *> Frags;
-    for (MCSection &Sec : Asm) {
+    for (MCSection &Sec : *Asm) {
       Frags.clear();
       for (MCFragment &F : Sec)
         Frags.push_back(&F);
@@ -580,7 +596,7 @@ public:
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(*Frags[J]);
+          auto Size = Asm->computeFragmentSize(*Frags[J]);
           for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (Frags[K]->getKind()) {
@@ -596,15 +612,22 @@ public:
               auto &RF = *Frags[K];
               MCInst Inst = RF.getInst();
 
+              // Don't add nops to packets that have fixups, as reshuffling can
+              // invalidate fixup offsets.
+              if (!RF.getVarFixups().empty()) {
+                Size = 0;
+                break;
+              }
+
               const bool WouldTraverseLabel = llvm::any_of(
-                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                  Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {
                     uint64_t Offset = 0;
-                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const bool HasOffset = Asm->getSymbolOffset(sym, Offset);
                     const unsigned PacketSizeBytes =
                         HexagonMCInstrInfo::bundleSize(Inst) *
                         HEXAGON_INSTR_SIZE;
                     const bool OffsetPastSym =
-                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                        Offset <= Asm->getFragmentOffset(RF) + PacketSizeBytes;
                     return !sym.isVariable() && Offset != 0 && HasOffset &&
                            OffsetPastSym;
                   });
@@ -631,7 +654,7 @@ public:
                                             *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
-              ReplaceInstruction(Asm.getEmitter(), RF, Inst);
+              ReplaceInstruction(Asm->getEmitter(), RF, Inst);
               Size = 0; // Only look back one instruction
               break;
             }

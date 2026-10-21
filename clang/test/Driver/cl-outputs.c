@@ -37,6 +37,11 @@
 // CHECK-MULTIPLESOURCEOK2: "-o" "cl-outputs.obj"
 // CHECK-MULTIPLESOURCEOK2: "-o" "cl-outputs.obj"
 
+// RUN: %clang_cl /c /Foa.obj -Xlinker -foo -### -- %s foo.obj foo.lib 2>&1 | FileCheck -check-prefix=FoLINKERINPUT %s
+// RUN: %clang_cl /Foa.obj -Xlinker -foo -### -- %s foo.lib 2>&1 | FileCheck -check-prefix=FoLINKERINPUT %s
+// FoLINKERINPUT-NOT: error: cannot specify '/Foa.obj' when compiling multiple source files
+// FoLINKERINPUT: "-o" "a.obj"
+
 // RUN: %clang_cl /c /oa -### -- %s 2>&1 | FileCheck -check-prefix=oNAME1 %s
 // oNAME1:  "-o" "a.obj"
 
@@ -243,6 +248,9 @@
 // RUN: %clang_cl /Fa -### -- %s %s 2>&1 | FileCheck -check-prefix=FaMULTIPLESOURCEOK %s
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
+// RUN: %clang_cl /Faa.asm -Xlinker -foo -### -- %s foo.obj 2>&1 | FileCheck -check-prefix=FaLINKERINPUT %s
+// FaLINKERINPUT-NOT: error: cannot specify '/Faa.asm' when compiling multiple source files
+// FaLINKERINPUT: "-o" "a.asm"
 
 // Copy of the same tests above, but with /FAcsu
 // RUN: %clang_cl /FAcsu -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU %s
@@ -310,3 +318,19 @@
 
 // RUN: %clang_cl -target x86_64-windows -fdebug-compilation-dir=. /Z7 /Fofoo/a.obj -### -- %s 2>&1 | FileCheck -check-prefix=RELATIVE_OBJPATH2 %s
 // RELATIVE_OBJPATH2: "-object-file-name=foo\\a.obj"
+
+// RUN: %clang_cl /c /Fodir/ /clang:-fembed-bitcode -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEBC %s
+// FoNAMEBC:  "-o" "dir/cl-outputs.bc"
+// FoNAMEBC:  "-o" "dir/cl-outputs.obj"
+
+// RUN: %clang_cl /c /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM %s
+// EMITLLVM:  "-o" "cl-outputs.bc"
+
+// RUN: %clang_cl /c /Fodir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_Fo %s
+// EMITLLVM_Fo:  "-o" "dir/cl-outputs.bc"
+
+// RUN: %clang_cl /c /odir/ /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_o %s
+// EMITLLVM_o:  "-o" "dir/cl-outputs.bc"
+
+// RUN: %clang_cl /c /omain.bc /clang:-emit-llvm -### -- %s 2>&1 | FileCheck -check-prefix=EMITLLVM_oNAME %s
+// EMITLLVM_oNAME:  "-o" "main.bc"

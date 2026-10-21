@@ -40,7 +40,7 @@ TEST(LlvmLibcIsLower, SimpleTest) {
 }
 
 TEST(LlvmLibcIsLower, DefaultLocale) {
-  // Loops through all characters, verifying that numbers and letters
+  // Loops through all characters, verifying that only lowercase letters
   // return non-zero integer and everything else returns a zero.
   for (int ch = -255; ch < 255; ++ch) {
     if (in_span(ch, LOWER_ARRAY))

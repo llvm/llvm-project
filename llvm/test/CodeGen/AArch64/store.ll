@@ -39,6 +39,29 @@ define void @store_i64(i64 %a, ptr %ptr){
     ret void
 }
 
+define i32 @store_i112(ptr %p) {
+; CHECK-SD-LABEL: store_i112:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, x0
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    str xzr, [x8]
+; CHECK-SD-NEXT:    strh wzr, [x8, #12]
+; CHECK-SD-NEXT:    str wzr, [x8, #8]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_i112:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    mov w0, wzr
+; CHECK-GI-NEXT:    str xzr, [x8]
+; CHECK-GI-NEXT:    str wzr, [x8, #8]
+; CHECK-GI-NEXT:    strh wzr, [x8, #12]
+; CHECK-GI-NEXT:    ret
+  store i112 0, ptr %p, align 16
+  ret i32 0
+}
+
+
 ; ===== Legal Vector Types =====
 
 define void @store_v8i8(<8 x i8> %a, ptr %ptr){
@@ -146,13 +169,19 @@ define void @store_v32i8(<32 x i8> %a, ptr %ptr){
 }
 
 define void @store_v2i16(<2 x i16> %a, ptr %ptr){
-; CHECK-LABEL: store_v2i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: store_v2i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_v2i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-GI-NEXT:    str h0, [x0]
+; CHECK-GI-NEXT:    str h1, [x0, #2]
+; CHECK-GI-NEXT:    ret
     store <2 x i16> %a, ptr %ptr
     ret void
 }
@@ -207,13 +236,11 @@ define void @store_v3i8(<3 x i8> %a, ptr %ptr){
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov v0.h[1], w1
-; CHECK-SD-NEXT:    mov v0.h[2], w2
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
-; CHECK-SD-NEXT:    str s0, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
 ; CHECK-SD-NEXT:    strb w2, [x3, #2]
-; CHECK-SD-NEXT:    strh w8, [x3]
+; CHECK-SD-NEXT:    mov v0.b[1], w1
+; CHECK-SD-NEXT:    mov v0.b[2], w2
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    str h0, [x3]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;

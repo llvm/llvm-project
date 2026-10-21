@@ -473,10 +473,9 @@ std::string llvm::formatCallSiteLocation(DebugLoc DLoc,
                                          const CallSiteFormat &Format) {
   std::string Buffer;
   raw_string_ostream CallSiteLoc(Buffer);
-  bool First = true;
+  ListSeparator LS(" @ ");
   for (DILocation *DIL = DLoc.get(); DIL; DIL = DIL->getInlinedAt()) {
-    if (!First)
-      CallSiteLoc << " @ ";
+    CallSiteLoc << LS;
     // Note that negative line offset is actually possible, but we use
     // unsigned int to match line offset representation in remarks so
     // it's directly consumable by relay advisor.
@@ -491,16 +490,14 @@ std::string llvm::formatCallSiteLocation(DebugLoc DLoc,
       CallSiteLoc << ":" << llvm::utostr(DIL->getColumn());
     if (Format.outputDiscriminator() && Discriminator)
       CallSiteLoc << "." << llvm::utostr(Discriminator);
-    First = false;
   }
 
   return CallSiteLoc.str();
 }
 
 void llvm::addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc) {
-  if (!DLoc) {
+  if (!DLoc)
     return;
-  }
 
   bool First = true;
   Remark << " at callsite ";

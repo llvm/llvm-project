@@ -68,8 +68,8 @@ module @mymod {
     %3 = nvgpu.tma.create.descriptor %cast box[%c64, %c8] : memref<*xf32> -> <tensor = memref<64x8xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>
     %4 = nvgpu.tma.create.descriptor %cast_3 box[%c8, %c128] : memref<*xf32> -> <tensor = memref<8x128xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) {
-      %5 = gpu.block_dim  x
-      %6 = gpu.thread_id  x
+      %5 = gpu.block_dim x
+      %6 = gpu.thread_id x
       %7 = memref.get_global @bufferLhsGlobal : memref<64x8xf32, 3>
       %8 = memref.get_global @bufferRhsGlobal : memref<8x128xf32, 3>
       %9 = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>

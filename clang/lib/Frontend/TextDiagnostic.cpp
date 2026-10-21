@@ -17,6 +17,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <optional>
 
@@ -349,14 +350,13 @@ private:
 
 /// When the source code line we want to print is too long for
 /// the terminal, select the "interesting" region.
-static void selectInterestingSourceRegion(std::string &SourceLine,
-                                          std::string &CaretLine,
-                                          std::string &FixItInsertionLine,
-                                          Columns NonGutterColumns,
-                                          const SourceColumnMap &Map) {
-  Columns CaretColumns = Columns(CaretLine.size());
-  Columns FixItColumns =
-      Columns(llvm::sys::locale::columnWidth(FixItInsertionLine));
+static void selectInterestingSourceRegion(
+    std::string &SourceLine, std::string &CaretLine,
+    std::string &FixItInsertionLine, Columns NonGutterColumns,
+    const SourceColumnMap &Map,
+    SmallVectorImpl<clang::TextDiagnostic::StyleRange> &Styles) {
+  Columns CaretColumns = CaretLine.size();
+  Columns FixItColumns = llvm::sys::locale::columnWidth(FixItInsertionLine);
   Columns MaxColumns =
       std::max({Map.columns().V, CaretColumns.V, FixItColumns.V});
   // if the number of columns is less than the desired number we're done
@@ -369,13 +369,11 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
   // Find the slice that we need to display the full caret line
   // correctly.
   Columns CaretStart = 0, CaretEnd = CaretLine.size();
-  for (; CaretStart != CaretEnd; CaretStart = CaretStart.next())
-    if (!isWhitespace(CaretLine[CaretStart.V]))
-      break;
+  while (CaretStart != CaretEnd && isWhitespace(CaretLine[CaretStart.V]))
+    CaretStart = CaretStart.next();
 
-  for (; CaretEnd != CaretStart; CaretEnd = CaretEnd.prev())
-    if (!isWhitespace(CaretLine[CaretEnd.V - 1]))
-      break;
+  while (CaretEnd != CaretStart && isWhitespace(CaretLine[CaretEnd.V]))
+    CaretEnd = CaretEnd.prev();
 
   // caret has already been inserted into CaretLine so the above whitespace
   // check is guaranteed to include the caret
@@ -516,13 +514,45 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
   assert(FrontColumnsRemoved + ColumnsKept + BackColumnsRemoved >
          NonGutterColumns);
 
+  // Since we've modified the SourceLine, we also need to adjust the line's
+  // highlighting information. In particular, if we've removed
+  // from the front of the line, we need to move the style ranges to the
+  // left and remove unneeded ranges.
+  // Note in particular that variables like CaretEnd are defined in the
+  // CaretLine, which only contains ASCII, while the style ranges are defined in
+  // the source line, where we have to care for the byte-index != column-index
+  // case.
+  Bytes BytesRemoved =
+      FrontColumnsRemoved > FrontEllipse.size()
+          ? (Map.columnToByte(FrontColumnsRemoved) - Bytes(FrontEllipse.size()))
+          : 0;
+  Bytes CodeEnd =
+      CaretEnd < Map.columns() ? Map.columnToByte(CaretEnd.V) : CaretEnd.V;
+  for (TextDiagnostic::StyleRange &R : Styles) {
+    // Remove style ranges before and after the new truncated snippet.
+    if (R.Start >= static_cast<unsigned>(CodeEnd.V) ||
+        R.End < static_cast<unsigned>(BytesRemoved.V)) {
+      R.Start = R.End = std::numeric_limits<int>::max();
+      continue;
+    }
+    // Move them left. (Note that this can wrap R.Start, but that doesn't
+    // matter).
+    R.Start -= BytesRemoved.V;
+    R.End -= BytesRemoved.V;
+
+    // Don't leak into the ellipse at the end.
+    if (R.Start < static_cast<unsigned>(CodeEnd.V) &&
+        R.End > static_cast<unsigned>(CodeEnd.V))
+      R.End = CodeEnd.V + 1; // R.End is inclusive.
+  }
+
   // The line needs some truncation, and we'd prefer to keep the front
   //  if possible, so remove the back
   if (BackColumnsRemoved > Columns(BackEllipse.size()))
     SourceLine.replace(SourceEnd.V, std::string::npos, BackEllipse);
 
   // If that's enough then we're done
-  if (FrontColumnsRemoved + ColumnsKept <= Columns(NonGutterColumns))
+  if (FrontColumnsRemoved + ColumnsKept <= NonGutterColumns)
     return;
 
   // Otherwise remove the front as well
@@ -701,15 +731,16 @@ void TextDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts.showColors(OS.has_colors()))
     OS.resetColor();
 
   if (DiagOpts.ShowLevel)
-    printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
+    printDiagnosticLevel(OS, Level, DiagOpts.showColors(OS.has_colors()));
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.getColumn() - StartOfLocationInfo,
-                         DiagOpts.MessageLength, DiagOpts.ShowColors);
+                         DiagOpts.MessageLength,
+                         DiagOpts.showColors(OS.has_colors()));
   // We use a formatted ostream, which does its own buffering. Flush here
   // so we keep the proper order of output.
   OS.flush();
@@ -806,7 +837,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
       TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
+      SM.getFileManager().makeAbsolutePath(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
       Filename = StringRef(TmpFilename.data(), TmpFilename.size());
@@ -843,7 +874,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   if (!DiagOpts.ShowLocation)
     return;
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts.showColors(OS.has_colors()))
     OS.changeColor(SavedColor, true);
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
@@ -891,23 +922,18 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     const SourceManager &SM = Loc.getManager();
 
     for (const auto &R : Ranges) {
-      // Ignore invalid ranges.
-      if (!R.isValid())
+      std::optional<CharSourceRange> FileRange =
+          getExpansionRangeInFile(R, CaretFileID, SM);
+      if (!FileRange)
         continue;
 
-      SourceLocation B = SM.getExpansionLoc(R.getBegin());
-      CharSourceRange ERange = SM.getExpansionRange(R.getEnd());
-      SourceLocation E = ERange.getEnd();
-
-      // If the start or end of the range is in another file, just
-      // discard it.
-      if (SM.getFileID(B) != CaretFileID || SM.getFileID(E) != CaretFileID)
-        continue;
+      SourceLocation B = FileRange->getBegin();
+      SourceLocation E = FileRange->getEnd();
 
       // Add in the length of the token, so that we cover multi-char
       // tokens.
       unsigned TokSize = 0;
-      if (ERange.isTokenRange())
+      if (FileRange->isTokenRange())
         TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
       FullSourceLoc BF(B, SM), EF(E, SM);
@@ -1391,11 +1417,16 @@ void TextDiagnostic::emitSnippetAndCaret(
       OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
 
+  Columns MessageLength = DiagOpts.MessageLength;
+  // If we don't have enough columns available, just abort now.
+  if (MessageLength != 0 && MessageLength <= Columns(MaxLineNoDisplayWidth + 4))
+    return;
+
   // Prepare source highlighting information for the lines we're about to
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
       highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
-                     DiagOpts.ShowColors, FID, SM);
+                     DiagOpts.showColors(OS.has_colors()), FID, SM);
 
   SmallVector<LineRange> LineRanges =
       prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
@@ -1450,10 +1481,14 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.
-    Columns MessageLength = DiagOpts.MessageLength;
-    if (MessageLength.V != 0)
+    if (MessageLength != 0) {
+      Columns NonGutterColumns = MessageLength;
+      if (MaxLineNoDisplayWidth != 0)
+        NonGutterColumns -= Columns(MaxLineNoDisplayWidth + 4);
       selectInterestingSourceRegion(SourceLine, CaretLine, FixItInsertionLine,
-                                    MessageLength, SourceColMap);
+                                    NonGutterColumns, SourceColMap,
+                                    SourceStyles[LineNo - Lines.first]);
+    }
 
     // If we are in -fdiagnostics-print-source-range-info mode, we are trying
     // to produce easily machine parsable output.  Add a space before the
@@ -1470,22 +1505,22 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     if (!CaretLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.changeColor(CaretColor, true);
       OS << CaretLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.resetColor();
     }
 
     if (!FixItInsertionLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         // Print fixit line in color
         OS.changeColor(FixitColor, false);
       if (DiagOpts.ShowSourceRanges)
         OS << ' ';
       OS << FixItInsertionLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts.showColors(OS.has_colors()))
         OS.resetColor();
     }
   }
@@ -1508,13 +1543,14 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   // Print the source line one character at a time.
   bool PrintReversed = false;
   std::optional<llvm::raw_ostream::Colors> CurrentColor;
-  size_t I = 0;
+  size_t I = 0; // Bytes.
+  const bool ShowColors = DiagOpts.showColors(OS.has_colors());
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
         printableTextForNextCharacter(SourceLine, &I, DiagOpts.TabStop);
 
     // Toggle inverted colors on or off for this character.
-    if (DiagOpts.ShowColors) {
+    if (ShowColors) {
       if (WasPrintable == PrintReversed) {
         PrintReversed = !PrintReversed;
         if (PrintReversed)
@@ -1545,7 +1581,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
     OS << Str;
   }
 
-  if (DiagOpts.ShowColors)
+  if (ShowColors)
     OS.resetColor();
 
   OS << '\n';

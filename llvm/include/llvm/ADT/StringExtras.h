@@ -63,7 +63,7 @@ inline StringRef toStringRef(ArrayRef<char> Input) {
   return StringRef(Input.begin(), Input.size());
 }
 
-/// Construct a string ref from an array ref of unsigned chars.
+/// Construct an array ref of bytes from a string ref.
 template <class CharT = uint8_t>
 inline ArrayRef<CharT> arrayRefFromStringRef(StringRef Input) {
   static_assert(std::is_same<CharT, char>::value ||
@@ -354,11 +354,6 @@ inline std::string toString(const APSInt &I, unsigned Radix) {
   return toString(I, Radix, I.isSigned());
 }
 
-/// StrInStrNoCase - Portable version of strcasestr.  Locates the first
-/// occurrence of string 's1' in string 's2', ignoring case.  Returns
-/// the offset of s2 in s1 or npos if s2 cannot be found.
-LLVM_ABI StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
-
 /// getToken - This function extracts one token from source, ignoring any
 /// leading characters that appear in the Delimiters string, and ending the
 /// token at any of the characters that appear in the Delimiters string.  If
@@ -403,6 +398,12 @@ LLVM_ABI void printHTMLEscaped(StringRef String, raw_ostream &Out);
 
 /// printLowerCase - Print each character as lowercase if it is uppercase.
 LLVM_ABI void printLowerCase(StringRef String, raw_ostream &Out);
+
+/// Print each character of \p String percent-encoded for use as a URL
+/// query-component value (RFC 3986): unreserved characters (ALPHA, DIGIT,
+/// '-' '_' '.' '~') are written directly; every other byte becomes an
+/// uppercase %XX escape. Operates on raw bytes, so UTF-8 round-trips.
+LLVM_ABI void printPercentEncoded(StringRef String, raw_ostream &Out);
 
 /// Converts a string from camel-case to snake-case by replacing all uppercase
 /// letters with '_' followed by the letter in lowercase, except if the
@@ -525,7 +526,7 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 ///   ListSeparator LS;
 ///   for (auto &I : C)
 ///     OS << LS << I.getName();
-/// \end
+/// \endcode
 class ListSeparator {
   bool First = true;
   StringRef Separator;
@@ -541,6 +542,7 @@ public:
     }
     return Separator;
   }
+  bool unused() { return First; }
 };
 
 /// A forward iterator over partitions of string over a separator.
@@ -606,9 +608,9 @@ public:
 /// \code
 ///   for (StringRef x : llvm::split("foo,bar,baz", ","))
 ///     ...;
-/// \end
+/// \endcode
 ///
-/// Note that the passed string must remain valid throuhgout lifetime
+/// Note that the passed string must remain valid throughout lifetime
 /// of the iterators.
 inline iterator_range<SplittingIterator> split(StringRef Str, StringRef Separator) {
   return {SplittingIterator(Str, Separator),

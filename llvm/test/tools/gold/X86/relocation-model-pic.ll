@@ -2,29 +2,29 @@
 
 ;; Non-PIC source.
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --shared \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec -pie \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ;; PIC source.
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --shared \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec -pie \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -r \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC

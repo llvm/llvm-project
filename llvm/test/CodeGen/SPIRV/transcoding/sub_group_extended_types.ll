@@ -803,33 +803,33 @@ declare dso_local spir_func <16 x double> @_Z19sub_group_broadcastDv16_dj(<16 x 
 ; CHECK-SPIRV: %[[#]] = OpGroupSMax %[[#char]] %[[#ScopeSubgroup]] ExclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testReduceScanChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testReduceScanChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z20sub_group_reduce_addc(i8 signext 0)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func signext i8 @_Z20sub_group_reduce_minc(i8 signext 0)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func signext i8 @_Z20sub_group_reduce_maxc(i8 signext 0)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   %7 = tail call spir_func signext i8 @_Z28sub_group_scan_inclusive_addc(i8 signext 0)
-  %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
-  store i8 %7, i8 addrspace(1)* %8, align 1
+  %8 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 3
+  store i8 %7, ptr addrspace(1) %8, align 1
   %9 = tail call spir_func signext i8 @_Z28sub_group_scan_inclusive_minc(i8 signext 0)
-  %10 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 4
-  store i8 %9, i8 addrspace(1)* %10, align 1
+  %10 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 4
+  store i8 %9, ptr addrspace(1) %10, align 1
   %11 = tail call spir_func signext i8 @_Z28sub_group_scan_inclusive_maxc(i8 signext 0)
-  %12 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 5
-  store i8 %11, i8 addrspace(1)* %12, align 1
+  %12 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 5
+  store i8 %11, ptr addrspace(1) %12, align 1
   %13 = tail call spir_func signext i8 @_Z28sub_group_scan_exclusive_addc(i8 signext 0)
-  %14 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 6
-  store i8 %13, i8 addrspace(1)* %14, align 1
+  %14 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 6
+  store i8 %13, ptr addrspace(1) %14, align 1
   %15 = tail call spir_func signext i8 @_Z28sub_group_scan_exclusive_minc(i8 signext 0)
-  %16 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 7
-  store i8 %15, i8 addrspace(1)* %16, align 1
+  %16 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 7
+  store i8 %15, ptr addrspace(1) %16, align 1
   %17 = tail call spir_func signext i8 @_Z28sub_group_scan_exclusive_maxc(i8 signext 0)
-  %18 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 8
-  store i8 %17, i8 addrspace(1)* %18, align 1
+  %18 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 8
+  store i8 %17, ptr addrspace(1) %18, align 1
   ret void
 }
 
@@ -863,33 +863,33 @@ declare dso_local spir_func signext i8 @_Z28sub_group_scan_exclusive_maxc(i8 sig
 ; CHECK-SPIRV: %[[#]] = OpGroupUMax %[[#char]] %[[#ScopeSubgroup]] ExclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testReduceScanUChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testReduceScanUChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i8 @_Z20sub_group_reduce_addh(i8 zeroext 0)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func zeroext i8 @_Z20sub_group_reduce_minh(i8 zeroext 0)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func zeroext i8 @_Z20sub_group_reduce_maxh(i8 zeroext 0)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   %7 = tail call spir_func zeroext i8 @_Z28sub_group_scan_inclusive_addh(i8 zeroext 0)
-  %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
-  store i8 %7, i8 addrspace(1)* %8, align 1
+  %8 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 3
+  store i8 %7, ptr addrspace(1) %8, align 1
   %9 = tail call spir_func zeroext i8 @_Z28sub_group_scan_inclusive_minh(i8 zeroext 0)
-  %10 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 4
-  store i8 %9, i8 addrspace(1)* %10, align 1
+  %10 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 4
+  store i8 %9, ptr addrspace(1) %10, align 1
   %11 = tail call spir_func zeroext i8 @_Z28sub_group_scan_inclusive_maxh(i8 zeroext 0)
-  %12 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 5
-  store i8 %11, i8 addrspace(1)* %12, align 1
+  %12 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 5
+  store i8 %11, ptr addrspace(1) %12, align 1
   %13 = tail call spir_func zeroext i8 @_Z28sub_group_scan_exclusive_addh(i8 zeroext 0)
-  %14 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 6
-  store i8 %13, i8 addrspace(1)* %14, align 1
+  %14 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 6
+  store i8 %13, ptr addrspace(1) %14, align 1
   %15 = tail call spir_func zeroext i8 @_Z28sub_group_scan_exclusive_minh(i8 zeroext 0)
-  %16 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 7
-  store i8 %15, i8 addrspace(1)* %16, align 1
+  %16 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 7
+  store i8 %15, ptr addrspace(1) %16, align 1
   %17 = tail call spir_func zeroext i8 @_Z28sub_group_scan_exclusive_maxh(i8 zeroext 0)
-  %18 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 8
-  store i8 %17, i8 addrspace(1)* %18, align 1
+  %18 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 8
+  store i8 %17, ptr addrspace(1) %18, align 1
   ret void
 }
 
@@ -923,33 +923,33 @@ declare dso_local spir_func zeroext i8 @_Z28sub_group_scan_exclusive_maxh(i8 zer
 ; CHECK-SPIRV: %[[#]] = OpGroupSMax %[[#short]] %[[#ScopeSubgroup]] ExclusiveScan %[[#short_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testReduceScanShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testReduceScanShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i16 @_Z20sub_group_reduce_adds(i16 signext 0)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func signext i16 @_Z20sub_group_reduce_mins(i16 signext 0)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func signext i16 @_Z20sub_group_reduce_maxs(i16 signext 0)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   %7 = tail call spir_func signext i16 @_Z28sub_group_scan_inclusive_adds(i16 signext 0)
-  %8 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 3
-  store i16 %7, i16 addrspace(1)* %8, align 2
+  %8 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 3
+  store i16 %7, ptr addrspace(1) %8, align 2
   %9 = tail call spir_func signext i16 @_Z28sub_group_scan_inclusive_mins(i16 signext 0)
-  %10 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 4
-  store i16 %9, i16 addrspace(1)* %10, align 2
+  %10 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 4
+  store i16 %9, ptr addrspace(1) %10, align 2
   %11 = tail call spir_func signext i16 @_Z28sub_group_scan_inclusive_maxs(i16 signext 0)
-  %12 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 5
-  store i16 %11, i16 addrspace(1)* %12, align 2
+  %12 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 5
+  store i16 %11, ptr addrspace(1) %12, align 2
   %13 = tail call spir_func signext i16 @_Z28sub_group_scan_exclusive_adds(i16 signext 0)
-  %14 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 6
-  store i16 %13, i16 addrspace(1)* %14, align 2
+  %14 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 6
+  store i16 %13, ptr addrspace(1) %14, align 2
   %15 = tail call spir_func signext i16 @_Z28sub_group_scan_exclusive_mins(i16 signext 0)
-  %16 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 7
-  store i16 %15, i16 addrspace(1)* %16, align 2
+  %16 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 7
+  store i16 %15, ptr addrspace(1) %16, align 2
   %17 = tail call spir_func signext i16 @_Z28sub_group_scan_exclusive_maxs(i16 signext 0)
-  %18 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 8
-  store i16 %17, i16 addrspace(1)* %18, align 2
+  %18 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 8
+  store i16 %17, ptr addrspace(1) %18, align 2
   ret void
 }
 
@@ -983,33 +983,33 @@ declare dso_local spir_func signext i16 @_Z28sub_group_scan_exclusive_maxs(i16 s
 ; CHECK-SPIRV: %[[#]] = OpGroupUMax %[[#short]] %[[#ScopeSubgroup]] ExclusiveScan %[[#short_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testReduceScanUShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testReduceScanUShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i16 @_Z20sub_group_reduce_addt(i16 zeroext 0)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func zeroext i16 @_Z20sub_group_reduce_mint(i16 zeroext 0)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func zeroext i16 @_Z20sub_group_reduce_maxt(i16 zeroext 0)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   %7 = tail call spir_func zeroext i16 @_Z28sub_group_scan_inclusive_addt(i16 zeroext 0)
-  %8 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 3
-  store i16 %7, i16 addrspace(1)* %8, align 2
+  %8 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 3
+  store i16 %7, ptr addrspace(1) %8, align 2
   %9 = tail call spir_func zeroext i16 @_Z28sub_group_scan_inclusive_mint(i16 zeroext 0)
-  %10 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 4
-  store i16 %9, i16 addrspace(1)* %10, align 2
+  %10 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 4
+  store i16 %9, ptr addrspace(1) %10, align 2
   %11 = tail call spir_func zeroext i16 @_Z28sub_group_scan_inclusive_maxt(i16 zeroext 0)
-  %12 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 5
-  store i16 %11, i16 addrspace(1)* %12, align 2
+  %12 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 5
+  store i16 %11, ptr addrspace(1) %12, align 2
   %13 = tail call spir_func zeroext i16 @_Z28sub_group_scan_exclusive_addt(i16 zeroext 0)
-  %14 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 6
-  store i16 %13, i16 addrspace(1)* %14, align 2
+  %14 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 6
+  store i16 %13, ptr addrspace(1) %14, align 2
   %15 = tail call spir_func zeroext i16 @_Z28sub_group_scan_exclusive_mint(i16 zeroext 0)
-  %16 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 7
-  store i16 %15, i16 addrspace(1)* %16, align 2
+  %16 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 7
+  store i16 %15, ptr addrspace(1) %16, align 2
   %17 = tail call spir_func zeroext i16 @_Z28sub_group_scan_exclusive_maxt(i16 zeroext 0)
-  %18 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 8
-  store i16 %17, i16 addrspace(1)* %18, align 2
+  %18 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 8
+  store i16 %17, ptr addrspace(1) %18, align 2
   ret void
 }
 

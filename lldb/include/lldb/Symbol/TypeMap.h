@@ -29,8 +29,6 @@ public:
   void Dump(Stream *s, bool show_context,
             lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
 
-  TypeMap FindTypes(ConstString name);
-
   void Insert(const lldb::TypeSP &type);
 
   bool Empty() const;

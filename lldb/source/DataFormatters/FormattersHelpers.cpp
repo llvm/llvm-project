@@ -10,6 +10,7 @@
 
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -98,15 +99,15 @@ void lldb_private::formatters::AddFilter(
 }
 
 std::optional<size_t>
-lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
-  if (!item_name || !*item_name)
+lldb_private::formatters::ExtractIndexFromString(llvm::StringRef item_name) {
+  if (item_name.empty())
     return std::nullopt;
-  if (*item_name != '[')
+  if (item_name.front() != '[' || item_name.back() != ']')
     return std::nullopt;
-  item_name++;
-  char *endptr = nullptr;
-  unsigned long int idx = ::strtoul(item_name, &endptr, 0);
-  if ((idx == 0 && endptr == item_name) || idx == ULONG_MAX)
+  item_name = item_name.drop_front().ltrim();
+
+  unsigned long long idx = 0;
+  if (llvm::consumeUnsignedInteger(item_name, /*Radix=*/0, idx))
     return std::nullopt;
   return idx;
 }
@@ -124,13 +125,13 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
       data_addr.type == eAddressTypeFile)
     return Address(data_addr.address, valobj.GetModule()->GetSectionList());
 
-  return data_addr.address;
+  return Address(data_addr.address);
 }
 
 void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
     Stream &stream, ValueObject &ptr, const TypeSummaryOptions &options) {
   if (ptr.GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+    stream.PutCString("nullptr");
     return;
   }
 
@@ -148,6 +149,6 @@ void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
 
 bool lldb_private::formatters::ContainerSizeSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
-                                       nullptr, nullptr, &valobj, false, false);
+  return FormatEntity::Formatter(nullptr, nullptr, nullptr, false, false)
+      .FormatStringRef("size=${svar%#}", stream, &valobj);
 }

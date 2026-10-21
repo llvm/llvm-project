@@ -47,8 +47,8 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, getCPU(CPU), FS,
-                               Options, getEffectiveRelocModel(RM),
+    : CodeGenTargetMachineImpl(T, TT, getCPU(CPU), FS, Options,
+                               getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, std::string(getCPU(CPU)), std::string(FS), *this) {
   this->TLOF = std::make_unique<AVRTargetObjectFile>();
@@ -84,6 +84,7 @@ void AVRPassConfig::addIRPasses() {
   //   %result = shl i32 %n, %amount
   // to a loop so that library calls are avoided.
   addPass(createAVRShiftExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

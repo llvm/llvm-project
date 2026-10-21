@@ -6,6 +6,8 @@ public:
   int m_arr_size = 4;
 };
 
+void stop() {}
+
 int main(int argc, char **argv) {
   int int_arr[] = {1, 2, 3};
   int *int_ptr = int_arr;
@@ -38,5 +40,6 @@ int main(int argc, char **argv) {
   myArray ma;
   myArray *ma_ptr = &ma;
 
-  return 0; // Set a breakpoint here
+  stop(); // Set a breakpoint here
+  return 0;
 }

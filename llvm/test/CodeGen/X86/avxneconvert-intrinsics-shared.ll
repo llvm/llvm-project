@@ -8,7 +8,6 @@ define <8 x bfloat> @test_int_x86_vcvtneps2bf16128(<4 x float> %A) {
 ; AVX512BF16-COMMON-LABEL: test_int_x86_vcvtneps2bf16128:
 ; AVX512BF16-COMMON:       # %bb.0:
 ; AVX512BF16-COMMON-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x7a,0x72,0xc0]
-; AVX512BF16-COMMON-NEXT:    # kill: def $xmm1 killed $xmm0
 ; AVX512BF16-COMMON-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512BF16-LABEL: test_int_x86_vcvtneps2bf16128:
@@ -24,7 +23,6 @@ define <8 x bfloat> @test_int_x86_vcvtneps2bf16256(<8 x float> %A) {
 ; AVX512BF16-COMMON-LABEL: test_int_x86_vcvtneps2bf16256:
 ; AVX512BF16-COMMON:       # %bb.0:
 ; AVX512BF16-COMMON-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0 # encoding: [0xc4,0xe2,0x7e,0x72,0xc0]
-; AVX512BF16-COMMON-NEXT:    # kill: def $xmm1 killed $xmm0
 ; AVX512BF16-COMMON-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; AVX512BF16-COMMON-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;

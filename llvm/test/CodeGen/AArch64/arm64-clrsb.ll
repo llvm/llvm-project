@@ -21,6 +21,20 @@ entry:
   ret i32 %0
 }
 
+define i32 @clrsb32_2(i32 %x) #2 {
+; CHECK-LABEL: clrsb32_2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cls w8, w0
+; CHECK-NEXT:    add w0, w8, #2
+; CHECK-NEXT:    ret
+entry:
+  %shr = ashr i32 %x, 31
+  %xor = xor i32 %shr, %x
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %xor, i1 false)
+  %sub = add i32 %ctlz, 1
+  ret i32 %sub
+}
+
 define i64 @clrsb64(i64 %x) #3 {
 ; CHECK-LABEL: clrsb64:
 ; CHECK:       ; %bb.0: ; %entry
@@ -33,6 +47,20 @@ entry:
   %add = or i64 %mul, 1
   %0 = tail call i64 @llvm.ctlz.i64(i64 %add, i1 false)
   ret i64 %0
+}
+
+define i64 @clrsb64_2(i64 %x) #3 {
+; CHECK-LABEL: clrsb64_2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cls x8, x0
+; CHECK-NEXT:    add x0, x8, #2
+; CHECK-NEXT:    ret
+entry:
+  %shr = ashr i64 %x, 63
+  %xor = xor i64 %shr, %x
+  %ctlz = tail call i64 @llvm.ctlz.i64(i64 %xor, i1 false)
+  %sub = add i64 %ctlz, 1
+  ret i64 %sub
 }
 
 define i32 @clrsb32_zeroundef(i32 %x) #2 {

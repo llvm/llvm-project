@@ -4,9 +4,12 @@ add_flang_library(FIROpenACCSupport
   FIROpenACCAttributes.cpp
   FIROpenACCOpsInterfaces.cpp
   FIROpenACCTypeInterfaces.cpp
+  FIROpenACCUtils.cpp
   RegisterOpenACCExtensions.cpp
 
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRBuilder
   FIRDialect
   FIRDialectSupport
@@ -14,6 +17,8 @@ add_flang_library(FIROpenACCSupport
   HLFIRDialect
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRBuilder
   FIRCodeGenDialect
   FIRDialect
@@ -22,8 +27,12 @@ add_flang_library(FIROpenACCSupport
   HLFIRDialect
 
   MLIR_DEPS
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
+  MLIROpenACCUtils
 
   MLIR_LIBS
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
+  MLIROpenACCUtils
 )

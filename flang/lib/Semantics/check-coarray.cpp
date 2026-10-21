@@ -9,6 +9,7 @@
 #include "check-coarray.h"
 #include "definable.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -100,6 +101,7 @@ template <typename T>
 static void CheckTeamType(
     SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
+    NoteUsedSymbols(context, *expr);
     if (!IsTeamType(evaluate::GetDerivedTypeSpec(expr->GetType()))) {
       context.Say(parser::FindSourceLocation(x), // C1114
           "Team value must be of type TEAM_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
@@ -113,10 +115,22 @@ static void CheckTeamType(
 static void CheckTeamStat(
     SemanticsContext &context, const parser::ImageSelectorSpec::Stat &stat) {
   const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
+  auto at{parser::FindSourceLocation(var)};
   if (parser::GetCoindexedNamedObject(var)) {
-    context.Say(parser::FindSourceLocation(var), // C931
+    context.Say(at, // C931
         "Image selector STAT variable must not be a coindexed "
         "object"_err_en_US);
+  } else if (const auto *expr{GetExpr(context, var)}) {
+    context.CheckIndexVarRedefine(var);
+    auto whyNot{WhyNotDefinable(at, context.FindScope(at), {}, *expr)};
+    if (whyNot && IsVariable(*expr)) {
+      whyNot->set_severity(parser::Severity::Because);
+      const Symbol *sym{evaluate::GetFirstSymbol(*expr)};
+      context
+          .Say(at, "STAT variable '%s' is not definable"_err_en_US,
+              sym ? sym->name().ToString() : var.GetSource().ToString())
+          .Attach(std::move(*whyNot));
+    }
   }
 }
 

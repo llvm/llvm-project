@@ -31,11 +31,15 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "fasttileconfig"
+#define DEBUG_TYPE "x86-fast-tile-config"
 
 namespace {
 
-class X86FastTileConfig : public MachineFunctionPass {
+class X86FastTileConfigImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
   // context
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
@@ -44,9 +48,11 @@ class X86FastTileConfig : public MachineFunctionPass {
   X86MachineFunctionInfo *X86FI = nullptr;
 
   bool configBasicBlock(MachineBasicBlock &MBB);
+};
 
+class X86FastTileConfigLegacy : public MachineFunctionPass {
 public:
-  X86FastTileConfig() : MachineFunctionPass(ID) {}
+  X86FastTileConfigLegacy() : MachineFunctionPass(ID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override {
@@ -70,11 +76,11 @@ public:
 
 } // end anonymous namespace
 
-char X86FastTileConfig::ID = 0;
+char X86FastTileConfigLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86FastTileConfig, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(X86FastTileConfigLegacy, DEBUG_TYPE,
                       "Fast Tile Register Configure", false, false)
-INITIALIZE_PASS_END(X86FastTileConfig, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86FastTileConfigLegacy, DEBUG_TYPE,
                     "Fast Tile Register Configure", false, false)
 
 static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
@@ -110,7 +116,7 @@ static unsigned getTMMIndex(Register Reg) {
 
 // PreTileConfig should configure the tile registers based on basic
 // block.
-bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
+bool X86FastTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
   bool Change = false;
   SmallVector<std::pair<unsigned, ShapeT>, 6> ShapeInfos;
   for (MachineInstr &MI : reverse(MBB)) {
@@ -168,7 +174,7 @@ bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
   return Change;
 }
 
-bool X86FastTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
+bool X86FastTileConfigImpl::runOnMachineFunction(MachineFunction &MFunc) {
   X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
@@ -188,6 +194,19 @@ bool X86FastTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
   return Change;
 }
 
-FunctionPass *llvm::createX86FastTileConfigPass() {
-  return new X86FastTileConfig();
+FunctionPass *llvm::createX86FastTileConfigLegacyPass() {
+  return new X86FastTileConfigLegacy();
+}
+
+bool X86FastTileConfigLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86FastTileConfigImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FastTileConfigPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  X86FastTileConfigImpl Impl;
+  Impl.runOnMachineFunction(MF);
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

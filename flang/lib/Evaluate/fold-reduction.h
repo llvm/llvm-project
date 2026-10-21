@@ -15,8 +15,7 @@ namespace Fortran::evaluate {
 
 // DOT_PRODUCT
 template <typename T>
-static Expr<T> FoldDotProduct(
-    FoldingContext &context, FunctionRef<T> &&funcRef) {
+Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
@@ -47,18 +46,13 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{x.Subtract(correction, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
+          auto added{sum.KahanSummation(x, correction, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
+          sum = added.value;
         } else {
           auto added{sum.Add(x, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
+          sum = added.value;
         }
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
@@ -97,18 +91,13 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{x.Subtract(correction, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
+          auto added{sum.KahanSummation(x, correction, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
+          sum = added.value;
         } else {
           auto added{sum.Add(x, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
+          sum = added.value;
         }
       }
     }
@@ -142,9 +131,9 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
-    FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
-    int arrayIndex, std::optional<int> dimIndex = std::nullopt,
+std::optional<ArrayAndMask<T>> ProcessReductionArgs(FoldingContext &context,
+    ActualArguments &arg, std::optional<int> &dim, int arrayIndex,
+    std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
@@ -184,7 +173,7 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
 // operator()(Scalar<T> &, const ConstantSubscripts &, bool first)
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
-static Constant<T> DoReduction(const Constant<ARRAY> &array,
+Constant<T> DoReduction(const Constant<ARRAY> &array,
     const Constant<LogicalResult> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -275,7 +264,7 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
+Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
     RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
@@ -319,7 +308,7 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldProduct(
+Expr<T> FoldProduct(
     FoldingContext &context, FunctionRef<T> &&ref, Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
@@ -357,14 +346,8 @@ public:
     } else if constexpr (T::category == TypeCategory::Unsigned) {
       element = element.AddUnsigned(array_.At(at)).value;
     } else { // Real & Complex: use Kahan summation
-      auto next{array_.At(at).Subtract(correction_, rounding_)};
-      overflow_ |= next.flags.test(RealFlag::Overflow);
-      auto sum{element.Add(next.value, rounding_)};
+      auto sum{element.KahanSummation(array_.At(at), correction_, rounding_)};
       overflow_ |= sum.flags.test(RealFlag::Overflow);
-      // correction = (sum - element) - next; algebraically zero
-      correction_ = sum.value.Subtract(element, rounding_)
-                        .value.Subtract(next.value, rounding_)
-                        .value;
       element = sum.value;
     }
   }
@@ -387,7 +370,7 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
+Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||

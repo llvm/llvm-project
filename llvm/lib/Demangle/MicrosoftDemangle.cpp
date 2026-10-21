@@ -21,7 +21,6 @@
 #include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
-#include <array>
 #include <cctype>
 #include <cstdio>
 #include <optional>
@@ -277,6 +276,18 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
+static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
+                                          size_t Count) {
+  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
+  N->Count = Count;
+  N->Nodes = Arena.allocArray<Node *>(Count);
+  for (size_t I = 0; I < Count; ++I) {
+    N->Nodes[I] = Head->N;
+    Head = Head->Next;
+  }
+  return N;
+}
+
 std::string_view Demangler::copyString(std::string_view Borrowed) {
   char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
@@ -323,8 +334,30 @@ Demangler::demangleSpecialTableSymbolNode(std::string_view &MangledName,
   }
 
   std::tie(STSN->Quals, IsMember) = demangleQualifiers(MangledName);
-  if (!consumeFront(MangledName, '@'))
-    STSN->TargetName = demangleFullyQualifiedTypeName(MangledName);
+
+  NodeList *TargetCurrent = nullptr;
+  NodeList *TargetHead = nullptr;
+  size_t Count = 0;
+  while (!consumeFront(MangledName, '@')) {
+    ++Count;
+
+    NodeList *Next = Arena.alloc<NodeList>();
+    if (TargetCurrent)
+      TargetCurrent->Next = Next;
+    else
+      TargetHead = Next;
+
+    TargetCurrent = Next;
+    QualifiedNameNode *QN = demangleFullyQualifiedTypeName(MangledName);
+    if (Error)
+      return nullptr;
+    assert(QN);
+    TargetCurrent->N = QN;
+  }
+
+  if (Count > 0)
+    STSN->TargetNames = nodeListToNodeArray(Arena, TargetHead, Count);
+
   return STSN;
 }
 
@@ -376,12 +409,11 @@ static QualifiedNameNode *synthesizeQualifiedName(ArenaAllocator &Arena,
   return synthesizeQualifiedName(Arena, Id);
 }
 
-static VariableSymbolNode *synthesizeVariable(ArenaAllocator &Arena,
-                                              TypeNode *Type,
-                                              std::string_view VariableName) {
-  VariableSymbolNode *VSN = Arena.alloc<VariableSymbolNode>();
+static VariableSymbolNode *synthesizeType(ArenaAllocator &Arena, TypeNode *Type,
+                                          std::string_view Description) {
+  TypeSymbolNode *VSN = Arena.alloc<TypeSymbolNode>();
   VSN->Type = Type;
-  VSN->Name = synthesizeQualifiedName(Arena, VariableName);
+  VSN->Name = synthesizeQualifiedName(Arena, Description);
   return VSN;
 }
 
@@ -495,7 +527,7 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(std::string_view &MangledName) {
       break;
     if (!MangledName.empty())
       break;
-    return synthesizeVariable(Arena, T, "`RTTI Type Descriptor'");
+    return synthesizeType(Arena, T, "`RTTI Type Descriptor'");
   }
   case SpecialIntrinsicKind::RttiBaseClassArray:
     return demangleUntypedVariable(Arena, MangledName,
@@ -840,7 +872,7 @@ SymbolNode *Demangler::demangleTypeinfoName(std::string_view &MangledName) {
     Error = true;
     return nullptr;
   }
-  return synthesizeVariable(Arena, T, "`RTTI Type Descriptor Name'");
+  return synthesizeType(Arena, T, "`RTTI Type Descriptor Name'");
 }
 
 // Parser entry point.
@@ -1603,18 +1635,6 @@ Demangler::demangleNameScopePiece(std::string_view &MangledName) {
     return demangleLocallyScopedNamePiece(MangledName);
 
   return demangleSimpleName(MangledName, /*Memorize=*/true);
-}
-
-static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
-                                          size_t Count) {
-  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
-  N->Count = Count;
-  N->Nodes = Arena.allocArray<Node *>(Count);
-  for (size_t I = 0; I < Count; ++I) {
-    N->Nodes[I] = Head->N;
-    Head = Head->Next;
-  }
-  return N;
 }
 
 QualifiedNameNode *
@@ -2521,6 +2541,12 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoMemberType);
   if (Flags & MSDF_NoVariableType)
     OF = OutputFlags(OF | OF_NoVariableType);
+  if (Flags & MSDF_NoTagSpecifier)
+    OF = OutputFlags(OF | OF_NoTagSpecifier);
+  if (Flags & MSDF_NoVoidParameter)
+    OF = OutputFlags(OF | OF_NoVoidParameter);
+  if (Flags & MSDF_NoDecorativeRTTITypeDescriptor)
+    OF = OutputFlags(OF | OF_NoDecorativeRTTITypeDescriptor);
 
   int InternalStatus = demangle_success;
   char *Buf;

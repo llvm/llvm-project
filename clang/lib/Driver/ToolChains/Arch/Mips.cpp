@@ -9,7 +9,7 @@
 #include "Mips.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 
@@ -49,8 +49,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     DefMips64CPU = "mips3";
   }
 
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ,
-                               options::OPT_mcpu_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ))
     CPUName = A->getValue();
 
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
@@ -190,6 +189,44 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   StringRef ABIName;
   getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
   ABIName = getGnuCompatibleMipsABIName(ABIName);
+
+  // Handle features corresponding to GCC's -ffixed-REG options. MIPS spells
+  // its GPRs numerically, so preserve that spelling in the driver interface.
+#define RESERVE_GPR(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-gpr" #REG);
+  RESERVE_GPR(1)
+  RESERVE_GPR(2)
+  RESERVE_GPR(3)
+  RESERVE_GPR(4)
+  RESERVE_GPR(5)
+  RESERVE_GPR(6)
+  RESERVE_GPR(7)
+  RESERVE_GPR(8)
+  RESERVE_GPR(9)
+  RESERVE_GPR(10)
+  RESERVE_GPR(11)
+  RESERVE_GPR(12)
+  RESERVE_GPR(13)
+  RESERVE_GPR(14)
+  RESERVE_GPR(15)
+  RESERVE_GPR(16)
+  RESERVE_GPR(17)
+  RESERVE_GPR(18)
+  RESERVE_GPR(19)
+  RESERVE_GPR(20)
+  RESERVE_GPR(21)
+  RESERVE_GPR(22)
+  RESERVE_GPR(23)
+  RESERVE_GPR(24)
+  RESERVE_GPR(25)
+  RESERVE_GPR(26)
+  RESERVE_GPR(27)
+  RESERVE_GPR(28)
+  RESERVE_GPR(29)
+  RESERVE_GPR(30)
+  RESERVE_GPR(31)
+#undef RESERVE_GPR
 
   // Historically, PIC code for MIPS was associated with -mabicalls, a.k.a
   // SVR4 abicalls. Static code does not use SVR4 calling sequences. An ABI
@@ -389,6 +426,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "virt");
   AddTargetFeature(Args, Features, options::OPT_mginv, options::OPT_mno_ginv,
                    "ginv");
+  AddTargetFeature(Args, Features, options::OPT_mfix_r5900,
+                   options::OPT_mno_fix_r5900, "fix-r5900");
 
   if (Arg *A = Args.getLastArg(options::OPT_mindirect_jump_EQ)) {
     StringRef Val = StringRef(A->getValue());

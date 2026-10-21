@@ -32,7 +32,7 @@ void NoInternalDependenciesCheck::check(
   const auto *InternalDependency =
       Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("InternalDep");
 
-  SourceLocation LocAtFault =
+  const SourceLocation LocAtFault =
       Result.SourceManager->getSpellingLoc(InternalDependency->getBeginLoc());
 
   if (!LocAtFault.isValid())

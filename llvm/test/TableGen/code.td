@@ -1,6 +1,5 @@
 // RUN: llvm-tblgen %s | FileCheck %s
 // RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
-// XFAIL: vg_leak
 
 // CHECK: def A1
 // CHECK:   code CodeCode = [{code here;}]

@@ -37,9 +37,7 @@ static void printRegion(llvm::raw_ostream &os, Region *region,
 static void printBlock(llvm::raw_ostream &os, Block *block,
                        OpPrintingFlags &flags) {
   Region *region = block->getParent();
-  Block *entry = &region->front();
-  int blockId = std::distance(entry->getIterator(), block->getIterator());
-  os << "Block #" << blockId << " for ";
+  os << "Block #" << block->computeBlockNumber() << " for ";
   bool shouldSkipRegions = flags.shouldSkipRegions();
   printRegion(os, region, flags.skipRegions());
   if (!shouldSkipRegions)

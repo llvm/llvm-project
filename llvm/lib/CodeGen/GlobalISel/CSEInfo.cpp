@@ -18,13 +18,9 @@
 using namespace llvm;
 char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
 GISelCSEAnalysisWrapperPass::GISelCSEAnalysisWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeGISelCSEAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-INITIALIZE_PASS_BEGIN(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                      "Analysis containing CSE Info", false, true)
-INITIALIZE_PASS_END(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                    "Analysis containing CSE Info", false, true)
+    : MachineFunctionPass(ID) {}
+INITIALIZE_PASS(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
+                "Analysis containing CSE Info", false, true)
 
 /// -------- UniqueMachineInstr -------------//
 
@@ -115,16 +111,16 @@ bool GISelCSEInfo::isUniqueMachineInstValid(
 }
 
 void GISelCSEInfo::invalidateUniqueMachineInstr(UniqueMachineInstr *UMI) {
-  bool Removed = CSEMap.RemoveNode(UMI);
+  bool Removed = CSEMap.erase(UMI);
   (void)Removed;
   assert(Removed && "Invalidation called on invalid UMI");
   // FIXME: Should UMI be deallocated/destroyed?
 }
 
-UniqueMachineInstr *GISelCSEInfo::getNodeIfExists(FoldingSetNodeID &ID,
-                                                  MachineBasicBlock *MBB,
-                                                  void *&InsertPos) {
-  auto *Node = CSEMap.FindNodeOrInsertPos(ID, InsertPos);
+UniqueMachineInstr *
+GISelCSEInfo::getNodeIfExists(FoldingSetNodeID &ID, MachineBasicBlock *MBB,
+                              FoldingSetInsertToken &Token) {
+  auto *Node = CSEMap.lookup(ID, Token);
   if (Node) {
     if (!isUniqueMachineInstValid(*Node)) {
       invalidateUniqueMachineInstr(Node);
@@ -137,14 +133,15 @@ UniqueMachineInstr *GISelCSEInfo::getNodeIfExists(FoldingSetNodeID &ID,
   return Node;
 }
 
-void GISelCSEInfo::insertNode(UniqueMachineInstr *UMI, void *InsertPos) {
+void GISelCSEInfo::insertNode(UniqueMachineInstr *UMI,
+                              FoldingSetInsertToken Token) {
   handleRecordedInsts();
   assert(UMI);
   UniqueMachineInstr *MaybeNewNode = UMI;
-  if (InsertPos)
-    CSEMap.InsertNode(UMI, InsertPos);
+  if (Token)
+    CSEMap.insert(UMI, Token);
   else
-    MaybeNewNode = CSEMap.GetOrInsertNode(UMI);
+    MaybeNewNode = CSEMap.getOrInsert(UMI);
   if (MaybeNewNode != UMI) {
     // A similar node exists in the folding set. Let's ignore this one.
     return;
@@ -160,19 +157,20 @@ UniqueMachineInstr *GISelCSEInfo::getUniqueInstrForMI(const MachineInstr *MI) {
   return Node;
 }
 
-void GISelCSEInfo::insertInstr(MachineInstr *MI, void *InsertPos) {
+void GISelCSEInfo::insertInstr(MachineInstr *MI, FoldingSetInsertToken Token) {
   assert(MI);
   // If it exists in temporary insts, remove it.
   TemporaryInsts.remove(MI);
   auto *Node = getUniqueInstrForMI(MI);
-  insertNode(Node, InsertPos);
+  insertNode(Node, Token);
 }
 
-MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
-                                                    MachineBasicBlock *MBB,
-                                                    void *&InsertPos) {
+MachineInstr *
+GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
+                                      MachineBasicBlock *MBB,
+                                      FoldingSetInsertToken &Token) {
   handleRecordedInsts();
-  if (auto *Inst = getNodeIfExists(ID, MBB, InsertPos)) {
+  if (auto *Inst = getNodeIfExists(ID, MBB, Token)) {
     LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI);
     return const_cast<MachineInstr *>(Inst->MI);
   }
@@ -207,7 +205,7 @@ void GISelCSEInfo::handleRecordedInst(MachineInstr *MI) {
     /// We'll reuse the same UniqueMachineInstr to avoid the new
     /// allocation.
     *UMI = UniqueMachineInstr(MI);
-    insertNode(UMI, nullptr);
+    insertNode(UMI);
   } else {
     /// This is a new instruction. Allocate a new UniqueMachineInstr and
     /// Insert.
@@ -291,9 +289,8 @@ Error GISelCSEInfo::verify() {
   for (auto &It : InstrMapping) {
     FoldingSetNodeID TmpID;
     GISelInstProfileBuilder(TmpID, *MRI).addNodeID(It.first);
-    void *InsertPos;
-    UniqueMachineInstr *FoundNode =
-        CSEMap.FindNodeOrInsertPos(TmpID, InsertPos);
+    FoldingSetInsertToken Token;
+    UniqueMachineInstr *FoundNode = CSEMap.lookup(TmpID, Token);
     if (FoundNode != It.second)
       return createStringError(std::errc::not_supported,
                                "CSEMap mismatch, InstrMapping has MIs without "
@@ -439,9 +436,8 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
 }
 
 GISelCSEInfo &
-GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool Recompute) {
-  if (!AlreadyComputed || Recompute) {
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt) {
+  if (!AlreadyComputed) {
     Info.releaseMemory();
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);
@@ -449,6 +445,18 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
   }
   return Info;
 }
+
+AnalysisKey GISelCSEAnalysis::Key;
+
+GISelCSEAnalysis::Result
+GISelCSEAnalysis::run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM) {
+  std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
+  Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
+  Info->analyze(MF);
+  return Info;
+}
+
 void GISelCSEAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);

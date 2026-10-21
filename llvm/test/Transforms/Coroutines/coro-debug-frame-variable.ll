@@ -36,7 +36,7 @@
 ; CHECK:         #dbg_declare(ptr %[[MEMORY]], ![[IVAR:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 20), ![[IDBGLOC]]
 ; CHECK:       await.ready:
 ;
-; CHECK-LABEL: define internal fastcc void @_Z3foov.resume({{.*}}) {{.*}} {
+; CHECK-LABEL: define internal void @_Z3foov.resume({{.*}}) {{.*}} {
 ; CHECK:       entry.resume:
 ; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK-NEXT:    #dbg_declare(ptr %[[DBG_PTR]], ![[XVAR_RESUME:[0-9]+]],   !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32),

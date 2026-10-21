@@ -49,6 +49,7 @@ public:
   bool isScalar() const { return flavor == Scalar; }
   bool isComplex() const { return flavor == Complex; }
   bool isAggregate() const { return flavor == Aggregate; }
+  bool isIgnored() const { return isScalar() && !getValue(); }
 
   bool isVolatileQualified() const { return isVolatile; }
 
@@ -157,7 +158,8 @@ class LValue {
     BitField,     // This is a bitfield l-value, use getBitfield*.
     ExtVectorElt, // This is an extended vector subset, use getExtVectorComp
     GlobalReg,    // This is a register l-value, use getGlobalReg()
-    MatrixElt     // This is a matrix element, use getVector*
+    MatrixElt,    // This is a matrix element, use getVector*
+    MatrixRow     // This is a matrix vector subset, use getVector*
   } lvType;
   clang::QualType type;
   clang::Qualifiers quals;
@@ -166,10 +168,15 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
-  mlir::Value vectorIdx; // Index for vector subscript
+  mlir::Value vectorIdx;      // Index for vector subscript & MatrixElt row idx
+  mlir::Value matrixColIdx;   // Matrix column index for MatrixElt
+  mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
   const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
+  // This flag shows if a nontemporal load/stores should be used when accessing
+  // this lvalue.
+  bool nontemporal;
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -184,16 +191,23 @@ class LValue {
     assert(this->alignment == alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->baseInfo = baseInfo;
+    this->nontemporal = false;
   }
 
 public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isExtVectorElt() const { return lvType == ExtVectorElt; }
   bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isMatrixElt() const { return lvType == MatrixElt; }
+  bool isMatrixRow() const { return lvType == MatrixRow; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
   bool isVolatileQualified() const { return quals.hasVolatile(); }
+
+  bool isNontemporal() const { return nontemporal; }
+  void setNontemporal(bool v) { nontemporal = v; }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
@@ -254,6 +268,22 @@ public:
     return vectorIdx;
   }
 
+  // extended vector elements.
+  Address getExtVectorAddress() const {
+    assert(isExtVectorElt());
+    return Address(getExtVectorPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getExtVectorPointer() const {
+    assert(isExtVectorElt());
+    return v;
+  }
+
+  mlir::ArrayAttr getExtVectorElts() const {
+    assert(isExtVectorElt());
+    return mlir::cast<mlir::ArrayAttr>(vectorElts);
+  }
+
   static LValue makeVectorElt(Address vecAddress, mlir::Value index,
                               clang::QualType t, LValueBaseInfo baseInfo) {
     LValue r;
@@ -262,6 +292,47 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getMatrixAddress() const {
+    assert(isMatrixElt());
+    return Address(v, elementType, getAlignment());
+  }
+
+  mlir::Value getMatrixRowIdx() const {
+    assert(isMatrixElt());
+    return vectorIdx;
+  }
+
+  mlir::Value getMatrixColumnIdx() const {
+    assert(isMatrixElt());
+    return matrixColIdx;
+  }
+
+  static LValue makeMatrixElt(Address matAddress, mlir::Value rowIdx,
+                              mlir::Value colIdx, clang::QualType t,
+                              LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = MatrixElt;
+    r.v = matAddress.getPointer();
+    r.elementType = matAddress.getElementType();
+    r.vectorIdx = rowIdx;
+    r.matrixColIdx = colIdx;
+    r.initialize(t, t.getQualifiers(), matAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  static LValue makeExtVectorElt(Address vecAddress, mlir::ArrayAttr elts,
+                                 clang::QualType type,
+                                 LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = ExtVectorElt;
+    r.v = vecAddress.getPointer();
+    r.elementType = vecAddress.getElementType();
+    r.vectorElts = elts;
+    r.initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
+                 baseInfo);
     return r;
   }
 
@@ -295,6 +366,10 @@ public:
     r.bitFieldInfo = &info;
     r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
+  }
+
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
   }
 };
 
@@ -341,7 +416,7 @@ public:
   enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
   enum IsAliased_t { IsNotAliased, IsAliased };
-  enum Overlap_t { MayOverlap, DoesNotOverlap };
+  enum Overlap_t { DoesNotOverlap, MayOverlap };
 
   /// Returns an aggregate value slot indicating that the aggregate
   /// value is being ignored.

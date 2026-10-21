@@ -119,6 +119,11 @@ AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
                          bool EndStatementAtEOF) {
+  // Buffer must be NULL-terminated. NULL terminator must reside at `Buf.end()`.
+  // It must be safe to dereference `Buf.end()`.
+  assert(*Buf.end() == '\0' &&
+         "Buffer provided to AsmLexer lacks null terminator.");
+
   CurBuf = Buf;
 
   if (ptr)
@@ -221,12 +226,6 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
                                  "expected at least one exponent digit");
 
   return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
-}
-
-/// LexIdentifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
-static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
-  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
-         (AllowAt && C == '@') || (AllowHash && C == '#');
 }
 
 AsmToken AsmLexer::LexIdentifier() {

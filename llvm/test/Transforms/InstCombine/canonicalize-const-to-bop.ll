@@ -123,8 +123,7 @@ define i8 @udiv_slt_exact(i8 %x) {
 define i8 @canonicalize_icmp_operands(i8 %x) {
 ; CHECK-LABEL: define i8 @canonicalize_icmp_operands(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 119)
-; CHECK-NEXT:    [[S:%.*]] = add nsw i8 [[TMP1]], 8
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X]], i8 8)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %add = add nsw i8 %x, 8
@@ -294,9 +293,9 @@ define i8 @multi_use_bop_negative(i8 %x) {
 define half @float_negative(half %x) {
 ; CHECK-LABEL: define half @float_negative(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fmul fast half [[X]], 0xH2E66
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt half [[X]], 0xH5640
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], half 0xH4900, half [[ADD]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul fast half [[X]], 9.997550e-02
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt half [[X]], 1.000000e+02
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], half 1.000000e+01, half [[ADD]]
 ; CHECK-NEXT:    ret half [[S]]
 ;
   %add = fdiv fast half %x, 10.0

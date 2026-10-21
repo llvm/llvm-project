@@ -5,9 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMISelLowering.h"
+#include "ARMSelectionDAGInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -50,7 +49,7 @@ protected:
     M = parseAssemblyString(Assembly, SMError, Context);
     if (!M)
       report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     F = M->getFunction("f");
     if (!F)
@@ -65,9 +64,9 @@ protected:
     if (!DAG)
       report_fatal_error("SelectionDAG allocation failed");
 
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, /*LibInfo*/ nullptr, /*AA*/ nullptr,
-              /*AC*/ nullptr, /*MDT*/ nullptr, /*MSDT*/ nullptr, MMI, nullptr);
+    DAG->init(*MF, /*LibInfo=*/nullptr, /*LibcallsInfo=*/nullptr,
+              /*AA=*/nullptr,
+              /*AC=*/nullptr, /*MDT=*/nullptr, /*MSDT=*/nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

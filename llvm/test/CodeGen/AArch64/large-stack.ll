@@ -32,18 +32,16 @@ attributes #0 = { noinline optnone "frame-pointer"="all" uwtable }
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK2:[0-9]+]], lsl #12
 ; CHECK-NEXT:             sub	sp, sp, #[[STACK3:[0-9]+]]
 ; CHECK:                  sub	x[[INDEX:[0-9]+]], x[[FRAME]], #8
+; CHECK-NEXT:             mov x10, #1 // =0x1
+; CHECK-NEXT:             adrp x8, .L.str
+; CHECK-NEXT:             add x8, x8, :lo12:.L.str
+; CHECK-NEXT:             add x11, sp, #8
 ; CHECK-NEXT:             str	x0, [x[[INDEX]]]
 ; CHECK-NEXT:             ldr	x[[VAL1:[0-9]+]], [x[[INDEX]]]
-; CHECK-NEXT:             add	x[[VAL3:[0-9]+]], sp, #8
-; CHECK-NEXT:             mov	x[[VAL2:[0-9]+]], #8
-; CHECK-NEXT:             madd	x[[VAL1]], x[[VAL1]], x[[VAL2]], x[[VAL3]]
-; CHECK-NEXT:             mov	x[[TMP1:[0-9]+]], #1
-; CHECK-NEXT:             str	x[[TMP1]], [x[[VAL1]]]
-; CHECK-NEXT:             ldr	x[[INDEX]], [x[[INDEX]]]
-; CHECK-NEXT:             add   x[[VAL3:[0-9]+]], sp, #8
-; CHECK-NEXT:             mov	x[[VAL4:[0-9]+]], #8
-; CHECK-NEXT:             madd	x[[INDEX]], x[[INDEX]], x[[VAL4]], x[[VAL3]]
-; CHECK-NEXT:             ldr	x1, [x[[INDEX]]
+; CHECK-NEXT:             str x10, [x11, x12, lsl #3]
+; CHECK-NEXT:             ldr x9, [x9]
+; CHECK-NEXT:             ldr x1, [x11, x9, lsl #3]
+; CHECK-NEXT:             mov x0, x8
 ; CHECK:                  bl	printf
 ; CHECK-COUNT-128:        add	sp, sp, #[[STACK1]], lsl #12
 ; CHECK-NEXT:             add	sp, sp, #[[STACK2]], lsl #12

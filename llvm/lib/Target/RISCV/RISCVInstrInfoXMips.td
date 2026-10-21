@@ -15,19 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 // A 7-bit unsigned immediate where the least significant three bits are zero.
-def uimm7_lsb000 : RISCVOp,
-                   ImmLeaf<XLenVT, [{return isShiftedUInt<4, 3>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<7, "Lsb000">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_UIMM7_LSB000";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<4, 3>(Imm);
-  }];
-}
+def uimm7_lsb000 : RISCVUImmLsbZeroOp<7, 3>;
 
 // A 9-bit unsigned offset
 def uimm9 : RISCVUImmOp<9>;
@@ -193,6 +181,7 @@ let mayLoad = 1, mayStore = 0 in {
 def MIPS_LWP : LWPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb00:$imm7),
                          "mips.lwp", "$rd1, $rd2, ${imm7}(${rs1})">,
                Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
+let append Predicates = [IsRV64] in
 def MIPS_LDP : LDPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb000:$imm7),
                          "mips.ldp", "$rd1, $rd2, ${imm7}(${rs1})">,
                Sched<[WriteLDD, WriteLDD, ReadMemBase]>;
@@ -202,6 +191,7 @@ let mayLoad = 0, mayStore = 1 in {
 def MIPS_SWP : SWPFormat<(outs), (ins GPR:$rs2, GPR:$rs3, GPR:$rs1, uimm7_lsb00:$imm7),
                          "mips.swp", "$rs2, $rs3, ${imm7}(${rs1})">,
                Sched<[WriteSTW, ReadStoreData, ReadStoreData, ReadMemBase]>;
+let append Predicates = [IsRV64] in
 def MIPS_SDP : SDPFormat<(outs), (ins GPR:$rs2, GPR:$rs3, GPR:$rs1, uimm7_lsb000:$imm7),
                          "mips.sdp", "$rs2, $rs3, ${imm7}(${rs1})">,
                Sched<[WriteSTD, ReadStoreData, ReadStoreData, ReadMemBase]>;

@@ -10,7 +10,7 @@
 ; Function Attrs: norecurse nounwind readonly
 define void @storef64stk(double %0) {
 ; CHECK-LABEL: storef64stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -22,7 +22,7 @@ define void @storef64stk(double %0) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storef32stk(float %0) {
 ; CHECK-LABEL: storef32stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    stu %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -34,7 +34,7 @@ define void @storef32stk(float %0) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei64stk(i64 %0) {
 ; CHECK-LABEL: storei64stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -46,7 +46,7 @@ define void @storei64stk(i64 %0) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei32stk(i32 %0) {
 ; CHECK-LABEL: storei32stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    stl %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -58,7 +58,7 @@ define void @storei32stk(i32 %0) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei16stk(i16 %0) {
 ; CHECK-LABEL: storei16stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st2b %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -70,7 +70,7 @@ define void @storei16stk(i16 %0) {
 ; Function Attrs: norecurse nounwind readonly
 define void @storei8stk(i8 %0) {
 ; CHECK-LABEL: storei8stk:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st1b %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)

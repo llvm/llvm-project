@@ -27,10 +27,6 @@
 
 #define DEBUG_TYPE "bpf-preserve-di-type"
 
-namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::TypeIdAttr;
-} // namespace llvm
-
 using namespace llvm;
 
 namespace {
@@ -94,15 +90,6 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       Ty = DTy->getBaseType();
     }
 
-    if (Reloc == BTF::BTF_TYPE_ID_REMOTE) {
-      if (Ty->getName().empty()) {
-        if (isa<DISubroutineType>(Ty))
-          report_fatal_error(
-              "SubroutineType not supported for BTF_TYPE_ID_REMOTE reloc");
-        else
-          report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
-      }
-    }
     MD = Ty;
 
     BasicBlock *BB = Call->getParent();

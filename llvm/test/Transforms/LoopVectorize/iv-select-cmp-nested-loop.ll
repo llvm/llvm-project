@@ -18,7 +18,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -72,7 +72,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -82,9 +82,9 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 [[TMP1]]
-; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
-; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 8
-; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 12
+; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 4
+; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 8
+; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 12
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
@@ -144,7 +144,7 @@ define i64 @select_iv_def_from_outer_loop(ptr %a, i64 %start, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:

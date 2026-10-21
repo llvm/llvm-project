@@ -46,15 +46,15 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
 template <forward_range _View, indirect_binary_predicate<iterator_t<_View>, iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
@@ -100,17 +100,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit chunk_by_view(_View __base, _Pred __pred)
       : __base_(std::move(__base)), __pred_(in_place, std::move(__pred)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a chunk_by_view that does not have a valid predicate.");
@@ -122,7 +122,7 @@ public:
     return {*this, std::move(__first), *__cached_begin_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
       return __iterator{*this, ranges::end(__base_), ranges::end(__base_)};
     } else {
@@ -155,7 +155,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
     // If the iterator is at end, this would return an empty range which can be checked by the calling code and doesn't
     // necessarily lead to a bad access.
     _LIBCPP_ASSERT_PEDANTIC(__current_ != __next_, "Trying to dereference past-the-end chunk_by_view iterator.");
@@ -226,9 +226,9 @@ inline constexpr auto chunk_by = __chunk_by::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

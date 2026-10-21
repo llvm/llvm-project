@@ -418,12 +418,7 @@ public:
     if (!pointer) {
       return CFI_ERROR_BASE_ADDR_NULL;
     } else {
-      int allocIndex{MapAllocIdx()};
-      if (allocIndex == kDefaultAllocator) {
-        std::free(pointer);
-      } else {
-        allocatorRegistry.GetDeallocator(MapAllocIdx())(pointer);
-      }
+      allocatorRegistry.Deallocate(MapAllocIdx(), pointer);
       descriptor.base_addr = nullptr;
       return CFI_SUCCESS;
     }
@@ -510,7 +505,9 @@ public:
 
   RT_API_ATTRS void Check() const;
 
-  void Dump(FILE * = stdout) const;
+  // When dumpRawType, dumps stringified CFI_type_*, otherwise
+  // try to canonicalize and print as a Fortran type.
+  void Dump(FILE * = stdout, bool dumpRawType = true) const;
 
   RT_API_ATTRS inline bool HasAddendum() const {
     return raw_.extra & _CFI_ADDENDUM_FLAG;

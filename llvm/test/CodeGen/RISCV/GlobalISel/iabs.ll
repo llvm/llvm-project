@@ -8,11 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBB
 
-declare i8 @llvm.abs.i8(i8, i1 immarg)
-declare i16 @llvm.abs.i16(i16, i1 immarg)
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-declare i64 @llvm.abs.i64(i64, i1 immarg)
-
 define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
 ; RV32I:       # %bb.0:
@@ -117,8 +112,8 @@ define i64 @abs64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    sltu a3, a0, a2
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    xor a1, a1, a2
@@ -128,8 +123,8 @@ define i64 @abs64(i64 %x) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    srai a2, a1, 31
 ; RV32ZBB-NEXT:    add a0, a0, a2
-; RV32ZBB-NEXT:    add a1, a1, a2
 ; RV32ZBB-NEXT:    sltu a3, a0, a2
+; RV32ZBB-NEXT:    add a1, a1, a2
 ; RV32ZBB-NEXT:    add a1, a1, a3
 ; RV32ZBB-NEXT:    xor a0, a0, a2
 ; RV32ZBB-NEXT:    xor a1, a1, a2

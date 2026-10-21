@@ -26,18 +26,14 @@ using ast_matchers::returns;
 
 CanQualType getLikeReturnType(QualType RT) {
   if (!RT.isNull() && RT->isPointerType()) {
-    return RT->getPointeeType()
-        ->getCanonicalTypeUnqualified()
-        .getUnqualifiedType();
+    return RT->getPointeeType()->getCanonicalTypeUnqualified();
   }
   return {};
 }
 
 CanQualType valueLikeReturnType(QualType RT) {
   if (!RT.isNull() && RT->isReferenceType()) {
-    return RT.getNonReferenceType()
-        ->getCanonicalTypeUnqualified()
-        .getUnqualifiedType();
+    return RT.getNonReferenceType()->getCanonicalTypeUnqualified();
   }
   return {};
 }

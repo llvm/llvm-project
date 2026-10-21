@@ -33,7 +33,7 @@ static std::string validFunctionNameRegex(bool RequirePrefix) {
   // If a prefix is required, the regex checks for a capital letter followed by
   // another capital letter or number that is part of the prefix and another
   // capital letter or number that begins the name following the prefix.
-  std::string FunctionNameMatcher =
+  const std::string FunctionNameMatcher =
       std::string(RequirePrefix ? "[A-Z][A-Z0-9]+" : "") + "[A-Z][a-zA-Z0-9]*";
   return std::string("::(") + FunctionNameMatcher + ")$";
 }
@@ -48,13 +48,13 @@ static FixItHint generateFixItHint(const FunctionDecl *Decl) {
   if (Decl->getStorageClass() != SC_Static)
     return {};
 
-  StringRef Name = Decl->getName();
+  const StringRef Name = Decl->getName();
   std::string NewName = Decl->getName().str();
 
   size_t Index = 0;
   bool AtWordBoundary = true;
   while (Index < NewName.size()) {
-    char Ch = NewName[Index];
+    const char Ch = NewName[Index];
     if (isalnum(Ch)) {
       // Capitalize the first letter after every word boundary.
       if (AtWordBoundary) {
@@ -75,23 +75,21 @@ static FixItHint generateFixItHint(const FunctionDecl *Decl) {
   if (NewName != Name)
     return FixItHint::CreateReplacement(
         CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-        llvm::StringRef(NewName));
+        StringRef(NewName));
 
   return {};
 }
 
 void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
   // Enforce Objective-C function naming conventions on all functions except:
-  // • Functions defined in system headers.
   // • C++ member functions.
   // • Namespaced functions.
   // • Implicitly defined functions.
   // • The main function.
   Finder->addMatcher(
       functionDecl(
-          unless(anyOf(isExpansionInSystemHeader(), cxxMethodDecl(),
-                       hasAncestor(namespaceDecl()), isMain(), isImplicit(),
-                       matchesName(validFunctionNameRegex(true)),
+          unless(anyOf(cxxMethodDecl(), hasAncestor(namespaceDecl()), isMain(),
+                       isImplicit(), matchesName(validFunctionNameRegex(true)),
                        allOf(isStaticStorageClass(),
                              matchesName(validFunctionNameRegex(false))))))
           .bind("function"),
@@ -101,7 +99,7 @@ void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionNamingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("function");
 
-  bool IsGlobal = MatchedDecl->getStorageClass() != SC_Static;
+  const bool IsGlobal = MatchedDecl->getStorageClass() != SC_Static;
   diag(MatchedDecl->getLocation(),
        "%select{static function|function in global namespace}1 named %0 must "
        "%select{be in|have an appropriate prefix followed by}1 Pascal case as "

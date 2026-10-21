@@ -34,7 +34,7 @@ AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
 } // namespace
 
 static Matcher<Stmt> loopEndingStmt(Matcher<Stmt> Internal) {
-  Matcher<QualType> IsNoReturnFunType =
+  const Matcher<QualType> IsNoReturnFunType =
       ignoringParens(functionType(typeHasNoReturnAttr()));
   Matcher<Decl> IsNoReturnDecl =
       anyOf(declHasNoReturnAttr(), functionDecl(hasType(IsNoReturnFunType)),
@@ -70,7 +70,7 @@ static bool isVarPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
   if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
     Var = VarD;
   } else if (const auto *BD = dyn_cast<BindingDecl>(VD)) {
-    if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
+    if (const DecompositionDecl *DD = BD->getDecomposedDecl())
       Var = DD;
   }
 
@@ -91,7 +91,7 @@ static bool isVarPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
 static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
                                        const Stmt *Cond, ASTContext *Context) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl()))
+    if (const ValueDecl *VD = DRE->getDecl())
       return isVarPossiblyChanged(Func, LoopStmt, VD, Context);
   } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
                  ObjCMessageExpr>(Cond)) {
@@ -119,14 +119,9 @@ static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
   if (isVarThatIsPossiblyChanged(Func, LoopStmt, Cond, Context))
     return true;
 
-  for (const Stmt *Child : Cond->children()) {
-    if (!Child)
-      continue;
-
-    if (isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Cond->children(), [&](const Stmt *Child) {
+    return Child && isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context);
+  });
 }
 
 /// Return the variable names in `Cond`.
@@ -135,9 +130,8 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
       return std::string(Var->getName());
 
-    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
       return std::string(BD->getName());
-    }
   }
 
   std::string Result;
@@ -145,7 +139,7 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (!Child)
       continue;
 
-    std::string NewNames = getCondVarNames(Child);
+    const std::string NewNames = getCondVarNames(Child);
     if (!Result.empty() && !NewNames.empty())
       Result += ", ";
     Result += NewNames;
@@ -170,10 +164,11 @@ static bool isKnownToHaveValue(const Expr &Cond, const ASTContext &Ctx,
     } else if (const auto *UnOp = dyn_cast<UnaryOperator>(&Cond)) {
       if (UnOp->getOpcode() == UO_LNot)
         return isKnownToHaveValue(*UnOp->getSubExpr(), Ctx, !ExpectedValue);
-    } else if (const auto *Paren = dyn_cast<ParenExpr>(&Cond))
+    } else if (const auto *Paren = dyn_cast<ParenExpr>(&Cond)) {
       return isKnownToHaveValue(*Paren->getSubExpr(), Ctx, ExpectedValue);
-    else if (const auto *ImplCast = dyn_cast<ImplicitCastExpr>(&Cond))
+    } else if (const auto *ImplCast = dyn_cast<ImplicitCastExpr>(&Cond)) {
       return isKnownToHaveValue(*ImplCast->getSubExpr(), Ctx, ExpectedValue);
+    }
     return false;
   }
   bool Result = false;
@@ -209,7 +204,7 @@ static bool populateCallees(const Stmt *StmtNode,
   return true;
 }
 
-/// returns true iff `SCC` contains `Func` and its' function set overlaps with
+/// returns true iff `SCC` contains `Func` and its function set overlaps with
 /// `Callees`
 static bool overlap(ArrayRef<CallGraphNode *> SCC,
                     const llvm::SmallPtrSet<const Decl *, 16> &Callees,
@@ -230,20 +225,19 @@ static bool overlap(ArrayRef<CallGraphNode *> SCC,
 /// returns true iff `Cond` involves at least one static local variable.
 static bool hasStaticLocalVariable(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      if (VD->isStaticLocal())
-        return true;
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        VD && VD->isStaticLocal())
+      return true;
 
     if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
-      if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
-        if (DD->isStaticLocal())
-          return true;
+      if (const DecompositionDecl *DD = BD->getDecomposedDecl();
+          DD && DD->isStaticLocal())
+        return true;
   }
 
-  for (const Stmt *Child : Cond->children())
-    if (Child && hasStaticLocalVariable(Child))
-      return true;
-  return false;
+  return llvm::any_of(Cond->children(), [](const Stmt *Child) {
+    return Child && hasStaticLocalVariable(Child);
+  });
 }
 
 /// Tests if the loop condition `Cond` involves static local variables and
@@ -332,7 +326,7 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
                                               Result.Context))
     return;
 
-  std::string CondVarNames = getCondVarNames(Cond);
+  const std::string CondVarNames = getCondVarNames(Cond);
   if (ShouldHaveConditionVariables && CondVarNames.empty())
     return;
 

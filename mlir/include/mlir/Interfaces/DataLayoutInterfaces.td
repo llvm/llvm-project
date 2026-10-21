@@ -43,6 +43,12 @@ def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   ];
 }
 
+def ImplementsDLTIQueryInterface : AttrConstraint<
+    CPred<"::llvm::isa<::mlir::DLTIQueryInterface>($_self)">,
+    "implementing the `DLTIQueryInterface` attr interface">;
+
+def DLTIQueryAttr : ConfinedAttr<AnyAttr, [ImplementsDLTIQueryInterface]>;
+
 def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let cppNamespace = "::mlir";
 
@@ -714,6 +720,66 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect interface
+//===----------------------------------------------------------------------===//
+
+def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> {
+  let description = [{
+    An interface to be implemented by dialects that can have identifiers in the
+    data layout specification entries. Provides hooks for verifying the entry
+    validity and combining two entries.
+  }];
+  let cppNamespace = "::mlir";
+
+  let extraClassDeclaration = [{
+    /// Default implementation of entry combination that combines identical
+    /// entries and returns null otherwise.
+    static ::mlir::DataLayoutEntryInterface
+    defaultCombine(::mlir::DataLayoutEntryInterface outer,
+                   ::mlir::DataLayoutEntryInterface inner) {
+      if (!outer || outer == inner)
+        return inner;
+      return {};
+    }
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::DataLayoutEntryInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::TargetDeviceSpecInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Combines two entries with identifiers that belong to this dialect. Returns
+        the combined entry or null if the entries are not compatible. Derived
+        classes likely need to reimplement this.
+      }],
+      "::mlir::DataLayoutEntryInterface", "combine",
+      (ins "::mlir::DataLayoutEntryInterface":$outer, 
+           "::mlir::DataLayoutEntryInterface":$inner),
+      [{
+        return defaultCombine(outer, inner);
+      }]
+    > 
   ];
 }
 

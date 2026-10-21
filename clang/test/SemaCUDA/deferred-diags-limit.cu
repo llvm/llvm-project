@@ -8,13 +8,20 @@
 // CHECK-NOT: cannot use 'throw' in __host__ __device__ function
 // CHECK: too many errors emitted, stopping now
 
-inline __host__ __device__ void hasInvalid() {
+inline __host__ __device__ void hasInvalid1() {
+  throw NULL;
+}
+
+inline __host__ __device__ void hasInvalid2() {
+  throw NULL;
+}
+
+inline __host__ __device__ void hasInvalid3() {
   throw NULL;
 }
 
 __global__ void use0() {
-  hasInvalid();
-  hasInvalid();
-  hasInvalid();
-  hasInvalid();
+  hasInvalid1();
+  hasInvalid2();
+  hasInvalid3();
 }

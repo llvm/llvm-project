@@ -13,14 +13,16 @@
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class CMOPInst<bits<3> imm3, string opcodestr>
-    : RVInst16CI<0b011, 0b01, (outs), (ins), opcodestr, ""> {
+    : RVInst16CI<0b011, OPC_C1, (outs), (ins), opcodestr, ""> {
   let Inst{6-2} = 0;
   let Inst{7} = 1;
   let Inst{10-8} = imm3;
   let Inst{12-11} = 0;
 }
 
-foreach n = [1, 3, 5, 7, 9, 11, 13, 15] in {
+// c.mop.1 and c.mop.5 are aliases for c.sspush and c.sspopchk respectively,
+// defined in RISCVInstrInfoZicfiss.td.
+foreach n = [3, 7, 9, 11, 13, 15] in {
   let Predicates = [HasStdExtZcmop] in
   def C_MOP_ # n : CMOPInst<!srl(n, 1), "c.mop." # n>, Sched<[]>;
 }

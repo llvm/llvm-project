@@ -98,18 +98,18 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Iter& base() const& noexcept { return __current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Iter& base() const& noexcept { return __current_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
     return *__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
     requires __dereferenceable<const _Iter>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
@@ -169,13 +169,13 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator+(iter_difference_t<_Iter> __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator+(iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     return counted_iterator(__current_ + __n, __count_ - __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr counted_iterator
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr counted_iterator
   operator+(iter_difference_t<_Iter> __n, const counted_iterator& __x)
     requires random_access_iterator<_Iter>
   {
@@ -191,24 +191,24 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator-(iter_difference_t<_Iter> __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator-(iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     return counted_iterator(__current_ - __n, __count_ + __n);
   }
 
   template <common_with<_Iter> _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_I2>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_I2>
   operator-(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
     return __rhs.__count_ - __lhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
   operator-(const counted_iterator& __lhs, default_sentinel_t) {
     return -__lhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
   operator-(default_sentinel_t, const counted_iterator& __rhs) {
     return __rhs.__count_;
   }
@@ -226,7 +226,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < __count_, "Subscript argument must be less than size.");
@@ -249,7 +249,7 @@ public:
     return __rhs.__count_ <=> __lhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const counted_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_)))
     requires input_iterator<_Iter>
   {

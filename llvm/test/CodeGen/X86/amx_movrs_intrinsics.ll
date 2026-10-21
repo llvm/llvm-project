@@ -11,7 +11,7 @@ define void @test_amx_internal(i16 %m, i16 %n, ptr %buf, i64 %s) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; CHECK-NEXT:    subq $3072, %rsp # imm = 0xC00
+; CHECK-NEXT:    subq $2048, %rsp # imm = 0x800
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
@@ -46,8 +46,8 @@ define void @test_amx_internal(i16 %m, i16 %n, ptr %buf, i64 %s) {
 ; EGPR-NEXT:    .cfi_def_cfa_register %rbp
 ; EGPR-NEXT:    andq $-1024, %rsp # encoding: [0x48,0x81,0xe4,0x00,0xfc,0xff,0xff]
 ; EGPR-NEXT:    # imm = 0xFC00
-; EGPR-NEXT:    subq $3072, %rsp # encoding: [0x48,0x81,0xec,0x00,0x0c,0x00,0x00]
-; EGPR-NEXT:    # imm = 0xC00
+; EGPR-NEXT:    subq $2048, %rsp # encoding: [0x48,0x81,0xec,0x00,0x08,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x800
 ; EGPR-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
 ; EGPR-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp) # encoding: [0x0f,0x11,0x84,0x24,0xc0,0x03,0x00,0x00]
 ; EGPR-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp) # encoding: [0x0f,0x11,0x84,0x24,0xd0,0x03,0x00,0x00]
@@ -108,7 +108,7 @@ define void @test_amx_t1_internal(i16 %m, i16 %n, ptr %buf, i64 %s) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; CHECK-NEXT:    subq $3072, %rsp # imm = 0xC00
+; CHECK-NEXT:    subq $2048, %rsp # imm = 0x800
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
@@ -143,8 +143,8 @@ define void @test_amx_t1_internal(i16 %m, i16 %n, ptr %buf, i64 %s) {
 ; EGPR-NEXT:    .cfi_def_cfa_register %rbp
 ; EGPR-NEXT:    andq $-1024, %rsp # encoding: [0x48,0x81,0xe4,0x00,0xfc,0xff,0xff]
 ; EGPR-NEXT:    # imm = 0xFC00
-; EGPR-NEXT:    subq $3072, %rsp # encoding: [0x48,0x81,0xec,0x00,0x0c,0x00,0x00]
-; EGPR-NEXT:    # imm = 0xC00
+; EGPR-NEXT:    subq $2048, %rsp # encoding: [0x48,0x81,0xec,0x00,0x08,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x800
 ; EGPR-NEXT:    xorps %xmm0, %xmm0 # encoding: [0x0f,0x57,0xc0]
 ; EGPR-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp) # encoding: [0x0f,0x11,0x84,0x24,0xc0,0x03,0x00,0x00]
 ; EGPR-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp) # encoding: [0x0f,0x11,0x84,0x24,0xd0,0x03,0x00,0x00]

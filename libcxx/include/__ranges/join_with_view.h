@@ -49,9 +49,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <class _Range>
@@ -372,7 +372,7 @@ public:
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires __ref_is_glvalue && forward_range<_Base> && equality_comparable<_InnerIter>
   {
     return __x.__outer_it_ == __y.__outer_it_ && __x.__inner_it_ == __y.__inner_it_;
@@ -420,8 +420,7 @@ public:
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __get_outer_of(__x) == __y.__end_;
   }
 };
@@ -451,9 +450,9 @@ inline constexpr auto join_with = __join_with_view::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

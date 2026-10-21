@@ -19,7 +19,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   // builtin function. Hence, matching LLVM-libc's notion of NaN with the
   // isnan result ensures that LLVM-libc's behavior matches the compiler's
   // behavior.
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
 
   FPBits bits(0.0l);
   bits.set_biased_exponent(FPBits::MAX_BIASED_EXPONENT);

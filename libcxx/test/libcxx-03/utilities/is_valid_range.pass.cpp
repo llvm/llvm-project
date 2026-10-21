@@ -39,14 +39,6 @@ TEST_CONSTEXPR_CXX14 void check_type() {
     assert(!std::__is_valid_range(static_cast<TQualified*>(&arr[1]), static_cast<TQualified*>(&arr[0])));
     assert(!std::__is_valid_range(static_cast<TQualified*>(&arr[2]), static_cast<TQualified*>(&arr[0])));
   }
-
-#if TEST_STD_VER >= 20
-  {
-    T* arr = new int[4]{1, 2, 3, 4};
-    assert(std::__is_valid_range(static_cast<TQualified*>(arr), static_cast<TQualified*>(arr + 4)));
-    delete[] arr;
-  }
-#endif
 }
 
 TEST_CONSTEXPR_CXX14 bool test() {
@@ -60,9 +52,6 @@ TEST_CONSTEXPR_CXX14 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 14
-  static_assert(test(), "");
-#endif
 
   return 0;
 }

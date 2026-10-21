@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llvm_testing_tools"
+description = "LLVM Testing Tools"
+readme = "README.md"
+requires-python = ">=3.8"
+version = "23.0.0"
+license = "Apache-2.0 WITH LLVM-exception"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+llvm_testing_tools = ["binaries/*"]
+
+[project.scripts]
+split-file = "llvm_testing_tools.wrapper:run_test_tool"
+FileCheck = "llvm_testing_tools.wrapper:run_test_tool"

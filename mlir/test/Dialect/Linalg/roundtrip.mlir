@@ -308,6 +308,34 @@ func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref
 
 // -----
 
+#scaledA = affine_map<(m, n, k) -> (m, k)>
+#scaledScaleA = affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>
+#scaledB = affine_map<(m, n, k) -> (n, k)>
+#scaledScaleB = affine_map<(m, n, k) -> (n)>
+#scaledC = affine_map<(m, n, k) -> (m, n)>
+func.func @scaled_contract_named_op(
+    %a: memref<256x512xi8>, %sa: memref<8x4xf8E8M0FNU>, %b: memref<128x512xi8>,
+    %sb: memref<128xf8E8M0FNU>, %c: memref<256x128xf32>,
+    %ta: tensor<256x512xi8>, %tsa: tensor<8x4xf8E8M0FNU>, %tb: tensor<128x512xi8>,
+    %tsb: tensor<128xf8E8M0FNU>, %tc: tensor<256x128xf32>)
+  -> tensor<256x128xf32>
+{
+  linalg.scaled_contract
+      indexing_maps = [#scaledA, #scaledScaleA, #scaledB, #scaledScaleB, #scaledC]
+      ins(%a, %sa, %b, %sb : memref<256x512xi8>, memref<8x4xf8E8M0FNU>, memref<128x512xi8>, memref<128xf8E8M0FNU>)
+      outs(%c : memref<256x128xf32>)
+  %res = linalg.scaled_contract
+      indexing_maps = [#scaledA, #scaledScaleA, #scaledB, #scaledScaleB, #scaledC]
+      ins(%ta, %tsa, %tb, %tsb : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%tc : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %res : tensor<256x128xf32>
+}
+// CHECK-LABEL: func @scaled_contract_named_op
+//       CHECK:   linalg.scaled_contract
+//       CHECK:   linalg.scaled_contract
+
+// -----
+
 func.func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
   %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
   %1 = linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -599,6 +627,21 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
 
 // -----
 
+func.func @broadcast_0d_tensor(%input: tensor<i32>,
+                               %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 1]
+  func.return %bcast : tensor<32x2xi32>
+}
+// CHECK-LABEL: func @broadcast_0d_tensor
+//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<i32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<32x2xi32>)
+// CHECK-SAME:    dimensions = [0, 1]
+
+// -----
+
 func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
                       %init: tensor<64xf32>) -> tensor<64xf32> {
   %add = linalg.map
@@ -755,3 +798,77 @@ func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt:
 // CHECK-LABEL: func @conv2d_channel_first_q_promote(
 // CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<100x3x224x224xi8>, %[[arg1:[a-zA-z0-9]*]]: tensor<64x3x5x5xi8>, %[[arg2:[a-zA-z0-9]*]]: i8, %[[arg3:[a-zA-z0-9]*]]: i8)
 // CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+
+// -----
+
+func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32>) {
+  linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+      into %dest : memref<128x256xf32> -> memref<8x16x8x32xf32>
+  return
+}
+
+// CHECK-LABEL: func @pack_memref(
+// CHECK:   %[[source:[a-zA-z0-9]*]]: memref<128x256xf32>, %[[dest:[a-zA-z0-9]*]]: memref<8x16x8x32xf32>) {
+// CHECK:     linalg.pack %[[source]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<128x256xf32> -> memref<8x16x8x32xf32>
+// CHECK:   return
+// CHECK: }
+// -----
+
+func.func @unpack_memref(%source: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
+  linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+      into %dest : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
+}
+
+// CHECK-LABEL: func @unpack_memref(
+// CHECK:   %[[source:[a-zA-z0-9]*]]: memref<16x8x8x32xf32>, %[[dest:[a-zA-z0-9]*]]: memref<128x256xf32>) {
+// CHECK:         linalg.unpack %[[source]] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<16x8x8x32xf32> -> memref<128x256xf32>
+// CHECK:   return
+
+// -----
+
+// CHECK-LABEL: func @test_pack_memref
+func.func @test_pack_memref(%arg0: memref<128x256xf32>, %arg1: memref<16x8x8x32xf32>) {
+  // CHECK-NOT: %{{.*}} = linalg.pack
+  // CHECK: linalg.pack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_unpack_memref
+func.func @test_unpack_memref(%arg0: memref<16x8x8x32xf32>, %arg1: memref<128x256xf32>) {
+  // CHECK: linalg.unpack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<16x8x8x32xf32>
+  linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_pack_memref_with_padding
+func.func @test_pack_memref_with_padding(%arg0: memref<127x255xf32>, %arg1: memref<16x8x8x32xf32>, %pad: f32) {
+  // CHECK: linalg.pack %{{.*}} padding_value(%{{.*}} : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : memref<127x255xf32>
+  linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<127x255xf32> -> memref<16x8x8x32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_pack_tensor
+func.func @test_pack_tensor(%arg0: tensor<128x256xf32>, %arg1: tensor<16x8x8x32xf32>) -> tensor<16x8x8x32xf32> {
+  // CHECK: %[[RESULT:.*]] = linalg.pack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+  %0 = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+  // CHECK: return %[[RESULT]] : tensor<16x8x8x32xf32>
+  return %0 : tensor<16x8x8x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @test_unpack_tensor
+func.func @test_unpack_tensor(%arg0: tensor<16x8x8x32xf32>, %arg1: tensor<128x256xf32>) -> tensor<128x256xf32> {
+  // CHECK: %[[RESULT:.*]] = linalg.unpack %{{.*}} inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+  %0 = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+  // CHECK: return %[[RESULT]] : tensor<128x256xf32>
+  return %0 : tensor<128x256xf32>
+}

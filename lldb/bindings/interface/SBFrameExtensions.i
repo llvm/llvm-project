@@ -24,6 +24,13 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
             else:
                 return SBFrame()
 
+        def get_child_frame(self):
+            child_idx = self.idx - 1
+            if child_idx >= 0:
+                return self.thread.frame[child_idx]
+            else:
+                return SBFrame()
+
         def get_arguments(self):
             return self.GetVariables(True,False,False,False)
 
@@ -33,10 +40,17 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
         def get_statics(self):
             return self.GetVariables(False,False,True,False)
 
-        def var(self, var_expr_path):
+        def var(self, var_expr_path, use_dynamic=None):
             '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
             a value that represents the variable expression path'''
-            return self.GetValueForVariablePath(var_expr_path)
+            if use_dynamic is None:
+                return self.GetValueForVariablePath(var_expr_path)
+            return self.GetValueForVariablePath(var_expr_path, use_dynamic)
+        
+        def var_with_mode(self, var_path: str, mode: int, use_dynamic = None, /):
+            if use_dynamic is None:
+                return self.GetValueForVariablePathWithMode(var_path, mode)
+            return self.GetValueForVariablePathWithMode(var_path, mode, use_dynamic)
 
         def get_registers_access(self):
             class registers_access(object):
@@ -92,6 +106,7 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
         register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
         reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
         parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
+        child = property(get_child_frame, None, doc='''A read only property that returns the child (callee) frame of the current frame.''')
     %}
 #endif
 }

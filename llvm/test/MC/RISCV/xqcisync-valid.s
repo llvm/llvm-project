@@ -1,13 +1,13 @@
 # Xqcisync - Qualcomm uC Sync Delay Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisync -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcisync -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisync < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcisync -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcisync < %s \
+# RUN:     | llvm-objdump --mattr=+xqcisync -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisync -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcisync -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisync < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcisync --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcisync < %s \
+# RUN:     | llvm-objdump --mattr=+xqcisync --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ALIAS %s
 
 # CHECK-NOALIAS: c.slli zero, 10

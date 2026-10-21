@@ -13,11 +13,13 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -55,7 +57,8 @@ std::unique_ptr<LVReader> createReader(LVReaderHandler &ReaderHandler,
                                        SmallString<128> &InputsDir,
                                        StringRef Filename) {
   SmallString<128> ObjectName(InputsDir);
-  llvm::sys::path::append(ObjectName, Filename);
+  if (Filename != "")
+    llvm::sys::path::append(ObjectName, Filename);
 
   Expected<std::unique_ptr<LVReader>> ReaderOrErr =
       ReaderHandler.createReader(std::string(ObjectName));
@@ -414,6 +417,77 @@ TEST(LogicalViewTest, DWARFReader) {
 
   // Compare logical elements.
   compareElements(InputsDir);
+}
+
+bool CreateTempBrokenFile(SmallString<128> &TempPath) {
+  // create broken, but syntax correct Yaml file
+  // 0x41 - version of format
+  // 0x05000000 - length of section, false equal to 5 byte
+  StringRef Yaml = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    Content:         4105000000
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+)";
+
+  int FD;
+  sys::fs::createTemporaryFile("test-broken-dwarf", "", FD, TempPath);
+  raw_fd_ostream OS(FD, /*shouldClose=*/true);
+
+  llvm::yaml::Input YIn(Yaml);
+  const bool Success = llvm::yaml::convertYAML(
+      YIn, OS, [](const Twine &Msg) { FAIL() << Msg.str(); });
+  if (!Success)
+    return false;
+  OS.flush();
+
+  return true;
+}
+
+TEST(LogicalViewTest, DWARFReader_ReadBrokenFile) {
+  // Initialize targets and assembly printers/parsers.
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  InitializeAllDisassemblers();
+
+  llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
+
+  // This test requires a x86-registered-target.
+  Triple TT;
+  TT.setArch(Triple::riscv64);
+  TT.setVendor(Triple::UnknownVendor);
+  TT.setOS(Triple::UnknownOS);
+
+  std::string TargetLookupError;
+  if (!TargetRegistry::lookupTarget(TT, TargetLookupError))
+    GTEST_SKIP();
+
+  // Reader options.
+  LVOptions ReaderOptions;
+  std::vector<std::string> Objects;
+  ScopedPrinter W(outs());
+  LVReaderHandler ReaderHandler(Objects, W, ReaderOptions);
+
+  SmallString<128> TempPath;
+  if (!CreateTempBrokenFile(TempPath))
+    GTEST_SKIP();
+
+  // Check logical elements properties.
+  std::unique_ptr<LVReader> Reader = createReader(ReaderHandler, TempPath, "");
+
+  sys::fs::remove(TempPath);
 }
 
 } // namespace

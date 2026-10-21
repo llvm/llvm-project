@@ -17,4 +17,4 @@ long pathconf(const char *path, int name);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_PREAD_H
+#endif // LLVM_LIBC_SRC_UNISTD_PATHCONF_H

@@ -29,25 +29,25 @@
 namespace llvm::vfs {
 
 /// Create a backend that ignores all output.
-IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
 
 /// Make a backend where \a OutputBackend::createFile() forwards to
 /// \p UnderlyingBackend when \p Filter is true, and otherwise returns a
 /// \a NullOutput.
-IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     IntrusiveRefCntPtr<OutputBackend> UnderlyingBackend,
     std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
 
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
 /// Backend1 and \p Backend2. Writing to such backend will create identical
 /// outputs using two different backends.
-IntrusiveRefCntPtr<OutputBackend>
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend>
 makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                            IntrusiveRefCntPtr<OutputBackend> Backend2);
 
 /// A helper class for proxying another backend, with the default
 /// implementation to forward to the underlying backend.
-class ProxyOutputBackend : public OutputBackend {
+class LLVM_ABI ProxyOutputBackend : public OutputBackend {
   void anchor() override;
 
 protected:
@@ -76,15 +76,15 @@ private:
 };
 
 /// An output backend that creates files on disk, wrapping APIs in sys::fs.
-class OnDiskOutputBackend : public OutputBackend {
-  LLVM_ABI void anchor() override;
+class LLVM_ABI OnDiskOutputBackend : public OutputBackend {
+  void anchor() override;
 
 protected:
   IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {
     return clone();
   }
 
-  LLVM_ABI Expected<std::unique_ptr<OutputFileImpl>>
+  Expected<std::unique_ptr<OutputFileImpl>>
   createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override;
 
 public:

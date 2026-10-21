@@ -20,6 +20,10 @@ namespace {
 
 AST_MATCHER(VarDecl, isNRVOVariable) { return Node.isNRVOVariable(); }
 
+AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
+  return Node.refersToEnclosingVariableOrCapture();
+}
+
 } // namespace
 
 NoAutomaticMoveCheck::NoAutomaticMoveCheck(StringRef Name,
@@ -36,7 +40,7 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                   isConstQualified(),
                   hasCanonicalType(matchers::isExpensiveToCopy()),
                   unless(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(AllowedTypes)))))))
+                      matchers::matchesAnyListedRegexName(AllowedTypes)))))))
           .bind("vardecl");
 
   // A matcher for a `DstT::DstT(const Src&)` where DstT also has a
@@ -62,8 +66,11 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
               ignoringElidableConstructorCall(ignoringParenImpCasts(
                   cxxConstructExpr(
                       hasDeclaration(anyOf(LValueRefCtor, ConstRefRefCtor)),
-                      hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                         to(NonNrvoConstLocalVariable)))))
+                      hasArgument(
+                          0,
+                          ignoringParenImpCasts(declRefExpr(
+                              to(NonNrvoConstLocalVariable),
+                              unless(refersToEnclosingVariableOrCapture())))))
                       .bind("ctor_call")))))),
       this);
 }

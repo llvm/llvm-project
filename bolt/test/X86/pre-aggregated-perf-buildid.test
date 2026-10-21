@@ -1,0 +1,63 @@
+## This test checks that perf2bolt correctly reads pre-aggregated profile data
+## with buildid-prefixed addresses. Buildid entries that don't match the main
+## binary should be treated as external addresses.
+##
+## The input pre-aggregated-buildid.txt has the same data as pre-aggregated.txt
+## but with buildid prefixes on external addresses (e.g. deadbeef:addr instead
+## of X:addr).
+
+REQUIRES: system-linux
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+
+## Test that buildid-prefixed entries are parsed correctly and produce the same
+## result as the X:-prefixed version.
+RUN: perf2bolt %t.exe -o %t.fdata --pa -p %p/Inputs/pre-aggregated-buildid.txt \
+RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-BUILDID
+
+CHECK-BUILDID: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
+
+RUN: FileCheck %s --check-prefix=CHECK-FDATA --input-file %t.fdata
+
+CHECK-FDATA: 1 main 451 1 SolveCubic 0 0 2
+CHECK-FDATA: 1 main 490 0 [unknown] 0 0 1
+CHECK-FDATA: 1 main 537 0 [unknown] 0 0 1
+CHECK-FDATA: 0 [unknown] 0 1 main 53c 0 2
+CHECK-FDATA: 1 usqrt a 1 usqrt 10 0 22
+CHECK-FDATA: 1 usqrt 30 1 usqrt 32 0 22
+CHECK-FDATA: 1 usqrt 30 1 usqrt 39 4 33
+CHECK-FDATA: 1 usqrt 35 1 usqrt 39 0 22
+CHECK-FDATA: 1 usqrt 3d 1 usqrt 10 0 58
+CHECK-FDATA: 1 usqrt 3d 1 usqrt 3f 0 22
+
+## Test with empty buildid prefix on main binary addresses (`:addr` format).
+## An omitted buildid with a preserved colon should be treated as the main
+## binary. The output should be identical to the non-empty buildid version.
+RUN: perf2bolt %t.exe -o %t.fdata2 --pa \
+RUN:   -p %p/Inputs/pre-aggregated-buildid-empty.txt \
+RUN:   --profile-format=fdata 2>&1 | FileCheck %s --check-prefix=CHECK-BUILDID
+RUN: diff %t.fdata %t.fdata2
+
+## Test YAML output with buildid-prefixed input.
+RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated-buildid.txt \
+RUN:   --profile-format=yaml --profile-use-dfs 2>&1
+
+RUN: FileCheck %s --check-prefix=CHECK-YAML --input-file %t.yaml
+
+CHECK-YAML: - name:            usqrt
+CHECK-YAML:   fid:             7
+CHECK-YAML:   exec:            0
+CHECK-YAML:   nblocks:         5
+CHECK-YAML:   blocks:
+CHECK-YAML:     - bid:             0
+CHECK-YAML:       insns:           4
+CHECK-YAML:       succ:            [ { bid: 1, cnt: 22 } ]
+CHECK-YAML:     - bid:             1
+CHECK-YAML:       insns:           9
+CHECK-YAML:       succ:            [ { bid: 3, cnt: 33, mis: 4 }, { bid: 2, cnt: 22 } ]
+CHECK-YAML:     - bid:             2
+CHECK-YAML:       insns:           2
+CHECK-YAML:       succ:            [ { bid: 3, cnt: 22 } ]
+CHECK-YAML:     - bid:             3
+CHECK-YAML:       insns:           2
+CHECK-YAML:       succ:            [ { bid: 1, cnt: 58 }, { bid: 4, cnt: 22 } ]

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 namespace quant {
@@ -86,12 +87,12 @@ class NormalizedQuantTypesConverter : public TypeConverter {
       auto shape = subChannelType.getScales().getType().getShape();
       const auto *quantizedDimItr =
           llvm::find_if(shape, [](int64_t dim) { return dim != 1; });
-      auto scales = llvm::to_vector(llvm::map_range(
+      auto scales = llvm::map_to_vector(
           subChannelType.getScales().getValues<APFloat>(),
-          [](const APFloat &scale) { return scale.convertToDouble(); }));
-      auto zeroPoints = llvm::to_vector(llvm::map_range(
+          [](const APFloat &scale) { return scale.convertToDouble(); });
+      auto zeroPoints = llvm::map_to_vector(
           subChannelType.getZeroPoints().getValues<APInt>(),
-          [](const APInt &zeroPoint) { return zeroPoint.getSExtValue(); }));
+          [](const APInt &zeroPoint) { return zeroPoint.getSExtValue(); });
       auto perAxisType = UniformQuantizedPerAxisType::get(
           subChannelType.getFlags(), subChannelType.getStorageType(),
           subChannelType.getExpressedType(), scales, zeroPoints,
@@ -122,9 +123,10 @@ public:
     if (failed(typeConverter->convertTypes(op->getResultTypes(), resultTypes)))
       return failure();
 
-    auto *newOp = Operation::create(
-        op->getLoc(), op->getName(), resultTypes, operands, op->getAttrs(),
-        op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions());
+    auto *newOp = Operation::create(op->getLoc(), op->getName(), resultTypes,
+                                    operands, op->getRawDictionaryAttrs(),
+                                    op->getPropertiesStorage(),
+                                    op->getSuccessors(), op->getNumRegions());
     for (auto regions : llvm::zip(op->getRegions(), newOp->getRegions())) {
       Region &before = std::get<0>(regions);
       Region &parent = std::get<1>(regions);

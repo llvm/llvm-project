@@ -64,3 +64,9 @@ fmmla   z23.s, z13.h, z8.h
 bfscale z0.h, p0/m, z0.h, z0.h
 // CHECK: error: instruction requires: sve-bfscale
 // CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
+
+.arch armv9.6-a+sve-lrcpc
+.arch armv9.6-a+nosve-lrcpc
+ldapro z0, [x0]
+// CHECK: error: instruction requires: sve-lrcpc
+// CHECK-NEXT: ldapro z0, [x0]

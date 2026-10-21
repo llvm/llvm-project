@@ -28,6 +28,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -130,7 +131,7 @@ void ExecutionEngine::registerSymbols(
 
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
-  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setDataLayout(tm->getTargetTriple().computeDataLayout());
   llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
@@ -143,15 +144,13 @@ static std::string makePackedFunctionName(StringRef name) {
 // pointer to provide a unified invocation interface.
 static void packFunctionArguments(Module *module) {
   auto &ctx = module->getContext();
-  llvm::IRBuilder<> builder(ctx);
+  llvm::IRBuilder<> builder(*module);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
-    if (func.isDeclaration()) {
+    if (func.isDeclaration() || func.hasLocalLinkage())
       continue;
-    }
-    if (interfaceFunctions.count(&func)) {
+    if (interfaceFunctions.count(&func))
       continue;
-    }
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
@@ -220,9 +219,7 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 
 ExecutionEngine::~ExecutionEngine() {
   // Execute the global destructors from the module being processed.
-  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (jit && !jit->getTargetTriple().isAArch64())
+  if (jit)
     llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
@@ -247,6 +244,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   }
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
+  if (options.libraryOptions)
+    ctx->getLibraryOptions().assign(*options.libraryOptions);
   auto llvmModule = options.llvmModuleBuilder
                         ? options.llvmModuleBuilder(m, *ctx)
                         : translateModuleToLLVMIR(m, *ctx);
@@ -260,6 +259,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     if (!tmBuilderOrError)
       return tmBuilderOrError.takeError();
 
+    tmBuilderOrError->getOptions().MCOptions.LibraryOptions =
+        options.libraryOptions;
     auto tmOrError = tmBuilderOrError->createTargetMachine();
     if (!tmOrError)
       return tmOrError.takeError();
@@ -315,11 +316,17 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
+                                       llvm::jitlink::JITLinkMemoryManager
+                                           &IgnoredMemMgr) {
+    // Needed to respect AArch64 ABI requirements on the distance between
+    // TEXT and GOT sections.
+    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper =
-                      options.sectionMemoryMapper](const MemoryBuffer &) {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+        session, [sectionMemoryMapper = options.sectionMemoryMapper,
+                  reserveAlloc](const MemoryBuffer &) {
+          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
+                                                        reserveAlloc);
         });
 
     // Register JIT event listeners if they are enabled.
@@ -451,9 +458,6 @@ Error ExecutionEngine::invokePacked(StringRef name,
 void ExecutionEngine::initialize() {
   if (isInitialized)
     return;
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (!jit->getTargetTriple().isAArch64())
-    cantFail(jit->initialize(jit->getMainJITDylib()));
+  cantFail(jit->initialize(jit->getMainJITDylib()));
   isInitialized = true;
 }

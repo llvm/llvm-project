@@ -148,6 +148,18 @@ TEST(UnixSignalsTest, GetAsString) {
             signals.GetSignalDescription(16, 3, 0x1233, 0x1234, 0x5678));
 }
 
+TEST(UnixSignalsTest, GetNumberDescription) {
+  TestSignals signals;
+
+  ASSERT_EQ("DESC2", signals.GetSignalNumberDescription(2));
+  ASSERT_EQ("DESC4", signals.GetSignalNumberDescription(4));
+  ASSERT_EQ("DESC8", signals.GetSignalNumberDescription(8));
+  ASSERT_EQ("DESC16", signals.GetSignalNumberDescription(16));
+
+  // Unknown signal number.
+  ASSERT_EQ("", signals.GetSignalNumberDescription(100));
+}
+
 TEST(UnixSignalsTest, VersionChange) {
   TestSignals signals;
 

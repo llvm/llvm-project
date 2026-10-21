@@ -14,6 +14,9 @@ def HasStaticShape : Constraint<CPred< [{
   ::llvm::dyn_cast<ShapedType>($0.getType()).hasStaticShape()
 }]>>;
 
+def IsTensorType : Constraint<CPred<"isa<TensorType>($0.getType())">,
+                              "is a tensor type">;
+
 // Helper that takes the first element of a range.
 def TakeFront : NativeCodeCall<"$0.front()">;
 
@@ -45,8 +48,11 @@ def TensorCastConstShape : Pat <
   (Tensor_CastOp:$res (Shape_ConstShapeOp $arg)), (Shape_ConstShapeOp $arg),
   [(HasStaticShape $res)]>;
 
-// tensor.extract from shape_of -> tensor.dim. We can take the first index
-// because shape_of always returns a 1D tensor.
+// tensor.extract from shape_of(tensor) -> tensor.dim. We can take the first
+// index because shape_of always returns a 1D tensor.  Only applies when $arg
+// is a tensor; the memref case is not handled here (memref.dim would be
+// needed, but adding a MemRef dependency to this file is not desirable).
 def ExtractFromShapeOfExtentTensor : Pat<
   (Tensor_ExtractOp (Shape_ShapeOfOp $arg), $indices),
-  (Tensor_DimOp $arg, (TakeFront $indices))>;
+  (Tensor_DimOp $arg, (TakeFront $indices)),
+  [(IsTensorType $arg)]>;

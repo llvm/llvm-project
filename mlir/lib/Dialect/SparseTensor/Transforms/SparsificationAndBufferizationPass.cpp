@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -60,7 +59,7 @@ class SparsificationAndBufferizationPass
     : public impl::SparsificationAndBufferizationBase<
           SparsificationAndBufferizationPass> {
 public:
-  // Private pass options only.
+  // Bufferization, sparsification, and sparse storage options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
@@ -69,8 +68,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization) {}
+        enableBufferInitialization(enableBufferInitialization) {
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
+  }
   // Private pass options and visible pass options.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
@@ -82,9 +82,9 @@ public:
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
-        enableRuntimeLibrary(enableRuntimeLibrary),
         enableBufferInitialization(enableBufferInitialization) {
     // Set the visible pass options explicitly.
+    this->enableRuntimeLibrary = enableRuntimeLibrary;
     vectorLength = vl;
     enableVLAVectorization = vla;
     enableSIMDIndex32 = index32;
@@ -129,6 +129,9 @@ public:
 
     // Overrides the default parallelization strategy using user-provided value.
     this->sparsificationOptions.parallelizationStrategy = parallelization;
+
+    // Keep sparsification and sparse storage lowering on the same runtime path.
+    this->sparsificationOptions.enableRuntimeLibrary = enableRuntimeLibrary;
 
     // Run enabling transformations.
     {
@@ -208,7 +211,6 @@ private:
   bufferization::OneShotBufferizationOptions bufferizationOptions;
   SparsificationOptions sparsificationOptions;
   bool createSparseDeallocs;
-  bool enableRuntimeLibrary;
   bool enableBufferInitialization;
 };
 
@@ -221,10 +223,12 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
-  options.unknownTypeConverterFn = [](TensorType tensorType,
+  options.unknownTypeConverterFn = [](TensorLikeType tensorType,
                                       Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace);
+    return cast<bufferization::BufferLikeType>(
+        getMemRefTypeWithStaticIdentityLayout(cast<TensorType>(tensorType),
+                                              memorySpace));
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

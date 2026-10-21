@@ -22,7 +22,8 @@ void fuzzerop::makeConstantsWithType(Type *T, std::vector<Constant *> &Cs) {
     uint64_t W = IntTy->getBitWidth();
     Cs.push_back(ConstantInt::get(IntTy, 0));
     Cs.push_back(ConstantInt::get(IntTy, 1));
-    Cs.push_back(ConstantInt::get(IntTy, 42));
+    Cs.push_back(ConstantInt::get(IntTy, 42, /*IsSigned=*/false,
+                                  /*ImplicitTrunc=*/true));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getMaxValue(W)));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getMinValue(W)));
     Cs.push_back(ConstantInt::get(IntTy, APInt::getSignedMaxValue(W)));

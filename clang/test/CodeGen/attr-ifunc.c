@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -verify -emit-llvm-only %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -verify -emit-llvm-only %s
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvcu -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -verify -emit-llvm-only -DCHECK_ALIASES %s
 
 #if defined(_WIN32) && !defined(__aarch64__)
 void foo(void) {}

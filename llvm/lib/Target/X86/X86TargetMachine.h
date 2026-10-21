@@ -26,6 +26,7 @@ class StringRef;
 class TargetTransformInfo;
 
 class X86TargetMachine final : public CodeGenTargetMachineImpl {
+  const X86Options &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
   // True if this is used in JIT.
@@ -41,6 +42,8 @@ public:
                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
   ~X86TargetMachine() override;
+
+  const X86Options &getCLOpts() const { return CLOpts; }
 
   const X86Subtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
@@ -71,18 +74,22 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
-  Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
-                             raw_pwrite_stream *, CodeGenFileType,
-                             const CGPassBuilderOption &,
-                             PassInstrumentationCallbacks *) override;
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 
   bool isJIT() const { return IsJIT; }
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  bool canLowerCondLoop() const override { return true; }
 };
 
 } // end namespace llvm

@@ -1,0 +1,40 @@
+; REQUIRES: x86-registered-target
+
+; Test case 7 - S_DEFRANGE_REGREL_INDIR
+
+; t.cpp
+;  1 struct Foo {
+;  2   bool a;
+;  3   short b;
+;  4   int c;
+;  5 };
+;  6 
+;  7 int main() {
+;  8   Foo f{1, 2, 3};
+;  9   auto &[a, b, c] = f;
+; 10   return b + c;
+; 11 }
+
+; RUN: yaml2obj %p/Inputs/defrange-regrel-indir-clang.yaml -o - | \
+; RUN: llvm-debuginfo-analyzer --attribute=register \
+; RUN:                         --print=symbols \
+; RUN:                         - 2>&1 | \
+; RUN: FileCheck --strict-whitespace %s
+
+; CHECK: Logical View:
+; CHECK-NEXT:            {File} '-'
+; CHECK-EMPTY:
+; CHECK-NEXT:              {CompileUnit} 't.cpp'
+; CHECK-NEXT:                {Function} extern not_inlined 'main' -> 'int'
+; CHECK-NEXT:                  {Variable} 'a' -> 'bool'
+; CHECK-NEXT:                    {Location} Lines ?:?
+; CHECK-NEXT:                      {Entry} register_rel_indir RSP offset 0 offset_in_udt 0
+; CHECK-NEXT:                  {Variable} 'b' -> 'short'
+; CHECK-NEXT:                    {Location} Lines ?:?
+; CHECK-NEXT:                      {Entry} register_rel_indir RSP offset 0 offset_in_udt 2
+; CHECK-NEXT:                  {Variable} 'c' -> 'int'
+; CHECK-NEXT:                    {Location} Lines ?:?
+; CHECK-NEXT:                      {Entry} register_rel_indir RSP offset 0 offset_in_udt 4
+; CHECK-NEXT:                  {Variable} 'f' -> 'Foo'
+; CHECK-NEXT:                    {Location} Lines ?:?
+; CHECK-NEXT:                      {Entry} frame_pointer_rel 12

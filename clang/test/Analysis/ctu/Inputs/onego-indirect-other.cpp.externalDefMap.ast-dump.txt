@@ -1,0 +1,2 @@
+11:c:@F@other# onego-indirect-other.cpp.ast
+9:c:@F@bar# onego-indirect-other.cpp.ast

@@ -62,13 +62,14 @@ namespace llvm {
     bool IgnoreColonInIdentifiers = false;
 
   public:
-    explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
-                     LLVMContext &C);
+    LLVM_ABI explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
+                              LLVMContext &C);
 
     lltok::Kind Lex() { return CurKind = LexToken(); }
 
     typedef SMLoc LocTy;
     LocTy getLoc() const { return SMLoc::getFromPointer(TokStart); }
+    LocTy getPrevTokEndLoc() const { return SMLoc::getFromPointer(PrevTokEnd); }
     lltok::Kind getKind() const { return CurKind; }
     const std::string &getStrVal() const { return StrVal; }
     Type *getTyVal() const { return TyVal; }
@@ -101,11 +102,11 @@ namespace llvm {
     }
     bool ParseError(const Twine &Msg) { return ParseError(getLoc(), Msg); }
 
-    void Warning(LocTy WarningLoc, const Twine &Msg) const;
+    LLVM_ABI void Warning(LocTy WarningLoc, const Twine &Msg) const;
     void Warning(const Twine &Msg) const { return Warning(getLoc(), Msg); }
 
   private:
-    lltok::Kind LexToken();
+    LLVM_ABI lltok::Kind LexToken();
 
     int getNextChar();
     void SkipLineComment();
@@ -126,6 +127,7 @@ namespace llvm {
     lltok::Kind Lex0x();
     lltok::Kind LexHash();
     lltok::Kind LexCaret();
+    lltok::Kind LexFloatStr();
 
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);
@@ -133,7 +135,7 @@ namespace llvm {
     void FP80HexToIntPair(const char *Buffer, const char *End,
                           uint64_t Pair[2]);
 
-    void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
+    LLVM_ABI void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
 
     void LexError(LocTy ErrorLoc, const Twine &Msg) {
       Error(ErrorLoc, Msg, ErrorPriority::Lexer);

@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -153,6 +154,71 @@ TEST(ArchSpecTest, TestSetTriple) {
   AS = ArchSpec();
   EXPECT_FALSE(AS.SetTriple(""));
 }
+
+namespace {
+struct AMDGPUModel {
+  uint32_t mach;    // EF_AMDGPU_MACH value.
+  const char *flag; // ELF flag name used in the YAML "Flags" field.
+  const char *name; // Canonical model name, e.g. "gfx942".
+};
+
+// Every AMD GPU model, taken from llvm's AMDGPU_MACH_LIST so the tests track
+// the authoritative list instead of duplicating it.
+const AMDGPUModel kAMDGPUModels[] = {
+#define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
+    AMDGPU_MACH_LIST(AMDGPU_MODEL)
+#undef AMDGPU_MODEL
+};
+
+std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
+  // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
+  std::string name = info.param.name;
+  for (char &c : name)
+    if (c == '-')
+      c = '_';
+  return name;
+}
+} // namespace
+
+class ArchSpecAMDGPUTest : public ::testing::TestWithParam<AMDGPUModel> {};
+
+// SetTriple() must resolve every AMD GPU triple to the right arch and core.
+// This exercises ArchSpec::UpdateCore(), which refines the core from the GPU
+// model in the triple environment.
+TEST_P(ArchSpecAMDGPUTest, SetTriple) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+  std::string triple =
+      (is_gcn ? "amdgpu" : "r600") + std::string("-amd-amdhsa--") + model.name;
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetTriple(triple));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+// SetArchitecture() from an ELF header must resolve every AMD GPU model to the
+// right arch, vendor, OS, sub type and core.
+TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
+                                 llvm::ELF::ELFOSABI_AMDGPU_HSA));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::AMD, AS.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::AMDHSA, AS.GetTriple().getOS());
+  EXPECT_EQ(model.mach, AS.GetElfCPUSubType());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+INSTANTIATE_TEST_SUITE_P(AMDGPU, ArchSpecAMDGPUTest,
+                         ::testing::ValuesIn(kAMDGPUModels), AMDGPUModelName);
 
 TEST(ArchSpecTest, MergeFrom) {
   {
@@ -416,6 +482,72 @@ TEST(ArchSpecTest, Compatibility) {
   }
 }
 
+TEST(ArchSpecTest, UnrelatedCoresCompatibleMatchTerminates) {
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7em-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, AsymmetricCoreRulesAreCheckedBothWays) {
+  // Some cores' compatibility rules only work one way: core A accepts B,
+  // but B's own rule says nothing about A. A compatible match must check
+  // both directions to find these cases.
+  {
+    // A 32-bit MIPS core has no rule about 64-bit MIPS, but 64-bit MIPS
+    // accepts the 32-bit family with the same endianness.
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("mips64el-unknown-linux");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+  {
+    // The two Cortex-M cores explicitly accept each other.
+    ArchSpec A("armv7em-apple-none");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, WasmCompatibility) {
+  // A Wasm module encodes no vendor or OS: those are properties of the runtime
+  // executing it. A bare wasm32 or wasm64 architecture therefore has to stay
+  // compatible with the more specific triple a runtime reports at launch.
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+  }
+  {
+    // An explicitly specified "unknown" OS is still a specified OS, and does
+    // not match a runtime that reports a different one.
+    ArchSpec A("wasm32-unknown-unknown-wasm");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm64-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
 TEST(ArchSpecTest, OperatorBool) {
   EXPECT_FALSE(ArchSpec());
   EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));
@@ -491,5 +623,56 @@ TEST(ArchSpecTest, TripleComponentsWereSpecified) {
     ASSERT_TRUE(D.TripleVendorWasSpecified());
     ASSERT_TRUE(D.TripleOSWasSpecified());
     ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
+  }
+}
+
+TEST(ArchSpecTest, ARM64EX1Variants) {
+  // Test arm64e.x1 architecture.
+  {
+    ArchSpec AS("arm64e.x1");
+    ASSERT_TRUE(AS.IsValid());
+    EXPECT_EQ(ArchSpec::eCore_arm_arm64ex1, AS.GetCore());
+    EXPECT_EQ(llvm::Triple::aarch64, AS.GetTriple().getArch());
+    EXPECT_STREQ("arm64e.x1", AS.GetArchitectureName());
+    EXPECT_EQ(8u, AS.GetAddressByteSize());
+    EXPECT_EQ(4u, AS.GetMinimumOpcodeByteSize());
+    EXPECT_EQ(4u, AS.GetMaximumOpcodeByteSize());
+  }
+
+  // Test MachO CPU types for x1 variants.
+  {
+    ArchSpec AS;
+    EXPECT_TRUE(AS.SetTriple("arm64e.x1-apple-macosx"));
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_ARM64), AS.GetMachOCPUType());
+    EXPECT_EQ(uint32_t(llvm::MachO::CPU_SUBTYPE_ARM64E_X1),
+              AS.GetMachOCPUSubType());
+  }
+}
+
+TEST(ArchSpecTest, ARM64EX1Compatibility) {
+  // Test compatibility between arm64e.x1 and other arm64e variants.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("arm64e");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
+  }
+
+  // Test compatibility with aarch64.
+  {
+    ArchSpec A("arm64e.x1");
+    ArchSpec B("aarch64");
+    ASSERT_TRUE(A.IsValid());
+    ASSERT_TRUE(B.IsValid());
+
+    EXPECT_FALSE(A.IsExactMatch(B));
+    EXPECT_TRUE(A.IsCompatibleMatch(B));
+    EXPECT_FALSE(B.IsExactMatch(A));
+    EXPECT_TRUE(B.IsCompatibleMatch(A));
   }
 }

@@ -15,7 +15,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <cstring>
@@ -275,6 +274,12 @@ template <>
 void mapLoadCommandData<MachO::build_version_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
   IO.mapOptional("Tools", LoadCommand.Tools);
+}
+
+template <>
+void mapLoadCommandData<MachO::target_triple_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
 }
 
 void MappingTraits<MachOYAML::LoadCommand>::mapping(
@@ -623,6 +628,11 @@ void MappingTraits<MachO::build_version_command>::mapping(
   IO.mapRequired("minos", LoadCommand.minos);
   IO.mapRequired("sdk", LoadCommand.sdk);
   IO.mapRequired("ntools", LoadCommand.ntools);
+}
+
+void MappingTraits<MachO::target_triple_command>::mapping(
+    IO &IO, MachO::target_triple_command &LoadCommand) {
+  IO.mapRequired("triple", LoadCommand.triple);
 }
 
 void MappingTraits<MachO::fileset_entry_command>::mapping(

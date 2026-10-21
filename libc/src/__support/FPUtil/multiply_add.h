@@ -1,9 +1,14 @@
-//===-- Common header for multiply-add implementations ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Common header for multiply-add implementations.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_MULTIPLY_ADD_H
@@ -23,25 +28,33 @@ namespace fputil {
 // which uses FMA instructions to speed up if available.
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
 multiply_add(const T &x, const T &y, const T &z) {
-  return x * y + z;
+  T prod = x * y;
+  return prod + z;
 }
 
 template <typename T>
-LIBC_INLINE static constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
 multiply_add(T x, T y, T z) {
-  return x * y + z;
+  T prod = x * y;
+  return prod + z;
 }
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_USE_CONSTEXPR)
 
 // FMA instructions are available.
 // We use builtins directly instead of including FMA.h to avoid a circular
 // dependency: multiply_add.h -> FMA.h -> generic/FMA.h -> dyadic_float.h.
+//
+// TODO: for constexpr evaluation of multiply_add using FMA, we will need to
+// use the generic fma implementation from generic/FMA.h.  But currently that
+// implementation will use dyadic_float.h , which in turns including this
+// multiply_add.h .  We will need to break the dependency to enable constexpr
+// for other math functions.
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

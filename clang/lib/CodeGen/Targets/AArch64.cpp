@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace clang;
@@ -24,9 +25,16 @@ namespace {
 class AArch64ABIInfo : public ABIInfo {
   AArch64ABIKind Kind;
 
+  std::unique_ptr<TargetCodeGenInfo> WinX86_64CodegenInfo;
+
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : ABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : ABIInfo(CGM.getTypes()), Kind(Kind) {
+    if (getTarget().getTriple().isWindowsArm64EC()) {
+      WinX86_64CodegenInfo =
+          createWinX86_64TargetCodeGenInfo(CGM, X86AVXABILevel::None);
+    }
+  }
 
   bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
 
@@ -119,9 +127,9 @@ public:
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
-    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
+  AArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGM, Kind)) {
+    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGM.getTypes());
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
@@ -150,7 +158,7 @@ public:
       if (!Attr.BranchProtection.empty()) {
         StringRef Error;
         (void)CGM.getTarget().validateBranchProtection(
-            Attr.BranchProtection, Attr.CPU, BPI, CGM.getLangOpts(), Error);
+            Attr, BPI, CGM.getLangOpts(), Error);
         assert(Error.empty());
       }
     }
@@ -200,8 +208,8 @@ private:
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
-  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind K)
-      : AArch64TargetCodeGenInfo(CGT, K) {}
+  WindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K)
+      : AArch64TargetCodeGenInfo(CGM, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -368,6 +376,13 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                                 unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
+  if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
+    // Arm64EC varargs functions use the x86_64 classification rules,
+    // not the AArch64 ABI rules.
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(
+        Ty, IsNamedArg);
+  }
+
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty, NSRN, NPRN);
@@ -399,6 +414,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         case BuiltinType::SveBoolx4:
           NPRN = std::min(NPRN + 4, 4u);
           break;
+        case BuiltinType::MFloat8:
+          NSRN = std::min(NSRN + 1, 8u);
+          break;
         default:
           if (BT->isSVESizelessBuiltinType())
             NSRN = std::min(
@@ -422,6 +440,12 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   }
 
   // Empty records:
+  // AAPCS64 does not say that empty records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  // Those situations are in fact language-mode-specific, which seems really
+  // unfortunate, but it's something we just have to accept. If this doesn't
+  // apply, just fall through to the standard argument-handling path.
+  // Darwin overrides the psABI here to ignore all empty records in all modes.
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
   if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
@@ -434,9 +458,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     // behaviour here.
     if (Size == 0)
       return ABIArgInfo::getIgnore();
-
-    // Otherwise, they are passed as if they have a size of 1 byte.
-    return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
@@ -485,6 +506,10 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
           std::max(getContext().getTypeAlign(Ty),
                    (unsigned)getTarget().getPointerWidth(LangAS::Default));
     }
+    if (Size < 64 && getDataLayout().isLittleEndian() && !isDarwinPCS())
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), Size));
+
     Size = llvm::alignTo(Size, Alignment);
 
     // If the Aggregate is made up of pointers, use an array of pointers for the
@@ -955,7 +980,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
         reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, Align - 1),
         "align_regoffs");
     reg_offs = CGF.Builder.CreateAnd(
-        reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, -Align),
+        reg_offs, llvm::ConstantInt::getSigned(CGF.Int32Ty, -Align),
         "aligned_regoffs");
   }
 
@@ -1148,23 +1173,27 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
+  bool AllowHigherAlign = false;
   bool IsIndirect = false;
 
-  // Composites larger than 16 bytes are passed by reference.
-  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
-    IsIndirect = true;
+  if (getTarget().getTriple().isWindowsArm64EC()) {
+    // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+    // not 1, 2, 4, or 8 bytes, must be passed by reference."
+    uint64_t Width = getContext().getTypeSize(Ty);
+    IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
+  } else {
+    // E.g. __int128 when passed is aligned to 16 bytes, so it must be read
+    // with the same alignment.
+    AllowHigherAlign = true;
+
+    // Composites larger than 16 bytes are passed by reference.
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+      IsIndirect = true;
+  }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false, Slot);
-}
-
-static bool isStreamingCompatible(const FunctionDecl *F) {
-  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
-    return T->getAArch64SMEAttributes() &
-           FunctionType::SME_PStateSMCompatibleMask;
-  return false;
+                          CharUnits::fromQuantity(8), AllowHigherAlign, Slot);
 }
 
 // Report an error if an argument or return value of type Ty would need to be
@@ -1202,74 +1231,37 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-enum class ArmSMEInlinability : uint8_t {
-  Ok = 0,
-  ErrorCalleeRequiresNewZA = 1 << 0,
-  ErrorCalleeRequiresNewZT0 = 1 << 1,
-  WarnIncompatibleStreamingModes = 1 << 2,
-  ErrorIncompatibleStreamingModes = 1 << 3,
-
-  IncompatibleStreamingModes =
-      WarnIncompatibleStreamingModes | ErrorIncompatibleStreamingModes,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ErrorIncompatibleStreamingModes),
-};
-
-/// Determines if there are any Arm SME ABI issues with inlining \p Callee into
-/// \p Caller. Returns the issue (if any) in the ArmSMEInlinability bit enum.
-static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
-                                                const FunctionDecl *Callee) {
-  bool CallerIsStreaming =
-      IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
-  bool CalleeIsStreaming =
-      IsArmStreamingFunction(Callee, /*IncludeLocallyStreaming=*/true);
-  bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
-  bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
-
-  ArmSMEInlinability Inlinability = ArmSMEInlinability::Ok;
-
-  if (!CalleeIsStreamingCompatible &&
-      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible)) {
-    if (CalleeIsStreaming)
-      Inlinability |= ArmSMEInlinability::ErrorIncompatibleStreamingModes;
-    else
-      Inlinability |= ArmSMEInlinability::WarnIncompatibleStreamingModes;
-  }
-  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>()) {
-    if (NewAttr->isNewZA())
-      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZA;
-    if (NewAttr->isNewZT0())
-      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZT0;
-  }
-
-  return Inlinability;
-}
-
 void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee) const {
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  ArmSMEInlinability Inlinability = GetArmSMEInlinability(Caller, Callee);
+  CodeGenUtils::ArmSMEInlinability Inlinability =
+      CodeGenUtils::getArmSMEInlinability(Caller, Callee);
 
-  if ((Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) !=
-      ArmSMEInlinability::Ok)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::IncompatibleStreamingModes) !=
+      CodeGenUtils::ArmSMEInlinability::Ok)
     CGM.getDiags().Report(
         CallLoc,
-        (Inlinability & ArmSMEInlinability::ErrorIncompatibleStreamingModes) ==
-                ArmSMEInlinability::ErrorIncompatibleStreamingModes
+        (Inlinability &
+         CodeGenUtils::ArmSMEInlinability::ErrorIncompatibleStreamingModes) ==
+                CodeGenUtils::ArmSMEInlinability::
+                    ErrorIncompatibleStreamingModes
             ? diag::err_function_always_inline_attribute_mismatch
             : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 
-  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
-      ArmSMEInlinability::ErrorCalleeRequiresNewZA)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
+      CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
 
-  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
-      ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
+      CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_zt0)
         << Callee->getDeclName();
 }
@@ -1308,7 +1300,8 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
 bool AArch64TargetCodeGenInfo::wouldInliningViolateFunctionCallABI(
     const FunctionDecl *Caller, const FunctionDecl *Callee) const {
   return Caller && Callee &&
-         GetArmSMEInlinability(Caller, Callee) != ArmSMEInlinability::Ok;
+         CodeGenUtils::getArmSMEInlinability(Caller, Callee) !=
+             CodeGenUtils::ArmSMEInlinability::Ok;
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
@@ -1336,19 +1329,20 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
-      if (UniqueFeats.insert(Ext->Name).second)
-        Out << 'M' << Ext->Name;
+    if (getTarget().doesFeatureAffectCodeGen(Feat))
+      if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
+        if (UniqueFeats.insert(Ext->Name).second)
+          Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                         AArch64ABIKind Kind) {
-  return std::make_unique<AArch64TargetCodeGenInfo>(CGM.getTypes(), Kind);
+  return std::make_unique<AArch64TargetCodeGenInfo>(CGM, Kind);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                                AArch64ABIKind K) {
-  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM.getTypes(), K);
+  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM, K);
 }

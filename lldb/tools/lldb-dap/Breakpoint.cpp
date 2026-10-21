@@ -44,6 +44,11 @@ GetPersistenceDataForSymbol(lldb::SBSymbol &symbol) {
 void Breakpoint::SetCondition() { m_bp.SetCondition(m_condition.c_str()); }
 
 void Breakpoint::SetHitCondition() {
+  if (m_hit_condition.empty()) {
+    m_bp.SetIgnoreCount(0);
+    return;
+  }
+
   uint64_t hitCount = 0;
   if (llvm::to_integer(m_hit_condition, hitCount))
     m_bp.SetIgnoreCount(hitCount - 1);
@@ -128,7 +133,8 @@ void Breakpoint::SetBreakpoint() {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
-  m_bp.AddName(kDAPBreakpointLabel);
+  lldb::SBError error = m_bp.AddNameWithErrorHandling(kDAPBreakpointLabel);
+  // TODO: Report this error to the user instead of silently dropping it.
   if (!m_condition.empty())
     SetCondition();
   if (!m_hit_condition.empty())

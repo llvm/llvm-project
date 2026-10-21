@@ -34,7 +34,7 @@ int Arr[100];
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @bar(ptr noundef getelementptr inbounds ([100 x i32], ptr @Arr, i64 0, i64 49))
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @bar(ptr noundef getelementptr inbounds nuw (i8, ptr @Arr, i64 196))
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x i32], ptr @Arr, i64 0, i64 [[IDXPROM]]

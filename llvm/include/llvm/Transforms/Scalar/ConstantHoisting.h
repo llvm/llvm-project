@@ -59,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+struct ScalarOptions;
 class TargetTransformInfo;
 class TargetTransformInfo;
 
@@ -123,24 +124,21 @@ struct ConstantInfo {
 
 } // end namespace consthoist
 
-class ConstantHoistingPass : public PassInfoMixin<ConstantHoistingPass> {
+class ConstantHoistingPass
+    : public OptionalPassInfoMixin<ConstantHoistingPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, TargetTransformInfo &TTI, DominatorTree &DT,
-               BlockFrequencyInfo *BFI, BasicBlock &Entry,
-               ProfileSummaryInfo *PSI);
+  LLVM_ABI bool runImpl(Function &F, TargetTransformInfo &TTI,
+                        DominatorTree &DT, BlockFrequencyInfo *BFI,
+                        BasicBlock &Entry, ProfileSummaryInfo *PSI);
 
   void cleanup() {
     ClonedCastMap.clear();
     ConstIntCandVec.clear();
-    for (auto MapEntry : ConstGEPCandMap)
-      MapEntry.second.clear();
     ConstGEPCandMap.clear();
     ConstIntInfoVec.clear();
-    for (auto MapEntry : ConstGEPInfoMap)
-      MapEntry.second.clear();
     ConstGEPInfoMap.clear();
   }
 
@@ -148,6 +146,7 @@ private:
   using ConstPtrUnionType = PointerUnion<ConstantInt *, ConstantExpr *>;
   using ConstCandMapType = DenseMap<ConstPtrUnionType, unsigned>;
 
+  const ScalarOptions *Opts = nullptr;
   const TargetTransformInfo *TTI;
   DominatorTree *DT;
   BlockFrequencyInfo *BFI;

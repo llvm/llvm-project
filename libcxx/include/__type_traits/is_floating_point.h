@@ -20,18 +20,19 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // clang-format off
-template <class _Tp> struct __libcpp_is_floating_point              : false_type {};
-template <>          struct __libcpp_is_floating_point<float>       : true_type {};
-template <>          struct __libcpp_is_floating_point<double>      : true_type {};
-template <>          struct __libcpp_is_floating_point<long double> : true_type {};
+template <class _Tp> inline const bool __is_floating_point_impl              = false;
+template <>          inline const bool __is_floating_point_impl<float>       = true;
+template <>          inline const bool __is_floating_point_impl<double>      = true;
+template <>          inline const bool __is_floating_point_impl<long double> = true;
 // clang-format on
 
 template <class _Tp>
-struct _LIBCPP_NO_SPECIALIZATIONS is_floating_point : __libcpp_is_floating_point<__remove_cv_t<_Tp> > {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_floating_point
+    : integral_constant<bool, __is_floating_point_impl<__remove_cv_t<_Tp> > > {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_floating_point_v = is_floating_point<_Tp>::value;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_floating_point_v = __is_floating_point_impl<__remove_cv_t<_Tp>>;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

@@ -378,3 +378,16 @@ func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
 func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
   return
 }
+
+// -----
+
+// The explicit lvlToDim of a blocked dimension that follows a plain one is the
+// inverse of dimToLvl and must be accepted.
+#MixedBlock = #sparse_tensor.encoding<{
+  map = {jl, il, ii} (i = il * 2 + ii, j = jl) -> (jl = j : dense, il = i floordiv 2 : compressed, ii = i mod 2 : singleton)
+}>
+
+// CHECK: #[[$MIXED:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d1 : dense, d0 floordiv 2 : compressed, d0 mod 2 : singleton) }>
+// CHECK-LABEL: func private @sparse_mixed_block(
+// CHECK-SAME: tensor<?x?xf64, #[[$MIXED]]>)
+func.func private @sparse_mixed_block(tensor<?x?xf64, #MixedBlock>)

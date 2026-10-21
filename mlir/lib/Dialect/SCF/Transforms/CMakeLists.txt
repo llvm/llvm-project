@@ -25,6 +25,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRArithDialect
@@ -32,6 +33,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRBufferizationTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
+  MLIRIndexDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRPass

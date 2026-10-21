@@ -1,5 +1,5 @@
 // Tests that we wouldn't generate an allocation call in promise_type with (std::size_t, std::nothrow_t) in case we find promsie_type::get_return_object_on_allocation_failure;
-// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 -Wno-coroutines-unsupported-target %s -fsyntax-only -verify
 
 namespace std {
 template <typename... T>

@@ -161,8 +161,9 @@ std::optional<ProgramTree> ProgramTree::Build(
   const parser::LanguageBindingSpec *bindingSpec{};
   if (const auto &suffix{
           std::get<std::optional<parser::Suffix>>(stmt.statement.t)}) {
-    if (suffix->binding) {
-      bindingSpec = &*suffix->binding;
+    if (const auto &binding{
+            std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t)}) {
+      bindingSpec = &*binding;
     }
   }
   return BuildSubprogramTree(name, context, x)
@@ -233,7 +234,9 @@ std::optional<ProgramTree> ProgramTree::Build(
 
 std::optional<ProgramTree> ProgramTree::Build(
     const parser::OpenACCRoutineConstruct &, SemanticsContext &) {
-  DIE("ProgramTree::Build() called for OpenACCRoutineConstruct");
+  // OpenACC ROUTINE can appear in a module subprogram part but it does not
+  // introduce a program unit node in the semantics program tree.
+  return std::nullopt;
 }
 
 const parser::ParentIdentifier &ProgramTree::GetParentId() const {

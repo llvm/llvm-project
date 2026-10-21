@@ -58,16 +58,16 @@ body: |
   bb.1:
     liveins: $x0, $x1, $x2, $x4
 
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = COPY $x2
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %2(i64) = COPY $x2
 )MIR") +
    Twine(MIRFunc) + Twine("...\n"))
       .toNullTerminatedStringRef(S);
 }
 
 std::unique_ptr<TargetMachine> AMDGPUGISelMITest::createTargetMachine() const {
-  Triple TargetTriple("amdgcn-amd-amdhsa");
+  Triple TargetTriple("amdgpu9.00-amd-amdhsa");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
   if (!T)
@@ -75,7 +75,7 @@ std::unique_ptr<TargetMachine> AMDGPUGISelMITest::createTargetMachine() const {
 
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TargetTriple, "gfx900", "", Options, std::nullopt,
+      T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
                              std::nullopt, CodeGenOptLevel::Aggressive));
 }
 

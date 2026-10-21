@@ -17,7 +17,8 @@ enum PragmaMSCommentKind {
   PCK_Lib,      // #pragma comment(lib, ...)
   PCK_Compiler, // #pragma comment(compiler, ...)
   PCK_ExeStr,   // #pragma comment(exestr, ...)
-  PCK_User      // #pragma comment(user, ...)
+  PCK_User,     // #pragma comment(user, ...)
+  PCK_Copyright // #pragma comment(copyright, ...)
 };
 
 enum PragmaMSStructKind {

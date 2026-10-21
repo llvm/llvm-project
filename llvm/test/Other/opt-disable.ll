@@ -1,36 +1,32 @@
 ; This test uses the same IR functions of the opt-bisect test
 ; but it checks the correctness of the -opt-disable flag.
-; -opt-disable-enable-verbosity is required to have output.
 
 ; RUN: opt -disable-output -disable-verify \
-; RUN:     -opt-disable-enable-verbosity \
 ; RUN:     -passes=inferattrs -opt-disable=inferattrs %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
-; CHECK-MODULE-PASS: OptDisable: NOT running pass inferattrs on [module]
+; CHECK-MODULE-PASS: BISECT: NOT running pass (1) inferattrs on [module]
 
 ; RUN: opt -disable-output -disable-verify \
-; RUN:     -opt-disable-enable-verbosity \
 ; RUN:     -passes=sroa -opt-disable=sroa %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
-; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f1
-; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f2
-; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f3
-; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f4
+; CHECK-FUNCTION-PASS: BISECT: NOT running pass (1) sroa on f1
+; CHECK-FUNCTION-PASS: BISECT: NOT running pass (2) sroa on f2
+; CHECK-FUNCTION-PASS: BISECT: NOT running pass (3) sroa on f3
+; CHECK-FUNCTION-PASS: BISECT: NOT running pass (4) sroa on f4
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -opt-disable=inferattrs,function-attrs  \
-; RUN:     -opt-disable-enable-verbosity \
 ; RUN:     -passes='inferattrs,cgscc(function-attrs,function(early-cse))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MULTI-PASS
-; CHECK-MULTI-PASS: OptDisable: NOT running pass inferattrs on [module]
-; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f1)
-; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f1
-; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f2)
-; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f2
-; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f3)
-; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f3
-; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f4)
-; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f4
+; CHECK-MULTI-PASS: BISECT: NOT running pass (1) inferattrs on [module]
+; CHECK-MULTI-PASS: BISECT: NOT running pass (2) function-attrs on (f1)
+; CHECK-MULTI-PASS: BISECT: running pass (3) early-cse on f1
+; CHECK-MULTI-PASS: BISECT: NOT running pass (4) function-attrs on (f2)
+; CHECK-MULTI-PASS: BISECT: running pass (5) early-cse on f2
+; CHECK-MULTI-PASS: BISECT: NOT running pass (6) function-attrs on (f3)
+; CHECK-MULTI-PASS: BISECT: running pass (7) early-cse on f3
+; CHECK-MULTI-PASS: BISECT: NOT running pass (8) function-attrs on (f4)
+; CHECK-MULTI-PASS: BISECT: running pass (9) early-cse on f4
 
 declare i32 @g()
 

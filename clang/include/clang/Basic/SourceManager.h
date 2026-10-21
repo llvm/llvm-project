@@ -52,6 +52,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -714,6 +715,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// as they do not refer to a file.
   std::vector<SrcMgr::ContentCache*> MemBufferInfos;
 
+  /// Per-FileID content caches for aliased file references.
+  ///
+  /// These caches preserve the spelling used for a particular include while
+  /// sharing file contents with the canonical cache in \c FileInfos.
+  std::vector<SrcMgr::ContentCache *> FileIDContentCaches;
+
   /// The table of SLocEntries that are local to this module.
   ///
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
@@ -1205,9 +1212,14 @@ public:
   /// Given \p Loc, if it is a macro location return the expansion
   /// location or the spelling location, depending on if it comes from a
   /// macro argument or not.
-  SourceLocation getFileLoc(SourceLocation Loc) const {
+  ///
+  /// If resolving \p Loc requires walking through more than \p MaxDepth
+  /// macro expansions, an invalid location is returned instead.
+  SourceLocation
+  getFileLoc(SourceLocation Loc,
+             unsigned MaxDepth = std::numeric_limits<unsigned>::max()) const {
     if (Loc.isFileID()) return Loc;
-    return getFileLocSlowCase(Loc);
+    return getFileLocSlowCase(Loc, MaxDepth);
   }
 
   /// Return the start/end of the expansion information for an
@@ -1286,16 +1298,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// the final location expanded.
   FileIDAndOffset getDecomposedExpansionLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-
-    return getDecomposedExpansionLocSlowCase(E);
+    return getDecomposedLoc(getExpansionLoc(Loc));
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
@@ -1303,15 +1306,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// its spelling record.
   FileIDAndOffset getDecomposedSpellingLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-    return getDecomposedSpellingLocSlowCase(E, Offset);
+    return getDecomposedLoc(getSpellingLoc(Loc));
   }
 
   /// Returns the "included/expanded in" decomposed location of the given
@@ -1426,10 +1421,15 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
-                                   bool *Invalid = nullptr) const;
+                                   bool *Invalid = nullptr) const {
+    return getColumnNumber(getSpellingLoc(Loc), Invalid);
+  }
   unsigned getExpansionColumnNumber(SourceLocation Loc,
-                                    bool *Invalid = nullptr) const;
+                                    bool *Invalid = nullptr) const {
+    return getColumnNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
 
@@ -1440,8 +1440,15 @@ public:
   /// MemoryBuffer, so this is not cheap: use only when about to emit a
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
-  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getSpellingLineNumber(SourceLocation Loc,
+                                 bool *Invalid = nullptr) const {
+    return getLineNumber(getSpellingLoc(Loc), Invalid);
+  }
+  unsigned getExpansionLineNumber(SourceLocation Loc,
+                                  bool *Invalid = nullptr) const {
+    return getLineNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
 
   /// Return the filename or buffer identifier of the buffer the
@@ -1529,6 +1536,15 @@ public:
       return false;
     StringRef Filename(Presumed.getFilename());
     return Filename == "<scratch space>";
+  }
+
+  /// Returns whether \p Loc is located in a <module-includes> file.
+  bool isWrittenInModuleIncludes(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<module-includes>";
   }
 
   /// Returns whether \p Loc is located in a built-in or command line source.
@@ -1977,12 +1993,9 @@ private:
 
   SourceLocation getExpansionLocSlowCase(SourceLocation Loc) const;
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
-  SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
+  SourceLocation getFileLocSlowCase(SourceLocation Loc,
+                                    unsigned MaxDepth) const;
 
-  FileIDAndOffset
-  getDecomposedExpansionLocSlowCase(const SrcMgr::SLocEntry *E) const;
-  FileIDAndOffset getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                   unsigned Offset) const;
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,

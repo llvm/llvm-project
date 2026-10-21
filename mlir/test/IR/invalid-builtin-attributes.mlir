@@ -580,6 +580,16 @@ func.func @duplicate_dictionary_attr_key() {
 
 // -----
 
+// expected-error@below {{expected i1 type for 'true' or 'false' values}}
+#attr = array<i8: true>
+
+// -----
+
+// expected-error@below {{expected 'true' or 'false' values for i1 type}}
+#attr = array<i1: 0>
+
+// -----
+
 // expected-error@below {{expected '[' after 'distinct'}}
 #attr = distinct<
 
@@ -664,4 +674,29 @@ func.func @expect_to_parse_literal() {
   // expected-error@below {{expected string token, got 23}}
   %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
   return
+}
+
+// -----
+
+// f8E8M0FNU has no encoding for a negative value. Converting the literal used
+// to keep the sign bit, and printing the result asserted in APFloat.
+func.func @negative_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant -2.000000e+00 : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @negative_elements_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant dense<[1.000000e+00, -2.000000e+00]> : tensor<2xf8E8M0FNU>
+  return
+}
+
+// -----
+
+func.func @string_in_int_tensor() {
+  // expected-error @+1 {{expected integer elements, but parsed string}}
+  "foo"() {bar = dense<["oops"]> : tensor<1xi1>} : () -> ()
 }

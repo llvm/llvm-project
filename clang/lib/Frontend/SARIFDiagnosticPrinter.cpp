@@ -40,14 +40,13 @@ void SARIFDiagnosticPrinter::EndSourceFile() {
   assert(SARIFDiag && "SARIFDiagnostic has not been set.");
   Writer->endRun();
   llvm::json::Value Value(Writer->createDocument());
-  OS << "\n" << Value << "\n\n";
+  OS << llvm::formatv("\n{0:2}\n\n", Value);
   OS.flush();
   SARIFDiag.reset();
 }
 
 void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
                                               const Diagnostic &Info) {
-  assert(SARIFDiag && "SARIFDiagnostic has not been set.");
   // Default implementation (Warnings/errors count). Keeps track of the
   // number of errors.
   DiagnosticConsumer::HandleDiagnostic(Level, Info);
@@ -67,6 +66,8 @@ void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
     // FIXME: Enable diagnostics without a source manager
     return;
   }
+
+  assert(SARIFDiag && "SARIFDiagnostic has not been set.");
 
   // Assert that the rest of our infrastructure is setup properly.
   assert(Info.hasSourceManager() &&

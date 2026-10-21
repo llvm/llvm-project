@@ -105,9 +105,9 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
 
 LogicalResult LLVM::detail::vectorOneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags) {
+    ArrayRef<NamedAttribute> targetAttrs, Attribute propertiesAttr,
+    const LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   assert(!operands.empty());
 
   // Cannot convert ops if their operands are not of LLVM type.
@@ -116,15 +116,14 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 
   auto llvmNDVectorTy = operands[0].getType();
   if (!isa<LLVM::LLVMArrayType>(llvmNDVectorTy))
-    return oneToOneRewrite(op, targetOp, operands, targetAttrs, typeConverter,
-                           rewriter, overflowFlags);
-
-  auto callback = [op, targetOp, targetAttrs, overflowFlags,
+    return oneToOneRewrite(op, targetOp, operands, targetAttrs, propertiesAttr,
+                           typeConverter, rewriter);
+  auto callback = [op, targetOp, targetAttrs, propertiesAttr,
                    &rewriter](Type llvm1DVectorTy, ValueRange operands) {
-    Operation *newOp =
-        rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp),
-                        operands, llvm1DVectorTy, targetAttrs);
-    LLVM::detail::setNativeProperties(newOp, overflowFlags);
+    OperationState state(op->getLoc(), rewriter.getStringAttr(targetOp),
+                         operands, llvm1DVectorTy, targetAttrs);
+    state.propertiesAttr = propertiesAttr;
+    Operation *newOp = rewriter.create(state);
     return newOp->getResult(0);
   };
 

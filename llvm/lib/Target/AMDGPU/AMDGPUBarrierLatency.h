@@ -14,7 +14,10 @@
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createAMDGPUBarrierLatencyDAGMutation();
+class MachineFunction;
+
+std::unique_ptr<ScheduleDAGMutation>
+createAMDGPUBarrierLatencyDAGMutation(MachineFunction *MF);
 
 } // namespace llvm
 

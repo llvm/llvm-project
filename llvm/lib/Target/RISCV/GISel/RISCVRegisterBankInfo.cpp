@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "RISCVGenRegisterBank.inc"
@@ -112,6 +113,19 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
+const RegisterBank &
+RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                              LLT Ty) const {
+  switch (RC.getID()) {
+  // Vector control and status register class
+  case RISCV::VCSRRegClassID:
+    return getRegBank(RISCV::GPRBRegBankID);
+  default:
+    // For all GPR register classes and others, use the default implementation
+    return RISCVGenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
+  }
+}
+
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
@@ -154,6 +168,10 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
   case TargetOpcode::G_FCMP:
     return true;
   default:
@@ -183,6 +201,23 @@ bool RISCVRegisterBankInfo::anyUseOnlyUseFP(
   return any_of(
       MRI.use_nodbg_instructions(Def),
       [&](const MachineInstr &UseMI) { return onlyUsesFP(UseMI, MRI, TRI); });
+}
+
+/// Decide whether an s64 value on RV32 belongs in a GPRPair (an i64, needs
+/// Zilsd) rather than in FPR64 (an f64, needs D).
+///
+/// With extended LLTs the type answers this directly. Without them every
+/// 64-bit scalar is an ANY_SCALAR LLT, so i64 and f64 are indistinguishable --
+/// guessing from the uses gets it wrong, e.g. an f64 whose only use is a
+/// G_SELECT looks like an integer because G_SELECT is not itself floating
+/// point constrained. So fall back to using a GPRPair only where the value
+/// cannot be an f64 at all.
+static bool useGPRPairForS64(const RISCVSubtarget &ST, LLT Ty) {
+  if (!ST.hasStdExtZilsd())
+    return false;
+  if (LLT::getUseExtended())
+    return Ty.isInteger();
+  return !ST.hasStdExtD();
 }
 
 static const RegisterBankInfo::ValueMapping *getVRBValueMapping(unsigned Size) {
@@ -216,11 +251,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
 
-  unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
-  assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
+  unsigned GPRSize = Subtarget.getXLen();
 
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *GPRValueMapping =
@@ -328,9 +362,15 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (cast<GLoad>(MI).isAtomic())
       break;
 
-    // Use FPR64 for s64 loads on rv32.
+    // RV32 s64 loads: f64 (D) uses FPR64; i64 (Zilsd without D) uses a
+    // GPRPair.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      if (useGPRPairForS64(ST, Ty)) {
+        OpdsMapping[0] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+        break;
+      }
+      assert(ST.hasStdExtD() && "s64 load without D or Zilsd");
       OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
@@ -366,9 +406,15 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (cast<GStore>(MI).isAtomic())
       break;
 
-    // Use FPR64 for s64 stores on rv32.
+    // RV32 s64 stores: f64 (D) uses FPR64; i64 (Zilsd without D) uses a
+    // GPRPair.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      if (useGPRPairForS64(ST, Ty)) {
+        OpdsMapping[0] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+        break;
+      }
+      assert(ST.hasStdExtD() && "s64 store without D or Zilsd");
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
     }
@@ -397,7 +443,9 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // everything has to be on GPR.
     unsigned NumFP = 0;
 
-    // Use FPR64 for s64 select on rv32.
+    // Use FPR64 for s64 select on rv32. An s64 select is only legal here when
+    // D is present (see the G_SELECT rules), so this cannot be a Zilsd i64,
+    // which would need a GPRPair instead.
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
       NumFP = 3;
     } else {
@@ -449,6 +497,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
   case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
@@ -472,24 +524,32 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    // Use FPR64 for s64 merge on rv32.
+    // RV32 s64: f64 (D) uses FPR64; i64 (Zilsd without D) uses a GPRPair.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      OpdsMapping[0] = useGPRPairForS64(ST, Ty)
+                           ? &RISCV::ValueMappings[RISCV::GPRB64Idx]
+                           : getFPValueMapping(Ty.getSizeInBits());
+      assert((useGPRPairForS64(ST, Ty) || ST.hasStdExtD()) &&
+             "s64 merge without D or Zilsd");
       OpdsMapping[1] = GPRValueMapping;
       OpdsMapping[2] = GPRValueMapping;
     }
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    // Use FPR64 for s64 unmerge on rv32.
+    // RV32 s64: f64 (D) uses FPR64; i64 (Zilsd without D) uses a GPRPair.
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      OpdsMapping[2] = useGPRPairForS64(ST, Ty)
+                           ? &RISCV::ValueMappings[RISCV::GPRB64Idx]
+                           : getFPValueMapping(Ty.getSizeInBits());
+      assert((useGPRPairForS64(ST, Ty) || ST.hasStdExtD()) &&
+             "s64 unmerge without D or Zilsd");
       OpdsMapping[0] = GPRValueMapping;
       OpdsMapping[1] = GPRValueMapping;
-      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
     }
     break;
   }
@@ -531,6 +591,17 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         } else {
           OpdsMapping[Idx] = GPRValueMapping;
         }
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::riscv_orc_b ||
+        IntrinsicID == Intrinsic::riscv_vsetvli ||
+        IntrinsicID == Intrinsic::riscv_vsetvlimax) {
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        OpdsMapping[Idx] = GPRValueMapping;
       }
     }
     break;

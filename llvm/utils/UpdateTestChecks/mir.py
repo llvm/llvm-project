@@ -21,7 +21,8 @@ VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
     r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |unpredictable "
-    r"|noconvergent |nneg |disjoint |nusw |samesign |inbounds )*"
+    r"|noconvergent |nneg |disjoint |nusw |samesign |inbounds |lr-split "
+    r"|nonnull )*"
 )
 VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
 
@@ -50,9 +51,52 @@ MIR_FUNC_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+# A marker inserted into a filtered MIR function body to record that one or more
+# lines were removed by --filter between two retained lines. When emitting
+# checks, the retained line that follows a marker is printed as CHECK (rather
+# than CHECK-NEXT) because it is not guaranteed to immediately follow the
+# previous match in the tool output.
+MIR_FILTER_GAP_MARKER = "; UTC-MIR-FILTER-GAP"
+
+def filter_mir_body(body, filters):
+    """Filter a MIR function body while keeping the generated checks correct.
+
+    Behaves like common.do_filter, with two MIR-specific adjustments that make
+    --filter usable for tests whose interesting instructions are scattered
+    through the function:
+
+      * Basic block label lines are always retained.  This keeps the check
+        comments at the block-level indentation (so the surrounding "body: |"
+        block scalar stays valid) and documents the control-flow structure.
+      * A marker line is inserted wherever one or more lines were removed
+        between two retained lines.  add_mir_check_lines turns the retained line
+        after a marker into a CHECK instead of a CHECK-NEXT, since filtered-out
+        instructions may sit between the two matches in the tool output.
+    """
+    if not filters:
+        return body
+    if common.has_filter_out_after(filters):
+        lines = common.filter_out_after(body, filters)
+    else:
+        lines = body.splitlines()
+    result = []
+    have_gap = False
+    for line in lines:
+        keep = common.apply_filters(line, filters) or bool(
+            MIR_BASIC_BLOCK_RE.match(line)
+        )
+        if not keep:
+            have_gap = True
+            continue
+        if have_gap and result:
+            result.append(MIR_FILTER_GAP_MARKER)
+        result.append(line)
+        have_gap = False
+    return "\n".join(result)
+
 
 def build_function_info_dictionary(
-    test, raw_tool_output, triple, prefixes, func_dict, verbose
+    test, raw_tool_output, triple, prefixes, func_dict, verbose, filters=None
 ):
     for m in MIR_FUNC_RE.finditer(raw_tool_output):
         func = m.group("func")
@@ -84,10 +128,11 @@ def build_function_info_dictionary(
                 )
             mangled.append(func_line)
         body = "".join(mangled)
+        filtered_body = filter_mir_body(body, filters)
 
         for prefix in prefixes:
             info = common.function_body(
-                body, fixedStack, None, None, None, None, ginfo=None
+                filtered_body, fixedStack, None, None, None, None, ginfo=None
             )
             if func in func_dict[prefix]:
                 if (
@@ -163,13 +208,15 @@ def add_mir_checks_for_function(
     print_fixed_stack,
     first_check_is_next,
     at_the_function_name,
+    check_indent=None,
 ):
     printed_prefixes = set()
     for run in run_list:
         for prefix in run[0]:
             if prefix in printed_prefixes:
                 break
-            if not func_dict[prefix][func_name]:
+            # func_info can be empty if there was a prefix conflict.
+            if not func_dict[prefix].get(func_name):
                 continue
             if printed_prefixes:
                 # Add some space between different check prefixes.
@@ -185,6 +232,7 @@ def add_mir_checks_for_function(
                 func_dict[prefix][func_name],
                 print_fixed_stack,
                 first_check_is_next,
+                check_indent,
             )
             break
         else:
@@ -204,10 +252,17 @@ def add_mir_check_lines(
     func_info,
     print_fixed_stack,
     first_check_is_next,
+    check_indent=None,
 ):
     func_body = str(func_info).splitlines()
     if single_bb:
         # Don't bother checking the basic block label for a single BB
+        func_body.pop(0)
+
+    # A gap marker carries no information before the first retained line, and
+    # popping the basic block label above may have exposed one.  Drop any such
+    # leading markers so indentation is computed from a real instruction line.
+    while func_body and func_body[0] == MIR_FILTER_GAP_MARKER:
         func_body.pop(0)
 
     if not func_body:
@@ -220,7 +275,10 @@ def add_mir_check_lines(
     first_line = func_body[0]
     indent = len(first_line) - len(first_line.lstrip(" "))
     # A check comment, indented the appropriate amount
-    check = "{:>{}}; {}".format("", indent, prefix)
+    if check_indent is not None:
+        check = "{}; {}".format(check_indent, prefix)
+    else:
+        check = "{:>{}}; {}".format("", indent, prefix)
 
     output_lines.append("{}-LABEL: name: {}".format(check, func_name))
 
@@ -232,6 +290,12 @@ def add_mir_check_lines(
 
     first_check = not first_check_is_next
     for func_line in func_body:
+        if func_line == MIR_FILTER_GAP_MARKER:
+            # One or more lines were filtered out here, so the next retained
+            # line is not necessarily adjacent to the previous match: emit it as
+            # CHECK rather than CHECK-NEXT.
+            first_check = True
+            continue
         if not func_line.strip():
             # The mir printer prints leading whitespace so we can't use CHECK-EMPTY:
             output_lines.append(check + "-NEXT: {{" + func_line + "$}}")
@@ -269,7 +333,10 @@ def add_mir_checks(
     func_name = None
     state = "toplevel"
     for input_line in input_lines:
-        if input_line == autogenerated_note:
+        if common.UTC_ADVERT in input_line:
+            # Discard any previous autogenerated note.  Matching on the advert
+            # text (rather than the exact note) ensures a stale note is dropped
+            # even when the arguments differ, e.g. when --filter was added.
             continue
 
         if state == "toplevel":

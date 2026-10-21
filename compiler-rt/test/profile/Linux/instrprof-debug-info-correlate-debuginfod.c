@@ -15,10 +15,13 @@
 // RUN: cp %t.correlate.exe %t/buildid/12345678/debuginfo
 // RUN: mkdir -p %t/debuginfod-cache
 // RUN: env DEBUGINFOD_CACHE_PATH=%t/debuginfod-cache DEBUGINFOD_URLS=file://%t llvm-profdata merge -o %t.correlate-debuginfod.profdata --debuginfod --correlate=debug-info %t.debug-info-correlate.proflite
-// RUN: diff <(llvm-profdata show --all-functions --counts %t.default.profdata) <(llvm-profdata show --all-functions --counts %t.correlate-debuginfod.profdata)
+// RUN: llvm-profdata show --all-functions --counts %t.default.profdata > %t.default_counts
+// RUN: llvm-profdata show --all-functions --counts %t.correlate-debuginfod.profdata > %t.correlated_counts
+// RUN: diff %t.default_counts %t.correlated_counts
 
 // Test llvm-profdata merge profile correlation with --debug-file-directory option.
 // RUN: mkdir -p %t/.build-id/12
 // RUN: cp %t.correlate.exe %t/.build-id/12/345678.debug
 // RUN: llvm-profdata merge -o %t.correlate-debug-file-dir.profdata --debug-file-directory %t --correlate=debug-info %t.debug-info-correlate.proflite
-// RUN: diff <(llvm-profdata show --all-functions --counts %t.default.profdata) <(llvm-profdata show --all-functions --counts %t.correlate-debug-file-dir.profdata)
+// RUN: llvm-profdata show --all-functions --counts %t.correlate-debug-file-dir.profdata > %t.correlated_debug_file_dir_counts
+// RUN: diff %t.default_counts %t.correlated_debug_file_dir_counts

@@ -12,7 +12,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstring>
 
 using namespace llvm;
 
@@ -46,7 +45,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeExternalAAWrapperPassPass(Registry);
   initializeImmutableModuleSummaryIndexWrapperPassPass(Registry);
   initializeIVUsersWrapperPassPass(Registry);
-  initializeIRSimilarityIdentifierWrapperPassPass(Registry);
   initializeLazyBranchProbabilityInfoPassPass(Registry);
   initializeLazyBFIPassPass(Registry);
   initializeLazyBlockFrequencyInfoPassPass(Registry);
@@ -63,6 +61,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeRegionPrinterPass(Registry);
   initializeRegionOnlyViewerPass(Registry);
   initializeRegionOnlyPrinterPass(Registry);
+  initializeRuntimeLibraryInfoWrapperPass(Registry);
   initializeSCEVAAWrapperPassPass(Registry);
   initializeScalarEvolutionWrapperPassPass(Registry);
   initializeStackSafetyGlobalInfoWrapperPassPass(Registry);

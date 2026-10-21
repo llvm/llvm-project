@@ -21,8 +21,8 @@ def check_inputs(in1, in2, flags):
     """
     Perform checking on the user provided inputs and diagnose any abnormalities
     """
-    in1_kind, in1_err = util.classify_input_file(in1)
-    in2_kind, in2_err = util.classify_input_file(in2)
+    in1_kind, _ = util.classify_input_file(in1)
+    in2_kind, _ = util.classify_input_file(in2)
     output_file = util.find_benchmark_flag("--benchmark_out=", flags)
     output_type = util.find_benchmark_flag("--benchmark_out_format=", flags)
     if (
@@ -85,7 +85,10 @@ def create_parser():
         "-d",
         "--dump_to_json",
         dest="dump_to_json",
-        help="Additionally, dump benchmark comparison output to this file in JSON format.",
+        help=(
+            "Additionally, dump benchmark comparison output to this file in"
+            " JSON format."
+        ),
     )
 
     utest = parser.add_argument_group()
@@ -94,8 +97,15 @@ def create_parser():
         dest="utest",
         default=True,
         action="store_false",
-        help="The tool can do a two-tailed Mann-Whitney U test with the null hypothesis that it is equally likely that a randomly selected value from one sample will be less than or greater than a randomly selected value from a second sample.\nWARNING: requires **LARGE** (no less than {}) number of repetitions to be meaningful!\nThe test is being done by default, if at least {} repetitions were done.\nThis option can disable the U Test.".format(
-            report.UTEST_OPTIMAL_REPETITIONS, report.UTEST_MIN_REPETITIONS
+        help=(
+            "The tool can do a two-tailed Mann-Whitney U test with the null"
+            " hypothesis that it is equally likely that a randomly selected"
+            " value from one sample will be less than or greater than a"
+            " randomly selected value from a second sample.\nWARNING: requires"
+            f" **LARGE** (no less than {report.UTEST_OPTIMAL_REPETITIONS})"
+            " number of repetitions to be meaningful!\nThe test is being done"
+            f" by default, if at least {report.UTEST_MIN_REPETITIONS}"
+            " repetitions were done.\nThis option can disable the U Test."
         ),
     )
     alpha_default = 0.05
@@ -105,7 +115,9 @@ def create_parser():
         default=alpha_default,
         type=float,
         help=(
-            "significance level alpha. if the calculated p-value is below this value, then the result is said to be statistically significant and the null hypothesis is rejected.\n(default: %0.4f)"
+            "significance level alpha. if the calculated p-value is below this"
+            " value, then the result is said to be statistically significant"
+            " and the null hypothesis is rejected.\n(default: %0.4f)"
         )
         % alpha_default,
     )
@@ -116,7 +128,10 @@ def create_parser():
 
     parser_a = subparsers.add_parser(
         "benchmarks",
-        help="The most simple use-case, compare all the output of these two benchmarks",
+        help=(
+            "The most simple use-case, compare all the output of these two"
+            " benchmarks"
+        ),
     )
     baseline = parser_a.add_argument_group("baseline", "The benchmark baseline")
     baseline.add_argument(
@@ -180,7 +195,10 @@ def create_parser():
 
     parser_c = subparsers.add_parser(
         "benchmarksfiltered",
-        help="Compare filter one of first benchmark with filter two of the second benchmark",
+        help=(
+            "Compare filter one of first benchmark with filter two of the"
+            " second benchmark"
+        ),
     )
     baseline = parser_c.add_argument_group("baseline", "The benchmark baseline")
     baseline.add_argument(
@@ -205,7 +223,10 @@ def create_parser():
         metavar="test_contender",
         type=argparse.FileType("r"),
         nargs=1,
-        help="The second benchmark executable or JSON output file, that will be compared against the baseline",
+        help=(
+            "The second benchmark executable or JSON output file, that will be"
+            " compared against the baseline"
+        ),
     )
     contender.add_argument(
         "filter_contender",

@@ -9,6 +9,7 @@
 #include "GDBRemoteClientBase.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -192,6 +193,22 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
   }
 
   return SendPacketAndWaitForResponseNoLock(payload, response, sync_on_timeout);
+}
+
+llvm::Expected<StringExtractorGDBRemote>
+GDBRemoteClientBase::SendPacketAndExpectResponse(
+    llvm::StringRef payload, std::chrono::seconds interrupt_timeout) {
+  StringExtractorGDBRemote response;
+  GDBRemoteCommunication::PacketResult packet_result =
+      SendPacketAndWaitForResponse(payload, response, interrupt_timeout);
+  if (packet_result != GDBRemoteCommunication::PacketResult::Success)
+    return llvm::createStringErrorV("failed to send packet: '{0}'", payload);
+
+  if (response.IsUnsupportedResponse())
+    return llvm::createStringErrorV("unsupported response: '{0}'",
+                                    response.GetStringRef());
+
+  return std::move(response);
 }
 
 GDBRemoteCommunication::PacketResult

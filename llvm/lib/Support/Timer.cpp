@@ -207,7 +207,7 @@ void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
 
 namespace {
 
-typedef StringMap<Timer> Name2TimerMap;
+using Name2TimerMap = StringMap<Timer>;
 
 class Name2PairMap {
   StringMap<std::pair<TimerGroup*, Name2TimerMap> > Map;

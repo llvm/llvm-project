@@ -58,6 +58,8 @@ SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV);
 DefinedOrUnknownSVal getDynamicElementCountWithOffset(ProgramStateRef State,
                                                       SVal BufV, QualType Ty);
 
+void markAllDynamicExtentLive(ProgramStateRef State, SymbolReaper &SymReaper);
+
 } // namespace ento
 } // namespace clang
 

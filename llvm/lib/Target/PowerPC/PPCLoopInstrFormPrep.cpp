@@ -94,6 +94,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -543,17 +544,16 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
          "invalid bucket for chain commoning!\n");
   SmallPtrSet<Value *, 16> DeletedPtrs;
 
-  BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
-                     "loopprepare-chaincommon");
+  SCEVExpander SCEVE(*SE, "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
     unsigned BaseElemIdx = Bucket.ChainSize * ChainIdx;
     const SCEV *BaseSCEV =
         ChainIdx ? SE->getAddExpr(Bucket.BaseSCEV,
                                   Bucket.Elements[BaseElemIdx].Offset)
+                       .getPointer()
                  : Bucket.BaseSCEV;
     const SCEVAddRecExpr *BasePtrSCEV = cast<SCEVAddRecExpr>(BaseSCEV);
 
@@ -1013,9 +1013,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
   if (!BasePtrSCEV->isAffine())
     return MadeChange;
 
-  BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
-                     "loopprepare-formrewrite");
+  SCEVExpander SCEVE(*SE, "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;
 

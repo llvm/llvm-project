@@ -3,7 +3,8 @@
 
 ; This is a regression test. Without the fix it crashes on SSAUpdater due to
 ; LoopVectroizer created a phi node placeholder without incoming values but
-; SSAUpdater expects that phi node is completely filled.
+; SSAUpdater expects that phi node is completely filled. L1 is kept scalar, so
+; the induction step of L2 is expanded as an IV in L1.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
@@ -16,7 +17,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], [[L1_BACKEDGE]] ], [ 0, [[L1_PREHEADER]] ]
 ; CHECK-NEXT:    [[L1_SUM:%.*]] = phi i32 [ [[ARG]], [[L1_PREHEADER]] ], [ [[L1_SUM_NEXT:%.*]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_IV:%.*]] = phi i32 [ 1, [[L1_PREHEADER]] ], [ [[L1_IV_NEXT:%.*]], [[L1_BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[INDVAR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[L1_BACKEDGE]], label [[L1_EARLY_EXIT:%.*]]
 ; CHECK:       L1.backedge:
@@ -25,7 +26,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[L1_EXIT_COND:%.*]] = icmp ult i32 [[L1_IV_NEXT]], [[L1_LIMIT:%.*]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[L1_EXIT_COND]], label [[L1_HEADER]], label [[L1_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[L1_EXIT_COND]], label [[L1_HEADER]], label [[L1_EXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
@@ -49,14 +50,14 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT1]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> splat (i32 1), [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDUCTION_IV]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i32> [[TMP7]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
@@ -64,7 +65,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
 ; CHECK:       L2.exit:
@@ -73,31 +74,31 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 L1.preheader:
   br label %L1.header
 
-L1.header:                                        ; preds = %L1.preheader, %L1.backedge
+L1.header:
   %L1.sum = phi i32 [ %arg, %L1.preheader ], [ %L1.sum.next, %L1.backedge ]
   %L1.iv = phi i32 [ 1, %L1.preheader ], [ %L1.iv.next, %L1.backedge ]
   br i1 %c, label %L1.backedge, label %L1.early.exit
 
-L1.backedge:                                      ; preds = %L1.header
+L1.backedge:
   %L1.sum.next = add i32 %L1.iv, %L1.sum
   %L1.iv.next = add nuw nsw i32 %L1.iv, 1
   %L1.exit.cond = icmp ult i32 %L1.iv.next, %L1.limit
-  br i1 %L1.exit.cond, label %L1.header, label %L1.exit
+  br i1 %L1.exit.cond, label %L1.header, label %L1.exit, !llvm.loop !0
 
-L1.early.exit:                                    ; preds = %L1.header
+L1.early.exit:
   ret void
 
-L1.exit:                                          ; preds = %L1.backedge
+L1.exit:
   %L1.exit.val = phi i32 [ %L1.sum.next, %L1.backedge ]
   br label %L2.header
 
-L2.header:                                        ; preds = %L2.Inner.header, %L1.exit, %L2.header
+L2.header:
   switch i32 %L2.switch, label %L2.header [
   i32 8, label %L2.exit
   i32 20, label %L2.Inner.header
   ]
 
-L2.Inner.header:                                  ; preds = %L2.Inner.header, %L2.header
+L2.Inner.header:
   %L2.accum = phi i32 [ %L2.accum.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.iv = phi i64 [ %L2.iv.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.accum.next = sub i32 %L2.accum, %L1.exit.val
@@ -108,7 +109,9 @@ L2.Inner.header:                                  ; preds = %L2.Inner.header, %L
   %L2.exit_cond = icmp ugt i64 %L2.iv, 11
   br i1 %L2.exit_cond, label %L2.header, label %L2.Inner.header
 
-L2.exit:                                          ; preds = %L2.header
+L2.exit:
   ret void
 }
 
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.disable"}

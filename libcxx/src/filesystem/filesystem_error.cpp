@@ -15,6 +15,7 @@
 #include "format_string.h"
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 filesystem_error::~filesystem_error() {}
 
@@ -37,4 +38,5 @@ void filesystem_error::__create_what(int __num_paths) {
   }();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

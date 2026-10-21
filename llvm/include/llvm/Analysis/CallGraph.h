@@ -218,22 +218,6 @@ public:
   // modified
   //
 
-  /// Removes all edges from this CallGraphNode to any functions it
-  /// calls.
-  void removeAllCalledFunctions() {
-    while (!CalledFunctions.empty()) {
-      CalledFunctions.back().second->DropRef();
-      CalledFunctions.pop_back();
-    }
-  }
-
-  /// Moves all the callee information from N to this node.
-  void stealCalledFunctionsFrom(CallGraphNode *N) {
-    assert(CalledFunctions.empty() &&
-           "Cannot steal callsite information if I already have some");
-    std::swap(CalledFunctions, N->CalledFunctions);
-  }
-
   /// Adds a function to the list of functions called by this one.
   void addCalledFunction(CallBase *Call, CallGraphNode *M) {
     CalledFunctions.emplace_back(Call ? std::optional<WeakTrackingVH>(Call)
@@ -299,28 +283,25 @@ public:
 };
 
 /// Printer pass for the \c CallGraphAnalysis results.
-class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
+class CallGraphPrinterPass
+    : public RequiredPassInfoMixin<CallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the summarized \c CallGraphAnalysis results.
 class CallGraphSCCsPrinterPass
-    : public PassInfoMixin<CallGraphSCCsPrinterPass> {
+    : public RequiredPassInfoMixin<CallGraphSCCsPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CallGraphSCCsPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// The \c ModulePass which wraps up a \c CallGraph and the logic to

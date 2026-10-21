@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -verify -triple x86_64-unknown-unknown -emit-llvm-only %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-unknown -emit-llvm-only -fopenmp %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-unknown -emit-llvm-only -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -triple x86_64-unknown-unknown -emit-llvm-only -fopenmp -fopenmp-simd %s
 typedef int vec256 __attribute__((ext_vector_type(8)));
+
+void g(int x) { __asm__("nop" : "=@"(x)); } // expected-error {{invalid output constraint '=@' in asm}}
 
 vec256 foo(vec256 in) {
   vec256 out;
@@ -10,4 +15,3 @@ vec256 foo(vec256 in) {
 
   return out;
 }
-

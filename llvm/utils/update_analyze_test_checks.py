@@ -55,11 +55,11 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             common.warn("Skipping unparsable RUN line: " + l)
             continue
 
-        (tool_cmd, filecheck_cmd) = tuple([cmd.strip() for cmd in l.split("|", 1)])
+        tool_cmd, filecheck_cmd, preprocess_cmd = common.split_run_line(l)
         common.verify_filecheck_prefixes(filecheck_cmd)
 
         if not tool_cmd.startswith(opt_basename + " "):
-            common.warn("WSkipping non-%s RUN line: %s" % (opt_basename, l))
+            common.warn("Skipping non-%s RUN line: %s" % (opt_basename, l))
             continue
 
         if not filecheck_cmd.startswith("FileCheck "):
@@ -72,7 +72,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         # FIXME: We should use multiple check prefixes to common check lines. For
         # now, we just ignore all but the last.
-        prefix_list.append((check_prefixes, tool_cmd_args))
+        prefix_list.append((check_prefixes, tool_cmd_args, preprocess_cmd))
 
     ginfo = common.make_analyze_generalizer(version=1)
     builder = common.FunctionTestBuilder(
@@ -93,46 +93,53 @@ def update_test(opt_basename: str, ti: common.TestInfo):
         ginfo=ginfo,
     )
 
-    for prefixes, opt_args in prefix_list:
+    for prefixes, opt_args, preprocess_cmd in prefix_list:
         common.debug("Extracted opt cmd:", opt_basename, opt_args, file=sys.stderr)
         common.debug("Extracted FileCheck prefixes:", str(prefixes), file=sys.stderr)
 
-        raw_tool_outputs = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
+        raw_tool_outputs = common.invoke_tool(
+            ti.args.opt_binary,
+            opt_args,
+            ti.path,
+            preprocess_cmd=preprocess_cmd,
+            verbose=ti.args.verbose,
+        )
 
-        if re.search(r"Printing analysis ", raw_tool_outputs) is not None:
-            # Split analysis outputs by "Printing analysis " declarations.
-            for raw_tool_output in re.split(r"Printing analysis ", raw_tool_outputs):
+        regex_map = {
+            r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
+            r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
+            r"VPlan for loop in ": common.VPLAN_RE,
+        }
+
+        for split_by, regex in regex_map.items():
+            if re.search(split_by, raw_tool_outputs) is None:
+                continue
+            for raw_tool_output in re.split(split_by, raw_tool_outputs):
+                # For VPlan mode, don't scrub whitespace - preserve exact alignment
+                scrubber = (
+                    (lambda body: body)
+                    if regex == common.VPLAN_RE
+                    else common.scrub_body
+                )
                 builder.process_run_line(
-                    common.ANALYZE_FUNCTION_RE,
-                    common.scrub_body,
+                    regex,
+                    scrubber,
                     raw_tool_output,
                     prefixes,
                 )
-        elif (
-            re.search(
-                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
-            )
-            is not None
-        ):
-            for raw_tool_output in re.split(
-                r"(LV|LDist|HashRecognize): Checking a loop in ", raw_tool_outputs
-            ):
-                builder.process_run_line(
-                    common.LOOP_PASS_DEBUG_RE,
-                    common.scrub_body,
-                    raw_tool_output,
-                    prefixes,
-                )
+            break
         else:
             common.warn("Don't know how to deal with this output")
             continue
 
         builder.processed_prefixes(prefixes)
 
+    check_label_prefix = "VPlan for loop in " if regex == common.VPLAN_RE else ""
+
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
-    prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
+    prefix_set = set([prefix for prefixes, _, _ in prefix_list for prefix in prefixes])
     common.debug("Rewriting FileCheck prefixes:", str(prefix_set), file=sys.stderr)
     output_lines = []
 
@@ -159,6 +166,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
+                    check_label_prefix=check_label_prefix,
                 )
             )
             is_in_function_start = False

@@ -573,4 +573,137 @@ define <32 x i32> @test_2i(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
   ret <32 x i32> %t1
 }
 
-attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }
+; --- Float32
+
+; CHECK-LABEL: test_2j:
+; CHECK: q[[Q2J0:[0-3]]] = vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2J0]],v0,v1)
+define <32 x float> @test_2j(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp nnan oeq <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2k:
+; CHECK: q[[Q2K0:[0-3]]] = vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2K0]],v1,v0)
+define <32 x float> @test_2k(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp one <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2l:
+; CHECK: v0.sf = vmin(v1.sf,v0.sf)
+define <32 x float> @test_2l(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp olt <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2m:
+; CHECK: q[[Q2M0:[0-3]]] = vcmp.gt(v0.sf,v1.sf)
+; CHECK: v0 = vmux(q[[Q2M0]],v1,v0)
+define <32 x float> @test_2m(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp ole <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2n:
+; CHECK: v0.sf = vmax(v0.sf,v1.sf)
+define <32 x float> @test_2n(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp ogt <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2o:
+; CHECK: q[[Q2O0:[0-3]]] = vcmp.gt(v1.sf,v0.sf)
+; CHECK: v0 = vmux(q[[Q2O0]],v1,v0)
+define <32 x float> @test_2o(<32 x float> %v0, <32 x float> %v1) #1 {
+  %t0 = fcmp oge <32 x float> %v0, %v1
+  %t1 = select <32 x i1> %t0, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2p:
+; CHECK: r[[R2P0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2P1:[0-3]]] = vand(v2,r[[R2P0]])
+; CHECK: q[[Q2P1:[0-3]]] &= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2P1]],v0,v1)
+define <32 x float> @test_2p(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = and <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2q:
+; CHECK: r[[R2Q0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2Q1:[0-3]]] = vand(v2,r[[R2Q0]])
+; CHECK: q[[Q2Q1:[0-3]]] |= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2Q1]],v0,v1)
+define <32 x float> @test_2q(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = or <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2r:
+; CHECK: r[[R2R0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2R1:[0-3]]] = vand(v2,r[[R2R0]])
+; CHECK: q[[Q2R1:[0-3]]] ^= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2R1]],v0,v1)
+define <32 x float> @test_2r(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = xor <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2s:
+; CHECK: r[[R2S0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2S1:[0-3]]] = vand(v2,r[[R2S0]])
+; CHECK: q[[Q2S1:[0-3]]] &= vcmp.gt(v0.sf,v1.sf)
+; CHECK: v0 = vmux(q[[Q2R1]],v0,v1)
+define <32 x float> @test_2s(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp ogt <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = and <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2t:
+; CHECK: r[[R2T0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2T1:[0-3]]] = vand(v2,r[[R2T0]])
+; CHECK: q[[Q2T1:[0-3]]] |= vcmp.gt(v0.sf,v1.sf)
+; CHECK: v0 = vmux(q[[Q2T1]],v0,v1)
+define <32 x float> @test_2t(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp ogt <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = or <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+; CHECK-LABEL: test_2u:
+; CHECK: r[[R2U0:[0-9]*]] = ##16843009
+; CHECK: q[[Q2U1:[0-3]]] = vand(v2,r[[R2U0]])
+; CHECK: q[[Q2U1:[0-3]]] ^= vcmp.gt(v0.sf,v1.sf)
+; CHECK: v0 = vmux(q[[Q2U1]],v0,v1)
+define <32 x float> @test_2u(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2) #1 {
+  %q0 = fcmp ogt <32 x float> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = xor <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
+  ret <32 x float> %t1
+}
+
+attributes #0 = { nounwind readnone "target-cpu"="hexagonv73" "target-features"="+hvxv73,+hvx-length128b" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv68" "target-features"="+hvxv68,+hvx-length128b,+hvx-qfloat" }

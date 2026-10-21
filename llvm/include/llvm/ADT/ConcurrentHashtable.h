@@ -24,11 +24,10 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-#include <type_traits>
 
 namespace llvm {
 
-/// ConcurrentHashTable - is a resizeable concurrent hashtable.
+/// ConcurrentHashTable is a resizeable concurrent hashtable.
 /// The number of resizings limited up to x2^31. This hashtable is
 /// useful to have efficient access to aggregate data(like strings,
 /// type descriptors...) and to keep only single copy of such
@@ -343,10 +342,8 @@ protected:
     CurBucket.Size = NewBucketSize;
 
     // Delete old bucket entries.
-    if (SrcHashes != nullptr)
-      delete[] SrcHashes;
-    if (SrcEntries != nullptr)
-      delete[] SrcEntries;
+    delete[] SrcHashes;
+    delete[] SrcEntries;
   }
 
   uint32_t getBucketIdx(hash_code Hash) { return Hash & HashMask; }

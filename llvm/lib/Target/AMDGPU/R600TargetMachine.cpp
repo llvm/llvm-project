@@ -51,15 +51,16 @@ static MachineSchedRegistry R600SchedRegistry("r600",
 // R600 CodeGen Pass Builder interface.
 //===----------------------------------------------------------------------===//
 
-class R600CodeGenPassBuilder
-    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+class R600CodeGenPassBuilder : public CodeGenPassBuilder {
 public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
                          PassInstrumentationCallbacks *PIC);
 
-  void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
+  void addPreISel(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -90,13 +91,8 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
   SubtargetKey.append(FS);
 
   auto &I = SubtargetMap[SubtargetKey];
-  if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
+  if (!I)
     I = std::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
-  }
 
   return I.get();
 }
@@ -163,11 +159,12 @@ TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 Error R600TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opts, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
@@ -188,16 +185,23 @@ R600CodeGenPassBuilder::R600CodeGenPassBuilder(
   Opt.RequiresCodeGenSCCOrder = true;
 }
 
-void R600CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   // TODO: Add passes pre instruction selection.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
-                                           CreateMCStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
+  // TODO: Add AsmPrinterBegin
+}
+
+void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   // TODO: Add AsmPrinter.
 }
 
-Error R600CodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
+void R600CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
+  // TODO: Add AsmPrinterEnd
+}
+
+Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   // TODO: Add instruction selector.
   return Error::success();
 }

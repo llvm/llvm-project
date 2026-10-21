@@ -12,10 +12,25 @@
 
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
+#include "llvm/CAS/OnDiskKeyValueDB.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Testing/Support/Error.h"
 
+namespace llvm::cas::ondisk {
+/// Declared in the private "OnDiskCommon.h".
+Expected<uint64_t> getBootTime();
+} // namespace llvm::cas::ondisk
+
 namespace llvm::unittest::cas {
+
+/// \returns whether the boot time is known, i.e. it is supported on this
+/// platform and getting it succeeds. Validation of on-disk data is only ever
+/// skipped if it is, since otherwise it cannot be told whether the data has
+/// been validated since boot.
+inline bool isBootTimeKnown() {
+  return expectedToOptional(llvm::cas::ondisk::getBootTime()).value_or(0) != 0;
+}
 
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
@@ -44,6 +59,21 @@ inline HashType digest(StringRef Data) {
   return HasherT::hash(arrayRefFromStringRef(Data));
 }
 
+inline HashType digestFile(StringRef FilePath) {
+  std::optional<HashType> Digest;
+  EXPECT_THAT_ERROR(
+      BuiltinObjectHasher<HasherT>::hashFile(FilePath).moveInto(Digest),
+      Succeeded());
+  return *Digest;
+}
+
+inline ObjectID digestFile(OnDiskGraphDB &DB, StringRef FilePath) {
+  HashType Digest = digestFile(FilePath);
+  std::optional<ObjectID> ID;
+  EXPECT_THAT_ERROR(DB.getReference(Digest).moveInto(ID), Succeeded());
+  return *ID;
+}
+
 inline ValueType valueFromString(StringRef S) {
   ValueType Val = {};
   llvm::copy(S.substr(0, sizeof(Val)), Val.data());
@@ -56,6 +86,25 @@ inline Expected<ObjectID> store(OnDiskGraphDB &DB, StringRef Data,
   if (Error E = DB.store(ID, Refs, arrayRefFromStringRef<char>(Data)))
     return std::move(E);
   return ID;
+}
+
+inline Expected<ObjectID> cachePut(OnDiskKeyValueDB &DB, ArrayRef<uint8_t> Key,
+                                   ObjectID ID) {
+  auto Value = UnifiedOnDiskCache::getValueFromObjectID(ID);
+  auto Result = DB.put(Key, Value);
+  if (!Result)
+    return Result.takeError();
+  return UnifiedOnDiskCache::getObjectIDFromValue(*Result);
+}
+
+inline Expected<std::optional<ObjectID>> cacheGet(OnDiskKeyValueDB &DB,
+                                                  ArrayRef<uint8_t> Key) {
+  auto Result = DB.get(Key);
+  if (!Result)
+    return Result.takeError();
+  if (!*Result)
+    return std::nullopt;
+  return UnifiedOnDiskCache::getObjectIDFromValue(**Result);
 }
 
 inline Error printTree(OnDiskGraphDB &DB, ObjectID ID, raw_ostream &OS,
@@ -72,5 +121,9 @@ inline Error printTree(OnDiskGraphDB &DB, ObjectID ID, raw_ostream &OS,
   }
   return Error::success();
 }
+
+std::unique_ptr<unittest::TempFile> createSmallFile(char initChar);
+std::unique_ptr<unittest::TempFile> createLargeFile(char initChar);
+std::unique_ptr<unittest::TempFile> createLargePageAlignedFile(char initChar);
 
 } // namespace llvm::unittest::cas

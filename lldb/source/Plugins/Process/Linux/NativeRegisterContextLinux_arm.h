@@ -13,8 +13,8 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
-#include "Plugins/Process/Utility/lldb-arm-register-enums.h"
+#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Arch/lldb-arm-register-enums.h"
 
 namespace lldb_private {
 namespace process_linux {
@@ -58,21 +58,30 @@ protected:
 
   Status WriteFPR() override;
 
+  Status ReadTLS();
+
   void *GetGPRBuffer() override { return &m_gpr_arm; }
 
   void *GetFPRBuffer() override { return &m_fpr; }
 
   size_t GetFPRSize() override { return sizeof(m_fpr); }
 
+  void *GetTLSBuffer() { return &m_tls; }
+
+  size_t GetTLSSize() { return sizeof(m_tls); }
+
 private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
-  RegisterInfoPOSIX_arm::FPU m_fpr;
+  RegisterInfo_arm::FPU m_fpr;
+  RegisterInfo_arm::TLS m_tls;
 
   bool m_refresh_hwdebug_info;
 
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
+
+  bool IsTLS(unsigned reg) const;
 
   llvm::Error ReadHardwareDebugInfo() override;
 
@@ -83,7 +92,7 @@ private:
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
-  RegisterInfoPOSIX_arm &GetRegisterInfo() const;
+  RegisterInfo_arm &GetRegisterInfo() const;
 };
 
 } // namespace process_linux

@@ -1,8 +1,8 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=hawaii < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=tonga  < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
+; RUN: llc -global-isel -mtriple=amdgpu7.01-- < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02--  < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
@@ -28,7 +28,7 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
-; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
+; UNKNOWN-OS: COMPUTE_PGM_RSRC2:USER_SGPR: 2
 ; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
-; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
+; UNKNOWN-OS: COMPUTE_PGM_RSRC2:USER_SGPR: 2
 ; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
@@ -90,7 +90,7 @@ define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
 ; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; MESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 6
-; ALL-NOMESA3D: COMPUTE_PGM_RSRC2:USER_SGPR: 2
+; UNKNOWN-OS: COMPUTE_PGM_RSRC2:USER_SGPR: 2
 ; ALL: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1

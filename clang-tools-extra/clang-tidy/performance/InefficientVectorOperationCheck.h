@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -37,6 +37,7 @@ private:
                   const ast_matchers::DeclarationMatcher &AppendMethodDecl,
                   StringRef AppendCallName, ast_matchers::MatchFinder *Finder);
   const std::vector<StringRef> VectorLikeClasses;
+  const std::vector<StringRef> ForRangeLoopClasses;
 
   // If true, also check inefficient operations for proto repeated fields.
   bool EnableProto;
@@ -44,4 +45,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENT_VECTOR_OPERATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTVECTOROPERATIONCHECK_H

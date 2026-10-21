@@ -45,9 +45,6 @@ endforeach()
 
 string(REPLACE ";" " " SYSTEM_LIBS "${SYSTEM_LIBS}")
 
-# Fetch target specific compile options, e.g. RTTI option
-get_property(COMPILE_FLAGS TARGET llvm-config PROPERTY COMPILE_FLAGS)
-
 # NOTE: We don't want to start extracting any random C/CXX flags that the
 # user may add that could affect the ABI.  We only want to extract flags
 # that have been added by the LLVM build system.
@@ -61,9 +58,19 @@ set(LLVM_CPPFLAGS "${LLVM_DEFINITIONS}")
 set(LLVM_CFLAGS "${LLVM_C_STD_FLAG} ${LLVM_DEFINITIONS}")
 # The language standard potentially affects the ABI/API of LLVM, so we want
 # to make sure it is reported by llvm-config.
-set(LLVM_CXXFLAGS "${CMAKE_CXX${CMAKE_CXX_STANDARD}_STANDARD_COMPILE_OPTION} ${LLVM_CXX_STDLIB_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
+set(LLVM_CXXFLAGS "${CMAKE_CXX${CMAKE_CXX_STANDARD}_STANDARD_COMPILE_OPTION} ${LLVM_CXX_STDLIB_FLAG} ${LLVM_DEFINITIONS}")
+if(LLVM_ENABLE_EH)
+  append(${LLVM_CXXFLAGS_EH_ENABLE} LLVM_CXXFLAGS)
+else()
+  append(${LLVM_CXXFLAGS_EH_DISABLE} LLVM_CXXFLAGS)
+endif()
+if(LLVM_ENABLE_RTTI)
+  append(${LLVM_CXXFLAGS_RTTI_ENABLE} LLVM_CXXFLAGS)
+else()
+  append(${LLVM_CXXFLAGS_RTTI_DISABLE} LLVM_CXXFLAGS)
+endif()
 set(LLVM_BUILD_SYSTEM cmake)
-set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
+set(LLVM_HAS_RTTI ${LLVM_ENABLE_RTTI})
 set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}")
 set(LLVM_SHARED_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
 

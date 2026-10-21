@@ -25,8 +25,8 @@ export namespace std {
 
     using std::chrono::duration_values;
 
-    // using std::chrono::is_clock;
-    // using std::chrono::is_clock_v;
+    using std::chrono::is_clock;
+    using std::chrono::is_clock_v;
 
     // [time.duration.nonmember], duration arithmetic
     using std::chrono::operator+;
@@ -283,6 +283,10 @@ export namespace std {
     using std::chrono::September;
 
   } // namespace chrono
+
+#if _LIBCPP_STD_VER >= 26
+  using std::hash;
+#endif
 
 } // namespace std
 export namespace std::inline literals::inline chrono_literals {

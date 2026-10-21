@@ -7,7 +7,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[ARG]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr addrspace(1)> [[TMP0]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> [[TMP1]], <2 x i64> <i64 21, i64 22>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> [[TMP1]], <2 x i64> <i64 20, i64 21>
@@ -127,7 +127,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK:       [[BB72:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB142:.*]], label %[[BB79:.*]]
 ; CHECK:       [[BB73]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr addrspace(1)> <ptr addrspace(1) poison, ptr addrspace(1) null>, ptr addrspace(1) [[GETELEMENTPTR3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr addrspace(1)> <ptr addrspace(1) poison, ptr addrspace(1) null>, ptr addrspace(1) [[GETELEMENTPTR3]], i64 0
 ; CHECK-NEXT:    br i1 false, label %[[BB146:.*]], label %[[BB74:.*]]
 ; CHECK:       [[BB74]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB75:.*]], label %[[BB76:.*]]
@@ -249,7 +249,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x ptr addrspace(1)> [ poison, %[[BB142]] ], [ [[TMP4]], %[[BB73]] ], [ poison, %[[BB79]] ], [ poison, %[[BB85]] ]
 ; CHECK-NEXT:    br label %[[BB150]]
 ; CHECK:       [[BB150]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP2]], %[[BB75]] ], [ poison, %[[BB80]] ], [ zeroinitializer, %[[BB146]] ], [ [[TMP3]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP2]], %[[BB75]] ], [ poison, %[[BB80]] ], [ splat (ptr addrspace(1) null), %[[BB146]] ], [ [[TMP3]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[BB153]]
 ; CHECK:       [[BB153]]:
 ; CHECK-NEXT:    [[PHI154:%.*]] = phi ptr addrspace(1) [ null, %[[BB150]] ], [ [[GETELEMENTPTR3]], %[[BB76]] ]

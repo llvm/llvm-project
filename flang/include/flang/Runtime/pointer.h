@@ -14,6 +14,7 @@
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -88,9 +89,15 @@ int RTDECL(PointerCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the pointer has a
 // derived type, and is always initialized by PointerAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
+#ifdef RT_DEVICE_COMPILATION
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, MemcpyFct memcpyFct = &MemcpyWrapper);
+#else
+int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, MemcpyFct memcpyFct = &Fortran::runtime::memcpy);
+#endif
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -123,7 +130,7 @@ bool RTDECL(PointerIsAssociatedWith)(
 // Fortran POINTERs are allocated with an extra validation word after their
 // payloads in order to detect erroneous deallocations later.
 RT_API_ATTRS void *AllocateValidatedPointerPayload(
-    std::size_t, int allocatorIdx = 0);
+    std::size_t, int allocatorIdx = 0, std::size_t alignment = 0);
 RT_API_ATTRS bool ValidatePointerPayload(const ISO::CFI_cdesc_t &);
 
 } // extern "C"

@@ -376,9 +376,8 @@ define void @test_monotonic_ptr_iv_cond_doesnt_control_exit(ptr %start, i16 %len
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -437,9 +436,8 @@ define void @test_monotonic_ptr_iv_cond_doesnt_control_exit2(ptr %start, i16 %le
 ; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[T_2]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -500,9 +498,8 @@ define void @test_monotonic_ptr_iv_cond_doesnt_dominate_checks(ptr %start, i16 %
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
@@ -619,9 +616,8 @@ define void @test_monotonic_ptr_iv_step_2_cond_doesnt_control_exit(ptr %start, i
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -680,9 +676,8 @@ define void @test_monotonic_ptr_iv_step_64_cond_doesnt_control_exit(ptr %start, 
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -741,9 +736,8 @@ define void @test_monotonic_ptr_iv_step_80_cond_doesnt_control_exit(ptr %start, 
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -807,9 +801,8 @@ define void @test_monotonic_ptr_iv_inc_1_check_outside_loop(ptr %start, i16 %len
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
 ; CHECK-NEXT:    br label [[EXIT_2]]
 ; CHECK:       exit.2:

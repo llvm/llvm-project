@@ -49,8 +49,13 @@ public:
     if (llvm::any_of(stride, [](int64_t v) { return v != 1; }))
       return failure();
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputTy.isDynamicDim(i) || resultTy.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return failure();
 
     int64_t kernelHeight = weightTy.getDimSize(1);
@@ -113,8 +118,13 @@ public:
     if (llvm::all_of(stride, [](int64_t v) { return v == 1; }))
       return rewriter.notifyMatchFailure(op, "non-one stride found.");
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputTy.isDynamicDim(i) || resultTy.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return failure();
 
     int64_t batch = inputTy.getDimSize(0);
@@ -161,7 +171,7 @@ public:
     const Value inputPadConst =
         createPadConstTensor(builder, op->getLoc(), input, inputZpVal);
     const Value weightPadConst =
-        createPadConstTensor(builder, op->getLoc(), input, weightZpVal);
+        createPadConstTensor(builder, op->getLoc(), weight, weightZpVal);
 
     weight = CreateOpAndInferShape<tosa::PadOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,

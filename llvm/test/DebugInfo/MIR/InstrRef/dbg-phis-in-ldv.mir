@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
-# RUN:    -experimental-debug-variable-locations -run-pass=livedebugvalues\
+# RUN:    -experimental-debug-variable-locations -run-pass=live-debug-values\
 # RUN:    | FileCheck %s
 #
 # Test that a DBG_INSTR_REF that refers to a DBG_PHI, will be translated into a

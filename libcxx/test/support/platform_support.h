@@ -37,9 +37,10 @@
 #include <stdlib.h>
 #include <string>
 #if defined(_WIN32)
-#   include <io.h> // _mktemp_s
-#   include <fcntl.h> // _O_EXCL, ...
-#   include <sys/stat.h> // _S_IREAD, ...
+#  include <io.h>       // _mktemp_s
+#  include <fcntl.h>    // _O_EXCL, ...
+#  include <sys/stat.h> // _S_IREAD, ...
+#  include <cerrno>
 #elif __has_include(<unistd.h>)
 #  include <unistd.h> // close
 #endif
@@ -48,7 +49,7 @@
 # include <string.h> // strverscmp
 #endif
 
-#if defined(_NEWLIB_VERSION) && defined(__STRICT_ANSI__)
+#if _LIBCPP_LIBC_NEWLIB && defined(__STRICT_ANSI__)
 // Newlib provides this, but in the header it's under __STRICT_ANSI__
 extern "C" {
   int mkstemp(char*);

@@ -271,6 +271,11 @@ isl_bool isl_multi_##BASE##_involves_param_id_list(			\
 	__isl_keep isl_multi_##BASE *multi,				\
 	__isl_keep isl_id_list *list);
 
+#define ISL_DECLARE_MULTI_DOMAIN_REVERSE(BASE)				\
+__isl_export								\
+__isl_give isl_multi_##BASE *isl_multi_##BASE##_domain_reverse(		\
+	__isl_take isl_multi_##BASE *multi);
+
 #if defined(__cplusplus)
 }
 #endif

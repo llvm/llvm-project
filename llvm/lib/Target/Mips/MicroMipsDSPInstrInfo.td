@@ -177,121 +177,116 @@ class CMPU_LE_QB_MM_ENC : POOL32A_2R2B0_FMT<"cmpu.le.qb", 0b1011000101>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
-                                InstrItinClass itin, RegisterOperand ROD,
+                                RegisterOperand ROD,
                                 RegisterOperand ROS = ROD> {
   dag OutOperandList = (outs ROD:$rt);
   dag InOperandList = (ins ROS:$rs);
   string AsmString = !strconcat(opstr, "\t$rt, $rs");
   list<dag> Pattern = [(set ROD:$rt, (OpNode ROS:$rs))];
-  InstrItinClass Itinerary = itin;
 }
 class ABSQ_S_PH_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "absq_s.ph", int_mips_absq_s_ph, NoItinerary, DSPROpnd>, Defs<[DSPOutFlag20]>;
+  "absq_s.ph", int_mips_absq_s_ph, DSPROpnd>, Defs<[DSPOutFlag20]>;
 class ABSQ_S_W_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "absq_s.w", int_mips_absq_s_w, NoItinerary, GPR32Opnd>, Defs<[DSPOutFlag20]>;
+  "absq_s.w", int_mips_absq_s_w, GPR32Opnd>, Defs<[DSPOutFlag20]>;
 class ABSQ_S_QB_MMR2_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "absq_s.qb", int_mips_absq_s_qb, NoItinerary, DSPROpnd>, Defs<[DSPOutFlag20]>;
+  "absq_s.qb", int_mips_absq_s_qb, DSPROpnd>, Defs<[DSPOutFlag20]>;
 class PRECEQ_W_PHL_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceq.w.phl", int_mips_preceq_w_phl, NoItinerary, GPR32Opnd, DSPROpnd>;
+  "preceq.w.phl", int_mips_preceq_w_phl, GPR32Opnd, DSPROpnd>;
 class PRECEQ_W_PHR_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceq.w.phr", int_mips_preceq_w_phr, NoItinerary, GPR32Opnd, DSPROpnd>;
+  "preceq.w.phr", int_mips_preceq_w_phr, GPR32Opnd, DSPROpnd>;
 class PRECEQU_PH_QBL_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "precequ.ph.qbl", int_mips_precequ_ph_qbl, NoItinerary, DSPROpnd>;
+  "precequ.ph.qbl", int_mips_precequ_ph_qbl, DSPROpnd>;
 class PRECEQU_PH_QBLA_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "precequ.ph.qbla", int_mips_precequ_ph_qbla, NoItinerary, DSPROpnd>;
+  "precequ.ph.qbla", int_mips_precequ_ph_qbla, DSPROpnd>;
 class PRECEQU_PH_QBR_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "precequ.ph.qbr", int_mips_precequ_ph_qbr, NoItinerary, DSPROpnd>;
+  "precequ.ph.qbr", int_mips_precequ_ph_qbr, DSPROpnd>;
 class PRECEQU_PH_QBRA_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "precequ.ph.qbra", int_mips_precequ_ph_qbra, NoItinerary, DSPROpnd>;
+  "precequ.ph.qbra", int_mips_precequ_ph_qbra, DSPROpnd>;
 class PRECEU_PH_QBL_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceu.ph.qbl", int_mips_preceu_ph_qbl, NoItinerary, DSPROpnd>;
+  "preceu.ph.qbl", int_mips_preceu_ph_qbl, DSPROpnd>;
 class PRECEU_PH_QBLA_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceu.ph.qbla", int_mips_preceu_ph_qbla, NoItinerary, DSPROpnd>;
+  "preceu.ph.qbla", int_mips_preceu_ph_qbla, DSPROpnd>;
 class PRECEU_PH_QBR_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceu.ph.qbr", int_mips_preceu_ph_qbr, NoItinerary, DSPROpnd>;
+  "preceu.ph.qbr", int_mips_preceu_ph_qbr, DSPROpnd>;
 class PRECEU_PH_QBRA_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<
-  "preceu.ph.qbra", int_mips_preceu_ph_qbra, NoItinerary, DSPROpnd>;
+  "preceu.ph.qbra", int_mips_preceu_ph_qbra, DSPROpnd>;
 
 class SHLL_R2_MM_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                           SDPatternOperator ImmPat, InstrItinClass itin,
+                           SDPatternOperator ImmPat,
                            RegisterOperand RO, Operand ImmOpnd> {
   dag OutOperandList = (outs RO:$rt);
   dag InOperandList = (ins RO:$rs, ImmOpnd:$sa);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $sa");
   list<dag> Pattern = [(set RO:$rt, (OpNode RO:$rs, ImmPat:$sa))];
-  InstrItinClass Itinerary = itin;
   bit hasSideEffects = 1;
 }
 class SHLL_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shll.ph", null_frag, immZExt4, NoItinerary, DSPROpnd, uimm4>,
+  "shll.ph", null_frag, immZExt4, DSPROpnd, uimm4>,
   Defs<[DSPOutFlag22]>;
 class SHLL_S_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shll_s.ph", int_mips_shll_s_ph, immZExt4, NoItinerary, DSPROpnd, uimm4>,
+  "shll_s.ph", int_mips_shll_s_ph, immZExt4, DSPROpnd, uimm4>,
   Defs<[DSPOutFlag22]>;
 class SHLL_QB_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shll.qb", null_frag, immZExt3, NoItinerary, DSPROpnd, uimm3>,
+  "shll.qb", null_frag, immZExt3, DSPROpnd, uimm3>,
   Defs<[DSPOutFlag22]>;
 class SHLL_S_W_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shll_s.w", int_mips_shll_s_w, immZExt5, NoItinerary, GPR32Opnd, uimm5>,
+  "shll_s.w", int_mips_shll_s_w, immZExt5, GPR32Opnd, uimm5>,
   Defs<[DSPOutFlag22]>;
 class SHRA_QB_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
-  "shra.qb", null_frag, immZExt3, NoItinerary, DSPROpnd, uimm3>;
+  "shra.qb", null_frag, immZExt3, DSPROpnd, uimm3>;
 class SHRA_R_QB_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
-  "shra_r.qb", int_mips_shra_r_qb, immZExt3, NoItinerary, DSPROpnd, uimm3>;
+  "shra_r.qb", int_mips_shra_r_qb, immZExt3, DSPROpnd, uimm3>;
 class SHRA_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shra.ph", null_frag, immZExt4, NoItinerary, DSPROpnd, uimm4>;
+  "shra.ph", null_frag, immZExt4, DSPROpnd, uimm4>;
 class SHRA_R_PH_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shra_r.ph", int_mips_shra_r_ph, immZExt4, NoItinerary, DSPROpnd, uimm4>;
+  "shra_r.ph", int_mips_shra_r_ph, immZExt4, DSPROpnd, uimm4>;
 class SHRA_R_W_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shra_r.w", int_mips_shra_r_w, immZExt5, NoItinerary, GPR32Opnd, uimm5>;
+  "shra_r.w", int_mips_shra_r_w, immZExt5, GPR32Opnd, uimm5>;
 class SHRL_QB_MM_DESC : SHLL_R2_MM_DESC_BASE<
-  "shrl.qb", null_frag, immZExt3, NoItinerary, DSPROpnd, uimm3>;
+  "shrl.qb", null_frag, immZExt3, DSPROpnd, uimm3>;
 class SHRL_PH_MMR2_DESC : SHLL_R2_MM_DESC_BASE<
-  "shrl.ph", null_frag, immZExt4, NoItinerary, DSPROpnd, uimm4>;
+  "shrl.ph", null_frag, immZExt4, DSPROpnd, uimm4>;
 
 class SHLLV_R3_MM_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                            InstrItinClass itin, RegisterOperand RO> {
+                            RegisterOperand RO> {
   dag OutOperandList = (outs RO:$rd);
   dag InOperandList =  (ins RO:$rt, GPR32Opnd:$rs);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rt, $rs");
   list<dag> Pattern = [(set RO:$rd, (OpNode RO:$rt, GPR32Opnd:$rs))];
-  InstrItinClass Itinerary = itin;
 }
 class SHLLV_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shllv.ph", int_mips_shll_ph, NoItinerary, DSPROpnd>, Defs<[DSPOutFlag22]>;
+  "shllv.ph", int_mips_shll_ph, DSPROpnd>, Defs<[DSPOutFlag22]>;
 class SHLLV_S_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shllv_s.ph", int_mips_shll_s_ph, NoItinerary, DSPROpnd>,
+  "shllv_s.ph", int_mips_shll_s_ph, DSPROpnd>,
   Defs<[DSPOutFlag22]>;
 class SHLLV_QB_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shllv.qb", int_mips_shll_qb, NoItinerary, DSPROpnd>, Defs<[DSPOutFlag22]>;
+  "shllv.qb", int_mips_shll_qb, DSPROpnd>, Defs<[DSPOutFlag22]>;
 class SHLLV_S_W_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shllv_s.w", int_mips_shll_s_w, NoItinerary, GPR32Opnd>, Defs<[DSPOutFlag22]>;
+  "shllv_s.w", int_mips_shll_s_w, GPR32Opnd>, Defs<[DSPOutFlag22]>;
 class SHRAV_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrav.ph", int_mips_shra_ph, NoItinerary, DSPROpnd>;
+  "shrav.ph", int_mips_shra_ph, DSPROpnd>;
 class SHRAV_R_PH_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrav_r.ph", int_mips_shra_r_ph, NoItinerary, DSPROpnd>;
+  "shrav_r.ph", int_mips_shra_r_ph, DSPROpnd>;
 class SHRAV_QB_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrav.qb", int_mips_shra_qb, NoItinerary, DSPROpnd>;
+  "shrav.qb", int_mips_shra_qb, DSPROpnd>;
 class SHRAV_R_QB_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrav_r.qb", int_mips_shra_r_qb, NoItinerary, DSPROpnd>;
+  "shrav_r.qb", int_mips_shra_r_qb, DSPROpnd>;
 class SHRAV_R_W_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrav_r.w", int_mips_shra_r_w, NoItinerary, GPR32Opnd>;
+  "shrav_r.w", int_mips_shra_r_w, GPR32Opnd>;
 class SHRLV_PH_MMR2_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrlv.ph", int_mips_shrl_ph, NoItinerary, DSPROpnd>;
+  "shrlv.ph", int_mips_shrl_ph, DSPROpnd>;
 class SHRLV_QB_MM_DESC : SHLLV_R3_MM_DESC_BASE<
-  "shrlv.qb", int_mips_shrl_qb, NoItinerary, DSPROpnd>;
+  "shrlv.qb", int_mips_shrl_qb, DSPROpnd>;
 
 class EXT_MM_2R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins ACC64DSPOpnd:$ac, GPR32Opnd:$rs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $rs");
-  InstrItinClass Itinerary = NoItinerary;
 }
 class EXT_MM_1R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins ACC64DSPOpnd:$ac, uimm5:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $imm");
-  InstrItinClass Itinerary = NoItinerary;
 }
 
 class EXTP_MM_DESC : EXT_MM_1R_DESC_BASE<"extp">,
@@ -322,26 +317,21 @@ class EXTRV_RS_W_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv_rs.w">,
 class EXTRV_S_H_MM_DESC : EXT_MM_2R_DESC_BASE<"extrv_s.h">,
                           Defs<[DSPOutFlag23]>;
 
-class MFHI_MM_DESC_BASE<string instr_asm, RegisterOperand RO, SDNode OpNode,
-                        InstrItinClass itin> {
+class MFHI_MM_DESC_BASE<string instr_asm, RegisterOperand RO, SDNode OpNode> {
   dag OutOperandList = (outs GPR32Opnd:$rs);
   dag InOperandList = (ins RO:$ac);
   string AsmString = !strconcat(instr_asm, "\t$rs, $ac");
   list<dag> Pattern = [(set GPR32Opnd:$rs, (OpNode RO:$ac))];
-  InstrItinClass Itinerary = itin;
 }
 
-class MFHI_MM_DESC : MFHI_MM_DESC_BASE<"mfhi", ACC64DSPOpnd, MipsMFHI,
-                                       NoItinerary>;
-class MFLO_MM_DESC : MFHI_MM_DESC_BASE<"mflo", ACC64DSPOpnd, MipsMFLO,
-                                       NoItinerary>;
+class MFHI_MM_DESC : MFHI_MM_DESC_BASE<"mfhi", ACC64DSPOpnd, MipsMFHI>;
+class MFLO_MM_DESC : MFHI_MM_DESC_BASE<"mflo", ACC64DSPOpnd, MipsMFLO>;
 
 class RADDU_W_QB_MM_DESC {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins DSPROpnd:$rs);
   string AsmString = !strconcat("raddu.w.qb", "\t$rt, $rs");
   list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_raddu_w_qb DSPROpnd:$rs))];
-  InstrItinClass Itinerary = NoItinerary;
   string BaseOpcode = "raddu.w.qb";
 }
 
@@ -350,7 +340,6 @@ class RDDSP_MM_DESC {
   dag InOperandList = (ins uimm7:$mask);
   string AsmString = !strconcat("rddsp", "\t$rt, $mask");
   list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_rddsp timmZExt7:$mask))];
-  InstrItinClass Itinerary = NoItinerary;
 }
 
 class REPL_QB_MM_DESC {
@@ -358,14 +347,13 @@ class REPL_QB_MM_DESC {
   dag InOperandList = (ins uimm8:$imm);
   string AsmString = !strconcat("repl.qb", "\t$rt, $imm");
   list<dag> Pattern = [(set DSPROpnd:$rt, (int_mips_repl_qb immZExt8:$imm))];
-  InstrItinClass Itinerary = NoItinerary;
 }
 
 class REPLV_PH_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"replv.ph", int_mips_repl_ph,
-                                                   NoItinerary, DSPROpnd,
+                                                   DSPROpnd,
                                                    GPR32Opnd>;
 class REPLV_QB_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"replv.qb", int_mips_repl_qb,
-                                                   NoItinerary, DSPROpnd,
+                                                   DSPROpnd,
                                                    GPR32Opnd>;
 
 class WRDSP_MM_DESC {
@@ -373,14 +361,12 @@ class WRDSP_MM_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt, uimm7:$mask);
   string AsmString = !strconcat("wrdsp", "\t$rt, $mask");
   list<dag> Pattern = [(int_mips_wrdsp GPR32Opnd:$rt, timmZExt7:$mask)];
-  InstrItinClass Itinerary = NoItinerary;
 }
 
 class BPOSGE32C_MMR3_DESC {
   dag OutOperandList = (outs);
   dag InOperandList = (ins brtarget1SImm16:$offset);
   string AsmString = !strconcat("bposge32c", "\t$offset");
-  InstrItinClass Itinerary = NoItinerary;
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 0;
@@ -393,21 +379,19 @@ class BALIGN_MMR2_DESC {
   list<dag> Pattern =  [(set GPR32Opnd:$rt, (int_mips_balign GPR32Opnd:$src,
                                                              GPR32Opnd:$rs,
                                                              immZExt2:$bp))];
-  InstrItinClass Itinerary = NoItinerary;
   string Constraints = "$src = $rt";
 }
 
 class BITREV_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"bitrev", int_mips_bitrev,
-                                                 NoItinerary, GPR32Opnd>;
+                                                 GPR32Opnd>;
 
-class BPOSGE32_MM_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget_mm,
-                                            NoItinerary>;
+class BPOSGE32_MM_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget_mm>;
 
 let DecoderNamespace = "MicroMipsDSP", Arch = "mmdsp",
     EncodingPredicates = [InMicroMips], ASEPredicate = [HasDSP] in {
-  def LWDSP_MM : Load<"lw", DSPROpnd, null_frag, II_LW>, DspMMRel,
+  def LWDSP_MM : Load<"lw", DSPROpnd, null_frag>, DspMMRel,
                  LW_FM_MM<0x3f>;
-  def SWDSP_MM : Store<"sw", DSPROpnd, null_frag, II_SW>, DspMMRel,
+  def SWDSP_MM : Store<"sw", DSPROpnd, null_frag>, DspMMRel,
                  LW_FM_MM<0x3e>;
 }
 // Instruction defs.

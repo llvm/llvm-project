@@ -78,4 +78,4 @@ add      w1, w0, #4
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       add	w4, w3, #2, lsl #12
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       add	w0, w4, #3
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       add	w1, w0, #4
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>

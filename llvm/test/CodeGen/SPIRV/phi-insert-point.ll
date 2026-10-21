@@ -36,8 +36,17 @@ ok:
   br label %exit
 
 exit:
+  store i64 %r1, ptr @g1
+  store i64 %r2, ptr @g2
+  store ptr addrspace(4) %r3, ptr @g3
+  store ptr addrspace(4) %r4, ptr @g4
   ret void
 }
+
+@g1 = internal global i64 0
+@g2 = internal global i64 0
+@g3 = internal global ptr addrspace(4) null
+@g4 = internal global ptr addrspace(4) null
 
 define spir_kernel void @bar(i64 %arg_val, i64 %arg_val_def, ptr addrspace(4) byval(%struct) %arg_ptr, ptr addrspace(4) %arg_ptr_def) {
 entry:
@@ -55,5 +64,9 @@ ok:
   br label %exit
 
 exit:
+  store i64 %r1, ptr @g1
+  store i64 %r2, ptr @g2
+  store ptr addrspace(4) %r3, ptr @g3
+  store ptr addrspace(4) %r4, ptr @g4
   ret void
 }

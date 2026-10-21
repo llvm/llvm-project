@@ -2,106 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for sqshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshl_scalar_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshr1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urshr_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshr1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srshr_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu2d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu1d_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu_i64_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu_i32_constant
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrn4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshrun4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrn4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqrshrun4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqrshrn4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uqshrn4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for neon_ushl_vscalar_constant_shift
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for neon_ushl_scalar_constant_shift
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for neon_sshll_vscalar_constant_shift
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift_m1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ursra1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for ursra_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srsra1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srsra_scalar
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli1d_imm0
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sli2d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
-
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
 ; CHECK:       // %bb.0:
@@ -155,11 +55,19 @@ define <1 x i64> @sqshl1d(ptr %A, ptr %B) nounwind {
 }
 
 define <1 x i64> @sqshl1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshl1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshl d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshl1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshl d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshl1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    sqshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sqshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
@@ -168,10 +76,8 @@ define <1 x i64> @sqshl1d_constant(ptr %A) nounwind {
 define i64 @sqshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sqshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -182,12 +88,21 @@ define i64 @sqshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @sqshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshl d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshl d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    sqshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -350,11 +265,19 @@ define <1 x i64> @uqshl1d(ptr %A, ptr %B) nounwind {
 }
 
 define <1 x i64> @uqshl1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqshl1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uqshl d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqshl1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    uqshl d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqshl1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.uqshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
@@ -363,10 +286,8 @@ define <1 x i64> @uqshl1d_constant(ptr %A) nounwind {
 define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: uqshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    uqshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -377,12 +298,21 @@ define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @uqshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uqshl d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    uqshl d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -477,15 +407,23 @@ define <1 x i64> @srshl1d_constant(ptr %A) nounwind {
 }
 
 define i64 @srshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: srshl_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    srshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srshl_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x8, [x0]
+; CHECK-SD-NEXT:    ldr x9, [x1]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    srshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srshl_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 %tmp2)
@@ -493,15 +431,24 @@ define i64 @srshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @srshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: srshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    srshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x9, [x0]
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    srshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -573,15 +520,23 @@ define <1 x i64> @urshl1d_constant(ptr %A) nounwind {
 }
 
 define i64 @urshl_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: urshl_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    urshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: urshl_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x8, [x0]
+; CHECK-SD-NEXT:    ldr x9, [x1]
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, x9
+; CHECK-SD-NEXT:    urshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: urshl_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp2 = load i64, ptr %B
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 %tmp2)
@@ -589,15 +544,24 @@ define i64 @urshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @urshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: urshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    urshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: urshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr x9, [x0]
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    urshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: urshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -888,10 +852,8 @@ define <1 x i64> @sqrshl1d_constant(ptr %A) nounwind {
 define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqrshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -902,15 +864,23 @@ define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @sqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqrshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    sqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqrshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    sqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqrshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    sqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -997,10 +967,8 @@ define <1 x i64> @uqrshl1d_constant(ptr %A) nounwind {
 define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: uqrshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    uqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1011,15 +979,23 @@ define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @uqrshl_scalar_constant(ptr %A) nounwind {
-; CHECK-LABEL: uqrshl_scalar_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    uqrshl d0, d0, d1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: uqrshl_scalar_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    uqrshl d0, d0, d1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqrshl_scalar_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    uqrshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -1174,23 +1150,40 @@ define <2 x i64> @urshr2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @urshr1d(ptr %A) nounwind {
-; CHECK-LABEL: urshr1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    urshr d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: urshr1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    urshr d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: urshr1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.urshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 -1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @urshr_scalar(ptr %A) nounwind {
-; CHECK-LABEL: urshr_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    urshr d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: urshr_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    urshr d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: urshr_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 -1)
   ret i64 %tmp3
@@ -1323,23 +1316,40 @@ define <2 x i64> @srshr2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @srshr1d(ptr %A) nounwind {
-; CHECK-LABEL: srshr1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    srshr d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srshr1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    srshr d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srshr1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.srshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 -1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @srshr_scalar(ptr %A) nounwind {
-; CHECK-LABEL: srshr_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    srshr d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srshr_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    srshr d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srshr_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 -1)
   ret i64 %tmp3
@@ -1423,23 +1433,38 @@ define <2 x i64> @sqshlu2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @sqshlu1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sqshlu.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @sqshlu_i64_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu_i64_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu_i64_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu_i64_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -2227,8 +2252,7 @@ define <8 x i16> @ushll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #1
+; CHECK-GI-NEXT:    ushll2 v0.8h, v0.16b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2247,8 +2271,7 @@ define <4 x i32> @ushll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #1
+; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -2267,8 +2290,7 @@ define <2 x i64> @ushll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: ushll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #1
+; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -2457,13 +2479,22 @@ define <2 x i64> @neon_ushll2d_constant_shift(ptr %A) nounwind {
 }
 
 define <1 x i64> @neon_ushl_vscalar_constant_shift(ptr %A) nounwind {
-; CHECK-LABEL: neon_ushl_vscalar_constant_shift:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    zip1 v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    shl d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neon_ushl_vscalar_constant_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ldr s1, [x0]
+; CHECK-SD-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-SD-NEXT:    shl d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_ushl_vscalar_constant_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w9, [x0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    ushl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i32>, ptr %A
   %tmp2 = zext <1 x i32> %tmp1 to <1 x i64>
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.ushl.v1i64(<1 x i64> %tmp2, <1 x i64> <i64 1>)
@@ -2471,13 +2502,22 @@ define <1 x i64> @neon_ushl_vscalar_constant_shift(ptr %A) nounwind {
 }
 
 define i64 @neon_ushl_scalar_constant_shift(ptr %A) nounwind {
-; CHECK-LABEL: neon_ushl_scalar_constant_shift:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    shl d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neon_ushl_scalar_constant_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    shl d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_ushl_scalar_constant_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w9, [x0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    ushl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i32, ptr %A
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = call i64 @llvm.aarch64.neon.ushl.i64(i64 %tmp2, i64 1)
@@ -2731,13 +2771,22 @@ define <2 x i64> @neon_sshll2d_constant_shift(ptr %A) nounwind {
 }
 
 define <1 x i64> @neon_sshll_vscalar_constant_shift(ptr %A) nounwind {
-; CHECK-LABEL: neon_sshll_vscalar_constant_shift:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    zip1 v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    shl d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neon_sshll_vscalar_constant_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ldr s1, [x0]
+; CHECK-SD-NEXT:    zip1 v0.2s, v1.2s, v0.2s
+; CHECK-SD-NEXT:    shl d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_sshll_vscalar_constant_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w9, [x0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    sshl d0, d0, d1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i32>, ptr %A
   %tmp2 = zext <1 x i32> %tmp1 to <1 x i64>
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sshl.v1i64(<1 x i64> %tmp2, <1 x i64> <i64 1>)
@@ -2745,13 +2794,22 @@ define <1 x i64> @neon_sshll_vscalar_constant_shift(ptr %A) nounwind {
 }
 
 define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
-; CHECK-LABEL: neon_sshll_scalar_constant_shift:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    shl d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    shl d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_sshll_scalar_constant_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w9, [x0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    sshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i32, ptr %A
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = call i64 @llvm.aarch64.neon.sshl.i64(i64 %tmp2, i64 1)
@@ -2759,13 +2817,22 @@ define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
 }
 
 define i64 @neon_sshll_scalar_constant_shift_m1(ptr %A) nounwind {
-; CHECK-LABEL: neon_sshll_scalar_constant_shift_m1:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    sshr d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift_m1:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    sshr d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_sshll_scalar_constant_shift_m1:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w9, [x0]
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    sshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i32, ptr %A
   %tmp2 = zext i32 %tmp1 to i64
   %tmp3 = call i64 @llvm.aarch64.neon.sshl.i64(i64 %tmp2, i64 -1)
@@ -2822,8 +2889,7 @@ define <8 x i16> @sshll2_8h(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_8h:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #1
+; CHECK-GI-NEXT:    sshll2 v0.8h, v0.16b, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <16 x i8>, ptr %A
   %tmp1 = shufflevector <16 x i8> %load1, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2842,8 +2908,7 @@ define <4 x i32> @sshll2_4s(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_4s:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #1
+; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <8 x i16>, ptr %A
   %tmp1 = shufflevector <8 x i16> %load1, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -2862,8 +2927,7 @@ define <2 x i64> @sshll2_2d(ptr %A) nounwind {
 ; CHECK-GI-LABEL: sshll2_2d:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #1
+; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #1
 ; CHECK-GI-NEXT:    ret
   %load1 = load <4 x i32>, ptr %A
   %tmp1 = shufflevector <4 x i32> %load1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -3300,12 +3364,24 @@ define <2 x i64> @ursra2d(ptr %A, ptr %B) nounwind {
 }
 
 define <1 x i64> @ursra1d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: ursra1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    ursra d0, d1, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ursra1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    ldr d0, [x1]
+; CHECK-SD-NEXT:    ursra d0, d1, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ursra1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    ldr x8, [x1]
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    add x8, x9, x8
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.urshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 -1>)
   %tmp4 = load <1 x i64>, ptr %B
@@ -3314,13 +3390,24 @@ define <1 x i64> @ursra1d(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @ursra_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: ursra_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ursra d1, d0, #1
-; CHECK-NEXT:    fmov x0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ursra_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    ursra d1, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ursra_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    ldr x8, [x1]
+; CHECK-GI-NEXT:    urshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    add x0, x9, x8
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 -1)
   %tmp4 = load i64, ptr %B
@@ -3490,12 +3577,24 @@ define <2 x i64> @srsra2d(ptr %A, ptr %B) nounwind {
 }
 
 define <1 x i64> @srsra1d(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: srsra1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    srsra d0, d1, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srsra1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    ldr d0, [x1]
+; CHECK-SD-NEXT:    srsra d0, d1, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srsra1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    ldr x8, [x1]
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    add x8, x9, x8
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.srshl.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 -1>)
   %tmp4 = load <1 x i64>, ptr %B
@@ -3504,13 +3603,24 @@ define <1 x i64> @srsra1d(ptr %A, ptr %B) nounwind {
 }
 
 define i64 @srsra_scalar(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: srsra_scalar:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    srsra d1, d0, #1
-; CHECK-NEXT:    fmov x0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: srsra_scalar:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    srsra d1, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: srsra_scalar:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    ldr x8, [x1]
+; CHECK-GI-NEXT:    srshl d0, d0, d1
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    add x0, x9, x8
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 -1)
   %tmp4 = load i64, ptr %B
@@ -4003,32 +4113,20 @@ define <2 x i64> @shl_orr2d(ptr %A, ptr %B) nounwind {
 }
 
 define <8 x i16> @shll(<8 x i8> %in) {
-; CHECK-SD-LABEL: shll:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    shll v0.8h, v0.8b, #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shll:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shll:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %in to <8 x i16>
   %res = shl <8 x i16> %ext, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   ret <8 x i16> %res
 }
 
 define <4 x i32> @shll_high(<8 x i16> %in) {
-; CHECK-SD-LABEL: shll_high:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shll_high:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shll_high:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-NEXT:    ret
   %extract = shufflevector <8 x i16> %in, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ext = zext <4 x i16> %extract to <4 x i32>
   %res = shl <4 x i32> %ext, <i32 16, i32 16, i32 16, i32 16>
@@ -4158,6 +4256,110 @@ declare <16 x i8> @llvm.aarch64.neon.vsli.v16i8(<16 x i8>, <16 x i8>, i32) nounw
 declare <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16>, <8 x i16>, i32) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.vsli.v4i32(<4 x i32>, <4 x i32>, i32) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.vsli.v2i64(<2 x i64>, <2 x i64>, i32) nounwind readnone
+
+define <8 x i8> @sri8b(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.8b, v1.8b, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.vsri.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2, i32 1)
+  ret <8 x i8> %tmp3
+}
+
+define <4 x i16> @sri4h(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.4h, v1.4h, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i16>, ptr %A
+  %tmp2 = load <4 x i16>, ptr %B
+  %tmp3 = call <4 x i16> @llvm.aarch64.neon.vsri.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp2, i32 1)
+  ret <4 x i16> %tmp3
+}
+
+define <2 x i32> @sri2s(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.2s, v1.2s, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <2 x i32>, ptr %A
+  %tmp2 = load <2 x i32>, ptr %B
+  %tmp3 = call <2 x i32> @llvm.aarch64.neon.vsri.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2, i32 1)
+  ret <2 x i32> %tmp3
+}
+
+define <1 x i64> @sri1d(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri1d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri d0, d1, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <1 x i64>, ptr %A
+  %tmp2 = load <1 x i64>, ptr %B
+  %tmp3 = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> %tmp1, <1 x i64> %tmp2, i32 1)
+  ret <1 x i64> %tmp3
+}
+
+define <16 x i8> @sri16b(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.16b, v1.16b, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <16 x i8>, ptr %A
+  %tmp2 = load <16 x i8>, ptr %B
+  %tmp3 = call <16 x i8> @llvm.aarch64.neon.vsri.v16i8(<16 x i8> %tmp1, <16 x i8> %tmp2, i32 1)
+  ret <16 x i8> %tmp3
+}
+
+define <8 x i16> @sri8h(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.8h, v1.8h, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <8 x i16>, ptr %A
+  %tmp2 = load <8 x i16>, ptr %B
+  %tmp3 = call <8 x i16> @llvm.aarch64.neon.vsri.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp2, i32 1)
+  ret <8 x i16> %tmp3
+}
+
+define <4 x i32> @sri4s(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.4s, v1.4s, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i32>, ptr %A
+  %tmp2 = load <4 x i32>, ptr %B
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.vsri.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp2, i32 1)
+  ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @sri2d(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.2d, v1.2d, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <2 x i64>, ptr %A
+  %tmp2 = load <2 x i64>, ptr %B
+  %tmp3 = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> %tmp1, <2 x i64> %tmp2, i32 1)
+  ret <2 x i64> %tmp3
+}
 
 define <1 x i64> @ashr_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-SD-LABEL: ashr_v1i64:
@@ -4403,13 +4605,8 @@ define <4 x i16> @lshr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: lshr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI270_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI270_0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    neg v1.4s, v2.4s
-; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #8
 ; CHECK-GI-NEXT:    ret
   %b = lshr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
@@ -4444,13 +4641,8 @@ define <4 x i16> @ashr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: ashr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI272_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI272_0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    neg v1.4s, v2.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #8
 ; CHECK-GI-NEXT:    ret
   %b = ashr <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
@@ -4475,23 +4667,12 @@ define <2 x i8> @shl_trunc_v2i64_v2i8(<2 x i64> %a) {
 }
 
 define <4 x i16> @shl_trunc_v4i64_v4i16(<4 x i64> %a) {
-; CHECK-SD-LABEL: shl_trunc_v4i64_v4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shl_trunc_v4i64_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI274_0
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI274_0]
-; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
-; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shl_trunc_v4i64_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    ret
   %b = shl <4 x i64> %a, <i64 8, i64 8, i64 8, i64 8>
   %c = trunc <4 x i64> %b to <4 x i16>
   ret <4 x i16> %c

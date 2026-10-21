@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -25,16 +26,8 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool insideAccComputeRegion(mlir::Operation *op) {
-  mlir::Operation *parent{op->getParentOp()};
-  while (parent) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(parent)) {
-      return true;
-    }
-    parent = parent->getParentOp();
-  }
-  return false;
+  return op->getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
 }
 
 static void collectVars(mlir::ValueRange operands,
@@ -159,6 +152,12 @@ public:
   using LegalizeDataValuesInRegionBase<
       LegalizeDataValuesInRegion>::LegalizeDataValuesInRegionBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    LegalizeDataValuesInRegionBase<
+        LegalizeDataValuesInRegion>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     bool replaceHostVsDevice = this->hostToDevice.getValue();
@@ -203,5 +202,4 @@ public:
     });
   }
 };
-
 } // end anonymous namespace

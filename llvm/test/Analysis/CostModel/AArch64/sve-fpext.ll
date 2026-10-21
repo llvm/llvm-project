@@ -8,13 +8,13 @@ define void @sve_fpext() {
 ; CHECK-LABEL: 'sve_fpext'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_to_f32 = fpext <vscale x 2 x half> poison to <vscale x 2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4_f16_to_f32 = fpext <vscale x 4 x half> poison to <vscale x 4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f32 = fpext <vscale x 8 x half> poison to <vscale x 8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8_f16_to_f32 = fpext <vscale x 8 x half> poison to <vscale x 8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_to_f64 = fpext <vscale x 2 x half> poison to <vscale x 2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_to_f64 = fpext <vscale x 4 x half> poison to <vscale x 4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f64 = fpext <vscale x 8 x half> poison to <vscale x 8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4_f16_to_f64 = fpext <vscale x 4 x half> poison to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8_f16_to_f64 = fpext <vscale x 8 x half> poison to <vscale x 8 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f32_to_f64 = fpext <vscale x 2 x float> poison to <vscale x 2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f32_to_f64 = fpext <vscale x 4 x float> poison to <vscale x 4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f32_to_f64 = fpext <vscale x 8 x float> poison to <vscale x 8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4_f32_to_f64 = fpext <vscale x 4 x float> poison to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %nxv8_f32_to_f64 = fpext <vscale x 8 x float> poison to <vscale x 8 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %nxv2_f16_to_f32 = fpext <vscale x 2 x half> poison to <vscale x 2 x float>
@@ -36,10 +36,10 @@ define void @sve_fpext_bf16() {
 ; CHECK-LABEL: 'sve_fpext_bf16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_to_f32 = fpext <vscale x 2 x bfloat> poison to <vscale x 2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4_f16_to_f32 = fpext <vscale x 4 x bfloat> poison to <vscale x 4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f32 = fpext <vscale x 8 x bfloat> poison to <vscale x 8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_to_f64 = fpext <vscale x 2 x bfloat> poison to <vscale x 2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_to_f64 = fpext <vscale x 4 x bfloat> poison to <vscale x 4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f64 = fpext <vscale x 8 x bfloat> poison to <vscale x 8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %nxv8_f16_to_f32 = fpext <vscale x 8 x bfloat> poison to <vscale x 8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2_f16_to_f64 = fpext <vscale x 2 x bfloat> poison to <vscale x 2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %nxv4_f16_to_f64 = fpext <vscale x 4 x bfloat> poison to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 14 for: %nxv8_f16_to_f64 = fpext <vscale x 8 x bfloat> poison to <vscale x 8 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %nxv2_f16_to_f32 = fpext <vscale x 2 x bfloat> poison to <vscale x 2 x float>

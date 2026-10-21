@@ -23,7 +23,7 @@ using namespace llvm::sys;
 
 // All methods for HandleSet should be used holding SymbolsMutex.
 class DynamicLibrary::HandleSet {
-  typedef std::vector<void *> HandleList;
+  using HandleList = std::vector<void *>;
   HandleList Handles;
   void *Process = &Invalid;
 

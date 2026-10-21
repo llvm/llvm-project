@@ -15,6 +15,7 @@ entry:
 
 ; CHECK-LABEL: .Ltmp0:
 ; CHECK: callq  trap
+; CHECK: nop
 ; CHECK-LABEL: .Ltmp1:
 
   invoke void asm sideeffect unwind "call trap", "~{dirflag},~{fpsr},~{flags}"()
@@ -27,6 +28,7 @@ except:
 
 ; CHECK-LABEL: "?dtor$2@?0?test@4HA":
 ; CHECK: callq	printf
+; CHECK: nop
 
   %0 = cleanuppad within none []
   call void (ptr, ...) @printf(ptr @str) [ "funclet"(token %0) ]

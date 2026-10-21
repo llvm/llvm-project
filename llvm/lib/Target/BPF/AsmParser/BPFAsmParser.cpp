@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -71,8 +70,8 @@ public:
   };
 
   BPFAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 };
@@ -172,7 +171,7 @@ public:
       break;
     case Register:
       OS << "<register x";
-      OS << getReg() << ">";
+      OS << getReg().id() << ">";
       break;
     case Token:
       OS << "'" << getToken() << "'";
@@ -236,8 +235,10 @@ public:
         .Case("gotol", true)
         .Case("gotox", true)
         .Case("may_goto", true)
+        .Case("unwind_goto", true)
         .Case("*", true)
         .Case("exit", true)
+        .Case("unwind_exit", true)
         .Case("lock", true)
         .Case("ld_pseudo", true)
         .Case("store_release", true)

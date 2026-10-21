@@ -124,7 +124,7 @@ define void @test_03(ptr %p, i32 %shift) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[LESS_THAN_SHIFTED:%.*]] = icmp ult i32 [[IV]], [[X_SHIFTED]]
+; CHECK-NEXT:    [[LESS_THAN_SHIFTED:%.*]] = icmp samesign ult i32 [[IV]], [[X_SHIFTED]]
 ; CHECK-NEXT:    br i1 [[LESS_THAN_SHIFTED]], label [[GUARDED:%.*]], label [[FAILURE:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[NEVER_HAPPENS:%.*]]
@@ -180,7 +180,7 @@ define void @test_04(ptr %p, i32 %shift) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[LESS_THAN_SHIFTED:%.*]] = icmp ugt i32 [[X_SHIFTED]], [[IV]]
+; CHECK-NEXT:    [[LESS_THAN_SHIFTED:%.*]] = icmp samesign ugt i32 [[X_SHIFTED]], [[IV]]
 ; CHECK-NEXT:    br i1 [[LESS_THAN_SHIFTED]], label [[GUARDED:%.*]], label [[FAILURE:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[NEVER_HAPPENS:%.*]]

@@ -15,6 +15,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
 
@@ -367,6 +368,13 @@ void GCNIterativeScheduler::scheduleBest(Region &R) {
   R.BestSchedule.reset();
 }
 
+void GCNIterativeScheduler::restoreRegionLivenessFlags(const Region &R) {
+  for (MachineBasicBlock::iterator I = R.Begin; I != R.End; ++I) {
+    if (!I->isDebugInstr())
+      RegisterOperands::restoreLivenessFlags(*I, *TRI, MRI, *LIS);
+  }
+}
+
 // minimal required region scheduler, works for ranges of SUnits*,
 // SUnits or MachineIntrs*
 template <typename Range>
@@ -381,24 +389,18 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
   auto Top = R.Begin;
   for (const auto &I : Schedule) {
     auto MI = getMachineInstr(I);
-    if (MI != &*Top) {
+
+    MachineBasicBlock::iterator MII = MI->getIterator();
+    if (MII != Top) {
+      bool NonDebugReordered =
+          !MI->isDebugInstr() && skipDebugInstructionsForward(Top, MII) != MII;
       BB->remove(MI);
       BB->insert(Top, MI);
-      if (!MI->isDebugInstr())
+      if (NonDebugReordered)
         LIS->handleMove(*MI, true);
     }
-    if (!MI->isDebugInstr()) {
-      // Reset read - undef flags and update them later.
-      for (auto &Op : MI->all_defs())
-        Op.setIsUndef(false);
-
-      RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, /*ShouldTrackLaneMasks*/true,
-                                       /*IgnoreDead*/false);
-      // Adjust liveness and add missing dead+read-undef flags.
-      auto SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
-    }
+    if (!MI->isDebugInstr())
+      RegisterOperands::restoreLivenessFlags(*MI, *TRI, MRI, *LIS);
     Top = std::next(MI->getIterator());
   }
   RegionBegin = getMachineInstr(Schedule.front());
@@ -618,6 +620,8 @@ void GCNIterativeScheduler::scheduleILP(
                                        ST, DynamicVGPRBlockSize) >= TgtOcc) {
         LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
         scheduleBest(*R);
+      } else {
+        restoreRegionLivenessFlags(*R);
       }
     } else {
       scheduleRegion(*R, ILPSchedule, RP);

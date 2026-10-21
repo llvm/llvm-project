@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
 struct FortranVariableTest : public testing::Test {
@@ -51,7 +52,8 @@ TEST_F(FortranVariableTest, SimpleScalar) {
       /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
       /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -78,7 +80,8 @@ TEST_F(FortranVariableTest, CharacterScalar) {
       /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr,
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -110,7 +113,8 @@ TEST_F(FortranVariableTest, SimpleArray) {
       shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -142,7 +146,8 @@ TEST_F(FortranVariableTest, CharacterArray) {
       shape, typeParams, /*dummy_scope=*/nullptr, /*storage=*/nullptr,
       /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -155,4 +160,69 @@ TEST_F(FortranVariableTest, CharacterArray) {
   EXPECT_NE(fortranVariable.getBase(), addr);
   EXPECT_EQ(fortranVariable.getBase().getType(), addr.getType());
   EXPECT_EQ(fortranVariable.getExplicitCharLen(), len);
+}
+
+TEST_F(FortranVariableTest, AttributesThroughAssert) {
+  mlir::Location loc = getLoc();
+  auto target = fir::AllocaOp::create(*builder, loc, builder->getI32Type());
+  target->setAttr(fir::getTargetAttrName(), builder->getUnitAttr());
+  auto plain = fir::AllocaOp::create(*builder, loc, builder->getI32Type());
+  auto condition = mlir::arith::ConstantOp::create(
+      *builder, loc, builder->getBoolAttr(false));
+  auto guard = fir::AssertOp::create(*builder, loc, condition,
+      fir::RuntimeCheckKind::conformance, "mismatch", mlir::ValueRange{},
+      mlir::ValueRange{plain, target});
+  auto nested = fir::AssertOp::create(*builder, loc, condition,
+      fir::RuntimeCheckKind::pointer, "invalid pointer", mlir::ValueRange{},
+      guard.getResults());
+  EXPECT_FALSE(
+      fir::valueHasFirAttribute(nested.getResult(0), fir::getTargetAttrName()));
+  EXPECT_TRUE(
+      fir::valueHasFirAttribute(nested.getResult(1), fir::getTargetAttrName()));
+  EXPECT_FALSE(fir::valueMayHaveFirAttributes(
+      nested.getResult(0), {fir::getTargetAttrName()}));
+  EXPECT_TRUE(fir::valueMayHaveFirAttributes(
+      nested.getResult(1), {fir::getTargetAttrName()}));
+}
+
+TEST_F(FortranVariableTest, BoxAttributesThroughAssertAndLoad) {
+  mlir::Location loc = getLoc();
+  auto boxTy = fir::BoxType::get(builder->getF32Type());
+  auto boxAddr = fir::AllocaOp::create(*builder, loc, boxTy);
+  boxAddr->setAttr(fir::getTargetAttrName(), builder->getUnitAttr());
+  auto condition = mlir::arith::ConstantOp::create(
+      *builder, loc, builder->getBoolAttr(false));
+  auto guardAddr = fir::AssertOp::create(*builder, loc, condition,
+      fir::RuntimeCheckKind::pointer, "invalid pointer", mlir::ValueRange{},
+      mlir::ValueRange{boxAddr});
+  auto box = fir::LoadOp::create(*builder, loc, guardAddr.getResult(0));
+  auto guardBox = fir::AssertOp::create(*builder, loc, condition,
+      fir::RuntimeCheckKind::conformance, "mismatch", mlir::ValueRange{},
+      mlir::ValueRange{box});
+  EXPECT_TRUE(fir::valueHasFirAttribute(
+      guardBox.getResult(0), fir::getTargetAttrName()));
+  EXPECT_FALSE(fir::mayBeAbsentBox(guardBox.getResult(0)));
+}
+
+TEST_F(FortranVariableTest, OptionalBoxThroughAssert) {
+  mlir::Location loc = getLoc();
+  auto boxTy = fir::BoxType::get(builder->getF32Type());
+  mlir::Value box = builder->getInsertionBlock()->addArgument(boxTy, loc);
+  auto condition = mlir::arith::ConstantOp::create(
+      *builder, loc, builder->getBoolAttr(false));
+  for (bool optional : {false, true}) {
+    auto flags = optional ? fir::FortranVariableFlagsEnum::optional
+                          : fir::FortranVariableFlagsEnum::None;
+    auto declare = fir::DeclareOp::create(*builder, loc, boxTy, box,
+        /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
+        /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
+        builder->getStringAttr("x"),
+        fir::FortranVariableFlagsAttr::get(&context, flags),
+        /*data_attr=*/cuf::DataAttributeAttr{},
+        /*dummy_arg_no=*/mlir::IntegerAttr{});
+    auto guard = fir::AssertOp::create(*builder, loc, condition,
+        fir::RuntimeCheckKind::conformance, "mismatch", mlir::ValueRange{},
+        mlir::ValueRange{declare});
+    EXPECT_EQ(fir::mayBeAbsentBox(guard.getResult(0)), optional);
+  }
 }

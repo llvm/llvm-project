@@ -11,12 +11,14 @@ tablegen(LLVM HexagonGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM HexagonGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM HexagonGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM HexagonGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM HexagonGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM HexagonGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(HexagonCommonTableGen)
 
 add_llvm_target(HexagonCodeGen
   BitTracker.cpp
+  HexagonAlignGlobalArrays.cpp
   HexagonAsmPrinter.cpp
   HexagonBitSimplify.cpp
   HexagonBitTracker.cpp
@@ -37,7 +39,11 @@ add_llvm_target(HexagonCodeGen
   HexagonGenMemAbsolute.cpp
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
+  HexagonGlobalRegion.cpp
+  HexagonGlobalScheduler.cpp
+  HexagonLiveVariables.cpp
   HexagonHardwareLoops.cpp
+  HexagonHVXSaveRemark.cpp
   HexagonHazardRecognizer.cpp
   HexagonInstrInfo.cpp
   HexagonISelDAGToDAG.cpp
@@ -54,9 +60,11 @@ add_llvm_target(HexagonCodeGen
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
   HexagonPeephole.cpp
+  HexagonPostRAHandleQFP.cpp
   HexagonQFPOptimizer.cpp
   HexagonRDFOpt.cpp
   HexagonRegisterInfo.cpp
+  HexagonXQFloatGenerator.cpp
   HexagonSelectionDAGInfo.cpp
   HexagonSplitConst32AndConst64.cpp
   HexagonSplitDouble.cpp
@@ -72,6 +80,7 @@ add_llvm_target(HexagonCodeGen
   HexagonVExtract.cpp
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
+  HexagonAggressiveRDFCopy.cpp
   RDFDeadCode.cpp
 
   LINK_COMPONENTS
@@ -85,6 +94,7 @@ add_llvm_target(HexagonCodeGen
   HexagonInfo
   IPO
   MC
+  MIRParser
   Scalar
   SelectionDAG
   Support

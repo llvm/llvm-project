@@ -1,0 +1,43 @@
+{
+  "members": [
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "c.cpp"
+      },
+      "type": "TUSummary"
+    },
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "a.cpp"
+      },
+      "type": "TUSummary"
+    },
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "b.cpp"
+      },
+      "type": "TUSummary"
+    }
+  ],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libmulti"
+  },
+  "target_triple": "arm64-apple-macosx",
+  "type": "StaticLibrary"
+}

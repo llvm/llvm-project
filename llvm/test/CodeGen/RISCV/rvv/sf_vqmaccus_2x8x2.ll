@@ -4,12 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+xsfvqmaccdod \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 2 x i32> @llvm.riscv.sf.vqmaccus.2x8x2.nxv2i32.nxv8i8.nxv8i8(
-  <vscale x 2 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 8 x i8>,
-  iXLen, iXLen);
-
 define <vscale x 2 x i32> @intrinsic_vqmaccus_2x8x2_tu_i32m1(<vscale x 2 x i32> %0, <vscale x 8 x i8> %1, <vscale x 8 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccus_2x8x2_tu_i32m1:
 ; CHECK:       # %bb.0: # %entry
@@ -41,12 +35,6 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.sf.vqmaccus.2x8x2.nxv4i32.nxv8i8.nxv16i8(
-  <vscale x 4 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 16 x i8>,
-  iXLen, iXLen);
 
 define <vscale x 4 x i32> @intrinsic_vqmaccus_2x8x2_tu_i32m2(<vscale x 4 x i32> %0, <vscale x 8 x i8> %1, <vscale x 16 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccus_2x8x2_tu_i32m2:
@@ -80,12 +68,6 @@ entry:
   ret <vscale x 4 x i32> %a
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.sf.vqmaccus.2x8x2.nxv8i32.nxv8i8.nxv32i8(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 32 x i8>,
-  iXLen, iXLen);
-
 define <vscale x 8 x i32> @intrinsic_vqmaccus_2x8x2_tu_i32m4(<vscale x 8 x i32> %0, <vscale x 8 x i8> %1, <vscale x 32 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccus_2x8x2_tu_i32m4:
 ; CHECK:       # %bb.0: # %entry
@@ -117,12 +99,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.sf.vqmaccus.2x8x2.nxv16i32.nxv8i8.nxv64i8(
-  <vscale x 16 x i32>,
-  <vscale x 8 x i8>,
-  <vscale x 64 x i8>,
-  iXLen, iXLen);
 
 define <vscale x 16 x i32> @intrinsic_vqmaccus_2x8x2_tu_i32m8(<vscale x 16 x i32> %0, <vscale x 8 x i8> %1, <vscale x 64 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vqmaccus_2x8x2_tu_i32m8:

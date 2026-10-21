@@ -66,7 +66,7 @@ sw.bb:
 ; CHECK:                    OpBranchConditional %[[#tmp]] %[[#sw_default:]] %[[#while_end]]
 
 ; CHECK: %[[#sw_default]] = OpLabel
-; CHECK:                    OpStore %[[#]] %[[#B:]] Aligned 4
+; CHECK:                    OpStore %[[#]] %[[#B:]]
 ; CHECK:                    OpBranch %[[#for_cond:]]
 sw.default:
   store i32 0, ptr %i, align 4

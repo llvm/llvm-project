@@ -9,7 +9,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 
-namespace llvm {
+using namespace llvm;
 
 void Use::swap(Use &RHS) {
   if (Val == RHS.Val)
@@ -42,5 +42,3 @@ void Use::zap(Use *Start, const Use *Stop, bool del) {
   if (del)
     ::operator delete(Start);
 }
-
-} // namespace llvm

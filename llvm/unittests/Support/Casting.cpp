@@ -561,6 +561,47 @@ TEST(CastingTest, assertion_check_unique_ptr) {
       << "Invalid cast of const ref did not cause an abort()";
 }
 
+TEST(Casting, StaticCastPredicate) {
+  uint32_t Value = 1;
+
+  static_assert(
+      std::is_same_v<decltype(StaticCastTo<uint64_t>(Value)), uint64_t>);
+}
+
+TEST(Casting, LLVMRTTIPredicates) {
+  struct Base {
+    enum Kind { BK_Base, BK_Derived };
+    const Kind K;
+    Base(Kind K = BK_Base) : K(K) {}
+    Kind getKind() const { return K; }
+    virtual ~Base() = default;
+  };
+
+  struct Derived : Base {
+    Derived() : Base(BK_Derived) {}
+    static bool classof(const Base *B) { return B->getKind() == BK_Derived; }
+    bool Field = false;
+  };
+
+  Base B;
+  Derived D;
+  Base *BD = &D;
+  Base *Null = nullptr;
+
+  // Pointers.
+  EXPECT_EQ(DynCastTo<Derived>(BD), &D);
+  EXPECT_EQ(CastTo<Derived>(BD), &D);
+  EXPECT_EQ(DynCastTo<Derived>(&B), nullptr);
+  EXPECT_EQ(CastIfPresentTo<Derived>(BD), &D);
+  EXPECT_EQ(CastIfPresentTo<Derived>(Null), nullptr);
+  EXPECT_EQ(DynCastIfPresentTo<Derived>(BD), &D);
+  EXPECT_EQ(DynCastIfPresentTo<Derived>(Null), nullptr);
+
+  Base &R = D;
+  CastTo<Derived>(R).Field = true;
+  EXPECT_TRUE(D.Field);
+}
+
 } // end namespace assertion_checks
 #endif
 } // end namespace

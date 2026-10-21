@@ -135,8 +135,6 @@ const uint8_t *BreakpointSite::GetSavedOpcodeBytes() const {
   return &m_saved_opcode[0];
 }
 
-bool BreakpointSite::IsEnabled() const { return m_enabled; }
-
 void BreakpointSite::SetEnabled(bool enabled) { m_enabled = enabled; }
 
 void BreakpointSite::AddConstituent(const BreakpointLocationSP &constituent) {
@@ -166,6 +164,22 @@ bool BreakpointSite::ValidForThisThread(Thread &thread) {
   if (ThreadSP backed_thread = thread.GetBackedThread())
     return m_constituents.ValidForThisThread(*backed_thread);
   return m_constituents.ValidForThisThread(thread);
+}
+
+bool BreakpointSite::ContainsUserBreakpointForThread(Thread &thread) {
+  if (ThreadSP backed_thread = thread.GetBackedThread())
+    return ContainsUserBreakpointForThread(*backed_thread);
+
+  std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  for (const BreakpointLocationSP &bp_loc :
+       m_constituents.BreakpointLocations()) {
+    const Breakpoint &bp = bp_loc->GetBreakpoint();
+    if (bp.IsInternal())
+      continue;
+    if (bp_loc->ValidForThisThread(thread))
+      return true;
+  }
+  return false;
 }
 
 void BreakpointSite::BumpHitCounts() {

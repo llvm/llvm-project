@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy -std=c++98,c++11,c++14,c++17,c++20 -check-suffixes=,CXX %s readability-use-concise-preprocessor-directives %t
+// RUN: %check_clang_tidy -std=c++20-or-earlier -check-suffixes=,CXX %s readability-use-concise-preprocessor-directives %t
 // RUN: %check_clang_tidy -std=c++23-or-later -check-suffixes=,23,CXX,CXX23 %s readability-use-concise-preprocessor-directives %t
 
-// RUN: %check_clang_tidy -std=c99,c11,c17 %s readability-use-concise-preprocessor-directives %t -- -- -x c
+// RUN: %check_clang_tidy -std=c17-or-earlier %s readability-use-concise-preprocessor-directives %t -- -- -x c
 // RUN: %check_clang_tidy -std=c23-or-later -check-suffixes=,23 %s readability-use-concise-preprocessor-directives %t -- -- -x c
 
 // CHECK-MESSAGES: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#ifdef' [readability-use-concise-preprocessor-directives]
@@ -26,6 +26,14 @@
 // CHECK-MESSAGES-23: :[[@LINE+2]]:4: warning: preprocessor condition can be written more concisely using '#elifdef' [readability-use-concise-preprocessor-directives]
 // CHECK-FIXES-23: #  elifdef BAR
 #  elif (defined(BAR))
+#endif
+
+// CHECK-MESSAGES: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#ifdef' [readability-use-concise-preprocessor-directives]
+// CHECK-FIXES: #ifdef FOO
+#if(defined(FOO))
+// CHECK-MESSAGES-23: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#elifdef' [readability-use-concise-preprocessor-directives]
+// CHECK-FIXES-23: #elifdef BAR
+#elif(defined(BAR))
 #endif
 
 // CHECK-MESSAGES: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#ifdef' [readability-use-concise-preprocessor-directives]

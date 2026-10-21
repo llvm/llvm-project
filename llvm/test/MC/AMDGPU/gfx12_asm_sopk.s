@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
-// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgpu12.00 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 s_movk_i32 s0, 0x1234
 // GFX12: encoding: [0x34,0x12,0x00,0xb0]
@@ -258,3 +258,12 @@ s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
 
 s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
 // GFX12: encoding: [0x1e,0xf8,0x80,0xb8]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SCHED_MODE)
+// GFX12: encoding: [0x1a,0xf8,0x80,0xb8]
+
+s_setreg_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), s2
+// GFX12: encoding: [0x1a,0x08,0x02,0xb9]
+
+s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE), 0x2
+// GFX12: encoding: [0x1a,0xf8,0x80,0xb9,0x02,0x00,0x00,0x00]

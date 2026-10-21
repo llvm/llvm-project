@@ -26,7 +26,7 @@ __kernel void kernel_function(__global int *i) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define dso_local ptx_kernel void @__clang_ocl_kern_imp_kernel_function(
+// CHECK-LABEL: define dso_local void @__clang_ocl_kern_imp_kernel_function(
 // CHECK-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META5]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr addrspace(1), align 4

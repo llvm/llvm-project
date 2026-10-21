@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 
 consteval int id(int i) { return i; }
 constexpr char id(char c) { return c; }
@@ -627,6 +629,20 @@ void fn() {
 
 }
 
+namespace GH176045 {
+
+template <int NumArgs> struct MessageFormat {
+  template <int N> consteval MessageFormat(const char (&)[N]) {}
+};
+template <typename... Ts> void format(MessageFormat<sizeof...(Ts)>, Ts ...args);
+
+auto message = [] {
+   format("");
+   format("");
+};
+
+}
+
 
 namespace GH109096 {
 consteval void undefined();
@@ -634,7 +650,7 @@ template <typename T>
 struct scope_exit {
     T t;
     constexpr ~scope_exit() { t(); }
-    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-error@-1 {{call to immediate function 'GH109096::(lambda)::operator()' is not a constant expression}} \
     // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
 };
 
@@ -642,4 +658,69 @@ scope_exit guard( // expected-note {{in instantiation of member function}}
     []() { undefined(); }
 );
 
+}
+
+namespace GH183415 {
+consteval void f(int) {}
+
+void test1() {
+    auto g = []() consteval {
+        return [](int x) {
+            f(x);
+        };
+    }();
+
+    int x = 42; // expected-note {{declared here}}
+    g(x); // expected-error {{call to immediate function 'GH183415::test1()::(lambda)::operator()()::(lambda)::operator()' is not a constant expression}} \
+          // expected-note {{read of non-const variable 'x' is not allowed in a constant expression}}
+}
+
+struct F {
+    consteval F(int) {}
+};
+
+void test2() {
+    auto g = []() consteval {
+        return [](int x) {
+            return F(x);
+        };
+    }();
+
+    int x = 42; // expected-note {{declared here}}
+    g(x); // expected-error {{call to immediate function 'GH183415::test2()::(lambda)::operator()()::(lambda)::operator()' is not a constant expression}} \
+          // expected-note {{read of non-const variable 'x' is not allowed in a constant expression}}
+}
+
+consteval void f() {}
+
+template <auto a>
+auto id = a;
+
+void test3() {
+  id<[]{ f(); }>(); // ok, (inner) call to immediate function with no arguments \
+                    // ok, (outer) call to a (non-immediate) lambda call operator
+}
+
+void test4(int a) { // expected-note {{declared here}}
+  auto g = id<[](int i){ f(i); }>;
+  g(a); // expected-error {{call to immediate function 'GH183415::test4(int)::(lambda)::operator()' is not a constant expression}} \
+        // expected-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+}
+
+static_assert(+[]{}); // ok, static_assert is manifestly-constant-evaluated, which should allow taking the address of lambda call operator
+
+}
+
+namespace GH169139 {
+consteval int foo() { return 0; }
+
+template <auto fn>
+void bar() {
+    fn(); // ok, call to a (non-immediate) lambda call operator
+};
+
+void test() {
+    bar<[] { return foo(); }>(); // ok, (inner) call to immediate function with no arguments
+                                 // ok, (outer) call to a (non-immediate) function template instantiation
+}
 }

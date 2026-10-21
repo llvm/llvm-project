@@ -1,7 +1,7 @@
 @ RUN: llvm-mc -triple=armv7 -mcpu=cortex-m3 -show-encoding < %s 2>&1 | FileCheck -check-prefix M3-ARM %s
 @ RUN: llvm-mc -triple=thumbv7 -mcpu=cortex-m3 -show-encoding < %s 2>&1 | FileCheck -check-prefix M3-THUMB %s
 
-@ RUN: llvm-mc -triple=thumbv7 -mcpu=cortex-a15 -show-encoding < %s 2>&1 | FileCheck -check-prefix A15-THUMB %s
+@ RUN: llvm-mc -triple=armv7 -mcpu=cortex-a15 -show-encoding < %s 2>&1 | FileCheck -check-prefix A15-ARM %s
 @ RUN: llvm-mc -triple=thumbv7 -mcpu=cortex-a15 -show-encoding < %s 2>&1 | FileCheck -check-prefix A15-THUMB %s
 
 @ RUN: llvm-mc -triple=armv7 -mcpu=cortex-a15 -mattr=-hwdiv -show-encoding < %s 2>&1 | FileCheck -check-prefix A15-ARM-NOTHUMBHWDIV %s

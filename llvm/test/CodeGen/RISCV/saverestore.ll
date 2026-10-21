@@ -180,9 +180,6 @@ entry:
 
 ; Check that functions with varargs do not use save/restore code
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 define i32 @varargs(ptr %fmt, ...) nounwind {
 ; RV32I-LABEL: varargs:
 ; RV32I-NOT:     call t0, __riscv_save
@@ -249,8 +246,6 @@ entry:
 
 ; Check that dynamic allocation calculations remain correct
 
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
 declare void @notdead(ptr)
 
 define void @alloca(i32 %n) nounwind {

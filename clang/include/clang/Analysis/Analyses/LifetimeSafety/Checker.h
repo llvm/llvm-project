@@ -26,9 +26,11 @@ namespace clang::lifetimes::internal {
 /// examining loan expiration points and checking if any live origins hold
 /// the expired loan.
 void runLifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
+                        const MovedLoansAnalysis &MovedLoans,
                         const LiveOriginsAnalysis &LiveOrigins,
-                        const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetyReporter *Reporter);
+                        FactManager &FactMgr, AnalysisDeclContext &ADC,
+                        LifetimeSafetySemaHelper *SemaHelper,
+                        const LifetimeSafetyOpts &LSOpts);
 
 } // namespace clang::lifetimes::internal
 

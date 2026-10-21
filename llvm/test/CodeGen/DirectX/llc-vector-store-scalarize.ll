@@ -21,7 +21,7 @@ define void @store_array_vec_test () local_unnamed_addr #0 {
 
 ; CHECK-LABEL: store_vec_test
 define void @store_vec_test(<4 x i32> %inputVec) #0 {
-  ; CHECK-COUNT-4: store i32 %inputVec.{{.*}}, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i32, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align 4 
+  ; CHECK-COUNT-4: store i32 %inputVec.{{.*}}, ptr addrspace(3) {{(@vecData.scalarized|getelementptr \(i8, ptr addrspace\(3\) @vecData.scalarized, i32 .*\)|%.*)}}, align 4 
   ; CHECK-NEXT: ret void
   store <4 x i32> %inputVec, <4 x i32> addrspace(3)* @"vecData", align 4
   ret void

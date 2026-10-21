@@ -1233,6 +1233,16 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_PAIR, P10W_FX_3C, P10FX_Read],
     MTCRF, MTCRF8
 )>;
 
+// 2 Cycle Branch operation, 1 input operand followed by a
+// 6 cycle Load operation, 0 input operands.
+def : InstRW<[P10W_BR_2C, P10W_DISP_ANY, P10BR_Read, P10W_LD_6C, P10W_DISP_ANY],
+      (instrs
+    BL_LWZinto_toc,
+    BL_LWZinto_toc_RM,
+    BL8_LDinto_toc,
+    BL8_LDinto_toc_RM
+)>;
+
 // 6 Cycles Load operations, 0 input operands
 def : InstRW<[P10W_LD_6C, P10W_DISP_ANY],
       (instrs
@@ -1888,7 +1898,7 @@ def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_FX_3C, P10W_DISP_ANY],
 )>;
 
 // Expand instructions
-// 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 6 Cycles Load operations, and 3 Cycles Store operations, 1 input operands
+// 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 3 Cycles Store operations, 3 Cycles ALU operations, 6 Cycles Load operations, and 3 Cycles Store operations, 2 input operands
 def : InstRW<[P10W_ST_3C, P10W_DISP_EVEN, P10W_FX_3C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY, P10W_FX_3C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY, P10W_FX_3C, P10W_DISP_ANY, P10W_LD_6C, P10W_DISP_ANY, P10W_ST_3C, P10W_DISP_ANY],
       (instrs
     LDAT,
@@ -1992,6 +2002,7 @@ def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY],
 // 3 Cycles Simple Fixed-point (SFX) operations, 1 input operands
 def : InstRW<[P10W_SX_3C, P10W_DISP_EVEN, P10W_DISP_ANY, P10SX_Read],
       (instrs
+    MSGSNDP, MSGSNDP8,
     MTMSR,
     MTMSRD
 )>;

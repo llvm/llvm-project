@@ -20,7 +20,7 @@ llvm.func @parallel_op_1_private(%arg0: !llvm.ptr) {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_1_private..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 
@@ -52,7 +52,7 @@ llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 // CHECK: }
 
 // CHECK-LABEL: void @parallel_op_2_privates..omp_par
-// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %[[ARG:.*]])
+// CHECK-SAME: (ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %[[ARG:.*]])
 // CHECK: %[[ORIG1_PTR_PTR:.*]] = getelementptr { ptr, ptr }, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %[[ORIG1_PTR:.*]] = load ptr, ptr %[[ORIG1_PTR_PTR]], align 8
 // CHECK: %[[ORIG2_PTR_PTR:.*]] = getelementptr { ptr, ptr }, ptr %[[ARG]], i32 0, i32 1
@@ -240,7 +240,7 @@ omp.declare_reduction @reducer.part : !llvm.ptr alloc {
 llvm.func @_QPequivalence() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.array<4 x i8> : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.mlir.constant(0 : i64) : i64
   %3 = llvm.getelementptr %1[0, %2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
   omp.parallel private(@_QFequivalenceEx_firstprivate_ptr_f32 %3 -> %arg0 : !llvm.ptr) {
     %4 = llvm.mlir.constant(3.140000e+00 : f32) : f32
@@ -264,7 +264,7 @@ omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : f32 c
 // Test that we initialize the firstprivate variable.
 // CHECK:   store float %[[HOST_VAL]], ptr %[[PRIV_ALLOC]], align 4
 // Test that we inlined the body of the parallel region.
-// CHECK:   store float 0x{{.*}}, ptr %[[PRIV_ALLOC]], align 4
+// CHECK:   store float 3.140000e+00, ptr %[[PRIV_ALLOC]], align 4
 
 // -----
 

@@ -20,7 +20,7 @@
 #include "toy/Parser.h"
 #include "toy/Passes.h"
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"

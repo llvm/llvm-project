@@ -19,6 +19,7 @@
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -35,6 +36,7 @@ namespace Fortran::parser {
 // and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
+  ErrorUnlessDeadCode,
   Warning, // likely problem
   Portability, // nonstandard or obsolete features
   Because, // for AttachTo(), explanatory attachment to support another message
@@ -42,6 +44,15 @@ enum class Severity {
   Todo, // a feature that's not yet implemented, a fatal error
   None // everything else, common for attachments with source locations
 };
+
+inline constexpr bool IsFatalSeverity(Severity severity) {
+  return severity == Severity::Error ||
+      severity == Severity::ErrorUnlessDeadCode || severity == Severity::Todo;
+}
+
+inline constexpr bool IsWarningSeverity(Severity severity) {
+  return severity == Severity::Warning || severity == Severity::Portability;
+}
 
 class MessageFixedText {
 public:
@@ -61,9 +72,7 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
 
   static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
 
@@ -76,6 +85,10 @@ inline namespace literals {
 constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Error};
+}
+constexpr MessageFixedText operator""_errUnlessDead_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::ErrorUnlessDeadCode};
 }
 constexpr MessageFixedText operator""_warn_en_US(
     const char str[], std::size_t n) {
@@ -100,9 +113,9 @@ constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock, std::string, and std::string_view
-// argument values are also supported; they are automatically converted
-// into char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, std::string_view, and
+// llvm::StringRef argument values are also supported; they are automatically
+// converted into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
@@ -115,9 +128,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;
@@ -149,6 +160,7 @@ private:
   const char *Convert(const std::string_view &);
   const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
+  const char *Convert(llvm::StringRef);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }
 
@@ -329,6 +341,7 @@ public:
   }
 
   std::list<Message> &messages() { return messages_; }
+  const std::list<Message> &messages() const { return messages_; }
   bool empty() const { return messages_.empty(); }
   void clear() { messages_.clear(); }
 

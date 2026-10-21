@@ -51,6 +51,8 @@ public:
 
 class NextAccessAnalysis : public DenseBackwardDataFlowAnalysis<NextAccess> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NextAccessAnalysis)
+
   NextAccessAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
                      bool assumeFuncReads = false)
       : DenseBackwardDataFlowAnalysis(solver, symbolTable),
@@ -244,15 +246,15 @@ void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
   LDBG() << "visitRegionBranchControlFlowTransfer: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << "  regionFrom: " << (regionFrom.isParent() ? "parent" : "region");
-  LDBG() << "  regionTo: " << (regionTo.isParent() ? "parent" : "region");
+  LDBG() << "  regionTo: " << (regionTo.isOperation() ? "operation" : "region");
 
   auto testStoreWithARegion =
       dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
 
-  if (testStoreWithARegion &&
-      ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
-       (regionFrom.isParent() &&
-        testStoreWithARegion.getStoreBeforeRegion()))) {
+  if (testStoreWithARegion && ((regionTo.isOperation() &&
+                                !testStoreWithARegion.getStoreBeforeRegion()) ||
+                               (regionFrom.isParent() &&
+                                testStoreWithARegion.getStoreBeforeRegion()))) {
     LDBG() << "  Handling TestStoreWithARegion with special logic";
     (void)visitOperation(branch, static_cast<const NextAccess &>(after),
                          static_cast<NextAccess *>(before));
@@ -318,7 +320,7 @@ struct TestNextAccessPass
       innerAttrs.reserve(nextAcc->get().size());
       for (Operation *nextAccOp : nextAcc->get()) {
         if (auto nextAccTag =
-                nextAccOp->getAttrOfType<StringAttr>(kTagAttrName)) {
+                nextAccOp->getDiscardableAttrOfType<StringAttr>(kTagAttrName)) {
           innerAttrs.push_back(nextAccTag);
           continue;
         }
@@ -354,7 +356,7 @@ struct TestNextAccessPass
     LDBG() << "  Dataflow solver completed successfully";
     LDBG() << "  Walking operations to set next access attributes";
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
+      auto tag = op->getDiscardableAttrOfType<StringAttr>(kTagAttrName);
       if (!tag)
         return;
 
@@ -362,8 +364,8 @@ struct TestNextAccessPass
              << OpWithFlags(op, OpPrintingFlags().skipRegions());
       const NextAccess *nextAccess =
           solver.lookupState<NextAccess>(solver.getProgramPointAfter(op));
-      op->setAttr(kNextAccessAttrName,
-                  makeNextAccessAttribute(op, solver, nextAccess));
+      op->setDiscardableAttr(kNextAccessAttrName,
+                             makeNextAccessAttribute(op, solver, nextAccess));
 
       auto iface = dyn_cast<RegionBranchOpInterface>(op);
       if (!iface)
@@ -373,7 +375,7 @@ struct TestNextAccessPass
       SmallVector<RegionSuccessor> regionSuccessors;
       iface.getSuccessorRegions(RegionBranchPoint::parent(), regionSuccessors);
       for (const RegionSuccessor &successor : regionSuccessors) {
-        if (!successor.getSuccessor() || successor.getSuccessor()->empty())
+        if (successor.isOperation() || successor.getSuccessor()->empty())
           continue;
         Block &successorBlock = successor.getSuccessor()->front();
         ProgramPoint *successorPoint =
@@ -381,8 +383,9 @@ struct TestNextAccessPass
         entryPointNextAccess.push_back(makeNextAccessAttribute(
             op, solver, solver.lookupState<NextAccess>(successorPoint)));
       }
-      op->setAttr(kAtEntryPointAttrName,
-                  ArrayAttr::get(op->getContext(), entryPointNextAccess));
+      op->setDiscardableAttr(
+          kAtEntryPointAttrName,
+          ArrayAttr::get(op->getContext(), entryPointNextAccess));
     });
   }
 };

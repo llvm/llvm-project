@@ -50,6 +50,17 @@ func.func @subview_zero_size_dim(%memref: memref<10x4x1xf32, strided<[?, ?, ?], 
     return
 }
 
+func.func @subview_with_empty_slice(%memref: memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>, 
+                                 %dim_0: index, 
+                                 %dim_1: index, 
+                                 %dim_2: index,
+                                 %offset: index) {
+    %subview = memref.subview %memref[%offset, 0, 0] [%dim_0, %dim_1, %dim_2] [1, 1, 1] :
+        memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>> to
+        memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    return
+}
+
 
 func.func @main() {
   %0 = arith.constant 0 : index
@@ -127,5 +138,9 @@ func.func @main() {
   func.call @subview_zero_size_dim(%alloca_10x4x1_dyn_stride, %dim_0, %dim_1, %dim_2)
                                         : (memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>, index, index, index) -> ()
 
+  // CHECK-NOT: ERROR: Runtime op verification failed
+  %offset = arith.constant 10 : index
+  func.call @subview_with_empty_slice(%alloca_10x4x1_dyn_stride, %dim_0, %dim_1, %dim_2, %offset)
+                                        : (memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>, index, index, index, index) -> ()
   return
 }

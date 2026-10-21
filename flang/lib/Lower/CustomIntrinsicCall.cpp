@@ -12,12 +12,12 @@
 
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
 #include <optional>
 
 /// Is this a call to MIN or MAX intrinsic with arguments that may be absent at
@@ -85,6 +85,17 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
          isAssociatedWithDynamicallyOptionalArg(name, procRef);
 }
 
+fir::IntrinsicLoweringOptions
+Fortran::lower::getIntrinsicLoweringOptions(AbstractConverter &converter) {
+  fir::IntrinsicLoweringOptions options;
+  options.coarrayEnabled =
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::Coarray);
+  options.noPPCNativeVecElemOrder =
+      converter.getLoweringOptions().getNoPPCNativeVecElemOrder();
+  return options;
+}
+
 /// Generate the FIR+MLIR operations for the generic intrinsic \p name
 /// with arguments \p args and the expected result type \p resultType.
 /// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
@@ -95,8 +106,11 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx,
                                  Fortran::lower::AbstractConverter *converter) {
+  fir::IntrinsicLoweringOptions options;
+  if (converter)
+    options = getIntrinsicLoweringOptions(*converter);
   auto [result, mustBeFreed] =
-      fir::genIntrinsicCall(builder, loc, name, resultType, args, converter);
+      fir::genIntrinsicCall(builder, loc, name, resultType, args, options);
   if (mustBeFreed) {
     mlir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
@@ -118,7 +132,7 @@ static void prepareMinOrMaxArguments(
   assert(retTy && "MIN and MAX must have a return type");
   mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
-  if (fir::isa_char(resultType))
+  if (fir::isa_char(fir::unwrapSequenceType(resultType)))
     TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
     const auto *expr =

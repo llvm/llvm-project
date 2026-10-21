@@ -2631,6 +2631,39 @@ define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+define i8 @sub_of_adds_2xz_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nsw(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nsw i8 %x, %z
+  %yz = add nsw i8 %z, %y
+  %r = sub nsw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xz_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nuw(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nuw i8 %x, %z
+  %yz = add nuw i8 %z, %y
+  %r = sub nuw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_or_disjoint_2xz(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_or_disjoint_2xz(
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = or disjoint i8 %x, %z
+  %yz = or disjoint i8 %z, %y
+  %r = sub i8 %xz, %yz
+  ret i8 %r
+}
+
 define i8 @sub_of_adds_2xc_multiuse2_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_of_adds_2xc_multiuse2_fail(
 ; CHECK-NEXT:    [[XC:%.*]] = add i8 [[X:%.*]], 10
@@ -2862,4 +2895,134 @@ entry:
   %sub = sub i32 63, %x
   %and = and i32 %sub, 127
   ret i32 %and
+}
+
+define i32 @sub_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nsw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nsw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 90, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 10
+  %r = sub nsw i32 100, %a
+  ret i32 %r
+}
+
+define i32 @sub_nuw_const_or_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_nuw_const_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i32 100, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or disjoint i32 %x, 0
+  %r = sub nuw i32 100, %a
+  ret i32 %r
+}
+
+define <2 x i32> @sub_const_or_disjoint_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sub_const_or_disjoint_vec(
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> splat (i32 90), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = or disjoint <2 x i32> %x, splat (i32 10)
+  %r = sub <2 x i32> splat (i32 100), %a
+  ret <2 x i32> %r
+}
+
+; negative test
+define i32 @sub_const_or_no_disjoint(i32 %x) {
+; CHECK-LABEL: @sub_const_or_no_disjoint(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[R:%.*]] = sub i32 100, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = or i32 %x, 10
+  %r = sub i32 100, %a
+  ret i32 %r
+}
+
+define i8 @sub_and_add(i8 %x) {
+; CHECK-LABEL: @sub_and_add(
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 1
+  %and = and i8 %add, -2
+  %ret = sub i8 %and, %x
+  ret i8 %ret
+}
+
+define i8 @sub_and_add_multi_use(i8 %x) {
+; CHECK-LABEL: @sub_and_add_multi_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use8(i8 [[ADD]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -3
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X]], 2
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 2
+  call void @use8(i8 %add)
+  %and = and i8 %add, -3
+  call void @use8(i8 %and)
+  %ret = sub i8 %and, %x
+  ret i8 %ret
+}
+
+define <2 x i8> @sub_and_add_vec(<2 x i8> %x) {
+; CHECK-LABEL: @sub_and_add_vec(
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %and = and <2 x i8> %add, <i8 -2, i8 -2>
+  %ret = sub <2 x i8> %and, %x
+  ret <2 x i8> %ret
+}
+
+define i8 @neg_sub_and_add_commuted(i8 %x) {
+; CHECK-LABEL: @neg_sub_and_add_commuted(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -2
+; CHECK-NEXT:    [[RET:%.*]] = sub i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 1
+  %and = and i8 %add, -2
+  %ret = sub i8 %x, %and
+  ret i8 %ret
+}
+
+define i8 @neg_sub_and_add_2(i8 %x) {
+; CHECK-LABEL: @neg_sub_and_add_2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -2
+; CHECK-NEXT:    [[RET:%.*]] = sub i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 3
+  %and = and i8 %add, -2
+  %ret = sub i8 %and, %x
+  ret i8 %ret
+}
+
+define i8 @neg_sub_and_-4_add(i8 %x) {
+; CHECK-LABEL: @neg_sub_and_-4_add(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -4
+; CHECK-NEXT:    [[RET:%.*]] = add i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 1
+  %and = and i8 %add, -4
+  %ret = add i8 %and, %x
+  ret i8 %ret
 }

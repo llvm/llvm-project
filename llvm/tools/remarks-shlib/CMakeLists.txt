@@ -15,6 +15,9 @@ if(LLVM_ENABLE_PIC)
 
   add_llvm_library(Remarks SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES})
 
+  # libRemarks defines LLVMRemarkVersion() from the LLVM C API.
+  target_compile_definitions(Remarks PRIVATE LLVM_C_EXPORTS)
+
   if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
     # Make sure we search LLVMSupport first, before the CRT libs
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
@@ -25,10 +28,7 @@ if(LLVM_ENABLE_PIC)
     COMPONENT Remarks)
 
   if (APPLE)
-    set(REMARKS_VERSION ${LLVM_VERSION_MAJOR})
-    set_property(TARGET Remarks APPEND_STRING PROPERTY
-                 LINK_FLAGS
-                 " -compatibility_version 1 -current_version ${REMARKS_VERSION}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+    llvm_set_macho_current_version(Remarks ${LLVM_VERSION_MAJOR})
   endif()
 
 endif()

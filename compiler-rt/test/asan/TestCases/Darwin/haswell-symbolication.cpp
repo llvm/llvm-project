@@ -17,16 +17,18 @@
 // RUN: dsymutil %t.fat.x86_64h
 
 // Check LLVM symbolizer
-// RUN: %env_asan_opts=external_symbolizer_path=$(which llvm-symbolizer) not %run %t.thin.x86_64  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which llvm-symbolizer) not %run %t.thin.x86_64h 2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which llvm-symbolizer) not %run %t.fat.x86_64   2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which llvm-symbolizer) not %run %t.fat.x86_64h  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: which llvm-symbolizer | tr -d '\n' > %t.llvm_symbolizer_path
+// RUN: which atos | tr -d '\n' > %t.atos_path
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.llvm_symbolizer_path} not %run %t.thin.x86_64  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.llvm_symbolizer_path} not %run %t.thin.x86_64h 2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.llvm_symbolizer_path} not %run %t.fat.x86_64   2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.llvm_symbolizer_path} not %run %t.fat.x86_64h  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
 
 // Check atos
-// RUN: %env_asan_opts=external_symbolizer_path=$(which atos) not %run %t.thin.x86_64  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which atos) not %run %t.thin.x86_64h 2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which atos) not %run %t.fat.x86_64   2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
-// RUN: %env_asan_opts=external_symbolizer_path=$(which atos) not %run %t.fat.x86_64h  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.atos_path} not %run %t.thin.x86_64  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.atos_path} not %run %t.thin.x86_64h 2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.atos_path} not %run %t.fat.x86_64   2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
+// RUN: %env_asan_opts=external_symbolizer_path=%{readfile:%t.atos_path} not %run %t.fat.x86_64h  2>&1 | FileCheck %s --check-prefixes CHECK,CHECK-LI,CHECK-DATA
 
 // Check dladdr
 // RUN: %env_asan_opts=external_symbolizer_path= not %run %t.thin.x86_64  2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOLI,CHECK-DATA

@@ -33,7 +33,7 @@ define <2 x half> @foo(<2 x half> %0) nounwind {
 ; F16C-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; F16C-NEXT:    vcvtph2ps %xmm1, %ymm1
-; F16C-NEXT:    vsubps %ymm0, %ymm1, %ymm2
+; F16C-NEXT:    vsubps %xmm0, %xmm1, %xmm2
 ; F16C-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
 ; F16C-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; F16C-NEXT:    vcvtps2ph $4, %ymm0, %xmm0

@@ -301,6 +301,58 @@ TEST(SupportFileListTest, DifferentBasename) {
   EXPECT_EQ(ret, UINT32_MAX);
 }
 
+TEST(FileSpecListTest, AppendFileSpecList) {
+  // Test appending a FileSpecList to an existing FileSpecList.
+
+  FileSpecList list_a;
+  list_a.Append(PosixSpec("/a/foo.h"));
+  list_a.Append(PosixSpec("/a/bar.h"));
+
+  FileSpecList list_b;
+  list_b.Append(PosixSpec("/b/baz.h"));
+  list_b.Append(PosixSpec("/b/qux.h"));
+
+  // Duplicate gets appended too.
+  list_b.Append(PosixSpec("/a/foo.h"));
+
+  list_a.Append(list_b);
+  ASSERT_EQ(list_a.GetSize(), 5u);
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(0), PosixSpec("/a/foo.h"));
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(1), PosixSpec("/a/bar.h"));
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(2), PosixSpec("/b/baz.h"));
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(3), PosixSpec("/b/qux.h"));
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(4), PosixSpec("/a/foo.h"));
+}
+
+TEST(FileSpecListTest, AppendEmptyFileSpecList) {
+  // Test appending an empty FileSpecList to an existing FileSpecList.
+
+  FileSpecList list_a;
+  list_a.Append(PosixSpec("/a/foo.h"));
+
+  FileSpecList empty;
+  list_a.Append(empty);
+
+  ASSERT_EQ(list_a.GetSize(), 1u);
+  EXPECT_EQ(list_a.GetFileSpecAtIndex(0), PosixSpec("/a/foo.h"));
+}
+
+TEST(FileSpecListTest, AppendToEmptyFileSpecList) {
+  // Test appending to an empty FileSpecList to an existing FileSpecList.
+
+  FileSpecList list_a;
+  FileSpecList list_b;
+  list_b.Append(list_a);
+
+  ASSERT_EQ(list_b.GetSize(), 0u);
+
+  list_a.Append(PosixSpec("/a/foo.h"));
+  list_b.Append(list_a);
+
+  ASSERT_EQ(list_b.GetSize(), 1u);
+  EXPECT_EQ(list_b.GetFileSpecAtIndex(0), PosixSpec("/a/foo.h"));
+}
+
 // No prefixes are configured.
 // The support file and the breakpoint file are different.
 // Should find it incompatible.

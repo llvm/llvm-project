@@ -22,11 +22,11 @@ namespace {
 class RestrictedIncludesPPCallbacks
     : public portability::RestrictedIncludesPPCallbacks {
 public:
-  explicit RestrictedIncludesPPCallbacks(
-      RestrictSystemLibcHeadersCheck &Check, const SourceManager &SM,
-      const SmallString<128> CompilerIncudeDir)
+  explicit RestrictedIncludesPPCallbacks(RestrictSystemLibcHeadersCheck &Check,
+                                         const SourceManager &SM,
+                                         SmallString<128> CompilerIncudeDir)
       : portability::RestrictedIncludesPPCallbacks(Check, SM),
-        CompilerIncudeDir(CompilerIncudeDir) {}
+        CompilerIncudeDir(std::move(CompilerIncudeDir)) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -61,7 +61,7 @@ void RestrictSystemLibcHeadersCheck::registerPPCallbacks(
       StringRef(PP->getHeaderSearchInfo().getHeaderSearchOpts().ResourceDir);
   llvm::sys::path::append(CompilerIncudeDir, "include");
   PP->addPPCallbacks(std::make_unique<RestrictedIncludesPPCallbacks>(
-      *this, SM, CompilerIncudeDir));
+      *this, SM, std::move(CompilerIncudeDir)));
 }
 
 } // namespace clang::tidy::llvm_libc

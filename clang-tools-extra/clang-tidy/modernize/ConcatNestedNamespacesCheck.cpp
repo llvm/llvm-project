@@ -25,7 +25,8 @@ static bool locationsInSameFile(const SourceManager &Sources,
 static StringRef getRawStringRef(const SourceRange &Range,
                                  const SourceManager &Sources,
                                  const LangOptions &LangOpts) {
-  CharSourceRange TextRange = Lexer::getAsCharRange(Range, Sources, LangOpts);
+  const CharSourceRange TextRange =
+      Lexer::getAsCharRange(Range, Sources, LangOpts);
   return Lexer::getSourceText(TextRange, Sources, LangOpts);
 }
 
@@ -33,9 +34,8 @@ std::optional<SourceRange>
 NS::getCleanedNamespaceFrontRange(const SourceManager &SM,
                                   const LangOptions &LangOpts) const {
   // Front from namespace tp '{'
-  std::optional<Token> Tok =
-      ::clang::tidy::utils::lexer::findNextTokenSkippingComments(
-          back()->getLocation(), SM, LangOpts);
+  std::optional<Token> Tok = utils::lexer::findNextTokenSkippingComments(
+      back()->getLocation(), SM, LangOpts);
   if (!Tok)
     return std::nullopt;
   while (Tok->getKind() != tok::TokenKind::l_brace) {
@@ -56,15 +56,16 @@ SourceRange NS::getDefaultNamespaceBackRange() const {
 SourceRange NS::getNamespaceBackRange(const SourceManager &SM,
                                       const LangOptions &LangOpts) const {
   // Back from '}' to conditional '// namespace xxx'
-  SourceLocation Loc = front()->getRBraceLoc();
+  const SourceLocation Loc = front()->getRBraceLoc();
   std::optional<Token> Tok =
       utils::lexer::findNextTokenIncludingComments(Loc, SM, LangOpts);
   if (!Tok)
     return getDefaultNamespaceBackRange();
   if (Tok->getKind() != tok::TokenKind::comment)
     return getDefaultNamespaceBackRange();
-  SourceRange TokRange = SourceRange{Tok->getLocation(), Tok->getEndLoc()};
-  StringRef TokText = getRawStringRef(TokRange, SM, LangOpts);
+  const SourceRange TokRange =
+      SourceRange{Tok->getLocation(), Tok->getEndLoc()};
+  const StringRef TokText = getRawStringRef(TokRange, SM, LangOpts);
   NamespaceName CloseComment{"namespace "};
   appendCloseComment(CloseComment);
   // current fix hint in readability/NamespaceCommentCheck.cpp use single line
@@ -98,7 +99,7 @@ bool ConcatNestedNamespacesCheck::unsupportedNamespace(const NamespaceDecl &ND,
     return true;
   if (getLangOpts().CPlusPlus20) {
     // C++20 support inline nested namespace
-    bool IsFirstNS = IsChild || !Namespaces.empty();
+    const bool IsFirstNS = IsChild || !Namespaces.empty();
     return ND.isInlineNamespace() && !IsFirstNS;
   }
   return ND.isInlineNamespace();
@@ -106,7 +107,7 @@ bool ConcatNestedNamespacesCheck::unsupportedNamespace(const NamespaceDecl &ND,
 
 bool ConcatNestedNamespacesCheck::singleNamedNamespaceChild(
     const NamespaceDecl &ND) const {
-  NamespaceDecl::decl_range Decls = ND.decls();
+  const NamespaceDecl::decl_range Decls = ND.decls();
   if (std::distance(Decls.begin(), Decls.end()) != 1)
     return false;
 
@@ -121,7 +122,7 @@ void ConcatNestedNamespacesCheck::registerMatchers(
 
 void ConcatNestedNamespacesCheck::reportDiagnostic(
     const SourceManager &SM, const LangOptions &LangOpts) {
-  DiagnosticBuilder DB =
+  const DiagnosticBuilder DB =
       diag(Namespaces.front().front()->getBeginLoc(),
            "nested namespaces can be concatenated", DiagnosticIDs::Warning);
 
@@ -143,7 +144,7 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
 
   // the last one should be handled specially
   Fronts.pop_back();
-  SourceRange LastRBrace = Backs.pop_back_val();
+  const SourceRange LastRBrace = Backs.pop_back_val();
 
   NamespaceName ConcatNameSpace{"namespace "};
   for (const NS &NS : Namespaces) {

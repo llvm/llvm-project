@@ -14,20 +14,18 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-#define DEBUG_TYPE "riscv-indrect-branch-tracking"
+#define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
 
 using namespace llvm;
-
-cl::opt<uint32_t> PreferredLandingPadLabel(
-    "riscv-landing-pad-label", cl::ReallyHidden,
-    cl::desc("Use preferred fixed label for all labels"));
 
 namespace {
 class RISCVIndirectBranchTracking : public MachineFunctionPass {
@@ -54,9 +52,11 @@ FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
   return new RISCVIndirectBranchTracking();
 }
 
-static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
-                     uint32_t Label) {
-  auto I = MBB.begin();
+static void
+emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
+         MachineBasicBlock::iterator I = MachineBasicBlock::iterator{}) {
+  if (!I.isValid())
+    I = MBB.begin();
   BuildMI(MBB, I, MBB.findDebugLoc(I), TII->get(RISCV::AUIPC), RISCV::X0)
       .addImm(Label);
 }
@@ -64,15 +64,16 @@ static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
-  if (!Subtarget.hasStdExtZicfilp())
+
+  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
     return false;
 
   uint32_t FixedLabel = 0;
-  if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-    if (!isUInt<20>(PreferredLandingPadLabel))
+  if (std::optional<uint32_t> Label = Subtarget.getCLOpts().landing_pad_label) {
+    if (!isUInt<20>(*Label))
       report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
                          "unsigned 20-bits");
-    FixedLabel = PreferredLandingPadLabel;
+    FixedLabel = *Label;
   }
 
   bool Changed = false;

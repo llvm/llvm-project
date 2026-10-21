@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -60,31 +60,24 @@ enum : uint32_t {
   GCOV_TAG_LINES = 0x01450000,
 };
 
-static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("0000"), cl::Hidden,
-                                               cl::ValueRequired);
-
-static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
-                                   cl::desc("Make counter updates atomic"));
-
 // Returns the number of words which will be used to represent this string.
 static unsigned wordsOfString(StringRef s) {
   // Length + NUL-terminated string + 0~3 padding NULs.
   return (s.size() / 4) + 2;
 }
 
-GCOVOptions GCOVOptions::getDefault() {
+static GCOVOptions getDefaultOptions(const InstrumentationOptions &Opts) {
   GCOVOptions Options;
   Options.EmitNotes = true;
   Options.EmitData = true;
   Options.NoRedZone = false;
-  Options.Atomic = AtomicCounter;
+  Options.Atomic = Opts.gcov_atomic_counter;
 
-  if (DefaultGCOVVersion.size() != 4) {
+  if (Opts.default_gcov_version.size() != 4) {
     reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
-                          DefaultGCOVVersion);
+                          Opts.default_gcov_version);
   }
-  memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
+  memcpy(Options.Version, Opts.default_gcov_version.data(), 4);
   return Options;
 }
 
@@ -93,8 +86,6 @@ class GCOVFunction;
 
 class GCOVProfiler {
 public:
-  GCOVProfiler()
-      : GCOVProfiler(GCOVOptions::getDefault(), *vfs::getRealFileSystem()) {}
   GCOVProfiler(const GCOVOptions &Opts, vfs::FileSystem &VFS)
       : Options(Opts), VFS(VFS) {}
   bool
@@ -560,7 +551,9 @@ bool GCOVProfiler::runOnModule(
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
                                         ModuleAnalysisManager &AM) {
 
-  GCOVProfiler Profiler(GCOVOpts, *VFS);
+  const InstrumentationOptions &Opts =
+      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  GCOVProfiler Profiler(GCOVOpts ? *GCOVOpts : getDefaultOptions(Opts), *VFS);
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -616,8 +609,8 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     for (auto &I : instructions(F)) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         if (Function *Callee = CI->getCalledFunction()) {
-          LibFunc LF;
-          if (TLI->getLibFunc(*Callee, LF)) {
+          LibFunc LF = TLI->getLibFunc(*Callee);
+          if (LF != NotLibFunc) {
             if (LF == LibFunc_fork) {
 #if !defined(_WIN32)
               Forks.push_back(CI);
@@ -905,7 +898,7 @@ bool GCOVProfiler::emitProfileNotes(
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
           const Edge &E = *MST.allEdges()[I];
-          IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
+          IRBuilder<> Builder(E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
           // Disable sanitizers to decrease size bloat. We don't expect
@@ -1134,10 +1127,6 @@ Function *GCOVProfiler::insertCounterWriteout(
   StructType *FileInfoTy = StructType::create(
       {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
-  Constant *Zero32 = Builder.getInt32(0);
-  // Build an explicit array of two zeros for use in ConstantExpr GEP building.
-  Constant *TwoZero32s[] = {Zero32, Zero32};
-
   SmallVector<Constant *, 8> FileInfos;
   for (int i : llvm::seq<int>(0, CUNodes->getNumOperands())) {
     auto *CU = cast<DICompileUnit>(CUNodes->getOperand(i));
@@ -1167,9 +1156,7 @@ Function *GCOVProfiler::insertCounterWriteout(
       GlobalVariable *GV = CountersBySP[j].first;
       unsigned Arcs = cast<ArrayType>(GV->getValueType())->getNumElements();
       EmitArcsCallArgsArray.push_back(ConstantStruct::get(
-          EmitArcsCallArgsTy,
-          {Builder.getInt32(Arcs), ConstantExpr::getInBoundsGetElementPtr(
-                                       GV->getValueType(), GV, TwoZero32s)}));
+          EmitArcsCallArgsTy, {Builder.getInt32(Arcs), GV}));
     }
     // Create global arrays for the two emit calls.
     int CountersSize = CountersBySP.size();
@@ -1197,13 +1184,8 @@ Function *GCOVProfiler::insertCounterWriteout(
     EmitArcsCallArgsArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
     FileInfos.push_back(ConstantStruct::get(
-        FileInfoTy,
-        {StartFileCallArgs, Builder.getInt32(CountersSize),
-         ConstantExpr::getInBoundsGetElementPtr(EmitFunctionCallArgsArrayTy,
-                                                EmitFunctionCallArgsArrayGV,
-                                                TwoZero32s),
-         ConstantExpr::getInBoundsGetElementPtr(
-             EmitArcsCallArgsArrayTy, EmitArcsCallArgsArrayGV, TwoZero32s)}));
+        FileInfoTy, {StartFileCallArgs, Builder.getInt32(CountersSize),
+                     EmitFunctionCallArgsArrayGV, EmitArcsCallArgsArrayGV}));
   }
 
   // If we didn't find anything to actually emit, bail on out.

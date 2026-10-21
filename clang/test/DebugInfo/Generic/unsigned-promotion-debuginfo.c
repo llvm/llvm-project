@@ -18,19 +18,19 @@ unsigned short si, sj, sk;
 // CHECKS-NEXT:    [[CONV:%.*]] = zext i16 [[TMP0]] to i32, !dbg [[DBG20]]
 // CHECKS-NEXT:    [[TMP1:%.*]] = load i16, ptr @sk, align 2, !dbg [[DBG23:![0-9]+]], !tbaa [[SHORT_TBAA21]]
 // CHECKS-NEXT:    [[CONV1:%.*]] = zext i16 [[TMP1]] to i32, !dbg [[DBG23]]
-// CHECKS-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[CONV]], i32 [[CONV1]]), !dbg [[DBG24:![0-9]+]], !nosanitize [[META28:![0-9]+]]
-// CHECKS-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !dbg [[DBG24]], !nosanitize [[META28]]
-// CHECKS-NEXT:    br i1 [[TMP3]], label %[[HANDLER_MUL_OVERFLOW:.*]], label %[[CONT:.*]], !dbg [[DBG24]], !prof [[PROF29:![0-9]+]], !nosanitize [[META28]]
+// CHECKS-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[CONV]], i32 [[CONV1]]), !dbg [[DBG24:![0-9]+]], !nosanitize [[META29:![0-9]+]]
+// CHECKS-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !dbg [[DBG24]], !nosanitize [[META29]]
+// CHECKS-NEXT:    br i1 [[TMP3]], label %[[HANDLER_MUL_OVERFLOW:.*]], label %[[CONT:.*]], !dbg [[DBG24]], !prof [[PROF30:![0-9]+]], !nosanitize [[META29]]
 // CHECKS:       [[HANDLER_MUL_OVERFLOW]]:
 // CHECKS-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i64, !dbg [[DBG24]]
 // CHECKS-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP1]] to i64, !dbg [[DBG24]]
-// CHECKS-NEXT:    tail call void @__ubsan_handle_mul_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !dbg [[DBG24]], !nosanitize [[META28]]
-// CHECKS-NEXT:    unreachable, !dbg [[DBG24]], !nosanitize [[META28]]
+// CHECKS-NEXT:    tail call void @__ubsan_handle_mul_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !dbg [[DBG24]], !nosanitize [[META29]]
+// CHECKS-NEXT:    unreachable, !dbg [[DBG24]], !nosanitize [[META29]]
 // CHECKS:       [[CONT]]:
-// CHECKS-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !dbg [[DBG24]], !nosanitize [[META28]]
+// CHECKS-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !dbg [[DBG24]], !nosanitize [[META29]]
 // CHECKS-NEXT:    [[CONV2:%.*]] = trunc i32 [[TMP6]] to i16, !dbg [[DBG20]]
-// CHECKS-NEXT:    store i16 [[CONV2]], ptr @si, align 2, !dbg [[DBG30:![0-9]+]], !tbaa [[SHORT_TBAA21]]
-// CHECKS-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
+// CHECKS-NEXT:    store i16 [[CONV2]], ptr @si, align 2, !dbg [[DBG31:![0-9]+]], !tbaa [[SHORT_TBAA21]]
+// CHECKS-NEXT:    ret void, !dbg [[DBG32:![0-9]+]]
 //
 // CHECKU-LABEL: define dso_local void @testshortmul(
 // CHECKU-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG17:![0-9]+]] {
@@ -54,7 +54,7 @@ void testshortmul(void) {
 // CHECKS: [[META4]] = !{[[META5:![0-9]+]], [[META0]], [[META9:![0-9]+]]}
 // CHECKS: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression())
 // CHECKS: [[META6]] = distinct !DIGlobalVariable(name: "si", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)
-// CHECKS: [[META7]] = !DIFile(filename: "{{.*}}unsigned-promotion-debuginfo.c", directory: {{.*}})
+// CHECKS: [[META7]] = !DIFile(filename: "unsigned-promotion-debuginfo.c", directory: "")
 // CHECKS: [[META8]] = !DIBasicType(name: "unsigned short", size: 16, encoding: DW_ATE_unsigned)
 // CHECKS: [[META9]] = !DIGlobalVariableExpression(var: [[META10:![0-9]+]], expr: !DIExpression())
 // CHECKS: [[META10]] = distinct !DIGlobalVariable(name: "sk", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)
@@ -67,14 +67,15 @@ void testshortmul(void) {
 // CHECKS: [[SHORT_TBAA21]] = !{[[META22:![0-9]+]], [[META22]], i64 0}
 // CHECKS: [[META22]] = !{!"short", [[META15]], i64 0}
 // CHECKS: [[DBG23]] = !DILocation(line: 47, column: 13, scope: [[DBG17]])
-// CHECKS: [[DBG24]] = !DILocation(line: 0, scope: [[META25:![0-9]+]], inlinedAt: [[META27:![0-9]+]])
-// CHECKS: [[META25]] = distinct !DISubprogram(name: "__ubsan_check_mul_overflow", scope: [[META7]], file: [[META7]], type: [[META26:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META2]])
-// CHECKS: [[META26]] = !DISubroutineType(types: null)
-// CHECKS: [[META27]] = !DILocation(line: 47, column: 11, scope: [[DBG17]])
-// CHECKS: [[META28]] = !{}
-// CHECKS: [[PROF29]] = !{!"branch_weights", i32 1, i32 1048575}
-// CHECKS: [[DBG30]] = !DILocation(line: 47, column: 6, scope: [[DBG17]])
-// CHECKS: [[DBG31]] = !DILocation(line: 48, column: 1, scope: [[DBG17]])
+// CHECKS: [[DBG24]] = !DILocation(line: 0, scope: [[META25:![0-9]+]], inlinedAt: [[META28:![0-9]+]])
+// CHECKS: [[META25]] = distinct !DISubprogram(name: "__ubsan_check_mul_overflow", scope: [[META26:![0-9]+]], file: [[META26]], type: [[META27:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META2]])
+// CHECKS: [[META26]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// CHECKS: [[META27]] = !DISubroutineType(types: null)
+// CHECKS: [[META28]] = !DILocation(line: 47, column: 11, scope: [[DBG17]])
+// CHECKS: [[META29]] = !{}
+// CHECKS: [[PROF30]] = !{!"branch_weights", i32 1, i32 1048575}
+// CHECKS: [[DBG31]] = !DILocation(line: 47, column: 6, scope: [[DBG17]])
+// CHECKS: [[DBG32]] = !DILocation(line: 48, column: 1, scope: [[DBG17]])
 //.
 // CHECKU: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META1]] = distinct !DIGlobalVariable(name: "sj", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true)
@@ -83,7 +84,7 @@ void testshortmul(void) {
 // CHECKU: [[META4]] = !{[[META5:![0-9]+]], [[META0]], [[META9:![0-9]+]]}
 // CHECKU: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META6]] = distinct !DIGlobalVariable(name: "si", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)
-// CHECKU: [[META7]] = !DIFile(filename: "{{.*}}unsigned-promotion-debuginfo.c", directory: {{.*}})
+// CHECKU: [[META7]] = !DIFile(filename: "unsigned-promotion-debuginfo.c", directory: "")
 // CHECKU: [[META8]] = !DIBasicType(name: "unsigned short", size: 16, encoding: DW_ATE_unsigned)
 // CHECKU: [[META9]] = !DIGlobalVariableExpression(var: [[META10:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META10]] = distinct !DIGlobalVariable(name: "sk", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)

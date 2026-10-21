@@ -1,0 +1,16 @@
+## Show that llvm-cxxfilt can handle __alloc_token_ prefixed demangling.
+
+RUN: llvm-cxxfilt __alloc_token__Znwm \
+RUN:              __alloc_token__Znam \
+RUN:              __alloc_token_0__Znwm \
+RUN:              __alloc_token_1__Znam \
+RUN:              __alloc_token_123__Z3foov \
+RUN:              __alloc_token_malloc \
+RUN:   | FileCheck %s
+
+CHECK: operator new(unsigned long) (.alloc_token)
+CHECK-NEXT: operator new[](unsigned long) (.alloc_token)
+CHECK-NEXT: operator new(unsigned long) (.alloc_token)
+CHECK-NEXT: operator new[](unsigned long) (.alloc_token)
+CHECK-NEXT: foo() (.alloc_token)
+CHECK-NEXT: __alloc_token_malloc

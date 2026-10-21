@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of SYCL RT version macro.
+/// This file contains the declaration of libsycl version macro.
 ///
 //===----------------------------------------------------------------------===//
 #define _LIBSYCL_MAJOR_VERSION ${LIBSYCL_MAJOR_VERSION}

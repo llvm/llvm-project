@@ -11,6 +11,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/ThreadCollection.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "Utils.h"
@@ -81,7 +82,7 @@ SBError SBSaveCoreOptions::SetProcess(lldb::SBProcess process) {
   return m_opaque_up->SetProcess(process.GetSP());
 }
 
-SBProcess SBSaveCoreOptions::GetProcess() {
+SBProcess SBSaveCoreOptions::GetProcess() const {
   LLDB_INSTRUMENT_VA(this);
   return SBProcess(m_opaque_up->GetProcess());
 }
@@ -133,7 +134,7 @@ uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
   return *expected_bytes;
 }
 
-lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
+lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() const {
   LLDB_INSTRUMENT_VA(this);
   llvm::Expected<lldb_private::CoreFileMemoryRanges> memory_ranges =
       m_opaque_up->GetMemoryRegionsToSave();

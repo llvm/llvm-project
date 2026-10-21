@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -24,7 +25,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -33,9 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
-
-static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -49,9 +47,7 @@ STATISTIC(NumLoopExitsDeleted,
 /// return nullptr.
 static BasicBlock *getOnlyLiveSuccessor(BasicBlock *BB) {
   Instruction *TI = BB->getTerminator();
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-    if (BI->isUnconditional())
-      return nullptr;
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
     if (BI->getSuccessor(0) == BI->getSuccessor(1))
       return BI->getSuccessor(0);
     ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
@@ -78,7 +74,6 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
                                  Loop *LastLoop = nullptr) {
   assert((!LastLoop || LastLoop->contains(FirstLoop->getHeader())) &&
          "First loop is supposed to be inside of last loop!");
-  assert(FirstLoop->contains(BB) && "Must be a loop block!");
   for (Loop *Current = FirstLoop; Current != LastLoop;
        Current = Current->getParentLoop())
     Current->removeBlockFromLoop(BB);
@@ -393,6 +388,17 @@ private:
       DTUpdates.push_back({DominatorTree::Insert, Preheader, BB});
       ++NumLoopExitsDeleted;
     }
+    // We don't really need to add branch weights to DummySwitch, because all
+    // but one branches are just a temporary artifact - see the comment on top
+    // of this function. But, it's easy to estimate the weights, and it helps
+    // maintain a property of the overall compiler - that the branch weights
+    // don't "just get dropped" accidentally (i.e. profcheck)
+    if (DummySwitch->getParent()->getParent()->hasProfileData()) {
+      SmallVector<uint32_t> DummyBranchWeights(1 + DummySwitch->getNumCases());
+      // default. 100% probability, the rest are dead.
+      DummyBranchWeights[0] = 1;
+      setBranchWeights(*DummySwitch, DummyBranchWeights, /*IsExpected=*/false);
+    }
 
     assert(L.getLoopPreheader() == NewPreheader && "Malformed CFG?");
     if (Loop *OuterLoop = LI.getLoopFor(Preheader)) {
@@ -525,9 +531,8 @@ private:
       if (MSSAU && TheOnlySuccDuplicates > 1)
         MSSAU->removeDuplicatePhiEdgesBetween(BB, TheOnlySucc);
 
-      IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();
-      Builder.SetInsertPoint(Term);
+      IRBuilder<> Builder(Term);
       Builder.CreateBr(TheOnlySucc);
       Term->eraseFromParent();
 
@@ -645,7 +650,7 @@ public:
            "DT broken after transform!");
 #endif
     assert(DT.isReachableFromEntry(Header));
-    LI.verify(DT);
+    LI.verify();
 #endif
 
     return true;
@@ -659,11 +664,12 @@ public:
 
 /// Turn branches and switches with known constant conditions into unconditional
 /// branches.
-static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
+static bool constantFoldTerminators(const ScalarOptions &Opts, Loop &L,
+                                    DominatorTree &DT, LoopInfo &LI,
                                     ScalarEvolution &SE,
                                     MemorySSAUpdater *MSSAU,
                                     bool &IsLoopDeleted) {
-  if (!EnableTermFolding)
+  if (!Opts.enable_loop_simplifycfg_term_folding)
     return false;
 
   // To keep things simple, only process loops with single latch. We
@@ -715,10 +721,12 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU,
                             bool &IsLoopDeleted) {
+  const ScalarOptions &Opts =
+      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.
-  Changed |= constantFoldTerminators(L, DT, LI, SE, MSSAU, IsLoopDeleted);
+  Changed |= constantFoldTerminators(Opts, L, DT, LI, SE, MSSAU, IsLoopDeleted);
 
   if (IsLoopDeleted)
     return true;

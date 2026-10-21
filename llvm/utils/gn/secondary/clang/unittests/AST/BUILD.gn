@@ -16,6 +16,7 @@ unittest("ASTTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "APValueTest.cpp",
     "ASTContextParentMapTest.cpp",
     "ASTDumperTest.cpp",
     "ASTExprTest.cpp",
@@ -48,7 +49,9 @@ unittest("ASTTests") {
     "SizelessTypesTest.cpp",
     "SourceLocationTest.cpp",
     "StmtPrinterTest.cpp",
+    "StringLiteral.cpp",
     "StructuralEquivalenceTest.cpp",
+    "SubobjectVisitorTest.cpp",
     "TemplateNameTest.cpp",
     "TypePrinterTest.cpp",
     "UnresolvedSetTest.cpp",

@@ -202,3 +202,13 @@ define void @storev2f64(<4 x i32> %0) {
       <4 x i32> %0)
   ret void
 }
+
+; CHECK-DAG: declare %dx.types.Handle @dx.op.createHandleFromBinding(i32, %dx.types.ResBind, i32, i1) #[[#ATTR0:]]
+; CHECK-DAG: declare %dx.types.Handle @dx.op.annotateHandle(i32, %dx.types.Handle, %dx.types.ResourceProperties) #[[#ATTR0]]
+; CHECK-DAG: declare void @dx.op.bufferStore.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32, i32, i8) #[[#ATTR1:]]
+; CHECK-DAG: declare void @dx.op.bufferStore.i16(i32, %dx.types.Handle, i32, i32, i16, i16, i16, i16, i8) #[[#ATTR1]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f16(i32, %dx.types.Handle, i32, i32, half, half, half, half, i8) #[[#ATTR1]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f32(i32, %dx.types.Handle, i32, i32, float, float, float, float, i8) #[[#ATTR1]]
+
+; CHECK-DAG: attributes #[[#ATTR0]] = { nounwind memory(none) }
+; CHECK-DAG: attributes #[[#ATTR1]] = { nounwind }

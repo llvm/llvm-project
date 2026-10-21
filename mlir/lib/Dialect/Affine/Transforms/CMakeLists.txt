@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   AffineParallelize.cpp
   AffineScalarReplacement.cpp
   DecomposeAffineOps.cpp
+  FoldMemRefAliasOps.cpp
   LoopCoalescing.cpp
   LoopFusion.cpp
   LoopTiling.cpp
@@ -16,6 +17,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   RaiseMemrefDialect.cpp
   ReifyValueBounds.cpp
   SuperVectorize.cpp
+  SimplifyAffineWithBounds.cpp
   SimplifyAffineStructures.cpp
   SimplifyAffineMinMax.cpp
 
@@ -28,12 +30,14 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRLoopLikeInterfaceIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
   MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
+  MLIRMemRefUtils
   MLIRPass
   MLIRSCFUtils
   MLIRSideEffectInterfaces

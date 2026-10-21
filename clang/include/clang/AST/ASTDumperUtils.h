@@ -31,57 +31,60 @@ struct TerminalColor {
   bool Bold;
 };
 
-// Red           - CastColor
-// Green         - TypeColor
-// Bold Green    - DeclKindNameColor, UndeserializedColor
-// Yellow        - AddressColor, LocationColor
-// Blue          - CommentColor, NullColor, IndentColor
-// Bold Blue     - AttrColor
-// Bold Magenta  - StmtColor
-// Cyan          - ValueKindColor, ObjectKindColor
-// Bold Cyan     - ValueColor, DeclNameColor
+struct ASTDumpColor {
+  // Red           - Cast
+  // Green         - Type
+  // Bold Green    - DeclKindName, Undeserialized
+  // Yellow        - Address, Location
+  // Blue          - Comment, Null, Indent
+  // Bold Blue     - Attr
+  // Bold Magenta  - Stmt
+  // Cyan          - ValueKind, ObjectKind
+  // Bold Cyan     - Value, DeclName
 
-// Decl kind names (VarDecl, FunctionDecl, etc)
-static const TerminalColor DeclKindNameColor = {llvm::raw_ostream::GREEN, true};
-// Attr names (CleanupAttr, GuardedByAttr, etc)
-static const TerminalColor AttrColor = {llvm::raw_ostream::BLUE, true};
-// Statement names (DeclStmt, ImplicitCastExpr, etc)
-static const TerminalColor StmtColor = {llvm::raw_ostream::MAGENTA, true};
-// Comment names (FullComment, ParagraphComment, TextComment, etc)
-static const TerminalColor CommentColor = {llvm::raw_ostream::BLUE, false};
+  // Decl kind names (VarDecl, FunctionDecl, etc)
+  static constexpr TerminalColor DeclKindName = {llvm::raw_ostream::GREEN,
+                                                 true};
+  // Attr names (CleanupAttr, GuardedByAttr, etc)
+  static constexpr TerminalColor Attr = {llvm::raw_ostream::BLUE, true};
+  // Statement names (DeclStmt, ImplicitCastExpr, etc)
+  static constexpr TerminalColor Stmt = {llvm::raw_ostream::MAGENTA, true};
+  // Comment names (FullComment, ParagraphComment, TextComment, etc)
+  static constexpr TerminalColor Comment = {llvm::raw_ostream::BLUE, false};
 
-// Type names (int, float, etc, plus user defined types)
-static const TerminalColor TypeColor = {llvm::raw_ostream::GREEN, false};
+  // Type names (int, float, etc, plus user defined types)
+  static constexpr TerminalColor Type = {llvm::raw_ostream::GREEN, false};
 
-// Pointer address
-static const TerminalColor AddressColor = {llvm::raw_ostream::YELLOW, false};
-// Source locations
-static const TerminalColor LocationColor = {llvm::raw_ostream::YELLOW, false};
+  // Pointer address
+  static constexpr TerminalColor Address = {llvm::raw_ostream::YELLOW, false};
+  // Source locations
+  static constexpr TerminalColor Location = {llvm::raw_ostream::YELLOW, false};
 
-// lvalue/xvalue
-static const TerminalColor ValueKindColor = {llvm::raw_ostream::CYAN, false};
-// bitfield/objcproperty/objcsubscript/vectorcomponent
-static const TerminalColor ObjectKindColor = {llvm::raw_ostream::CYAN, false};
-// contains-errors
-static const TerminalColor ErrorsColor = {llvm::raw_ostream::RED, true};
+  // lvalue/xvalue
+  static constexpr TerminalColor ValueKind = {llvm::raw_ostream::CYAN, false};
+  // bitfield/objcproperty/objcsubscript/vectorcomponent
+  static constexpr TerminalColor ObjectKind = {llvm::raw_ostream::CYAN, false};
+  // contains-errors
+  static constexpr TerminalColor Errors = {llvm::raw_ostream::RED, true};
 
-// Null statements
-static const TerminalColor NullColor = {llvm::raw_ostream::BLUE, false};
+  // Null statements
+  static constexpr TerminalColor Null = {llvm::raw_ostream::BLUE, false};
 
-// Undeserialized entities
-static const TerminalColor UndeserializedColor = {llvm::raw_ostream::GREEN,
-                                                  true};
+  // Undeserialized entities
+  static constexpr TerminalColor Undeserialized = {llvm::raw_ostream::GREEN,
+                                                   true};
 
-// CastKind from CastExpr's
-static const TerminalColor CastColor = {llvm::raw_ostream::RED, false};
+  // CastKind from CastExpr's
+  static constexpr TerminalColor Cast = {llvm::raw_ostream::RED, false};
 
-// Value of the statement
-static const TerminalColor ValueColor = {llvm::raw_ostream::CYAN, true};
-// Decl names
-static const TerminalColor DeclNameColor = {llvm::raw_ostream::CYAN, true};
+  // Value of the statement
+  static constexpr TerminalColor Value = {llvm::raw_ostream::CYAN, true};
+  // Decl names
+  static constexpr TerminalColor DeclName = {llvm::raw_ostream::CYAN, true};
 
-// Indents ( `, -. | )
-static const TerminalColor IndentColor = {llvm::raw_ostream::BLUE, false};
+  // Indents ( `, -. | )
+  static constexpr TerminalColor Indent = {llvm::raw_ostream::BLUE, false};
+};
 
 class ColorScope {
   llvm::raw_ostream &OS;

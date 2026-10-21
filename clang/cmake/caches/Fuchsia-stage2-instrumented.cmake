@@ -9,6 +9,7 @@ endif()
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
   check-clang
+  check-clang-extra
   check-lld
   check-llvm
   check-polly
@@ -28,7 +29,8 @@ get_cmake_property(variableNames VARIABLES)
 foreach(variableName ${variableNames})
   if(variableName MATCHES "^STAGE2_")
     string(REPLACE "STAGE2_" "" new_name ${variableName})
-    list(APPEND EXTRA_ARGS "-D${new_name}=${${variableName}}")
+    string(REPLACE ";" "|" value "${${variableName}}")
+    list(APPEND EXTRA_ARGS "-D${new_name}=${value}")
   endif()
 endforeach()
 

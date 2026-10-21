@@ -1,5 +1,4 @@
 ; RUN: opt < %s -mtriple=arm-unknown-linux-gnu -S -passes=inline | FileCheck %s
-; RUN: opt < %s -mtriple=arm-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 ; Check that we only inline when we have compatible target attributes.
 ; ARM has implemented a target attribute that will verify that the attribute
 ; sets are compatible.
@@ -51,6 +50,19 @@ entry:
   ret i32 %call
 ; CHECK-LABEL: soft_float_fn
 ; CHECK: call i32 @foo
+}
+
+; Make sure architecture features like +armv8-a do not interfere with inlining.
+define i32 @callee_crc(i32 %x, i32 %y) "target-features"="+armv7-a,+crc" {
+  %res = call i32 @llvm.arm.crc32b(i32 %x, i32 %y)
+  ret i32 %res
+}
+
+define i32 @caller_crc(i32 %x, i32 %y) "target-features"="+armv8-a,+crc" {
+; CHECK-LABEL: caller_crc
+; CHECK: call i32 @llvm.arm.crc32b
+  %res = call i32 @callee_crc(i32 %x, i32 %y)
+  ret i32 %res
 }
 
 attributes #0 = { "target-cpu"="generic" "target-features"="+dsp,+neon" }

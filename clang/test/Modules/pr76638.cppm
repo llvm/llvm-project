@@ -10,11 +10,21 @@
 // RUN: %clang_cc1 -std=c++20 %t/mod4.cppm -fmodule-file=mod3=%t/mod3.pcm \
 // RUN:     -fsyntax-only -verify
 
+// Check the underlying types even when both are found through using-declarations.
+// RUN: %clang_cc1 -std=c++20 -DBOTH_USE_USING %t/mod3.cppm -emit-module-interface -o %t/mod3.pcm
+// RUN: %clang_cc1 -std=c++20 %t/mod4.cppm -fmodule-file=mod3=%t/mod3.pcm -fsyntax-only -verify
+
 // Testing the behavior of `-fskip-odr-check-in-gmf`
 // RUN: %clang_cc1 -std=c++20 %t/mod3.cppm -fskip-odr-check-in-gmf \
 // RUN:     -emit-module-interface -o %t/mod3.pcm
 // RUN: %clang_cc1 -std=c++20 %t/mod4.cppm -fmodule-file=mod3=%t/mod3.pcm \
 // RUN:     -fskip-odr-check-in-gmf -DSKIP_ODR_CHECK_IN_GMF -fsyntax-only -verify
+
+// Ignored cv qualifiers must not hide a difference in enumerator initializers.
+// RUN: %clang_cc1 -std=c++20 -fno-skip-odr-check-in-gmf -Wno-underlying-cv-qualifier-ignored \
+// RUN:     %t/cv1.cppm -emit-module-interface -o %t/cv1.pcm
+// RUN: %clang_cc1 -std=c++20 -fno-skip-odr-check-in-gmf \
+// RUN:     %t/cv2.cppm -fmodule-file=cv1=%t/cv1.pcm -fsyntax-only -verify
 
 //--- size_t.h
 
@@ -58,6 +68,9 @@ extern "C" {
 //--- mod3.cppm
 module;
 #include "size_t.h"
+#ifdef BOTH_USE_USING
+#include "csize_t"
+#endif
 #include "align.h"
 export module mod3;
 export using std::align_val_t;
@@ -77,3 +90,24 @@ export using std::align_val_t;
 // expected-error@align.h:* {{'std::align_val_t' has different definitions in different modules; defined here first difference is enum with specified type 'size_t' (aka 'int')}}
 // expected-note@align.h:* {{but in 'mod3.<global>' found enum with specified type 'size_t' (aka 'unsigned int')}}
 #endif
+
+//--- cv1.cppm
+module;
+namespace ignored_cv {
+using Int = int;
+enum class E : const Int { value = 1 };
+}
+export module cv1;
+export using ignored_cv::E;
+
+//--- cv2.cppm
+module;
+namespace ignored_cv {
+using Int = int;
+enum class E : Int { value = 2 };
+}
+export module cv2;
+import cv1;
+export using ignored_cv::E;
+// expected-error@cv2.cppm:* {{'ignored_cv::E' has different definitions in different modules; defined here first difference is 1st element 'value' has an initializer}}
+// expected-note@cv1.cppm:* {{but in 'cv1.<global>' found 1st element 'value' has different initializer}}

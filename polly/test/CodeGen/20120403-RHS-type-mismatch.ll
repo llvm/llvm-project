@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 
 ; We just check that this compilation does not crash.
 

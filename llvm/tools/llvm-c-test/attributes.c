@@ -20,7 +20,8 @@
 int llvm_test_function_attributes(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, true);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, true);
 
   LLVMValueRef F = LLVMGetFirstFunction(M);
   while (F) {
@@ -42,6 +43,7 @@ int llvm_test_function_attributes(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
@@ -49,7 +51,8 @@ int llvm_test_function_attributes(void) {
 int llvm_test_callsite_attributes(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, true);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, true);
 
   LLVMValueRef F = LLVMGetFirstFunction(M);
   while (F) {
@@ -81,6 +84,7 @@ int llvm_test_callsite_attributes(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }

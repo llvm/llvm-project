@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_ALIAS_DECLS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_ALIAS_DECLS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDALIASDECLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDALIASDECLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
@@ -32,4 +32,4 @@ private:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_ALIAS_DECLS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSEDALIASDECLSCHECK_H

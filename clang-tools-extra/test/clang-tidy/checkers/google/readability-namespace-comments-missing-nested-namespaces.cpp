@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-readability-namespace-comments %t -std=c++20 \
+// RUN: %check_clang_tidy %s google-readability-namespace-comments %t -std=c++20-or-later \
 // RUN:   '-config={CheckOptions: { \
 // RUN:     google-readability-namespace-comments.AllowOmittingNamespaceComments: true, \
 // RUN:     google-readability-namespace-comments.ShortNamespaceLines: 0, \

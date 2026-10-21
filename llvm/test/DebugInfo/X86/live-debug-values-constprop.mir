@@ -1,6 +1,6 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=CHECK
-# RUN: llc %s -o - -start-before=livedebugvalues -filetype=obj -mtriple=x86_64-unknown-unknown | llvm-dwarfdump - | FileCheck %s --check-prefix=RANGES
-# Check that livedebugvalues does the right thing when register and constant
+# RUN: llc %s -o - -run-pass=live-debug-values -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=CHECK
+# RUN: llc %s -o - -start-before=live-debug-values -filetype=obj -mtriple=x86_64-unknown-unknown | llvm-dwarfdump - | FileCheck %s --check-prefix=RANGES
+# Check that live-debug-values does the right thing when register and constant
 # DBG_VALUEs interact, and that their ranges are correctly terminated by the
 # debug printing backend.
 --- |
@@ -82,15 +82,18 @@
   !14 = !DISubroutineType(types: !15)
   !15 = !{!16}
   !16 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-  !40 = distinct !DISubprogram(name: "bar", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !40 = distinct !DISubprogram(name: "bar", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !43, type: !14, isDefinition: true)
   !41 = !DILocalVariable(name: "towel", scope: !40, file: !2, line: 1, type: !16)
   !42 = !DILocation(line: 40, scope: !40)
-  !80 = distinct !DISubprogram(name: "baz", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !43 = !{!41}
+  !80 = distinct !DISubprogram(name: "baz", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !83, type: !14, isDefinition: true)
   !81 = !DILocalVariable(name: "socks", scope: !80, file: !2, line: 1, type: !16)
   !82 = !DILocation(line: 40, scope: !80)
-  !120 = distinct !DISubprogram(name: "qux", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !83 = !{!81}
+  !120 = distinct !DISubprogram(name: "qux", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !123, type: !14, isDefinition: true)
   !121 = !DILocalVariable(name: "shoes", scope: !120, file: !2, line: 1, type: !16)
   !122 = !DILocation(line: 40, scope: !120)
+  !123 = !{!121}
 
 ...
 ---
@@ -102,7 +105,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '' }
 body:             |
 
-  ; Two DBG_VALUEs for eax merge into bb3, check that livedebugvalues propagates
+  ; Two DBG_VALUEs for eax merge into bb3, check that live-debug-values propagates
   ; the location.
   ; CHECK-LABEL: name: foo
   ; CHECK-LABEL: bb.1.bb1
@@ -165,7 +168,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '' }
 body:             |
   ; Two DBG_VALUEs, one for eax, the other for zero, merge into bb3. Check that
-  ; livedebugvalues does not propagate anything.
+  ; live-debug-values does not propagate anything.
   ; the location.
   ; CHECK-LABEL: name: bar
   ; CHECK-LABEL: bb.1.bb1
@@ -229,7 +232,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '' }
 body:             |
   ; Two DBG_VALUEs, one for zero, the other for eax, merge into bb3. Check that
-  ; livedebugvalues does not propagate anything.
+  ; live-debug-values does not propagate anything.
   ; the location.
   ; CHECK-LABEL: name: baz
   ; CHECK-LABEL: bb.1.bb1
@@ -292,7 +295,7 @@ registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 body:             |
-  ; Two DBG_VALUEs for zero merging into bb3, Check that livedebugvalues does
+  ; Two DBG_VALUEs for zero merging into bb3, Check that live-debug-values does
   ; propagate the zero into the merging block.
   ; CHECK-LABEL: name: qux
   ; CHECK-LABEL: bb.1.bb1

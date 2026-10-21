@@ -181,10 +181,6 @@ static bool isInertIntrinsic(unsigned ID) {
   case Intrinsic::lifetime_end:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
-  // Don't let dbg info affect our results.
-  case Intrinsic::dbg_declare:
-  case Intrinsic::dbg_value:
-  case Intrinsic::dbg_label:
     // Short cut: Some intrinsics obviously don't use ObjC pointers.
     return true;
   default:
@@ -244,7 +240,8 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
     case Instruction::Select:
     case Instruction::PHI:
     case Instruction::Ret:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
     case Instruction::IndirectBr:
     case Instruction::Alloca:

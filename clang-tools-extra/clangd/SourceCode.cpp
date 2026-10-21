@@ -1217,6 +1217,26 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
   return ER;
 }
 
+std::string getNamespaceAtPosition(StringRef Code, const Position &Pos,
+                                   const LangOptions &LangOpts) {
+  std::vector<std::string> Enclosing = {""};
+  parseNamespaceEvents(Code, LangOpts, [&](NamespaceEvent Event) {
+    if (Pos < Event.Pos)
+      return;
+    if (Event.Trigger == NamespaceEvent::UsingDirective)
+      return;
+    if (!Event.Payload.empty())
+      Event.Payload.append("::");
+    if (Event.Trigger == NamespaceEvent::BeginNamespace) {
+      Enclosing.emplace_back(std::move(Event.Payload));
+    } else {
+      Enclosing.pop_back();
+      assert(Enclosing.back() == Event.Payload);
+    }
+  });
+  return Enclosing.back();
+}
+
 bool isHeaderFile(llvm::StringRef FileName,
                   std::optional<LangOptions> LangOpts) {
   // Respect the langOpts, for non-file-extension cases, e.g. standard library

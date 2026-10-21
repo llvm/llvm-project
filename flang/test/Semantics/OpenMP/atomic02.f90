@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
@@ -7,7 +5,6 @@
 ! operator is one of +, *, -, /, .AND., .OR., .EQV., or .NEQV
 
 program OmpAtomic
-   use omp_lib
    CHARACTER c*3, d*3
    LOGICAL l, m, n
 
@@ -30,10 +27,10 @@ program OmpAtomic
    !$omp atomic
    !ERROR: The ** operator is not a valid ATOMIC UPDATE operation
    a = a**4
-   !$omp atomic 
+   !$omp atomic
    !ERROR: Atomic variable c cannot have CHARACTER type
    !ERROR: The atomic variable c should appear as an argument in the update operation
-   c = d 
+   c = d
    !$omp atomic
    !ERROR: The < operator is not a valid ATOMIC UPDATE operation
    l = a .LT. b

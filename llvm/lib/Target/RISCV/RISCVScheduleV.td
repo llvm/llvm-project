@@ -19,6 +19,14 @@ defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
 defvar SchedMxListF = !listremove(SchedMxList, ["MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
 defvar SchedMxListFWRed = SchedMxListF;
+// Used for indexed and strided loads of 8 bit lanes, same as full MX list
+defvar SchedMxListEEW8 = SchedMxList;
+// Used for indexed and strided loads of 16 bit lanes
+defvar SchedMxListEEW16 = SchedMxListF;
+// Used for indexed and strided loads of 32 bit lanes
+defvar SchedMxListEEW32 = !listremove(SchedMxListEEW16, ["MF4"]);
+// Used for indexed and strided loads of 64 bit lanes
+defvar SchedMxListEEW64 = !listremove(SchedMxListEEW32, ["MF2"]);
 
 class SchedSEWSet<string mx, bit isF = 0, bit isWidening = 0> {
   assert !or(!not(isF), !ne(mx, "MF8")), "LMUL shouldn't be MF8 for floating-point";
@@ -550,9 +558,12 @@ def WriteVMovFS : SchedWrite;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedWrites<"WriteVSlideUpX">;
 defm "" : LMULSchedWrites<"WriteVSlideDownX">;
-defm "" : LMULSchedWrites<"WriteVSlideI">;
-defm "" : LMULSchedWrites<"WriteVISlide1X">;
-defm "" : LMULSchedWrites<"WriteVFSlide1F">;
+defm "" : LMULSchedWrites<"WriteVSlideUpI">;
+defm "" : LMULSchedWrites<"WriteVSlideDownI">;
+defm "" : LMULSchedWrites<"WriteVISlide1Up">;
+defm "" : LMULSchedWrites<"WriteVISlide1Down">;
+defm "" : LMULSchedWrites<"WriteVFSlide1Up">;
+defm "" : LMULSchedWrites<"WriteVFSlide1Down">;
 // 16.4. Vector Register Gather Instructions
 defm "" : LMULSEWSchedWrites<"WriteVRGatherVV">;
 defm "" : LMULSEWSchedWrites<"WriteVRGatherEI16VV">;
@@ -992,9 +1003,12 @@ def : WriteRes<WriteVMovSF, []>;
 def : WriteRes<WriteVMovFS, []>;
 defm "" : LMULWriteRes<"WriteVSlideUpX", []>;
 defm "" : LMULWriteRes<"WriteVSlideDownX", []>;
-defm "" : LMULWriteRes<"WriteVSlideI", []>;
-defm "" : LMULWriteRes<"WriteVISlide1X", []>;
-defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
+defm "" : LMULWriteRes<"WriteVSlideUpI", []>;
+defm "" : LMULWriteRes<"WriteVSlideDownI", []>;
+defm "" : LMULWriteRes<"WriteVISlide1Up", []>;
+defm "" : LMULWriteRes<"WriteVISlide1Down", []>;
+defm "" : LMULWriteRes<"WriteVFSlide1Up", []>;
+defm "" : LMULWriteRes<"WriteVFSlide1Down", []>;
 defm "" : LMULSEWWriteRes<"WriteVRGatherVV", []>;
 defm "" : LMULSEWWriteRes<"WriteVRGatherEI16VV", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVX", []>;

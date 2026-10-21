@@ -148,12 +148,12 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
       const size_t pos = dsym_root.find("/Contents/Resources/");
       dsym_root = pos != std::string::npos ? dsym_root.substr(0, pos) : "";
 
-      DataBufferSP dsym_file_data_sp;
+      DataExtractorSP dsym_file_extractor_sp;
       lldb::offset_t dsym_file_data_offset = 0;
       dsym_objfile_sp =
           ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
                                  FileSystem::Instance().GetByteSize(dsym_fspec),
-                                 dsym_file_data_sp, dsym_file_data_offset);
+                                 dsym_file_extractor_sp, dsym_file_data_offset);
       // Important to save the dSYM FileSpec so we don't call
       // PluginManager::LocateExecutableSymbolFile a second time while trying to
       // add the symbol ObjectFile to this Module.

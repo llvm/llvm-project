@@ -10,15 +10,17 @@ define { half, half } @test_modf_f16(half %a) {
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    addi r4, r1, 44
-; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lfs f2, 44(r1)
+; CHECK-NEXT:    xscvdphp f0, f1
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    lfs f0, 44(r1)
+; CHECK-NEXT:    xscvdphp f0, f0
+; CHECK-NEXT:    mffprwz r4, f0
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -35,14 +37,14 @@ define half @test_modf_f16_only_use_fractional_part(half %a) {
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    addi r4, r1, 44
-; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    xscvdphp f0, f1
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -60,15 +62,15 @@ define half @test_modf_f16_only_use_integral_part(half %a) {
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    addi r4, r1, 44
-; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lfs f1, 44(r1)
+; CHECK-NEXT:    lfs f0, 44(r1)
+; CHECK-NEXT:    xscvdphp f0, f0
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -82,40 +84,53 @@ define { <2 x half>, <2 x half> } @test_modf_v2f16(<2 x half> %a) {
 ; CHECK-LABEL: test_modf_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset f30, -16
+; CHECK-NEXT:    .cfi_offset r30, -24
 ; CHECK-NEXT:    .cfi_offset f31, -8
-; CHECK-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    xscvdphp f0, f2
-; CHECK-NEXT:    addi r4, r1, 40
-; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    stdu r1, -96(r1)
+; CHECK-NEXT:    clrlwi r30, r3, 16
+; CHECK-NEXT:    clrlwi r3, r4, 16
+; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mtfprwz f0, r3
-; CHECK-NEXT:    xscvhpdp f31, f0
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    std r0, 112(r1)
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi r4, r1, 44
-; CHECK-NEXT:    fmr f30, f1
-; CHECK-NEXT:    fmr f1, f31
+; CHECK-NEXT:    lfs f0, 44(r1)
+; CHECK-NEXT:    addi r4, r1, 40
+; CHECK-NEXT:    xscvdphp f0, f0
+; CHECK-NEXT:    fmr f31, f1
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    mtfprwz f0, r30
+; CHECK-NEXT:    sth r3, 50(r1)
+; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lfs f3, 40(r1)
-; CHECK-NEXT:    fmr f2, f1
-; CHECK-NEXT:    fmr f1, f30
-; CHECK-NEXT:    lfs f4, 44(r1)
-; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    lfs f0, 40(r1)
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    li r6, 2
+; CHECK-NEXT:    xscvdphp f0, f0
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    sth r3, 48(r1)
+; CHECK-NEXT:    xscvdphp f0, f31
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    sth r3, 66(r1)
+; CHECK-NEXT:    xscvdphp f0, f1
+; CHECK-NEXT:    lxv v2, 48(r1)
+; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    sth r3, 64(r1)
+; CHECK-NEXT:    lxv v3, 64(r1)
+; CHECK-NEXT:    vextuhrx r3, r5, v3
+; CHECK-NEXT:    vextuhrx r4, r6, v3
+; CHECK-NEXT:    vextuhrx r5, r5, v2
+; CHECK-NEXT:    vextuhrx r6, r6, v2
+; CHECK-NEXT:    addi r1, r1, 96
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    lfd f31, -8(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    lfd f30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r30, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
   %result = call { <2 x half>, <2 x half> } @llvm.modf.v2f16(<2 x half> %a)

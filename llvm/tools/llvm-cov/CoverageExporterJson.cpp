@@ -22,7 +22,7 @@
 //           -- Branch: dict => Describes a branch of the file with counters
 //         -- MCDC Records: array => List of MCDC records in the file
 //           -- MCDC Values: array => List of T/F covered condition values and
-//           list of executed test vectors
+//           list of test vectors with execution status
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
@@ -59,7 +59,7 @@
 #include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <limits>
-#include <mutex>
+#include <numeric>
 #include <utility>
 
 /// The semantic version combined as a string.
@@ -81,93 +81,152 @@ int64_t clamp_uint64_to_int64(uint64_t u) {
   return std::min(u, static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
 }
 
-json::Array renderSegment(const coverage::CoverageSegment &Segment) {
-  return json::Array({Segment.Line, Segment.Col,
-                      clamp_uint64_to_int64(Segment.Count), Segment.HasCount,
-                      Segment.IsRegionEntry, Segment.IsGapRegion});
+void renderSegment(json::OStream &JOS,
+                   const coverage::CoverageSegment &Segment) {
+  JOS.array([&] {
+    JOS.value(Segment.Line);
+    JOS.value(Segment.Col);
+    JOS.value(clamp_uint64_to_int64(Segment.Count));
+    JOS.value(Segment.HasCount);
+    JOS.value(Segment.IsRegionEntry);
+    JOS.value(Segment.IsGapRegion);
+  });
 }
 
-json::Array renderRegion(const coverage::CountedRegion &Region) {
-  return json::Array({Region.LineStart, Region.ColumnStart, Region.LineEnd,
-                      Region.ColumnEnd, clamp_uint64_to_int64(Region.ExecutionCount),
-                      Region.FileID, Region.ExpandedFileID,
-                      int64_t(Region.Kind)});
+void renderRegion(json::OStream &JOS, const coverage::CountedRegion &Region) {
+  JOS.array([&] {
+    JOS.value(Region.LineStart);
+    JOS.value(Region.ColumnStart);
+    JOS.value(Region.LineEnd);
+    JOS.value(Region.ColumnEnd);
+    JOS.value(clamp_uint64_to_int64(Region.ExecutionCount));
+    JOS.value(Region.FileID);
+    JOS.value(Region.ExpandedFileID);
+    JOS.value(int64_t(Region.Kind));
+  });
 }
 
-json::Array renderBranch(const coverage::CountedRegion &Region) {
-  return json::Array(
-      {Region.LineStart, Region.ColumnStart, Region.LineEnd, Region.ColumnEnd,
-       clamp_uint64_to_int64(Region.ExecutionCount),
-       clamp_uint64_to_int64(Region.FalseExecutionCount), Region.FileID,
-       Region.ExpandedFileID, int64_t(Region.Kind)});
+void renderBranch(json::OStream &JOS, const coverage::CountedRegion &Region) {
+  JOS.array([&] {
+    JOS.value(Region.LineStart);
+    JOS.value(Region.ColumnStart);
+    JOS.value(Region.LineEnd);
+    JOS.value(Region.ColumnEnd);
+    JOS.value(clamp_uint64_to_int64(Region.ExecutionCount));
+    JOS.value(clamp_uint64_to_int64(Region.FalseExecutionCount));
+    JOS.value(Region.FileID);
+    JOS.value(Region.ExpandedFileID);
+    JOS.value(int64_t(Region.Kind));
+  });
 }
 
-json::Array gatherConditions(const coverage::MCDCRecord &Record) {
-  json::Array Conditions;
-  for (unsigned c = 0; c < Record.getNumConditions(); c++)
-    Conditions.push_back(Record.isConditionIndependencePairCovered(c));
-  return Conditions;
+void gatherConditions(json::OStream &JOS, const coverage::MCDCRecord &Record) {
+  JOS.array([&] {
+    for (unsigned c = 0; c < Record.getNumConditions(); c++)
+      JOS.value(Record.isConditionIndependencePairCovered(c));
+  });
 }
 
-json::Value renderCondState(const coverage::MCDCRecord::CondState CondState) {
+void renderCondState(json::OStream &JOS,
+                     const coverage::MCDCRecord::CondState CondState) {
   switch (CondState) {
   case coverage::MCDCRecord::MCDC_DontCare:
-    return json::Value(nullptr);
+    JOS.value(nullptr);
+    return;
   case coverage::MCDCRecord::MCDC_True:
-    return json::Value(true);
+    JOS.value(true);
+    return;
   case coverage::MCDCRecord::MCDC_False:
-    return json::Value(false);
+    JOS.value(false);
+    return;
   }
   llvm_unreachable("Unknown llvm::coverage::MCDCRecord::CondState enum");
 }
 
-json::Array gatherTestVectors(coverage::MCDCRecord &Record) {
-  json::Array TestVectors;
+void gatherTestVectors(json::OStream &JOS, coverage::MCDCRecord &Record,
+                       const CoverageViewOptions &Options) {
   unsigned NumConditions = Record.getNumConditions();
-  for (unsigned tv = 0; tv < Record.getNumTestVectors(); tv++) {
+  const bool ShowNonExecutedVectors = Options.ShowMCDCNonExecutedVectors;
 
-    json::Array TVConditions;
-    for (unsigned c = 0; c < NumConditions; c++)
-      TVConditions.push_back(renderCondState(Record.getTVCondition(tv, c)));
+  JOS.array([&] {
+    for (unsigned tv = 0; tv < Record.getNumTestVectors(); tv++) {
+      JOS.object([&] {
+        JOS.attributeArray("conditions", [&] {
+          for (unsigned c = 0; c < NumConditions; c++)
+            renderCondState(JOS, Record.getTVCondition(tv, c));
+        });
 
-    TestVectors.push_back(
-        json::Object({{"executed", json::Value(true)},
-                      {"result", renderCondState(Record.getTVResult(tv))},
-                      {"conditions", std::move(TVConditions)}}));
-  }
-  return TestVectors;
+        JOS.attribute("executed", true);
+
+        JOS.attributeBegin("result");
+        renderCondState(JOS, Record.getTVResult(tv));
+        JOS.attributeEnd();
+      });
+    }
+
+    if (ShowNonExecutedVectors) {
+      for (unsigned tv = 0; tv < Record.getNumNotExecutedTestVectors(); tv++) {
+        JOS.object([&] {
+          JOS.attributeArray("conditions", [&] {
+            for (unsigned c = 0; c < NumConditions; c++)
+              renderCondState(JOS, Record.getNotExecutedTVCondition(tv, c));
+          });
+
+          JOS.attribute("executed", false);
+
+          JOS.attributeBegin("result");
+          renderCondState(JOS, Record.getNotExecutedTVResult(tv));
+          JOS.attributeEnd();
+        });
+      }
+    }
+  });
 }
 
-json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
+void renderMCDCRecord(json::OStream &JOS, const coverage::MCDCRecord &Record,
+                      const CoverageViewOptions &Options) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
   const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
-  return json::Array(
-      {CMR.LineStart, CMR.ColumnStart, CMR.LineEnd, CMR.ColumnEnd,
-       TrueDecisions, FalseDecisions, CMR.FileID, CMR.ExpandedFileID,
-       int64_t(CMR.Kind), gatherConditions(Record),
-       gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record))});
+  JOS.array([&, TrueDecisions = TrueDecisions,
+             FalseDecisions = FalseDecisions] {
+    JOS.value(CMR.LineStart);
+    JOS.value(CMR.ColumnStart);
+    JOS.value(CMR.LineEnd);
+    JOS.value(CMR.ColumnEnd);
+    JOS.value(TrueDecisions);
+    JOS.value(FalseDecisions);
+    JOS.value(CMR.FileID);
+    JOS.value(CMR.ExpandedFileID);
+    JOS.value(int64_t(CMR.Kind));
+    gatherConditions(JOS, Record);
+    gatherTestVectors(JOS, const_cast<coverage::MCDCRecord &>(Record), Options);
+  });
 }
 
-json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
-  json::Array RegionArray;
-  for (const auto &Region : Regions)
-    RegionArray.push_back(renderRegion(Region));
-  return RegionArray;
+void renderRegions(json::OStream &JOS,
+                   ArrayRef<coverage::CountedRegion> Regions) {
+  JOS.array([&] {
+    for (const auto &Region : Regions)
+      renderRegion(JOS, Region);
+  });
 }
 
-json::Array renderBranchRegions(ArrayRef<coverage::CountedRegion> Regions) {
-  json::Array RegionArray;
-  for (const auto &Region : Regions)
-    if (!Region.TrueFolded || !Region.FalseFolded)
-      RegionArray.push_back(renderBranch(Region));
-  return RegionArray;
+void renderBranchRegions(json::OStream &JOS,
+                         ArrayRef<coverage::CountedRegion> Regions) {
+  JOS.array([&] {
+    for (const auto &Region : Regions)
+      if (!Region.TrueFolded || !Region.FalseFolded)
+        renderBranch(JOS, Region);
+  });
 }
 
-json::Array renderMCDCRecords(ArrayRef<coverage::MCDCRecord> Records) {
-  json::Array RecordArray;
-  for (auto &Record : Records)
-    RecordArray.push_back(renderMCDCRecord(Record));
-  return RecordArray;
+void renderMCDCRecords(json::OStream &JOS,
+                       ArrayRef<coverage::MCDCRecord> Records,
+                       const CoverageViewOptions &Options) {
+  JOS.array([&] {
+    for (auto &Record : Records)
+      renderMCDCRecord(JOS, Record, Options);
+  });
 }
 
 std::vector<llvm::coverage::CountedRegion>
@@ -192,112 +251,116 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
   return Branches;
 }
 
-json::Object renderExpansion(const coverage::CoverageMapping &Coverage,
-                             const coverage::ExpansionRecord &Expansion) {
+void renderExpansion(json::OStream &JOS,
+                     const coverage::CoverageMapping &Coverage,
+                     const coverage::ExpansionRecord &Expansion) {
   std::vector<llvm::coverage::ExpansionRecord> Expansions = {Expansion};
-  return json::Object(
-      {{"filenames", json::Array(Expansion.Function.Filenames)},
-       // Mark the beginning and end of this expansion in the source file.
-       {"source_region", renderRegion(Expansion.Region)},
-       // Enumerate the coverage information for the expansion.
-       {"target_regions", renderRegions(Expansion.Function.CountedRegions)},
-       // Enumerate the branch coverage information for the expansion.
-       {"branches",
-        renderBranchRegions(collectNestedBranches(Coverage, Expansions))}});
+  JOS.object([&] {
+    JOS.attributeArray("filenames", [&] {
+      for (const auto &Filename : Expansion.Function.Filenames)
+        JOS.value(Filename);
+    });
+    // Enumerate the branch coverage information for the expansion.
+    JOS.attributeBegin("branches");
+    renderBranchRegions(JOS, collectNestedBranches(Coverage, Expansions));
+    JOS.attributeEnd();
+    // Mark the beginning and end of this expansion in the source file.
+    JOS.attributeBegin("source_region");
+    renderRegion(JOS, Expansion.Region);
+    JOS.attributeEnd();
+    // Enumerate the coverage information for the expansion.
+    JOS.attributeBegin("target_regions");
+    renderRegions(JOS, Expansion.Function.CountedRegions);
+    JOS.attributeEnd();
+  });
 }
 
-json::Object renderSummary(const FileCoverageSummary &Summary) {
-  return json::Object(
-      {{"lines",
-        json::Object({{"count", int64_t(Summary.LineCoverage.getNumLines())},
-                      {"covered", int64_t(Summary.LineCoverage.getCovered())},
-                      {"percent", Summary.LineCoverage.getPercentCovered()}})},
-       {"functions",
-        json::Object(
-            {{"count", int64_t(Summary.FunctionCoverage.getNumFunctions())},
-             {"covered", int64_t(Summary.FunctionCoverage.getExecuted())},
-             {"percent", Summary.FunctionCoverage.getPercentCovered()}})},
-       {"instantiations",
-        json::Object(
-            {{"count",
-              int64_t(Summary.InstantiationCoverage.getNumFunctions())},
-             {"covered", int64_t(Summary.InstantiationCoverage.getExecuted())},
-             {"percent", Summary.InstantiationCoverage.getPercentCovered()}})},
-       {"regions",
-        json::Object(
-            {{"count", int64_t(Summary.RegionCoverage.getNumRegions())},
-             {"covered", int64_t(Summary.RegionCoverage.getCovered())},
-             {"notcovered", int64_t(Summary.RegionCoverage.getNumRegions() -
-                                    Summary.RegionCoverage.getCovered())},
-             {"percent", Summary.RegionCoverage.getPercentCovered()}})},
-       {"branches",
-        json::Object(
-            {{"count", int64_t(Summary.BranchCoverage.getNumBranches())},
-             {"covered", int64_t(Summary.BranchCoverage.getCovered())},
-             {"notcovered", int64_t(Summary.BranchCoverage.getNumBranches() -
-                                    Summary.BranchCoverage.getCovered())},
-             {"percent", Summary.BranchCoverage.getPercentCovered()}})},
-       {"mcdc",
-        json::Object(
-            {{"count", int64_t(Summary.MCDCCoverage.getNumPairs())},
-             {"covered", int64_t(Summary.MCDCCoverage.getCoveredPairs())},
-             {"notcovered", int64_t(Summary.MCDCCoverage.getNumPairs() -
-                                    Summary.MCDCCoverage.getCoveredPairs())},
-             {"percent", Summary.MCDCCoverage.getPercentCovered()}})}});
+void renderSummary(json::OStream &JOS, const FileCoverageSummary &Summary) {
+  JOS.object([&] {
+    JOS.attributeObject("lines", [&] {
+      JOS.attribute("count", int64_t(Summary.LineCoverage.getNumLines()));
+      JOS.attribute("covered", int64_t(Summary.LineCoverage.getCovered()));
+      JOS.attribute("percent", Summary.LineCoverage.getPercentCovered());
+    });
+    JOS.attributeObject("functions", [&] {
+      JOS.attribute("count",
+                    int64_t(Summary.FunctionCoverage.getNumFunctions()));
+      JOS.attribute("covered", int64_t(Summary.FunctionCoverage.getExecuted()));
+      JOS.attribute("percent", Summary.FunctionCoverage.getPercentCovered());
+    });
+    JOS.attributeObject("instantiations", [&] {
+      JOS.attribute("count",
+                    int64_t(Summary.InstantiationCoverage.getNumFunctions()));
+      JOS.attribute("covered",
+                    int64_t(Summary.InstantiationCoverage.getExecuted()));
+      JOS.attribute("percent",
+                    Summary.InstantiationCoverage.getPercentCovered());
+    });
+    JOS.attributeObject("regions", [&] {
+      JOS.attribute("count", int64_t(Summary.RegionCoverage.getNumRegions()));
+      JOS.attribute("covered", int64_t(Summary.RegionCoverage.getCovered()));
+      JOS.attribute("notcovered",
+                    int64_t(Summary.RegionCoverage.getNumRegions() -
+                            Summary.RegionCoverage.getCovered()));
+      JOS.attribute("percent", Summary.RegionCoverage.getPercentCovered());
+    });
+    JOS.attributeObject("branches", [&] {
+      JOS.attribute("count", int64_t(Summary.BranchCoverage.getNumBranches()));
+      JOS.attribute("covered", int64_t(Summary.BranchCoverage.getCovered()));
+      JOS.attribute("notcovered",
+                    int64_t(Summary.BranchCoverage.getNumBranches() -
+                            Summary.BranchCoverage.getCovered()));
+      JOS.attribute("percent", Summary.BranchCoverage.getPercentCovered());
+    });
+    JOS.attributeObject("mcdc", [&] {
+      JOS.attribute("count", int64_t(Summary.MCDCCoverage.getNumPairs()));
+      JOS.attribute("covered", int64_t(Summary.MCDCCoverage.getCoveredPairs()));
+      JOS.attribute("notcovered",
+                    int64_t(Summary.MCDCCoverage.getNumPairs() -
+                            Summary.MCDCCoverage.getCoveredPairs()));
+      JOS.attribute("percent", Summary.MCDCCoverage.getPercentCovered());
+    });
+  });
 }
 
-json::Array renderFileExpansions(const coverage::CoverageMapping &Coverage,
-                                 const coverage::CoverageData &FileCoverage) {
-  json::Array ExpansionArray;
-  for (const auto &Expansion : FileCoverage.getExpansions())
-    ExpansionArray.push_back(renderExpansion(Coverage, Expansion));
-  return ExpansionArray;
-}
-
-json::Array renderFileSegments(const coverage::CoverageData &FileCoverage) {
-  json::Array SegmentArray;
-  for (const auto &Segment : FileCoverage)
-    SegmentArray.push_back(renderSegment(Segment));
-  return SegmentArray;
-}
-
-json::Array renderFileBranches(const coverage::CoverageData &FileCoverage) {
-  json::Array BranchArray;
-  for (const auto &Branch : FileCoverage.getBranches())
-    BranchArray.push_back(renderBranch(Branch));
-  return BranchArray;
-}
-
-json::Array renderFileMCDC(const coverage::CoverageData &FileCoverage) {
-  json::Array MCDCRecordArray;
-  for (const auto &Record : FileCoverage.getMCDCRecords())
-    MCDCRecordArray.push_back(renderMCDCRecord(Record));
-  return MCDCRecordArray;
-}
-
-json::Object renderFile(const coverage::CoverageMapping &Coverage,
-                        const std::string &Filename,
-                        const FileCoverageSummary &FileReport,
-                        const CoverageViewOptions &Options) {
-  json::Object File({{"filename", Filename}});
-  if (!Options.ExportSummaryOnly) {
-    // Calculate and render detailed coverage information for given file.
-    auto FileCoverage = Coverage.getCoverageForFile(Filename);
-    File["segments"] = renderFileSegments(FileCoverage);
-    File["branches"] = renderFileBranches(FileCoverage);
-    File["mcdc_records"] = renderFileMCDC(FileCoverage);
-    if (!Options.SkipExpansions) {
-      File["expansions"] = renderFileExpansions(Coverage, FileCoverage);
+void renderFile(json::OStream &JOS, const coverage::CoverageMapping &Coverage,
+                const std::string &Filename,
+                const FileCoverageSummary &FileReport,
+                const CoverageViewOptions &Options) {
+  JOS.object([&] {
+    JOS.attribute("filename", Filename);
+    if (!Options.ExportSummaryOnly) {
+      // Calculate and render detailed coverage information for given file.
+      auto FileCoverage = Coverage.getCoverageForFile(Filename);
+      JOS.attributeArray("branches", [&] {
+        for (const auto &Branch : FileCoverage.getBranches())
+          renderBranch(JOS, Branch);
+      });
+      if (!Options.SkipExpansions) {
+        JOS.attributeArray("expansions", [&] {
+          for (const auto &Expansion : FileCoverage.getExpansions())
+            renderExpansion(JOS, Coverage, Expansion);
+        });
+      }
+      JOS.attributeArray("mcdc_records", [&] {
+        for (const auto &Record : FileCoverage.getMCDCRecords())
+          renderMCDCRecord(JOS, Record, Options);
+      });
+      JOS.attributeArray("segments", [&] {
+        for (const auto &Segment : FileCoverage)
+          renderSegment(JOS, Segment);
+      });
     }
-  }
-  File["summary"] = renderSummary(FileReport);
-  return File;
+    JOS.attributeBegin("summary");
+    renderSummary(JOS, FileReport);
+    JOS.attributeEnd();
+  });
 }
 
-json::Array renderFiles(const coverage::CoverageMapping &Coverage,
-                        ArrayRef<std::string> SourceFiles,
-                        ArrayRef<FileCoverageSummary> FileReports,
-                        const CoverageViewOptions &Options) {
+void renderFiles(json::OStream &JOS, const coverage::CoverageMapping &Coverage,
+                 ArrayRef<std::string> SourceFiles,
+                 ArrayRef<FileCoverageSummary> FileReports,
+                 const CoverageViewOptions &Options) {
   ThreadPoolStrategy S = hardware_concurrency(Options.NumThreads);
   if (Options.NumThreads == 0) {
     // If NumThreads is not specified, create one thread for each input, up to
@@ -305,37 +368,67 @@ json::Array renderFiles(const coverage::CoverageMapping &Coverage,
     S = heavyweight_hardware_concurrency(SourceFiles.size());
     S.Limit = true;
   }
+
+  // Pre-render coverage for each file to separate string.
+  std::vector<std::string> RenderedFiles(SourceFiles.size());
   DefaultThreadPool Pool(S);
-  json::Array FileArray;
-  std::mutex FileArrayMutex;
 
   for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I) {
     auto &SourceFile = SourceFiles[I];
     auto &FileReport = FileReports[I];
-    Pool.async([&] {
-      auto File = renderFile(Coverage, SourceFile, FileReport, Options);
-      {
-        std::lock_guard<std::mutex> Lock(FileArrayMutex);
-        FileArray.push_back(std::move(File));
-      }
+    Pool.async([&, I] {
+      std::string Buffer;
+      llvm::raw_string_ostream RawSStream(Buffer);
+      json::OStream JOS(RawSStream);
+      renderFile(JOS, Coverage, SourceFile, FileReport, Options);
+      RawSStream.flush();
+      RenderedFiles[I] = std::move(Buffer);
     });
   }
   Pool.wait();
-  return FileArray;
+
+  // Dump rendered strings sorted by filename.
+  std::vector<unsigned> Indices(SourceFiles.size());
+  std::iota(Indices.begin(), Indices.end(), 0u);
+  llvm::sort(Indices, [&](unsigned A, unsigned B) {
+    return SourceFiles[A] < SourceFiles[B];
+  });
+  JOS.array([&] {
+    for (unsigned I : Indices)
+      JOS.rawValue(RenderedFiles[I]);
+  });
 }
 
-json::Array renderFunctions(
-    const iterator_range<coverage::FunctionRecordIterator> &Functions) {
-  json::Array FunctionArray;
-  for (const auto &F : Functions)
-    FunctionArray.push_back(
-        json::Object({{"name", F.Name},
-                      {"count", clamp_uint64_to_int64(F.ExecutionCount)},
-                      {"regions", renderRegions(F.CountedRegions)},
-                      {"branches", renderBranchRegions(F.CountedBranchRegions)},
-                      {"mcdc_records", renderMCDCRecords(F.MCDCRecords)},
-                      {"filenames", json::Array(F.Filenames)}}));
-  return FunctionArray;
+void renderFunctions(
+    json::OStream &JOS,
+    const iterator_range<coverage::FunctionRecordIterator> &Functions,
+    const CoverageViewOptions &Options) {
+  JOS.array([&] {
+    for (const auto &F : Functions) {
+      JOS.object([&] {
+        JOS.attributeBegin("branches");
+        renderBranchRegions(JOS, F.CountedBranchRegions);
+        JOS.attributeEnd();
+
+        JOS.attribute("count", clamp_uint64_to_int64(F.ExecutionCount));
+
+        JOS.attributeArray("filenames", [&] {
+          for (const auto &Filename : F.Filenames)
+            JOS.value(Filename);
+        });
+
+        JOS.attributeBegin("mcdc_records");
+        renderMCDCRecords(JOS, F.MCDCRecords, Options);
+        JOS.attributeEnd();
+
+        JOS.attribute("name", F.Name);
+
+        JOS.attributeBegin("regions");
+        renderRegions(JOS, F.CountedRegions);
+        JOS.attributeEnd();
+      });
+    }
+  });
 }
 
 } // end anonymous namespace
@@ -353,26 +446,28 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
   FileCoverageSummary Totals = FileCoverageSummary("Totals");
   auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
                                                         SourceFiles, Options);
-  auto Files = renderFiles(Coverage, SourceFiles, FileReports, Options);
-  // Sort files in order of their names.
-  llvm::sort(Files, [](const json::Value &A, const json::Value &B) {
-    const json::Object *ObjA = A.getAsObject();
-    const json::Object *ObjB = B.getAsObject();
-    assert(ObjA != nullptr && "Value A was not an Object");
-    assert(ObjB != nullptr && "Value B was not an Object");
-    const StringRef FilenameA = *ObjA->getString("filename");
-    const StringRef FilenameB = *ObjB->getString("filename");
-    return FilenameA.compare(FilenameB) < 0;
+
+  json::OStream JOS(OS);
+  JOS.object([&] {
+    JOS.attributeArray("data", [&] {
+      JOS.object([&] {
+        JOS.attributeBegin("files");
+        renderFiles(JOS, Coverage, SourceFiles, FileReports, Options);
+        JOS.attributeEnd();
+
+        // Skip functions-level information if necessary.
+        if (!Options.ExportSummaryOnly && !Options.SkipFunctions) {
+          JOS.attributeBegin("functions");
+          renderFunctions(JOS, Coverage.getCoveredFunctions(), Options);
+          JOS.attributeEnd();
+        }
+
+        JOS.attributeBegin("totals");
+        renderSummary(JOS, Totals);
+        JOS.attributeEnd();
+      });
+    });
+    JOS.attribute("type", LLVM_COVERAGE_EXPORT_JSON_TYPE_STR);
+    JOS.attribute("version", LLVM_COVERAGE_EXPORT_JSON_STR);
   });
-  auto Export = json::Object(
-      {{"files", std::move(Files)}, {"totals", renderSummary(Totals)}});
-  // Skip functions-level information  if necessary.
-  if (!Options.ExportSummaryOnly && !Options.SkipFunctions)
-    Export["functions"] = renderFunctions(Coverage.getCoveredFunctions());
-
-  auto ExportArray = json::Array({std::move(Export)});
-
-  OS << json::Object({{"version", LLVM_COVERAGE_EXPORT_JSON_STR},
-                      {"type", LLVM_COVERAGE_EXPORT_JSON_TYPE_STR},
-                      {"data", std::move(ExportArray)}});
 }

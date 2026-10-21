@@ -238,9 +238,6 @@ value llvm_dispose_context(value C) {
   return Val_unit;
 }
 
-/* unit -> llcontext */
-value llvm_global_context(value Unit) { return to_val(LLVMGetGlobalContext()); }
-
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
   unsigned MDKindID = LLVMGetMDKindIDInContext(Context_val(C), String_val(Name),
@@ -331,14 +328,14 @@ value llvm_set_target_triple(value Trip, value M) {
   return Val_unit;
 }
 
-/* llmodule -> string */
+/* llmodule -> DataLayout.t */
 value llvm_data_layout(value M) {
-  return caml_copy_string(LLVMGetDataLayout(Module_val(M)));
+  return llvm_alloc_data_layout(LLVMGetModuleDataLayout(Module_val(M)));
 }
 
-/* string -> llmodule -> unit */
+/* DataLayout.t -> llmodule -> unit */
 value llvm_set_data_layout(value Layout, value M) {
-  LLVMSetDataLayout(Module_val(M), String_val(Layout));
+  LLVMSetModuleDataLayout(Module_val(M), DataLayout_val(Layout));
   return Val_unit;
 }
 
@@ -1138,18 +1135,6 @@ value llvm_aggregate_element(value Const, value N) {
 
 /*--... Constant expressions ...............................................--*/
 
-/* lltype -> llvalue */
-value llvm_align_of(value Type) {
-  LLVMValueRef Value = LLVMAlignOf(Type_val(Type));
-  return to_val(Value);
-}
-
-/* lltype -> llvalue */
-value llvm_size_of(value Type) {
-  LLVMValueRef Value = LLVMSizeOf(Type_val(Type));
-  return to_val(Value);
-}
-
 /* llvalue -> llvalue */
 value llvm_const_neg(value Value) {
   LLVMValueRef NegValue = LLVMConstNeg(Value_val(Value));
@@ -1159,12 +1144,6 @@ value llvm_const_neg(value Value) {
 /* llvalue -> llvalue */
 value llvm_const_nsw_neg(value Value) {
   LLVMValueRef NegValue = LLVMConstNSWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
   return to_val(NegValue);
 }
 
@@ -1216,24 +1195,26 @@ value llvm_const_xor(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_gep(value Ty, value ConstantVal, value Indices) {
-  mlsize_t Length = Wosize_val(Indices);
-  LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
-  free(Temp);
+/* llvalue -> llvalue -> int -> llvalue */
+value llvm_const_ptradd(value ConstantVal, value ConstantOffset,
+                        value NoWrapFlags) {
+  LLVMValueRef Value = LLVMConstPtrAdd(
+      Value_val(ConstantVal), Value_val(ConstantOffset), Int_val(NoWrapFlags));
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_in_bounds_gep(value Ty, value ConstantVal, value Indices) {
+/* DataLayout.t -> lltype -> llvalue -> llvalue array -> int ->
+ * llvalue option */
+value llvm_const_ptradd_from_indices(value DataLayout, value Ty,
+                                     value ConstantVal, value Indices,
+                                     value NoWrapFlags) {
   mlsize_t Length = Wosize_val(Indices);
   LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstInBoundsGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
+  LLVMValueRef Value = LLVMConstPtrAddFromIndices(
+      DataLayout_val(DataLayout), Type_val(Ty), Value_val(ConstantVal), Temp,
+      Length, Int_val(NoWrapFlags));
   free(Temp);
-  return to_val(Value);
+  return ptr_to_option(Value);
 }
 
 /* llvalue -> lltype -> llvalue */
@@ -1599,9 +1580,61 @@ value llvm_delete_function(value Fn) {
   return Val_unit;
 }
 
-/* llvalue -> bool */
-value llvm_is_intrinsic(value Fn) {
-  return Val_bool(LLVMGetIntrinsicID(Value_val(Fn)));
+/* string -> int */
+value llvm_lookup_intrinsic_id(value Name) {
+  const char *NameCStr = String_val(Name);
+  size_t Len = caml_string_length(Name);
+  return Val_int(LLVMLookupIntrinsicID(NameCStr, Len));
+}
+
+/* llvalue -> int */
+value llvm_intrinsic_id(value Fn) {
+  return Val_int(LLVMGetIntrinsicID(Value_val(Fn)));
+}
+
+/* llmodule -> int -> lltype array -> llvalue */
+value llvm_intrinsic_declaration(value M, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  LLVMValueRef Intrinsic =
+      LLVMGetIntrinsicDeclaration(Module_val(M), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Intrinsic);
+}
+
+/* llcontext -> int -> lltype array -> lltype */
+value llvm_intrinsic_type(value C, value ID, value OverloadTypes) {
+  mlsize_t Length = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  LLVMTypeRef Type =
+      LLVMIntrinsicGetType(Context_val(C), Int_val(ID), Temp, Length);
+  free(Temp);
+  return to_val(Type);
+}
+
+/* int -> string */
+value llvm_intrinsic_name(value ID) {
+  size_t Length = -1;
+  const char *NameCStr = LLVMIntrinsicGetName(Int_val(ID), &Length);
+  return caml_copy_string(NameCStr);
+}
+
+/* llmodule -> int -> lltype array -> string */
+value llvm_intrinsic_overloaded_name(value M, value ID, value OverloadTypes) {
+  mlsize_t TypeCount = Wosize_val(OverloadTypes);
+  LLVMTypeRef *Temp = from_val_array(OverloadTypes);
+  size_t NameLength = -1;
+  char *OverloadedNameCStrOwned = LLVMIntrinsicCopyOverloadedName2(
+      Module_val(M), Int_val(ID), Temp, TypeCount, &NameLength);
+  value OverloadedName = caml_copy_string(OverloadedNameCStrOwned);
+  free(OverloadedNameCStrOwned);
+  free(Temp);
+  return OverloadedName;
+}
+
+/* int -> bool */
+value llvm_intrinsic_is_overloaded(int ID) {
+  return Val_bool(LLVMIntrinsicIsOverloaded(Int_val(ID)));
 }
 
 /* llvalue -> int */
@@ -2359,12 +2392,6 @@ value llvm_build_nsw_neg(value X, value Name, value B) {
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
 value llvm_build_fneg(value X, value Name, value B) {
   return to_val(LLVMBuildFNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }
@@ -2751,4 +2778,116 @@ value llvm_memorybuffer_as_string(value MB) {
 value llvm_memorybuffer_dispose(value MemBuf) {
   LLVMDisposeMemoryBuffer(MemoryBuffer_val(MemBuf));
   return Val_unit;
+}
+
+/*===---- Data Layout -----------------------------------------------------===*/
+
+static void llvm_finalize_data_layout(value DataLayout) {
+  LLVMDisposeTargetData(DataLayout_val(DataLayout));
+}
+
+static struct custom_operations llvm_data_layout_ops = {
+    (char *)"Llvm.DataLayout.t", llvm_finalize_data_layout,
+    custom_compare_default,      custom_hash_default,
+    custom_serialize_default,    custom_deserialize_default,
+    custom_compare_ext_default};
+
+value llvm_alloc_data_layout(LLVMTargetDataRef DataLayout) {
+  value V =
+      caml_alloc_custom(&llvm_data_layout_ops, sizeof(LLVMTargetDataRef), 0, 1);
+  DataLayout_val(V) = DataLayout;
+  return V;
+}
+
+/* string -> DataLayout.t */
+value llvm_datalayout_of_string(value StringRep) {
+  return llvm_alloc_data_layout(LLVMCreateTargetData(String_val(StringRep)));
+}
+
+/* DataLayout.t -> string */
+value llvm_datalayout_as_string(value TD) {
+  char *StringRep = LLVMCopyStringRepOfTargetData(DataLayout_val(TD));
+  value Copy = caml_copy_string(StringRep);
+  LLVMDisposeMessage(StringRep);
+  return Copy;
+}
+
+/* DataLayout.t -> Endian.t */
+value llvm_datalayout_byte_order(value DL) {
+  return Val_int(LLVMByteOrder(DataLayout_val(DL)));
+}
+
+/* DataLayout.t -> int */
+value llvm_datalayout_pointer_size(value DL) {
+  return Val_int(LLVMPointerSize(DataLayout_val(DL)));
+}
+
+/* Llvm.llcontext -> DataLayout.t -> Llvm.lltype */
+value llvm_datalayout_intptr_type(value C, value DL) {
+  LLVMTypeRef Type =
+      LLVMIntPtrTypeInContext(Context_val(C), DataLayout_val(DL));
+  return to_val(Type);
+}
+
+/* int -> DataLayout.t -> int */
+value llvm_datalayout_qualified_pointer_size(value AS, value DL) {
+  return Val_int(LLVMPointerSizeForAS(DataLayout_val(DL), Int_val(AS)));
+}
+
+/* Llvm.llcontext -> int -> DataLayout.t -> Llvm.lltype */
+value llvm_datalayout_qualified_intptr_type(value C, value AS, value DL) {
+  LLVMTypeRef Type = LLVMIntPtrTypeForASInContext(
+      Context_val(C), DataLayout_val(DL), Int_val(AS));
+  return to_val(Type);
+}
+
+/* Llvm.lltype -> DataLayout.t -> Int64.t */
+value llvm_datalayout_size_in_bits(value Ty, value DL) {
+  return caml_copy_int64(
+      LLVMSizeOfTypeInBits(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.lltype -> DataLayout.t -> Int64.t */
+value llvm_datalayout_store_size(value Ty, value DL) {
+  return caml_copy_int64(LLVMStoreSizeOfType(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.lltype -> DataLayout.t -> Int64.t */
+value llvm_datalayout_abi_size(value Ty, value DL) {
+  return caml_copy_int64(LLVMABISizeOfType(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.lltype -> DataLayout.t -> int */
+value llvm_datalayout_abi_align(value Ty, value DL) {
+  return Val_int(LLVMABIAlignmentOfType(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.lltype -> DataLayout.t -> int */
+value llvm_datalayout_stack_align(value Ty, value DL) {
+  return Val_int(
+      LLVMCallFrameAlignmentOfType(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.lltype -> DataLayout.t -> int */
+value llvm_datalayout_preferred_align(value Ty, value DL) {
+  return Val_int(
+      LLVMPreferredAlignmentOfType(DataLayout_val(DL), Type_val(Ty)));
+}
+
+/* Llvm.llvalue -> DataLayout.t -> int */
+value llvm_datalayout_preferred_align_of_global(value GlobalVar, value DL) {
+  return Val_int(
+      LLVMPreferredAlignmentOfGlobal(DataLayout_val(DL), Value_val(GlobalVar)));
+}
+
+/* Llvm.lltype -> Int64.t -> DataLayout.t -> int */
+value llvm_datalayout_element_at_offset(value Ty, value Offset, value DL) {
+  return Val_int(
+      LLVMElementAtOffset(DataLayout_val(DL), Type_val(Ty), Int64_val(Offset)));
+}
+
+/* Llvm.lltype -> int -> DataLayout.t -> Int64.t */
+value llvm_datalayout_offset_of_element(value Ty, value Index, value DL) {
+  return caml_copy_int64(
+      LLVMOffsetOfElement(DataLayout_val(DL), Type_val(Ty), Int_val(Index)));
 }

@@ -16,6 +16,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 
@@ -145,6 +146,12 @@ bool lldb_private::formatters::IsMsvcStlStringType(ValueObject &valobj) {
                                                                 indexes) > 0;
 }
 
+bool lldb_private::formatters::IsMsvcStlStringViewType(ValueObject &valobj) {
+  std::vector<uint32_t> indexes;
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mydata", true,
+                                                                indexes) > 0;
+}
+
 bool lldb_private::formatters::MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
@@ -215,4 +222,126 @@ bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
                               const TypeSummaryOptions &summary_options) {
   return formatStringViewImpl<StringElementType::UTF32>(valobj, stream,
                                                         summary_options, "U");
+}
+
+bool lldb_private::formatters::IsMsvcStlOrdering(ValueObject &valobj) {
+  std::vector<uint32_t> indexes;
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Value", true,
+                                                                indexes) > 0;
+}
+
+static std::optional<int64_t> MsvcStlExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Value");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::MsvcStlPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -128:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::MsvcStlWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = MsvcStlExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::IsMsvcStlSourceLocation(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_File") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP file_sp = valobj.GetChildMemberWithName("_File");
+  ValueObjectSP function_sp = valobj.GetChildMemberWithName("_Function");
+  ValueObjectSP line_sp = valobj.GetChildMemberWithName("_Line");
+  ValueObjectSP column_sp = valobj.GetChildMemberWithName("_Column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  // Default-constructed source_location is empty; don't invent a summary.
+  if (line == 0 && column == 0 &&
+      (!file || file[0] == '\0' || llvm::StringRef(file) == "\"\""))
+    return false;
+
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
+  return true;
 }

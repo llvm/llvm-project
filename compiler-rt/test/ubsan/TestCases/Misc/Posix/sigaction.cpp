@@ -7,6 +7,9 @@
 // Reason unknown, needs debugging.
 // UNSUPPORTED: target=aarch64{{.*}} && ubsan-tsan
 
+// TySan doesn't build a shared library
+// UNSUPPORTED: ubsan-tysan
+
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>

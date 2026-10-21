@@ -71,7 +71,7 @@ func.func @cmp_exchange_weak_unsupported_version(%ptr: !spirv.ptr<i32, Workgroup
 func.func @group_non_uniform_ballot_suitable_version(%predicate: i1) -> vector<4xi32> attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
-  // CHECK: spirv.GroupNonUniformBallot <Workgroup>
+  // CHECK: spirv.GroupNonUniformBallot <Subgroup>
   %0 = "test.convert_to_group_non_uniform_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
   return %0: vector<4xi32>
 }
@@ -140,7 +140,8 @@ func.func @sdot_scalar_i32_i32_capabilities(%operand: i32) -> i32 attributes {
     [DotProduct, DotProductInput4x8BitPacked], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.SDot
-  %0 = "test.convert_to_sdot_op"(%operand, %operand) {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> (i32)
+  // CHECK-SAME: test.marker = "keep"
+  %0 = "test.convert_to_sdot_op"(%operand, %operand) {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>, test.marker = "keep"}: (i32, i32) -> (i32)
   return %0: i32
 }
 
