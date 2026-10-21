@@ -64,7 +64,7 @@ class PlatformRemoteDarwinDeviceTest : public ::testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 };
 
-// Target::SetExecutableModule loads dependent modules in parallel, and each
+// Target::RebuildModuleListWithExecutable loads dependent modules in parallel, and each
 // one ends up in GetDeviceSupportDirectoryForOSVersion. The cache it fills
 // must not be written by more than one thread at a time.
 TEST_F(PlatformRemoteDarwinDeviceTest, DeviceSupportDirectoryForOSVersionRace) {
