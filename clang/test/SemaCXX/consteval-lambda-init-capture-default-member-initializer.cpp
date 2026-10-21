@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
 
-int gv = 5; // expected-note 4 {{declared here}}
+int gv = 5; // expected-note 6 {{declared here}}
 constexpr int cgv = 5;
 
 struct W {
@@ -35,6 +35,21 @@ struct MixedThisLast {
   // expected-note {{read of non-const variable 'gv' is not allowed in a constant expression}}
 };
 
+struct MixedThisBetween {
+  int member = [first = 1, this, captured = id(gv)] { return first + captured; }(); // expected-error {{call to consteval function 'id' is not a constant expression}} \
+  // expected-note {{declared here}} \
+  // expected-note {{read of non-const variable 'gv' is not allowed in a constant expression}}
+};
+
+struct MixedImplicitThis {
+  int value = 1;
+  int member = [=, captured = id(gv)] { return value + captured; }(); // expected-warning {{implicit capture of 'this' with a capture default of '=' is deprecated}} \
+  // expected-note {{add an explicit capture of 'this' to capture '*this' by reference}} \
+  // expected-error {{call to consteval function 'id' is not a constant expression}} \
+  // expected-note {{declared here}} \
+  // expected-note {{read of non-const variable 'gv' is not allowed in a constant expression}}
+};
+
 struct Valid {
   int member = [captured = W(cgv).value] { return captured; }();
   int function = [captured = id(cgv)] { return captured; }();
@@ -51,7 +66,8 @@ static_assert(Valid{}.mixed_ctor == 5);
 static_assert(Valid{}.mixed_function == 5);
 
 int main() {
-  return S{}.member + F{}.member + MixedThisFirst{}.member + MixedThisLast{}.member; // expected-note 4 {{in the default initializer of 'member'}}
+  return S{}.member + F{}.member + MixedThisFirst{}.member + MixedThisLast{}.member + // expected-note 4 {{in the default initializer of 'member'}}
+         MixedThisBetween{}.member + MixedImplicitThis{}.member; // expected-note 2 {{in the default initializer of 'member'}}
 }
 
 namespace consteval_copy_capture {

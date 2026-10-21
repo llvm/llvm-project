@@ -5808,21 +5808,23 @@ struct EnsureImmediateInvocationInDefaultArgs
   // Lambda default arguments are transformed upon calling the closure. The
   // body is not a subexpression, so only transform init-captures here.
   ExprResult TransformLambdaExpr(LambdaExpr *E) {
-    SmallVector<Expr *, 4> CaptureInits(E->capture_inits().begin(),
-                                        E->capture_inits().end());
+    SmallVector<Expr *, 4> CaptureInits;
     bool Changed = false;
-    auto Init = CaptureInits.begin();
-    for (LambdaExpr::capture_iterator C = E->capture_begin(),
-                                      CEnd = E->capture_end();
-         C != CEnd; ++C, ++Init) {
-      if (!E->isInitCapture(C))
+    auto Init = E->capture_init_begin();
+    for (const LambdaCapture &Capture : E->captures()) {
+      Expr *InitExpr = *Init++;
+      if (!E->isInitCapture(&Capture)) {
+        CaptureInits.push_back(InitExpr);
         continue;
+      }
 
-      auto *CaptureVar = cast<VarDecl>(C->getCapturedVar());
+      auto *CaptureVar = cast<VarDecl>(Capture.getCapturedVar());
       ImmediateCallVisitor V(SemaRef.Context);
       V.TraverseStmt(CaptureVar->getInit());
-      if (!V.HasImmediateCalls)
+      if (!V.HasImmediateCalls) {
+        CaptureInits.push_back(InitExpr);
         continue;
+      }
 
       ExprResult NewInit =
           TransformInitializer(CaptureVar->getInit(),
@@ -5831,18 +5833,19 @@ struct EnsureImmediateInvocationInDefaultArgs
         return ExprError();
 
       Expr *NewInitExpr = NewInit.get();
-      SourceLocation EllipsisLoc =
-          C->isPackExpansion() ? C->getEllipsisLoc() : SourceLocation();
+      SourceLocation EllipsisLoc = Capture.isPackExpansion()
+                                       ? Capture.getEllipsisLoc()
+                                       : SourceLocation();
       QualType InitCaptureType = SemaRef.buildLambdaInitCaptureInitialization(
-          C->getLocation(), C->getCaptureKind() == LCK_ByRef, EllipsisLoc,
-          std::nullopt, CaptureVar->getIdentifier(),
+          Capture.getLocation(), Capture.getCaptureKind() == LCK_ByRef,
+          EllipsisLoc, std::nullopt, CaptureVar->getIdentifier(),
           CaptureVar->getInitStyle() != VarDecl::CInit, NewInitExpr);
       if (InitCaptureType.isNull())
         return ExprError();
       assert(InitCaptureType == CaptureVar->getType() &&
              "init-capture type changed during immediate invocation check");
 
-      *Init = NewInitExpr;
+      CaptureInits.push_back(NewInitExpr);
       Changed = true;
     }
 
