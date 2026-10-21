@@ -157,11 +157,15 @@ def mem_mm_4sp : Operand<i32> {
 
 def jmptarget_mm : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET_MM";
   let PrintMethod = "printJumpOperand";
 }
 
 def calltarget_mm : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let OperandNamespace = "MipsII";
+  let OperandType = "OPERAND_JUMP_TARGET_MM";
   let PrintMethod = "printJumpOperand";
 }
 
