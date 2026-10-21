@@ -920,7 +920,6 @@ RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
                          ignoreResult);
 }
 
-#ifndef NDEBUG
 static QualType
 getCoroutineSuspendExprReturnType(const ASTContext &ctx,
                                   const CoroutineSuspendExpr *e) {
@@ -928,52 +927,46 @@ getCoroutineSuspendExprReturnType(const ASTContext &ctx,
   assert(isa<CallExpr>(re) && "unexpected suspend expression type");
   return cast<CallExpr>(re)->getCallReturnType(ctx);
 }
-#endif
 
-LValue CIRGenFunction::emitCoawaitLValue(const CoawaitExpr *e) {
-  assert(
-      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
-      "Can't have a scalar return unless the return type is a "
-      "reference type!");
-  mlir::Location scopeLoc = getLoc(e->getSourceRange());
-  mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
+static LValue emitSuspendLValue(CIRGenFunction &cgf,
+                                const CoroutineSuspendExpr *e,
+                                cir::AwaitKind kind) {
+  QualType retTy = getCoroutineSuspendExprReturnType(cgf.getContext(), e);
+  assert(retTy->isReferenceType() &&
+         "Can't have a scalar return unless the return type is a "
+         "reference type!");
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::Block *currEntryBlock = cgf.curLexScope->getEntryBlock();
   mlir::Value tmpResumeLValAddr;
-  LValue lv = emitSuspendExpression(*this, *curCoro.data, *e,
-                                    curCoro.data->currentAwaitKind,
+  LValue lv = emitSuspendExpression(cgf, *cgf.curCoro.data, *e, kind,
                                     AggValueSlot::ignored(),
                                     /*ignoreResult=*/false, currEntryBlock,
                                     tmpResumeLValAddr, /*forLValue=*/true)
                   .lv;
-  if (tmpResumeLValAddr) {
-    Address addr = lv.getAddress();
-    mlir::Value loadedPtr = cir::LoadOp::create(
-        getBuilder(), scopeLoc, addr.getPointer().getType(), tmpResumeLValAddr);
-    lv.setAddress(addr.withPointer(loadedPtr));
+  if (!tmpResumeLValAddr) {
+    assert(isResumeExprInTryCatch(*cgf.curCoro.data, kind, *e) &&
+           "expected resume in try/catch");
+    QualType pointeeTy = retTy->getPointeeType();
+    mlir::Type elemTy = cgf.convertType(pointeeTy);
+    mlir::Value nullPtr = cgf.getBuilder().getNullPtr(
+        cgf.getBuilder().getPointerTo(elemTy), scopeLoc);
+    return cgf.makeNaturalAlignAddrLValue(nullPtr, pointeeTy);
   }
+
+  Address addr = lv.getAddress();
+  mlir::Value loadedPtr =
+      cir::LoadOp::create(cgf.getBuilder(), scopeLoc,
+                          addr.getPointer().getType(), tmpResumeLValAddr);
+  lv.setAddress(addr.withPointer(loadedPtr));
   return lv;
 }
 
+LValue CIRGenFunction::emitCoawaitLValue(const CoawaitExpr *e) {
+  return emitSuspendLValue(*this, e, curCoro.data->currentAwaitKind);
+}
+
 LValue CIRGenFunction::emitCoyieldLValue(const CoyieldExpr *e) {
-  assert(
-      getCoroutineSuspendExprReturnType(getContext(), e)->isReferenceType() &&
-      "Can't have a scalar return unless the return type is a "
-      "reference type!");
-  mlir::Location scopeLoc = getLoc(e->getSourceRange());
-  mlir::Block *currEntryBlock = curLexScope->getEntryBlock();
-  mlir::Value tmpResumeLValAddr;
-  LValue lv =
-      emitSuspendExpression(*this, *curCoro.data, *e, cir::AwaitKind::Yield,
-                            AggValueSlot::ignored(),
-                            /*ignoreResult=*/false, currEntryBlock,
-                            tmpResumeLValAddr, /*forLValue=*/true)
-          .lv;
-  if (tmpResumeLValAddr) {
-    Address addr = lv.getAddress();
-    mlir::Value loadedPtr = cir::LoadOp::create(
-        getBuilder(), scopeLoc, addr.getPointer().getType(), tmpResumeLValAddr);
-    lv.setAddress(addr.withPointer(loadedPtr));
-  }
-  return lv;
+  return emitSuspendLValue(*this, e, cir::AwaitKind::Yield);
 }
 
 mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
