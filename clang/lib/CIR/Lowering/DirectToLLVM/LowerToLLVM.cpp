@@ -2374,19 +2374,33 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+  mlir::Attribute langOpts =
+      module->getAttr(cir::CIRDialect::getLoweringLangOptionsAttrName());
+  auto loweringLangOps =
+      dyn_cast_if_present<cir::LoweringLangOptionsAttr>(langOpts);
+
+  bool isForHLSL = loweringLangOps ? loweringLangOps.getHlsl() : false;
+  if (isForHLSL && mlir::isa<cir::MatrixType>(op.getAllocaType()) &&
+      mlir::isa<cir::BoolType>(
+          cast<cir::MatrixType>(op.getAllocaType()).getElementType())) {
+    return op.emitError()
+           << "NYI: Builtin matrix type with bool element type for HLSL";
+  }
+
   mlir::Value size =
       op.isDynamic()
           ? adaptor.getDynAllocSize()
           : mlir::LLVM::ConstantOp::create(
                 rewriter, op.getLoc(),
                 typeConverter->convertType(rewriter.getI32Type()), 1);
-  mlir::Type elementTy =
-      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
+  mlir::Type elementTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
+                                              op.getAllocaType(), isForHLSL);
   if (!elementTy)
     return op.emitError()
            << "NYI: lowering alloca of a type with no memory representation";
-  mlir::Type resultTy =
-      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+  mlir::Type resultTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
+                                             op.getType(), isForHLSL);
 
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
@@ -5648,6 +5662,33 @@ mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
                              adaptor.getRowIdx(), adaptor.getColumnIdx());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
       op, adaptor.getMatrix(), flatIndex);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixExtractRowOpLowering::matchAndRewrite(
+    cir::MatrixExtractRowOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  mlir::Type elementType =
+      typeConverter->convertType(matrixTy.getElementType());
+  mlir::Type resultTy =
+      mlir::VectorType::get(matrixTy.getNumColumns(), elementType);
+  mlir::Value rowVec =
+      mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), resultTy);
+
+  for (unsigned col = 0; col != matrixTy.getNumColumns(); ++col) {
+    mlir::Value columnIdx = mlir::LLVM::ConstantOp::create(
+        rewriter, op.getLoc(), rewriter.getI32Type(),
+        rewriter.getIntegerAttr(rewriter.getI32Type(), col));
+    mlir::Value flatIndex = computeMatrixFlatIndex(
+        rewriter, op.getLoc(), matrixTy, adaptor.getRowIdx(), columnIdx);
+
+    auto element = mlir::LLVM::ExtractElementOp::create(
+        rewriter, op->getLoc(), elementType, adaptor.getMatrix(), flatIndex);
+    rowVec = mlir::LLVM::InsertElementOp::create(rewriter, op->getLoc(), rowVec,
+                                                 element, columnIdx);
+  }
+  rewriter.replaceOp(op, rowVec);
   return mlir::success();
 }
 
