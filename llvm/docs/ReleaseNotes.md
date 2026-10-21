@@ -229,6 +229,12 @@ Makes programs 10x faster by doing Special New Thing.
   found with an explanatory message instead of succeeding with no targets;
   such a build never provided a usable MLIR SDK.
 
+* When Clang is in the `LLVM_ENABLE_PROJECTS` list, it now compiles the
+  experimental MLIR-Generator ClangIR by default. This functionality can
+  increase the compile time and binary size of Clang significantly.  This can be
+  disabled with `CLANG_ENABLE_CIR=OFF`, which wil disable the `-fclangir` flag
+  in Clang.
+
 * LLVM's documentation has largely been rewritten from [reStructuredText] to
   Markdown, and our Sphinx documentation build now has a hard dependency on the
   [`myst-parser` package]. Vendors packaging LLVM will need to install

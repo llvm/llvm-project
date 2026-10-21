@@ -10091,8 +10091,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     // transform may not be safe because order of loads/stores outside of this
     // set may not be preserved.
     // TODO: We could allow multiple sizes by tracking each stored byte.
-    if (Store->getMemoryVT() != MemVT || !Store->isSimple() ||
-        Store->isIndexed() || !Store->hasOneUse())
+    // Keep a differently-sized store in the incoming chain and try to merge
+    // the stores collected after it.
+    if (Store->getMemoryVT() != MemVT)
+      break;
+    if (!Store->isSimple() || Store->isIndexed() || !Store->hasOneUse())
       return SDValue();
     Stores.push_back(Store);
     Chain = Store->getChain();

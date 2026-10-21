@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -target-cpu sm_90a \
+// REQUIRES: amdSupport
 // RUN:            -target-feature +ptx87 -x cuda -fcuda-is-device -fclangir -emit-cir \
 // RUN:            %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s

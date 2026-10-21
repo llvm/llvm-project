@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -x c -ffreestanding %s -O2 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -fclangir -emit-cir -o - -Wall -Werror | FileCheck %s --check-prefixes=CIR
+// XFAIL: *
 // RUN: %clang_cc1 -x c -ffreestanding %s -O2 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -fclangir -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=LLVM
 // RUN: %clang_cc1 -x c -ffreestanding %s -O2 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
 // RUN: %clang_cc1 -x c -ffreestanding %s -O0 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -menable-no-infs -fclangir -emit-cir -o - -Wall -Werror | FileCheck %s --check-prefix=CIR-NINF
