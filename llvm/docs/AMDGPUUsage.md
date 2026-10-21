@@ -1174,8 +1174,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - `amdgpu12.50s`
     - dGPU
-    - - sramecc
-      - xnack
+    - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
       - Globally Accessible Scratch
@@ -1191,8 +1190,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - `amdgpu12.50`
     - APU
-    - - sramecc
-      - xnack
+    - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
       - Globally Accessible Scratch
@@ -1208,8 +1206,7 @@ Every processor supports every OS ABI (see {ref}`amdgpu-os`) with the following 
     -
     - `amdgpu12.51`
     - APU
-    - - sramecc
-      - xnack
+    - - xnack
     - - Architected flat scratch
       - Packed work-item IDs
       - Globally Accessible Scratch
@@ -1395,8 +1392,7 @@ Generic processor code objects are versioned. See {ref}`amdgpu-generic-processor
   - `amdgpu12.5`
   - - `gfx1250`
     - `gfx1251`
-  - - sramecc
-    - xnack
+  - - xnack
   - - Architected flat scratch
     - Packed work-item IDs
   - Functionally equivalent to gfx1250.
@@ -10715,6 +10711,10 @@ For GFX942:
 
   - PCIe access from the GPU to the CPU can be kept coherent by using the MTYPE
     UC (uncached) which bypasses the L2.
+
+ - A `buffer_inv` with neither sc0 nor sc1 set (or `BUFFER_INV 0` in MIR) does not invalidate the L1 or L2 caches.
+   It is functionally `s_nop` with the side effect of incrementing `vmcnt`.
+   This side effect is also present when `EXEC` is zero.
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
