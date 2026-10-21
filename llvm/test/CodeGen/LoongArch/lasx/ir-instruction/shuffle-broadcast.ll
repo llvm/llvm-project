@@ -6,8 +6,7 @@ define void @broadcast0_v32i8(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.b $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.b $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -36,8 +35,7 @@ define void @broadcast0_v16i16(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.h $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.h $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -66,8 +64,7 @@ define void @broadcast0_v8i32(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -96,8 +93,7 @@ define void @broadcast0_v8f32(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -126,7 +122,7 @@ define void @broadcast0_v4i64(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -154,7 +150,7 @@ define void @broadcast0_v4f64(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: broadcast0_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

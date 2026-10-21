@@ -233,6 +233,18 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
   }
 }
 
+// A section symbol's addend is not validated until getSymVA. Return nullopt
+// to conservatively disable folding for such an out-of-range offset.
+static std::optional<uint64_t> getMergeOffset(const Defined &d,
+                                              uint64_t addend) {
+  auto &ms = cast<MergeInputSection>(*d.section);
+  if (!d.isSection())
+    return ms.getOffset(d.value) + addend;
+  if (addend >= ms.content().size())
+    return std::nullopt;
+  return ms.getOffset(addend);
+}
+
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
@@ -251,11 +263,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
 
     Symbol &sa = secA->file->getRelocTargetSym(*rai);
     Symbol &sb = secB->file->getRelocTargetSym(*rbi);
-    if (&sa == &sb) {
-      if (addA == addB)
-        continue;
-      return false;
-    }
+    if (&sa == &sb && addA == addB)
+      continue;
 
     auto *da = dyn_cast<Defined>(&sa);
     auto *db = dyn_cast<Defined>(&sb);
@@ -299,11 +308,8 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     if (x->getParent() != y->getParent())
       return false;
 
-    uint64_t offsetA =
-        sa.isSection() ? x->getOffset(addA) : x->getOffset(da->value) + addA;
-    uint64_t offsetB =
-        sb.isSection() ? y->getOffset(addB) : y->getOffset(db->value) + addB;
-    if (offsetA != offsetB)
+    auto offA = getMergeOffset(*da, addA);
+    if (!offA || offA != getMergeOffset(*db, addB))
       return false;
   }
 
@@ -539,16 +545,9 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
-  auto print = [&ctx = ctx]() -> ELFSyncStream {
-    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
-  };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
-    if (end - begin == 1)
-      return;
-    print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence
@@ -558,6 +557,22 @@ template <class ELFT> void ICF<ELFT>::run() {
         isec->markDead();
     }
   });
+
+  // Print classes in input order, independent of the hash.
+  if (ctx.arg.printIcfSections) {
+    DenseMap<InputSection *, SmallVector<InputSection *, 0>> folded;
+    for (InputSectionBase *sec : ctx.inputSections)
+      if (auto *s = dyn_cast<InputSection>(sec); s && s->repl != s)
+        folded[s->repl].push_back(s);
+    for (InputSectionBase *sec : ctx.inputSections) {
+      auto it = folded.find(dyn_cast<InputSection>(sec));
+      if (it == folded.end())
+        continue;
+      Msg(ctx) << "selected section " << sec;
+      for (InputSection *s : it->second)
+        Msg(ctx) << "  removing identical section " << s;
+    }
+  }
 
   // Change Defined symbol's section field to the canonical one.
   auto fold = [](Symbol *sym) {

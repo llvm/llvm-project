@@ -22,6 +22,7 @@ from .types import (
     CapabilitiesEvent,
     ContinueArgs,
     DAPError,
+    EmptyBodyResponse,
     ErrorResponse,
     Event,
     ExitedEvent,
@@ -40,6 +41,7 @@ from .types import (
     ReverseResponse,
     RunInTerminalRequest,
     RunInTerminalResponse,
+    StartDebuggingRequest,
     StepInArgs,
     StepOutArgs,
     TerminateArgs,
@@ -319,6 +321,10 @@ class Session:
             terminal_request = dict_to_message(RunInTerminalRequest, request)
             self._reverse_requests.append(terminal_request)
             self._handle_run_in_terminal(terminal_request)
+        elif request_type == "startDebugging":
+            start_request = dict_to_message(StartDebuggingRequest, request)
+            self._reverse_requests.append(start_request)
+            self._handle_start_debugging(start_request)
         else:
             raise NotImplementedError(
                 f"no reverse request handler for '{request_type}'"
@@ -382,6 +388,16 @@ class Session:
                 self._reverse_process_io_threads.append(err_thread)
 
         self._send_response(response)
+
+    def _handle_start_debugging(self, request: StartDebuggingRequest):
+        resp = EmptyBodyResponse(
+            type=MessageType.RESPONSE,
+            seq=self._next_sequence(),
+            command=request.command,
+            request_seq=request.seq,
+            success=True,
+        )
+        self._send_response(resp)
 
     def ensure_initialized(self):
         if self._state.is_initialized:

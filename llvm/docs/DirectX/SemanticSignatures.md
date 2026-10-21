@@ -98,8 +98,8 @@ retains all information needed to serialize into `ISG1`, `OSG1` and `PSV0`.
 | Cols                   | i8              | number of components per row (1–4)                                                                                                                                                                                                 |
 | Start Row              | i32             | starting register row; `-1` (`0xFFFFFFFF`) if unallocated                                                                                                                                                                          |
 | Start Column           | i8              | starting component column; `-1` (`0xFF`) if unallocated, otherwise 0–3                                                                                                                                                             |
-| Usage Mask             | i8              | 4-bit bitmask of components that are always read (input) or may be written (output).                                                                                                                                               |
-| Dynamic Index Mask     | i8              | 4-bit bitmask of components that are dynamically indexed                                                                                                                                                                           |
+| Usage Mask             | i8              | 4-bit register-relative mask of components read (input) or written (output), including conditional accesses.                                                                                                                                               |
+| Dynamic Index Mask     | i8              | 4-bit element-relative mask of components that are dynamically indexed                                                                                                                                                                           |
 | GS Output Stream Index | i32             | GS output stream index; 0 for non-GS stages                                                                                                                                                                                        |
 
 [ElementType]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h
@@ -113,8 +113,11 @@ The following container fields are derived from the operands above:
   sentinels are always set together).
 - **DeclaredMask**: `((1 << Cols) - 1) << StartCol`.
 - **AlwaysReads / NeverWrites**: `UsageMask` is written to `AlwaysReads` for
-  inputs; for outputs `NeverWrites = ~UsageMask & DeclaredMask`.
-- **MinPrecision**: from `CompType` plus the `UseMinPrecision` module flag.
+  inputs (including conditional reads, following DXC); for outputs
+  `NeverWrites = ~UsageMask & 0xF`. The output mask includes components outside
+  the declared mask. These conventions apply to validator version 1.5 onward.
+- **MinPrecision**: from `CompType` when native low-precision mode is disabled;
+  otherwise `Default`. The backend reads native mode from `dx.nativelowprec`.
 
 ## Semantic Indices
 

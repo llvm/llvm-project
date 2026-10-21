@@ -309,6 +309,9 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     return;
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
+  case CK_BaseToDerived:
+    // The conversion cast doesn't change what it refers to, so preserve the
+    // borrow if we can.
     // It is possible that the derived class and base class have different
     // gsl::Pointer annotations. Skip if their origin shape differ.
     if (Dest && Src && Dest->getLength() == Src->getLength())
@@ -1204,8 +1207,35 @@ void FactsGenerator::handleUse(const Expr *E) {
     CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(E, List));
 }
 
+// Issues a placeholder loan (this->field) for each origin-carrying field of the
+// class and its bases. It represents the storage the field refers to, as
+// opposed to the field itself (covered by $this).
+void FactsGenerator::issueFieldPlaceholderLoans(
+    const CXXMethodDecl *MD, llvm::SmallVectorImpl<Fact *> &Facts) {
+  const CXXRecordDecl *ClassDecl = MD->getParent()->getDefinition();
+  if (!ClassDecl)
+    return;
+  auto IssueForRecord = [&](const CXXRecordDecl *RD) {
+    for (const FieldDecl *Field : RD->fields()) {
+      // Skip private fields of bases as they cannot be named in MD.
+      if (RD != ClassDecl && Field->getAccess() == AS_private)
+        continue;
+      OriginList *FieldList = getOriginsList(*Field);
+      if (!FieldList)
+        continue;
+      const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(Field);
+      Facts.push_back(FactMgr.createFact<IssueFact>(
+          L->getID(), FieldList->getOuterOriginID()));
+    }
+    return true;
+  };
+  IssueForRecord(ClassDecl);
+  ClassDecl->forallBases(IssueForRecord);
+}
+
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
-// parameter at the function's entry.
+// parameter, the implicit 'this', and (if enabled) each origin-carrying field
+// at the function's entry.
 llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
   if (!FD)
@@ -1214,10 +1244,12 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L =
-        FactMgr.getLoanMgr().createPlaceholderLoan(cast<CXXMethodDecl>(FD));
+    const auto *MD = cast<CXXMethodDecl>(FD);
+    const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(MD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+    if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD))
+      issueFieldPlaceholderLoans(MD, PlaceholderLoanFacts);
   }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);

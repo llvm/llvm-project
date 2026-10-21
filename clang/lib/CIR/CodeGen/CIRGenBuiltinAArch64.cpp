@@ -37,7 +37,7 @@ using namespace clang::aarch64;
 
 // Generate vscale * scalingFactor
 static mlir::Value genVscaleTimesFactor(mlir::Location loc,
-                                        CIRGenBuilderTy builder,
+                                        CIRGenBuilderTy &builder,
                                         mlir::Type cirTy,
                                         int32_t scalingFactor) {
   mlir::Value vscale = builder.emitIntrinsicCallOp(loc, "vscale", cirTy);
