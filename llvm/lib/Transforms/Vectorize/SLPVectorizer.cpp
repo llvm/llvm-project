@@ -10524,7 +10524,9 @@ class InstructionsCompatibilityAnalysis {
   /// lanes are inserted into it. A single-index scalar GEP is supported: the
   /// copyable lanes are modeled as zero-index GEPs of the lane values
   /// themselves. A scalar zext is supported: the copyable lanes are constants
-  /// modeled as zexts of truncated constants.
+  /// modeled as zexts of truncated constants. A scalar integer compare is
+  /// supported: the copyable lanes are i1 constants modeled as compares of
+  /// constants or of a value with itself.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
            RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
@@ -10533,7 +10535,8 @@ class InstructionsCompatibilityAnalysis {
            (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
             !I->getType()->isVectorTy()) ||
            (isa<ZExtInst>(I) && !I->getType()->isVectorTy() &&
-            !isa<Constant>(I->getOperand(0)));
+            !isa<Constant>(I->getOperand(0))) ||
+           (isa<ICmpInst>(I) && I->getOperand(0)->getType()->isIntegerTy());
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10755,6 +10758,9 @@ class InstructionsCompatibilityAnalysis {
     if (MainOpcode == Instruction::ZExt)
       return {ConstantExpr::getTrunc(cast<Constant>(V),
                                      cast<CastInst>(MainOp)->getSrcTy())};
+    // icmp pred C1, C2 == V for the i1 constant lanes.
+    if (auto *Cmp = dyn_cast<ICmpInst>(MainOp))
+      return CmpSamePredicateHelper::getConstantLaneOperands(V, Cmp);
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     Type *Ty = V->getType();
     if (PoisonPlaceholder &&
@@ -11318,9 +11324,10 @@ public:
       return S;
     InstructionsState OrigS = S;
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
-    // Cast nodes support only matching lanes from the main op block and
-    // copyable (round-trippable constant) lanes.
-    if (isa<CastInst>(MainOp) && any_of(VL, [&](Value *V) {
+    auto *Cmp = dyn_cast<ICmpInst>(MainOp);
+    // Cast and compare nodes support only matching lanes from the main op
+    // block and copyable (constant) lanes.
+    if ((Cmp || isa<CastInst>(MainOp)) && any_of(VL, [&](Value *V) {
           auto *I = dyn_cast<Instruction>(V);
           return !isa<PoisonValue>(V) &&
                  !(I && I->getOpcode() == MainOpcode &&
@@ -11328,6 +11335,31 @@ public:
                  !S.isCopyableElement(V);
         }))
       return OrigS;
+    // A compare node needs the constant lanes and a predicate shared by all
+    // the lanes, the main op must be a compare with this predicate.
+    if (Cmp) {
+      if (none_of(VL, [&](Value *V) { return S.isCopyableElement(V); }))
+        return OrigS;
+      CmpInst::Predicate Pred =
+          CmpSamePredicateHelper::getSharedPredicate(VL, Cmp);
+      if (Pred != Cmp->getPredicate()) {
+        auto Cmps = make_isa_range<ICmpInst>(VL);
+        auto It = find_if(Cmps, [&](ICmpInst *I) {
+          return I->getPredicate() == Pred && isSupportedMainOp(I) &&
+                 (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
+        });
+        if (It == Cmps.end())
+          return OrigS;
+        MainOp = Cmp = *It;
+        S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+      }
+      // The i1 constants 0 and 1 differ in sign, so their compare is poison if
+      // all the lanes are samesign.
+      if (Cmp->getOperand(0)->getType()->isIntegerTy(1) &&
+          all_of(make_isa_range<ICmpInst>(VL),
+                 [](ICmpInst *I) { return I->hasSameSign(); }))
+        return OrigS;
+    }
     if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
       return OrigS;
     if (!WithProfitabilityCheck)
@@ -11347,11 +11379,12 @@ public:
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
-    // A cast copyable node just extends the sources of the matching lanes:
-    // the constant lanes are free in a gather of the original values, so it
-    // cannot be better unless the matching lanes are the majority and are not
-    // vectorized already (the gather reuses the vector otherwise).
-    if (isa<CastInst>(MainOp) &&
+    // A cast or compare copyable node just converts the operands of the
+    // matching lanes: the constant lanes are free in a gather of the original
+    // values, so it cannot be better unless the matching lanes are the
+    // majority and are not vectorized already (the gather reuses the vector
+    // otherwise).
+    if ((Cmp || isa<CastInst>(MainOp)) &&
         (CopyableNum * 2 >= VL.size() || none_of(VL, [&](Value *V) {
            return !S.isCopyableElement(V) && !isa<PoisonValue>(V) &&
                   !R.isVectorized(V);
@@ -11594,6 +11627,38 @@ public:
               return isa<GetElementPtrInst>(V) && !S.isCopyableElement(V);
             },
             Operands[1]);
+      // The constant lanes, equal to the compare of the equal operands,
+      // compare the not undef or poison value of a splat operand column with
+      // itself. The constant lanes are not scheduled, so the value cannot be
+      // an instruction from the main op block.
+      if (auto *Cmp = dyn_cast<ICmpInst>(MainOp)) {
+        auto GetSelfOperand = [&](ArrayRef<Value *> Ops) -> Value * {
+          Value *X = nullptr;
+          for (auto [V, Op] : zip(VL, Ops)) {
+            if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+              continue;
+            if (X && X != Op)
+              return nullptr;
+            X = Op;
+          }
+          auto *XI = dyn_cast<Instruction>(X);
+          if ((XI && XI->getParent() == MainOp->getParent()) ||
+              !isGuaranteedNotToBeUndefOrPoison(X, /*AC=*/nullptr, MainOp, &DT))
+            return nullptr;
+          return X;
+        };
+        Value *X = GetSelfOperand(Operands[0]);
+        if (!X)
+          X = GetSelfOperand(Operands[1]);
+        const bool IsTrueWhenEqual =
+            ICmpInst::isTrueWhenEqual(Cmp->getPredicate());
+        for (auto [V, Op0, Op1] : zip(VL, Operands[0], Operands[1])) {
+          auto *CI = dyn_cast<ConstantInt>(V);
+          if (X && S.isCopyableElement(V) &&
+              (!CI || CI->isOne() == IsTrueWhenEqual))
+            Op0 = Op1 = X;
+        }
+      }
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
@@ -17322,7 +17387,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // The bit tests of trunc X to i1 lanes compare and A, B with a constant.
     const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
     auto GetScalarCost = [&](unsigned Idx) {
-      if (isa<PoisonValue>(UniqueValues[Idx]))
+      if (isa<PoisonValue>(UniqueValues[Idx]) ||
+          E->isCopyableElement(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
       if (!isa<SelectInst>(UniqueValues[Idx])) {
