@@ -2206,8 +2206,8 @@ class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
     auto initialYieldOp =
         cast<cir::YieldOp>(initialRegion.back().getTerminator());
     rewriter.setInsertionPoint(initialYieldOp);
-    rewriter.replaceOpWithNewOp<cir::BrOp>(
-        initialYieldOp, initialYieldOp.getArgs(), beforeBody);
+    rewriter.replaceOpWithNewOp<cir::BrOp>(initialYieldOp, beforeBody,
+                                           initialYieldOp.getArgs());
     rewriter.inlineRegionBefore(initialRegion, insertBefore);
   }
 
@@ -2224,14 +2224,14 @@ class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
     mlir::Operation *bodyTerminator = bodyRegion.back().getTerminator();
     if (auto bodyYield = dyn_cast<cir::YieldOp>(bodyTerminator)) {
       rewriter.setInsertionPoint(bodyYield);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, mlir::ValueRange{},
-                                             beforeFinal);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, beforeFinal,
+                                             mlir::ValueRange{});
     }
 
     for (auto &coReturn : coReturnsOps) {
       rewriter.setInsertionPoint(coReturn);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, mlir::ValueRange{},
-                                             beforeFinal);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, beforeFinal,
+                                             mlir::ValueRange{});
     }
 
     rewriter.inlineRegionBefore(bodyRegion, insertBefore);
@@ -2266,8 +2266,8 @@ class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
       // there instead of to the exit region.
       assert(!cir::MissingFeatures::coroutineGetRetObjManager());
       rewriter.setInsertionPoint(coroExit);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(coroExit, mlir::ValueRange{},
-                                             beforeExit);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(coroExit, beforeExit,
+                                             mlir::ValueRange{});
     }
   }
 
@@ -2299,7 +2299,7 @@ class CIRCoroutineFlattening : public mlir::OpRewritePattern<cir::CoroutineOp> {
     rewriter.inlineRegionBefore(exitRegion, afterCleanup);
 
     rewriter.setInsertionPointAfter(scope);
-    cir::BrOp::create(rewriter, scope.getLoc(), mlir::ValueRange(), beforeExit);
+    cir::BrOp::create(rewriter, scope.getLoc(), beforeExit, mlir::ValueRange{});
   }
 
 public:
@@ -2330,7 +2330,7 @@ public:
         rewriter.splitBlock(coroBlock, rewriter.getInsertionPoint());
 
     rewriter.setInsertionPointToEnd(coroBlock);
-    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), remainingOpsBlock);
+    cir::BrOp::create(rewriter, loc, remainingOpsBlock, mlir::ValueRange());
 
     // coroOp now lives in remainingOpsBlock. Build the cleanup scope in front
     // of it.
