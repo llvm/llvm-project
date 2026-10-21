@@ -183,6 +183,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execvpe
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvpe
+)
+
+add_entrypoint_object(
   fexecve
   ALIAS
   DEPENDS
