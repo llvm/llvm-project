@@ -8,6 +8,8 @@ define void @copyable_mask_lane(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[N64:%.*]] = zext nneg i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
@@ -19,10 +21,12 @@ define void @copyable_mask_lane(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[PR0:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[IV]]
 ; CHECK-NEXT:    [[IV1:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i64 [[IV1]], [[N64]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[IV]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP25:%.*]] = or disjoint <2 x i64> [[TMP4]], <i64 2, i64 3>
 ; CHECK-NEXT:    [[IV2:%.*]] = or disjoint i64 [[IV]], 2
-; CHECK-NEXT:    [[C2:%.*]] = icmp samesign ult i64 [[IV2]], [[N64]]
-; CHECK-NEXT:    [[IV3:%.*]] = or disjoint i64 [[IV]], 3
-; CHECK-NEXT:    [[C3:%.*]] = icmp samesign ult i64 [[IV3]], [[N64]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp samesign ult <2 x i64> [[TMP25]], [[TMP6]]
 ; CHECK-NEXT:    [[PX0:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[IV]]
 ; CHECK-NEXT:    [[PY0:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[IV]]
 ; CHECK-NEXT:    [[Y0:%.*]] = load float, ptr [[PY0]], align 4
@@ -32,8 +36,8 @@ define void @copyable_mask_lane(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i8>, ptr [[PR0]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> <i1 true, i1 poison, i1 poison, i1 poison>, i1 [[C1]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[C2]], i64 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i1> [[TMP4]], i1 [[C3]], i64 3
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i1> [[TMP7]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i1> [[TMP5]], <4 x i1> [[TMP26]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP13]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <4 x float>, ptr [[PX0]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP18]], <4 x float> zeroinitializer

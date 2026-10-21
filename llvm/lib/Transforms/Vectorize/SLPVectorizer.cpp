@@ -20853,10 +20853,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             count_if(Entry->Scalars, [&](Value *V) {
               return ValueToExtUses->contains(V);
             }) <= 2;
+        // The extracted address index hides the consecutive accesses of the
+        // users from the later trees.
+        auto *GEPUser = dyn_cast_if_present<GetElementPtrInst>(EU.User);
+        const bool IsAddressIndex =
+            GEPUser && GEPUser->getPointerOperand() != EU.Scalar;
         if (IsProfitablePHIUser) {
           KeepScalar = true;
         } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
                    ExtraCost - ScalarCost <= TTI::TCC_Basic &&
+                   !IsAddressIndex &&
                    (!GatheredLoadsEntriesFirst.has_value() ||
                     Entry->Idx < *GatheredLoadsEntriesFirst)) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
