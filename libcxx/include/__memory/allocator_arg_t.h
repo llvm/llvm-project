@@ -49,21 +49,21 @@ template <class _Tp, class _Alloc, class... _Args>
 struct __uses_alloc_ctor : integral_constant<int, __uses_alloc_ctor_imp<_Tp, _Alloc, _Args...>::value> {};
 
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline void
 __user_alloc_construct_impl(integral_constant<int, 0>, _Tp* __storage, const _Allocator&, _Args&&... __args) {
   new (__storage) _Tp(std::forward<_Args>(__args)...);
 }
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline void
 __user_alloc_construct_impl(integral_constant<int, 1>, _Tp* __storage, const _Allocator& __a, _Args&&... __args) {
   new (__storage) _Tp(allocator_arg, __a, std::forward<_Args>(__args)...);
 }
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline void
 __user_alloc_construct_impl(integral_constant<int, 2>, _Tp* __storage, const _Allocator& __a, _Args&&... __args) {
   new (__storage) _Tp(std::forward<_Args>(__args)..., __a);
 }
