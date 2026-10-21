@@ -890,25 +890,14 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       break;
 
     case TargetLowering::Expand: {
-      // Vector extending loads should be handled in LegalizeVectorOps,
-      // except for the special case of f16/bf16 vector extloads.
-      EVT SVT = SrcVT.getScalarType();
-      assert(((SVT.isInteger() && !SrcVT.isVector()) ||
-              ((SVT == MVT::f16 || SVT == MVT::bf16) &&
-               ExtType == ISD::EXTLOAD)) &&
-             "Expanding extending loads only for scalar integers and f16/bf16 "
-             "EXTLOAD");
-
       EVT DestVT = Node->getValueType(0);
       if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
                            ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
-        if (SrcVT.isInteger()) {
-          assert(!SrcVT.isVector() &&
-                 "Scalar integer loads guaranteed by assert at top of case");
-          assert(DestVT.isInteger() &&
-                 "Extending load from integer must have integer destination");
+
+        // For scalar integer loads, try intermediate integer types.
+        if (SrcVT.isInteger() && !SrcVT.isVector()) {
           unsigned SrcBits = SrcVT.getSizeInBits();
           unsigned DestBits = DestVT.getSizeInBits();
 
@@ -921,7 +910,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
               continue;
 
             ISD::LoadExtType MidExtType =
-                (IntVT == SrcVT.getSimpleVT()) ? ISD::NON_EXTLOAD : ExtType;
+                IntBits == SrcBits ? ISD::NON_EXTLOAD : ExtType;
 
             if (TLI.isLoadLegal(IntVT, SrcVT, LD->getAlign(),
                                 LD->getAddressSpace(), MidExtType, false)) {
@@ -937,13 +926,34 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
           if (Value.getNode())
             break;
-        } else {
-          // Handle the special case of fp16 extloads. EXTLOAD doesn't have the
-          // normal undefined upper bits behavior to allow using an in-reg
-          // extend with the illegal FP type, so load as an integer and do the
-          // from-integer conversion.
-          assert((SVT == MVT::f16 || SVT == MVT::bf16) &&
-                 "Non-integer extending loads must be f16/bf16");
+        }
+
+        EVT LoadVT =
+            TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
+        if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
+            (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
+             TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
+                             LD->getAddressSpace(), ExtType, false))) {
+          // If we are loading a legal type, this is a non-extload followed by a
+          // full extend.
+          ISD::LoadExtType MidExtType =
+              (LoadVT == SrcVT) ? ISD::NON_EXTLOAD : ExtType;
+
+          SDValue Load = DAG.getExtLoad(MidExtType, dl, LoadVT, Chain, Ptr,
+                                        SrcVT, LD->getMemOperand());
+          unsigned ExtendOp =
+              ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
+          Value = DAG.getNode(ExtendOp, dl, Node->getValueType(0), Load);
+          Chain = Load.getValue(1);
+          break;
+        }
+
+        // Handle the special case of fp16 extloads. EXTLOAD doesn't have the
+        // normal undefined upper bits behavior to allow using an in-reg extend
+        // with the illegal FP type, so load as an integer and do the
+        // from-integer conversion.
+        EVT SVT = SrcVT.getScalarType();
+        if (SVT == MVT::f16 || SVT == MVT::bf16) {
           EVT ISrcVT = SrcVT.changeTypeToInteger();
           EVT IDestVT = DestVT.changeTypeToInteger();
           EVT ILoadVT =
@@ -958,6 +968,9 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
           break;
         }
       }
+
+      assert(!SrcVT.isVector() &&
+             "Vector Loads are handled in LegalizeVectorOps");
 
       // FIXME: This does not work for vectors on most targets.  Sign-
       // and zero-extend operations are currently folded into extending
