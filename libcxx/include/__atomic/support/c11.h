@@ -199,63 +199,20 @@ struct __cxx_atomic_base_impl {
         std::addressof(__atomic_value_), __pattern, static_cast<__memory_order_underlying_t>(__order));
   }
 
-  // Clang's __c11_atomic_fetch_max/min builtins do not accept pointer
-  // arguments, so dispatch to a CAS loop for pointer types.
-  // TODO: Use the builtin for pointer types once Clang accepts them.
   _Tp __atomic_fetch_max(_Tp __val, memory_order __order) volatile _NOEXCEPT {
-    if constexpr (!is_pointer<_Tp>::value) {
-      return __c11_atomic_fetch_max(
-          std::addressof(__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
-    } else {
-      _Tp __ret = this->__atomic_load(memory_order_relaxed);
-      _Tp __value;
-      do {
-        __value = __ret > __val ? __ret : __val;
-      } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-      return __ret;
-    }
+    return __atomic_fetch_max_impl(*this, __val, __order);
   }
 
   _Tp __atomic_fetch_max(_Tp __val, memory_order __order) _NOEXCEPT {
-    if constexpr (!is_pointer<_Tp>::value) {
-      return __c11_atomic_fetch_max(
-          std::addressof(__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
-    } else {
-      _Tp __ret = this->__atomic_load(memory_order_relaxed);
-      _Tp __value;
-      do {
-        __value = __ret > __val ? __ret : __val;
-      } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-      return __ret;
-    }
+    return __atomic_fetch_max_impl(*this, __val, __order);
   }
 
   _Tp __atomic_fetch_min(_Tp __val, memory_order __order) volatile _NOEXCEPT {
-    if constexpr (!is_pointer<_Tp>::value) {
-      return __c11_atomic_fetch_min(
-          std::addressof(__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
-    } else {
-      _Tp __ret = this->__atomic_load(memory_order_relaxed);
-      _Tp __value;
-      do {
-        __value = __ret < __val ? __ret : __val;
-      } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-      return __ret;
-    }
+    return __atomic_fetch_min_impl(*this, __val, __order);
   }
 
   _Tp __atomic_fetch_min(_Tp __val, memory_order __order) _NOEXCEPT {
-    if constexpr (!is_pointer<_Tp>::value) {
-      return __c11_atomic_fetch_min(
-          std::addressof(__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
-    } else {
-      _Tp __ret = this->__atomic_load(memory_order_relaxed);
-      _Tp __value;
-      do {
-        __value = __ret < __val ? __ret : __val;
-      } while (!this->__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
-      return __ret;
-    }
+    return __atomic_fetch_min_impl(*this, __val, __order);
   }
 
 private:
@@ -264,6 +221,41 @@ private:
     return __order == memory_order_release
              ? memory_order_relaxed
              : (__order == memory_order_acq_rel ? memory_order_acquire : __order);
+  }
+
+  // Clang's __c11_atomic_fetch_max/min builtins do not accept pointer
+  // arguments, so dispatch to a CAS loop for pointer types.
+  // TODO: Use the builtin for pointer types once Clang accepts them.
+  template <class _Self, class _Up = _Tp, __enable_if_t<!is_pointer<_Up>::value, int> = 0>
+  static _Tp __atomic_fetch_max_impl(_Self&& __self, _Tp __val, memory_order __order) _NOEXCEPT {
+    return __c11_atomic_fetch_max(
+        std::addressof(__self.__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  template <class _Self, class _Up = _Tp, __enable_if_t<is_pointer<_Up>::value, int> = 0>
+  static _Tp __atomic_fetch_max_impl(_Self&& __self, _Tp __val, memory_order __order) _NOEXCEPT {
+    _Tp __ret = __self.__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret > __val ? __ret : __val;
+    } while (!__self.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
+  }
+
+  template <class _Self, class _Up = _Tp, __enable_if_t<!is_pointer<_Up>::value, int> = 0>
+  static _Tp __atomic_fetch_min_impl(_Self&& __self, _Tp __val, memory_order __order) _NOEXCEPT {
+    return __c11_atomic_fetch_min(
+        std::addressof(__self.__atomic_value_), __val, static_cast<__memory_order_underlying_t>(__order));
+  }
+
+  template <class _Self, class _Up = _Tp, __enable_if_t<is_pointer<_Up>::value, int> = 0>
+  static _Tp __atomic_fetch_min_impl(_Self&& __self, _Tp __val, memory_order __order) _NOEXCEPT {
+    _Tp __ret = __self.__atomic_load(memory_order_relaxed);
+    _Tp __value;
+    do {
+      __value = __ret < __val ? __ret : __val;
+    } while (!__self.__atomic_compare_exchange_weak(std::addressof(__ret), __value, __order, memory_order_relaxed));
+    return __ret;
   }
 
   // backward compatibility: it was public

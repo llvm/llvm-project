@@ -170,7 +170,7 @@ struct __cxx_atomic_base_impl {
   }
 
   template <typename _Td>
-  _Tp __atomic_fetch_sub(volatile _Td __delta, memory_order __order) volatile {
+  _Tp __atomic_fetch_sub(_Td __delta, memory_order __order) volatile {
     return ::__atomic_fetch_sub(
         std::addressof(__value_), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
   }
