@@ -317,4 +317,27 @@ TEST_F(OpenMPContextTest, ScoringSimple) {
   // TODO: Add scoring tests (via getBestVariantMatchForContext).
 }
 
+TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo Subset, Other, Superset;
+  Subset.addTrait(TraitProperty::user_condition_true, "");
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  Other.addTrait(TraitProperty::device_kind_cpu, "");
+  Other.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  Superset.addTrait(TraitProperty::user_condition_true, "");
+  Superset.addTrait(TraitProperty::device_kind_host, "");
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 3>(VMIs),
+                                         HostLinux);
+  };
+
+  // All three score 5. Subset is a strict subset of Superset, and the first of
+  // the other two wins.
+  EXPECT_EQ(Best({Subset, Other, Superset}), 1);
+  EXPECT_EQ(Best({Subset, Superset, Other}), 1);
+}
+
 } // namespace

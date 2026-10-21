@@ -398,8 +398,7 @@ int llvm::omp::getBestVariantMatchForContext(
     const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
 
   APInt BestScore(64, 0);
-  int BestVMIIdx = -1;
-  const VariantMatchInfo *BestVMI = nullptr;
+  SmallVector<unsigned, 4> BestVMIIdxs;
 
   for (unsigned u = 0, e = VMIs.size(); u < e; ++u) {
     const VariantMatchInfo &VMI = VMIs[u];
@@ -414,22 +413,28 @@ int llvm::omp::getBestVariantMatchForContext(
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);
     if (Score.ult(BestScore))
       continue;
-    // Equal score need subset checks.
-    if (Score.eq(BestScore)) {
-      // Strict subset are never best.
-      if (isStrictSubset(VMI, *BestVMI))
-        continue;
-      // Same score and the current best is no strict subset so we keep it.
-      if (!isStrictSubset(*BestVMI, VMI))
-        continue;
+    if (Score.ugt(BestScore)) {
+      BestScore = Score;
+      BestVMIIdxs.clear();
     }
-    // New best found.
-    BestVMI = &VMI;
-    BestVMIIdx = u;
-    BestScore = Score;
+    BestVMIIdxs.push_back(u);
   }
 
-  return BestVMIIdx;
+  // A strict subset of another tied variant is never best; otherwise the first
+  // one wins. Tied variants often share a superset, so try the last one first.
+  const VariantMatchInfo *Superset = nullptr;
+  for (unsigned Idx : BestVMIIdxs) {
+    const VariantMatchInfo &VMI = VMIs[Idx];
+    if (Superset && isStrictSubset(VMI, *Superset))
+      continue;
+    auto *It = llvm::find_if(BestVMIIdxs, [&](unsigned OtherIdx) {
+      return isStrictSubset(VMI, VMIs[OtherIdx]);
+    });
+    if (It == BestVMIIdxs.end())
+      return Idx;
+    Superset = &VMIs[*It];
+  }
+  return -1;
 }
 
 TraitSet llvm::omp::getOpenMPContextTraitSetKind(StringRef S) {
