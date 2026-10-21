@@ -43,6 +43,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
     // TargetInfo::getABI(), e.g. "avx512" on x86 or "aapcs" on ARM.
     static llvm::StringRef getTargetABIAttrName() { return "cir.target_abi"; }
+    // -fc++-abi override, if not present the target default is used.
+    static llvm::StringRef getCXXABIAttrName() { return "cir.cxx_abi"; }
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
@@ -147,6 +149,14 @@ def CIR_Dialect : Dialect {
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
+
+    /// Returns true if \p ty and every type nested in it are CIR types.
+    /// Memoized, since FuncType verification re-queries the same records.
+    bool isPureCIRType(mlir::Type ty) const;
+
+  private:
+    mutable llvm::DenseMap<mlir::Type, bool> pureCIRTypeCache;
+    mutable std::mutex pureCIRTypeCacheMutex;
   }];
 }
 

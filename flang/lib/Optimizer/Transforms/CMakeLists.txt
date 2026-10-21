@@ -86,7 +86,7 @@ add_flang_library(FIRTransforms
 
   MLIR_LIBS
   MLIRAffineUtils
-  MLIRAnalysis
+  MLIRAnalysisDataFlow
   MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect

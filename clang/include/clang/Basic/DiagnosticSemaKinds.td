@@ -9832,6 +9832,15 @@ def note_cuda_conflicting_device_function_declared_here : Note<
 def err_cuda_device_exceptions : Error<
   "cannot use '%0' in "
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
+def err_cuda_device_rtti : Error<
+  "cannot use '%0' in "
+  "%select{__device__|__global__|__host__|__host__ __device__}1 function as "
+  "RTTI is not available in device code">;
+def err_cuda_device_rtti_var_init : Error<
+  "cannot use '%0' in the initializer of a device variable as RTTI is not "
+  "available in device code">;
+def note_cuda_device_rtti_default_used_here : Note<
+  "%select{default member initializer|default argument}0 used here">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
@@ -12428,7 +12437,8 @@ def err_omp_atomic_not_expression_statement : Error<
 def note_omp_atomic_update: Note<
   "%select{expected an expression statement|expected built-in binary or unary operator|expected unary decrement/increment operation|"
   "expected expression of scalar type|expected assignment expression|expected built-in binary operator|"
-  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression}0">;
+  "expected one of '+', '*', '-', '/', '&', '^', '%|', '<<', or '>>' built-in operations|expected in right hand side of expression|"
+  "expected a valid expression}0">;
 def err_omp_atomic_capture_not_expression_statement : Error<
   "the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x',"
   " where x and v are both lvalue expressions with scalar type">;
