@@ -33,15 +33,13 @@ define void @copy(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IXQCISLS:       # %bb.0: # %entry
 ; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB0_3
 ; RV32IXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IXQCISLS-NEXT:    slli a2, a2, 1
-; RV32IXQCISLS-NEXT:    add a2, a0, a2
+; RV32IXQCISLS-NEXT:    addi a3, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB0_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lh a3, 0(a1)
-; RV32IXQCISLS-NEXT:    sh a3, 0(a0)
-; RV32IXQCISLS-NEXT:    addi a0, a0, 2
-; RV32IXQCISLS-NEXT:    addi a1, a1, 2
-; RV32IXQCISLS-NEXT:    bne a0, a2, .LBB0_2
+; RV32IXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IXQCISLS-NEXT:    qc.srh a4, a0, a3, 1
+; RV32IXQCISLS-NEXT:    addi a3, a3, 1
+; RV32IXQCISLS-NEXT:    bne a2, a3, .LBB0_2
 ; RV32IXQCISLS-NEXT:  .LBB0_3: # %exit
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
@@ -65,15 +63,13 @@ define void @copy(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB0_3
 ; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBXQCISLS-NEXT:    c.slli a2, 1
-; RV32IZCBXQCISLS-NEXT:    c.add a2, a0
+; RV32IZCBXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB0_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.lh a3, 0(a1)
-; RV32IZCBXQCISLS-NEXT:    c.sh a3, 0(a0)
-; RV32IZCBXQCISLS-NEXT:    c.addi a0, 2
-; RV32IZCBXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBXQCISLS-NEXT:    bne a0, a2, .LBB0_2
+; RV32IZCBXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IZCBXQCISLS-NEXT:    qc.srh a4, a0, a3, 1
+; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBXQCISLS-NEXT:    bne a2, a3, .LBB0_2
 ; RV32IZCBXQCISLS-NEXT:  .LBB0_3: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
@@ -96,14 +92,13 @@ define void @copy(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB0_3
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBZBAXQCISLS-NEXT:    sh1add a2, a2, a0
+; RV32IZCBZBAXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB0_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.lh a3, 0(a1)
-; RV32IZCBZBAXQCISLS-NEXT:    c.sh a3, 0(a0)
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a0, 2
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBZBAXQCISLS-NEXT:    bne a0, a2, .LBB0_2
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srh a4, a0, a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne a2, a3, .LBB0_2
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB0_3: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
@@ -145,15 +140,13 @@ define void @widen_i16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IXQCISLS:       # %bb.0: # %entry
 ; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB1_3
 ; RV32IXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IXQCISLS-NEXT:    slli a2, a2, 2
-; RV32IXQCISLS-NEXT:    add a2, a0, a2
+; RV32IXQCISLS-NEXT:    addi a3, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB1_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lh a3, 0(a1)
-; RV32IXQCISLS-NEXT:    sw a3, 0(a0)
-; RV32IXQCISLS-NEXT:    addi a0, a0, 4
-; RV32IXQCISLS-NEXT:    addi a1, a1, 2
-; RV32IXQCISLS-NEXT:    bne a0, a2, .LBB1_2
+; RV32IXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IXQCISLS-NEXT:    addi a3, a3, 1
+; RV32IXQCISLS-NEXT:    bne a2, a3, .LBB1_2
 ; RV32IXQCISLS-NEXT:  .LBB1_3: # %exit
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
@@ -177,15 +170,13 @@ define void @widen_i16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB1_3
 ; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBXQCISLS-NEXT:    c.slli a2, 2
-; RV32IZCBXQCISLS-NEXT:    c.add a2, a0
+; RV32IZCBXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB1_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.lh a3, 0(a1)
-; RV32IZCBXQCISLS-NEXT:    c.sw a3, 0(a0)
-; RV32IZCBXQCISLS-NEXT:    c.addi a0, 4
-; RV32IZCBXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBXQCISLS-NEXT:    bne a0, a2, .LBB1_2
+; RV32IZCBXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IZCBXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBXQCISLS-NEXT:    bne a2, a3, .LBB1_2
 ; RV32IZCBXQCISLS-NEXT:  .LBB1_3: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
@@ -208,14 +199,13 @@ define void @widen_i16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB1_3
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBZBAXQCISLS-NEXT:    sh2add a2, a2, a0
+; RV32IZCBZBAXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB1_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.lh a3, 0(a1)
-; RV32IZCBZBAXQCISLS-NEXT:    c.sw a3, 0(a0)
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a0, 4
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBZBAXQCISLS-NEXT:    bne a0, a2, .LBB1_2
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrh a4, a1, a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne a2, a3, .LBB1_2
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB1_3: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
@@ -258,15 +248,14 @@ define void @shift_i8(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IXQCISLS:       # %bb.0: # %entry
 ; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB2_3
 ; RV32IXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IXQCISLS-NEXT:    add a2, a0, a2
+; RV32IXQCISLS-NEXT:    addi a3, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB2_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lb a3, 0(a1)
-; RV32IXQCISLS-NEXT:    srli a3, a3, 1
-; RV32IXQCISLS-NEXT:    sb a3, 0(a0)
-; RV32IXQCISLS-NEXT:    addi a0, a0, 1
-; RV32IXQCISLS-NEXT:    addi a1, a1, 1
-; RV32IXQCISLS-NEXT:    bne a0, a2, .LBB2_2
+; RV32IXQCISLS-NEXT:    qc.lrb a4, a1, a3, 0
+; RV32IXQCISLS-NEXT:    srli a4, a4, 1
+; RV32IXQCISLS-NEXT:    qc.srb a4, a0, a3, 0
+; RV32IXQCISLS-NEXT:    addi a3, a3, 1
+; RV32IXQCISLS-NEXT:    bne a2, a3, .LBB2_2
 ; RV32IXQCISLS-NEXT:  .LBB2_3: # %exit
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
@@ -290,15 +279,14 @@ define void @shift_i8(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB2_3
 ; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBXQCISLS-NEXT:    c.add a2, a0
+; RV32IZCBXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB2_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    lb a3, 0(a1)
-; RV32IZCBXQCISLS-NEXT:    c.srli a3, 1
-; RV32IZCBXQCISLS-NEXT:    c.sb a3, 0(a0)
-; RV32IZCBXQCISLS-NEXT:    c.addi a0, 1
-; RV32IZCBXQCISLS-NEXT:    c.addi a1, 1
-; RV32IZCBXQCISLS-NEXT:    bne a0, a2, .LBB2_2
+; RV32IZCBXQCISLS-NEXT:    qc.lrb a4, a1, a3, 0
+; RV32IZCBXQCISLS-NEXT:    c.srli a4, 1
+; RV32IZCBXQCISLS-NEXT:    qc.srb a4, a0, a3, 0
+; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBXQCISLS-NEXT:    bne a2, a3, .LBB2_2
 ; RV32IZCBXQCISLS-NEXT:  .LBB2_3: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
@@ -322,15 +310,14 @@ define void @shift_i8(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB2_3
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBZBAXQCISLS-NEXT:    c.add a2, a0
+; RV32IZCBZBAXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB2_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    lb a3, 0(a1)
-; RV32IZCBZBAXQCISLS-NEXT:    c.srli a3, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.sb a3, 0(a0)
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a0, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a1, 1
-; RV32IZCBZBAXQCISLS-NEXT:    bne a0, a2, .LBB2_2
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrb a4, a1, a3, 0
+; RV32IZCBZBAXQCISLS-NEXT:    c.srli a4, 1
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srb a4, a0, a3, 0
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne a2, a3, .LBB2_2
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB2_3: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
@@ -373,15 +360,13 @@ define void @widen_u16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IXQCISLS:       # %bb.0: # %entry
 ; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB3_3
 ; RV32IXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IXQCISLS-NEXT:    slli a2, a2, 2
-; RV32IXQCISLS-NEXT:    add a2, a0, a2
+; RV32IXQCISLS-NEXT:    addi a3, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB3_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lhu a3, 0(a1)
-; RV32IXQCISLS-NEXT:    sw a3, 0(a0)
-; RV32IXQCISLS-NEXT:    addi a0, a0, 4
-; RV32IXQCISLS-NEXT:    addi a1, a1, 2
-; RV32IXQCISLS-NEXT:    bne a0, a2, .LBB3_2
+; RV32IXQCISLS-NEXT:    qc.lrhu a4, a1, a3, 1
+; RV32IXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IXQCISLS-NEXT:    addi a3, a3, 1
+; RV32IXQCISLS-NEXT:    bne a2, a3, .LBB3_2
 ; RV32IXQCISLS-NEXT:  .LBB3_3: # %exit
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
@@ -405,15 +390,13 @@ define void @widen_u16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB3_3
 ; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBXQCISLS-NEXT:    c.slli a2, 2
-; RV32IZCBXQCISLS-NEXT:    c.add a2, a0
+; RV32IZCBXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB3_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.lhu a3, 0(a1)
-; RV32IZCBXQCISLS-NEXT:    c.sw a3, 0(a0)
-; RV32IZCBXQCISLS-NEXT:    c.addi a0, 4
-; RV32IZCBXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBXQCISLS-NEXT:    bne a0, a2, .LBB3_2
+; RV32IZCBXQCISLS-NEXT:    qc.lrhu a4, a1, a3, 1
+; RV32IZCBXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBXQCISLS-NEXT:    bne a2, a3, .LBB3_2
 ; RV32IZCBXQCISLS-NEXT:  .LBB3_3: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
@@ -436,14 +419,13 @@ define void @widen_u16_to_i32(ptr noalias %dst, ptr noalias %src, i32 %len) {
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
 ; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB3_3
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %loop.preheader
-; RV32IZCBZBAXQCISLS-NEXT:    sh2add a2, a2, a0
+; RV32IZCBZBAXQCISLS-NEXT:    c.li a3, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB3_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.lhu a3, 0(a1)
-; RV32IZCBZBAXQCISLS-NEXT:    c.sw a3, 0(a0)
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a0, 4
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a1, 2
-; RV32IZCBZBAXQCISLS-NEXT:    bne a0, a2, .LBB3_2
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrhu a4, a1, a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srw a4, a0, a3, 2
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne a2, a3, .LBB3_2
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB3_3: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
@@ -497,12 +479,11 @@ define i32 @find_index_of_key(ptr %a, i32 %n, i32 %key) {
 ; RV32IXQCISLS-NEXT:    addi a4, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB4_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lw a5, 0(a3)
+; RV32IXQCISLS-NEXT:    qc.lrw a5, a3, a4, 2
 ; RV32IXQCISLS-NEXT:    beq a5, a2, .LBB4_5
 ; RV32IXQCISLS-NEXT:  # %bb.3: # %latch
 ; RV32IXQCISLS-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; RV32IXQCISLS-NEXT:    addi a4, a4, 1
-; RV32IXQCISLS-NEXT:    addi a3, a3, 4
 ; RV32IXQCISLS-NEXT:    bne a1, a4, .LBB4_2
 ; RV32IXQCISLS-NEXT:  .LBB4_4: # %exit
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
@@ -541,12 +522,11 @@ define i32 @find_index_of_key(ptr %a, i32 %n, i32 %key) {
 ; RV32IZCBXQCISLS-NEXT:    c.li a4, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB4_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.lw a5, 0(a3)
+; RV32IZCBXQCISLS-NEXT:    qc.lrw a5, a3, a4, 2
 ; RV32IZCBXQCISLS-NEXT:    beq a5, a2, .LBB4_5
 ; RV32IZCBXQCISLS-NEXT:  # %bb.3: # %latch
 ; RV32IZCBXQCISLS-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; RV32IZCBXQCISLS-NEXT:    c.addi a4, 1
-; RV32IZCBXQCISLS-NEXT:    c.addi a3, 4
 ; RV32IZCBXQCISLS-NEXT:    bne a1, a4, .LBB4_2
 ; RV32IZCBXQCISLS-NEXT:  .LBB4_4: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
@@ -585,12 +565,11 @@ define i32 @find_index_of_key(ptr %a, i32 %n, i32 %key) {
 ; RV32IZCBZBAXQCISLS-NEXT:    c.li a4, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB4_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.lw a5, 0(a3)
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrw a5, a3, a4, 2
 ; RV32IZCBZBAXQCISLS-NEXT:    beq a5, a2, .LBB4_5
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.3: # %latch
 ; RV32IZCBZBAXQCISLS-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; RV32IZCBZBAXQCISLS-NEXT:    c.addi a4, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 4
 ; RV32IZCBZBAXQCISLS-NEXT:    bne a1, a4, .LBB4_2
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB4_4: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
@@ -635,16 +614,14 @@ define void @update(ptr %p, i32 %i, i32 %c, i32 %v) {
 ;
 ; RV32IXQCISLS-LABEL: update:
 ; RV32IXQCISLS:       # %bb.0: # %entry
-; RV32IXQCISLS-NEXT:    slli a1, a1, 2
-; RV32IXQCISLS-NEXT:    add a0, a0, a1
 ; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB5_2
 ; RV32IXQCISLS-NEXT:  # %bb.1: # %if.end
-; RV32IXQCISLS-NEXT:    sw a3, 0(a0)
+; RV32IXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ; RV32IXQCISLS-NEXT:  .LBB5_2: # %if.else
-; RV32IXQCISLS-NEXT:    lw a3, 0(a0)
+; RV32IXQCISLS-NEXT:    qc.lrw a3, a0, a1, 2
 ; RV32IXQCISLS-NEXT:    addi a3, a3, 1
-; RV32IXQCISLS-NEXT:    sw a3, 0(a0)
+; RV32IXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
 ; RV32IZCB-LABEL: update:
@@ -663,16 +640,14 @@ define void @update(ptr %p, i32 %i, i32 %c, i32 %v) {
 ;
 ; RV32IZCBXQCISLS-LABEL: update:
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
-; RV32IZCBXQCISLS-NEXT:    c.slli a1, 2
-; RV32IZCBXQCISLS-NEXT:    c.add a0, a1
 ; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB5_2
 ; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %if.end
-; RV32IZCBXQCISLS-NEXT:    c.sw a3, 0(a0)
+; RV32IZCBXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ; RV32IZCBXQCISLS-NEXT:  .LBB5_2: # %if.else
-; RV32IZCBXQCISLS-NEXT:    c.lw a3, 0(a0)
+; RV32IZCBXQCISLS-NEXT:    qc.lrw a3, a0, a1, 2
 ; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
-; RV32IZCBXQCISLS-NEXT:    c.sw a3, 0(a0)
+; RV32IZCBXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
 ; RV32IZCBZBA-LABEL: update:
@@ -690,15 +665,14 @@ define void @update(ptr %p, i32 %i, i32 %c, i32 %v) {
 ;
 ; RV32IZCBZBAXQCISLS-LABEL: update:
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
-; RV32IZCBZBAXQCISLS-NEXT:    sh2add a0, a1, a0
 ; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB5_2
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %if.end
-; RV32IZCBZBAXQCISLS-NEXT:    c.sw a3, 0(a0)
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB5_2: # %if.else
-; RV32IZCBZBAXQCISLS-NEXT:    c.lw a3, 0(a0)
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrw a3, a0, a1, 2
 ; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.sw a3, 0(a0)
+; RV32IZCBZBAXQCISLS-NEXT:    qc.srw a3, a0, a1, 2
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
   %addr = getelementptr inbounds [4 x i8], ptr %p, i32 %i
@@ -716,6 +690,8 @@ if.end:
   ret void
 }
 
+; FIXME: this case is a bit borderline in that we lose out on size if
+; compression is enable but fewer instructions in the loop.
 define i32 @memcmp(ptr %vl, ptr %vr, i32 %n) {
 ; RV32I-LABEL: memcmp:
 ; RV32I:       # %bb.0: # %entry
@@ -740,23 +716,23 @@ define i32 @memcmp(ptr %vl, ptr %vr, i32 %n) {
 ;
 ; RV32IXQCISLS-LABEL: memcmp:
 ; RV32IXQCISLS:       # %bb.0: # %entry
-; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB6_3
-; RV32IXQCISLS-NEXT:  .LBB6_1: # %loop
+; RV32IXQCISLS-NEXT:    beq a2, zero, .LBB6_4
+; RV32IXQCISLS-NEXT:  # %bb.1: # %loop.preheader
+; RV32IXQCISLS-NEXT:    addi a3, zero, 0
+; RV32IXQCISLS-NEXT:  .LBB6_2: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    lbu a3, 0(a0)
-; RV32IXQCISLS-NEXT:    lbu a4, 0(a1)
-; RV32IXQCISLS-NEXT:    bne a3, a4, .LBB6_4
-; RV32IXQCISLS-NEXT:  # %bb.2: # %latch
-; RV32IXQCISLS-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; RV32IXQCISLS-NEXT:    addi a2, a2, -1
-; RV32IXQCISLS-NEXT:    addi a0, a0, 1
-; RV32IXQCISLS-NEXT:    addi a1, a1, 1
-; RV32IXQCISLS-NEXT:    bne a2, zero, .LBB6_1
-; RV32IXQCISLS-NEXT:  .LBB6_3:
+; RV32IXQCISLS-NEXT:    qc.lrbu a4, a0, a3, 0
+; RV32IXQCISLS-NEXT:    qc.lrbu a5, a1, a3, 0
+; RV32IXQCISLS-NEXT:    bne a4, a5, .LBB6_5
+; RV32IXQCISLS-NEXT:  # %bb.3: # %latch
+; RV32IXQCISLS-NEXT:    # in Loop: Header=BB6_2 Depth=1
+; RV32IXQCISLS-NEXT:    addi a3, a3, 1
+; RV32IXQCISLS-NEXT:    bne a2, a3, .LBB6_2
+; RV32IXQCISLS-NEXT:  .LBB6_4:
 ; RV32IXQCISLS-NEXT:    addi a0, zero, 0
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
-; RV32IXQCISLS-NEXT:  .LBB6_4: # %diff
-; RV32IXQCISLS-NEXT:    sub a0, a3, a4
+; RV32IXQCISLS-NEXT:  .LBB6_5: # %diff
+; RV32IXQCISLS-NEXT:    sub a0, a4, a5
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
 ;
 ; RV32IZCB-LABEL: memcmp:
@@ -782,23 +758,23 @@ define i32 @memcmp(ptr %vl, ptr %vr, i32 %n) {
 ;
 ; RV32IZCBXQCISLS-LABEL: memcmp:
 ; RV32IZCBXQCISLS:       # %bb.0: # %entry
-; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB6_3
-; RV32IZCBXQCISLS-NEXT:  .LBB6_1: # %loop
+; RV32IZCBXQCISLS-NEXT:    c.beqz a2, .LBB6_4
+; RV32IZCBXQCISLS-NEXT:  # %bb.1: # %loop.preheader
+; RV32IZCBXQCISLS-NEXT:    c.li a3, 0
+; RV32IZCBXQCISLS-NEXT:  .LBB6_2: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.lbu a3, 0(a0)
-; RV32IZCBXQCISLS-NEXT:    c.lbu a4, 0(a1)
-; RV32IZCBXQCISLS-NEXT:    bne a3, a4, .LBB6_4
-; RV32IZCBXQCISLS-NEXT:  # %bb.2: # %latch
-; RV32IZCBXQCISLS-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.addi a2, -1
-; RV32IZCBXQCISLS-NEXT:    c.addi a0, 1
-; RV32IZCBXQCISLS-NEXT:    c.addi a1, 1
-; RV32IZCBXQCISLS-NEXT:    c.bnez a2, .LBB6_1
-; RV32IZCBXQCISLS-NEXT:  .LBB6_3:
+; RV32IZCBXQCISLS-NEXT:    qc.lrbu a4, a0, a3, 0
+; RV32IZCBXQCISLS-NEXT:    qc.lrbu a5, a1, a3, 0
+; RV32IZCBXQCISLS-NEXT:    bne a4, a5, .LBB6_5
+; RV32IZCBXQCISLS-NEXT:  # %bb.3: # %latch
+; RV32IZCBXQCISLS-NEXT:    # in Loop: Header=BB6_2 Depth=1
+; RV32IZCBXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBXQCISLS-NEXT:    bne a2, a3, .LBB6_2
+; RV32IZCBXQCISLS-NEXT:  .LBB6_4:
 ; RV32IZCBXQCISLS-NEXT:    c.li a0, 0
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
-; RV32IZCBXQCISLS-NEXT:  .LBB6_4: # %diff
-; RV32IZCBXQCISLS-NEXT:    sub a0, a3, a4
+; RV32IZCBXQCISLS-NEXT:  .LBB6_5: # %diff
+; RV32IZCBXQCISLS-NEXT:    sub a0, a4, a5
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
 ;
 ; RV32IZCBZBA-LABEL: memcmp:
@@ -824,23 +800,23 @@ define i32 @memcmp(ptr %vl, ptr %vr, i32 %n) {
 ;
 ; RV32IZCBZBAXQCISLS-LABEL: memcmp:
 ; RV32IZCBZBAXQCISLS:       # %bb.0: # %entry
-; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB6_3
-; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_1: # %loop
+; RV32IZCBZBAXQCISLS-NEXT:    c.beqz a2, .LBB6_4
+; RV32IZCBZBAXQCISLS-NEXT:  # %bb.1: # %loop.preheader
+; RV32IZCBZBAXQCISLS-NEXT:    c.li a3, 0
+; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_2: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.lbu a3, 0(a0)
-; RV32IZCBZBAXQCISLS-NEXT:    c.lbu a4, 0(a1)
-; RV32IZCBZBAXQCISLS-NEXT:    bne a3, a4, .LBB6_4
-; RV32IZCBZBAXQCISLS-NEXT:  # %bb.2: # %latch
-; RV32IZCBZBAXQCISLS-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a2, -1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a0, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi a1, 1
-; RV32IZCBZBAXQCISLS-NEXT:    c.bnez a2, .LBB6_1
-; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_3:
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrbu a4, a0, a3, 0
+; RV32IZCBZBAXQCISLS-NEXT:    qc.lrbu a5, a1, a3, 0
+; RV32IZCBZBAXQCISLS-NEXT:    bne a4, a5, .LBB6_5
+; RV32IZCBZBAXQCISLS-NEXT:  # %bb.3: # %latch
+; RV32IZCBZBAXQCISLS-NEXT:    # in Loop: Header=BB6_2 Depth=1
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi a3, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne a2, a3, .LBB6_2
+; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_4:
 ; RV32IZCBZBAXQCISLS-NEXT:    c.li a0, 0
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
-; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_4: # %diff
-; RV32IZCBZBAXQCISLS-NEXT:    sub a0, a3, a4
+; RV32IZCBZBAXQCISLS-NEXT:  .LBB6_5: # %diff
+; RV32IZCBZBAXQCISLS-NEXT:    sub a0, a4, a5
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra
 entry:
   %n.zero = icmp eq i32 %n, 0
