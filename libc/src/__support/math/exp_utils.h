@@ -450,7 +450,13 @@ exp_denorm(double x, int hi, double r_hi, double lo_u, double err_d,
 //     with |u.hi + u.lo| <= 2^-8 * log(2). On targets without FMA,
 //       lsb(u.hi) >= 2^-30 and |u.lo| < 2^-18
 //     so that m_hi * u.hi is exact in double.
-//   - hi: integer exponent k >> 7 in [-1075, 1023].
+//   - hi: integer exponent k >> 7 in [-1075, 1024].
+//     When hi == 1024, k = 1024 * 2^7 so
+//       idx = 0 (exp2_mid = 1.0) and u < -2^-46 < 0,
+//     since x is strictly below the overflow threshold, which keeps upper in
+//     [1 - 2^-8, 1) with unbiased exponent -1 (biased exponent 1022). Adding
+//     hi = 1024 in scale_exp2(upper, hi) then produces biased exponent 2046
+//     (unbiased exponent 1023) without overflowing.
 //   - idx: table index k & 0x7f in [0, 127].
 //   - err_d: Ziv error bound on the double-double approximation r_hi + r_lo.
 //   - log2_base: pointer to 192-bit log2(b) table (or nullptr when b = 2).
