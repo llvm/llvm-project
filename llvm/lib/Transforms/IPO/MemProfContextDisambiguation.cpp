@@ -990,11 +990,17 @@ private:
     // allocation (Chain[0]) up to the outermost node in the CCG for this
     // context.
     std::vector<const ContextNode *> Chain;
-    // Index in Chain of the outermost matched callsite node (where
-    // Chain[1..MaxMatchedFrame] all had hasCall() == true).
+    // Index in Chain of the outermost matched callsite node, i.e. the
+    // outermost node such that it and all nodes below it
+    // (Chain[1..MaxMatchedFrame]) were matched to a call in the IR/summary
+    // (hasCall() == true). If the whole context matched, this is the
+    // context's outermost frame (possibly where it was pruned); otherwise it
+    // is the last matched node below the first unmatched one. The function
+    // containing it (the "outermost matched caller") is where the reported
+    // post-cloning paths start. 0 if no caller of the allocation matched.
     unsigned MaxMatchedFrame = 0;
     // True if the outermost matched node had caller edges for other contexts.
-    bool TopNodeHasOtherCallers = false;
+    bool OutermostMatchedNodeHasOtherCallers = false;
     // If MaxMatchedFrame + 1 < Chain.size(), why did Chain[MaxMatchedFrame + 1]
     // not have a call?
     bool StoppedAtRecursive = false;
@@ -3502,10 +3508,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
 
       if (Info.MaxMatchedFrame > 0 &&
           Info.MaxMatchedFrame + 1 == Info.Chain.size()) {
-        const ContextNode *TopNode = Info.Chain[Info.MaxMatchedFrame];
-        for (const auto &Edge : TopNode->CallerEdges) {
+        const ContextNode *OutermostMatchedNode =
+            Info.Chain[Info.MaxMatchedFrame];
+        for (const auto &Edge : OutermostMatchedNode->CallerEdges) {
           if (!Edge->isRemoved() && Edge->Caller->hasCall()) {
-            Info.TopNodeHasOtherCallers = true;
+            Info.OutermostMatchedNodeHasOtherCallers = true;
             break;
           }
         }
@@ -3563,36 +3570,41 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::formatContextReportSuffix(
                   std::to_string(Info.UnmatchedStackId) + ")";
     }
   } else {
-    const ContextNode *TopNode = Info.Chain[Matched];
-    const FuncTy *TopFunc = getCallingFunc(TopNode);
-    unsigned NumTopClones =
-        std::max<unsigned>(1, FuncToNumClones.lookup(TopFunc));
-    bool HasCallersAbove = NumTopClones > 1 || Info.TopNodeHasOtherCallers ||
-                           (TopFunc && FunctionsWithCallers.contains(TopFunc));
+    const ContextNode *OutermostMatchedNode = Info.Chain[Matched];
+    const FuncTy *OutermostMatchedFunc = getCallingFunc(OutermostMatchedNode);
+    unsigned NumOutermostMatchedFuncClones =
+        std::max<unsigned>(1, FuncToNumClones.lookup(OutermostMatchedFunc));
+    bool HasCallersAbove =
+        NumOutermostMatchedFuncClones > 1 ||
+        Info.OutermostMatchedNodeHasOtherCallers ||
+        (OutermostMatchedFunc &&
+         FunctionsWithCallers.contains(OutermostMatchedFunc));
     if (HasCallersAbove) {
       StatusStr = "pruned at frame " + std::to_string(Matched) + " in " +
-                  getFuncName(TopFunc, 0);
+                  getFuncName(OutermostMatchedFunc, 0);
     } else {
       StatusStr = "matched " + std::to_string(Matched) + " frames to " +
-                  getFuncName(TopFunc, 0);
+                  getFuncName(OutermostMatchedFunc, 0);
     }
   }
 
   std::string ReachesStr;
   if (Matched >= 1) {
-    const ContextNode *TopNode = Info.Chain[Matched];
-    const FuncTy *TopFunc = getCallingFunc(TopNode);
-    unsigned NumTopClones =
-        std::max<unsigned>(1, FuncToNumClones.lookup(TopFunc));
+    const ContextNode *OutermostMatchedNode = Info.Chain[Matched];
+    const FuncTy *OutermostMatchedFunc = getCallingFunc(OutermostMatchedNode);
+    unsigned NumOutermostMatchedFuncClones =
+        std::max<unsigned>(1, FuncToNumClones.lookup(OutermostMatchedFunc));
     ReachesStr = "; reaches ";
     SmallSet<unsigned, 4> SeenReachedAllocClone;
     bool FirstPath = true;
-    for (unsigned TopClone = 0; TopClone < NumTopClones; ++TopClone) {
+    for (unsigned OutermostMatchedFuncClone = 0;
+         OutermostMatchedFuncClone < NumOutermostMatchedFuncClones;
+         ++OutermostMatchedFuncClone) {
       std::vector<const FuncTy *> PathFuncs(Matched + 1);
       std::vector<unsigned> PathClones(Matched + 1);
-      PathFuncs[0] = TopFunc;
-      PathClones[0] = TopClone;
-      unsigned CurClone = TopClone;
+      PathFuncs[0] = OutermostMatchedFunc;
+      PathClones[0] = OutermostMatchedFuncClone;
+      unsigned CurClone = OutermostMatchedFuncClone;
       for (unsigned Step = 0; Step < Matched; ++Step) {
         unsigned FrameIdx = Matched - Step;
         const ContextNode *CallNode = Info.Chain[FrameIdx];
