@@ -8,6 +8,9 @@ set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
 set(_FUCHSIA_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly")
 
+# Disable CIR support in the clang build.
+set(CLANG_ENABLE_CIR OFF CACHE BOOL "")
+
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 set(LLVM_ENABLE_LIBEDIT OFF CACHE BOOL "")
 set(LLVM_ENABLE_LIBXML2 OFF CACHE BOOL "")
