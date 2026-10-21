@@ -2146,9 +2146,11 @@ Expected<bool> FunctionImporter::importFunctions(
     struct DeclInfo {
       std::string Name;
       FunctionType *Ty;
+      unsigned AddrSpace;
       CallingConv::ID CC;
       AttributeList Attrs;
       GlobalValue::VisibilityTypes Visibility;
+      bool DSOLocal;
       GlobalValue::GUID GUID;
     };
     SmallVector<DeclInfo> DeclInfos;
@@ -2162,8 +2164,9 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!F)
         continue;
       DeclInfos.push_back({GV->getName().str(), F->getFunctionType(),
-                           F->getCallingConv(), F->getAttributes(),
-                           GV->getVisibility(), GUID});
+                           F->getAddressSpace(), F->getCallingConv(),
+                           F->getAttributes(), GV->getVisibility(),
+                           GV->isDSOLocal(), GUID});
     }
 
     if (PrintImports) {
@@ -2183,16 +2186,28 @@ Expected<bool> FunctionImporter::importFunctions(
     NumImportedModules++;
 
     // Now create the declarations to import, if they don't already exist in
-    // the destination module (e.g. because they are referenced by an imported
-    // definition).
+    // the destination module. Declarations of direct callees will typically
+    // already exist, either because the call is in the destination module or
+    // because the IRMover created them when linking an imported definition
+    // that references them. Callees reached only via indirect calls (e.g.
+    // from value profile or MemProf call edges in the summary) have no such IR
+    // reference, so this is mainly where declarations of those are created.
+    //
+    // We create these declarations by hand rather than via the IRMover: the
+    // IRMover only creates declarations as a side effect of mapping references
+    // from linked IR, it creates attribute-less declarations for aliases, and
+    // it does not copy metadata from source definitions.
     for (auto &DI : DeclInfos) {
       if (DestModule.getNamedValue(DI.Name))
         continue;
       Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
-                                     DI.Name, DestModule);
+                                     DI.AddrSpace, DI.Name, &DestModule);
       F->setCallingConv(DI.CC);
       F->setAttributes(DI.Attrs);
+      // Note that the visibility must be set before dso_local, since
+      // setDSOLocal(false) is not allowed on an implicitly dso_local value.
       F->setVisibility(DI.Visibility);
+      F->setDSOLocal(DI.DSOLocal);
       // Record the GUID of the original value, which may differ from the GUID
       // computed from the current name if it was a promoted local. This allows
       // the declaration to be located via the GUID, e.g. by MemProf ICP.
