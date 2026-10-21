@@ -6,8 +6,10 @@
 ; caught here.
 ;
 ; Each case is run on znver5 (per-shape tables) and on skylake-avx512 (generic
-; flat overhead). Where the two disagree the decision is table-driven, and the
-; SKX run is what stops the znver5 CHECK-NOTs from passing vacuously.
+; flat overhead). The SKX run is what stops the znver5 CHECK-NOTs from passing
+; vacuously. Read it for whether an operation is formed, not for how wide:
+; skylake-avx512 sets prefer-256-bit and znver5 does not, so a width difference
+; between the two runs follows from that rather than from the tables.
 ;
 ; The six cases below:
 ;   1. f64 indirect-load reduction -- gather IS chosen, on both.
@@ -18,10 +20,9 @@
 ;      Regression guard for issue llvm#91370.
 ;   4. f64 indirect store -- scatter IS chosen, on both.
 ;   5. i64 indirect store -- scatter is NOT chosen on znver5, but IS on SKX.
-;   6. f32 indirect store -- scatter is chosen on both, but the per-shape rows
-;      carry it to sixteen lanes where the flat overhead stops at eight. This
-;      is the only case reaching the 32-bit scatter rows, which price a whole
-;      zmm scatter rather than the half-width form the other cases use.
+;   6. f32 indirect store -- scatter is chosen on both. This is the only case
+;      reaching the 32-bit scatter rows, which price a whole zmm scatter
+;      rather than the half-width form the other cases use.
 ;
 ; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-unknown-linux-gnu \
 ; RUN:   -mcpu=znver5 | FileCheck %s --check-prefixes=CHECK,ZNVER5
@@ -167,11 +168,11 @@ exit:
   ret void
 }
 
-; --- Case 6: f32 indirect store scatters wider under the tables ----------
-; Both targets scatter, so the contrast is the width rather than the choice:
-; the per-shape row for a sixteen-lane f32 scatter keeps a full zmm worth of
-; lanes profitable, where the flat overhead stops at eight. Nothing else in
-; this file reaches the 32-bit scatter rows.
+; --- Case 6: f32 indirect store reaches the 32-bit scatter rows ----------
+; Both targets scatter, and the sixteen lanes are not table-driven: znver5
+; picks them with the tables disabled too, and skylake-avx512 picks them once
+; prefer-256-bit is off. The case earns its place because nothing else in this
+; file reaches the 32-bit scatter rows at all.
 ; CHECK-LABEL: define void @f32_indirect_scatter_wide
 ; ZNVER5:      call void @llvm.masked.scatter.v16f32
 ; SKX:         call void @llvm.masked.scatter.v8f32
