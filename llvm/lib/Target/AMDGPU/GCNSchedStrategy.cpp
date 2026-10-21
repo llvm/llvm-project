@@ -160,9 +160,10 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
   if (!KnownExcessRP) {
-    VGPRCriticalLimit = std::min(
-        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize()),
-        VGPRExcessLimit);
+    // Preserve the combined occupancy budget before clamping to one bank.
+    UnifiedVGPRCriticalLimit =
+        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize());
+    VGPRCriticalLimit = std::min(UnifiedVGPRCriticalLimit, VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
@@ -176,6 +177,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
         AMDGPU::IsaInfo::getAddressableNumVGPRs(ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
+    UnifiedVGPRCriticalLimit = VGPRBudget;
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   }
 
@@ -188,6 +190,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
     VGPRExcessLimit = (VGPRThresholdPercent * VGPRExcessLimit + 99) / 100;
     VGPRCriticalLimit = (VGPRThresholdPercent * VGPRCriticalLimit + 99) / 100;
+    UnifiedVGPRCriticalLimit =
+        (VGPRThresholdPercent * UnifiedVGPRCriticalLimit + 99) / 100;
     LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
                       << VGPRThresholdPercent << "%, VGPRExcessLimit: "
                       << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
@@ -197,6 +201,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
     VGPRCriticalLimit -=
         std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+    UnifiedVGPRCriticalLimit -=
+        std::min(VGPRLimitBias + ErrorMargin, UnifiedVGPRCriticalLimit);
   }
 
   // Subtract error margin and bias from register limits and avoid overflow.
@@ -207,6 +213,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   AGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, AGPRCriticalLimit);
 
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
+                    << ", UnifiedVGPRCriticalLimit = "
+                    << UnifiedVGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", AGPRCriticalLimit = " << AGPRCriticalLimit
                     << ", AGPRExcessLimit = " << AGPRExcessLimit
@@ -402,10 +410,23 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // register pressure is 'CRITICAL', increasing SGPR, VGPR, and AGPR
   // pressure all has the same cost, so we pick the most critical type.
 
+  // Unified targets allocate both vector banks from the same occupancy budget.
+  // Keep the bank pressures above for excess checks, and do not align VGPRs
+  // when there are no AGPRs, matching GCNRegPressure::getVGPRNum().
+  bool UnifiedVGPRFile = MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts();
+  unsigned VectorCriticalLimit = VGPRCriticalLimit;
+  if (UnifiedVGPRFile) {
+    if (NewAGPRPressure)
+      NewVGPRPressure = GCNRegPressure::getUnifiedVGPRNum(NewVGPRPressure,
+                                                          NewAGPRPressure, 0);
+    VectorCriticalLimit = UnifiedVGPRCriticalLimit;
+  }
+
   int SGPRDelta = NewSGPRPressure - SGPRCriticalLimit;
-  int VGPRDelta = NewVGPRPressure - VGPRCriticalLimit;
-  int AGPRDelta = AGPRExcessLimit > 0 ? NewAGPRPressure - AGPRCriticalLimit
-                                      : std::numeric_limits<int>::min();
+  int VGPRDelta = NewVGPRPressure - VectorCriticalLimit;
+  int AGPRDelta = !UnifiedVGPRFile && AGPRExcessLimit > 0
+                      ? NewAGPRPressure - AGPRCriticalLimit
+                      : std::numeric_limits<int>::min();
 
   if (SGPRDelta >= 0 || VGPRDelta >= 0 || AGPRDelta >= 0) {
     HasHighPressure = true;
@@ -2329,6 +2350,7 @@ bool LiveIntervalRPStage::initGCNRegion() {
   if (DoRescheduling && GCNSchedStage::initGCNRegion()) {
     SavedVGPRExcessLimit = S.VGPRExcessLimit;
     SavedVGPRCriticalLimit = S.VGPRCriticalLimit;
+    SavedUnifiedVGPRCriticalLimit = S.UnifiedVGPRCriticalLimit;
     SavedVGPRThresholdPercent = S.VGPRThresholdPercent;
     S.VGPRThresholdPercent = NewVGPRThresholdPercent;
     return true;
@@ -2340,6 +2362,7 @@ bool LiveIntervalRPStage::initGCNRegion() {
 void LiveIntervalRPStage::finalizeGCNRegion() {
   S.VGPRExcessLimit = SavedVGPRExcessLimit;
   S.VGPRCriticalLimit = SavedVGPRCriticalLimit;
+  S.UnifiedVGPRCriticalLimit = SavedUnifiedVGPRCriticalLimit;
   S.VGPRThresholdPercent = SavedVGPRThresholdPercent;
   GCNSchedStage::finalizeGCNRegion();
 }

@@ -1,0 +1,78 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+
+# Fixed-bank virtual live ranges isolate candidate critical scoring from
+# allocation limits. Check the initial scheduling decisions before later
+# stages can hide the reason for the ordering. S_NOP implicit uses keep
+# the fixtures independent of memory scheduling.
+
+--- |
+  define amdgpu_kernel void @vgpr_increase() #0 { ret void }
+  define amdgpu_kernel void @wide_budget() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
+...
+
+# A raw occupancy budget of 64 gives a critical limit of 61 after the
+# scheduler margin. With V=32 and A=28, adding a VGPR raises combined
+# pressure from 60 to align(33)+28=64, while each bank stays below 61.
+# Prefer consuming AGPRs before introducing the new VGPR.
+# CHECK-LABEL: vgpr_increase:%bb.1
+# CHECK: UnifiedVGPRCriticalLimit = 61, VGPRExcessLimit = 253
+# CHECK: Reason:{{ *}}Cand SU(1) REG-CRIT
+# CHECK: Scheduling SU(1) S_NOP 0
+# CHECK: Scheduling SU(0) %new:
+---
+name: vgpr_increase
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 8
+body: |
+  bb.0:
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %a0:areg_512 = IMPLICIT_DEF
+    %a1:areg_384 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    %new:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+    S_NOP 0, implicit %a0, implicit %a1
+    S_NOP 1, implicit %v0, implicit %new
+    S_ENDPGM 0
+...
+
+# At occupancy 1, the combined limit is 509, not the bank limit of 253.
+# With V=200 and A=100, adding a VGPR raises combined pressure from 300
+# to 304. Both banks and the combined allocation still fit their limits,
+# so critical pressure must not override the original candidate order.
+# CHECK-LABEL: wide_budget:%bb.1
+# CHECK: VGPRCriticalLimit = 253, UnifiedVGPRCriticalLimit = 509, VGPRExcessLimit = 253
+# CHECK-NOT: REG-CRIT
+# CHECK: Scheduling SU(0) %new:
+# CHECK: Scheduling SU(1) S_NOP 0
+---
+name: wide_budget
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 1
+body: |
+  bb.0:
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+    %v4:vreg_1024 = IMPLICIT_DEF
+    %v5:vreg_1024 = IMPLICIT_DEF
+    %v6:vreg_256 = IMPLICIT_DEF
+    %a0:areg_1024 = IMPLICIT_DEF
+    %a1:areg_1024 = IMPLICIT_DEF
+    %a2:areg_1024 = IMPLICIT_DEF
+    %a3:areg_128 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    %new:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+    S_NOP 0, implicit %a0, implicit %a1, implicit %a2, implicit %a3
+    S_NOP 1, implicit %v0, implicit %v1, implicit %v2, implicit %v3, implicit %v4, implicit %v5, implicit %v6, implicit %new
+    S_ENDPGM 0
+...
