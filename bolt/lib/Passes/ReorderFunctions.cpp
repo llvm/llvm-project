@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/ReorderFunctions.h"
+#include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Passes/HFSort.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,9 +29,6 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<uint32_t> RandomSeed;
-
-extern size_t padFunctionBefore(const bolt::BinaryFunction &Function);
-extern size_t padFunctionAfter(const bolt::BinaryFunction &Function);
 
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(

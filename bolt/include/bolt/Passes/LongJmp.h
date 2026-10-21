@@ -78,7 +78,8 @@ class LongJmpPass : public BinaryFunctionPass {
                           const BranchLivenessInfo *BLI = nullptr);
 
   /// Relax calls and direct unconditional branches using one cluster layout.
-  void relaxWithClusters(BinaryContext &BC);
+  /// Return false after reporting an error if the layout cannot be relaxed.
+  bool relaxWithClusters(BinaryContext &BC);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

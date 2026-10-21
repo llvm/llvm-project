@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
+#include "bolt/Core/BinaryEmitter.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
@@ -21,6 +23,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <optional>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -51,13 +54,18 @@ static cl::opt<unsigned> MaxThunkChainLength(
     cl::desc("maximum number of B-only thunks to use for call relaxation"),
     cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
 
+static cl::opt<bool> UseFullLayout(
+    "use-full-layout",
+    cl::desc("use the full emitted-code layout for experimental relaxation"),
+    cl::init(false), cl::cat(BoltOptCategory));
+
 static cl::opt<bool> DeprecatedRelaxPLT(
     "relax-plt", cl::desc("deprecated, has no effect"), cl::init(true),
     cl::callback([](const bool &) {
       errs() << "BOLT-WARNING: '-relax-plt' is deprecated and has no effect\n";
     }),
     cl::Hidden, cl::cat(BoltOptCategory));
-}
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
@@ -492,6 +500,569 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
 }
+
+namespace {
+
+struct BasicBlockAddress {
+  const BinaryBasicBlock *BB;
+  uint64_t Address;
+};
+
+class ClusteredRelaxation;
+
+/// Calculates the emitted code layout used by LongJmp. This is distinct from
+/// BinaryFunction's block/fragment layout: it assigns output addresses by
+/// mirroring BinaryEmitter and RewriteInstance.
+class LongJmpLayout {
+public:
+  LongJmpLayout() = default;
+  explicit LongJmpLayout(ClusteredRelaxation &Relaxation)
+      : Relaxation(&Relaxation) {}
+
+  void calculate(const BinaryContext &BC,
+                 const BinaryFunctionListType &SortedFunctions);
+
+private:
+  struct FunctionFragmentPlacement {
+    const BinaryFunction *Func;
+    FragmentNum Fragment;
+    size_t FunctionIndex;
+  };
+
+  struct SectionPlacement {
+    SmallString<32> Name;
+    SmallVector<FunctionFragmentPlacement, 0> Fragments;
+    uint64_t Alignment;
+  };
+
+  ClusteredRelaxation *Relaxation{nullptr};
+  SmallVector<SectionPlacement, 4> Sections;
+
+  uint64_t updateSectionAlignment(const BinaryContext &BC,
+                                  const BinaryFunction &Func,
+                                  const FunctionFragment &FF,
+                                  uint64_t CurrentAlignment) const;
+  void assignFunctionFragmentToSection(const BinaryContext &BC,
+                                       const BinaryFunction &Func,
+                                       const FunctionFragment &FF,
+                                       size_t FunctionIndex);
+  void assignFunctionsToSections(const BinaryContext &BC,
+                                 const BinaryFunctionListType &SortedFunctions);
+  uint64_t
+  layoutFunctionBody(const BinaryContext &BC, const BinaryFunction &Func,
+                     const FunctionFragment &FF, uint64_t DotAddress,
+                     SmallVectorImpl<BasicBlockAddress> *BasicBlockAddresses,
+                     bool RecordAddresses = true);
+  uint64_t layoutFunctionFragment(const BinaryContext &BC,
+                                  const BinaryFunction &Func,
+                                  const FunctionFragment &FF,
+                                  size_t FunctionIndex, uint64_t DotAddress,
+                                  bool RecordAddresses = true);
+  uint64_t layoutSection(const BinaryContext &BC,
+                         const SectionPlacement &Section, uint64_t DotAddress,
+                         bool RecordAddresses = true);
+  uint64_t layoutSectionsForward(const BinaryContext &BC, uint64_t DotAddress);
+  bool layoutSectionsBackward(const BinaryContext &BC, uint64_t DotAddress);
+  void layoutFunctions(const BinaryContext &BC,
+                       const BinaryFunctionListType &SortedFunctions);
+  void resetClusteredLayout();
+  void finishClusteredLayout();
+  void recordFragment(const BinaryFunction &Func, const FunctionFragment &FF,
+                      size_t FunctionIndex, uint64_t StartAddress,
+                      uint64_t EndAddress,
+                      ArrayRef<BasicBlockAddress> BasicBlockAddresses);
+};
+
+uint64_t LongJmpLayout::updateSectionAlignment(const BinaryContext &BC,
+                                               const BinaryFunction &Func,
+                                               const FunctionFragment &FF,
+                                               uint64_t Alignment) const {
+  if (BC.HasRelocations) {
+    // BinaryEmitter::emitFunction() raises every emitted code section to at
+    // least BC.AlignFunctions in relocation mode.
+    Alignment = std::max<uint64_t>(Alignment, BC.AlignFunctions);
+
+    // BinaryEmitter::emitAll() sets the main text section to BC.AlignText.
+    if (Func.getCodeSectionName(FF.getFragmentNum()) ==
+        BC.getMainCodeSectionName())
+      Alignment = std::max<uint64_t>(Alignment, BC.AlignText);
+
+    // BinaryEmitter::emitFunction() emits the mandatory minimum function
+    // alignment first.
+    Alignment = std::max<uint64_t>(Alignment, Func.getMinAlignment());
+
+    // BinaryEmitter::emitFunction() emits the preferred function alignment
+    // only when the corresponding maximum padding is nonzero.
+    const uint16_t MaxAlignBytes = FF.isSplitFragment()
+                                       ? Func.getMaxColdAlignmentBytes()
+                                       : Func.getMaxAlignmentBytes();
+    if (MaxAlignBytes > 0)
+      Alignment = std::max<uint64_t>(Alignment, Func.getAlignment());
+  } else {
+    // In non-relocation mode BinaryEmitter emits only the preferred function
+    // alignment. This path is used for newly allocated injected sections.
+    Alignment = std::max<uint64_t>(Alignment, Func.getAlignment());
+  }
+
+  // BinaryEmitter::emitFunctionBody() emits enabled basic-block alignment
+  // directives.
+  if (BC.AlignBlocks || BC.PreserveBlocksAlignment)
+    for (const BinaryBasicBlock *BB : FF)
+      if (BB->getAlignment() > 1)
+        Alignment = std::max<uint64_t>(Alignment, BB->getAlignment());
+
+  // BinaryEmitter::emitConstantIslands() aligns owned and cloned islands
+  // using the host function's constant-island alignment.
+  if (Func.hasIslandsInfo())
+    Alignment =
+        std::max<uint64_t>(Alignment, Func.getConstantIslandAlignment());
+
+  return Alignment;
+}
+
+void LongJmpLayout::assignFunctionFragmentToSection(const BinaryContext &BC,
+                                                    const BinaryFunction &Func,
+                                                    const FunctionFragment &FF,
+                                                    size_t FunctionIndex) {
+  const StringRef SectionName = Func.getCodeSectionName(FF.getFragmentNum());
+  auto It = llvm::find_if(Sections, [&](const SectionPlacement &Section) {
+    return StringRef(Section.Name) == SectionName;
+  });
+  if (It == Sections.end()) {
+    // AArch64ELFStreamer::changeSection() gives every text section a
+    // four-byte minimum alignment before BinaryEmitter raises it further.
+    Sections.push_back({SmallString<32>(SectionName),
+                        {},
+                        updateSectionAlignment(BC, Func, FF, 4)});
+    It = std::prev(Sections.end());
+  } else {
+    It->Alignment = updateSectionAlignment(BC, Func, FF, It->Alignment);
+  }
+
+  It->Fragments.push_back({&Func, FF.getFragmentNum(), FunctionIndex});
+}
+
+void LongJmpLayout::assignFunctionsToSections(
+    const BinaryContext &BC, const BinaryFunctionListType &SortedFunctions) {
+  // Mirror BinaryEmitter::emitFunctions(): emit each main fragment followed
+  // immediately by its split fragments, preserving that order per section.
+  for (auto [FunctionIndex, Func] : llvm::enumerate(SortedFunctions)) {
+    // Do not assign functions for which BinaryEmitter::emitFunction()
+    // returns before selecting a section.
+    if (!shouldEmitFunctionFragment(BC, *Func))
+      continue;
+
+    assert((BC.HasRelocations || Func->getLayout().isHotColdSplit()) &&
+           "non-relocation mode supports only hot/cold splitting");
+
+    // RewriteInstance ultimately excludes every code section with a
+    // pre-assigned output address. At this point, those are the sections of
+    // fixed-address injected functions.
+    if (Func->isInjected() && Func->getOutputAddress())
+      continue;
+
+    // In relocation mode, process all remaining functions. In non-relocation
+    // mode, process only non-fixed injected functions. Their sections are
+    // allocated after the moved cold fragments and require the same alignment
+    // calculation as relocation-mode sections.
+    if (!BC.HasRelocations && !Func->isInjected())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: collecting fragments for "
+                      << Func->getPrintName() << " (#"
+                      << Func->getFunctionNumber() << ")\n");
+
+    const FunctionLayout &Layout = Func->getLayout();
+    assignFunctionFragmentToSection(BC, *Func, Layout.getMainFragment(),
+                                    FunctionIndex);
+
+    if (Func->isSplit()) {
+      assert(!Func->isInjected() && "injected functions cannot be split");
+      assert((Layout.fragment_size() == 1 || Func->isSimple()) &&
+             "only simple functions can have multiple fragments");
+      for (const FunctionFragment &FF : Layout.getSplitFragments()) {
+        // BinaryEmitter::emitFunctions() skips an empty split fragment unless
+        // the function carries a constant island.
+        if (FF.empty() && !Func->hasConstantIsland())
+          continue;
+        assignFunctionFragmentToSection(BC, *Func, FF, FunctionIndex);
+      }
+    }
+  }
+}
+
+/// Advance \p Offset using the rule from
+/// MCObjectStreamer::emitCodeAlignment(). A zero maximum makes the alignment
+/// mandatory; otherwise omit padding larger than \p MaxBytesToEmit.
+static uint64_t applyCodeAlignment(uint64_t Offset, Align Alignment,
+                                   uint64_t MaxBytesToEmit = 0) {
+  const uint64_t Pad = offsetToAlignment(Offset, Alignment);
+  return !MaxBytesToEmit || Pad <= MaxBytesToEmit ? Offset + Pad : Offset;
+}
+
+uint64_t LongJmpLayout::layoutFunctionBody(
+    const BinaryContext &BC, const BinaryFunction &Func,
+    const FunctionFragment &FF, uint64_t DotAddress,
+    SmallVectorImpl<BasicBlockAddress> *BasicBlockAddresses,
+    bool RecordAddresses) {
+  for (const BinaryBasicBlock *BB : FF) {
+    // Mirror per-basic-block alignment in BinaryEmitter::emitFunctionBody().
+    if ((BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
+        BB->getAlignment() > 1)
+      DotAddress = applyCodeAlignment(DotAddress, BB->getAlign(),
+                                      BB->getAlignmentMaxBytes());
+
+    if (RecordAddresses) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp layout: basic block "
+                        << BB->getName() << " in " << Func.getPrintName()
+                        << " starts at 0x" << Twine::utohexstr(DotAddress)
+                        << '\n');
+      if (BasicBlockAddresses)
+        BasicBlockAddresses->push_back({BB, DotAddress});
+    }
+
+#ifdef EXPENSIVE_CHECKS
+    // computeCodeSize() skips all pseudo-instructions. Calling
+    // computeInstructionSize() directly would not generally help: unless a
+    // pseudo has an explicit size annotation, it also returns zero.
+    // BinaryEmitter handles CFI pseudos separately by emitting unwind
+    // directives that do not advance the code-section address, but passes
+    // every other pseudo to emitInstruction(). No BOLT path is known to place
+    // another pseudo in an emitted basic block; verify that assumption here.
+    for (const MCInst &Instr : *BB)
+      assert((!BC.MIB->isPseudo(Instr) || BC.MIB->isCFI(Instr)) &&
+             "unexpected non-CFI pseudo in emitted function");
+#endif
+    DotAddress += BC.computeCodeSize(BB->begin(), BB->end());
+  }
+
+  // BinaryEmitter::emitFunctionBody() emits constant islands after the
+  // fragment instructions.
+  if (Func.hasIslandsInfo()) {
+    DotAddress = alignTo(DotAddress, Func.getConstantIslandAlignment());
+    DotAddress += Func.estimateConstantIslandSize();
+  }
+
+  return DotAddress;
+}
+
+uint64_t LongJmpLayout::layoutFunctionFragment(const BinaryContext &BC,
+                                               const BinaryFunction &Func,
+                                               const FunctionFragment &FF,
+                                               size_t FunctionIndex,
+                                               uint64_t DotAddress,
+                                               bool RecordAddresses) {
+  assert(shouldEmitFunctionFragment(BC, Func) &&
+         "attempting to lay out a function BinaryEmitter will not emit");
+  const FragmentNum Fragment = FF.getFragmentNum();
+  const bool IsMain = FF.isMainFragment();
+  const bool IsSplit = FF.isSplitFragment();
+
+  const bool HasFixedOutputAddress =
+      Func.isInjected() && Func.getOutputAddress();
+  const bool NeedsRelocationAlignment =
+      BC.HasRelocations && !HasFixedOutputAddress;
+  const bool NeedsNonRelocInjectedAlignment =
+      !BC.HasRelocations && Func.isInjected() && !HasFixedOutputAddress;
+  const bool NeedsNonRelocColdAlignment =
+      !BC.HasRelocations && !Func.isInjected() && IsSplit;
+
+  // Apply the alignment that affects the fragment's mapped address.
+  // Section-relative fragments mirror BinaryEmitter::emitFunction(); moved
+  // cold fragments mirror mapCodeSectionsInPlace(). Ordinary non-relocation
+  // main fragments and fixed-address injected functions already have exact
+  // addresses.
+  if (NeedsRelocationAlignment) {
+    DotAddress = alignTo(DotAddress, Func.getMinAlignment());
+    const uint16_t MaxAlignmentBytes =
+        IsSplit ? Func.getMaxColdAlignmentBytes() : Func.getMaxAlignmentBytes();
+    if (MaxAlignmentBytes > 0)
+      DotAddress =
+          applyCodeAlignment(DotAddress, Func.getAlign(), MaxAlignmentBytes);
+  } else if (NeedsNonRelocInjectedAlignment) {
+    // Newly allocated injected sections retain BinaryEmitter's regular
+    // non-relocation function alignment.
+    DotAddress = alignTo(DotAddress, Func.getAlign());
+  } else if (NeedsNonRelocColdAlignment) {
+    // mapCodeSectionsInPlace() aligns each moved cold fragment to a hard-coded
+    // 16-byte boundary.
+    DotAddress = alignTo(DotAddress, ColdFragAlign);
+  }
+
+  // BinaryEmitter::emitFunction() places --pad-funcs-before after function
+  // alignment and rejects nonzero padding in non-relocation mode.
+  if (BC.HasRelocations)
+    DotAddress += opts::padFunctionBefore(Func);
+
+  const uint64_t FragmentAddress = DotAddress;
+
+  // --break-funcs emits UD2 before the function body.
+  DotAddress += opts::breakFunctionSize(Func);
+
+  SmallVector<BasicBlockAddress, 8> BasicBlockAddresses;
+  DotAddress = layoutFunctionBody(
+      BC, Func, FF, DotAddress,
+      Relaxation && RecordAddresses ? &BasicBlockAddresses : nullptr,
+      RecordAddresses);
+
+  // BinaryEmitter::emitFunction() emits --pad-funcs after the body in both
+  // relocation and non-relocation modes.
+  DotAddress += opts::padFunctionAfter(Func);
+
+  // --mark-funcs emits the target-specific trap marker after the fragment.
+  DotAddress += opts::markFunctionBytes(BC).size();
+
+  if (RecordAddresses)
+    recordFragment(Func, FF, FunctionIndex, FragmentAddress, DotAddress,
+                   BasicBlockAddresses);
+
+  LLVM_DEBUG({
+    if (RecordAddresses) {
+      const StringRef FragmentName =
+          IsMain                                                 ? "main"
+          : BC.HasWarmSection && Fragment == FragmentNum::warm() ? "warm"
+          : Fragment == FragmentNum::cold()                      ? "cold"
+                                                                 : "split";
+      dbgs() << "BOLT-DEBUG: LongJmp layout: " << FragmentName << " fragment "
+             << Func.getPrintName();
+      if (IsMain)
+        dbgs() << " starts at 0x" << Twine::utohexstr(FragmentAddress)
+               << " and";
+      dbgs() << " ends at 0x" << Twine::utohexstr(DotAddress) << '\n';
+    }
+  });
+
+  return DotAddress;
+}
+
+uint64_t LongJmpLayout::layoutSection(const BinaryContext &BC,
+                                      const SectionPlacement &Section,
+                                      uint64_t DotAddress,
+                                      bool RecordAddresses) {
+  LLVM_DEBUG({
+    if (RecordAddresses)
+      dbgs() << "BOLT-DEBUG: LongJmp layout: section " << Section.Name
+             << " starts at 0x" << Twine::utohexstr(DotAddress)
+             << ", alignment 0x" << Twine::utohexstr(Section.Alignment) << ", "
+             << Section.Fragments.size() << " fragments\n";
+  });
+
+  for (const FunctionFragmentPlacement &Placement : Section.Fragments) {
+    const BinaryFunction &Func = *Placement.Func;
+
+    const FunctionFragment &FF =
+        Func.getLayout().getFragment(Placement.Fragment);
+    DotAddress = layoutFunctionFragment(BC, Func, FF, Placement.FunctionIndex,
+                                        DotAddress, RecordAddresses);
+  }
+
+  LLVM_DEBUG({
+    if (RecordAddresses)
+      dbgs() << "BOLT-DEBUG: LongJmp layout: section " << Section.Name
+             << " ends at 0x" << Twine::utohexstr(DotAddress) << '\n';
+  });
+
+  return DotAddress;
+}
+
+uint64_t LongJmpLayout::layoutSectionsForward(const BinaryContext &BC,
+                                              uint64_t DotAddress) {
+  const StringRef LastNonColdSectionName = BC.HasWarmSection
+                                               ? BC.getWarmCodeSectionName()
+                                               : BC.getMainCodeSectionName();
+  const bool AdjustLastNonColdSection =
+      BC.HasRelocations &&
+      (opts::HotText || (opts::Hugify && !BC.HasFixedLoadAddress));
+  std::optional<uint64_t> LastNonColdSectionEnd = std::nullopt;
+
+  // Mirror allocateAt() in RewriteInstance::mapCodeSections().
+  for (const SectionPlacement &Section : Sections) {
+    DotAddress = alignTo(DotAddress, Section.Alignment);
+    DotAddress = layoutSection(BC, Section, DotAddress);
+
+    if (AdjustLastNonColdSection &&
+        StringRef(Section.Name) == LastNonColdSectionName) {
+      if (opts::HotText)
+        LastNonColdSectionEnd = DotAddress;
+      // Mirror the extra post-hot-text alignment in allocateAt() for
+      // --hugify. With CDSplit, warm code is part of hot text.
+      if (opts::Hugify && !BC.HasFixedLoadAddress)
+        DotAddress = alignTo(DotAddress, Section.Alignment);
+    }
+  }
+
+  // Mirror RewriteInstance::mapCodeSections() padding used to accommodate
+  // hot-text huge-page mapping. The hot-text end is the end of the warm
+  // section when one exists, and the end of the main section otherwise.
+  // RewriteInstance applies this adjustment only in allocateAt() to advance
+  // the next free address; allocateBefore() starts from a fixed upper boundary
+  // and has no corresponding adjustment.
+  if (LastNonColdSectionEnd)
+    DotAddress =
+        std::max(DotAddress, alignTo(*LastNonColdSectionEnd, BC.PageAlign));
+
+  return DotAddress;
+}
+
+bool LongJmpLayout::layoutSectionsBackward(const BinaryContext &BC,
+                                           uint64_t DotAddress) {
+  SmallVector<uint64_t, 4> SectionAddresses(Sections.size());
+  // Mirror allocateBefore() in RewriteInstance::mapCodeSections(): assign
+  // section bases in reverse while preserving their sorted output order.
+  for (size_t I = Sections.size(); I > 0; --I) {
+    const SectionPlacement &Section = Sections[I - 1];
+    uint64_t &SectionAddress = SectionAddresses[I - 1];
+    // Match the BinarySection::getOutputSize() consumed by allocateBefore().
+    const uint64_t SectionSize =
+        layoutSection(BC, Section, 0, /*RecordAddresses=*/false);
+    if (SectionSize > DotAddress)
+      return false;
+    DotAddress -= SectionSize;
+    DotAddress = alignDown(DotAddress, Section.Alignment);
+    if (DotAddress < BC.OldTextSectionAddress)
+      return false;
+    SectionAddress = DotAddress;
+  }
+
+  // Contents within every section are still laid out toward higher addresses.
+  for (size_t I = 0; I < Sections.size(); ++I)
+    layoutSection(BC, Sections[I], SectionAddresses[I]);
+
+  return true;
+}
+
+void LongJmpLayout::layoutFunctions(
+    const BinaryContext &BC, const BinaryFunctionListType &SortedFunctions) {
+  if (BC.HasRelocations) {
+    // Mirror the old-text allocation choice in
+    // RewriteInstance::mapCodeSections().
+    bool AllocatedAtOldText = false;
+    if (opts::UseOldText) {
+      if (opts::HotFunctionsAtEnd) {
+        AllocatedAtOldText = layoutSectionsBackward(
+            BC, BC.OldTextSectionAddress + BC.OldTextSectionSize);
+      } else {
+        const uint64_t EndAddress =
+            layoutSectionsForward(BC, BC.OldTextSectionAddress);
+        AllocatedAtOldText =
+            EndAddress <= BC.OldTextSectionAddress + BC.OldTextSectionSize;
+      }
+
+      if (!AllocatedAtOldText) {
+        BC.errs() << "BOLT-WARNING: --use-old-text failed during LongJmp "
+                     "layout. The original .text is too small to fit the new "
+                     "code.\n";
+        // Do not clear opts::UseOldText here. RewriteInstance also uses it
+        // during emission to decide how to handle non-code sections such as
+        // .eh_frame, and performs the authoritative fallback later.
+      } else {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp: The layout fits into the "
+                             "original .text section\n");
+      }
+    }
+
+    // mapCodeSections() falls back to allocateAt() when old text is unused
+    // or too small. Discard fragment records from a failed forward old-text
+    // attempt before recording the authoritative placement.
+    if (!AllocatedAtOldText) {
+      if (opts::UseOldText)
+        resetClusteredLayout();
+      layoutSectionsForward(BC, BC.LayoutStartAddress);
+    }
+  } else {
+    // Mirror RewriteInstance::mapCodeSectionsInPlace(). Main fragments retain
+    // their input addresses, while split cold fragments are appended in
+    // original-function order starting at the first free output address.
+    uint64_t ColdAddress = BC.LayoutStartAddress;
+    for (const auto &BFI : BC.getBinaryFunctions()) {
+      const BinaryFunction &Func = BFI.second;
+
+      // PopulateOutputFunctions excludes functions for which shouldEmit()
+      // returns false. LongJmp never relaxes them, so they need no entries in
+      // the function or basic-block address maps. Unlike the other layout
+      // loops, this one visits getBinaryFunctions() to mirror
+      // mapCodeSectionsInPlace(), and therefore needs an explicit check.
+      if (!BC.shouldEmit(Func))
+        continue;
+
+      if (!shouldEmitFunctionFragment(BC, Func))
+        continue;
+
+      layoutFunctionFragment(BC, Func, Func.getLayout().getMainFragment(),
+                             /*FunctionIndex=*/0, Func.getAddress());
+
+      if (Func.isSplit()) {
+        ColdAddress = layoutFunctionFragment(
+            BC, Func, Func.getLayout().getFragment(FragmentNum::cold()),
+            /*FunctionIndex=*/0, ColdAddress);
+      }
+    }
+
+    // mapCodeSectionsInPlace() allocates non-fixed injected sections, normally
+    // .text.injected, immediately after the moved cold fragments. These are
+    // the only entries in Sections in non-relocation mode.
+    layoutSectionsForward(BC, ColdAddress);
+  }
+
+  // Fixed-address injected functions are outside Sections and use their
+  // pre-assigned output addresses.
+  for (auto [FunctionIndex, Func] : llvm::enumerate(SortedFunctions)) {
+    if (!shouldEmitFunctionFragment(BC, *Func))
+      continue;
+
+    if (Func->isInjected() && Func->getOutputAddress()) {
+      assert(!Func->isSplit() && "injected functions cannot be split");
+      layoutFunctionFragment(BC, *Func, Func->getLayout().getMainFragment(),
+                             FunctionIndex, Func->getOutputAddress());
+    }
+  }
+}
+
+void LongJmpLayout::calculate(const BinaryContext &BC,
+                              const BinaryFunctionListType &SortedFunctions) {
+  Sections.clear();
+  resetClusteredLayout();
+
+  LLVM_DEBUG(
+      dbgs() << "BOLT-DEBUG: LongJmp layout starts at 0x"
+             << Twine::utohexstr(BC.LayoutStartAddress) << ", text alignment 0x"
+             << Twine::utohexstr(BC.AlignText) << ", function alignment 0x"
+             << Twine::utohexstr(BC.AlignFunctions)
+             << ", maximum main alignment 0x"
+             << Twine::utohexstr(BC.MaxMainCodeAlignment.load())
+             << ", maximum cold alignment 0x"
+             << Twine::utohexstr(BC.MaxColdCodeAlignment.load()) << '\n');
+
+  // Reproduce the code placement performed later by BinaryEmitter and
+  // RewriteInstance. First catalogue fragments whose addresses are determined
+  // by output-section placement. In relocation mode this includes all emitted
+  // fragments except fixed-address injected patches. In non-relocation mode it
+  // includes only non-fixed injected functions; ordinary main fragments remain
+  // at their input addresses, while mapCodeSectionsInPlace() allocates moved
+  // cold fragments directly.
+  //
+  // Section alignment depends on every fragment assigned to the section, so
+  // the complete catalogue must be built before calculating any section base.
+  // The layout phase then mirrors either mapCodeSections() or
+  // mapCodeSectionsInPlace(), and finally records fixed injected patches whose
+  // addresses do not come from the section catalogue.
+
+  assignFunctionsToSections(BC, SortedFunctions);
+
+  if (BC.HasRelocations) {
+    // Mirror RewriteInstance::getCodeSections(). Sections not named explicitly
+    // retain their first-emission order.
+    llvm::stable_sort(
+        Sections, [&](const SectionPlacement &A, const SectionPlacement &B) {
+          return BC.compareSectionNames(A.Name, B.Name);
+        });
+  }
+
+  layoutFunctions(BC, SortedFunctions);
+  finishClusteredLayout();
+}
+
+} // namespace
 
 bool LongJmpPass::usesStub(const BinaryFunction &Func,
                            const MCInst &Inst) const {
@@ -1057,6 +1628,19 @@ public:
                       BinaryFunctionListType &OutputFunctions)
       : BC(BC), OutputFunctions(OutputFunctions) {}
 
+  ClusteredRelaxation(BinaryContext &BC,
+                      BinaryFunctionListType &OutputFunctions,
+                      bool UseFullLayout)
+      : BC(BC), OutputFunctions(OutputFunctions), HasFullLayout(UseFullLayout) {
+    assert(UseFullLayout && "use the default constructor for estimated layout");
+  }
+
+  void resetFullLayout();
+  void addFragmentToFullLayout(const BinaryFunction &Func,
+                               const FunctionFragment &FF, size_t FunctionIndex,
+                               uint64_t StartAddress, uint64_t EndAddress,
+                               ArrayRef<BasicBlockAddress> BasicBlockAddresses);
+  void finalizeFullLayout();
   bool run();
 
 private:
@@ -1129,10 +1713,12 @@ private:
     unsigned TargetCluster;
   };
 
+  bool isWithinClusterRange(uint64_t SourceOffset, uint64_t TargetOffset) const;
+  bool usesFullLayout() const { return HasFullLayout; }
   static unsigned getClusterDistance(unsigned A, unsigned B);
   static uint64_t estimateFragmentSize(const BinaryFunction &BF,
                                        const FunctionFragment &FF);
-  void buildLayout();
+  bool buildLayout();
   void printStats() const;
   void collectOutOfRangeReferences();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
@@ -1141,8 +1727,30 @@ private:
   void relaxUnconditionalBranches();
   void insertThunks();
 
+  /// Records a laid-out function fragment. Records are consumed immediately
+  /// in normal output order, or buffered with their basic-block range until
+  /// finalizeFullLayout() when --hot-functions-at-end is enabled.
+  struct FragmentRecord {
+    const BinaryFunction *Func;
+    const FunctionFragment *FF;
+    size_t FunctionIndex;
+    uint64_t StartAddress;
+    uint64_t EndAddress;
+    size_t FirstBasicBlock;
+    size_t NumBasicBlocks;
+  };
+
+  void
+  addFragmentToCurrentCluster(const FragmentRecord &Fragment,
+                              ArrayRef<BasicBlockAddress> BasicBlockAddresses);
+
   BinaryContext &BC;
   BinaryFunctionListType &OutputFunctions;
+  bool HasFullLayout{false};
+  bool FullLayoutValid{true};
+  bool FullLayoutFinalized{false};
+  SmallVector<FragmentRecord, 0> PendingFragments;
+  SmallVector<BasicBlockAddress, 0> PendingBasicBlocks;
 
   /// Estimated cluster layout and source/target position maps.
   SmallVector<FragmentCluster, 4> Clusters;
@@ -1167,6 +1775,178 @@ private:
 };
 } // namespace
 
+void LongJmpLayout::resetClusteredLayout() {
+  if (Relaxation)
+    Relaxation->resetFullLayout();
+}
+
+void LongJmpLayout::finishClusteredLayout() {
+  if (Relaxation)
+    Relaxation->finalizeFullLayout();
+}
+
+void LongJmpLayout::recordFragment(
+    const BinaryFunction &Func, const FunctionFragment &FF,
+    size_t FunctionIndex, uint64_t StartAddress, uint64_t EndAddress,
+    ArrayRef<BasicBlockAddress> BasicBlockAddresses) {
+  if (Relaxation)
+    Relaxation->addFragmentToFullLayout(Func, FF, FunctionIndex, StartAddress,
+                                        EndAddress, BasicBlockAddresses);
+}
+
+void ClusteredRelaxation::resetFullLayout() {
+  assert(usesFullLayout() && "cannot reset an estimated layout");
+  Clusters.clear();
+  BBLayout.clear();
+  SymLayout.clear();
+  PendingFragments.clear();
+  PendingBasicBlocks.clear();
+  FullLayoutValid = true;
+  FullLayoutFinalized = false;
+}
+
+void ClusteredRelaxation::addFragmentToCurrentCluster(
+    const FragmentRecord &Fragment,
+    ArrayRef<BasicBlockAddress> BasicBlockAddresses) {
+  assert(!Clusters.empty() && "no cluster for function fragment");
+  FragmentCluster &FC = Clusters.back();
+  const unsigned ClusterNum = Clusters.size() - 1;
+  const BinaryFunction &Func = *Fragment.Func;
+  const FunctionFragment &FF = *Fragment.FF;
+  const StringRef SectionName = Func.getCodeSectionName(FF.getFragmentNum());
+
+  if (FC.NumFragments == 0) {
+    FC.StartSectionName = SectionName;
+    FC.StartOffset = Fragment.StartAddress;
+    FC.FirstFunctionIndex = Fragment.FunctionIndex;
+  }
+
+  FC.EndSectionName = SectionName;
+  FC.LastFunctionIndex = Fragment.FunctionIndex;
+  FC.Size = std::max(FC.getEndOffset(), Fragment.EndAddress) - FC.StartOffset;
+  ++FC.NumFragments;
+
+  // Map primary entry points.
+  if (FF.isMainFragment())
+    for (const MCSymbol *Symbol : Func.getSymbols())
+      SymLayout[Symbol] = {ClusterNum, Fragment.StartAddress};
+
+  for (const BasicBlockAddress &Block : BasicBlockAddresses) {
+    BBLayout[Block.BB] = {ClusterNum, Block.Address};
+    // Map the local BB label.
+    if (const MCSymbol *Label = Block.BB->getLabel())
+      SymLayout[Label] = {ClusterNum, Block.Address};
+    // Map the secondary entry point, which can differ from the BB label.
+    if (MCSymbol *Label = Func.getLabelAtOffset(Block.BB->getOffset()))
+      if (MCSymbol *EntrySymbol = Func.getSecondaryEntryPointSymbol(Label))
+        SymLayout[EntrySymbol] = {ClusterNum, Block.Address};
+  }
+}
+
+void ClusteredRelaxation::addFragmentToFullLayout(
+    const BinaryFunction &Func, const FunctionFragment &FF,
+    size_t FunctionIndex, uint64_t StartAddress, uint64_t EndAddress,
+    ArrayRef<BasicBlockAddress> BasicBlockAddresses) {
+  assert(usesFullLayout() && "cannot add a fragment to an estimated layout");
+  assert(!FullLayoutFinalized && "full layout is already finalized");
+  assert(StartAddress <= EndAddress && "invalid function fragment range");
+
+  // Fixed injected patches are not part of the clustered output.
+  if (Func.isPatch())
+    return;
+
+  if (EndAddress - StartAddress > opts::MaxClusterSize) {
+    BC.errs() << "BOLT-ERROR: function fragment " << Func.getPrintName()
+              << " has size " << EndAddress - StartAddress
+              << " bytes, exceeding --max-cluster-size=" << opts::MaxClusterSize
+              << '\n';
+    FullLayoutValid = false;
+  }
+
+  FragmentRecord Fragment{&Func,
+                          &FF,
+                          FunctionIndex,
+                          StartAddress,
+                          EndAddress,
+                          0,
+                          BasicBlockAddresses.size()};
+
+  // Hot fragments are placed last and clusters are packed backwards from
+  // them. Save lightweight layout records and form the clusters in
+  // finalizeFullLayout().
+  if (opts::HotFunctionsAtEnd) {
+    Fragment.FirstBasicBlock = PendingBasicBlocks.size();
+    PendingBasicBlocks.append(BasicBlockAddresses.begin(),
+                              BasicBlockAddresses.end());
+    PendingFragments.push_back(Fragment);
+  } else {
+    if (Clusters.empty() ||
+        std::max(Clusters.back().getEndOffset(), EndAddress) -
+                Clusters.back().StartOffset >
+            opts::MaxClusterSize)
+      Clusters.emplace_back();
+
+    addFragmentToCurrentCluster(Fragment, BasicBlockAddresses);
+  }
+}
+
+void ClusteredRelaxation::finalizeFullLayout() {
+  assert(usesFullLayout() && "cannot finalize an estimated layout");
+  assert(!FullLayoutFinalized && "full layout is already finalized");
+
+  if (opts::HotFunctionsAtEnd && !PendingFragments.empty()) {
+    struct FragmentRange {
+      size_t Begin;
+      size_t End;
+    };
+
+    SmallVector<FragmentRange, 4> ClusterRanges;
+    size_t End = PendingFragments.size();
+    uint64_t ClusterEnd = PendingFragments.back().EndAddress;
+    for (size_t I = End - 1; I > 0;) {
+      --I;
+      const FragmentRecord &Fragment = PendingFragments[I];
+      const uint64_t NewEnd = std::max(ClusterEnd, Fragment.EndAddress);
+      if (NewEnd - Fragment.StartAddress > opts::MaxClusterSize) {
+        ClusterRanges.push_back({I + 1, End});
+        End = I + 1;
+        ClusterEnd = Fragment.EndAddress;
+        continue;
+      }
+      ClusterEnd = NewEnd;
+    }
+    ClusterRanges.push_back({0, End});
+    std::reverse(ClusterRanges.begin(), ClusterRanges.end());
+
+    for (const FragmentRange &Range : ClusterRanges) {
+      Clusters.emplace_back();
+      for (size_t I = Range.Begin; I < Range.End; ++I) {
+        const FragmentRecord &Fragment = PendingFragments[I];
+        addFragmentToCurrentCluster(
+            Fragment,
+            ArrayRef(PendingBasicBlocks)
+                .slice(Fragment.FirstBasicBlock, Fragment.NumBasicBlocks));
+      }
+    }
+  }
+
+  PendingFragments.clear();
+  PendingBasicBlocks.clear();
+  FullLayoutFinalized = true;
+}
+
+bool ClusteredRelaxation::isWithinClusterRange(uint64_t SourceOffset,
+                                               uint64_t TargetOffset) const {
+  const uint64_t Distance = SourceOffset <= TargetOffset
+                                ? TargetOffset - SourceOffset
+                                : SourceOffset - TargetOffset;
+  if (usesFullLayout())
+    return Distance < LongestJumpSpan;
+
+  // Preserve the coarse model's safety margin and equality behavior.
+  return Distance <= opts::MaxClusterSize;
+}
+
 unsigned ClusteredRelaxation::getClusterDistance(unsigned A, unsigned B) {
   return A > B ? A - B : B - A;
 }
@@ -1188,7 +1968,12 @@ uint64_t ClusteredRelaxation::estimateFragmentSize(const BinaryFunction &BF,
   return Size;
 }
 
-void ClusteredRelaxation::buildLayout() {
+bool ClusteredRelaxation::buildLayout() {
+  if (usesFullLayout()) {
+    assert(FullLayoutFinalized && "full layout is not finalized");
+    return FullLayoutValid;
+  }
+
   struct OutputFragment {
     const FunctionFragment *FF;
     size_t FunctionIndex;
@@ -1327,11 +2112,10 @@ void ClusteredRelaxation::buildLayout() {
       addFragmentToCluster(*OrderedFragments[I]);
   }
 
-  if (Clusters.empty())
-    return;
-
   LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
                     << '\n');
+
+  return true;
 }
 
 void ClusteredRelaxation::printStats() const {
@@ -1347,6 +2131,18 @@ void ClusteredRelaxation::printStats() const {
               << " estimated bytes without thunks\n"
               << "BOLT-INFO:   " << FC.ThunkBytes << " thunk bytes\n";
   }
+
+  LLVM_DEBUG({
+    dbgs() << "BOLT-DEBUG: clustered relaxation uses "
+           << (usesFullLayout() ? "the full" : "an estimated")
+           << " code layout\n";
+    for (size_t I = 0; I < Clusters.size(); ++I) {
+      const FragmentCluster &FC = Clusters[I];
+      dbgs() << "BOLT-DEBUG: cluster " << I << " spans [0x"
+             << Twine::utohexstr(FC.StartOffset) << ", 0x"
+             << Twine::utohexstr(FC.getEndOffset()) << ")\n";
+    }
+  });
 
   if (NumShortThunkCalls)
     BC.outs() << "BOLT-INFO: relaxed " << NumShortThunkCalls
@@ -1416,9 +2212,14 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         // Unmapped targets use maximum offset and are treated as out of range.
         const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
 
-        // References within the same cluster do not need relaxation.
-        if (Source.Cluster == Target.Cluster)
+        if (!usesFullLayout()) {
+          // Preserve the coarse model's behavior: every cross-cluster
+          // reference is relaxed.
+          if (Source.Cluster == Target.Cluster)
+            continue;
+        } else if (Found && isWithinClusterRange(SourceOffset, Target.Offset)) {
           continue;
+        }
 
         const OutOfRangeRef Reference{&Inst,          TargetSymbol,
                                       SourceOffset,   Target.Offset,
@@ -1437,12 +2238,11 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         }
 
         assert(IsCall && "expected call after branch-chain handling");
-
         if (!Found) {
           OutOfLayoutCalls.push_back(Reference);
         } else {
-          const unsigned Distance = getClusterDistance(Reference.SourceCluster,
-                                                       Reference.TargetCluster);
+          const unsigned Distance =
+              getClusterDistance(Source.Cluster, Target.Cluster);
           CallsByDistance[Distance].push_back(Reference);
         }
       }
@@ -1515,22 +2315,20 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
   auto getThunkOffset = [&](const unsigned Cluster) {
     const FragmentCluster &FC = Clusters[Cluster];
-    return IsForward ? FC.getEndOffset() : FC.StartOffset;
-  };
-
-  auto isWithinClusterRange = [&](Position Source, Position Target) {
-    const uint64_t Distance = Source.Offset <= Target.Offset
-                                  ? Target.Offset - Source.Offset
-                                  : Source.Offset - Target.Offset;
-    // A hop across a full adjacent cluster can be exactly this far. The
-    // remaining branch range covers emitted thunks and output alignment.
-    return Distance <= opts::MaxClusterSize;
+    // BinaryEmitter aligns every injected thunk as a function. A backward
+    // thunk is modeled at an already aligned fragment start; a forward thunk
+    // following arbitrary fragment contents may require explicit padding.
+    if (!IsForward)
+      return FC.StartOffset;
+    if (!usesFullLayout())
+      return FC.getEndOffset();
+    return alignTo(FC.getEndOffset(), Align(BC.MIB->getMinFunctionAlignment()));
   };
 
   SmallVector<unsigned> ThunkClusters;
-  Position Current{0, Ref.SourceOffset};
+  uint64_t CurrentOffset = Ref.SourceOffset;
   unsigned NextHop = 0;
-  while (!isWithinClusterRange(Current, {NumHops, Ref.TargetOffset})) {
+  while (!isWithinClusterRange(CurrentOffset, Ref.TargetOffset)) {
     // Stop if the chain would exceed the configured thunk budget.
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
@@ -1538,7 +2336,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     unsigned BestHop = -1u;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
-      if (!isWithinClusterRange(Current, {Hop, getThunkOffset(Cluster)}))
+      if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
         break;
       BestHop = Hop;
     }
@@ -1548,8 +2346,8 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
     ThunkClusters.push_back(BestCluster);
+    CurrentOffset = getThunkOffset(BestCluster);
     NextHop = BestHop + 1;
-    Current = {BestHop, getThunkOffset(BestCluster)};
   }
 
   BinaryFunction *FirstThunk = nullptr;
@@ -1706,15 +2504,15 @@ void ClusteredRelaxation::insertThunks() {
 }
 
 bool ClusteredRelaxation::run() {
-  buildLayout();
-  if (Clusters.empty())
+  if (!buildLayout())
     return false;
+  if (Clusters.empty())
+    return true;
 
   collectOutOfRangeReferences();
   relaxCalls();
   relaxUnconditionalBranches();
   printStats();
-  insertThunks();
 
   // Warn if a cluster's thunks and a text-alignment gap exhaust the space
   // reserved between a full cluster and the AArch64 B/BL branch reach. A hop
@@ -1729,19 +2527,48 @@ bool ClusteredRelaxation::run() {
                 << "-byte branch safety margin\n";
   }
 
+  insertThunks();
+
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
              for (const auto *BF : OutputFunctions) { dbgs() << *BF << '\n'; });
 
   return true;
 }
 
-void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
+bool LongJmpPass::relaxWithClusters(BinaryContext &BC) {
   BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
-  ClusteredRelaxation Relaxation(BC, OutputFunctions);
+  if (!opts::UseFullLayout) {
+    ClusteredRelaxation Relaxation(BC, OutputFunctions);
+    if (!Relaxation.run())
+      return false;
+    BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+    return true;
+  }
+
+  // Clustered relaxation does not support non-relocation mode. Still calculate
+  // its complete layout for validation and debugging, but retain the existing
+  // estimated relaxation behavior.
+  if (!BC.HasRelocations) {
+    LongJmpLayout Layout;
+    Layout.calculate(BC, OutputFunctions);
+
+    ClusteredRelaxation Relaxation(BC, OutputFunctions);
+    if (!Relaxation.run())
+      return false;
+    BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+    return true;
+  }
+
+  ClusteredRelaxation Relaxation(BC, OutputFunctions,
+                                 /*UseFullLayout=*/true);
+  LongJmpLayout Layout(Relaxation);
+  Layout.calculate(BC, OutputFunctions);
+
   if (!Relaxation.run())
-    return;
+    return false;
 
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+  return true;
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
@@ -1803,7 +2630,8 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       return Error::success();
 
     BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    relaxWithClusters(BC);
+    if (!relaxWithClusters(BC))
+      return createFatalBOLTError("clustered branch relaxation failure");
     return Error::success();
   }
 
