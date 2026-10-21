@@ -8,7 +8,7 @@
 define agx_kernel void @if_then_else(ptr addrspace(1) %out, i32 %n) {
 ; CHECK-LABEL: if_then_else:
 ; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 3 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -16,15 +16,13 @@ define agx_kernel void @if_then_else(ptr addrspace(1) %out, i32 %n) {
 ; CHECK-NEXT:    get_sr r1, sr80 (thread_position_in_grid.x)
 ; CHECK-NEXT:    // implicit-def: $r2
 ; CHECK-NEXT:    if_icmp r0l, ugte, r1, u2, 1
-; CHECK-NEXT:    jmp_exec_none .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %else
 ; CHECK-NEXT:    iadd r2, r1, 7
-; CHECK-NEXT:  .LBB0_2: // %Flow
+; CHECK-NEXT:  // %bb.2: // %Flow
 ; CHECK-NEXT:    else_fcmp r0l, eq, 0.0, 0.0, 1
-; CHECK-NEXT:    jmp_exec_none .LBB0_4
 ; CHECK-NEXT:  // %bb.3: // %then
 ; CHECK-NEXT:    imadd r2, r1, 3, 0
-; CHECK-NEXT:  .LBB0_4: // %end
+; CHECK-NEXT:  // %bb.4: // %end
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    device_store 0, i32, x, r2, u0_u1, r1, signed
 ; CHECK-NEXT:    stop
@@ -55,7 +53,7 @@ end:
 define agx_kernel void @early_return(ptr addrspace(1) %out, i32 %n) {
 ; CHECK-LABEL: early_return:
 ; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 3 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 3 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
@@ -91,7 +89,7 @@ ret:
 define agx_kernel void @loop(ptr addrspace(1) %out) {
 ; CHECK-LABEL: loop:
 ; CHECK:         // uniform registers: 10 x 16-bit (threadgroups_per_grid at u2)
-; CHECK-NEXT:    // general purpose registers: 5 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 5 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -140,7 +138,7 @@ exit:
 define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-LABEL: nested_loops:
 ; CHECK:         // uniform registers: 14 x 16-bit (threadgroups_per_grid at u4)
-; CHECK-NEXT:    // general purpose registers: 7 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 7 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -161,13 +159,12 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:    // implicit-def: $r4
 ; CHECK-NEXT:    mov_imm r6l, 1
 ; CHECK-NEXT:    if_icmp r0l, nueq, r1, r3, 1
-; CHECK-NEXT:    jmp_exec_none .LBB3_4
 ; CHECK-NEXT:  // %bb.3: // %inner.c
 ; CHECK-NEXT:    // in Loop: Header=BB3_2 Depth=2
 ; CHECK-NEXT:    iadd r4, r3, 1
 ; CHECK-NEXT:    icmpsel ult, r6, r3, u3, 0, 1
 ; CHECK-NEXT:    mov_imm r5l, 0
-; CHECK-NEXT:  .LBB3_4: // %Flow
+; CHECK-NEXT:  // %bb.4: // %Flow
 ; CHECK-NEXT:    // in Loop: Header=BB3_2 Depth=2
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    bitop 0101, r6, r6l, 0
@@ -180,13 +177,12 @@ define agx_kernel void @nested_loops(ptr addrspace(1) %out, i32 %n, i32 %m) {
 ; CHECK-NEXT:    bitop 0101, r5, r4l, 0
 ; CHECK-NEXT:    mov_imm r4l, 1
 ; CHECK-NEXT:    if_icmp r0l, nueq, r5, 0, 1
-; CHECK-NEXT:    jmp_exec_none .LBB3_7
 ; CHECK-NEXT:  // %bb.6: // %outer.latch
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    iadd r2, r2, 1
 ; CHECK-NEXT:    icmpsel ult, r4, r2, u2, 0, 1
 ; CHECK-NEXT:    bitop 0101, r3, r2, 0
-; CHECK-NEXT:  .LBB3_7: // %Flow3
+; CHECK-NEXT:  // %bb.7: // %Flow3
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    bitop 0101, r4, r4l, 0
@@ -232,7 +228,7 @@ exit:
 define agx_kernel void @switch(ptr addrspace(1) %out) {
 ; CHECK-LABEL: switch:
 ; CHECK:         // uniform registers: 10 x 16-bit (threadgroups_per_grid at u2)
-; CHECK-NEXT:    // general purpose registers: 5 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 5 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -245,34 +241,30 @@ define agx_kernel void @switch(ptr addrspace(1) %out) {
 ; CHECK-NEXT:  // %bb.1: // %LeafBlock1
 ; CHECK-NEXT:    mov_imm r3l, 1
 ; CHECK-NEXT:    if_icmp r0l, ueq, r1, 5, 1
-; CHECK-NEXT:    jmp_exec_none .LBB4_3
 ; CHECK-NEXT:  // %bb.2: // %b
 ; CHECK-NEXT:    mov_imm r3l, 0
-; CHECK-NEXT:  .LBB4_3: // %Flow3
+; CHECK-NEXT:  // %bb.3: // %Flow3
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:  .LBB4_4: // %Flow
 ; CHECK-NEXT:    else_fcmp r0l, eq, 0.0, 0.0, 1
-; CHECK-NEXT:    jmp_exec_none .LBB4_6
 ; CHECK-NEXT:  // %bb.5: // %LeafBlock
 ; CHECK-NEXT:    icmpsel ueq, r3, r1, 0, 0, 1
 ; CHECK-NEXT:    mov_imm r2l, 1
-; CHECK-NEXT:  .LBB4_6: // %Flow4
+; CHECK-NEXT:  // %bb.6: // %Flow4
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    bitop 0101, r4, r3l, 0
 ; CHECK-NEXT:    mov_imm r3, 2
 ; CHECK-NEXT:    if_icmp r0l, nueq, r4, 0, 1
-; CHECK-NEXT:    jmp_exec_none .LBB4_8
 ; CHECK-NEXT:  // %bb.7: // %def
 ; CHECK-NEXT:    mov_imm r2l, 0
 ; CHECK-NEXT:    mov_imm r3, 3
-; CHECK-NEXT:  .LBB4_8: // %Flow5
+; CHECK-NEXT:  // %bb.8: // %Flow5
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    bitop 0101, r2, r2l, 0
 ; CHECK-NEXT:    if_icmp r0l, nueq, r2, 0, 1
-; CHECK-NEXT:    jmp_exec_none .LBB4_10
 ; CHECK-NEXT:  // %bb.9: // %a
 ; CHECK-NEXT:    mov_imm r3, 1
-; CHECK-NEXT:  .LBB4_10: // %join
+; CHECK-NEXT:  // %bb.10: // %join
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    device_store 0, i32, x, r3, u0_u1, r1, signed
 ; CHECK-NEXT:    stop
@@ -306,7 +298,7 @@ declare i32 @llvm.agx.thread.position.in.grid.x()
 define agx_kernel void @trap(ptr addrspace(1) %out, i32 %n) {
 ; CHECK-LABEL: trap:
 ; CHECK:         // uniform registers: 12 x 16-bit (threadgroups_per_grid at u3)
-; CHECK-NEXT:    // general purpose registers: 2 x 32-bit
+; CHECK-NEXT:    // general purpose registers: 2 x 32-bit (up to 1024 threads per threadgroup)
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:

@@ -98,8 +98,10 @@ mlir() {
 fatbin() {
   have "${LLVM_BUILD:-}" && [ -x "$LLVM_BUILD/bin/mlir-opt" ] || skip "no mlir-opt"
   k="$ROOT/mlir/utils/agx-kernels"
-  src=$(ls "$k"/*.mlir 2>/dev/null | head -n 1)
-  [ -n "$src" ] || skip "no kernel source in $k"
+  # ZLUDA's library kernels
+  have "${ZLUDA:-}" || skip "ZLUDA unset (the kernel sources)"
+  src="$ZLUDA/agx_libs/kernels/sgemm.mlir"
+  have "$src" || skip "no $src"
   python3 -I "$k/agx-build-fatbin.py" --mlir-opt "$LLVM_BUILD/bin/mlir-opt" \
     --mlir-translate "$LLVM_BUILD/bin/mlir-translate" --llc "$LLVM_BUILD/bin/llc" \
     --chips agx-g13g,agx-g14c "$src" -o "$TMP/k.agxfat" &&
