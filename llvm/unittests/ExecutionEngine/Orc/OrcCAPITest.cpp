@@ -860,3 +860,70 @@ TEST_F(OrcCAPITestBase, SuspendedLookup) {
   // Check that the generator context was "destroyed".
   EXPECT_TRUE(Ctx.Disposed);
 }
+
+static LLVMErrorRef createModuleInContext(void *Ctx, LLVMContextRef C) {
+  *static_cast<LLVMModuleRef *>(Ctx) =
+      LLVMModuleCreateWithNameInContext("test", C);
+  return LLVMErrorSuccess;
+}
+
+static LLVMErrorRef checkModuleContext(void *Ctx, LLVMModuleRef M) {
+  if (LLVMGetModuleContext(M) != *static_cast<LLVMContextRef *>(Ctx))
+    return wrap(make_error<StringError>("Module context mismatch",
+                                        inconvertibleErrorCode()));
+  return LLVMErrorSuccess;
+}
+
+struct NestedWithModuleDoContext {
+  LLVMOrcThreadSafeModuleRef TSM;
+  LLVMContextRef C;
+};
+
+static LLVMErrorRef nestedWithModuleDo(void *Ctx, LLVMContextRef C) {
+  auto *NCtx = static_cast<NestedWithModuleDoContext *>(Ctx);
+  NCtx->C = C;
+  return LLVMOrcThreadSafeModuleWithModuleDo(NCtx->TSM, checkModuleContext,
+                                             &NCtx->C);
+}
+
+static LLVMErrorRef failWithContext(void *Ctx, LLVMContextRef C) {
+  return wrap(make_error<StringError>("WithContextDo failure",
+                                      inconvertibleErrorCode()));
+}
+
+TEST(OrcCAPITest, ThreadSafeContextWithContextDo) {
+  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
+
+  // Create a module inside the context.
+  LLVMModuleRef M = nullptr;
+  LLVMErrorRef Err =
+      LLVMOrcThreadSafeContextWithContextDo(TSCtx, createModuleInContext, &M);
+  if (Err)
+    FAIL() << "Failed to create module in context: " << toString(Err);
+  ASSERT_NE(M, nullptr);
+
+  LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(M, TSCtx);
+
+  // Check that the module's context is the one seen by WithContextDo, and that
+  // WithModuleDo can be nested inside WithContextDo.
+  NestedWithModuleDoContext NCtx = {TSM, nullptr};
+  Err = LLVMOrcThreadSafeContextWithContextDo(TSCtx, nestedWithModuleDo, &NCtx);
+  if (Err)
+    FAIL() << "Nested WithModuleDo failed: " << toString(Err);
+  ASSERT_NE(NCtx.C, nullptr);
+
+  LLVMOrcDisposeThreadSafeModule(TSM);
+  LLVMOrcDisposeThreadSafeContext(TSCtx);
+}
+
+TEST(OrcCAPITest, ThreadSafeContextWithContextDoError) {
+  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
+
+  LLVMErrorRef Err =
+      LLVMOrcThreadSafeContextWithContextDo(TSCtx, failWithContext, nullptr);
+  if (!Err)
+    FAIL() << "Expected WithContextDo to propagate the callback's error";
+  ASSERT_EQ(toString(Err), "WithContextDo failure");
+
+  LLVMOrcDisposeThreadSafeContext(TSCtx);
+}
