@@ -27,6 +27,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <utility>
@@ -35,6 +36,16 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
+
+ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  if (!Stride)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = Stride->getValue() * ElementSize;
+  return ConstantInt::get(Stride->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
@@ -60,6 +71,60 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
                             /*CtxI=*/nullptr, VIC);
+}
+
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
+  Value *Stride = getStrideBytesIfConstant(
+      dyn_cast_if_present<ConstantInt>(StrideVal), ScalarTy, DL, IsReverse);
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment,
+                                 /*I=*/nullptr, Stride),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost +=
+        getWidenedStridedCastCost(TTI, StridedLoadTy, VecTy, DL, Ctx, CostKind);
+  return StridedCost;
+}
+
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind) {
+  if (Info.InterleaveFactor) {
+    assert(!Info.IsMasked && "Masked interleaved loads are not supported");
+    return TTI.getInterleavedMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
+        LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+  }
+
+  InstructionCost Cost;
+  if (Info.IsMasked) {
+    Cost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI.getMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind,
+        TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
+  }
+  // For REVEC the emitted shuffle uses the compress mask expanded to the
+  // individual elements of the vector scalars.
+  SmallVector<int> CompressCostMask(Info.CompressMask);
+  transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                         CompressCostMask);
+  // TODO: include this cost into CommonCost.
+  Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
+                         CostKind, CompressCostMask);
+  return Cost;
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -124,6 +189,11 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    const bool IsSameBase =
+        !all_of(Ptrs, IsaPred<GetElementPtrInst>) ||
+        all_equal(map_range(Ptrs, [](Value *V) {
+          return cast<GetElementPtrInst>(V)->getPointerOperand();
+        }));
     // The GEPs of the masked gather loads are accessed with the loaded type
     // and form a chain only if the lanes share the base.
     Type *AccessTy = ScalarTy;
@@ -131,9 +201,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
           auto *Ptr = dyn_cast<GetElementPtrInst>(V);
           return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
         })) {
-      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
-        return cast<GetElementPtrInst>(V)->getPointerOperand();
-      }));
+      PtrsInfo.IsSameBaseAddress = IsSameBase;
       AccessTy = Ptrs.front()->user_back()->getType();
     }
     ScalarCost =
@@ -144,7 +212,21 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
       if (It != Ptrs.end())
         BaseGEP = cast<GEPOperator>(*It);
     }
-    if (BaseGEP) {
+    if (!IsSameBase) {
+      // The different bases are not folded into the addressing of the vector
+      // access, the scaled indices are added to them.
+      const DataLayout &DL = cast<Instruction>(Ptrs.front())->getDataLayout();
+      Type *IdxTy = DL.getIndexType(VecTy);
+      VecCost = TTI.getArithmeticInstrCost(Instruction::Add, IdxTy, CostKind);
+      uint64_t Stride = DL.getTypeAllocSize(BaseGEP->getSourceElementType())
+                            .getKnownMinValue();
+      if (Stride != 1 && !all_of(Ptrs, [](Value *V) {
+            return isa<Constant>(cast<GetElementPtrInst>(V)->getOperand(1));
+          }))
+        VecCost += TTI.getArithmeticInstrCost(
+            isPowerOf2_64(Stride) ? Instruction::Shl : Instruction::Mul, IdxTy,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_None});
+    } else if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, CostKind,

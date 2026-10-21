@@ -19,6 +19,7 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -31,6 +32,7 @@ class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
 class Instruction;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class User;
@@ -40,6 +42,39 @@ enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
+ConstantInt *getStrideBytesIfConstant(ConstantInt *Stride, Type *ScalarTy,
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
+
+/// Return the cost of a strided load and accompanying bitcast.
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse);
+
+/// Describe a single compressed load for costing and generating the vector
+/// instruction.
+struct CompressedLoadInfo {
+  CompressedLoadInfo(bool IsMasked, unsigned InterleaveFactor,
+                     SmallVector<int> CompressMask, VectorType *LoadVecTy)
+      : IsMasked(IsMasked), InterleaveFactor(InterleaveFactor),
+        CompressMask(std::move(CompressMask)), LoadVecTy(LoadVecTy) {}
+
+  bool IsMasked = false;
+  unsigned InterleaveFactor = 0;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy = nullptr;
+};
+
+/// Return the cost of a compressed load and accompanying shuffle.
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for

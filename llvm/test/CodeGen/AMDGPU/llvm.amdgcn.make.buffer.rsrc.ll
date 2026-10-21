@@ -20,13 +20,11 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_2]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
   ; CHECK45-LABEL: name: basic_raw_buffer
@@ -45,13 +43,11 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 9
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
+  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_1]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
@@ -71,13 +67,11 @@ define amdgpu_ps ptr addrspace(8) @large_num_records_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_2]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
   ; CHECK45-LABEL: name: large_num_records_raw_buffer
@@ -96,13 +90,11 @@ define amdgpu_ps ptr addrspace(8) @large_num_records_raw_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 33554441
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -536870912
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
+  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_1]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 4294968530, i32 5678)
   ret ptr addrspace(8) %rsrc
@@ -122,13 +114,11 @@ define amdgpu_ps ptr addrspace(8) @overflow_num_records_raw_buffer(ptr inreg %p)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_1]]
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_2]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
   ; CHECK45-LABEL: name: overflow_num_records_raw_buffer
@@ -147,13 +137,11 @@ define amdgpu_ps ptr addrspace(8) @overflow_num_records_raw_buffer(ptr inreg %p)
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 63
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
+  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_1]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 -1, i32 0)
   ret ptr addrspace(8) %rsrc
@@ -338,13 +326,11 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
   ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_3]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_5]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   ;
   ; CHECK45-LABEL: name: basic_struct_buffer
@@ -363,13 +349,11 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 9
-  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_]]
-  ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -536854528
-  ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 [[S_MOV_B32_2]]
+  ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -536854528
   ; CHECK45-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK45-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
-  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
+  ; CHECK45-NEXT:   $sgpr2 = COPY [[S_MOV_B32_]]
+  ; CHECK45-NEXT:   $sgpr3 = COPY [[S_MOV_B32_1]]
   ; CHECK45-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 4, i64 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
