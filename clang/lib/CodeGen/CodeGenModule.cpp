@@ -2446,7 +2446,9 @@ void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
 
 void CodeGenModule::setDLLImportDLLExport(llvm::GlobalValue *GV,
                                           const NamedDecl *D) const {
-  if (D && D->isExternallyVisible()) {
+  // Local-linkage globals (e.g. `.inline` builtin clones) cannot carry a DLL
+  // storage class.
+  if (D && D->isExternallyVisible() && !GV->hasLocalLinkage()) {
     if (D->hasAttr<DLLImportAttr>())
       GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
     else if ((D->hasAttr<DLLExportAttr>() ||
