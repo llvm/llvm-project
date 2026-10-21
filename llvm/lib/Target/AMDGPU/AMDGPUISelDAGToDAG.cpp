@@ -599,7 +599,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
-  unsigned EltSizeInRegs = static_cast<unsigned>(EltVT.getSizeInBits() / 32);
+  uint64_t EltSizeInRegs = EltVT.getSizeInBits() / 32;
   assert(IsGCN || EltSizeInRegs == 1);
   for (unsigned i = 0; i < NOps; i++) {
     // XXX: Why is this here?
