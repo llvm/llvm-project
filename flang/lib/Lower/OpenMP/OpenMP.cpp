@@ -428,9 +428,9 @@ protected:
   virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
                                                llvm::omp::Directive dir) = 0;
 
-  /// Obtain the list of clauses of the given OpenMP block or loop construct
-  /// evaluation. If it's not an OpenMP construct, no modifications are made to
-  /// the \c clauses output argument.
+  /// Obtain the list of clauses of the given OpenMP block, loop or sections
+  /// construct evaluation. If it's not an OpenMP construct, no modifications
+  /// are made to the \c clauses output argument.
   void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses) {
     const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
     if (!ompEval)
@@ -442,7 +442,8 @@ protected:
         [&](const auto &construct) {
           using Type = llvm::remove_cvref_t<decltype(construct)>;
           if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
+                        std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
+                        std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
             beginClauseList = &construct.BeginDir().Clauses();
             if (auto &endSpec{construct.EndDir()})
               endClauseList = &endSpec->Clauses();
