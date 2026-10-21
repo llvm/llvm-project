@@ -2244,6 +2244,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::OP##_NF_ND:                                                        \
   case X86::OP##_EVEX:
 
+  // clang-format off
   switch (Opc) {
   // SHLD B, C, I <-> SHRD C, B, (BitWidth - I). All rri8 variants (legacy,
   // _ND, _NF, _NF_ND, _EVEX) are commutable; swapping only the sources would
@@ -2286,6 +2287,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(Size - MI.getOperand(3).getImm());
     break;
   }
+  // clang-format on
   case X86::PFSUBrr:
   case X86::PFSUBRrr:
     // PFSUB  x, y: x = x - y
