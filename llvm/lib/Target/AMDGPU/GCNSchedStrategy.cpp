@@ -1593,7 +1593,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
     Register DefReg = CandReg.getDefReg();
     MarkedRegs.insert(DefReg);
-    DefRegToCandIdx[DefReg] = Candidates.size();
+    DefRegToCandIdx[DefReg] = static_cast<unsigned>(Candidates.size());
     Candidates.emplace_back(RegIdx, NumRegions);
   }
 
