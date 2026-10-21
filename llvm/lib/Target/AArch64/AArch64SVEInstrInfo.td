@@ -559,6 +559,11 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
+// AND_U permits either operand order.
+def SVEAndU : PatFrags<(ops node:$pg, node:$a, node:$b),
+                      [(int_aarch64_sve_and_u node:$pg, node:$a, node:$b),
+                       (int_aarch64_sve_and_u node:$pg, node:$b, node:$a)]>;
+
 def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                              [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
                               (and node:$pg, (and node:$op1, node:$op2))]>;
@@ -753,14 +758,40 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
   defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", AArch64bic>;
 
-  // Select BIC when NOT's inactive values are undefined or all lanes are active.
   multiclass SVEAndNotPats<ValueType VT, ValueType PT> {
+    // Ordinary AND: NOT's undefined inactive lanes may take the value ~b.
     def : Pat<(and VT:$a,
                 (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b))),
               (BIC_ZZZ $a, $b)>;
+    // Ordinary AND: an all-active NOT produces ~b in every lane.
     def : Pat<(and VT:$a,
                 (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b))),
               (BIC_ZZZ $a, $b)>;
+
+    // AND_U: matching predicates ensure NOT produces ~b in every active AND lane.
+    def : Pat<(VT (SVEAndU PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U: NOT's undefined inactive lanes may take the value ~b,
+    // even when the predicates differ.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
+                    (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U: an all-active NOT produces ~b regardless of AND_U's predicate.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U with ordinary LLVM NOT, which produces ~b in every lane.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a, (vnot VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+
+    // Fall back to register AND when no BIC pattern matches.
+    // AND_U allows any result in inactive lanes.
+    def : Pat<(VT (int_aarch64_sve_and_u (PT srcvalue), VT:$a, VT:$b)),
+              (AND_ZZZ $a, $b)>;
   }
   defm : SVEAndNotPats<nxv16i8, nxv16i1>;
   defm : SVEAndNotPats<nxv8i16, nxv8i1>;
@@ -824,6 +855,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", xor>;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
   defm BIC_ZI : sve_int_log_imm_bic<AArch64bic>;
+
+  // Allow retained AND_U intrinsics to select AND-immediate instructions.
+  class SVEAndUImmPat<ValueType VT, ValueType PT, ZPRRegOp ZPR,
+                     ValueType IT, ComplexPattern CP>
+    : Pat<(VT (SVEAndU (PT (SVEAnyPredicate)), (VT ZPR:$a),
+                (VT (splat_vector (IT (CP i64:$imm)))))),
+          (AND_ZI_PSEUDO $a, i64:$imm)>;
+  def : SVEAndUImmPat<nxv16i8, nxv16i1, ZPR8, i32, SVELogicalImm8Pat>;
+  def : SVEAndUImmPat<nxv8i16, nxv8i1, ZPR16, i32, SVELogicalImm16Pat>;
+  def : SVEAndUImmPat<nxv4i32, nxv4i1, ZPR32, i32, SVELogicalImm32Pat>;
+  def : SVEAndUImmPat<nxv2i64, nxv2i1, ZPR64, i64, SVELogicalImm64Pat>;
 
   defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", AArch64smax_p>;
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", AArch64smin_p>;
