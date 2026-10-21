@@ -80,7 +80,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::SampleIndex,
                                            SemanticKind::ViewID,
                                            SemanticKind::PrimitiveID,
-                                           SemanticKind::StencilRef};
+                                           SemanticKind::StencilRef,
+                                           SemanticKind::ViewPortArrayIndex};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -241,6 +242,17 @@ TEST(HLSLSemanticStagesTest, StencilRefSignaturePoints) {
       {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked},
   };
   expectOnlySignaturePoints(SemanticKind::StencilRef, Valid);
+}
+
+// SV_ViewportArrayIndex is written by the vertex shader and read by the pixel
+// shader. A vertex input with this name is an arbitrary semantic.
+TEST(HLSLSemanticStagesTest, ViewPortArrayIndexSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+      {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+      {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+  };
+  expectOnlySignaturePoints(SemanticKind::ViewPortArrayIndex, Valid);
 }
 
 } // namespace

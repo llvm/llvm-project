@@ -535,7 +535,7 @@ defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm SampleMaskOverrideCoverageNV : CapabilityOperand<5249, 0, 0, [], [SampleRateShading]>;
 defm GeometryShaderPassthroughNV : CapabilityOperand<5251, 0, 0, [], [Geometry]>;
-defm ShaderViewportIndexLayerEXT : CapabilityOperand<5254, 0, 0, [], [MultiViewport]>;
+defm ShaderViewportIndexLayerEXT : CapabilityOperand<5254, 0, 0, [SPV_EXT_shader_viewport_index_layer], [MultiViewport]>;
 defm ShaderViewportMaskNV : CapabilityOperand<5255, 0, 0, [], [ShaderViewportIndexLayerEXT]>;
 defm ShaderStereoViewNV : CapabilityOperand<5259, 0, 0, [], [ShaderViewportMaskNV]>;
 defm PerViewAttributesNV : CapabilityOperand<5260, 0, 0, [], [MultiView]>;
