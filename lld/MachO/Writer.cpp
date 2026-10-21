@@ -662,6 +662,12 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
+// Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
+// reference to a thread-local both want the same value -- the address of its
+// TLV descriptor -- so one __got entry serves both, and the result no longer
+// depends on which reference the relocation scan reaches first.
+static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Relocation &r) {
   if (!sym->isLive()) {
@@ -682,10 +688,10 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
-      in.tlvPointers->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
@@ -971,6 +977,45 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+// __objc_stubs is synthetic, so the input section sorting in
+// sortSegmentsAndSections() does not reach its entries. Order each stub by the
+// priority of the earliest-laid-out section that calls it, which keeps the
+// stubs reached during startup together.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &priorities) {
+  if (priorities.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  // ICF may make the prioritized section differ from the section whose
+  // relocations describe the original calls. Use the canonical section for
+  // priority lookup, but scan the original section's relocations.
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const ConcatInputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    const auto *priorityIsec = cast<ConcatInputSection>(isec->canonical());
+    if (priorityIsec->shouldOmitFromOutput())
+      continue;
+    auto prio = priorities.find(priorityIsec);
+    if (prio == priorities.end())
+      continue;
+    for (const Relocation &r : isec->relocs) {
+      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
+        continue;
+      auto *stub = dyn_cast_if_present<Symbol *>(r.referent);
+      if (!stub || !ObjCStubsSection::isObjCStubSymbol(stub))
+        continue;
+      auto [it, inserted] = stubPriority.try_emplace(stub, prio->second);
+      if (!inserted)
+        it->second = std::min(it->second, prio->second);
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  in.objcStubs->sortSymbols(stubPriority);
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -980,6 +1025,8 @@ static void sortSegmentsAndSections() {
 
   DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -1007,12 +1054,16 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
+        if (!isecPriorities.empty()) {
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }
@@ -1395,7 +1446,6 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

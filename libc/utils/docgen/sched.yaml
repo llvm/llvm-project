@@ -1,0 +1,27 @@
+macros:
+  SCHED_FIFO:
+    in-latest-posix: ''
+  SCHED_OTHER:
+    in-latest-posix: ''
+  SCHED_RR:
+    in-latest-posix: ''
+  SCHED_SPORADIC:
+    in-latest-posix: ''
+
+functions:
+  sched_get_priority_max:
+    in-latest-posix: ''
+  sched_get_priority_min:
+    in-latest-posix: ''
+  sched_getparam:
+    in-latest-posix: ''
+  sched_getscheduler:
+    in-latest-posix: ''
+  sched_rr_get_interval:
+    in-latest-posix: ''
+  sched_setparam:
+    in-latest-posix: ''
+  sched_setscheduler:
+    in-latest-posix: ''
+  sched_yield:
+    in-latest-posix: ''

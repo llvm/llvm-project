@@ -31,7 +31,11 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #define CRT_INFINITY INFINITY
 #else
+#if defined(DOUBLE_PRECISION)
+#define CRT_INFINITY __builtin_huge_val()
+#else
 #define CRT_INFINITY __builtin_huge_valf()
+#endif
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)

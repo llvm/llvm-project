@@ -36,6 +36,7 @@ std::string lldb_private::CreateFile(llvm::StringRef filename,
   int fd;
   std::error_code ret = llvm::sys::fs::openFileForWrite(path, fd);
   assert(!ret && "Failed to create test file.");
+  (void)ret;
   ::close(fd);
 
   return path.c_str();

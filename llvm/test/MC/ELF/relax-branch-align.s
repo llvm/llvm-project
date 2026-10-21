@@ -3,12 +3,11 @@
 
 ## In the initial all-short layout, `jmp target` has displacement -129 (1 beyond
 ## [-128,127]). `je far_target` relaxes from 2B to 6B, shifting `target` by
-## +4B, and `.p2align 4` absorbs this growth. With fresh offsets, the true
-## displacement is -125, which fits in a short jmp.
+## +4B, and `.p2align 4` absorbs this growth. With fresh offsets, `jmp target`
+## sees displacement -125 and stays short (2B).
 ##
-## The two-pass approach (relaxFragment, then layoutSection) evaluates the
-## backward jmp with stale target offsets (before je relaxation shifts it),
-## causing unnecessary relaxation from short (2B) to near (5B).
+## The fused relaxation+layout computes alignment padding with fresh offsets,
+## so the backward jmp sees the correct displacement and stays short (2B).
 
   .text
   .p2align 4
@@ -33,11 +32,10 @@ past_loop:
   cmpq %rdi, (%r8)
   jne loop
   cmpl %esi, 8(%r8)
-## The jmp is unnecessarily relaxed to near (5B). after is at 0x86 instead of
-## 0x83.
+## The jmp stays short (2B). after is at 0x83, not 0x86.
 # CHECK:       81: jmp 0x6 <target>
 # CHECK-EMPTY:
-# CHECK-NEXT: 0000000000000086 <after>:
+# CHECK-NEXT: 0000000000000083 <after>:
   jmp target
 after:
   popq %rbx

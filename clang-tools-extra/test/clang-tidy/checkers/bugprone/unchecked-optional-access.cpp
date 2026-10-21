@@ -1,16 +1,27 @@
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"
-#include "folly/types/Optional.h"
-#include "bde/types/bsl_optional.h"
 #include "bde/types/bdlb_nullablevalue.h"
+#include "bde/types/bsl_optional.h"
+#include "folly/types/Optional.h"
+#include "std/types/optional.h"
 
-void unchecked_value_access(const absl::optional<int> &opt) {
+void unchecked_value_access(std::optional<int> opt) {
   opt.value();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
-void unchecked_deref_operator_access(const absl::optional<int> &opt) {
+void absl_unchecked_value_access(const absl::optional<int> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void unchecked_deref_operator_access(std::optional<int> opt) {
+  *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: unchecked access to optional value
+}
+
+void absl_unchecked_deref_operator_access(const absl::optional<int> &opt) {
   *opt;
   // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: unchecked access to optional value
 }
@@ -19,7 +30,12 @@ struct Foo {
   void foo() const {}
 };
 
-void unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
+void unchecked_arrow_operator_access(std::optional<Foo> opt) {
+  opt->foo();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
+}
+
+void absl_unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
   opt->foo();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
@@ -40,7 +56,13 @@ void folly_value_after_swap(folly::Optional<int> opt1, folly::Optional<int> opt2
   }
 }
 
-void checked_access(const absl::optional<int> &opt) {
+void checked_access(std::optional<int> opt) {
+  if (opt.has_value()) {
+    opt.value();
+  }
+}
+
+void absl_checked_access(const absl::optional<int> &opt) {
   if (opt.has_value()) {
     opt.value();
   }
@@ -207,6 +229,72 @@ void nullable_value_make_value(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
   }
 
   opt2.value();
+}
+
+
+void bsl_optional_value_constructor(int v, bsl::string s) {
+  bsl::optional<int> opt1 = v;
+  opt1.value();
+
+  bsl::optional<int> opt2(v);
+  opt2.value();
+
+  bsl::optional<bsl::string> opt3 = s;
+  opt3.value();
+
+  bsl::optional<bsl::string> opt4(s);
+  opt4.value();
+}
+
+void bsl_optional_allocator_extended_value_constructor(bsl::string s) {
+  bsl::optional<bsl::string> opt(bsl::allocator_arg, bsl::allocator{}, s);
+  opt.value();
+}
+
+void bsl_optional_in_place_constructor(bsl::string s) {
+  bsl::optional<bsl::string> opt1(bsl::in_place, s);
+  opt1.value();
+
+  bsl::optional<bsl::string> opt2(bsl::allocator_arg, bsl::allocator{},
+                                  bsl::in_place, s);
+  opt2.value();
+}
+
+void bsl_optional_make_optional() {
+  bsl::optional<int> opt = bsl::make_optional<int>(1);
+  opt.value();
+}
+
+void bsl_optional_converting_constructor(std::optional<int> src) {
+  bsl::optional<int> opt1 = src;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (src.has_value()) {
+    bsl::optional<int> opt2 = src;
+    opt2.value();
+  }
+}
+
+void bsl_optional_empty_constructors() {
+  bsl::optional<bsl::string> opt1(bsl::allocator_arg, bsl::allocator{});
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::optional<int> opt2 = bsl::nullopt;
+  opt2.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void nullable_value_value_constructor(int v, bsl::string s) {
+  BloombergLP::bdlb::NullableValue<int> opt1 = v;
+  opt1.value();
+
+  BloombergLP::bdlb::NullableValue<bsl::string> opt2 = s;
+  opt2.value();
+
+  BloombergLP::bdlb::NullableValue<bsl::string> opt3(s, bsl::allocator{});
+  opt3.value();
 }
 
 void assertion_handler() __attribute__((analyzer_noreturn));

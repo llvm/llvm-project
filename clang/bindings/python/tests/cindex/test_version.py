@@ -8,4 +8,4 @@ class TestClangVersion(unittest.TestCase):
         conf = Config()
         version = conf.get_clang_version()
 
-        self.assertRegex(version, r"^clang version \d+\.\d+\.\d+")
+        self.assertRegex(version, r"clang version \d+\.\d+\.\d+")

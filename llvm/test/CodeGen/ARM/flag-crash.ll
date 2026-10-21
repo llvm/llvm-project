@@ -1,4 +1,5 @@
 ; RUN: llc < %s -O3 -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-a8 -relocation-model=pic
+; RUN: llc < %s -O3 -mtriple=thumbv7-apple-darwin10 -mcpu=cortex-a8 -relocation-model=pic -debugify-and-strip-all-safe
 ; PR7484
 
 %struct.gs_matrix = type { float, i32, float, i32, float, i32, float, i32, float, i32, float, i32 }

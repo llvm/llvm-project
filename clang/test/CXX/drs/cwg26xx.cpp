@@ -148,6 +148,13 @@ void f() {
 #endif
 } // namespace cwg2628
 
+namespace cwg2629 { // cwg2629: 2.7
+void f() {
+  switch (double d = 0.0) {}
+  // expected-error@-1 {{statement requires expression of integer type ('double' invalid)}}
+}
+} // namespace cwg2629
+
 // cwg2630 is in cwg2630.cpp
 
 namespace cwg2631 { // cwg2631: 16
@@ -207,18 +214,14 @@ int \N{Λ} = 0;
 // expected-error@-2 {{expected unqualified-id}}
 const char* emoji = "\N{🤡}";
 // expected-error@-1 {{'🤡' is not a valid Unicode character name}}
-//   expected-note@-2 {{did you mean OX ('🐂' U+1F402)?}}
-//   expected-note@-3 {{did you mean ANT ('🐜' U+1F41C)?}}
-//   expected-note@-4 {{did you mean ARC ('⌒' U+2312)?}}
-//   expected-note@-5 {{did you mean AXE ('🪓' U+1FA93)?}}
-//   expected-note@-6 {{did you mean BAT ('🦇' U+1F987)?}}
+// expected-note@-2 {{character '🤡' U+1F921 cannot appear in a Unicode character name}}
 
 #define z(x) 0
 #define cwg2640_a z(
 int x = cwg2640_a\N{abc});
 // expected-error@-1 {{'abc' is not a valid Unicode character name}}
 int y = cwg2640_a\N{LOTUS});
-// expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
+// expected-error@-1 {{character '🪷' U+1FAB7 not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
 } // namespace cwg2640
 
@@ -266,6 +269,8 @@ void f() {
     brachiosaur |= neck;                // OK
 }
 } // namespace cwg2654
+
+// cwg2660: na
 
 namespace cwg2681 { // cwg2681: 17
 #if __cplusplus >= 202002L

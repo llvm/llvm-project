@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -136,15 +135,14 @@ static bool isStandardPointerConvertible(QualType From, QualType To) {
   // be converted to a prvalue of type “pointer to cv B”, where B is a base
   // class of D. If B is an inaccessible or ambiguous base class of D, a program
   // that necessitates this conversion is ill-formed.
-  if (const auto *RD = From->getPointeeCXXRecordDecl()) {
-    if (RD->isCompleteDefinition() &&
-        isBaseOf(From->getPointeeType().getTypePtr(),
-                 To->getPointeeType().getTypePtr())) {
-      // If B is an inaccessible or ambiguous base class of D, a program
-      // that necessitates this conversion is ill-formed
-      return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
-                                          To->getPointeeType().getTypePtr());
-    }
+  if (const auto *RD = From->getPointeeCXXRecordDecl();
+      RD && RD->isCompleteDefinition() &&
+      isBaseOf(From->getPointeeType().getTypePtr(),
+               To->getPointeeType().getTypePtr())) {
+    // If B is an inaccessible or ambiguous base class of D, a program
+    // that necessitates this conversion is ill-formed
+    return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
+                                        To->getPointeeType().getTypePtr());
   }
 
   return false;
@@ -254,12 +252,10 @@ static bool isQualificationConvertiblePointer(QualType From, QualType To,
 
   int I = 0;
   bool ConstUntilI = true;
-  auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
-                                             const QualType &To) {
-    if (I > 1) {
-      if (From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
-        return false;
-    }
+  const auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
+                                                   const QualType &To) {
+    if (I > 1 && From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
+      return false;
 
     if (I > 0) {
       if (From.isConstQualified() && !To.isConstQualified())
@@ -331,6 +327,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -360,6 +362,8 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
   SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
+    if (!ExceptionTy)
+      continue;
     const CanQualType ExceptionCanTy =
         ExceptionTy->getCanonicalTypeUnqualified();
     const CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
@@ -432,14 +436,14 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
-    if (const auto *TD = T->getAsTagDecl()) {
-      if (TD->getDeclName().isIdentifier()) {
-        if ((IgnoreBadAlloc &&
-             (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.contains(TD->getName())))
-          TypesToDelete.push_back(T);
-      }
-    }
+    if (!T)
+      continue;
+    if (const auto *TD = T->getAsTagDecl();
+        TD && TD->getDeclName().isIdentifier() &&
+        ((IgnoreBadAlloc &&
+          (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
+         IgnoredTypes.contains(TD->getName())))
+      TypesToDelete.push_back(T);
   }
   for (const Type *T : TypesToDelete)
     ThrownExceptions.erase(T);
@@ -484,19 +488,28 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
-    CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException();
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
     }
+
+    CallStack.erase(Func);
     return Result;
   }
+
+  // Functions without a visible body can still be known non-throwing from their
+  // exception specification.
+  if (!canThrow(Func))
+    return ExceptionInfo::createNonThrowing();
 
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(
@@ -507,8 +520,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   }
 
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
-      Result.getBehaviour() == State::Unknown)
-    Result.registerUnknownException();
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
 
   return Result;
 }
@@ -593,6 +609,8 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
                                   Excs.getExceptions(), CallStack));
     for (const auto &Exception : Excs.getExceptions()) {
       const Type *ExcType = Exception.getFirst();
+      if (!ExcType)
+        continue;
       if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
         const ExceptionInfo DestructorExcs = throwsException(
             ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});

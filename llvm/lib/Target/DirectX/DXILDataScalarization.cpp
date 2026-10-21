@@ -194,6 +194,14 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // Allocate the array to hold the vector elements
   Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
   Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  // DXIL indexable temps cannot hold i1 elements; booleans occupy 32 bits in
+  // memory. Widen i1 element arrays to i32.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  bool WidenBool = ArrElemTy->isIntegerTy(1);
+  if (WidenBool) {
+    ArrElemTy = Builder.getInt32Ty();
+    ArrTy = ArrayType::get(ArrElemTy, ArrTy->getArrayNumElements());
+  }
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(ArrTy, nullptr, Name + ".alloca");
   const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
@@ -206,9 +214,11 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
-    GEPs[I] = Builder.CreateInBoundsGEP(
+    if (WidenBool)
+      EE = Builder.CreateZExt(EE, ArrElemTy, Name + ".zext");
+    GEPs[I] = GetElementPtrInst::CreateInBounds(
         ArrTy, ArrAlloca, {Builder.getInt32(0), Builder.getInt32(I)},
-        Name + ".index");
+        Name + ".index", Builder.GetInsertPoint());
     Builder.CreateStore(EE, GEPs[I]);
   }
 
@@ -222,8 +232,9 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
 static std::pair<Value *, Value *>
 dynamicallyLoadArray(IRBuilder<> &Builder, AllocaInst *ArrAlloca, Type *ArrTy,
                      Value *Index, const Twine &Name = "") {
-  Value *GEP = Builder.CreateInBoundsGEP(
-      ArrTy, ArrAlloca, {Builder.getInt32(0), Index}, Name + ".index");
+  Value *GEP = GetElementPtrInst::CreateInBounds(
+      ArrTy, ArrAlloca, {Builder.getInt32(0), Index}, Name + ".index",
+      Builder.GetInsertPoint());
   Value *Load =
       Builder.CreateLoad(ArrTy->getArrayElementType(), GEP, Name + ".load");
   return std::make_pair(GEP, Load);
@@ -243,17 +254,30 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
   Type *ArrTy = std::get<1>(ArrAllocaAndGEPs);
   SmallVector<Value *, 4> &ArrGEPs = std::get<2>(ArrAllocaAndGEPs);
 
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Convert between the vector
+  // element type and the (possibly wider) array element type as needed.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  Type *VecElemTy = cast<VectorType>(Vec->getType())->getElementType();
+  bool WidenBool = ArrElemTy != VecElemTy && VecElemTy->isIntegerTy(1);
+
   auto GEPAndLoad =
       dynamicallyLoadArray(Builder, ArrAlloca, ArrTy, Index, IEI.getName());
   Value *GEP = GEPAndLoad.first;
   Value *Load = GEPAndLoad.second;
 
-  Builder.CreateStore(Val, GEP);
+  Value *StoreVal = Val;
+  if (WidenBool)
+    StoreVal = Builder.CreateZExt(Val, ArrElemTy, IEI.getName() + ".zext");
+  Builder.CreateStore(StoreVal, GEP);
   Value *NewIEI = PoisonValue::get(Vec->getType());
   for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), ArrGEPs[I],
-                                     IEI.getName() + ".load");
-    NewIEI = Builder.CreateInsertElement(NewIEI, Load, Builder.getInt32(I),
+    Value *EltLoad =
+        Builder.CreateLoad(ArrElemTy, ArrGEPs[I], IEI.getName() + ".load");
+    if (WidenBool)
+      EltLoad =
+          Builder.CreateTrunc(EltLoad, VecElemTy, IEI.getName() + ".trunc");
+    NewIEI = Builder.CreateInsertElement(NewIEI, EltLoad, Builder.getInt32(I),
                                          IEI.getName() + ".insert");
   }
 
@@ -287,6 +311,15 @@ bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
                                          EEI.getIndexOperand(), EEI.getName());
   Value *Load = GEPAndLoad.second;
 
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Truncate back to the original
+  // element type of the extractelement if necessary.
+  if (Load->getType() != EEI.getType()) {
+    assert(Load->getType()->isIntegerTy(32) && EEI.getType()->isIntegerTy(1) &&
+           "Unexpected type mismatch: only i32 -> i1 widening is supported");
+    Load = Builder.CreateTrunc(Load, EEI.getType(), EEI.getName() + ".trunc");
+  }
+
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
   return true;
@@ -313,14 +346,10 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
         cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
     OldGEPI->insertBefore(GEPI.getIterator());
 
-    IRBuilder<> Builder(&GEPI);
     SmallVector<Value *> Indices(GEPI.indices());
-    Value *NewGEP =
-        Builder.CreateGEP(GEPI.getSourceElementType(), OldGEPI, Indices,
-                          GEPI.getName(), GEPI.getNoWrapFlags());
-    assert(isa<GetElementPtrInst>(NewGEP) &&
-           "Expected newly-created GEP to be an instruction");
-    GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
+    GetElementPtrInst *NewGEPI = GetElementPtrInst::Create(
+        GEPI.getSourceElementType(), OldGEPI, Indices, GEPI.getNoWrapFlags(),
+        GEPI.getName(), GEPI.getIterator());
 
     GEPI.replaceAllUsesWith(NewGEPI);
     GEPI.eraseFromParent();
@@ -338,10 +367,10 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   if (!NeedsTransform)
     return false;
 
-  IRBuilder<> Builder(&GEPI);
   SmallVector<Value *, MaxVecSize> Indices(GOp->idx_begin(), GOp->idx_end());
-  Value *NewGEP = Builder.CreateGEP(NewGEPType, NewPtrOperand, Indices,
-                                    GOp->getName(), GOp->getNoWrapFlags());
+  Value *NewGEP = GetElementPtrInst::Create(NewGEPType, NewPtrOperand, Indices,
+                                            GOp->getNoWrapFlags(),
+                                            GOp->getName(), GEPI.getIterator());
 
   GOp->replaceAllUsesWith(NewGEP);
 
@@ -402,7 +431,7 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
 static bool findAndReplaceVectors(Module &M) {
   bool MadeChange = false;
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   DataScalarizerVisitor Impl;
   for (GlobalVariable &G : M.globals()) {
     Type *OrigType = G.getValueType();
@@ -419,7 +448,7 @@ static bool findAndReplaceVectors(Module &M) {
 
       // Copy relevant attributes
       NewGlobal->setUnnamedAddr(G.getUnnamedAddr());
-      if (G.getAlignment() > 0) {
+      if (G.getAlign()) {
         NewGlobal->setAlignment(G.getAlign());
       }
 

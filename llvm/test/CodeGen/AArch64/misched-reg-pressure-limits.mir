@@ -1,0 +1,36 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64 -run-pass=machine-scheduler \
+# RUN:   -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+
+# Exceed the GPR32 pressure limit so the scheduler prints the limit diagnostic.
+# CHECK: Max Pressure: GPR32=34
+# CHECK: GPR32 Limit 31 Actual 34
+
+---
+name:            gpr_pressure
+tracksRegLiveness: true
+# Keep X29 (FP) allocatable by providing the known max call frame size.
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    %0:gpr32 = IMPLICIT_DEF implicit-def %1:gpr32
+    %2:gpr32 = IMPLICIT_DEF implicit-def %3:gpr32
+    %4:gpr32 = IMPLICIT_DEF implicit-def %5:gpr32
+    %6:gpr32 = IMPLICIT_DEF implicit-def %7:gpr32
+    %8:gpr32 = IMPLICIT_DEF implicit-def %9:gpr32
+    %10:gpr32 = IMPLICIT_DEF implicit-def %11:gpr32
+    %12:gpr32 = IMPLICIT_DEF implicit-def %13:gpr32
+    %14:gpr32 = IMPLICIT_DEF implicit-def %15:gpr32
+    %16:gpr32 = IMPLICIT_DEF implicit-def %17:gpr32
+    %18:gpr32 = IMPLICIT_DEF implicit-def %19:gpr32
+    %20:gpr32 = IMPLICIT_DEF implicit-def %21:gpr32
+    %22:gpr32 = IMPLICIT_DEF implicit-def %23:gpr32
+    %24:gpr32 = IMPLICIT_DEF implicit-def %25:gpr32
+    %26:gpr32 = IMPLICIT_DEF implicit-def %27:gpr32
+    %28:gpr32 = IMPLICIT_DEF implicit-def %29:gpr32
+    %30:gpr32 = IMPLICIT_DEF implicit-def %31:gpr32
+    %32:gpr32 = IMPLICIT_DEF implicit-def %33:gpr32
+    FAKE_USE %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15, %16, %17, %18, %19, %20, %21, %22, %23, %24, %25, %26, %27, %28, %29, %30, %31, %32, %33
+    RET_ReallyLR
+...

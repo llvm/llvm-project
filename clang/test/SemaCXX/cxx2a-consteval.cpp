@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value -Wno-vla %s -verify
+// RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value -Wno-vla %s -verify -fexperimental-new-constant-interpreter
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -1343,3 +1344,22 @@ void g() {
     f<int>();
 }
 }  // namespace GH156579
+
+namespace GH192846 {
+
+struct S {};
+
+consteval void F(S &out, const char *fmt, ...) {}
+
+template <class T>
+class C {
+  T value = {};
+};
+
+constexpr C<int> g_c{};
+
+void bar() {
+  S s;
+  __builtin_dump_struct(&g_c, F, s);
+}
+}  // namespace GH192846

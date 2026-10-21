@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
+#include "src/threads/mtx_trylock.h"
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
@@ -19,6 +21,15 @@
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
+
+static mtx_t snapshot_mutex(const void *mutex_storage) {
+  mtx_t snapshot;
+  // The original storage may currently hold libc's internal mutex
+  // representation. Copy the bytes into mtx_t storage before inspection to
+  // avoid strict aliasing violations.
+  LIBC_NAMESPACE::inline_memcpy(&snapshot, mutex_storage, sizeof(snapshot));
+  return snapshot;
+}
 
 mtx_t mutex;
 static int shared_int = START;
@@ -138,6 +149,32 @@ void wait_and_step() {
   LIBC_NAMESPACE::mtx_destroy(&step_lock);
 }
 
+void recursive_mutex_test() {
+  mtx_t recursive_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&recursive_mutex, mtx_recursive),
+            static_cast<int>(thrd_success));
+
+  mtx_t snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_TRUE(snapshot.__recursive);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex),
+            static_cast<int>(thrd_success));
+  snapshot = snapshot_mutex(&recursive_mutex);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+
+  LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
+}
+
 static constexpr int THREAD_COUNT = 10;
 static mtx_t multiple_waiter_lock;
 static mtx_t counter_lock;
@@ -194,9 +231,36 @@ void multiple_waiters() {
   LIBC_NAMESPACE::mtx_destroy(&counter_lock);
 }
 
+void trylock_test() {
+  mtx_t plain_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&plain_mutex, mtx_plain),
+            int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&plain_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&plain_mutex), int(thrd_busy));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&plain_mutex), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&plain_mutex);
+
+  mtx_t recursive_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&recursive_mutex, mtx_recursive),
+            int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&recursive_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&recursive_mutex), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
+}
+
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
+  recursive_mutex_test();
   multiple_waiters();
+  trylock_test();
   return 0;
 }

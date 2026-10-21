@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test procedure declarations. Change appearance order of definition and usages
 ! (passing a procedure and calling it), with and without definitions.
@@ -158,7 +158,7 @@ function call_foo7(i)
   integer :: i(10)
   ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo7) : () -> ()
   ! CHECK: %[[funccast:.*]] = fir.convert %[[f]] : (() -> ()) -> ((!fir.ref<!fir.array<10xi32>>) -> f32)
-  ! CHECK: fir.call %[[funccast]](%arg0) {{.*}}: (!fir.ref<!fir.array<10xi32>>) -> f32
+  ! CHECK: fir.call %[[funccast]](%{{.*}}) {{.*}}: (!fir.ref<!fir.array<10xi32>>) -> f32
   call_foo7 =  foo7(i)
 end function
 

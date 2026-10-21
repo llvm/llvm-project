@@ -32,4 +32,4 @@ class UnknownCommandTestCase(TestBase):
 
         command_interpreter.HandleCommand("qbert", result)
         self.assertFalse(result.Succeeded())
-        self.assertEqual(result.GetError(), "error: 'qbert' is not a valid command.\n")
+        self.assertEqual(result.GetError(), "error: 'qbert' is not a valid command\n")

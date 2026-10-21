@@ -1,0 +1,9 @@
+static_library("MIRUtils") {
+  output_name = "LLVMMIREmbUtils"
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/Target",
+  ]
+  include_dirs = [ ".." ]
+  sources = [ "MIRUtils.cpp" ]
+}

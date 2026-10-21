@@ -46,7 +46,11 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OP
+#undef OPCODES
+#undef DEF_INSTR
   };
 
 protected:
@@ -100,20 +104,24 @@ protected:
 
   /// Helper function for create(). It sets the builder's insert position
   /// according to \p Pos.
-  static IRBuilder<> &setInsertPos(InsertPosition Pos) {
-    auto *WhereBB = Pos.getBasicBlock();
-    auto WhereIt = Pos.getIterator();
-    auto &Ctx = WhereBB->getContext();
-    auto &Builder = Ctx.getLLVMIRBuilder();
-    if (WhereIt != WhereBB->end())
-      Builder.SetInsertPoint((*Pos).getTopmostLLVMInstruction());
-    else
-      Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-    return Builder;
-  }
+  LLVM_ABI static IRBuilder<> &setInsertPos(InsertPosition Pos);
 
 public:
-  LLVM_ABI static const char *getOpcodeName(Opcode Opc);
+  static const char *getOpcodeName(Opcode Opc) {
+    switch (Opc) {
+#define OP(OPC)                                                                \
+  case Opcode::OPC:                                                            \
+    return #OPC;
+#define OPCODES(...) __VA_ARGS__
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OPCODES
+#undef DEF_INSTR
+    }
+    llvm_unreachable("Unknown Opcode");
+  }
+
   /// This is used by BasicBlock::iterator.
   virtual unsigned getNumOfIRInstrs() const = 0;
   /// \Returns a BasicBlock::iterator for this Instruction.
@@ -1079,8 +1087,8 @@ class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
   friend Context; // for UncondBrInst()
 
 public:
-  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
-                              Context &Ctx);
+  LLVM_ABI static UncondBrInst *
+  create(BasicBlock *Target, InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI BasicBlock *getSuccessor() const;
   LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 1; }
@@ -1105,11 +1113,11 @@ class CondBrInst : public SingleLLVMInstructionImpl<llvm::CondBrInst>,
   friend Context; // for UcnondBrInst()
 
 public:
-  static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
-                            BasicBlock *IfFalse, InsertPosition InsertBefore,
-                            Context &Ctx);
+  LLVM_ABI static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
+                                     BasicBlock *IfFalse,
+                                     InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI Value *getCondition() const;
-  void setCondition(Value *V);
+  LLVM_ABI void setCondition(Value *V);
   LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 2; }
@@ -1258,6 +1266,10 @@ public:
   /// For isa/dyn_cast.
   LLVM_ABI static bool classof(const Value *From);
   LLVM_ABI Value *getPointerOperand() const;
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperandType()->getPointerAddressSpace();
+  }
   Align getAlign() const { return cast<llvm::LoadInst>(Val)->getAlign(); }
   bool isUnordered() const { return cast<llvm::LoadInst>(Val)->isUnordered(); }
   bool isSimple() const { return cast<llvm::LoadInst>(Val)->isSimple(); }
@@ -1287,6 +1299,10 @@ public:
   LLVM_ABI static bool classof(const Value *From);
   LLVM_ABI Value *getValueOperand() const;
   LLVM_ABI Value *getPointerOperand() const;
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperandType()->getPointerAddressSpace();
+  }
   Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
   bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
   bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
@@ -1941,8 +1957,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    LLVM_ABI_FOR_TEST ConstT *getCaseValue() const;
-    LLVM_ABI_FOR_TEST BlockT *getCaseSuccessor() const;
+    ConstT *getCaseValue() const;
+    BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();
@@ -2056,6 +2072,11 @@ public:
     return From->getSubclassID() == ClassID::Switch;
   }
 };
+
+extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
+extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 
 class UnaryOperator : public UnaryInstruction {
   static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {
@@ -2601,9 +2622,6 @@ protected:
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
-                                      const Twine &Name, IRBuilder<> &Builder,
-                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;
@@ -2737,6 +2755,29 @@ public:
     return From->getSubclassID() == ClassID::Opaque;
   }
 };
+
+//===----------------------------------------------------------------------===//
+//                          Helper functions
+//===----------------------------------------------------------------------===//
+
+/// A helper function that returns the address space of the pointer operand of
+/// load or store instruction.
+inline unsigned getLoadStoreAddressSpace(const Instruction *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerAddressSpace();
+  return cast<StoreInst>(I)->getPointerAddressSpace();
+}
+
+/// A helper function that returns the alignment of load or store instruction.
+inline Align getLoadStoreAlignment(const Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlign();
+  return cast<StoreInst>(I)->getAlign();
+}
 
 } // namespace llvm::sandboxir
 

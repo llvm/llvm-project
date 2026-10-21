@@ -49,8 +49,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
     FileSpec sc_directory_symbols = sc_directory;
     sc_directory_symbols.AppendPathComponent("Symbols");
     if (FileSystem::Instance().Exists(sc_directory_symbols)) {
-      SDKDirectoryInfo thisdir(sc_directory,
-                               sc_directory.GetFilename().GetStringRef());
+      SDKDirectoryInfo thisdir(sc_directory, sc_directory.GetFilename());
       m_sdk_directory_infos.push_back(thisdir);
       LLDB_LOGF(log,
                 "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -69,8 +68,7 @@ void PlatformDarwinDevice::AddSharedCacheDirectory(
       FileSpec subdir_directory_symbols = subdir;
       subdir_directory_symbols.AppendPathComponent("Symbols");
       if (FileSystem::Instance().Exists(subdir_directory_symbols)) {
-        SDKDirectoryInfo thisdir(subdir,
-                                 sc_directory.GetFilename().GetStringRef());
+        SDKDirectoryInfo thisdir(subdir, sc_directory.GetFilename());
         m_sdk_directory_infos.push_back(thisdir);
         LLDB_LOGF(log,
                   "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -98,19 +96,22 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
     if (device_support_dir) {
       AddSharedCacheDirectory(device_support_dir, "builtin SDK directory");
 
-      // "macOS DeviceSupport", "iOS DeviceSupport", etc.
-      llvm::StringRef dirname = GetDeviceSupportDirectoryName();
-      std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
-      local_sdk_cache_str += std::string(dirname);
-      FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
-      FileSystem::Instance().Resolve(local_sdk_cache);
-      if (FileSystem::Instance().Exists(local_sdk_cache)) {
-        LLDB_LOGF(log,
-                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                  "searching %s for additional SDKs",
-                  local_sdk_cache.GetPath().c_str());
-        AddSharedCacheDirectory(local_sdk_cache.GetPath().c_str(),
-                                "system developer dir directory");
+      // "macOS DeviceSupport", "iOS DeviceSupport", etc. The names are in
+      // order of preference, so stop at the first one that exists.
+      for (llvm::StringRef dirname : GetDeviceSupportDirectoryNames()) {
+        std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
+        local_sdk_cache_str += std::string(dirname);
+        FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
+        FileSystem::Instance().Resolve(local_sdk_cache);
+        if (FileSystem::Instance().Exists(local_sdk_cache)) {
+          LLDB_LOGF(log,
+                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                    "searching %s for additional SDKs",
+                    local_sdk_cache.GetPath().c_str());
+          AddSharedCacheDirectory(local_sdk_cache.GetPath().c_str(),
+                                  "system developer dir directory");
+          break;
+        }
       }
 
       const char *addtional_platform_dirs = getenv("PLATFORM_SDK_DIRECTORY");
@@ -274,25 +275,25 @@ BringInRemoteFile(Platform *platform,
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
-    Process *process) {
+    Target &target) {
 
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log,
-            "[%s] Trying to find module %s/%s - platform path %s/%s symbol "
-            "path %s/%s",
-            (IsHost() ? "host" : "remote"),
-            module_spec.GetFileSpec().GetDirectory().AsCString(),
-            module_spec.GetFileSpec().GetFilename().AsCString(),
-            module_spec.GetPlatformFileSpec().GetDirectory().AsCString(),
-            module_spec.GetPlatformFileSpec().GetFilename().AsCString(),
-            module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
-            module_spec.GetSymbolFileSpec().GetFilename().AsCString());
+  LLDB_LOG(log,
+           "[{0}] Trying to find module {1}/{2} - platform path {3}/{4} symbol "
+           "path {5}/{6}",
+           (IsHost() ? "host" : "remote"),
+           module_spec.GetFileSpec().GetDirectory(),
+           module_spec.GetFileSpec().GetFilename(),
+           module_spec.GetPlatformFileSpec().GetDirectory(),
+           module_spec.GetPlatformFileSpec().GetFilename(),
+           module_spec.GetSymbolFileSpec().GetDirectory(),
+           module_spec.GetSymbolFileSpec().GetFilename());
 
   Status err;
 
   if (CheckLocalSharedCache()) {
-    err = GetModuleFromSharedCaches(module_spec, process, module_sp,
-                                    old_modules, did_create_ptr);
+    err = GetModuleFromSharedCaches(module_spec, target, module_sp, old_modules,
+                                    did_create_ptr);
     if (module_sp)
       return err;
   }
@@ -341,10 +342,10 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
           return err;
         if (FileSystem::Instance().Exists(module_cache_spec)) {
           Log *log = GetLog(LLDBLog::Platform);
-          LLDB_LOGF(log, "[%s] module %s/%s was rsynced and is now there",
-                    (IsHost() ? "host" : "remote"),
-                    module_spec.GetFileSpec().GetDirectory().AsCString(),
-                    module_spec.GetFileSpec().GetFilename().AsCString());
+          LLDB_LOG(log, "[{0}] module {1}/{2} was rsynced and is now there",
+                   (IsHost() ? "host" : "remote"),
+                   module_spec.GetFileSpec().GetDirectory(),
+                   module_spec.GetFileSpec().GetFilename());
           ModuleSpec local_spec(module_cache_spec,
                                 module_spec.GetArchitecture());
           module_sp = std::make_shared<Module>(local_spec);
@@ -375,11 +376,12 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
             requires_transfer = *MD5 != *remote_md5;
           if (requires_transfer) {
             // bring in the remote file
-            LLDB_LOGF(log,
-                      "[%s] module %s/%s needs to be replaced from remote copy",
-                      (IsHost() ? "host" : "remote"),
-                      module_spec.GetFileSpec().GetDirectory().AsCString(),
-                      module_spec.GetFileSpec().GetFilename().AsCString());
+            LLDB_LOG(
+                log,
+                "[{0}] module {1}/{2} needs to be replaced from remote copy",
+                (IsHost() ? "host" : "remote"),
+                module_spec.GetFileSpec().GetDirectory(),
+                module_spec.GetFileSpec().GetFilename());
             Status err =
                 BringInRemoteFile(this, module_spec, module_cache_spec);
             if (err.Fail())
@@ -391,27 +393,27 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s was found in the cache",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOG(log, "[{0}] module {1}/{2} was found in the cache",
+                 (IsHost() ? "host" : "remote"),
+                 module_spec.GetFileSpec().GetDirectory(),
+                 module_spec.GetFileSpec().GetFilename());
         return Status();
       }
 
       // bring in the remote module file
-      LLDB_LOGF(log, "[%s] module %s/%s needs to come in remotely",
-                (IsHost() ? "host" : "remote"),
-                module_spec.GetFileSpec().GetDirectory().AsCString(),
-                module_spec.GetFileSpec().GetFilename().AsCString());
+      LLDB_LOG(log, "[{0}] module {1}/{2} needs to come in remotely",
+               (IsHost() ? "host" : "remote"),
+               module_spec.GetFileSpec().GetDirectory(),
+               module_spec.GetFileSpec().GetFilename());
       Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
       if (err.Fail())
         return err;
       if (FileSystem::Instance().Exists(module_cache_spec)) {
         Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s is now cached and fine",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOG(log, "[{0}] module {1}/{2} is now cached and fine",
+                 (IsHost() ? "host" : "remote"),
+                 module_spec.GetFileSpec().GetDirectory(),
+                 module_spec.GetFileSpec().GetFilename());
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());

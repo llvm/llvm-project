@@ -423,7 +423,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (Base) {
     Type = mergeTypeForSet(Type, Base->getType());
   }
-  uint8_t Info = (Binding << 4) | Type;
+  uint8_t Info = ELF::getSymbolInfo(Binding, Type);
 
   // Other and Visibility share the same byte with Visibility using the lower
   // 2 bits
@@ -457,7 +457,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (ESize) {
     int64_t Res;
     if (!ESize->evaluateKnownAbsolute(Res, Asm))
-      report_fatal_error("Size expression must be absolute.");
+      report_fatal_error("size expression must be absolute");
     Size = Res;
   }
 
@@ -610,8 +610,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     for (; FileNameIt != FileNames.end() && FileNameIt->second <= MSD.Order;
          ++FileNameIt) {
       Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                         ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                         ELF::SHN_ABS, true);
+                         ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0,
+                         0, ELF::STV_DEFAULT, ELF::SHN_ABS, true);
       ++Index;
     }
 
@@ -623,8 +623,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                       ELF::SHN_ABS, true);
+                       ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0, 0,
+                       ELF::STV_DEFAULT, ELF::SHN_ABS, true);
     ++Index;
   }
 
@@ -672,8 +672,8 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
     Flags = ELF::SHF_GROUP;
 
   const StringRef SectionName = Sec.getName();
-  const MCTargetOptions *TO = Ctx.getTargetOptions();
-  if (TO && TO->Crel) {
+  const MCTargetOptions &TO = Ctx.getTargetOptions();
+  if (TO.Crel) {
     MCSectionELF *RelaSection =
         Ctx.createELFRelSection(".crel" + SectionName, ELF::SHT_CREL, Flags,
                                 /*EntrySize=*/1, Sec.getGroup(), &Sec);
@@ -724,8 +724,7 @@ void ELFWriter::writeSectionData(MCSection &Sec) {
   StringRef SectionName = Section.getName();
   auto &Ctx = Asm.getContext();
   const DebugCompressionType CompressionType =
-      Ctx.getTargetOptions() ? Ctx.getTargetOptions()->CompressDebugSections
-                             : DebugCompressionType::None;
+      Ctx.getTargetOptions().CompressDebugSections;
   if (CompressionType == DebugCompressionType::None ||
       !SectionName.starts_with(".debug_")) {
     Asm.writeSectionData(W.OS, &Section);
@@ -796,7 +795,7 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
 
 void ELFWriter::writeRelocations(const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
-  const MCTargetOptions *TO = getContext().getTargetOptions();
+  const MCTargetOptions &TO = getContext().getTargetOptions();
   const bool Rela = OWriter.usesRela(TO, Sec);
 
   // Sort the relocation entries. MIPS needs this.
@@ -837,7 +836,7 @@ void ELFWriter::writeRelocations(const MCSectionELF &Sec) {
         }
       }
     }
-  } else if (TO && TO->Crel) {
+  } else if (TO.Crel) {
     if (is64Bit())
       encodeCrel<true>(Relocs, W.OS);
     else
@@ -868,6 +867,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
                                    uint64_t Size, const MCSectionELF &Section) {
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
+  uint64_t EntrySize = Section.getEntrySize();
 
   switch(Section.getType()) {
   default:
@@ -902,6 +902,14 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
     sh_link = SymbolTableIndex;
     sh_info = GroupSymbolIndex;
     break;
+
+  case ELF::SHT_INIT_ARRAY:
+  case ELF::SHT_FINI_ARRAY:
+  case ELF::SHT_PREINIT_ARRAY:
+    // Match GAS, which uses the pointer size regardless of sh_size.
+    if (!EntrySize)
+      EntrySize = is64Bit() ? 8 : 4;
+    break;
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
@@ -912,10 +920,10 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
       sh_link = Sym->getSection().getOrdinal();
   }
 
-  writeSectionHeaderEntry(
-      StrTabBuilder.getOffset(Section.getName()), Section.getType(),
-      Section.getFlags(), 0, Offset, Size, sh_link, sh_info,
-      Section.getAlignmentForObjectFile(Size), Section.getEntrySize());
+  writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
+                          Section.getType(), Section.getFlags(), 0, Offset,
+                          Size, sh_link, sh_info, Section.getAlign(),
+                          EntrySize);
 }
 
 void ELFWriter::writeSectionHeaders() {
@@ -1358,16 +1366,16 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   // Convert SymA to an STT_SECTION symbol if it's defined, local, and meets
   // specific conditions, unless it's a .reloc directive, which disables
   // STT_SECTION adjustment.
-  const MCTargetOptions *TO = Ctx.getTargetOptions();
+  const MCTargetOptions &TO = Ctx.getTargetOptions();
   bool UseSectionSym = SymA && SymA->getBinding() == ELF::STB_LOCAL &&
                        !SymA->isUndefined() &&
                        !mc::isRelocRelocation(Fixup.getKind());
   if (UseSectionSym) {
-    auto RSS = TO ? TO->RelocSectionSym : RelocSectionSymType::All;
+    auto RSS = TO.RelocSectionSym;
     UseSectionSym = RSS == RelocSectionSymType::All ||
                     (RSS == RelocSectionSymType::Internal &&
                      SymA->getName().starts_with(
-                         Ctx.getAsmInfo()->getInternalSymbolPrefix()));
+                         Ctx.getAsmInfo().getInternalSymbolPrefix()));
   }
   if (UseSectionSym && useSectionSymbol(Target, SymA, Addend, Type)) {
     Addend += Asm->getSymbolOffset(*SymA);
@@ -1382,11 +1390,11 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   Relocations[&Section].emplace_back(FixupOffset, SymA, Type, Addend);
 }
 
-bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
+bool ELFObjectWriter::usesRela(const MCTargetOptions &TO,
                                const MCSectionELF &Sec) const {
   return (hasRelocationAddend() &&
           Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE) ||
-         (TO && TO->Crel);
+         TO.Crel;
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(

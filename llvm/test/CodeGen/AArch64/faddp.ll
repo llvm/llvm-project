@@ -4,7 +4,6 @@
 define float @faddp_2xfloat(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -41,7 +40,6 @@ entry:
 define float @faddp_2xfloat_commute(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -75,36 +73,9 @@ entry:
   ret double %1
 }
 
-define i64 @addp_2xi64(<2 x i64> %a) {
-; CHECK-LABEL: addp_2xi64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
-entry:
-  %shift = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
-  %0 = add <2 x i64> %a, %shift
-  %1 = extractelement <2 x i64> %0, i32 0
-  ret i64 %1
-}
-
-define i64 @addp_2xi64_commute(<2 x i64> %a) {
-; CHECK-LABEL: addp_2xi64_commute:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
-entry:
-  %shift = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
-  %0 = add <2 x i64> %shift, %a
-  %1 = extractelement <2 x i64> %0, i32 0
-  ret i64 %1
-}
-
 define float @faddp_2xfloat_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -141,7 +112,6 @@ entry:
 define float @faddp_2xfloat_commute_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_commute_strict:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:

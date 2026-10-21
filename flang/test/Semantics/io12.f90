@@ -74,3 +74,81 @@ module m4
   end subroutine
 end module
 
+! Regression test: an illegal recursive derived-type component used to cause
+! infinite recursion in FindUnsafeIoDirectComponent when the object appeared
+! in an I/O list (issue #192387).
+subroutine test_recursive_io
+  type t1
+    !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
+    type(t1) :: b
+  end type t1
+  type(t1) :: obj
+  print *, obj
+end subroutine
+
+! Same regression covering the FindInaccessibleComponent walk: the type
+! must be defined in a module and used in I/O outside that module so the
+! recursive component traversal in FindInaccessibleComponent is reached.
+module m_recursive
+  type t2
+    !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
+    type(t2) :: b
+  end type t2
+end module
+subroutine test_recursive_io_module
+  use m_recursive
+  type(t2) :: obj
+  print *, obj
+end subroutine
+
+! Positive cases: a recursive type is legal when the recursive component
+! is POINTER or ALLOCATABLE.  With defined I/O, an I/O list item of such
+! a type is accepted without diagnostics.
+module m_recursive_pointer
+  type :: rp
+    integer :: x
+    type(rp), pointer :: next => null()
+   contains
+    procedure :: wuf_rp
+    generic :: write(unformatted) => wuf_rp
+  end type
+ contains
+  subroutine wuf_rp(dtv, unit, iostat, iomsg)
+    class(rp), intent(in) :: dtv
+    integer, intent(in) :: unit
+    integer, intent(out) :: iostat
+    character(*), intent(in out) :: iomsg
+    write(unit) dtv%x
+  end subroutine
+end module
+subroutine test_recursive_pointer_io(u)
+  use m_recursive_pointer
+  integer, intent(in) :: u
+  type(rp) :: obj
+  write(u) obj ! ok: defined I/O
+end subroutine
+
+module m_recursive_allocatable
+  type :: ra
+    integer :: x
+    type(ra), allocatable :: next
+   contains
+    procedure :: wuf_ra
+    generic :: write(unformatted) => wuf_ra
+  end type
+ contains
+  subroutine wuf_ra(dtv, unit, iostat, iomsg)
+    class(ra), intent(in) :: dtv
+    integer, intent(in) :: unit
+    integer, intent(out) :: iostat
+    character(*), intent(in out) :: iomsg
+    write(unit) dtv%x
+  end subroutine
+end module
+subroutine test_recursive_allocatable_io(u)
+  use m_recursive_allocatable
+  integer, intent(in) :: u
+  type(ra) :: obj
+  write(u) obj ! ok: defined I/O
+end subroutine
+

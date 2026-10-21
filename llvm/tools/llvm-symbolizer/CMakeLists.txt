@@ -12,7 +12,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
-  SupportHTTP
   Symbolize
   )
 
@@ -25,7 +24,7 @@ add_llvm_tool(llvm-symbolizer
   )
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-symbolizer PRIVATE LLVMDebuginfod)
+  target_link_libraries(llvm-symbolizer PRIVATE LLVMDebuginfod LLVMHTTP)
 endif()
 
 add_llvm_tool_symlink(llvm-addr2line llvm-symbolizer)

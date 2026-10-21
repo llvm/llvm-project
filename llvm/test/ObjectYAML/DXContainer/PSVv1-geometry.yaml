@@ -69,6 +69,7 @@ Parts:
 # CHECK-NEXT: SigInputVectors: 0
 # CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
 # CHECK-NEXT: ResourceStride: 16
+# CHECK-NEXT: RuntimeInfoSize: 36
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            Sampler
 # CHECK-NEXT: Space:           2

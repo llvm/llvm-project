@@ -572,11 +572,10 @@ for.cond.cleanup:
 define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE-LABEL: array_or_not_nxv4i32:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntw x9
-; SVE-NEXT:    eor z0.d, z0.d, z1.d
 ; SVE-NEXT:  .LBB43_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
@@ -590,10 +589,9 @@ define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ;
 ; SVE2-LABEL: array_or_not_nxv4i32:
 ; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; SVE2-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE2-NEXT:    ptrue p0.s
 ; SVE2-NEXT:    mov x8, xzr
-; SVE2-NEXT:    eor z0.d, z0.d, z1.d
 ; SVE2-NEXT:  .LBB43_1: // %vector.body
 ; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE2-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
@@ -627,11 +625,10 @@ for.cond.cleanup:
 define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; SVE-LABEL: array_xor_not_nxv4i32:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    mov x8, xzr
 ; SVE-NEXT:    cntw x9
-; SVE-NEXT:    eor z0.d, z0.d, z1.d
 ; SVE-NEXT:  .LBB44_1: // %vector.body
 ; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SVE-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]

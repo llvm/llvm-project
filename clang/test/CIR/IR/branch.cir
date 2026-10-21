@@ -1,0 +1,33 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+cir.func @branch_with_block_argument(%cond: !cir.bool) {
+  cir.br ^bb1
+^bb1:
+  cir.br ^bb2(%cond : !cir.bool)
+^bb2(%value: !cir.bool):
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @branch_with_block_argument
+// CHECK-SAME: %[[COND:.*]]: !cir.bool
+// CHECK-NEXT:   cir.br ^bb1
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   cir.br ^bb2(%[[COND]] : !cir.bool)
+// CHECK-NEXT: ^bb2(%{{.*}}: !cir.bool):
+// CHECK-NEXT:   cir.return
+
+cir.func @conditional_branch(%cond : !cir.bool) {
+  cir.brcond %cond ^bb1, ^bb2
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @conditional_branch
+// CHECK-SAME: %[[COND:.*]]: !cir.bool
+// CHECK-NEXT:   cir.brcond %[[COND]] ^bb1, ^bb2
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   cir.return

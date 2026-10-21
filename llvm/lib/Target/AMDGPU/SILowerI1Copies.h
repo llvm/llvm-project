@@ -20,7 +20,10 @@
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 
 namespace llvm {
-
+class MachineIDFSSAUpdater;
+namespace AMDGPU {
+class LoopFinder;
+class PhiIncomingAnalysis;
 /// Incoming for lane mask phi as machine instruction, incoming register \p Reg
 /// and incoming block \p Block are taken from machine instruction.
 /// \p UpdatedReg (if valid) is \p Reg lane mask merged with another lane mask.
@@ -38,15 +41,15 @@ Register createLaneMaskReg(MachineRegisterInfo *MRI,
 
 class PhiLoweringHelper {
 public:
-  PhiLoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
-                    MachinePostDominatorTree *PDT);
+  PhiLoweringHelper(MachineFunction &MF, MachineDominatorTree &DT,
+                    MachinePostDominatorTree &PDT);
   virtual ~PhiLoweringHelper() = default;
 
 protected:
   bool IsWave32 = false;
-  MachineFunction *MF = nullptr;
-  MachineDominatorTree *DT = nullptr;
-  MachinePostDominatorTree *PDT = nullptr;
+  MachineFunction &MF;
+  MachineDominatorTree &DT;
+  MachinePostDominatorTree &PDT;
   MachineRegisterInfo *MRI = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -60,6 +63,15 @@ protected:
 public:
   bool lowerPhis();
   bool isConstantLaneMask(Register Reg, bool &Val) const;
+
+  /// Merge the \p Incomings lane masks into \p DstReg, the value owned by \p
+  /// MBB. Builds the per-predecessor merges and leaves \p SSAUpdater calculated
+  /// so the caller can query the merged value with getValueInMiddleOfBlock. \p
+  /// Incomings is sorted and its UpdatedReg fields are filled in.
+  void mergeIncomingLaneMasks(Register DstReg, MachineBasicBlock &MBB,
+                              SmallVectorImpl<Incoming> &Incomings,
+                              MachineIDFSSAUpdater &SSAUpdater, LoopFinder &LF,
+                              PhiIncomingAnalysis &PIA);
   MachineBasicBlock::iterator
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
 
@@ -94,5 +106,5 @@ public:
                                    Register PrevReg, Register CurReg) = 0;
   virtual void constrainAsLaneMask(Incoming &In) = 0;
 };
-
+} // namespace AMDGPU
 } // end namespace llvm

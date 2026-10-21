@@ -41,8 +41,8 @@ define void @func_05() {
 ; CHECK-LABEL: func_05:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmrs r0, fpscr
-; CHECK-NEXT:    bic r0, r0, #12582912
 ; CHECK-NEXT:    orr r0, r0, #4194304
+; CHECK-NEXT:    bic r0, r0, #8388608
 ; CHECK-NEXT:    vmsr fpscr, r0
 ; CHECK-NEXT:    mov pc, lr
   call void @llvm.set.rounding(i32 2)
@@ -53,8 +53,8 @@ define void @func_06() {
 ; CHECK-LABEL: func_06:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmrs r0, fpscr
-; CHECK-NEXT:    bic r0, r0, #12582912
 ; CHECK-NEXT:    orr r0, r0, #8388608
+; CHECK-NEXT:    bic r0, r0, #4194304
 ; CHECK-NEXT:    vmsr fpscr, r0
 ; CHECK-NEXT:    mov pc, lr
   call void @llvm.set.rounding(i32 3)

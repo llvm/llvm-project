@@ -114,6 +114,11 @@ Error DatabaseFile::validate(MappedFileRegion &Region) {
     return createStringError(std::errc::invalid_argument,
                              "database: wrong version");
 
+  if (H->RootTableOffset < 0 ||
+      static_cast<uint64_t>(H->RootTableOffset) > Region.size())
+    return createStringError(std::errc::invalid_argument,
+                             "database: root table offset out of bound");
+
   auto *MFH = reinterpret_cast<MappedFileRegionArena::Header *>(Region.data() +
                                                                 sizeof(Header));
   // Check the bump-ptr, which should point past the header.

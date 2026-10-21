@@ -45,6 +45,12 @@ int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
     const char *sourceFile = nullptr, int sourceLine = 0,
     bool sourceIsDevice = false);
 
+/// Perform deallocation of the descriptor with synchronization of it when
+/// necessary.
+int RTDECL(CUFPointerDeallocate)(Descriptor &, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda

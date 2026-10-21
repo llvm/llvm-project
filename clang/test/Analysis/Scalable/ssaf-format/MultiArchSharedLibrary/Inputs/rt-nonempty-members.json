@@ -1,0 +1,79 @@
+{
+  "members": [
+    {
+      "data": [],
+      "id_table": [
+        {
+          "id": 0,
+          "name": {
+            "namespace": [
+              {
+                "kind": "LinkUnit",
+                "name": "libfoo"
+              }
+            ],
+            "suffix": "",
+            "usr": "c:@F@foo"
+          }
+        }
+      ],
+      "linkage_table": [
+        {
+          "id": 0,
+          "linkage": {
+            "type": "External"
+          }
+        }
+      ],
+      "lu_namespace": [
+        {
+          "kind": "LinkUnit",
+          "name": "libfoo"
+        }
+      ],
+      "target_triple": "arm64-apple-macosx",
+      "type": "LUSummary"
+    },
+    {
+      "data": [],
+      "id_table": [
+        {
+          "id": 0,
+          "name": {
+            "namespace": [
+              {
+                "kind": "LinkUnit",
+                "name": "libfoo"
+              }
+            ],
+            "suffix": "",
+            "usr": "c:@F@foo"
+          }
+        }
+      ],
+      "linkage_table": [
+        {
+          "id": 0,
+          "linkage": {
+            "type": "External"
+          }
+        }
+      ],
+      "lu_namespace": [
+        {
+          "kind": "LinkUnit",
+          "name": "libfoo"
+        }
+      ],
+      "target_triple": "x86_64-apple-macosx",
+      "type": "LUSummary"
+    }
+  ],
+  "namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "libfoo"
+    }
+  ],
+  "type": "MultiArchSharedLibrary"
+}

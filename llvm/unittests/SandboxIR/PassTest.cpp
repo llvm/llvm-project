@@ -125,7 +125,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(TPass.getName(), "test-pass");
   // Check runOnRegion();
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F, *TTI);
+      Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
   TPass.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount, 2u);
@@ -248,7 +248,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   RPM.addPass(std::make_unique<TestPass2>(InstCount2));
   // Check runOnRegion().
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F, *TTI);
+      Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
   RPM.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount1, 2u);
@@ -323,6 +323,22 @@ define void @f() {
   EXPECT_EQ(Str,
             "foo(aux1)<abc>bar<nested1(aux2)<nested2<nested3()>>>foo(aux3)<>");
 
+  // A pass with an aux argument followed by another pass in a flat pipeline.
+  std::string AuxArgStr;
+  auto CreatePassWithAuxArg =
+      [&AuxArgStr](llvm::StringRef Name, llvm::StringRef Args,
+                   llvm::StringRef AuxArg) -> std::unique_ptr<FunctionPass> {
+    if (Name == "foo")
+      return std::make_unique<FooPass>(AuxArgStr, Args, AuxArg);
+    if (Name == "bar")
+      return std::make_unique<BarPass>(AuxArgStr, Args, AuxArg);
+    return nullptr;
+  };
+  FunctionPassManager FPMWithAuxArg("test-fpm");
+  FPMWithAuxArg.setPassPipeline("foo(aux1),bar", CreatePassWithAuxArg);
+  FPMWithAuxArg.runOnFunction(*F, Analyses::emptyForTesting());
+  EXPECT_EQ(AuxArgStr, "foo(aux1)<>bar<>");
+
   // A second call to setPassPipeline will trigger an assertion in debug mode.
 #ifndef NDEBUG
   EXPECT_DEATH(FPM.setPassPipeline("bar,bar,foo", CreatePass),
@@ -389,4 +405,42 @@ define void @f() {
                ".*Expected delimiter.*");
   EXPECT_DEATH(FPM2.setPassPipeline("foo(args)bar", CreatePass),
                ".*Expected delimiter.*");
+}
+
+TEST_F(PassTest, AuxPassArgs) {
+  AuxPassArgsRegistry Registry;
+  AuxPassArg Arg1 = Registry.createArg("Arg1");
+  AuxPassArg Arg2 = Registry.createArg("Arg2");
+#ifndef NDEBUG
+  // Check that parsing crashes if there is no such argument created.
+  EXPECT_DEATH(Registry.parse("Foo"), "Unsupported.*");
+  EXPECT_DEATH(Registry.parse("Arg1,Foo"), "Unsupported.*");
+#endif
+  Registry.parse("Arg1");
+  // Check the contents.
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE((bool)Arg1);
+  EXPECT_FALSE(Arg2.get());
+  EXPECT_FALSE((bool)Arg2);
+  // Check the flag string.
+  EXPECT_EQ(Arg1.getFlagStr(), "Arg1");
+  EXPECT_EQ(Arg2.getFlagStr(), "Arg2");
+  // Check assigning a bool.
+  Arg1 = false;
+  EXPECT_FALSE(Arg1.get());
+  Arg2 = true;
+  EXPECT_TRUE(Arg2.get());
+  // Check copy.
+  Arg2 = Arg1;
+  EXPECT_FALSE(Arg2.get());
+  EXPECT_FALSE(Arg1.get());
+  // Check parsing an empty argument string.
+  Registry.parse("");
+  // Check ignoring delimiters.
+  Registry.parse("Arg1,,,,Arg2,,,");
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE(Arg2.get());
+  Registry.parse(",,Arg1,,,Arg2");
+  EXPECT_TRUE(Arg1.get());
+  EXPECT_TRUE(Arg2.get());
 }

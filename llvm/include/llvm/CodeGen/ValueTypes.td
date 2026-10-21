@@ -146,6 +146,8 @@ def v64i16   : VTVec<64,   i16>; //   64 x i16 vector value
 def v128i16  : VTVec<128,  i16>; //  128 x i16 vector value
 def v256i16  : VTVec<256,  i16>; //  256 x i16 vector value
 def v512i16  : VTVec<512,  i16>; //  512 x i16 vector value
+def v1024i16 : VTVec<1024, i16>; // 1024 x i16 vector value
+def v2048i16 : VTVec<2048, i16>; // 2048 x i16 vector value
 def v4096i16 : VTVec<4096, i16>; // 4096 x i16 vector value
 
 def v1i32    : VTVec<1,    i32>; //    1 x i32 vector value
@@ -184,6 +186,7 @@ def v128i64 : VTVec<128, i64>; // 128 x i64 vector value
 def v256i64 : VTVec<256, i64>; // 256 x i64 vector value
 
 def v1i128  : VTVec<1,  i128>; //  1 x i128 vector value
+def v2i128  : VTVec<2,  i128>; //  2 x i128 vector value
 
 def v1f16    : VTVec<1,    f16>; //    1 x f16 vector value
 def v2f16    : VTVec<2,    f16>; //    2 x f16 vector value
@@ -212,6 +215,8 @@ def v64bf16   : VTVec<64,   bf16>; //   64 x bf16 vector value
 def v128bf16  : VTVec<128,  bf16>; //  128 x bf16 vector value
 def v256bf16  : VTVec<256,  bf16>; //  256 x bf16 vector value
 def v512bf16  : VTVec<512,  bf16>; //  512 x bf16 vector value
+def v1024bf16 : VTVec<1024, bf16>; // 1024 x bf16 vector value
+def v2048bf16 : VTVec<2048, bf16>; // 2048 x bf16 vector value
 def v4096bf16 : VTVec<4096, bf16>; // 4096 x bf16 vector value
 
 def v1f32    : VTVec<1,    f32>; //    1 x f32 vector value

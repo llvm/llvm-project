@@ -7,16 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fromfpxbf16.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fromfpxbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, fromfpxbf16,
                    (bfloat16 x, int rnd, unsigned int width)) {
-  return fputil::fromfpx</*IsSigned=*/true>(x, rnd, width);
+  return math::fromfpxbf16(x, rnd, width);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

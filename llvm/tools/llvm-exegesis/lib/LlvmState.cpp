@@ -101,7 +101,8 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
     ReservedRegs.set(Reg);
   RATC.reset(
       new RegisterAliasingTrackerCache(getRegInfo(), std::move(ReservedRegs)));
-  IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
+  IC.reset(
+      new InstructionsCache(getInstrInfo(), getRATC(), &getSubtargetInfo()));
 }
 
 std::unique_ptr<TargetMachine> LLVMState::createTargetMachine() const {
@@ -157,7 +158,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
   SmallVector<char, 16> Tmp;
   SmallVector<MCFixup, 4> Fixups;
   CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
-                                 *TheTargetMachine->getMCSubtargetInfo());
+                                 TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }
 

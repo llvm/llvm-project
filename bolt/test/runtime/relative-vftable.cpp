@@ -4,7 +4,7 @@
 // REQUIRES: system-linux
 
 // RUN: split-file %s %t
-// RUN: %clang -fuse-ld=lld -o %t/main.so %t/tt.cpp %t/main.cpp -Wl,-q \
+// RUN: %clangxx -fuse-ld=lld -o %t/main.so %t/tt.cpp %t/main.cpp -Wl,-q \
 // RUN:     -fno-rtti -fexperimental-relative-c++-abi-vtables
 // RUN: %t/main.so | FileCheck %s
 

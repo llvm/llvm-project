@@ -979,13 +979,11 @@ void Interpreter::SwitchToNewBasicBlock(BasicBlock *Dest, ExecutionContext &SF){
 void Interpreter::visitAllocaInst(AllocaInst &I) {
   ExecutionContext &SF = ECStack.back();
 
-  Type *Ty = I.getAllocatedType(); // Type to be allocated
-
   // Get the number of elements being allocated by the array...
   unsigned NumElements =
     getOperandValue(I.getOperand(0), SF).IntVal.getZExtValue();
 
-  unsigned TypeSize = (size_t)getDataLayout().getTypeAllocSize(Ty);
+  unsigned TypeSize = (size_t)I.getAllocationBaseSize(getDataLayout());
 
   // Avoid malloc-ing zero bytes, use max()...
   unsigned MemToAlloc = std::max(1U, NumElements * TypeSize);
@@ -993,9 +991,9 @@ void Interpreter::visitAllocaInst(AllocaInst &I) {
   // Allocate enough memory to hold the type...
   void *Memory = safe_malloc(MemToAlloc);
 
-  LLVM_DEBUG(dbgs() << "Allocated Type: " << *Ty << " (" << TypeSize
-                    << " bytes) x " << NumElements << " (Total: " << MemToAlloc
-                    << ") at " << uintptr_t(Memory) << '\n');
+  LLVM_DEBUG(dbgs() << "Allocation: (" << TypeSize << " bytes) x "
+                    << NumElements << " (Total: " << MemToAlloc << ") at "
+                    << uintptr_t(Memory) << '\n');
 
   GenericValue Result = PTOGV(Memory);
   assert(Result.PointerVal && "Null pointer returned by malloc!");
@@ -1082,7 +1080,7 @@ void Interpreter::visitVAStartInst(VAStartInst &I) {
   GenericValue ArgIndex;
   ArgIndex.UIntPairVal.first = ECStack.size() - 1;
   ArgIndex.UIntPairVal.second = 0;
-  SetValue(&I, ArgIndex, SF);
+  SetValue(I.getArgList(), ArgIndex, SF);
 }
 
 void Interpreter::visitVAEndInst(VAEndInst &I) {
@@ -1729,7 +1727,8 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
 
   // Get the incoming valist parameter.  LLI treats the valist as a
   // (ec-stack-depth var-arg-index) pair.
-  GenericValue VAList = getOperandValue(I.getOperand(0), SF);
+  Value *V = I.getOperand(0);
+  GenericValue VAList = getOperandValue(V, SF);
   GenericValue Dest;
   GenericValue Src = ECStack[VAList.UIntPairVal.first]
                       .VarArgs[VAList.UIntPairVal.second];
@@ -1749,8 +1748,9 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
   // Set the Value of this Instruction.
   SetValue(&I, Dest, SF);
 
-  // Move the pointer to the next vararg.
+  // Move the pointer to the next vararg and set new value back.
   ++VAList.UIntPairVal.second;
+  SetValue(V, VAList, SF);
 }
 
 void Interpreter::visitExtractElementInst(ExtractElementInst &I) {

@@ -12,8 +12,8 @@
 /// their string data.
 ///
 /// Unlike std::string, CachedHashString can be used in DenseSet/DenseMap
-/// (because, unlike std::string, CachedHashString lets us have empty and
-/// tombstone values).
+/// (because, unlike std::string, CachedHashString lets us have an empty
+/// value).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -48,15 +48,7 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashStringRef> {
-  static CachedHashStringRef getEmptyKey() {
-    return CachedHashStringRef(DenseMapInfo<StringRef>::getEmptyKey(), 0);
-  }
-  static CachedHashStringRef getTombstoneKey() {
-    return CachedHashStringRef(DenseMapInfo<StringRef>::getTombstoneKey(), 1);
-  }
   static unsigned getHashValue(const CachedHashStringRef &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
-    assert(!isEqual(S, getTombstoneKey()) && "Cannot hash the tombstone key!");
     return S.hash();
   }
   static bool isEqual(const CachedHashStringRef &LHS,
@@ -76,21 +68,12 @@ class CachedHashString {
   uint32_t Size;
   uint32_t Hash;
 
-  static char *getEmptyKeyPtr() { return DenseMapInfo<char *>::getEmptyKey(); }
-  static char *getTombstoneKeyPtr() {
-    return DenseMapInfo<char *>::getTombstoneKey();
+  static char *getEmptyKeyPtr() {
+    // Assume no pointer requires more than 4096 (1 << 12) bytes of alignment.
+    return reinterpret_cast<char *>(static_cast<uintptr_t>(-1) << 12);
   }
 
-  bool isEmptyOrTombstone() const {
-    return P == getEmptyKeyPtr() || P == getTombstoneKeyPtr();
-  }
-
-  struct ConstructEmptyOrTombstoneTy {};
-
-  CachedHashString(ConstructEmptyOrTombstoneTy, char *EmptyOrTombstonePtr)
-      : P(EmptyOrTombstonePtr), Size(0), Hash(0) {
-    assert(isEmptyOrTombstone());
-  }
+  bool isEmpty() const { return P == getEmptyKeyPtr(); }
 
   // TODO: Use small-string optimization to avoid allocating.
 
@@ -110,7 +93,7 @@ public:
   // keys, and we want this to be usable there.
   CachedHashString(const CachedHashString &Other)
       : Size(Other.Size), Hash(Other.Hash) {
-    if (Other.isEmptyOrTombstone()) {
+    if (Other.isEmpty()) {
       P = Other.P;
     } else {
       P = new char[Size];
@@ -129,7 +112,7 @@ public:
   }
 
   ~CachedHashString() {
-    if (!isEmptyOrTombstone())
+    if (!isEmpty())
       delete[] P;
   }
 
@@ -151,30 +134,16 @@ public:
 };
 
 template <> struct DenseMapInfo<CachedHashString> {
-  static CachedHashString getEmptyKey() {
-    return CachedHashString(CachedHashString::ConstructEmptyOrTombstoneTy(),
-                            CachedHashString::getEmptyKeyPtr());
-  }
-  static CachedHashString getTombstoneKey() {
-    return CachedHashString(CachedHashString::ConstructEmptyOrTombstoneTy(),
-                            CachedHashString::getTombstoneKeyPtr());
-  }
-  static unsigned getHashValue(const CachedHashString &S) {
-    assert(!isEqual(S, getEmptyKey()) && "Cannot hash the empty key!");
-    assert(!isEqual(S, getTombstoneKey()) && "Cannot hash the tombstone key!");
-    return S.hash();
-  }
+  static unsigned getHashValue(const CachedHashString &S) { return S.hash(); }
   static bool isEqual(const CachedHashString &LHS,
                       const CachedHashString &RHS) {
     if (LHS.hash() != RHS.hash())
       return false;
     if (LHS.P == CachedHashString::getEmptyKeyPtr())
       return RHS.P == CachedHashString::getEmptyKeyPtr();
-    if (LHS.P == CachedHashString::getTombstoneKeyPtr())
-      return RHS.P == CachedHashString::getTombstoneKeyPtr();
 
-    // This is safe because if RHS.P is the empty or tombstone key, it will have
-    // length 0, so we'll never dereference its pointer.
+    // This is safe because if RHS.P is the empty key, it will have length 0, so
+    // we'll never dereference its pointer.
     return LHS.val() == RHS.val();
   }
 };

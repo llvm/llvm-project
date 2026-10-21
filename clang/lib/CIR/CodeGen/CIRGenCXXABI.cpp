@@ -63,8 +63,7 @@ void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
 cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
     GVALinkage linkage, const CXXDestructorDecl *dtor, CXXDtorType dt) const {
   // Delegate back to cgm by default.
-  return cgm.getCIRLinkageForDeclarator(dtor, linkage,
-                                        /*isConstantVariable=*/false);
+  return cgm.getCIRLinkageForDeclarator(dtor, linkage);
 }
 
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {

@@ -2,8 +2,6 @@
 Syntax of AMDGPU Instruction Operands
 =====================================
 
-.. contents::
-   :local:
 
 Conventions
 ===========
@@ -744,6 +742,16 @@ A 20-bit :ref:`integer number<amdgpu_synid_integer_number>`
 or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 The value must be in the range 0..0xFFFFF.
+
+.. _amdgpu_synid_simm16:
+
+simm16
+------
+
+A 16-bit :ref:`integer number<amdgpu_synid_integer_number>`
+or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
+The value must be in the range -0x8000..0x7FFF.
 
 .. _amdgpu_synid_simm21:
 

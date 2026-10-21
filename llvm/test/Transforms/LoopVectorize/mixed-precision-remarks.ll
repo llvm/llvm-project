@@ -54,13 +54,12 @@ for.cond.cleanup:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
+!llvm.module.flags = !{!3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "mixed-precision.c", directory: "/tmp/mixed-precision.c")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = !{i32 1, !"wchar_size", i32 4}
 !6 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !7 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)

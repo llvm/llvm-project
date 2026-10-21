@@ -48,7 +48,7 @@ LIBC_INLINE timespec convert_clock(timespec input, clockid_t from,
   output.tv_sec = input.tv_sec - from_time.tv_sec + to_time.tv_sec;
   output.tv_nsec = input.tv_nsec - from_time.tv_nsec + to_time.tv_nsec;
 
-  if (output.tv_nsec > 1_s_ns) {
+  if (output.tv_nsec >= 1_s_ns) {
     output.tv_sec++;
     output.tv_nsec -= 1_s_ns;
   } else if (output.tv_nsec < 0) {

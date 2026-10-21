@@ -1,0 +1,9 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("HTTPTests") {
+  deps = [
+    "//llvm/lib/HTTP",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [ "HTTPServerTests.cpp" ]
+}

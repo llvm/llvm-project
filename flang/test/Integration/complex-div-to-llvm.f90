@@ -34,61 +34,61 @@
 
 ! Case 1. Zero denominator, numerator contains at most one NaN value.
 ! IMPRVD: %[[RHS_REAL_ABS:.*]] = call contract half @llvm.fabs.f16(half %[[RHS_REAL]])
-! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq half %[[RHS_REAL_ABS]], 0xH0000
+! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq half %[[RHS_REAL_ABS]], 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_ABS:.*]] = call contract half @llvm.fabs.f16(half %[[RHS_IMAG]])
-! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq half %[[RHS_IMAG_ABS]], 0xH0000
-! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord half %[[LHS_REAL]], 0xH0000
-! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord half %[[LHS_IMAG]], 0xH0000
+! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq half %[[RHS_IMAG_ABS]], 0.000000e+00
+! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord half %[[LHS_REAL]], 0.000000e+00
+! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord half %[[LHS_IMAG]], 0.000000e+00
 ! IMPRVD: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = or i1 %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]]
 ! IMPRVD: %[[RHS_IS_ZERO:.*]] = and i1 %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]]
 ! IMPRVD: %[[RESULT_IS_INFINITY:.*]] = and i1 %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]]
-! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call half @llvm.copysign.f16(half 0xH7C00, half %[[RHS_REAL]])
+! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call half @llvm.copysign.f16(half +inf, half %[[RHS_REAL]])
 ! IMPRVD: %[[INFINITY_RESULT_REAL:.*]] = fmul contract half %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]]
 ! IMPRVD: %[[INFINITY_RESULT_IMAG:.*]] = fmul contract half %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]]
 
 ! Case 2. Infinite numerator, finite denominator.
-! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one half %[[RHS_REAL_ABS]], 0xH7C00
-! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one half %[[RHS_IMAG_ABS]], 0xH7C00
+! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one half %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one half %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_FINITE:.*]] = and i1 %[[RHS_REAL_FINITE]], %[[RHS_IMAG_FINITE]]
 ! IMPRVD: %[[LHS_REAL_ABS:.*]] = call contract half @llvm.fabs.f16(half %[[LHS_REAL]])
-! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq half %[[LHS_REAL_ABS]], 0xH7C00
+! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq half %[[LHS_REAL_ABS]], +inf
 ! IMPRVD: %[[LHS_IMAG_ABS:.*]] = call contract half @llvm.fabs.f16(half %[[LHS_IMAG]])
-! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq half %[[LHS_IMAG_ABS]], 0xH7C00
+! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq half %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_INFINITE:.*]] = or i1 %[[LHS_REAL_INFINITE]], %[[LHS_IMAG_INFINITE]]
 ! IMPRVD: %[[INF_NUM_FINITE_DENOM:.*]] = and i1 %[[LHS_IS_INFINITE]], %[[RHS_IS_FINITE]]
-! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], half 0xH3C00, half 0xH0000
+! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], half 1.000000e+00, half 0.000000e+00
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN:.*]] = call half @llvm.copysign.f16(half %[[LHS_REAL_IS_INF]], half %[[LHS_REAL]])
-! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], half 0xH3C00, half 0xH0000
+! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], half 1.000000e+00, half 0.000000e+00
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN:.*]] = call half @llvm.copysign.f16(half %[[LHS_IMAG_IS_INF]], half %[[LHS_IMAG]])
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract half %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract half %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_1:.*]] = fadd contract half %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract half %[[INF_MULTIPLICATOR_1]], 0xH7C00
+! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract half %[[INF_MULTIPLICATOR_1]], +inf
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract half %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract half %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_2:.*]] = fsub contract half %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract half %[[INF_MULTIPLICATOR_2]], 0xH7C00
+! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract half %[[INF_MULTIPLICATOR_2]], +inf
 
 ! Case 3. Finite numerator, infinite denominator.
-! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one half %[[LHS_REAL_ABS]], 0xH7C00
-! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one half %[[LHS_IMAG_ABS]], 0xH7C00
+! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one half %[[LHS_REAL_ABS]], +inf
+! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one half %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_FINITE:.*]] = and i1 %[[LHS_REAL_FINITE]], %[[LHS_IMAG_FINITE]]
-! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq half %[[RHS_REAL_ABS]], 0xH7C00
-! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq half %[[RHS_IMAG_ABS]], 0xH7C00
+! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq half %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq half %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_INFINITE:.*]] = or i1 %[[RHS_REAL_INFINITE]], %[[RHS_IMAG_INFINITE]]
 ! IMPRVD: %[[FINITE_NUM_INFINITE_DENOM:.*]] = and i1 %[[LHS_IS_FINITE]], %[[RHS_IS_INFINITE]]
-! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], half 0xH3C00, half 0xH0000
+! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], half 1.000000e+00, half 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN:.*]] = call half @llvm.copysign.f16(half %[[RHS_REAL_IS_INF]], half %[[RHS_REAL]])
-! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], half 0xH3C00, half 0xH0000
+! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], half 1.000000e+00, half 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN:.*]] = call half @llvm.copysign.f16(half %[[RHS_IMAG_IS_INF]], half %[[RHS_IMAG]])
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract half %[[LHS_REAL]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract half %[[LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_1:.*]] = fadd contract half %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract half %[[ZERO_MULTIPLICATOR_1]], 0xH0000
+! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract half %[[ZERO_MULTIPLICATOR_1]], 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract half %[[LHS_IMAG]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract half %[[LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_2:.*]] = fsub contract half %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL]]
-! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract half %[[ZERO_MULTIPLICATOR_2]], 0xH0000
+! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract half %[[ZERO_MULTIPLICATOR_2]], 0.000000e+00
 
 ! IMPRVD: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = fcmp olt half %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]]
 ! IMPRVD: %[[RESULT_REAL:.*]] = select i1 %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], half %[[RESULT_REAL_1]], half %[[RESULT_REAL_2]]
@@ -99,8 +99,8 @@
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_2:.*]] = select i1 %[[INF_NUM_FINITE_DENOM]], half %[[RESULT_IMAG_3]], half %[[RESULT_IMAG_SPECIAL_CASE_3]]
 ! IMPRVD: %[[RESULT_REAL_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], half %[[INFINITY_RESULT_REAL]], half %[[RESULT_REAL_SPECIAL_CASE_2]]
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], half %[[INFINITY_RESULT_IMAG]], half %[[RESULT_IMAG_SPECIAL_CASE_2]]
-! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno half %[[RESULT_REAL]], 0xH0000
-! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno half %[[RESULT_IMAG]], 0xH0000
+! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno half %[[RESULT_REAL]], 0.000000e+00
+! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno half %[[RESULT_IMAG]], 0.000000e+00
 ! IMPRVD: %[[RESULT_IS_NAN:.*]] = and i1 %[[RESULT_REAL_IS_NAN]], %[[RESULT_IMAG_IS_NAN]]
 ! IMPRVD: %[[RESULT_REAL_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], half %[[RESULT_REAL_SPECIAL_CASE_1]], half %[[RESULT_REAL]]
 ! IMPRVD: %[[RESULT_IMAG_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], half %[[RESULT_IMAG_SPECIAL_CASE_1]], half %[[RESULT_IMAG]]
@@ -160,61 +160,61 @@ end subroutine div_test_half
 
 ! Case 1. Zero denominator, numerator contains at most one NaN value.
 ! IMPRVD: %[[RHS_REAL_ABS:.*]] = call contract bfloat @llvm.fabs.bf16(bfloat %[[RHS_REAL]])
-! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq bfloat %[[RHS_REAL_ABS]], 0xR0000
+! IMPRVD: %[[RHS_REAL_ABS_IS_ZERO:.*]] = fcmp oeq bfloat %[[RHS_REAL_ABS]], 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_ABS:.*]] = call contract bfloat @llvm.fabs.bf16(bfloat %[[RHS_IMAG]])
-! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq bfloat %[[RHS_IMAG_ABS]], 0xR0000
-! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord bfloat %[[LHS_REAL]], 0xR0000
-! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord bfloat %[[LHS_IMAG]], 0xR0000
+! IMPRVD: %[[RHS_IMAG_ABS_IS_ZERO:.*]] = fcmp oeq bfloat %[[RHS_IMAG_ABS]], 0.000000e+00
+! IMPRVD: %[[LHS_REAL_IS_NOT_NAN:.*]] = fcmp ord bfloat %[[LHS_REAL]], 0.000000e+00
+! IMPRVD: %[[LHS_IMAG_IS_NOT_NAN:.*]] = fcmp ord bfloat %[[LHS_IMAG]], 0.000000e+00
 ! IMPRVD: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = or i1 %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]]
 ! IMPRVD: %[[RHS_IS_ZERO:.*]] = and i1 %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]]
 ! IMPRVD: %[[RESULT_IS_INFINITY:.*]] = and i1 %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]]
-! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call bfloat @llvm.copysign.bf16(bfloat 0xR7F80, bfloat %[[RHS_REAL]])
+! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call bfloat @llvm.copysign.bf16(bfloat +inf, bfloat %[[RHS_REAL]])
 ! IMPRVD: %[[INFINITY_RESULT_REAL:.*]] = fmul contract bfloat %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]]
 ! IMPRVD: %[[INFINITY_RESULT_IMAG:.*]] = fmul contract bfloat %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]]
 
 ! Case 2. Infinite numerator, finite denominator.
-! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one bfloat %[[RHS_REAL_ABS]], 0xR7F80
-! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one bfloat %[[RHS_IMAG_ABS]], 0xR7F80
+! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one bfloat %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one bfloat %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_FINITE:.*]] = and i1 %[[RHS_REAL_FINITE]], %[[RHS_IMAG_FINITE]]
 ! IMPRVD: %[[LHS_REAL_ABS:.*]] = call contract bfloat @llvm.fabs.bf16(bfloat %[[LHS_REAL]])
-! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq bfloat %[[LHS_REAL_ABS]], 0xR7F80
+! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq bfloat %[[LHS_REAL_ABS]], +inf
 ! IMPRVD: %[[LHS_IMAG_ABS:.*]] = call contract bfloat @llvm.fabs.bf16(bfloat %[[LHS_IMAG]])
-! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq bfloat %[[LHS_IMAG_ABS]], 0xR7F80
+! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq bfloat %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_INFINITE:.*]] = or i1 %[[LHS_REAL_INFINITE]], %[[LHS_IMAG_INFINITE]]
 ! IMPRVD: %[[INF_NUM_FINITE_DENOM:.*]] = and i1 %[[LHS_IS_INFINITE]], %[[RHS_IS_FINITE]]
-! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], bfloat 0xR3F80, bfloat 0xR0000
+! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], bfloat 1.000000e+00, bfloat 0.000000e+00
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN:.*]] = call bfloat @llvm.copysign.bf16(bfloat %[[LHS_REAL_IS_INF]], bfloat %[[LHS_REAL]])
-! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], bfloat 0xR3F80, bfloat 0xR0000
+! IMPRVD: %[[LHS_IMAG_IS_INF:.*]] = select i1 %[[LHS_IMAG_INFINITE]], bfloat 1.000000e+00, bfloat 0.000000e+00
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN:.*]] = call bfloat @llvm.copysign.bf16(bfloat %[[LHS_IMAG_IS_INF]], bfloat %[[LHS_IMAG]])
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract bfloat %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract bfloat %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_1:.*]] = fadd contract bfloat %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract bfloat %[[INF_MULTIPLICATOR_1]], 0xR7F80
+! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract bfloat %[[INF_MULTIPLICATOR_1]], +inf
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract bfloat %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract bfloat %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_2:.*]] = fsub contract bfloat %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract bfloat %[[INF_MULTIPLICATOR_2]], 0xR7F80
+! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract bfloat %[[INF_MULTIPLICATOR_2]], +inf
 
 ! Case 3. Finite numerator, infinite denominator.
-! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one bfloat %[[LHS_REAL_ABS]], 0xR7F80
-! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one bfloat %[[LHS_IMAG_ABS]], 0xR7F80
+! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one bfloat %[[LHS_REAL_ABS]], +inf
+! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one bfloat %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_FINITE:.*]] = and i1 %[[LHS_REAL_FINITE]], %[[LHS_IMAG_FINITE]]
-! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq bfloat %[[RHS_REAL_ABS]], 0xR7F80
-! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq bfloat %[[RHS_IMAG_ABS]], 0xR7F80
+! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq bfloat %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq bfloat %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_INFINITE:.*]] = or i1 %[[RHS_REAL_INFINITE]], %[[RHS_IMAG_INFINITE]]
 ! IMPRVD: %[[FINITE_NUM_INFINITE_DENOM:.*]] = and i1 %[[LHS_IS_FINITE]], %[[RHS_IS_INFINITE]]
-! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], bfloat 0xR3F80, bfloat 0xR0000
+! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], bfloat 1.000000e+00, bfloat 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN:.*]] = call bfloat @llvm.copysign.bf16(bfloat %[[RHS_REAL_IS_INF]], bfloat %[[RHS_REAL]])
-! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], bfloat 0xR3F80, bfloat 0xR0000
+! IMPRVD: %[[RHS_IMAG_IS_INF:.*]] = select i1 %[[RHS_IMAG_INFINITE]], bfloat 1.000000e+00, bfloat 0.000000e+00
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN:.*]] = call bfloat @llvm.copysign.bf16(bfloat %[[RHS_IMAG_IS_INF]], bfloat %[[RHS_IMAG]])
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract bfloat %[[LHS_REAL]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract bfloat %[[LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_1:.*]] = fadd contract bfloat %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract bfloat %[[ZERO_MULTIPLICATOR_1]], 0xR0000
+! IMPRVD: %[[RESULT_REAL_4:.*]] = fmul contract bfloat %[[ZERO_MULTIPLICATOR_1]], 0.000000e+00
 ! IMPRVD: %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG:.*]] = fmul contract bfloat %[[LHS_IMAG]], %[[RHS_REAL_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL:.*]] = fmul contract bfloat %[[LHS_REAL]], %[[RHS_IMAG_IS_INF_WITH_SIGN]]
 ! IMPRVD: %[[ZERO_MULTIPLICATOR_2:.*]] = fsub contract bfloat %[[RHS_REAL_IS_INF_WITH_SIGN_TIMES_LHS_IMAG]], %[[RHS_IMAG_IS_INF_WITH_SIGN_TIMES_LHS_REAL]]
-! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract bfloat %[[ZERO_MULTIPLICATOR_2]], 0xR0000
+! IMPRVD: %[[RESULT_IMAG_4:.*]] = fmul contract bfloat %[[ZERO_MULTIPLICATOR_2]], 0.000000e+00
 
 ! IMPRVD: %[[REAL_ABS_SMALLER_THAN_IMAG_ABS:.*]] = fcmp olt bfloat %[[RHS_REAL_ABS]], %[[RHS_IMAG_ABS]]
 ! IMPRVD: %[[RESULT_REAL:.*]] = select i1 %[[REAL_ABS_SMALLER_THAN_IMAG_ABS]], bfloat %[[RESULT_REAL_1]], bfloat %[[RESULT_REAL_2]]
@@ -225,8 +225,8 @@ end subroutine div_test_half
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_2:.*]] = select i1 %[[INF_NUM_FINITE_DENOM]], bfloat %[[RESULT_IMAG_3]], bfloat %[[RESULT_IMAG_SPECIAL_CASE_3]]
 ! IMPRVD: %[[RESULT_REAL_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], bfloat %[[INFINITY_RESULT_REAL]], bfloat %[[RESULT_REAL_SPECIAL_CASE_2]]
 ! IMPRVD: %[[RESULT_IMAG_SPECIAL_CASE_1:.*]] = select i1 %[[RESULT_IS_INFINITY]], bfloat %[[INFINITY_RESULT_IMAG]], bfloat %[[RESULT_IMAG_SPECIAL_CASE_2]]
-! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno bfloat %[[RESULT_REAL]], 0xR0000
-! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno bfloat %[[RESULT_IMAG]], 0xR0000
+! IMPRVD: %[[RESULT_REAL_IS_NAN:.*]] = fcmp uno bfloat %[[RESULT_REAL]], 0.000000e+00
+! IMPRVD: %[[RESULT_IMAG_IS_NAN:.*]] = fcmp uno bfloat %[[RESULT_IMAG]], 0.000000e+00
 ! IMPRVD: %[[RESULT_IS_NAN:.*]] = and i1 %[[RESULT_REAL_IS_NAN]], %[[RESULT_IMAG_IS_NAN]]
 ! IMPRVD: %[[RESULT_REAL_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], bfloat %[[RESULT_REAL_SPECIAL_CASE_1]], bfloat %[[RESULT_REAL]]
 ! IMPRVD: %[[RESULT_IMAG_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], bfloat %[[RESULT_IMAG_SPECIAL_CASE_1]], bfloat %[[RESULT_IMAG]]
@@ -294,18 +294,18 @@ end subroutine div_test_bfloat
 ! IMPRVD: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = or i1 %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]]
 ! IMPRVD: %[[RHS_IS_ZERO:.*]] = and i1 %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]]
 ! IMPRVD: %[[RESULT_IS_INFINITY:.*]] = and i1 %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]]
-! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call float @llvm.copysign.f32(float 0x7FF0000000000000, float %[[RHS_REAL]])
+! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call float @llvm.copysign.f32(float +inf, float %[[RHS_REAL]])
 ! IMPRVD: %[[INFINITY_RESULT_REAL:.*]] = fmul contract float %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]]
 ! IMPRVD: %[[INFINITY_RESULT_IMAG:.*]] = fmul contract float %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]]
 
 ! Case 2. Infinite numerator, finite denominator.
-! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one float %[[RHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one float %[[RHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one float %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one float %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_FINITE:.*]] = and i1 %[[RHS_REAL_FINITE]], %[[RHS_IMAG_FINITE]]
 ! IMPRVD: %[[LHS_REAL_ABS:.*]] = call contract float @llvm.fabs.f32(float %[[LHS_REAL]])
-! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq float %[[LHS_REAL_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq float %[[LHS_REAL_ABS]], +inf
 ! IMPRVD: %[[LHS_IMAG_ABS:.*]] = call contract float @llvm.fabs.f32(float %[[LHS_IMAG]])
-! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq float %[[LHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq float %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_INFINITE:.*]] = or i1 %[[LHS_REAL_INFINITE]], %[[LHS_IMAG_INFINITE]]
 ! IMPRVD: %[[INF_NUM_FINITE_DENOM:.*]] = and i1 %[[LHS_IS_INFINITE]], %[[RHS_IS_FINITE]]
 ! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], float 1.000000e+00, float 0.000000e+00
@@ -315,18 +315,18 @@ end subroutine div_test_bfloat
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract float %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract float %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_1:.*]] = fadd contract float %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract float %[[INF_MULTIPLICATOR_1]], 0x7FF0000000000000
+! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract float %[[INF_MULTIPLICATOR_1]], +inf
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract float %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract float %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_2:.*]] = fsub contract float %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract float %[[INF_MULTIPLICATOR_2]], 0x7FF0000000000000
+! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract float %[[INF_MULTIPLICATOR_2]], +inf
 
 ! Case 3. Finite numerator, infinite denominator.
-! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one float %[[LHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one float %[[LHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one float %[[LHS_REAL_ABS]], +inf
+! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one float %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_FINITE:.*]] = and i1 %[[LHS_REAL_FINITE]], %[[LHS_IMAG_FINITE]]
-! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq float %[[RHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq float %[[RHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq float %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq float %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_INFINITE:.*]] = or i1 %[[RHS_REAL_INFINITE]], %[[RHS_IMAG_INFINITE]]
 ! IMPRVD: %[[FINITE_NUM_INFINITE_DENOM:.*]] = and i1 %[[LHS_IS_FINITE]], %[[RHS_IS_INFINITE]]
 ! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], float 1.000000e+00, float 0.000000e+00
@@ -420,18 +420,18 @@ end subroutine div_test_single
 ! IMPRVD: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = or i1 %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]]
 ! IMPRVD: %[[RHS_IS_ZERO:.*]] = and i1 %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]]
 ! IMPRVD: %[[RESULT_IS_INFINITY:.*]] = and i1 %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]]
-! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call double @llvm.copysign.f64(double 0x7FF0000000000000, double %[[RHS_REAL]])
+! IMPRVD: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = call double @llvm.copysign.f64(double +inf, double %[[RHS_REAL]])
 ! IMPRVD: %[[INFINITY_RESULT_REAL:.*]] = fmul contract double %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]]
 ! IMPRVD: %[[INFINITY_RESULT_IMAG:.*]] = fmul contract double %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]]
 
 ! Case 2. Infinite numerator, finite denominator.
-! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one double %[[RHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one double %[[RHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[RHS_REAL_FINITE:.*]] = fcmp one double %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_FINITE:.*]] = fcmp one double %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_FINITE:.*]] = and i1 %[[RHS_REAL_FINITE]], %[[RHS_IMAG_FINITE]]
 ! IMPRVD: %[[LHS_REAL_ABS:.*]] = call contract double @llvm.fabs.f64(double %[[LHS_REAL]])
-! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq double %[[LHS_REAL_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_REAL_INFINITE:.*]] = fcmp oeq double %[[LHS_REAL_ABS]], +inf
 ! IMPRVD: %[[LHS_IMAG_ABS:.*]] = call contract double @llvm.fabs.f64(double %[[LHS_IMAG]])
-! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq double %[[LHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_IMAG_INFINITE:.*]] = fcmp oeq double %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_INFINITE:.*]] = or i1 %[[LHS_REAL_INFINITE]], %[[LHS_IMAG_INFINITE]]
 ! IMPRVD: %[[INF_NUM_FINITE_DENOM:.*]] = and i1 %[[LHS_IS_INFINITE]], %[[RHS_IS_FINITE]]
 ! IMPRVD: %[[LHS_REAL_IS_INF:.*]] = select i1 %[[LHS_REAL_INFINITE]], double 1.000000e+00, double 0.000000e+00
@@ -441,18 +441,18 @@ end subroutine div_test_single
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract double %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract double %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_1:.*]] = fadd contract double %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract double %[[INF_MULTIPLICATOR_1]], 0x7FF0000000000000
+! IMPRVD: %[[RESULT_REAL_3:.*]] = fmul contract double %[[INF_MULTIPLICATOR_1]], +inf
 ! IMPRVD: %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG:.*]] = fmul contract double %[[LHS_REAL_IS_INF_WITH_SIGN]], %[[RHS_IMAG]]
 ! IMPRVD: %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL:.*]] = fmul contract double %[[LHS_IMAG_IS_INF_WITH_SIGN]], %[[RHS_REAL]]
 ! IMPRVD: %[[INF_MULTIPLICATOR_2:.*]] = fsub contract double %[[LHS_IMAG_IS_INF_WITH_SIGN_TIMES_RHS_REAL]], %[[LHS_REAL_IS_INF_WITH_SIGN_TIMES_RHS_IMAG]]
-! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract double %[[INF_MULTIPLICATOR_2]], 0x7FF0000000000000
+! IMPRVD: %[[RESULT_IMAG_3:.*]] = fmul contract double %[[INF_MULTIPLICATOR_2]], +inf
 
 ! Case 3. Finite numerator, infinite denominator.
-! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one double %[[LHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one double %[[LHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[LHS_REAL_FINITE:.*]] = fcmp one double %[[LHS_REAL_ABS]], +inf
+! IMPRVD: %[[LHS_IMAG_FINITE:.*]] = fcmp one double %[[LHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[LHS_IS_FINITE:.*]] = and i1 %[[LHS_REAL_FINITE]], %[[LHS_IMAG_FINITE]]
-! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq double %[[RHS_REAL_ABS]], 0x7FF0000000000000
-! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq double %[[RHS_IMAG_ABS]], 0x7FF0000000000000
+! IMPRVD: %[[RHS_REAL_INFINITE:.*]] = fcmp oeq double %[[RHS_REAL_ABS]], +inf
+! IMPRVD: %[[RHS_IMAG_INFINITE:.*]] = fcmp oeq double %[[RHS_IMAG_ABS]], +inf
 ! IMPRVD: %[[RHS_IS_INFINITE:.*]] = or i1 %[[RHS_REAL_INFINITE]], %[[RHS_IMAG_INFINITE]]
 ! IMPRVD: %[[FINITE_NUM_INFINITE_DENOM:.*]] = and i1 %[[LHS_IS_FINITE]], %[[RHS_IS_INFINITE]]
 ! IMPRVD: %[[RHS_REAL_IS_INF:.*]] = select i1 %[[RHS_REAL_INFINITE]], double 1.000000e+00, double 0.000000e+00

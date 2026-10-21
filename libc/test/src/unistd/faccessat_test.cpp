@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/faccessat.h"
@@ -15,7 +16,6 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 namespace {

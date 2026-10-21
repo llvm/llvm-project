@@ -24,7 +24,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    call void @use(ptr [[Z_ADDR]])
 ; CHECK-NEXT:    br label %[[FLAG_MERGE]]
 ; CHECK:       [[FLAG_MERGE]]:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i32 56)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
@@ -37,7 +37,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    [[Y_ADDR_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[Y_ADDR_RELOAD_ADDR]], i8 1, i32 4, i1 false)
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 48
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
@@ -58,7 +58,7 @@ flag_true:
   br label %flag_merge
 
 flag_merge:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @myAlloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)

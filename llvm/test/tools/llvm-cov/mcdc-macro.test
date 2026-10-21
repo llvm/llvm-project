@@ -2,6 +2,7 @@
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
+// RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc --show-mcdc-non-executed-vectors %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s -check-prefix=ALL
 
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
 // CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]
@@ -18,7 +19,9 @@
 // CHECK-NEXT:  |     Condition C4 --> (3:23)
 // CHECK-NEXT:  |     Condition C5 --> (9:22)
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |  MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed:
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |     C1, C2, C3, C4, C5    Result
 // CHECK-NEXT:  |  1 { T,  C,  T,  T,  -  = T      }
@@ -41,7 +44,9 @@
 // CHECK-NEXT:  |     Condition C1 --> (11:7)
 // CHECK-NEXT:  |     Condition C2 --> (2:11)
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |  MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed:
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |     C1, C2    Result
 // CHECK-NEXT:  |  1 { T,  C  = T      }
@@ -69,7 +74,9 @@
 // CHECK-NEXT:  |     Condition C5 --> (3:11)
 // CHECK-NEXT:  |     Condition C6 --> (3:23)
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |  MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed:
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |     C1, C2, C3, C4, C5, C6    Result
 // CHECK-NEXT:  |  1 { T,  T,  T,  C,  -,  -  = T      }
@@ -83,6 +90,129 @@
 // CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
+
+// Same as CHECK above, but with --show-mcdc-non-executed-vectors (Not executed section after each decision).
+
+// ALL:  |  |  |  Branch (2:11): [Folded - Ignored]
+// ALL:  |  |  |  Branch (3:11): [True: 1, False: 0]
+// ALL:  |  |  |  Branch (3:23): [True: 1, False: 0]
+// ALL:  |  Branch (9:7): [True: 1, False: 0]
+// ALL-NEXT:  |  Branch (9:22): [True: 0, False: 0]
+// ALL-NEXT:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (9:7) to (9:23)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 5
+// ALL-NEXT:  |     Condition C1 --> (9:7)
+// ALL-NEXT:  |     Condition C2 --> (2:11)
+// ALL-NEXT:  |     Condition C3 --> (3:11)
+// ALL-NEXT:  |     Condition C4 --> (3:23)
+// ALL-NEXT:  |     Condition C5 --> (9:22)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4, C5    Result
+// ALL-NEXT:  |  1 { T,  C,  T,  T,  -  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4, C5    Result
+// ALL-NEXT:  |  2 { F,  C,  -,  -,  F  = F      }
+// ALL-NEXT:  |  3 { T,  C,  -,  -,  F  = F      }
+// ALL-NEXT:  |  4 { T,  C,  F,  -,  F  = F      }
+// ALL-NEXT:  |  5 { T,  C,  T,  F,  F  = F      }
+// ALL-NEXT:  |  6 { F,  C,  -,  -,  T  = T      }
+// ALL-NEXT:  |  7 { T,  C,  -,  -,  T  = T      }
+// ALL-NEXT:  |  8 { T,  C,  F,  -,  T  = T      }
+// ALL-NEXT:  |  9 { T,  C,  T,  F,  T  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: constant folded
+// ALL-NEXT:  |  C3-Pair: not covered
+// ALL-NEXT:  |  C4-Pair: not covered
+// ALL-NEXT:  |  C5-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
+
+// ALL:  |  |  |  Branch (2:11): [Folded - Ignored]
+// ALL:  |  Branch (11:7): [True: 1, False: 0]
+// ALL-NEXT:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (11:7) to (11:13)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 2
+// ALL-NEXT:  |     Condition C1 --> (11:7)
+// ALL-NEXT:  |     Condition C2 --> (2:11)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2    Result
+// ALL-NEXT:  |  1 { T,  C  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2    Result
+// ALL-NEXT:  |  2 { F,  C  = F      }
+// ALL-NEXT:  |  3 { T,  C  = F      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: constant folded
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
+
+// ALL:  |  |  |  Branch (1:11): [True: 1, False: 0]
+// ALL:  |  |  |  Branch (2:11): [Folded - Ignored]
+// ALL:  |  |  |  |  |  Branch (3:11): [True: 0, False: 0]
+// ALL:  |  |  |  |  |  Branch (3:23): [True: 0, False: 0]
+// ALL:  |  Branch (13:7): [True: 1, False: 0]
+// ALL-NEXT:  |  Branch (13:13): [True: 1, False: 0]
+// ALL-NEXT:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (13:7) to (13:32)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 6
+// ALL-NEXT:  |     Condition C1 --> (13:7)
+// ALL-NEXT:  |     Condition C2 --> (13:13)
+// ALL-NEXT:  |     Condition C3 --> (1:11)
+// ALL-NEXT:  |     Condition C4 --> (2:11)
+// ALL-NEXT:  |     Condition C5 --> (3:11)
+// ALL-NEXT:  |     Condition C6 --> (3:23)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4, C5, C6    Result
+// ALL-NEXT:  |  1 { T,  T,  T,  C,  -,  -  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4, C5, C6    Result
+// ALL-NEXT:  |  2 { F,  -,  -,  C,  -,  -  = F      }
+// ALL-NEXT:  |  3 { T,  F,  -,  C,  -,  -  = F      }
+// ALL-NEXT:  |  4 { T,  T,  F,  C,  -,  -  = F      }
+// ALL-NEXT:  |  5 { F,  -,  -,  C,  F,  -  = F      }
+// ALL-NEXT:  |  6 { T,  F,  -,  C,  F,  -  = F      }
+// ALL-NEXT:  |  7 { T,  T,  F,  C,  F,  -  = F      }
+// ALL-NEXT:  |  8 { F,  -,  -,  C,  T,  F  = F      }
+// ALL-NEXT:  |  9 { T,  F,  -,  C,  T,  F  = F      }
+// ALL-NEXT:  |  10 { T,  T,  F,  C,  T,  F  = F      }
+// ALL-NEXT:  |  11 { F,  -,  -,  C,  T,  T  = T      }
+// ALL-NEXT:  |  12 { T,  F,  -,  C,  T,  T  = T      }
+// ALL-NEXT:  |  13 { T,  T,  F,  C,  T,  T  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: not covered
+// ALL-NEXT:  |  C3-Pair: not covered
+// ALL-NEXT:  |  C4-Pair: constant folded
+// ALL-NEXT:  |  C5-Pair: not covered
+// ALL-NEXT:  |  C6-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
 
 Instructions for regenerating the test:
 

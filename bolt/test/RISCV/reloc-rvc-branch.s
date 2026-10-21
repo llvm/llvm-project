@@ -1,5 +1,9 @@
-// RUN: %clang %cflags -o %t %s
+// RUN: %clang %cflags64 -o %t %s
 // RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
+// RUN:    | FileCheck %s
+// RUN: llvm-mc -triple riscv32 -mattr=+c -filetype=obj -o %t.rv32.o %s
+// RUN: ld.lld -q -o %t.rv32 %t.rv32.o
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.rv32.null %t.rv32 \
 // RUN:    | FileCheck %s
 
   .text
@@ -7,7 +11,7 @@
   .p2align 1
 // CHECK: Binary Function "_start" after building cfg {
 _start:
-// CHECK: beqz a0, .Ltmp0
+// CHECK: {{(c.)?}}beqz a0, .Ltmp0
   c.beqz a0, 1f
   nop
 // CHECK: .Ltmp0

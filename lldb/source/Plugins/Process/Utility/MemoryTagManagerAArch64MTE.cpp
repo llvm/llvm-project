@@ -107,7 +107,7 @@ MemoryTagManagerAArch64MTE::MakeTaggedRange(
         });
 
     if (region == memory_regions.cend() ||
-        region->GetMemoryTagged() != MemoryRegionInfo::eYes) {
+        region->GetMemoryTagged() != eLazyBoolYes) {
       // Some part of this range is untagged (or unmapped) so error
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Address range 0x%" PRIx64 ":0x%" PRIx64

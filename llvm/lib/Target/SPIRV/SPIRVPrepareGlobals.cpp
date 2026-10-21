@@ -26,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
-#include <climits>
 #include <string>
 
 #define DEBUG_TYPE "spirv-prepare-globals"
@@ -35,15 +34,21 @@ using namespace llvm;
 
 namespace {
 
-struct SPIRVPrepareGlobals : public ModulePass {
+struct SPIRVPrepareGlobalsImpl {
+  bool runOnModule(Module &M);
+};
+
+struct SPIRVPrepareGlobalsLegacy : public ModulePass {
   static char ID;
-  SPIRVPrepareGlobals() : ModulePass(ID) {}
+  SPIRVPrepareGlobalsLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
     return "SPIRV prepare global variables";
   }
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override {
+    return SPIRVPrepareGlobalsImpl().runOnModule(M);
+  }
 };
 
 // The backend does not support GlobalAlias. Replace aliases with their aliasees
@@ -65,7 +70,9 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
     return false;
   }
 
-  if (AO->isInterposable()) {
+  // noipa doesn't affect which definition is used at link time, so it doesn't
+  // prevent replacing the alias.
+  if (AO->isInterposable(/*CheckNoIPA=*/false)) {
     LLVM_DEBUG(dbgs() << "Skipping interposable aliasee: " << AO->getName()
                       << "\n");
     return false;
@@ -127,7 +134,7 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
   return true;
 }
 
-bool SPIRVPrepareGlobals::runOnModule(Module &M) {
+bool SPIRVPrepareGlobalsImpl::runOnModule(Module &M) {
   bool Changed = false;
 
   for (GlobalAlias &GA : make_early_inc_range(M.aliases())) {
@@ -146,15 +153,21 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
 
   return Changed;
 }
-char SPIRVPrepareGlobals::ID = 0;
+char SPIRVPrepareGlobalsLegacy::ID = 0;
 
 } // namespace
 
-INITIALIZE_PASS(SPIRVPrepareGlobals, "prepare-globals",
+INITIALIZE_PASS(SPIRVPrepareGlobalsLegacy, "spirv-prepare-globals",
                 "SPIRV prepare global variables", false, false)
+
+PreservedAnalyses SPIRVPrepareGlobalsPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  return SPIRVPrepareGlobalsImpl().runOnModule(M) ? PreservedAnalyses::none()
+                                                  : PreservedAnalyses::all();
+}
 
 namespace llvm {
 ModulePass *createSPIRVPrepareGlobalsPass() {
-  return new SPIRVPrepareGlobals();
+  return new SPIRVPrepareGlobalsLegacy();
 }
 } // namespace llvm

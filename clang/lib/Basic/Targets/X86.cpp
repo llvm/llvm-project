@@ -164,11 +164,6 @@ bool X86TargetInfo::initFeatureMap(
   for (auto &F : CPUFeatures)
     setFeatureEnabled(Features, F, true);
 
-  if (Features.lookup("egpr") && getTriple().isOSWindows()) {
-    setFeatureEnabled(Features, "push2pop2", false);
-    setFeatureEnabled(Features, "ppx", false);
-  }
-
   std::vector<std::string> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
@@ -176,6 +171,14 @@ bool X86TargetInfo::initFeatureMap(
       UpdatedFeaturesVec.push_back("-x87");
       UpdatedFeaturesVec.push_back("-mmx");
       UpdatedFeaturesVec.push_back("-sse");
+      continue;
+    }
+
+    if (Feature == "+apxf" || Feature == "-apxf") {
+      char Sign = Feature[0];
+      for (const char *Sub :
+           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+        UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
       continue;
     }
 
@@ -286,6 +289,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+avx10.2") {
       HasAVX10_2 = true;
       HasFullBFloat16 = true;
+    } else if (Feature == "+avx10v2aux") {
+      HasAVX10_V2_AUX = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -301,6 +306,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
       HasAVX512BITALG = true;
+    } else if (Feature == "+avx512bmm") {
+      HasAVX512BMM = true;
     } else if (Feature == "+avx512bw") {
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
@@ -403,8 +410,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXMOVRS = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
-    } else if (Feature == "+amx-tf32") {
-      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -532,6 +537,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   } else {
     DefineStd(Builder, "i386", Opts);
+  }
+
+  if (getTriple().isLFI()) {
+    Builder.defineMacro("__LFI__");
   }
 
   Builder.defineMacro("__SEG_GS");
@@ -729,6 +738,18 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
     break;
+  case CK_C86_4G_M4:
+    defineCPUMacros(Builder, "c86_4g_m4");
+    break;
+  case CK_C86_4G_M6:
+    defineCPUMacros(Builder, "c86_4g_m6");
+    break;
+  case CK_C86_4G_M7:
+    defineCPUMacros(Builder, "c86_4g_m7");
+    break;
+  case CK_C86_4G_M8:
+    defineCPUMacros(Builder, "c86_4g_m8");
+    break;
   }
 
   // Target properties.
@@ -829,6 +850,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX10_2__");
     Builder.defineMacro("__AVX10_2_512__");
   }
+  if (HasAVX10_V2_AUX)
+    Builder.defineMacro("__AVX10_V2_AUX__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -843,6 +866,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
     Builder.defineMacro("__AVX512BITALG__");
+  if (HasAVX512BMM)
+    Builder.defineMacro("__AVX512BMM__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
   if (HasAVX512VL) {
@@ -935,8 +960,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
-  if (HasAMXTF32)
-    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -979,9 +1002,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ZU__");
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
-  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU && HasJMPABS)
-    if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
-      Builder.defineMacro("__APX_F__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasZU && HasJMPABS)
+    Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 
@@ -1075,11 +1098,11 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-fp8", true)
       .Case("amx-int8", true)
       .Case("amx-movrs", true)
-      .Case("amx-tf32", true)
       .Case("amx-tile", true)
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
+      .Case("avx10v2aux", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1089,6 +1112,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512fp16", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
+      .Case("avx512bmm", true)
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
@@ -1173,6 +1197,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("apxf", true)
       .Case("egpr", true)
       .Case("push2pop2", true)
       .Case("ppx", true)
@@ -1196,11 +1221,11 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-movrs", HasAMXMOVRS)
-      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)
+      .Case("avx10v2aux", HasAVX10_V2_AUX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
@@ -1210,6 +1235,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512fp16", HasAVX512FP16)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
+      .Case("avx512bmm", HasAVX512BMM)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
@@ -1378,11 +1404,9 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
 // rather than the full range of cpus.
 bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_TYPE(ENUM, STR) .Case(STR, true)
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_SUBTYPE(ENUM, STR) .Case(STR, true)
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, true)
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
@@ -1657,6 +1681,11 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER4:
     case CK_ZNVER5:
     case CK_ZNVER6:
+    // Hygon
+    case CK_C86_4G_M4:
+    case CK_C86_4G_M6:
+    case CK_C86_4G_M7:
+    case CK_C86_4G_M8:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
@@ -1851,4 +1880,32 @@ X86_64TargetInfo::getTargetBuiltins() const {
       {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
        "__builtin_ia32_"},
   };
+}
+
+unsigned
+MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                             bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
+
+  // Skip the MSVC size-based global-alignment increase under
+  // -fclang-abi-compat<=22.
+  if (!UseMSVCCompatGlobalAlign)
+    return Align;
+
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
+}
+
+void MicrosoftX86_64TargetInfo::adjust(DiagnosticsEngine &Diags,
+                                       LangOptions &Opts,
+                                       const TargetInfo *Aux) {
+  WindowsX86_64TargetInfo::adjust(Diags, Opts, Aux);
+  // Under -fclang-abi-compat<=22, restore the prior x86_64-windows-msvc
+  // behavior: apply the Sys V "large array" alignment increase and skip the
+  // MSVC size-based global-alignment increase.
+  if (Opts.isCompatibleWith(LangOptions::ClangABI::Ver22)) {
+    UseMSVCCompatGlobalAlign = false;
+    LargeArrayMinWidth = 128;
+    LargeArrayAlign = 128;
+  }
 }

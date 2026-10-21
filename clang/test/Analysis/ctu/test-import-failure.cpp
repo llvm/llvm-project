@@ -32,3 +32,4 @@ extern const int RootExamples[];
 // expected-warning@Inputs/test-import-failure-import.cpp:14{{incompatible definitions}}
 // expected-note@Inputs/test-import-failure-import.cpp:14{{no corresponding field here}}
 // expected-note@Inputs/test-import-failure-import.cpp:14{{no corresponding field here}}
+// expected-warning@Inputs/test-import-failure-import.cpp:44{{import of an external symbol for CTU failed: Failed to import the definition.}}

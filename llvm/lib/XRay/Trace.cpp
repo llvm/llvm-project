@@ -42,7 +42,7 @@ static Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
         "Invalid-sized XRay data.",
         std::make_error_code(std::errc::invalid_argument));
 
-  DataExtractor Reader(Data, IsLittleEndian, 8);
+  DataExtractor Reader(Data, IsLittleEndian);
   uint64_t OffsetPtr = 0;
   auto FileHeaderOrError = readBinaryFormatHeader(Reader, OffsetPtr);
   if (!FileHeaderOrError)
@@ -270,7 +270,7 @@ static Error loadFDRLog(StringRef Data, bool IsLittleEndian,
   if (Data.size() < 32)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Not enough bytes for an XRay FDR log.");
-  DataExtractor DE(Data, IsLittleEndian, 8);
+  DataExtractor DE(Data, IsLittleEndian);
 
   uint64_t OffsetPtr = 0;
   auto FileHeaderOrError = readBinaryFormatHeader(DE, OffsetPtr);
@@ -405,10 +405,10 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   auto Data = StringRef(MappedFile.data(), MappedFile.size());
 
   // TODO: Lift the endianness and implementation selection here.
-  DataExtractor LittleEndianDE(Data, true, 8);
+  DataExtractor LittleEndianDE(Data, true);
   auto TraceOrError = loadTrace(LittleEndianDE, Sort);
   if (!TraceOrError) {
-    DataExtractor BigEndianDE(Data, false, 8);
+    DataExtractor BigEndianDE(Data, false);
     consumeError(TraceOrError.takeError());
     TraceOrError = loadTrace(BigEndianDE, Sort);
   }
@@ -430,7 +430,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
   //
   // Only if we can't load either the binary or the YAML format will we yield an
   // error.
-  DataExtractor HeaderExtractor(DE.getData(), DE.isLittleEndian(), 8);
+  DataExtractor HeaderExtractor(DE.getData(), DE.isLittleEndian());
   uint64_t OffsetPtr = 0;
   uint16_t Version = HeaderExtractor.getU16(&OffsetPtr);
   uint16_t Type = HeaderExtractor.getU16(&OffsetPtr);

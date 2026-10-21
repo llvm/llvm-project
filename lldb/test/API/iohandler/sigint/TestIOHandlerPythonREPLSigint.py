@@ -22,7 +22,7 @@ class TestCase(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIfWindows
+    @requirePOSIX
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_while_evaluating_code(self):
         """Tests SIGINT handling while Python code is being evaluated."""
@@ -49,7 +49,6 @@ class TestCase(PExpectTest):
         # Send EOF to quit the Python REPL.
         self.child.sendeof()
 
-        self.quit()
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
@@ -57,7 +56,7 @@ class TestCase(PExpectTest):
     # FIXME: On Linux the Python code that reads from stdin seems to block until
     # it has finished reading a line before handling any queued signals.
     @skipIf(hostoslist=["linux"])
-    @skipIfWindows
+    @requirePOSIX
     def test_while_waiting_on_input(self):
         """Tests SIGINT handling while the REPL is waiting on input from
         stdin."""
@@ -71,4 +70,3 @@ class TestCase(PExpectTest):
         # Send EOF to quit the Python REPL.
         self.child.sendeof()
 
-        self.quit()

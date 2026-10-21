@@ -299,7 +299,7 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
 
 using MemcmpImplementations = testing::TypeList<
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
-#ifdef __SSE2__
+#ifdef __SSE4_1__
     generic::Memcmp<__m128i>, //
 #endif
 #ifdef __AVX2__

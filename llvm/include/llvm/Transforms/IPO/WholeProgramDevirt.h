@@ -222,7 +222,8 @@ LLVM_ABI void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
 
 } // end namespace wholeprogramdevirt
 
-struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
+struct WholeProgramDevirtPass
+    : public OptionalPassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;

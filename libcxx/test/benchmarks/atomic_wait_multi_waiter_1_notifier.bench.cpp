@@ -24,11 +24,12 @@
 
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
+#include "test_macros.h"
 
 using namespace std::chrono_literals;
 
 template <class NotifyPolicy, class NumWaitingThreads, class NumPrioTasks>
-void BM_1_atomic_multi_waiter_1_notifier(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_1_atomic_multi_waiter_1_notifier(benchmark::State& state) {
   [[maybe_unused]] std::array<HighPrioTask, NumPrioTasks::value> tasks{};
 
   std::atomic<std::uint64_t> a;

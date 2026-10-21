@@ -120,6 +120,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QSetSTDOUT;
       if (PACKET_STARTS_WITH("QSetSTDERR:"))
         return eServerPacketType_QSetSTDERR;
+      if (PACKET_STARTS_WITH("QSetSTDIOWindowSize:"))
+        return eServerPacketType_QSetSTDIOWindowSize;
       if (PACKET_STARTS_WITH("QSetWorkingDir:"))
         return eServerPacketType_QSetWorkingDir;
       if (PACKET_STARTS_WITH("QSetLogging:"))
@@ -315,11 +317,13 @@ StringExtractorGDBRemote::GetServerPacketType() const {
   case 'j':
     if (PACKET_STARTS_WITH("jModulesInfo:"))
       return eServerPacketType_jModulesInfo;
-    if (PACKET_MATCHES("jSignalsInfo"))
-      return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))
       return eServerPacketType_jThreadsInfo;
+    if (PACKET_MATCHES("jAddressSpacesInfo"))
+      return eServerPacketType_jAddressSpacesInfo;
 
+    if (PACKET_MATCHES("jLLDBSettings"))
+      return eServerPacketType_jLLDBSettings;
     if (PACKET_MATCHES("jLLDBTraceSupported"))
       return eServerPacketType_jLLDBTraceSupported;
     if (PACKET_STARTS_WITH("jLLDBTraceStop:"))
@@ -330,6 +334,16 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jLLDBTraceGetState;
     if (PACKET_STARTS_WITH("jLLDBTraceGetBinaryData:"))
       return eServerPacketType_jLLDBTraceGetBinaryData;
+    if (PACKET_STARTS_WITH("jMultiBreakpoint:"))
+      return eServerPacketType_jMultiBreakpoint;
+    if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
+      return eServerPacketType_jAcceleratorPluginInitialize;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
+      return eServerPacketType_jAcceleratorPluginBreakpointHit;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginGetDynamicLoaderLibraryInfo:"))
+      return eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo;
+    if (PACKET_STARTS_WITH("jThreadExtendedInfo:"))
+      return eServerPacketType_jThreadExtendedInfo;
     break;
 
   case 'v':

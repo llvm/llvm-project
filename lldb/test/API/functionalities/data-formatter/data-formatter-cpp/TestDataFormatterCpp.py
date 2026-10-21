@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class CppDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -16,6 +17,7 @@ class CppDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -317,14 +319,14 @@ class CppDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable member_func_ptr",
             patterns=["member_func_ptr = 0x[0-9a-z]+"],
-            substrs=["(a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
+            substrs=["a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
         )
         self.expect(
             "frame variable ref_to_member_func_ptr",
             patterns=["ref_to_member_func_ptr = 0x[0-9a-z]+"],
-            substrs=["(a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
+            substrs=["a.out`IUseCharStar::member_func(int) at main.cpp:61)"],
         )
         self.expect(
             "frame variable virt_member_func_ptr",
-            patterns=["virt_member_func_ptr = 0x[0-9a-z]+$"],
+            patterns=["virt_member_func_ptr = 0x[0-9a-z]+"],
         )

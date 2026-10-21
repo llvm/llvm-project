@@ -89,7 +89,7 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.tensor.fold_tensor_empty
-          {fold_single_use_only = true}
+          fold_single_use_only = true
     } : !transform.op<"func.func">
     transform.yield
   }
@@ -147,3 +147,19 @@ func.func @concats_of_empty(
 //   CHECK-DAG:   %[[SUM:.+]] = affine.apply #[[MAP]]()[%[[D0_1]], %[[D1_1]]]
 //       CHECK:   %[[NEW_EMPTY:.+]] = tensor.empty(%[[SUM]], %[[D2]])
 //       CHECK:   return %[[NEW_EMPTY]]
+
+#encoding = #test.tensor_encoding<"encoding">
+
+func.func @concats_of_empty_encoding(
+    %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index)
+    -> tensor<5x?x?xf32, #encoding>
+{
+  %0 = tensor.empty(%arg0, %arg1) : tensor<5x?x?xf32, #encoding>
+  %1 = tensor.empty(%arg2, %arg3) : tensor<5x?x?xf32, #encoding>
+  %2 = tensor.concat dim(1) %0, %1
+      : (tensor<5x?x?xf32, #encoding>, tensor<5x?x?xf32, #encoding>)
+      -> tensor<5x?x?xf32, #encoding>
+  return %2 : tensor<5x?x?xf32, #encoding>
+}
+// CHECK-LABEL: func @concats_of_empty_encoding(
+//       CHECK:   return %{{.+}} : tensor<5x?x?xf32, #test.tensor_encoding<"encoding">>

@@ -40,7 +40,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, pt
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[USER_CODE_ENTRY]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR3]]
-; CHECK-NEXT:    [[CALL_I:%.*]] = call double @__nv_sin(double 0x400921FB54442D18) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[CALL_I:%.*]] = call double @__nv_sin(double f0x400921FB54442D18) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    br label %[[REGION_CHECK_TID:.*]]
 ; CHECK:       [[REGION_CHECK_TID]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
@@ -55,7 +55,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, pt
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label %[[REGION_EXIT:.*]]
 ; CHECK:       [[REGION_EXIT]]:
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0, i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0, i32 0) #[[ATTR3]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit() #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;

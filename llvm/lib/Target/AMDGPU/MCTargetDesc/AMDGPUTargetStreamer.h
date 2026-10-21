@@ -11,7 +11,10 @@
 
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUPALMetadata.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCStreamer.h"
+#include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -26,14 +29,36 @@ struct MCKernelDescriptor;
 namespace HSAMD {
 struct Metadata;
 }
+
+struct FuncInfo {
+  uint32_t NumSGPR = 0;
+  uint32_t NumArchVGPR = 0;
+  uint32_t NumAccVGPR = 0;
+  uint32_t PrivateSegmentSize = 0;
+  bool UsesVCC = false;
+  bool UsesFlatScratch = false;
+  bool HasDynStack = false;
+
+  MCSymbol *Sym = nullptr;
+};
+
+struct InfoSectionData {
+  SmallVector<FuncInfo, 8> Funcs;
+  SmallVector<std::pair<MCSymbol *, MCSymbol *>, 4> Uses;
+  SmallVector<std::pair<MCSymbol *, MCSymbol *>, 8> Calls;
+  SmallVector<std::pair<MCSymbol *, std::string>, 4> IndirectCalls;
+  SmallVector<std::pair<MCSymbol *, std::string>, 4> TypeIds;
+};
+
 } // namespace AMDGPU
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
   AMDGPUPALMetadata PALMetadata;
+  bool AMDGCNTargetEmitted = false;
 
 protected:
   // TODO: Move HSAMetadataStream to AMDGPUTargetStreamer.
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
+  std::optional<AMDGPU::TargetID> TargetID;
   unsigned CodeObjectVersion;
 
   MCContext &getContext() const { return Streamer.getContext(); }
@@ -48,6 +73,17 @@ public:
   AMDGPUPALMetadata *getPALMetadata() { return &PALMetadata; }
 
   virtual void EmitDirectiveAMDGCNTarget(){};
+
+  /// Emit the .amdgcn_target directive unless it has already been emitted to
+  /// this streamer. The code generator and the parsers for any inline assembly
+  /// in the module share one streamer, and the directive must appear only once
+  /// per output file.
+  void emitDirectiveAMDGCNTargetOnce() {
+    if (AMDGCNTargetEmitted)
+      return;
+    AMDGCNTargetEmitted = true;
+    EmitDirectiveAMDGCNTarget();
+  }
 
   virtual void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) {
     CodeObjectVersion = COV;
@@ -104,25 +140,16 @@ public:
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) {}
 
-  static StringRef getArchNameFromElfMach(unsigned ElfMach);
+  virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
+
   static unsigned getElfMach(StringRef GPU);
 
-  const std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() const {
+  const std::optional<AMDGPU::TargetID> &getTargetID() const {
     return TargetID;
   }
-  std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
-    return TargetID;
-  }
-  void initializeTargetID(const MCSubtargetInfo &STI) {
-    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
-    TargetID.emplace(STI);
-  }
-  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    initializeTargetID(STI);
-
-    assert(getTargetID() != std::nullopt && "TargetID is None");
-    getTargetID()->setTargetIDFromFeaturesString(FeatureString);
-  }
+  std::optional<AMDGPU::TargetID> &getTargetID() { return TargetID; }
+  void initializeTargetID(const MCSubtargetInfo &STI,
+                          bool ApplyFeatureString = false);
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
@@ -168,6 +195,8 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -221,6 +250,8 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) override;
 };
 }
 #endif

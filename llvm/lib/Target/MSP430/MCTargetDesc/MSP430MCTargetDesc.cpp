@@ -17,6 +17,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -48,7 +49,7 @@ static MCRegisterInfo *createMSP430MCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createMSP430MCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MSP430MCAsmInfo(TT);
+  MCAsmInfo *MAI = new MSP430MCAsmInfo(TT, Options);
 
   // Initialize initial frame state.
   int stackGrowth = -2;
@@ -81,6 +82,10 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeMSP430TargetMC() {
   Target &T = getTheMSP430Target();
@@ -94,4 +99,5 @@ LLVMInitializeMSP430TargetMC() {
   TargetRegistry::RegisterMCAsmBackend(T, createMSP430MCAsmBackend);
   TargetRegistry::RegisterObjectTargetStreamer(
       T, createMSP430ObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(T, createNullTargetStreamer);
 }

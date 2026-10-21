@@ -11,7 +11,9 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#else
 #include <csignal>
 #include <unistd.h>
 #endif
@@ -38,6 +40,10 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/WithColor.h"
 
+#if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+#include "Plugins/Accelerator/Mock/LLDBServerMockAcceleratorPlugin.h"
+#endif
+
 #if defined(__linux__)
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #elif defined(__FreeBSD__)
@@ -46,6 +52,8 @@
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
+#elif defined(_AIX)
+#include "Plugins/Process/AIX/NativeProcessAIX.h"
 #endif
 
 #ifndef LLGS_PROGRAM_NAME
@@ -71,6 +79,8 @@ typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
 typedef NativeProcessWindows::Manager NativeProcessManager;
+#elif defined(_AIX)
+typedef process_aix::NativeProcessAIX::Manager NativeProcessManager;
 #else
 // Dummy implementation to make sure the code compiles
 class NativeProcessManager : public NativeProcessProtocol::Manager {
@@ -292,24 +302,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LLGSOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LLGSOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LLGSOptions.inc"
-#undef OPTION
-};
-
-class LLGSOptTable : public opt::GenericOptTable {
+class LLGSOptTable : public opt::OptTable {
 public:
-  LLGSOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLGSOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
@@ -415,6 +413,16 @@ int main_gdbserver(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     unnamed_pipe = (pipe_t)Arg;
+#ifdef _WIN32
+    if (::GetFileType((HANDLE)unnamed_pipe) != FILE_TYPE_PIPE) {
+      WithColor::error() << "'--pipe' argument is not a pipe handle\n"
+                         << HelpText;
+      return EXIT_FAILURE;
+    }
+    // Prevent the inferior we later launch from inheriting this pipe's write
+    // handle.
+    ::SetHandleInformation((HANDLE)unnamed_pipe, HANDLE_FLAG_INHERIT, 0);
+#endif
   }
   if (Args.hasArg(OPT_fd)) {
     int64_t fd;
@@ -429,7 +437,7 @@ int main_gdbserver(int argc, char *argv[]) {
           log_file, log_channels,
           LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
               LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
-    return -1;
+    return EXIT_FAILURE;
 
   std::vector<llvm::StringRef> Inputs;
   for (opt::Arg *Arg : Args.filtered(OPT_INPUT))
@@ -445,6 +453,12 @@ int main_gdbserver(int argc, char *argv[]) {
 
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+
+#if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+  gdb_server.InstallPlugin(
+      std::make_unique<lldb_server::LLDBServerMockAcceleratorPlugin>(gdb_server,
+                                                                     mainloop));
+#endif
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {

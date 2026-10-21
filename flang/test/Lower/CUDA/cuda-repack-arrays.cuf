@@ -1,0 +1,39 @@
+! RUN: bbc -emit-hlfir -fcuda -frepack-arrays %s -o - | FileCheck %s
+
+! Verify that -frepack-arrays does not generate fir.pack_array for
+! CUDA device dummy arguments.  Repacking a device array on the host
+! would create a host-side temporary whose address is invalid on the
+! GPU, leading to cudaErrorIllegalAddress at kernel launch.
+
+subroutine sub1(db, n1, n2)
+  real, device :: db(:,:)
+  integer :: n1, n2
+  db(1,1) = 1.0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub1(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?x?xf32>> {cuf.data_attr = #cuf.cuda<device>
+! CHECK-NOT:     fir.pack_array
+! CHECK:         return
+
+subroutine sub2(x, n)
+  real :: x(:)
+  integer :: n
+  x(1) = 1.0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub2(
+! CHECK:         fir.pack_array
+! CHECK:         fir.unpack_array
+! CHECK:         return
+
+subroutine sub3(db, n)
+  real, managed :: db(:)
+  integer :: n
+  db(1) = 1.0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub3(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<managed>
+! CHECK-NOT:     fir.pack_array
+! CHECK:         return

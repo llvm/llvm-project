@@ -35,6 +35,8 @@ add_llvm_tool_subdirectory(llvm-config)
 add_llvm_tool_subdirectory(llvm-ctxprof-util)
 add_llvm_tool_subdirectory(llvm-lto)
 add_llvm_tool_subdirectory(llvm-profdata)
+add_llvm_tool_subdirectory(llvm-nm)
+add_llvm_tool_subdirectory(llvm-readobj)
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
@@ -53,13 +55,17 @@ add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
 
-# libclc depends on clang
-add_llvm_external_project(libclc)
-
-# Add subprojects specified using LLVM_EXTERNAL_PROJECTS
+# Add subprojects specified using LLVM_EXTERNAL_PROJECTS. Anything they install
+# without a component is installed by install-<project>.
+set(default_component "${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME}")
 foreach(p ${LLVM_EXTERNAL_PROJECTS})
+  set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${p})
   add_llvm_external_project(${p})
+  if(NOT TARGET install-${p})
+    add_llvm_install_targets(install-${p} COMPONENT ${p})
+  endif()
 endforeach(p)
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "${default_component}")
 
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 

@@ -40,7 +40,7 @@ public:
   static inline mlir::ModuleOp getFromVoidPointer(void *p) {
     return mlir::ModuleOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 } // namespace llvm
 

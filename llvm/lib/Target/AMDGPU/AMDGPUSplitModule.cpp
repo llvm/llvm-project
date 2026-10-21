@@ -32,9 +32,7 @@
 ///   - Driver/pass "run" function glues everything together.
 
 #include "AMDGPUSplitModule.h"
-#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
@@ -47,6 +45,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -59,9 +58,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <cassert>
 #include <cmath>
-#include <memory>
 #include <utility>
-#include <vector>
 
 #ifndef NDEBUG
 #include "llvm/Support/LockFileManager.h"
@@ -165,19 +162,6 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 static bool isNonCopyable(const Function &F) {
   return F.hasExternalLinkage() || !F.isDefinitionExact() ||
          AMDGPU::isEntryFunctionCC(F.getCallingConv());
-}
-
-/// If \p GV has local linkage, make it external + hidden.
-static void externalize(GlobalValue &GV) {
-  if (GV.hasLocalLinkage()) {
-    GV.setLinkage(GlobalValue::ExternalLinkage);
-    GV.setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV.hasName())
-    GV.setName("__llvmsplit_unnamed");
 }
 
 /// Cost analysis function. Calculates the cost of each function in \p M
@@ -407,15 +391,6 @@ public:
     return any_of(IncomingEdges, [&](const auto *E) { return E->Kind == EK; });
   }
 
-  bool hasAnyOutgoingEdges() const { return OutgoingEdges.size(); }
-  bool hasAnyOutgoingEdgesOfKind(EdgeKind EK) const {
-    return any_of(OutgoingEdges, [&](const auto *E) { return E->Kind == EK; });
-  }
-
-  iterator_range<edges_iterator> incoming_edges() const {
-    return IncomingEdges;
-  }
-
   iterator_range<edges_iterator> outgoing_edges() const {
     return OutgoingEdges;
   }
@@ -601,14 +576,53 @@ void SplitGraph::buildGraph(CallGraph &CG) {
       CandidateEntryPoints.push_back(N);
   }
 
+  BitVector ReachableNodes = NodesReachableByKernels;
   for (Node *N : CandidateEntryPoints) {
     // This can be another entry point if it's not reachable by a kernel
     // TODO: We could sort all of the possible new entries in a stable order
     // (e.g. by cost), then consume them one by one until
     // NodesReachableByKernels is all 1s. It'd allow us to avoid
     // considering some nodes as non-entries in some specific cases.
-    if (!NodesReachableByKernels.test(N->getID()))
+    if (!NodesReachableByKernels.test(N->getID())) {
       N->markAsGraphEntry();
+      N->getDependencies(ReachableNodes);
+    }
+  }
+
+  // A function in a call cycle always has an incoming DirectCall edge, so it
+  // is never a candidate above. If no entry point reaches a cycle, one of its
+  // functions must become an entry point. Visit the unreached nodes in reverse
+  // post-order of the DirectCall edges, so that callers come before callees.
+  // This way, a function that an unreached cycle calls does not become an
+  // entry point of its own.
+  SmallVector<Node *> PostOrder;
+  BitVector Visited = ReachableNodes;
+  SmallVector<std::pair<Node *, edges_iterator>> Stack;
+  for (Node *Root : Nodes) {
+    if (Visited.test(Root->getID()))
+      continue;
+    Visited.set(Root->getID());
+    Stack.emplace_back(Root, Root->outgoing_edges().begin());
+    while (!Stack.empty()) {
+      auto &[N, It] = Stack.back();
+      if (It == N->outgoing_edges().end()) {
+        PostOrder.push_back(N);
+        Stack.pop_back();
+        continue;
+      }
+      const Edge *E = *It++;
+      if (E->Kind != EdgeKind::DirectCall || Visited.test(E->Dst->getID()))
+        continue;
+      Visited.set(E->Dst->getID());
+      Stack.emplace_back(E->Dst, E->Dst->outgoing_edges().begin());
+    }
+  }
+
+  for (Node *N : reverse(PostOrder)) {
+    if (ReachableNodes.test(N->getID()))
+      continue;
+    N->markAsGraphEntry();
+    N->getDependencies(ReachableNodes);
   }
 
 #ifndef NDEBUG
@@ -1400,7 +1414,7 @@ static void splitAMDGPUModule(
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
-        externalize(Fn);
+        Fn.externalize();
       }
     }
   }
@@ -1411,14 +1425,14 @@ static void splitAMDGPUModule(
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
-      externalize(GV);
+      GV.externalize();
     }
   }
 
   for (auto &GA : M.aliases()) {
     if (GA.hasLocalLinkage()) {
       LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
-      externalize(GA);
+      GA.externalize();
     }
   }
 

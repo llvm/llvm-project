@@ -21,7 +21,8 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace llvm {
+using namespace llvm;
+
 namespace {
 
 TEST(BasicBlockTest, PhiRange) {
@@ -169,7 +170,7 @@ TEST_F(InstrOrderInvalidationTest, InsertInvalidation) {
   EXPECT_TRUE(BB->isInstrOrderValid());
 
   // Invalidate orders.
-  IRBuilder<> Builder(BB, I2->getIterator());
+  IRBuilder<> Builder(I2->getIterator());
   Instruction *I1a = Builder.CreateCall(Nop);
   EXPECT_FALSE(BB->isInstrOrderValid());
   EXPECT_TRUE(I1->comesBefore(I1a));
@@ -546,4 +547,3 @@ TEST(BasicBlockTest, DiscardValueNames2) {
 }
 
 } // End anonymous namespace.
-} // End llvm namespace.

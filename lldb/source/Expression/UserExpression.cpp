@@ -35,11 +35,14 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
@@ -108,16 +111,13 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
     return {};
   }
 
-  lldb::VariableSP var_sp;
-  lldb::ValueObjectSP valobj_sp;
+  if (auto var_list_sp = frame_sp->GetInScopeVariableList(false))
+    if (auto var_sp =
+            var_list_sp->FindVariable(ConstString(object_name), false))
+      return frame_sp->GetValueObjectForFrameVariable(var_sp,
+                                                      lldb::eNoDynamicValues);
 
-  return frame_sp->GetValueForVariableExpressionPath(
-      object_name, lldb::eNoDynamicValues,
-      StackFrame::eExpressionPathOptionCheckPtrVsMember |
-          StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
-          StackFrame::eExpressionPathOptionsNoSyntheticChildren |
-          StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
-      var_sp, err);
+  return {};
 }
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
@@ -152,6 +152,14 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     result_valobj_sp = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), std::move(error));
   };
+
+  if (!PolicyStack::Get().Current().capabilities.can_evaluate_expressions) {
+    LLDB_LOG(log, "== [UserExpression::Evaluate] The current policy doesn't "
+                  "allow evaluating expressions ==");
+    set_error(Status::FromErrorString(
+        "expression evaluation is not allowed in this context"));
+    return lldb::eExpressionSetupError;
+  }
 
   if (ctx_obj) {
     static unsigned const ctx_type_mask = lldb::TypeFlags::eTypeIsClass |

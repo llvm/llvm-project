@@ -25,23 +25,21 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END8:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END10:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END13:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[IND_END13:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX2]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
@@ -61,23 +59,21 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC6]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC6]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[N_VEC6]], 1
 ; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC6]], 2
-; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP9]]
+; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT21:%.*]] = insertelement <4 x i16> poison, i16 [[OFFSET]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT22:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT21]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX15:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT23:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX16:%.*]] = mul i64 [[INDEX15]], 2
+; CHECK-NEXT:    [[OFFSET_IDX16:%.*]] = shl i64 [[INDEX15]], 1
 ; CHECK-NEXT:    [[NEXT_GEP17:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[OFFSET_IDX16]]
-; CHECK-NEXT:    [[OFFSET_IDX18:%.*]] = mul i64 [[INDEX15]], 2
-; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX18]]
+; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX16]]
 ; CHECK-NEXT:    [[WIDE_LOAD20:%.*]] = load <4 x i16>, ptr [[NEXT_GEP17]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16> [[WIDE_LOAD20]], <4 x i16> [[BROADCAST_SPLAT22]])
 ; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr [[NEXT_GEP19]], align 2
@@ -113,7 +109,7 @@ entry:
   %cmp.not6 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not6, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pSrc.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %entry ]
   %pDst.addr.07 = phi ptr [ %incdec.ptr3, %while.body ], [ %pDst, %entry ]
@@ -126,17 +122,16 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 
 ; CHECK-COST-LABEL: umin
 ; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i8 @llvm.umin.i8(i8 %0, i8 %offset)
-; CHECK-COST: Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
-; CHECK-COST: Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 3 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 3 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 1 for VF 16: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
-
 
 define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @umin(
@@ -151,7 +146,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END7:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST6]]
@@ -183,7 +178,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC5]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
@@ -231,7 +226,7 @@ entry:
   %cmp.not6 = icmp eq i32 %blockSize, 0
   br i1 %cmp.not6, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %blkCnt.09 = phi i32 [ %dec, %while.body ], [ %blockSize, %entry ]
   %pSrc.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %entry ]
   %pDst.addr.07 = phi ptr [ %incdec.ptr3, %while.body ], [ %pDst, %entry ]
@@ -244,12 +239,10 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 
-declare i16 @llvm.sadd.sat.i16(i16, i16)
-declare i8 @llvm.umin.i8(i8, i8)
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-COST: {{.*}}

@@ -1,5 +1,5 @@
 # RUN: not llc -mtriple=wasm32-unknown-unknown -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
-# When a typed immediate operand is only a single 'i'/'s'/'p' character
+# When a typed immediate operand is only a single type character
 ---
 name: test_typed_immediate_operand_invalid0
 liveins:
@@ -7,7 +7,7 @@ liveins:
 body: |
   bb.0:
     liveins: $arguments
-    ; CHECK: [[@LINE+1]]:24: expected integers after 'i'/'s'/'p' type character
+    ; CHECK: [[@LINE+1]]:24: expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier
     %0:i32 = CONST_I32 i 0, implicit-def dead $arguments
     RETURN implicit-def dead $arguments
 ...

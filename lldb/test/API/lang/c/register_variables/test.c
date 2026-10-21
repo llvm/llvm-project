@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-#if defined(__arm__) || defined(__aarch64__) || defined (__mips__) || defined(__powerpc64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(__mips__) ||           \
+    defined(__powerpc64__) || defined(__wasm__)
 // Clang does not accept regparm attribute on these platforms.
 // Fortunately, the default calling convention passes arguments in registers
 // anyway.

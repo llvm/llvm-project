@@ -12,13 +12,14 @@
 define i16 @abs_i16(i16 %a) {
 ; CHECK-LABEL: abs_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [abs_i16_param_0];
-; CHECK-NEXT:    abs.s16 %rs2, %rs1;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    neg.s16 %rs2, %rs1;
+; CHECK-NEXT:    max.s16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %neg = sub i16 0, %a
@@ -30,12 +31,13 @@ define i16 @abs_i16(i16 %a) {
 define i32 @abs_i32(i32 %a) {
 ; CHECK-LABEL: abs_i32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [abs_i32_param_0];
-; CHECK-NEXT:    abs.s32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    neg.s32 %r2, %r1;
+; CHECK-NEXT:    max.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %neg = sub i32 0, %a
   %abs.cond = icmp sge i32 %a, 0
@@ -46,12 +48,13 @@ define i32 @abs_i32(i32 %a) {
 define i64 @abs_i64(i64 %a) {
 ; CHECK-LABEL: abs_i64(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [abs_i64_param_0];
-; CHECK-NEXT:    abs.s64 %rd2, %rd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    neg.s64 %rd2, %rd1;
+; CHECK-NEXT:    max.s64 %rd3, %rd1, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %neg = sub i64 0, %a
   %abs.cond = icmp sge i64 %a, 0

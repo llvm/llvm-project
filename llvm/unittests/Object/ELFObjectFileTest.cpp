@@ -287,7 +287,7 @@ TEST(ELFObjectFileTest, MachineTestForXtensa) {
 
 TEST(ELFObjectFileTest, CheckOSAndTriple) {
   std::tuple<uint16_t, uint8_t, StringRef> Formats[] = {
-      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgcn-amd-amdhsa"},
+      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgpu-amd-amdhsa"},
       {ELF::EM_X86_64, ELF::ELFOSABI_LINUX, "x86_64--linux"},
       {ELF::EM_X86_64, ELF::ELFOSABI_NETBSD, "x86_64--netbsd"},
       {ELF::EM_X86_64, ELF::ELFOSABI_HURD, "x86_64--hurd"},
@@ -531,7 +531,7 @@ Sections:
   // Check that we can detect unsupported versions.
   SmallString<128> UnsupportedVersionYamlString(CommonYamlString);
   UnsupportedVersionYamlString += R"(
-      - Version: 6
+      - Version: 7
         BBRanges:
           - BaseAddress: 0x11111
             BBEntries:
@@ -543,7 +543,8 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 6");
+            "unsupported BB address map version: 7 in SHT_LLVM_BB_ADDR_MAP "
+            "section with index 1");
   }
 
   SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
@@ -579,8 +580,8 @@ Sections:
   {
     SCOPED_TRACE("truncated section");
     DoCheck(TruncatedYamlString,
-            "unable to decode LEB128 at offset 0x0000000b: "
-            "malformed uleb128, extends past end");
+            "unable to decode LEB128 at offset 0x0000000b: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we can detect when the encoded BB entry fields exceed the UINT32
@@ -611,11 +612,14 @@ Sections:
   {
     SCOPED_TRACE("overlimit fields");
     DoCheck(OverInt32LimitYamlStrings[0],
-            "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitYamlStrings[1],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitYamlStrings[2],
-            "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check the proper error handling when the section has fields exceeding
@@ -640,11 +644,13 @@ Sections:
     SCOPED_TRACE("overlimit fields, truncated section");
     DoCheck(OverInt32LimitAndTruncated[0],
             "unable to decode LEB128 at offset 0x00000015: malformed uleb128, "
-            "extends past end");
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitAndTruncated[1],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitAndTruncated[2],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check for proper error handling when the 'NumBlocks' field is overridden
@@ -657,7 +663,8 @@ Sections:
   {
     SCOPED_TRACE("overlimit 'NumBlocks' field");
     DoCheck(OverLimitNumBlocks,
-            "ULEB128 value at offset 0xa exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0xa exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check for proper error handling when the 'NumBBRanges' field is overridden
@@ -668,7 +675,8 @@ Sections:
         Feature:     0x8
 )";
   DoCheck(OverLimitNumBBRanges,
-          "ULEB128 value at offset 0x2 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x2 exceeds UINT32_MAX (0x100000000) in "
+          "SHT_LLVM_BB_ADDR_MAP section with index 1");
 
   // Check that we can detect unsupported version for callsite offsets.
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
@@ -686,8 +694,30 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when callsite"
-            " offsets feature is enabled: version = 2 feature = 32");
+            "version should be >= 3 for BB address map when callsite offsets "
+            "feature is enabled: version = 2 feature = 32 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
+  }
+
+  // Check that we can detect unsupported version for function GUID.
+  SmallString<128> UnsupportedFuncGUIDVersionYamlString(CommonYamlString);
+  UnsupportedFuncGUIDVersionYamlString += R"(
+      - Version:  5
+        Feature:  0x100
+        FuncGUID: 0x1
+        BBRanges:
+          - BBEntries:
+              - AddressOffset:   0x0
+                Size:            0x1
+                Metadata:        0x2
+)";
+
+  {
+    SCOPED_TRACE("unsupported version for function GUID");
+    DoCheck(UnsupportedFuncGUIDVersionYamlString,
+            "version should be >= 6 for BB address map when function GUID "
+            "feature is enabled: version = 5 feature = 256 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 }
 
@@ -856,9 +886,9 @@ Sections:
   {
     SCOPED_TRACE("truncated section");
     DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-                 "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: "
-                 "unable to decode LEB128 at offset 0x0000000a: malformed "
-                 "uleb128, extends past end");
+                 "unable to read BB addr map section: unable to decode LEB128 "
+                 "at offset 0x0000000a: malformed uleb128, extends past end in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 4");
 
     // Check that we can read the other section's bb-address-maps which are
     // valid.
@@ -915,7 +945,8 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 1");
+            "unsupported BB address map version: 1 in SHT_LLVM_BB_ADDR_MAP "
+            "section with index 1");
   }
 
   // Check that we fail when function entry count is enabled but not provided.
@@ -928,7 +959,8 @@ Sections:
   {
     SCOPED_TRACE("missing function entry count");
     DoCheck(MissingFuncEntryCount,
-            "unexpected end of data at offset 0x2 while reading [0x2, 0xa)");
+            "unexpected end of data at offset 0x2 while reading [0x2, 0xa) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we fail when basic block frequency is enabled but not provided.
@@ -946,8 +978,9 @@ Sections:
 
   {
     SCOPED_TRACE("missing bb frequency");
-    DoCheck(MissingBBFreq, "unable to decode LEB128 at offset 0x0000000f: "
-                           "malformed uleb128, extends past end");
+    DoCheck(MissingBBFreq,
+            "unable to decode LEB128 at offset 0x0000000f: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we fail when branch probability is enabled but not provided.
@@ -983,8 +1016,9 @@ Sections:
 
   {
     SCOPED_TRACE("missing branch probability");
-    DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x00000017: "
-                           "malformed uleb128, extends past end");
+    DoCheck(MissingBrProb,
+            "unable to decode LEB128 at offset 0x00000017: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 }
 
@@ -1103,6 +1137,94 @@ Sections:
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/0, Section0BBAddrMaps);
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, Section1BBAddrMaps);
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section2BBAddrMaps);
+}
+
+// Test for the ELFObjectFile::readBBAddrMap API with FuncGUID.
+TEST(ELFObjectFileTest, ReadFuncGUID) {
+  StringRef CommonYamlString(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_bb_addr_map
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version:  6
+        Feature:  0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x11111
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+      - Version:  6
+        Feature:  0x148
+        FuncGUID: 0xFFFFFFFFFFFFFFFF
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x0
+                Size:          0x2
+                Metadata:      0x4
+                Hash:          0x2
+          - BaseAddress: 0xFFFFF
+            BBEntries:
+              - ID:            15
+                AddressOffset: 0xF0
+                Size:          0xF1
+                Metadata:      0x1F
+                Hash:          0xF
+      - Version:  6
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x3
+                Metadata:      0x6
+)");
+
+  BBAddrMap E1 = {
+      {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}, {}, 0}}}},
+      0x1122334455667788};
+  BBAddrMap E2 = {
+      {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0x2}}},
+       {0xFFFFF, {{15, 0xF0, 0xF1, {true, true, true, true, true}, {}, 0xF}}}},
+      0xFFFFFFFFFFFFFFFF};
+  BBAddrMap E3 = {
+      {{0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}, {}, 0}}}},
+      0};
+
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+      toBinary<ELF64LE>(Storage, CommonYamlString);
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  auto BBAddrMaps = ElfOrErr->readBBAddrMap();
+  ASSERT_THAT_EXPECTED(BBAddrMaps, Succeeded());
+  EXPECT_EQ(*BBAddrMaps, std::vector<BBAddrMap>({E1, E2, E3}));
+
+  // Check that we detect when the function GUID is truncated.
+  SmallString<128> TruncatedYamlString(CommonYamlString);
+  TruncatedYamlString += R"(
+    ShSize: 0x7
+)";
+  {
+    SCOPED_TRACE("truncated function GUID");
+    SmallString<0> TruncatedStorage;
+    Expected<ELFObjectFile<ELF64LE>> TruncatedElfOrErr =
+        toBinary<ELF64LE>(TruncatedStorage, TruncatedYamlString);
+    ASSERT_THAT_EXPECTED(TruncatedElfOrErr, Succeeded());
+    EXPECT_THAT_ERROR(
+        TruncatedElfOrErr->readBBAddrMap().takeError(),
+        FailedWithMessage("unable to read BB addr map section: unexpected end "
+                          "of data at offset 0x7 while reading [0x3, 0xb) in "
+                          "SHT_LLVM_BB_ADDR_MAP section with index 1"));
+  }
 }
 
 // Test for the ELFObjectFile::readBBAddrMap API with PGOAnalysisMap.
@@ -1280,12 +1402,13 @@ Sections:
   BBAddrMap E1 = {
       {{0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}, {}, 0}}}}};
   PGOAnalysisMap P1 = {
-      892, {}, {true, false, false, false, false, false, false, false}};
+      892, {}, {true, false, false, false, false, false, false, false, false}};
   BBAddrMap E2 = {
       {{0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P2 = {{},
-                       {{BlockFrequency(343), 0, {}}},
-                       {false, true, false, false, false, false, false, false}};
+  PGOAnalysisMap P2 = {
+      {},
+      {{BlockFrequency(343), 0, {}}},
+      {false, true, false, false, false, false, false, false, false}};
   BBAddrMap E3 = {
       {{0x33333,
         {{0, 0x0, 0x3, {false, true, true, false, false}, {}, 0},
@@ -1299,32 +1422,33 @@ Sections:
          {2, BranchProbability::getRaw(0xeeee'eeee), 0}}},
        {{}, 0, {{2, BranchProbability::getRaw(0xffff'ffff), 0}}},
        {{}, 0, {}}},
-      {false, false, true, false, false, false, false, false}};
+      {false, false, true, false, false, false, false, false, false}};
   BBAddrMap E4 = {
       {{0x44444,
         {{0, 0x0, 0x4, {false, false, false, true, true}, {}, 0},
          {1, 0x4, 0x4, {false, false, false, false, false}, {}, 0},
          {2, 0x8, 0x4, {false, false, false, false, false}, {}, 0},
          {3, 0xc, 0x4, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P4 = {1000,
-                       {{BlockFrequency(1000),
-                         50,
-                         {{1, BranchProbability::getRaw(0x2222'2222), 0},
-                          {2, BranchProbability::getRaw(0x3333'3333), 0},
-                          {3, BranchProbability::getRaw(0xaaaa'aaaa), 0}}},
-                        {BlockFrequency(133),
-                         0,
-                         {{2, BranchProbability::getRaw(0x1111'1111), 0},
-                          {3, BranchProbability::getRaw(0xeeee'eeee), 0}}},
-                        {BlockFrequency(18),
-                         0,
-                         {{3, BranchProbability::getRaw(0xffff'ffff), 0}}},
-                        {BlockFrequency(1000), 0, {}}},
-                       {true, true, true, false, false, false, false, true}};
+  PGOAnalysisMap P4 = {
+      1000,
+      {{BlockFrequency(1000),
+        50,
+        {{1, BranchProbability::getRaw(0x2222'2222), 0},
+         {2, BranchProbability::getRaw(0x3333'3333), 0},
+         {3, BranchProbability::getRaw(0xaaaa'aaaa), 0}}},
+       {BlockFrequency(133),
+        0,
+        {{2, BranchProbability::getRaw(0x1111'1111), 0},
+         {3, BranchProbability::getRaw(0xeeee'eeee), 0}}},
+       {BlockFrequency(18),
+        0,
+        {{3, BranchProbability::getRaw(0xffff'ffff), 0}}},
+       {BlockFrequency(1000), 0, {}}},
+      {true, true, true, false, false, false, false, true, false}};
   BBAddrMap E5 = {
       {{0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0}}}}};
   PGOAnalysisMap P5 = {
-      {}, {}, {false, false, false, false, false, false, false, false}};
+      {}, {}, {false, false, false, false, false, false, false, false, false}};
   BBAddrMap E6 = {
       {{0x66666,
         {{0, 0x0, 0x6, {false, true, true, false, false}, {}, 0},
@@ -1339,7 +1463,7 @@ Sections:
          {2, BranchProbability::getRaw(0xcccc'cccc), 0}}},
        {{}, 0, {{2, BranchProbability::getRaw(0x8888'8888), 0}}},
        {{}, 0, {}}},
-      {false, false, true, true, false, false, false, true}};
+      {false, false, true, true, false, false, false, true, false}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5, E6};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
@@ -1471,10 +1595,10 @@ Sections:
 
   {
     SCOPED_TRACE("truncated section");
-    DoCheckFails(
-        TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-        "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
-        "unexpected end of data at offset 0xa while reading [0x4, 0xc)");
+    DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
+                 "unable to read BB addr map section: unexpected end of data "
+                 "at offset 0xa while reading [0x4, 0xc) in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 6");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,

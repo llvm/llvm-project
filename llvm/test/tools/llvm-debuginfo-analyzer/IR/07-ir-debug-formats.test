@@ -1,0 +1,48 @@
+; REQUIRES: x86-registered-target
+
+; Test case 7 - Logical view for debug-records and debug-intrinsics format.
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; The following command prints the debug locations for both formats:
+; debug-records and debug-intrinsics format.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,location \
+; RUN:                         --output-sort=name \
+; RUN:                         --print=symbols \
+; RUN:                         %p/Inputs/test-clang.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,location \
+; RUN:                         --output-sort=name \
+; RUN:                         --print=symbols \
+; RUN:                         %p/Inputs/test-clang-intrinsics.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang{{.*}}.ll'
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT: [004]                   {Location}
+; ONE-NEXT: [005]                     {Entry} bregx 2 ptr %ParamBool.addr+0
+; ONE-NEXT: [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+; ONE-NEXT: [004]                   {Location}
+; ONE-NEXT: [005]                     {Entry} bregx 0 ptr %ParamPtr.addr+0
+; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+; ONE-NEXT: [004]                   {Location}
+; ONE-NEXT: [005]                     {Entry} bregx 1 ptr %ParamUnsigned.addr+0
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+; ONE-NEXT: [006]                       {Location}
+; ONE-NEXT: [007]                         {Entry} bregx 3 ptr %CONSTANT+0

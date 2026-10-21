@@ -60,3 +60,29 @@ define void @no_gc() {
 ;
   ret void
 }
+
+@metadata = constant i32 0
+
+define void @non_ptr_alloca_root() gc "shadow-stack" {
+; CHECK-LABEL: define void @non_ptr_alloca_root() gc "shadow-stack" {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %A = alloca double, align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr %A, align 8
+; CHECK-NEXT:    %B = alloca { double, double }, align 8
+; CHECK-NEXT:    store { double, double } zeroinitializer, ptr %B, align 8
+; CHECK-NEXT:    call void @llvm.gcroot(ptr %A, ptr @metadata)
+; CHECK-NEXT:    call void @llvm.gcroot(ptr %B, ptr @metadata)
+; CHECK-NEXT:    ret void
+; CHECK-NEXT:  }
+entry:
+  %A = alloca double
+  %B = alloca { double, double }
+
+  ;; ptr A;
+  call void @llvm.gcroot(ptr %A, ptr @metadata)
+
+  ;; ptr B;
+  call void @llvm.gcroot(ptr %B, ptr @metadata)
+
+  ret void
+}

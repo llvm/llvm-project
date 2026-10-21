@@ -23,9 +23,9 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), resultTypes,
-                           operands, NamedAttrList(), nullptr, {}, numRegions);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {
@@ -237,7 +237,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
       OperationName("t.op", &context), builder.getIntegerType(16), {},
-      NamedAttrList(), nullptr, {}, 0);
+      NamedAttrList(), PropertyRef(), {}, 0);
 
   std::string str;
   OpPrintingFlags flags;
@@ -307,6 +307,11 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
                                              nullptr, nullptr, req2);
   auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
+  auto typed = op->getInherentAttrOfType<IntegerAttr>("default_valued_attr");
+  ASSERT_TRUE(typed) << *op;
+  EXPECT_EQ(typed.getInt(), 42);
+  EXPECT_FALSE(op->getInherentAttrOfType<StringAttr>("default_valued_attr"));
+  EXPECT_FALSE(op->getInherentAttrOfType<IntegerAttr>("unknown_attr"));
 
   op->destroy();
 }
@@ -334,7 +339,7 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   // Check ignore discardable dictionary attributes.
   SmallVector<NamedAttribute> newAttrs = {
       b.getNamedAttr("foo", b.getStringAttr("f"))};
-  op1->setAttrs(newAttrs);
+  op1->setDiscardableAttrs(newAttrs);
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
             getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),

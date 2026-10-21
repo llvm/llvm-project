@@ -94,7 +94,7 @@ Running tests
 
 Tests will only be built and run if a GPU target architecture is set and the
 corresponding loader utility was built. These can be overridden with the
-``LIBC_GPU_TEST_ARCHITECTURE`` and ``LIBC_GPU_LOADER_EXECUTABLE`` :ref:`CMake
+``LIBC_GPU_TEST_ARCHITECTURE`` and ``CMAKE_CROSSCOMPILING_EMULATOR`` :ref:`CMake
 options <gpu_cmake_options>`. Once built, they can be run like any other tests.
 The CMake target depends on how the library was built.
 
@@ -108,11 +108,11 @@ The CMake target depends on how the library was built.
 
         $> ninja check-libc
 
-   #. Hermetic tests - You can run hermetic with tests the command:
+   #. Libc tests - You can run libc tests with the command:
 
       .. code-block:: sh
 
-        $> ninja libc-hermetic-tests
+        $> ninja libc-tests
 
    #. Integration tests - You can run integration tests by the command:
 

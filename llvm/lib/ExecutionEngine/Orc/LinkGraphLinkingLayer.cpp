@@ -9,10 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
 
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "orc"
@@ -411,11 +409,6 @@ private:
 };
 
 LinkGraphLinkingLayer::Plugin::~Plugin() = default;
-
-LinkGraphLinkingLayer::LinkGraphLinkingLayer(ExecutionSession &ES)
-    : LinkGraphLayer(ES), MemMgr(ES.getExecutorProcessControl().getMemMgr()) {
-  ES.registerResourceManager(*this);
-}
 
 LinkGraphLinkingLayer::LinkGraphLinkingLayer(ExecutionSession &ES,
                                              JITLinkMemoryManager &MemMgr)

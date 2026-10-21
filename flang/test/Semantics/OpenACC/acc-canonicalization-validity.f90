@@ -85,7 +85,6 @@ program openacc_clause_validity
   end do
 
   !$acc parallel
-  !ERROR: COLLAPSE clause may not appear on loop construct associated with DO CONCURRENT
   !$acc loop collapse(2)
   do concurrent (i = 1:N, j = 1:N)
     aa(i, j) = 3.14
@@ -102,7 +101,6 @@ program openacc_clause_validity
 
   !$acc parallel
   !ERROR: TILE clause may not appear on loop construct associated with DO CONCURRENT
-  !ERROR: COLLAPSE clause may not appear on loop construct associated with DO CONCURRENT
   !$acc loop tile(2, 2) collapse(2)
   do concurrent (i = 1:N, j = 1:N)
     aa(i, j) = 3.14

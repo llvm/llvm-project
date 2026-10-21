@@ -2,8 +2,8 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout=e-n32 | FileCheck %s --check-prefix=ALL --check-prefix=LE
 ; RUN: opt < %s -passes=instcombine -S -data-layout=E-n32 | FileCheck %s --check-prefix=ALL --check-prefix=BE
 
-; RUN: opt < %s -passes=instcombine -S -data-layout=e-n32 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=LE
-; RUN: opt < %s -passes=instcombine -S -data-layout=E-n32 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=BE
+; RUN: opt < %s -passes=instcombine -S -data-layout=e-n32 -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=LE
+; RUN: opt < %s -passes=instcombine -S -data-layout=E-n32 -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefix=ALL --check-prefix=BE
 
 declare i32 @memcmp(ptr, ptr, i64)
 

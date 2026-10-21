@@ -2,7 +2,7 @@
 ; This tests that a simple error is caught and processed correctly.
 ; RUN: not llvm-as -disable-output %s 2>&1 | FileCheck %s
 
-; CHECK: floating point constant invalid for type
+; CHECK: floating-point constant invalid for type
 
 define void @test() {
   add i32 1, 2.0

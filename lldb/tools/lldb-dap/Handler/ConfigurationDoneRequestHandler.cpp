@@ -62,7 +62,7 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
+    return SendThreadStoppedEvent(dap, /*on_entry=*/dap.is_live_session);
 
   return ToError(process.Continue());
 }

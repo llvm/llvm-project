@@ -7,12 +7,12 @@
 float F1u = 1.0F + 0x0.000002p0F;
 float F2u = 1.0F + 0x0.000001p0F;
 float F3u = 0x1.000001p0;
-// CHECK: @F1u = {{.*}} float 0x3FF0000020000000
-// CHECK: @F2u = {{.*}} float 0x3FF0000020000000
-// CHECK: @F3u = {{.*}} float 0x3FF0000020000000
+// CHECK: @F1u = {{.*}} float f0x3F800001
+// CHECK: @F2u = {{.*}} float f0x3F800001
+// CHECK: @F3u = {{.*}} float f0x3F800001
 
 float FI1u = 0xFFFFFFFFU;
-// CHECK: @FI1u = {{.*}} float 0x41F0000000000000
+// CHECK: @FI1u = {{.*}} float f0x4F800000
 
 #pragma STDC FENV_ROUND FE_DOWNWARD
 
@@ -20,13 +20,13 @@ float F1d = 1.0F + 0x0.000002p0F;
 float F2d = 1.0F + 0x0.000001p0F;
 float F3d = 0x1.000001p0;
 
-// CHECK: @F1d = {{.*}} float 0x3FF0000020000000
+// CHECK: @F1d = {{.*}} float f0x3F800001
 // CHECK: @F2d = {{.*}} float 1.000000e+00
 // CHECK: @F3d = {{.*}} float 1.000000e+00
 
 
 float FI1d = 0xFFFFFFFFU;
-// CHECK: @FI1d = {{.*}} float 0x41EFFFFFE0000000
+// CHECK: @FI1d = {{.*}} float f0x4F7FFFFF
 
 // nextUp(1.F) == 0x1.000002p0F
 
@@ -47,7 +47,7 @@ constexpr float add_round_up(float x, float y) {
 float V1 = add_round_down(1.0F, 0x0.000001p0F);
 float V2 = add_round_up(1.0F, 0x0.000001p0F);
 // CHECK: @V1 = {{.*}} float 1.000000e+00
-// CHECK: @V2 = {{.*}} float 0x3FF0000020000000
+// CHECK: @V2 = {{.*}} float f0x3F800001
 
 
 constexpr float add_cast_round_down(float x, double y) {
@@ -68,4 +68,4 @@ float V3 = add_cast_round_down(1.0F, 0x0.000001p0F);
 float V4 = add_cast_round_up(1.0F, 0x0.000001p0F);
 
 // CHECK: @V3 = {{.*}} float 1.000000e+00
-// CHECK: @V4 = {{.*}} float 0x3FF0000020000000
+// CHECK: @V4 = {{.*}} float f0x3F800001

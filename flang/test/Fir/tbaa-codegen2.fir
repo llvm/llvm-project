@@ -22,12 +22,12 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %c2 = arith.constant 2 : index
     %c1 = arith.constant 1 : index
     %0 = fir.alloca !fir.box<!fir.array<?xi32>>
-    %1 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFfuncEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %1 = fir.declare %arg0 uniq_name("_QFfuncEa") fortran_attrs<intent_inout> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.rebox %1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %3:3 = fir.box_dims %2, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
     %4 = fir.shape %3#1 : (index) -> !fir.shape<1>
     %5 = fir.allocmem !fir.array<?xi32>, %3#1 {bindc_name = ".tmp.array", uniq_name = ""}
-    %6 = fir.declare %5(%4) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
+    %6 = fir.declare %5(%4) uniq_name(".tmp.array") : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
     %7 = fir.embox %6(%4) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
     fir.do_loop %arg1 = %c1 to %3#1 step %c1 unordered {
       %16 = fir.array_coor %2 %arg1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -94,7 +94,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL40:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 0
 // box access:
 // CHECK:  %[[VAL41:.*]] = load ptr, ptr %[[VAL40]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL42:.*]] = getelementptr nusw nuw i8, ptr %[[VAL41]], i64 %{{.*}}
+// CHECK:  %[[VAL42:.*]] = getelementptr nusw i8, ptr %[[VAL41]], i64 %{{.*}}
 // access to 'a':
 // CHECK:  %[[VAL43:.*]] = load i32, ptr %[[VAL42]], align 4, !tbaa ![[A_ACCESS_TAG:.*]]
 // [...]
@@ -113,4 +113,4 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE]], i64 0}
 // CHECK: ![[TMP_DATA_ACCESS_TAG]] = !{![[TMP_DATA_ACCESS_TYPE:.*]], ![[TMP_DATA_ACCESS_TYPE]], i64 0}
 // CHECK: ![[TMP_DATA_ACCESS_TYPE]] = !{!"allocated data/", ![[TMP_ACCESS_TYPE:.*]], i64 0}
-// CHECK: ![[TMP_ACCESS_TYPE]] = !{!"allocated data", ![[TARGET_ACCESS_TAG:.*]], i64 0}
+// CHECK: ![[TMP_ACCESS_TYPE]] = !{!"allocated data", ![[DATA_ACCESS_TYPE]], i64 0}

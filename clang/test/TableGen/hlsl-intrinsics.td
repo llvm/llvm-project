@@ -208,25 +208,27 @@ def test_08_avail_ge62 : HLSLBuiltin<"availfunc", "__builtin_availfunc"> {
 // ALIAS-NOT: availfunc
 
 //===----------------------------------------------------------------------===//
-// Explicit availability (< SM6.2) with 16-bit integer types: the ifdef guard
-// and _HLSL_AVAILABILITY(shadermodel, 6.2) are used for int16_t regardless of
-// the intrinsic's stated availability, because 16-bit types require SM6.2.
-// Note: half (IsConditionally16Bit) cannot be used here — the emitter asserts
-// because neither _HLSL_AVAILABILITY nor _HLSL_16BIT_AVAILABILITY can correctly
-// express availability for half when the intrinsic's SM < 6.2.
-// Exercises: Availability < SM6.2 with Is16Bit types.
+// Explicit availability (< SM6.2) with 16-bit types: int16_t gets the ifdef
+// guard and _HLSL_AVAILABILITY(shadermodel, 6.2) regardless of the intrinsic's
+// stated availability, because 16-bit types require SM6.2. Half gets a 3-arg
+// _HLSL_16BIT_AVAILABILITY so that 16-bit half uses SM6.2 availability while
+// the non-16-bit float fallback uses the intrinsic's original availability.
+// Exercises: Availability < SM6.2 with Is16Bit and IsConditionally16Bit types.
 //===----------------------------------------------------------------------===//
 
 def test_08b_avail_lt62 : HLSLBuiltin<"availlt62", "__builtin_availlt62"> {
   let Args = [Varying];
   let ReturnType = Varying;
   let VaryingScalar = 1;
-  let VaryingTypes = [Int16Ty, IntTy];
+  let VaryingTypes = [HalfTy, Int16Ty, IntTy];
   let Availability = SM6_1;
 }
 
 // ALIAS-LABEL: // availlt62 overloads
-// ALIAS-NEXT: #ifdef __HLSL_ENABLE_16_BIT
+// ALIAS-NEXT: _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2, 6.1)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availlt62)
+// ALIAS-NEXT: half availlt62(half);
+// ALIAS: #ifdef __HLSL_ENABLE_16_BIT
 // ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.2)
 // ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_availlt62)
 // ALIAS-NEXT: int16_t availlt62(int16_t);
@@ -440,6 +442,31 @@ def test_17_shape_arg : HLSLBuiltin<"shapearg", "__builtin_shapearg"> {
 // ALIAS-NOT: shapearg
 
 //===----------------------------------------------------------------------===//
+// Dependent-size vector template overload.
+// Exercises: VaryingLongVector emission after concrete vector overloads.
+//===----------------------------------------------------------------------===//
+
+def test_18_long_vector : HLSLBuiltin<"longvec", "__builtin_longvec"> {
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingVecSizes = [4];
+  let VaryingLongVector = 1;
+  let VaryingTypes = [IntTy];
+  let Availability = SM6_0;
+}
+
+// ALIAS-LABEL: // longvec overloads
+// ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_longvec)
+// ALIAS-NEXT: int4 longvec(int4);
+// ALIAS-NEXT: template <int N>
+// ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_longvec)
+// ALIAS-NEXT: vector<__detail::enable_if_t<(N > 4), int>, N> longvec(vector<__detail::enable_if_t<(N > 4), int>, N>);
+//
+// ALIAS-NOT: longvec
+
+//===----------------------------------------------------------------------===//
 // Verify no alias intrinsics are generated in the inline header.
 //===----------------------------------------------------------------------===//
 
@@ -459,6 +486,7 @@ def test_17_shape_arg : HLSLBuiltin<"shapearg", "__builtin_shapearg"> {
 // INLINE-NOT: shapesorted
 // INLINE-NOT: elemarg
 // INLINE-NOT: shapearg
+// INLINE-NOT: longvec
 
 //===----------------------------------------------------------------------===//
 // Verify no inline intrinsics are generated in the alias header.

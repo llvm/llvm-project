@@ -11,8 +11,8 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr getelementptr ([0 x i16], ptr null, i64 0, i64 -14), align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> poison, i8 [[VECTOR_RECUR_EXTRACT]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i8> [[TMP4]], i8 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> poison, i8 [[VECTOR_RECUR_EXTRACT]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i8> [[TMP4]], i8 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i8> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr getelementptr ([0 x i32], ptr null, i64 0, i64 -14), align 4
 ; CHECK-NEXT:    ret i32 0

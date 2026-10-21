@@ -64,6 +64,8 @@ size_t strlen(const char* s);
 #    include_next <string.h>
 #  endif
 
+#  include <stddef.h>
+
 // MSVCRT, GNU libc and its derivates may already have the correct prototype in
 // <string.h>. This macro can be defined by users if their C library provides
 // the right signature.

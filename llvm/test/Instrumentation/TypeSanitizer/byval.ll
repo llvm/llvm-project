@@ -193,7 +193,7 @@ entry:
 ;.
 ; CHECK-INLINE: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
 ; CHECK-INLINE: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; CHECK-INLINE: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK-INLINE: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK-INLINE: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
 ;.

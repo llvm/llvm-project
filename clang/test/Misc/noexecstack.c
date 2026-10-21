@@ -10,7 +10,7 @@
 // RUN: echo "nop" | %clang -cc1as -triple x86_64 - -filetype obj -o %t.o
 // RUN: llvm-readelf -S %t.o | FileCheck --check-prefix=NOSTACK %s
 
-// CHECK: .text             PROGBITS        0000000000000000 {{[0-9a-f]+}} 000001 00  AX  0   0 16
+// CHECK: .text             PROGBITS        0000000000000000 {{[0-9a-f]+}} 000001 00  AX  0   0  4
 // CHECK: .note.GNU-stack   PROGBITS        0000000000000000 {{[0-9a-f]+}} 000000 00      0   0  1
 
 // NOSTACK-NOT: .note.GNU-stack

@@ -66,6 +66,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Analysis/TopologicalSortUtils.h"
@@ -96,7 +97,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 /// Returns true if all users of the given value are inside the region.
 static bool allUsersAreInsideRegion(Value val, Region &region) {
   for (Operation *user : val.getUsers())
@@ -186,9 +186,8 @@ static bool isRematerializationCandidate(Value val,
   // getOriginalValue. If the traced op is not a candidate, check the direct
   // defining op of the live-in value.
   if (origVal != val) {
-    definingOp = val.getDefiningOp();
-    if (definingOp &&
-        isa<acc::OutlineRematerializationOpInterface>(definingOp)) {
+    if (isa_and_nonnull<acc::OutlineRematerializationOpInterface>(
+            val.getDefiningOp())) {
       LLVM_DEBUG(llvm::dbgs()
                  << "\t\t-> OutlineRematerializationOpInterface (direct)\n");
       return true;
@@ -206,6 +205,12 @@ public:
   using acc::impl::OffloadLiveInValueCanonicalizationBase<
       OffloadLiveInValueCanonicalization>::
       OffloadLiveInValueCanonicalizationBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::OffloadLiveInValueCanonicalizationBase<
+        OffloadLiveInValueCanonicalization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   /// Canonicalizes live-in values for a region by sinking or rematerializing
   /// operations. Returns true if any changes were made.
@@ -247,6 +252,13 @@ public:
       Operation *sinkOp = sinkCandidate.getDefiningOp();
       assert(sinkOp && "must have op to be considered");
       sinkOp->moveBefore(&region.front().front());
+      // Some operations (e.g. fir.declare) may carry identity operands that
+      // must not be left referencing a value defined outside the region.
+      // Unlike other operands, such identity operands cannot simply be
+      // treated as new live-ins to legalize; they must be dropped instead.
+      if (auto identityOp =
+              dyn_cast<acc::OutlineIdentityOperandOpInterface>(sinkOp))
+        identityOp.dropOutlinedIdentityOperands();
       LLVM_DEBUG(llvm::dbgs() << "\t\tSunk: " << *sinkOp << "\n");
     }
 
@@ -263,6 +275,14 @@ public:
     computeTopologicalSorting(opsToRematerialize);
     for (Operation *rematerializationOp : opsToRematerialize) {
       Operation *clonedOp = builder.clone(*rematerializationOp);
+      // See the comment above: identity operands must be dropped from the
+      // clone rather than duplicated, since duplicating them would make the
+      // clone appear to belong to a different instantiation than the
+      // original operation (and any of its siblings left outside the
+      // region).
+      if (auto identityOp =
+              dyn_cast<acc::OutlineIdentityOperandOpInterface>(clonedOp))
+        identityOp.dropOutlinedIdentityOperands();
       for (auto [oldResult, newResult] : llvm::zip(
                rematerializationOp->getResults(), clonedOp->getResults())) {
         replaceAllUsesInRegionWith(oldResult, newResult, region);
@@ -312,5 +332,4 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "Exit OffloadLiveInValueCanonicalization\n");
   }
 };
-
 } // namespace

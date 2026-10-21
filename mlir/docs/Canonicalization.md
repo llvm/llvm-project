@@ -96,6 +96,8 @@ canonicalizations include:
   rewriting `tensor.insert_slice(%src, tensor.cast(%dst))` (where the cast
   converts from `tensor<5xf32>` to `tensor<?xf32>`) as
   `tensor.cast(tensor.insert_slice(%src, %dst))`.
+* Replacing poisoned results with `ub.poison`. E.g., replacing
+  `arith.divsi(%c5, %c2, exact)` with `ub.poison`.
 
 
 Note: Some canonicalizations do not apply when they would lead to IR size
@@ -184,7 +186,9 @@ root operation may be replaced (but not erased). It allows for updating an
 operation in-place, or returning a set of pre-existing values (or attributes) to
 replace the operation with. This ensures that the `fold` method is a truly
 "local" transformation, and can be invoked without the need for a pattern
-rewriter.
+rewriter. A folder must always preserve always preserve IR verifiability
+(similar to [rewrite patterns](PatternRewriter.md#restrictions), where that
+property is highly recommended).
 
 In [ODS](DefiningDialects/Operations.md), an operation can set the `hasFolder` bit to generate
 a declaration for the `fold` method. This method takes on a different form,

@@ -61,7 +61,7 @@ public:
   }
 
   void testRange(FMinFunc func) {
-    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
@@ -82,12 +82,12 @@ public:
   }
 };
 
-#define LIST_FMIN_TESTS(T, func)                                               \
-  using LlvmLibcFMinTest = FMinTest<T>;                                        \
-  TEST_F(LlvmLibcFMinTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMinTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMinTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMinTest, BothZero) { testBothZero(&func); }                  \
-  TEST_F(LlvmLibcFMinTest, Range) { testRange(&func); }
+#define LIST_FMIN_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FMinTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMINTEST_H

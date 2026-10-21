@@ -24,14 +24,14 @@
 #endif // CONSTANT
 
 void test(AS_COMP int *arg_comp,
-          __attribute__((opencl_global_device)) int *arg_device,
-          __attribute__((opencl_global_host)) int *arg_host) {
+          __attribute__((opencl_global_device)) int *arg_device, // expected-warning {{''opencl_global_device'' attribute is deprecated}}
+          __attribute__((opencl_global_host)) int *arg_host) { // expected-warning {{''opencl_global_host'' attribute is deprecated}}
   AS_COMP int *var_glob1 = arg_device;
   AS_COMP int *var_glob2 = arg_host;
   AS_COMP int *var_glob3 = (AS_COMP int *)arg_device;
   AS_COMP int *var_glob4 = (AS_COMP int *)arg_host;
-  arg_device = (__attribute__((opencl_global_device)) int *)arg_comp;
-  arg_host = (__attribute__((opencl_global_host)) int *)arg_comp;
+  arg_device = (__attribute__((opencl_global_device)) int *)arg_comp; // expected-warning {{''opencl_global_device'' attribute is deprecated}}
+  arg_host = (__attribute__((opencl_global_host)) int *)arg_comp; // expected-warning {{''opencl_global_host'' attribute is deprecated}}
 #ifdef GENERIC
   // expected-error@+6{{assigning '__generic int *__private' to '__global_device int *__private' changes address space of pointer}}
   // expected-error@+6{{assigning '__generic int *__private' to '__global_host int *__private' changes address space of pointer}}
@@ -61,7 +61,7 @@ void test(AS_COMP int *arg_comp,
   AS_INCOMP int *var_incomp1 = arg_device;
   AS_INCOMP int *var_incomp2 = arg_host;
   AS_INCOMP int *var_incomp3 =
-      (__attribute__((opencl_global_device)) int *)arg_device;
+      (__attribute__((opencl_global_device)) int *)arg_device; // expected-warning {{''opencl_global_device'' attribute is deprecated}}
   AS_INCOMP int *var_incomp4 =
-      (__attribute__((opencl_global_host)) int *)arg_host;
+      (__attribute__((opencl_global_host)) int *)arg_host; // expected-warning {{''opencl_global_host'' attribute is deprecated}}
 }

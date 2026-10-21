@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -fexperimental-new-constant-interpreter -verify %s
 
 void literal_assignments() {
   half h;

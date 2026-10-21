@@ -1,5 +1,5 @@
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
-// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=8 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-emulate-narrow-int="memref-load-bitwidth=32 assume-aligned=true" --cse --verify-diagnostics --split-input-file %s | FileCheck %s --check-prefix=CHECK32
 
 // Expect no conversions.
 func.func @memref_i8() -> i8 {
@@ -238,6 +238,51 @@ func.func @memref_subview_dynamic_offset_i4(%idx : index) -> i4 {
 
 // -----
 
+func.func @memref_subview_dynamic_inner_offset_i4(%off: index) -> i4 {
+  %c0 = arith.constant 0 : index
+  %arr = memref.alloc() : memref<128xi4>
+  %subview = memref.subview %arr[%off] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset: ?>>
+  %ld = memref.load %subview[%c0] : memref<32xi4, strided<[1], offset: ?>>
+  return %ld : i4
+}
+
+// CHECK-LABEL:   func.func @memref_subview_dynamic_inner_offset_i4(
+// CHECK-SAME:        %[[OFF:[a-zA-Z0-9_]+]]: index
+// CHECK:           %[[ALLOC:.+]] = memref.alloc() : memref<64xi8>
+// CHECK:           %[[IDX:.+]] = affine.apply {{.*}}%[[OFF]]
+// CHECK:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[IDX]]] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: ?>>
+// CHECK:           memref.load %[[SUBVIEW]]
+
+// CHECK32-LABEL:   func.func @memref_subview_dynamic_inner_offset_i4(
+// CHECK32-SAME:        %[[OFF:[a-zA-Z0-9_]+]]: index
+// CHECK32:           %[[ALLOC:.+]] = memref.alloc() : memref<16xi32>
+// CHECK32:           %[[IDX:.+]] = affine.apply {{.*}}%[[OFF]]
+// CHECK32:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[IDX]]] [4] [1] : memref<16xi32> to memref<4xi32, strided<[1], offset: ?>>
+// CHECK32:           memref.load %[[SUBVIEW]]
+
+// -----
+
+// Dynamic innermost offset that is provably aligned (multiple of
+// `dstBits / srcBits`). The affine simplifier folds the `floordiv` away.
+
+func.func @memref_subview_aligned_dynamic_inner_offset_i4(%x: index) -> i4 {
+  %c0 = arith.constant 0 : index
+  %off = affine.apply affine_map<()[s0] -> (s0 * 2)>()[%x]
+  %arr = memref.alloc() : memref<128xi4>
+  %subview = memref.subview %arr[%off] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset: ?>>
+  %ld = memref.load %subview[%c0] : memref<32xi4, strided<[1], offset: ?>>
+  return %ld : i4
+}
+
+// CHECK-LABEL:   func.func @memref_subview_aligned_dynamic_inner_offset_i4(
+// CHECK-SAME:        %[[X:[a-zA-Z0-9_]+]]: index
+// CHECK:           %[[ALLOC:.+]] = memref.alloc() : memref<64xi8>
+// CHECK-NOT:       affine.apply
+// CHECK:           %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][%[[X]]] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: ?>>
+// CHECK:           memref.load %[[SUBVIEW]]
+
+// -----
+
 func.func @negative_memref_subview_non_contiguous(%idx : index) -> i4 {
   %c0 = arith.constant 0 : index
   %arr = memref.alloc() : memref<40x40xi4>
@@ -245,6 +290,61 @@ func.func @negative_memref_subview_non_contiguous(%idx : index) -> i4 {
   %subview = memref.subview %arr[%idx, 0] [4, 8] [1, 1] : memref<40x40xi4> to memref<4x8xi4, strided<[40, 1], offset:?>>
   %ld = memref.load %subview[%c0, %c0] : memref<4x8xi4, strided<[40, 1], offset:?>>
   return %ld : i4
+}
+
+// -----
+
+// Rank-3 reinterpret_cast on a sub-byte (i4) memref with a static, aligned
+// offset.
+
+func.func @reinterpret_cast_memref_rank3_static_offset_i4(%arg0: memref<2x4x8xi4>) -> memref<4x4x8xi4, strided<[32, 8, 1]>> {
+  %r = memref.reinterpret_cast %arg0 to offset: [0], sizes: [4, 4, 8], strides: [32, 8, 1] : memref<2x4x8xi4> to memref<4x4x8xi4, strided<[32, 8, 1]>>
+  return %r : memref<4x4x8xi4, strided<[32, 8, 1]>>
+}
+
+// CHECK-LABEL:   func @reinterpret_cast_memref_rank3_static_offset_i4(
+// CHECK-SAME:        %[[ARG0:.+]]: memref<32xi8>
+// CHECK:           %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [64], strides: [1] : memref<32xi8> to memref<64xi8>
+// CHECK:           return %[[R]]
+
+// CHECK32-LABEL:   func @reinterpret_cast_memref_rank3_static_offset_i4(
+// CHECK32-SAME:        %[[ARG0:.+]]: memref<8xi32>
+// CHECK32:           %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [16], strides: [1] : memref<8xi32> to memref<16xi32>
+// CHECK32:           return %[[R]]
+
+// -----
+
+// Rank-3 reinterpret_cast with a dynamic offset accepted under the alignment
+// contract.
+
+func.func @reinterpret_cast_memref_rank3_dynamic_offset_i4(%arg0: memref<2x4x8xi4>, %off: index) -> memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>> {
+  %r = memref.reinterpret_cast %arg0 to offset: [%off], sizes: [4, 4, 8], strides: [32, 8, 1] : memref<2x4x8xi4> to memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
+  return %r : memref<4x4x8xi4, strided<[32, 8, 1], offset: ?>>
+}
+
+// CHECK-LABEL:   func @reinterpret_cast_memref_rank3_dynamic_offset_i4(
+// CHECK-SAME:        %[[ARG0:.+]]: memref<32xi8>,
+// CHECK-SAME:        %[[OFF:.+]]: index
+// CHECK:           %[[NEWOFF:.+]] = affine.apply {{.*}}%[[OFF]]
+// CHECK:           %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[NEWOFF]]{{\]}}, sizes: [64], strides: [1] : memref<32xi8> to memref<64xi8, strided<[1], offset: ?>>
+// CHECK:           return %[[R]]
+
+// CHECK32-LABEL:   func @reinterpret_cast_memref_rank3_dynamic_offset_i4(
+// CHECK32-SAME:        %[[ARG0:.+]]: memref<8xi32>,
+// CHECK32-SAME:        %[[OFF:.+]]: index
+// CHECK32:           %[[NEWOFF:.+]] = affine.apply {{.*}}%[[OFF]]
+// CHECK32:           %[[R:.+]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[NEWOFF]]{{\]}}, sizes: [16], strides: [1] : memref<8xi32> to memref<16xi32, strided<[1], offset: ?>>
+// CHECK32:           return %[[R]]
+
+// -----
+
+// Provably-misaligned static offset (1 is not a multiple of i4 -> i8 ratio
+// of 2). Lowering must fail.
+
+func.func @negative_reinterpret_cast_memref_misaligned_static_offset_i4(%arg0: memref<2x4x8xi4>) -> memref<4x4x8xi4, strided<[32, 8, 1], offset: 1>> {
+  // expected-error @+1 {{failed to legalize operation 'memref.reinterpret_cast' that was explicitly marked illegal}}
+  %r = memref.reinterpret_cast %arg0 to offset: [1], sizes: [4, 4, 8], strides: [32, 8, 1] : memref<2x4x8xi4> to memref<4x4x8xi4, strided<[32, 8, 1], offset: 1>>
+  return %r : memref<4x4x8xi4, strided<[32, 8, 1], offset: 1>>
 }
 
 // -----

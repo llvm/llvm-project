@@ -2,6 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=CHECK,EXT %s
 ; RUN: llc -verify-machineinstrs -mtriple=spirv32-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefixes=CHECK,NOEXT %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s -o - -filetype=obj | spirv-val %}
 
 ; EXT:      OpCapability ExpectAssumeKHR
 ; EXT-NEXT: OpExtension "SPV_KHR_expect_assume"

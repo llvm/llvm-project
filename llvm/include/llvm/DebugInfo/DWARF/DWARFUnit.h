@@ -395,7 +395,7 @@ public:
   DWARFDataExtractor getDebugInfoExtractor() const;
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(StringSection, false, 0);
+    return DataExtractor(StringSection, false);
   }
 
   const DWARFLocationTable &getLocationTable() { return *LocTable; }
@@ -460,6 +460,16 @@ public:
     return DWO ? DWO->getUnitDIE(ExtractUnitDIEOnly)
                : getUnitDIE(ExtractUnitDIEOnly);
   }
+
+  /// Return the split unit this skeleton unit currently owns, or null if its
+  /// DWO context is not open.
+  DWARFUnit *getDWO() const { return DWO.get(); }
+
+  /// Release the DWO context owned by this skeleton unit, freeing the memory
+  /// held by its DWARFContext and parsed unit vector. This is safe to call once
+  /// the split-unit debug info has been fully processed; a subsequent
+  /// parseDWO() will transparently re-open it on demand.
+  void clearDWO() { DWO.reset(); }
 
   const char *getCompilationDir();
   std::optional<uint64_t> getDWOId() {

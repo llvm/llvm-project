@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.lib.o %p/Inputs/ret32.s
-# RUN: wasm-ld -m wasm32 --experimental-pic -shared --no-entry %t.lib.o -o %t.lib.so
+# RUN: wasm-ld -m wasm32 -shared --no-entry %t.lib.o -o %t.lib.so
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: wasm-ld -m wasm32 -Bdynamic %t.o %t.lib.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s

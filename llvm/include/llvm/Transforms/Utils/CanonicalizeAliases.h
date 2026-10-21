@@ -20,11 +20,12 @@ namespace llvm {
 class Module;
 
 /// Simple pass that canonicalizes aliases.
-class CanonicalizeAliasesPass : public PassInfoMixin<CanonicalizeAliasesPass> {
+class CanonicalizeAliasesPass
+    : public OptionalPassInfoMixin<CanonicalizeAliasesPass> {
 public:
   CanonicalizeAliasesPass() = default;
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

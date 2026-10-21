@@ -25,6 +25,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+LIBC_INLINE int strcoll(const char *left, const char *right) {
+  for (; *left && *left == *right; ++left, ++right)
+    ;
+  return static_cast<unsigned char>(*left) - static_cast<unsigned char>(*right);
+}
+
 // Returns the maximum length span that contains only characters not found in
 // 'segment'. If no characters are found, returns the length of 'src'.
 LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
@@ -122,6 +128,12 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 LIBC_INLINE void *find_first_character(const unsigned char *src,
                                        unsigned char ch, size_t max_strlen) {
   return find_first_character_impl(src, ch, max_strlen);
+}
+
+LIBC_INLINE size_t strnlen(const char *s, size_t max_len) {
+  const void *temp = internal::find_first_character(
+      reinterpret_cast<const unsigned char *>(s), '\0', max_len);
+  return temp ? reinterpret_cast<const char *>(temp) - s : max_len;
 }
 
 } // namespace internal

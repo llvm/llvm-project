@@ -35,7 +35,7 @@ define double @call_sqrt_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_sqrt_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.sqrt.f64(double 4.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 0xK40018000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 4.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -48,7 +48,7 @@ define double @call_sqrt_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_sqrt_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.sqrt.f64(double 4.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 0xK40018000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 4.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -65,8 +65,8 @@ entry:
 define x86_fp80 @call_sqrt_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_sqrt_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 0xK40018000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 0xK40018000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 4.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 4.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -142,8 +142,8 @@ entry:
 define x86_fp80 @call_powi_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_powi_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.powi.f80.i32(x86_fp80 0xK40008000000000000000, i32 3)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.powi.f80.i32(x86_fp80 0xK40008000000000000000, i32 3)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.powi.f80.i32(x86_fp80 2.000000e+00, i32 3)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.powi.f80.i32(x86_fp80 2.000000e+00, i32 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -187,7 +187,7 @@ define double @call_sin_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_sin_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.sin.f64(double 1.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 1.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -200,7 +200,7 @@ define double @call_sin_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_sin_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.sin.f64(double 1.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 1.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -217,8 +217,8 @@ entry:
 define x86_fp80 @call_sin_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_sin_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -262,7 +262,7 @@ define double @call_cos_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_cos_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.cos.f64(double 1.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 0xK3FFF8000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 1.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -275,7 +275,7 @@ define double @call_cos_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_cos_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.cos.f64(double 1.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 0xK3FFF8000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 1.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -292,8 +292,8 @@ entry:
 define x86_fp80 @call_cos_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_cos_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 0xK3FFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 0xK3FFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.cos.f80(x86_fp80 1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -337,7 +337,7 @@ define double @call_pow_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_pow_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.pow.f64(double 2.000000e+00, double 3.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -350,7 +350,7 @@ define double @call_pow_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_pow_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.pow.f64(double 2.000000e+00, double 3.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -367,8 +367,8 @@ entry:
 define x86_fp80 @call_pow_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_pow_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.pow.f80(x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -412,7 +412,7 @@ define double @call_exp_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_exp_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.exp.f64(double 1.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 0xK3FFF8000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 1.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -425,7 +425,7 @@ define double @call_exp_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_exp_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.exp.f64(double 1.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 0xK3FFF8000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 1.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -442,8 +442,8 @@ entry:
 define x86_fp80 @call_exp_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_exp_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 0xK3FFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 0xK3FFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp.f80(x86_fp80 1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -487,7 +487,7 @@ define double @call_exp2_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_exp2_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.exp2.f64(double 1.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 0xK3FFF8000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 1.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -500,7 +500,7 @@ define double @call_exp2_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_exp2_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.exp2.f64(double 1.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 0xK3FFF8000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 1.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -517,8 +517,8 @@ entry:
 define x86_fp80 @call_exp2_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_exp2_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 0xK3FFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 0xK3FFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.exp2.f80(x86_fp80 1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -562,7 +562,7 @@ define double @call_log_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_log_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.log.f64(double 2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -575,7 +575,7 @@ define double @call_log_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_log_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.log.f64(double 2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -592,8 +592,8 @@ entry:
 define x86_fp80 @call_log_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_log_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log.f80(x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -637,7 +637,7 @@ define double @call_log10_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_log10_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.log10.f64(double 1.000000e+02)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 0xK4005C800000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 1.000000e+02)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -650,7 +650,7 @@ define double @call_log10_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_log10_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.log10.f64(double 1.000000e+02)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 0xK4005C800000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 1.000000e+02)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -667,8 +667,8 @@ entry:
 define x86_fp80 @call_log10_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_log10_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 0xK7FFF0000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 0xK7FFF0000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 +snan(0x0))
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log10.f80(x86_fp80 +snan(0x0))
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -712,7 +712,7 @@ define double @call_log2_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_log2_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.log2.f64(double 8.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 0xK40028000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 8.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -725,7 +725,7 @@ define double @call_log2_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_log2_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.log2.f64(double 8.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 0xK40028000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 8.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -742,8 +742,8 @@ entry:
 define x86_fp80 @call_log2_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_log2_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 0xK40018000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 0xK40018000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 4.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.log2.f80(x86_fp80 4.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -787,7 +787,7 @@ define double @call_fma_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_fma_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -800,7 +800,7 @@ define double @call_fma_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_fma_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -817,8 +817,8 @@ entry:
 define x86_fp80 @call_fma_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_fma_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fma.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -862,7 +862,7 @@ define double @call_fmuladd_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_fmuladd_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -875,7 +875,7 @@ define double @call_fmuladd_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_fmuladd_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK4000C000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 3.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -892,8 +892,8 @@ entry:
 define x86_fp80 @call_fmuladd_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_fmuladd_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
-; CHECK-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000, x86_fp80 0xK40018000000000000000)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.fmuladd.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00, x86_fp80 4.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP6]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[TMP0]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -937,7 +937,7 @@ define double @call_fabs_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_fabs_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.fabs.f64(double -1.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 0xKBFFF8000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 -1.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -950,7 +950,7 @@ define double @call_fabs_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_fabs_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.fabs.f64(double -1.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 0xKBFFF8000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 -1.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -967,8 +967,8 @@ entry:
 define x86_fp80 @call_fabs_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_fabs_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 0xKBFFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 0xKBFFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 -1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 -1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1012,7 +1012,7 @@ define double @call_minnum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_minnum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.minnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1025,7 +1025,7 @@ define double @call_minnum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_minnum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.minnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1042,8 +1042,8 @@ entry:
 define x86_fp80 @call_minnum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_minnum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1087,7 +1087,7 @@ define double @call_maxnum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_maxnum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.maxnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1100,7 +1100,7 @@ define double @call_maxnum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_maxnum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.maxnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1117,8 +1117,8 @@ entry:
 define x86_fp80 @call_maxnum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_maxnum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maxnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1162,7 +1162,7 @@ define double @call_minimum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_minimum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.minimum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1175,7 +1175,7 @@ define double @call_minimum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_minimum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.minimum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1192,8 +1192,8 @@ entry:
 define x86_fp80 @call_minimum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_minimum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1237,7 +1237,7 @@ define double @call_maximum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_maximum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.maximum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1250,7 +1250,7 @@ define double @call_maximum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_maximum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.maximum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1267,8 +1267,8 @@ entry:
 define x86_fp80 @call_maximum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_maximum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1312,7 +1312,7 @@ define double @call_minimumnum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_minimumnum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[TMP0:%.*]] = call double @llvm.minimumnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP6]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[TMP0]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1325,7 +1325,7 @@ define double @call_minimumnum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_minimumnum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[TMP0:%.*]] = call double @llvm.minimumnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_l(double [[TMP0]], x86_fp80 [[TMP1]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
 ; DLQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to x86_fp80
@@ -1342,8 +1342,8 @@ entry:
 define x86_fp80 @call_minimumnum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_minimumnum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1387,7 +1387,7 @@ define double @call_maximumnum_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_maximumnum_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[TMP0:%.*]] = call double @llvm.maximumnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP6]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[TMP0]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1400,7 +1400,7 @@ define double @call_maximumnum_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_maximumnum_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[TMP0:%.*]] = call double @llvm.maximumnum.f64(double 1.000000e+00, double 2.000000e+00)
-; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; DLQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_l(double [[TMP0]], x86_fp80 [[TMP1]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
 ; DLQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to x86_fp80
@@ -1417,8 +1417,8 @@ entry:
 define x86_fp80 @call_maximumnum_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_maximumnum_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 1.000000e+00, x86_fp80 2.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1462,7 +1462,7 @@ define double @call_copysign_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_copysign_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double -2.000000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xKC0008000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 1.000000e+00, x86_fp80 -2.000000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1475,7 +1475,7 @@ define double @call_copysign_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_copysign_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double -2.000000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xKC0008000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 1.000000e+00, x86_fp80 -2.000000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1492,8 +1492,8 @@ entry:
 define x86_fp80 @call_copysign_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_copysign_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xKBFFF8000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xKBFFF8000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 1.000000e+00, x86_fp80 -1.000000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 1.000000e+00, x86_fp80 -1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1537,7 +1537,7 @@ define double @call_floor_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_floor_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.floor.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1550,7 +1550,7 @@ define double @call_floor_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_floor_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.floor.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1567,8 +1567,8 @@ entry:
 define x86_fp80 @call_floor_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_floor_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1612,7 +1612,7 @@ define double @call_ceil_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_ceil_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.ceil.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1625,7 +1625,7 @@ define double @call_ceil_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_ceil_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.ceil.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1642,8 +1642,8 @@ entry:
 define x86_fp80 @call_ceil_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_ceil_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1687,7 +1687,7 @@ define double @call_trunc_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_trunc_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.trunc.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1700,7 +1700,7 @@ define double @call_trunc_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_trunc_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.trunc.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1717,8 +1717,8 @@ entry:
 define x86_fp80 @call_trunc_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_trunc_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1762,7 +1762,7 @@ define double @call_rint_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_rint_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.rint.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1775,7 +1775,7 @@ define double @call_rint_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_rint_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.rint.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1792,8 +1792,8 @@ entry:
 define x86_fp80 @call_rint_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_rint_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1837,7 +1837,7 @@ define double @call_nearbyint_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_nearbyint_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.nearbyint.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1850,7 +1850,7 @@ define double @call_nearbyint_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_nearbyint_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.nearbyint.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1867,8 +1867,8 @@ entry:
 define x86_fp80 @call_nearbyint_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_nearbyint_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1912,7 +1912,7 @@ define double @call_round_f64() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_round_f64(
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    [[R:%.*]] = call double @llvm.round.f64(double 1.500000e+00)
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 0xK3FFFC000000000000000)
+; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 1.500000e+00)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
@@ -1925,7 +1925,7 @@ define double @call_round_f64() sanitize_numerical_stability {
 ; DLQ-LABEL: @call_round_f64(
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    [[R:%.*]] = call double @llvm.round.f64(double 1.500000e+00)
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 0xK3FFFC000000000000000)
+; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 1.500000e+00)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
 ; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
@@ -1942,8 +1942,8 @@ entry:
 define x86_fp80 @call_round_f80() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_round_f80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 0xK3FFFC000000000000000)
-; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 0xK3FFFC000000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 1.500000e+00)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 1.500000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1

@@ -6,10 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestBitfieldIvars(TestBase):
     def test(self):
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.m")
-        )
+        self.build_and_run()
 
         self.expect_expr(
             "chb->hb->field1", result_type="unsigned int", result_value="0"

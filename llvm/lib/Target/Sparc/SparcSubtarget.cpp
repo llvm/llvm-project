@@ -12,8 +12,10 @@
 
 #include "SparcSubtarget.h"
 #include "SparcSelectionDAGInfo.h"
+#include "SparcTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -23,6 +25,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "SparcGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "SparcOptions.inc"
 
 void SparcSubtarget::anchor() { }
 
@@ -54,9 +59,11 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
 }
 
 SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                               const StringRef &FS, const TargetMachine &TM)
+                               const StringRef &FS,
+                               const SparcTargetMachine &TM)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
-      ReserveRegister(TM.getMCRegisterInfo()->getNumRegs()),
+      CLOpts(TM.getCLOpts()),
+      ReserveRegister(TM.getMCRegisterInfo().getNumRegs()),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {
   TSInfo = std::make_unique<SparcSelectionDAGInfo>();

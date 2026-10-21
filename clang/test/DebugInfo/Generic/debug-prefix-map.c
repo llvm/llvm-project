@@ -27,27 +27,29 @@ void test_rewrite_includes(void) {
   vprintf("string", argp);
 }
 
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}",
+// Forward or backward slashes can be used depending on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}",
 // CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "")
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}<stdin>",
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}Inputs{{/|\\\\}}stdio.h",
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}<stdin>",
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}Inputs{{/|\\\\}}stdio.h",
 // CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "")
 // CHECK-NO-MAIN-FILE-NAME-NOT: !DIFile(filename:
 
-// CHECK-EVIL: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH=empty{{/|\\\\}}{{.*}}"
-// CHECK-EVIL: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH=empty{{/|\\\\}}{{.*}}Inputs{{/|\\\\}}stdio.h",
+// CHECK-EVIL: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH=empty{{/|\\\\}}{{.*}}"
+// CHECK-EVIL: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH=empty{{/|\\\\}}{{.*}}Inputs{{/|\\\\}}stdio.h",
 // CHECK-EVIL-SAME:    directory: "")
 // CHECK-EVIL-NOT: !DIFile(filename:
 
-// CHECK: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}",
-// CHECK: !DIFile(filename: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}Inputs{{/|\\\\}}stdio.h",
+// CHECK: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}",
+// CHECK: !DIFile(filename: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty{{/|\\\\}}{{.*}}Inputs{{/|\\\\}}stdio.h",
 // CHECK-SAME:    directory: ""
 // CHECK-NOT: !DIFile(filename:
 
-// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}", directory: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty")
-// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}Inputs{{/|\\\\}}stdio.h", directory: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty")
+// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}", directory: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty")
+// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}Inputs{{/|\\\\}}stdio.h", directory: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty")
 // CHECK-COMPILATION-DIR-NOT: !DIFile(filename:
-// CHECK-SYSROOT: !DICompileUnit({{.*}}sysroot: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty"
+// CHECK-SYSROOT: !DICompileUnit({{.*}}sysroot: "{{/|.:[/\\]+}}UNLIKELY_PATH{{/|\\\\}}empty"
+
 
 // CHECK-REL: !DIFile(filename: "./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}",
 // CHECK-REL: !DIFile(filename: "./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}Inputs/stdio.h",

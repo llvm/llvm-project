@@ -303,7 +303,7 @@ public:
           llvm::cast<mlir::omp::OffloadModuleInterface>(*module)
               .getIsTargetDevice();
 
-      mlir::omp::TargetOperands targetClauseOps;
+      mlir::omp::TargetExtOperands targetClauseOps;
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps,
                            isTargetDevice ? nullptr : &targetClauseOps);
 
@@ -313,23 +313,31 @@ public:
           fir::getKindMapping(doLoop->getParentOfType<mlir::ModuleOp>()));
 
       for (mlir::Value liveIn : loopNestLiveIns) {
+        bool isReductionVar = llvm::find(loop.getReduceVars(), liveIn) !=
+                              loop.getReduceVars().end();
         targetClauseOps.mapVars.push_back(
-            genMapInfoOpForLiveIn(builder, liveIn));
+            genMapInfoOpForLiveIn(builder, liveIn, isReductionVar));
         liveInShapeInfoMap.insert(
             {liveIn, TargetDeclareShapeCreationInfo(liveIn)});
       }
 
+      targetClauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+          rewriter.getContext(), mlir::omp::TargetExecMode::spmd);
       targetOp =
           genTargetOp(doLoop.getLoc(), rewriter, mapper, loopNestLiveIns,
                       targetClauseOps, loopNestClauseOps, liveInShapeInfoMap);
-      genTeamsOp(rewriter, loop, mapper);
+      auto teamsOp = genTeamsOp(rewriter, loop, mapper);
+      targetOp.setCombined(true);
+      teamsOp.setCombined(true);
     }
 
     mlir::omp::ParallelOp parallelOp =
         genParallelOp(rewriter, loop, ivInfos, mapper);
 
-    // Only set as composite when part of `distribute parallel do`.
+    // Only set as composite when part of `distribute parallel do`, and only set
+    // as combined when part of `parallel do`.
     parallelOp.setComposite(mapToDevice);
+    parallelOp.setCombined(!mapToDevice);
 
     if (!mapToDevice)
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps);
@@ -416,7 +424,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc, parallelOps);
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelOps.privateVars;
+    parallelArgs.privVars = parallelOps.privateVars;
     Fortran::common::openmp::genEntryBlock(rewriter, parallelArgs,
                                            parallelOp.getRegion());
     rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
@@ -457,7 +465,7 @@ private:
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       fir::DoConcurrentLoopOp loop,
       mlir::omp::LoopNestOperands &loopNestClauseOps,
-      mlir::omp::TargetOperands *targetClauseOps = nullptr) const {
+      mlir::omp::TargetExtOperands *targetClauseOps = nullptr) const {
     assert(loopNestClauseOps.loopLowerBounds.empty() &&
            "Loop nest bounds were already emitted!");
 
@@ -504,8 +512,8 @@ private:
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.privVars = wsloopClauseOps.privateVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
@@ -540,8 +548,26 @@ private:
         /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
   }
 
-  mlir::omp::MapInfoOp genMapInfoOpForLiveIn(fir::FirOpBuilder &builder,
-                                             mlir::Value liveIn) const {
+  static bool recordHasAllocatableMember(fir::RecordType recordType) {
+    for (auto [fieldName, fieldType] : recordType.getTypeList()) {
+      if (fir::isPointerType(fir::unwrapRefType(fieldType)))
+        continue;
+
+      if (fir::isAllocatableType(fieldType))
+        return true;
+
+      if (auto nestedRec = mlir::dyn_cast<fir::RecordType>(
+              fir::getFortranElementType(fieldType)))
+        if (recordHasAllocatableMember(nestedRec))
+          return true;
+    }
+
+    return false;
+  }
+
+  mlir::omp::MapInfoOp
+  genMapInfoOpForLiveIn(fir::FirOpBuilder &builder, mlir::Value liveIn,
+                        bool isReductionVar = false) const {
     mlir::Value rawAddr = liveIn;
     llvm::StringRef name;
 
@@ -574,7 +600,10 @@ private:
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
 
-    if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+    if (isReductionVar) {
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
+    } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
       captureKind = mlir::omp::VariableCaptureKind::ByCopy;
     } else if (!fir::isa_builtin_cptr_type(eleType)) {
       mapFlag |= mlir::omp::ClauseMapFlags::to;
@@ -584,33 +613,17 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    auto asRecordType = [&](mlir::Type eleType) {
-      return mlir::dyn_cast<fir::RecordType>(
-          fir::getDerivedType(fir::unwrapRefType(eleType)));
-    };
+    fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
+        fir::getDerivedType(fir::unwrapRefType(eleType)));
 
-    fir::RecordType recordType = asRecordType(eleType);
-
-    bool requiresImplcitMapper = [&]() {
-      if (!recordType)
-        return false;
-
-      for (auto [fieldName, fieldType] : recordType.getTypeList()) {
-        if (fir::isAllocatableType(fieldType))
-          return true;
-
-        if (asRecordType(fieldType))
-          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
-      }
-
-      return false;
-    }();
+    bool requiresImplicitMapper =
+        recordType && recordHasAllocatableMember(recordType);
 
     mlir::FlatSymbolRefAttr mapperId;
-    if (requiresImplcitMapper) {
+    if (requiresImplicitMapper) {
       std::string mapperIdName =
-          recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
-      // TODO Add a mangler callback once nested record types are supported.
+          Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+              recordType);
       mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
           builder, liveIn.getLoc(), recordType, mapperIdName);
     }
@@ -626,7 +639,7 @@ private:
   mlir::omp::TargetOp
   genTargetOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
               mlir::IRMapping &mapper, llvm::ArrayRef<mlir::Value> mappedVars,
-              mlir::omp::TargetOperands &clauseOps,
+              mlir::omp::TargetExtOperands &clauseOps,
               mlir::omp::LoopNestOperands &loopNestClauseOps,
               const LiveInShapeInfoMap &liveInShapeInfoMap) const {
     auto targetOp = mlir::omp::TargetOp::create(rewriter, loc, clauseOps);
@@ -775,7 +788,7 @@ private:
     mlir::Location loc = loop.getLoc();
     auto teamsOp = mlir::omp::TeamsOp::create(rewriter, loc, teamsOps);
     Fortran::common::openmp::EntryBlockArgs teamsArgs;
-    teamsArgs.reduction.vars = teamsOps.reductionVars;
+    teamsArgs.reductionVars = teamsOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
                                            teamsOp.getRegion());
 
@@ -843,7 +856,7 @@ private:
 
         auto privatizer = mlir::omp::PrivateClauseOp::create(
             rewriter, localizer.getLoc(), sym.getLeafReference().str() + ".omp",
-            localizer.getTypeAttr().getValue(),
+            /*sym_visibility=*/nullptr, localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
 
         cloneFIRRegionToOMP(rewriter, localizer.getInitRegion(),
@@ -882,7 +895,7 @@ private:
         if (!ompReducer) {
           ompReducer = mlir::omp::DeclareReductionOp::create(
               rewriter, firReducer.getLoc(), ompReducerName,
-              firReducer.getTypeAttr().getValue(),
+              /*sym_visibility=*/nullptr, firReducer.getTypeAttr().getValue(),
               firReducer.getByrefElementTypeAttr());
 
           cloneFIRRegionToOMP(rewriter, firReducer.getAllocRegion(),

@@ -136,7 +136,7 @@ mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
 /// Create the global op and its init if it has one
 fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                            const Fortran::lower::pft::Variable &var,
-                           llvm::StringRef globalName, mlir::StringAttr linkage,
+                           llvm::StringRef globalName, fir::LinkageAttr linkage,
                            cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate address \p addr inside an initializer.
@@ -191,6 +191,15 @@ fir::ExtendedValue genPackArray(Fortran::lower::AbstractConverter &converter,
 void genUnpackArray(Fortran::lower::AbstractConverter &converter,
                     mlir::Location loc, fir::FortranVariableOpInterface def,
                     const Fortran::semantics::Symbol &sym);
+
+/// Generate a scalar default initializer value for a derived type variable.
+/// Returns an SSA aggregate value with each component set to its default
+/// initialization (or zero if no default). This is a thin wrapper around
+/// the internal genDefaultInitializerValue utility, exposed for use by
+/// OpenMP reduction initialization.
+mlir::Value genScalarDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type symTy);
 
 } // namespace lower
 } // namespace Fortran

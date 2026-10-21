@@ -3,7 +3,8 @@
 
 define ptr @f() addrspace(200) presplitcoroutine !func_sanitize !0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %f1 = addrspacecast ptr addrspace(200) @f to ptr
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr %f1, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 
@@ -51,11 +52,15 @@ entry:
 ; CHECK: ret ptr %hdl
 
 ; CHECK-LABEL: @f.resume({{.*}}) addrspace(200) {
+; CHECK: %[[DESTROY_ADDR:.+]] = getelementptr inbounds i8, ptr %hdl, i64 8
+; CHECK-NEXT: %[[DESTROY:.+]] = load ptr, ptr %[[DESTROY_ADDR]]
+; CHECK-NEXT: %[[IS_ELIDED:.+]] = icmp eq ptr %[[DESTROY]], addrspacecast (ptr addrspace(200) @f.cleanup to ptr)
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(i32 0)
 ; CHECK: call void @print(i32 1)
 ; CHECK-NOT: call void @print(i32 0)
-; CHECK: call void @free(
+; CHECK: %[[CORO_FREE:.+]] = select i1 %[[IS_ELIDED]], ptr null, ptr %hdl
+; CHECK-NEXT: call void @free(ptr %[[CORO_FREE]])
 ; CHECK: ret void
 
 ; CHECK-LABEL: @f.destroy({{.*}}) addrspace(200) {
@@ -83,7 +88,6 @@ declare i8  @llvm.coro.suspend(token, i1)
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)
 
-declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.end(ptr, i1, token) 

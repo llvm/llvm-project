@@ -50,7 +50,7 @@ void foo() {
 
 // CHECK: cleanup.cont:{{.*}}
 // CHECK-NEXT: load i8
-// CHECK-NEXT: trunc
+// CHECK-NEXT: icmp ne
 // CHECK-NEXT: store i1 false
 
 // CHECK: await.suspend:{{.*}}

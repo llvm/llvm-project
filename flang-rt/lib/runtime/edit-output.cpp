@@ -921,6 +921,14 @@ template <typename CHAR>
 RT_API_ATTRS bool EditCharacterOutput(IoStatementState &io,
     const DataEdit &edit, const CHAR *x, std::size_t length) {
   int len{static_cast<int>(length)};
+  if (edit.descriptor == 'A' && edit.variation == 'T') {
+    // AT edit descriptor: output character value with trailing blanks
+    // removed (F2023 13.7.5.3.1).
+    while (len > 0 && x[len - 1] == static_cast<CHAR>(' ')) {
+      --len;
+    }
+    return EmitEncoded(io, x, len);
+  }
   int width{edit.width.value_or(len)};
   switch (edit.descriptor) {
   case 'A':

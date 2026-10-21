@@ -77,6 +77,7 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
 }
 
 static void *noReentry(void *) { abort(); }
+static char ResolveTag;
 
 TEST(JITLinkLazyReexportsTest, Basics) {
   OrcNativeTarget::initialize();
@@ -92,7 +93,16 @@ TEST(JITLinkLazyReexportsTest, Basics) {
 
   auto &OLL = cast<ObjectLinkingLayer>((*J)->getObjLinkingLayer());
 
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+  auto MA = (*J)->getExecutionSession()
+                .getExecutorProcessControl()
+                .createDefaultMemoryAccess();
+  if (!MA) {
+    dbgs() << "Boom for MA\n";
+    consumeError(MA.takeError());
+    GTEST_SKIP();
+  }
+
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL, **MA);
   if (!RSMgr) {
     dbgs() << "Boom for RSMgr\n";
     consumeError(RSMgr.takeError());
@@ -105,7 +115,9 @@ TEST(JITLinkLazyReexportsTest, Basics) {
   cantFail(JD.define(absoluteSymbols(
       {{ES.intern("__orc_rt_reentry"),
         {ExecutorAddr::fromPtr(&noReentry),
-         JITSymbolFlags::Exported | JITSymbolFlags::Callable}}})));
+         JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
+       {(*J)->mangleAndIntern("__orc_rt_resolve_tag"),
+        {ExecutorAddr::fromPtr(&ResolveTag), JITSymbolFlags::Exported}}})));
 
   auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, JD);
   if (!LRMgr) {

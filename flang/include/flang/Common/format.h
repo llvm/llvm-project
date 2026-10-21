@@ -91,13 +91,13 @@ static inline bool MulOverflow(
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
   if (isNegative) {
-    return ux >
-        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) +
-            std::uint64_t{1}) /
+    return ux > (static_cast<std::uint64_t>(
+                     common::numeric_limits<std::int64_t>::max()) +
+                    std::uint64_t{1}) /
         uy;
   } else {
-    return ux >
-        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) /
+    return ux > (static_cast<std::uint64_t>(
+                    common::numeric_limits<std::int64_t>::max())) /
         uy;
   }
 #endif
@@ -113,9 +113,9 @@ struct FormatMessage {
 
 // This declaration is logically private to class FormatValidator.
 // It is placed here to work around a clang compilation problem.
-ENUM_CLASS(TokenKind, None, A, B, BN, BZ, D, DC, DP, DT, E, EN, ES, EX, F, G, I,
-    L, LZ, LZP, LZS, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z,
-    Colon, Slash,
+ENUM_CLASS(TokenKind, None, A, AT, B, BN, BZ, D, DC, DP, DT, E, EN, ES, EX, F,
+    G, I, L, LZ, LZP, LZS, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR,
+    X, Z, Colon, Slash,
     Backslash, // nonstandard: inhibit newline on output
     Dollar, // nonstandard: inhibit newline on output on terminals
     Star, LParen, RParen, Comma, Point, Sign,
@@ -137,10 +137,10 @@ public:
 
 private:
   common::EnumSet<TokenKind, TokenKind_enumSize> itemsWithLeadingInts_{
-      TokenKind::A, TokenKind::B, TokenKind::D, TokenKind::DT, TokenKind::E,
-      TokenKind::EN, TokenKind::ES, TokenKind::EX, TokenKind::F, TokenKind::G,
-      TokenKind::I, TokenKind::L, TokenKind::O, TokenKind::P, TokenKind::X,
-      TokenKind::Z, TokenKind::Slash, TokenKind::LParen};
+      TokenKind::A, TokenKind::AT, TokenKind::B, TokenKind::D, TokenKind::DT,
+      TokenKind::E, TokenKind::EN, TokenKind::ES, TokenKind::EX, TokenKind::F,
+      TokenKind::G, TokenKind::I, TokenKind::L, TokenKind::O, TokenKind::P,
+      TokenKind::X, TokenKind::Z, TokenKind::Slash, TokenKind::LParen};
 
   struct Token {
     Token &set_kind(TokenKind kind) {
@@ -334,7 +334,11 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
     break;
   }
   case 'A':
-    token_.set_kind(TokenKind::A);
+    if (LookAheadChar() == 'T') {
+      Advance(TokenKind::AT);
+    } else {
+      token_.set_kind(TokenKind::A);
+    }
     break;
   case 'B':
     switch (LookAheadChar()) {
@@ -717,6 +721,23 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       check_r();
       NextToken();
       check_w();
+      break;
+    case TokenKind::AT:
+      // F2023 data-edit-desc -> AT (no w allowed)
+      hasDataEditDesc = true;
+      check_r();
+      NextToken();
+      if (token_.kind() == TokenKind::UnsignedInteger) {
+        ReportError("'AT' edit descriptor does not accept a width value");
+        NextToken();
+        // reset to allow the Read check below to also report
+        suppressMessageCascade_ = false;
+      }
+      if (stmt_ == IoStmtKind::Read) {
+        ReportError("'AT' edit descriptor must not be used for input");
+        // reset to allow subsequent '.' check to also report
+        suppressMessageCascade_ = false;
+      }
       break;
     case TokenKind::B:
     case TokenKind::I:

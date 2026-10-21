@@ -1989,7 +1989,7 @@ define i64 @llround_f64(double %a) nounwind strictfp {
   ret i64 %1
 }
 
-define double @ldexp_f64(double %x, i32 signext %y) nounwind {
+define double @ldexp_f64(double %x, i32 signext %y) nounwind strictfp {
 ; RV32IFD-LABEL: ldexp_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16

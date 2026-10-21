@@ -891,9 +891,9 @@ predsumu.dhs a2, a2, t3
 # CHECK-ASM-AND-OBJ: predsumu.dbs a2, a0, s0
 # CHECK-ASM: encoding: [0x1b,0x46,0x85,0x3c]
 predsumu.dbs a2, a0, s0
-# CHECK-ASM-AND-OBJ: pnsrli.b a2, a0, 0
-# CHECK-ASM: encoding: [0x1b,0xc6,0x05,0x01]
-pnsrli.b a2, a0, 0
+# CHECK-ASM-AND-OBJ: pnsrli.b a2, a0, 2
+# CHECK-ASM: encoding: [0x1b,0xc6,0x25,0x01]
+pnsrli.b a2, a0, 2
 # CHECK-ASM-AND-OBJ: pnsrli.h a0, t3, 1
 # CHECK-ASM: encoding: [0x1b,0xc5,0x1e,0x02]
 pnsrli.h a0, t3, 1
@@ -1120,10 +1120,10 @@ psrari.dh a2, a2, 6
 # CHECK-ASM: encoding: [0x1b,0xe7,0x55,0x52]
 psrari.dw a4, a0, 5
 # CHECK-ASM-AND-OBJ: psati.dh s2, s2, 9
-# CHECK-ASM: encoding: [0x1b,0xe9,0x99,0x61]
+# CHECK-ASM: encoding: [0x1b,0xe9,0x89,0x61]
 psati.dh s2, s2, 9
 # CHECK-ASM-AND-OBJ: psati.dw t5, t3, 14
-# CHECK-ASM: encoding: [0x1b,0xef,0xee,0x62]
+# CHECK-ASM: encoding: [0x1b,0xef,0xde,0x62]
 psati.dw t5, t3, 14
 # CHECK-ASM-AND-OBJ: psrl.dhs a0, t1, t5
 # CHECK-ASM: encoding: [0x1b,0xe5,0xe3,0x09]

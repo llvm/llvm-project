@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!s32i_bitint = !cir.int<s, 32, bitint>
+!u64i_bitint = !cir.int<u, 64, bitint>
+!s128i_bitint = !cir.int<s, 128, bitint>
+!s1024i_bitint = !cir.int<s, 1024, bitint>
+
+module {
+  // CHECK: cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint, %arg3: !s1024i_bitint)
+  cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint, %arg3: !s1024i_bitint) {
+    cir.return
+  }
+
+  // Regular int should NOT print bitint.
+  // CHECK: cir.func @round_trip_regular(%arg0: !s32i)
+  cir.func @round_trip_regular(%arg0: !s32i) {
+    cir.return
+  }
+}

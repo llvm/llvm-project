@@ -40,6 +40,8 @@ enum LineType {
 enum ScopeType {
   // Contained in class declaration/definition.
   ST_Class,
+  // Contained in enum declaration/definition.
+  ST_Enum,
   // Contained in compound requirement.
   ST_CompoundRequirement,
   // Contained in other blocks (function, lambda, loop, if/else, child, etc).
@@ -55,7 +57,8 @@ public:
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
         InPPDirective(Line.InPPDirective),
         InPragmaDirective(Line.InPragmaDirective),
-        InMacroBody(Line.InMacroBody),
+        InMacroBody(Line.InMacroBody), InMacroExpansion(Line.InMacroExpansion),
+        IsModuleOrImportDecl(Line.IsModuleOrImportDecl),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
@@ -67,6 +70,8 @@ public:
     // Next and Previous for every token, as previous formatting runs might have
     // left them in a different state.
     First->Previous = nullptr;
+    if (First->MacroParent)
+      ContainsMacroCall = true;
     FormatToken *Current = First;
     addChildren(Line.Tokens.front(), Current);
     for (const UnwrappedLineNode &Node : llvm::drop_begin(Line.Tokens)) {
@@ -154,11 +159,6 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
-  /// \c true if this line starts a C++ export block.
-  bool startsWithExportBlock() const {
-    return startsWith(tok::kw_export, tok::l_brace);
-  }
-
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -182,6 +182,8 @@ public:
   bool InPPDirective;
   bool InPragmaDirective;
   bool InMacroBody;
+  bool InMacroExpansion;
+  bool IsModuleOrImportDecl;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;
@@ -253,6 +255,8 @@ private:
                       const FormatToken &Right) const;
 
   bool mustBreakForReturnType(const AnnotatedLine &Line) const;
+
+  bool mustBreakBeforeReturnType(const AnnotatedLine &Line) const;
 
   void printDebugInfo(const AnnotatedLine &Line) const;
 

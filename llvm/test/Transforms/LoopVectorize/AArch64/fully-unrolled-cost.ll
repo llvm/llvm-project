@@ -7,22 +7,20 @@ target triple="aarch64--linux-gnu"
 ; vector loop gets executed exactly once with the given VF.
 define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test'
-; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost for VF 8: 30
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NOT: canonical IV increment
+; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 16: 56
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 %i.iv
@@ -41,20 +39,17 @@ for.body:                                         ; preds = %entry, %for.body
 ; Same as above, but in the next iteration IV has extra users, and thus, the cost is not zero.
 define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test_external_iv_user'
-; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 8: 30
-; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
+; CHECK: Cost for VF 8: 31
+; CHECK-NOT: canonical IV increment
+; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 16: 57
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %i.iv
@@ -69,33 +64,26 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %i.iv.next, 16
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 }
 
 ; Same as above but with two IVs without extra users. They all have zero cost when VF equals the number of iterations.
 define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test_two_ivs'
-; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 8: induction instruction   %j.iv.next = add nuw nsw i64 %j.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost for VF 8: 16
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 1 for VF 16: EXPRESSION vp<%11> = ir<%sum> + partial.reduce.add (mul nuw nsw (ir<%1> zext to i64), (ir<%0> zext to i64))
-; CHECK: Cost for VF 16: 3
+; CHECK: Cost for VF 16: 4
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body
 
-exit:                                 ; preds = %for.body
+exit:
   ret i64 %add
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
   %sum = phi i64 [ 0, %entry ], [ %add, %for.body ]
@@ -115,13 +103,14 @@ for.body:                                         ; preds = %entry, %for.body
 
 define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_extra_cmp_user'
-; CHECK: Cost of 4 for VF 8: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 4 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %indvars.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 8: 12
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK: Cost of 4 for VF 8: ir<%indvars.iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<{{.*}}>
+; CHECK: Cost of 4 for VF 8: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
+; CHECK: Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
+; CHECK: Cost for VF 8: 10
+; CHECK: Cost of 0 for VF 16: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
+; CHECK: Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK: Cost for VF 16: 4
 ; CHECK: LV: Selecting VF: 16
 entry:

@@ -222,5 +222,3 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
 #endif // ENABLE_VALIDATION
   return Replacements;
 }
-
-void support::detail::format_adapter::anchor() {}

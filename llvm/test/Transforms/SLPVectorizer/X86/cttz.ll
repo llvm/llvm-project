@@ -553,11 +553,11 @@ define void @cttz_32i8() #0 {
 }
 
 ;
-; CTTZ_ZERO_UNDEF
+; CTTZ_ZERO_POISON
 ;
 
-define void @cttz_undef_2i64() #0 {
-; SSE-LABEL: @cttz_undef_2i64(
+define void @cttz_poison_2i64() #0 {
+; SSE-LABEL: @cttz_poison_2i64(
 ; SSE-NEXT:    [[LD0:%.*]] = load i64, ptr @src64, align 8
 ; SSE-NEXT:    [[LD1:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i32 0, i64 1), align 8
 ; SSE-NEXT:    [[CTTZ0:%.*]] = call i64 @llvm.cttz.i64(i64 [[LD0]], i1 true)
@@ -566,7 +566,7 @@ define void @cttz_undef_2i64() #0 {
 ; SSE-NEXT:    store i64 [[CTTZ1]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i32 0, i64 1), align 8
 ; SSE-NEXT:    ret void
 ;
-; AVX1-LABEL: @cttz_undef_2i64(
+; AVX1-LABEL: @cttz_poison_2i64(
 ; AVX1-NEXT:    [[LD0:%.*]] = load i64, ptr @src64, align 8
 ; AVX1-NEXT:    [[LD1:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i32 0, i64 1), align 8
 ; AVX1-NEXT:    [[CTTZ0:%.*]] = call i64 @llvm.cttz.i64(i64 [[LD0]], i1 true)
@@ -575,7 +575,7 @@ define void @cttz_undef_2i64() #0 {
 ; AVX1-NEXT:    store i64 [[CTTZ1]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i32 0, i64 1), align 8
 ; AVX1-NEXT:    ret void
 ;
-; AVX2-LABEL: @cttz_undef_2i64(
+; AVX2-LABEL: @cttz_poison_2i64(
 ; AVX2-NEXT:    [[LD0:%.*]] = load i64, ptr @src64, align 8
 ; AVX2-NEXT:    [[LD1:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i32 0, i64 1), align 8
 ; AVX2-NEXT:    [[CTTZ0:%.*]] = call i64 @llvm.cttz.i64(i64 [[LD0]], i1 true)
@@ -584,7 +584,7 @@ define void @cttz_undef_2i64() #0 {
 ; AVX2-NEXT:    store i64 [[CTTZ1]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i32 0, i64 1), align 8
 ; AVX2-NEXT:    ret void
 ;
-; AVX512-LABEL: @cttz_undef_2i64(
+; AVX512-LABEL: @cttz_poison_2i64(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @src64, align 8
 ; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[TMP1]], i1 true)
 ; AVX512-NEXT:    store <2 x i64> [[TMP2]], ptr @dst64, align 8
@@ -599,8 +599,8 @@ define void @cttz_undef_2i64() #0 {
   ret void
 }
 
-define void @cttz_undef_4i64() #0 {
-; SSE-LABEL: @cttz_undef_4i64(
+define void @cttz_poison_4i64() #0 {
+; SSE-LABEL: @cttz_poison_4i64(
 ; SSE-NEXT:    [[LD0:%.*]] = load i64, ptr @src64, align 4
 ; SSE-NEXT:    [[LD1:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i64 0, i64 1), align 4
 ; SSE-NEXT:    [[LD2:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i64 0, i64 2), align 4
@@ -615,7 +615,7 @@ define void @cttz_undef_4i64() #0 {
 ; SSE-NEXT:    store i64 [[CTTZ3]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i64 0, i64 3), align 4
 ; SSE-NEXT:    ret void
 ;
-; AVX1-LABEL: @cttz_undef_4i64(
+; AVX1-LABEL: @cttz_poison_4i64(
 ; AVX1-NEXT:    [[LD0:%.*]] = load i64, ptr @src64, align 4
 ; AVX1-NEXT:    [[LD1:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i64 0, i64 1), align 4
 ; AVX1-NEXT:    [[LD2:%.*]] = load i64, ptr getelementptr inbounds ([4 x i64], ptr @src64, i64 0, i64 2), align 4
@@ -630,13 +630,13 @@ define void @cttz_undef_4i64() #0 {
 ; AVX1-NEXT:    store i64 [[CTTZ3]], ptr getelementptr inbounds ([4 x i64], ptr @dst64, i64 0, i64 3), align 4
 ; AVX1-NEXT:    ret void
 ;
-; AVX2-LABEL: @cttz_undef_4i64(
+; AVX2-LABEL: @cttz_poison_4i64(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @src64, align 4
 ; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> [[TMP1]], i1 true)
 ; AVX2-NEXT:    store <4 x i64> [[TMP2]], ptr @dst64, align 4
 ; AVX2-NEXT:    ret void
 ;
-; AVX512-LABEL: @cttz_undef_4i64(
+; AVX512-LABEL: @cttz_poison_4i64(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @src64, align 4
 ; AVX512-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.cttz.v4i64(<4 x i64> [[TMP1]], i1 true)
 ; AVX512-NEXT:    store <4 x i64> [[TMP2]], ptr @dst64, align 4
@@ -657,8 +657,8 @@ define void @cttz_undef_4i64() #0 {
   ret void
 }
 
-define void @cttz_undef_4i32() #0 {
-; SSE-LABEL: @cttz_undef_4i32(
+define void @cttz_poison_4i32() #0 {
+; SSE-LABEL: @cttz_poison_4i32(
 ; SSE-NEXT:    [[LD0:%.*]] = load i32, ptr @src32, align 4
 ; SSE-NEXT:    [[LD1:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 1), align 4
 ; SSE-NEXT:    [[LD2:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 2), align 4
@@ -673,7 +673,7 @@ define void @cttz_undef_4i32() #0 {
 ; SSE-NEXT:    store i32 [[CTTZ3]], ptr getelementptr inbounds ([8 x i32], ptr @dst32, i32 0, i64 3), align 4
 ; SSE-NEXT:    ret void
 ;
-; AVX1-LABEL: @cttz_undef_4i32(
+; AVX1-LABEL: @cttz_poison_4i32(
 ; AVX1-NEXT:    [[LD0:%.*]] = load i32, ptr @src32, align 4
 ; AVX1-NEXT:    [[LD1:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 1), align 4
 ; AVX1-NEXT:    [[LD2:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 2), align 4
@@ -688,13 +688,13 @@ define void @cttz_undef_4i32() #0 {
 ; AVX1-NEXT:    store i32 [[CTTZ3]], ptr getelementptr inbounds ([8 x i32], ptr @dst32, i32 0, i64 3), align 4
 ; AVX1-NEXT:    ret void
 ;
-; AVX2-LABEL: @cttz_undef_4i32(
+; AVX2-LABEL: @cttz_poison_4i32(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @src32, align 4
 ; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 true)
 ; AVX2-NEXT:    store <4 x i32> [[TMP2]], ptr @dst32, align 4
 ; AVX2-NEXT:    ret void
 ;
-; AVX512-LABEL: @cttz_undef_4i32(
+; AVX512-LABEL: @cttz_poison_4i32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @src32, align 4
 ; AVX512-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> [[TMP1]], i1 true)
 ; AVX512-NEXT:    store <4 x i32> [[TMP2]], ptr @dst32, align 4
@@ -715,8 +715,8 @@ define void @cttz_undef_4i32() #0 {
   ret void
 }
 
-define void @cttz_undef_8i32() #0 {
-; SSE-LABEL: @cttz_undef_8i32(
+define void @cttz_poison_8i32() #0 {
+; SSE-LABEL: @cttz_poison_8i32(
 ; SSE-NEXT:    [[LD0:%.*]] = load i32, ptr @src32, align 2
 ; SSE-NEXT:    [[LD1:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 1), align 2
 ; SSE-NEXT:    [[LD2:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 2), align 2
@@ -743,7 +743,7 @@ define void @cttz_undef_8i32() #0 {
 ; SSE-NEXT:    store i32 [[CTTZ7]], ptr getelementptr inbounds ([8 x i32], ptr @dst32, i32 0, i64 7), align 2
 ; SSE-NEXT:    ret void
 ;
-; AVX1-LABEL: @cttz_undef_8i32(
+; AVX1-LABEL: @cttz_poison_8i32(
 ; AVX1-NEXT:    [[LD0:%.*]] = load i32, ptr @src32, align 2
 ; AVX1-NEXT:    [[LD1:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 1), align 2
 ; AVX1-NEXT:    [[LD2:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @src32, i32 0, i64 2), align 2
@@ -770,13 +770,13 @@ define void @cttz_undef_8i32() #0 {
 ; AVX1-NEXT:    store i32 [[CTTZ7]], ptr getelementptr inbounds ([8 x i32], ptr @dst32, i32 0, i64 7), align 2
 ; AVX1-NEXT:    ret void
 ;
-; AVX2-LABEL: @cttz_undef_8i32(
+; AVX2-LABEL: @cttz_poison_8i32(
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @src32, align 2
 ; AVX2-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> [[TMP1]], i1 true)
 ; AVX2-NEXT:    store <8 x i32> [[TMP2]], ptr @dst32, align 2
 ; AVX2-NEXT:    ret void
 ;
-; AVX512-LABEL: @cttz_undef_8i32(
+; AVX512-LABEL: @cttz_poison_8i32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @src32, align 2
 ; AVX512-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> [[TMP1]], i1 true)
 ; AVX512-NEXT:    store <8 x i32> [[TMP2]], ptr @dst32, align 2
@@ -809,8 +809,8 @@ define void @cttz_undef_8i32() #0 {
   ret void
 }
 
-define void @cttz_undef_8i16() #0 {
-; CHECK-LABEL: @cttz_undef_8i16(
+define void @cttz_poison_8i16() #0 {
+; CHECK-LABEL: @cttz_poison_8i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @src16, align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 true)
 ; CHECK-NEXT:    store <8 x i16> [[TMP2]], ptr @dst16, align 2
@@ -843,8 +843,8 @@ define void @cttz_undef_8i16() #0 {
   ret void
 }
 
-define void @cttz_undef_16i16() #0 {
-; SSE-LABEL: @cttz_undef_16i16(
+define void @cttz_poison_16i16() #0 {
+; SSE-LABEL: @cttz_poison_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @src16, align 2
 ; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> [[TMP1]], i1 true)
 ; SSE-NEXT:    store <8 x i16> [[TMP2]], ptr @dst16, align 2
@@ -853,7 +853,7 @@ define void @cttz_undef_16i16() #0 {
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], ptr getelementptr inbounds ([16 x i16], ptr @dst16, i16 0, i64 8), align 2
 ; SSE-NEXT:    ret void
 ;
-; AVX-LABEL: @cttz_undef_16i16(
+; AVX-LABEL: @cttz_poison_16i16(
 ; AVX-NEXT:    [[TMP1:%.*]] = load <16 x i16>, ptr @src16, align 2
 ; AVX-NEXT:    [[TMP2:%.*]] = call <16 x i16> @llvm.cttz.v16i16(<16 x i16> [[TMP1]], i1 true)
 ; AVX-NEXT:    store <16 x i16> [[TMP2]], ptr @dst16, align 2
@@ -910,8 +910,8 @@ define void @cttz_undef_16i16() #0 {
   ret void
 }
 
-define void @cttz_undef_16i8() #0 {
-; CHECK-LABEL: @cttz_undef_16i8(
+define void @cttz_poison_16i8() #0 {
+; CHECK-LABEL: @cttz_poison_16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @src8, align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 true)
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr @dst8, align 1
@@ -968,8 +968,8 @@ define void @cttz_undef_16i8() #0 {
   ret void
 }
 
-define void @cttz_undef_32i8() #0 {
-; SSE-LABEL: @cttz_undef_32i8(
+define void @cttz_poison_32i8() #0 {
+; SSE-LABEL: @cttz_poison_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @src8, align 1
 ; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> [[TMP1]], i1 true)
 ; SSE-NEXT:    store <16 x i8> [[TMP2]], ptr @dst8, align 1
@@ -978,7 +978,7 @@ define void @cttz_undef_32i8() #0 {
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], ptr getelementptr inbounds ([32 x i8], ptr @dst8, i8 0, i64 16), align 1
 ; SSE-NEXT:    ret void
 ;
-; AVX-LABEL: @cttz_undef_32i8(
+; AVX-LABEL: @cttz_poison_32i8(
 ; AVX-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr @src8, align 1
 ; AVX-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.cttz.v32i8(<32 x i8> [[TMP1]], i1 true)
 ; AVX-NEXT:    store <32 x i8> [[TMP2]], ptr @dst8, align 1

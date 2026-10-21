@@ -29,6 +29,7 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+#define GET_CALLING_CONV_IMPL
 #include "CSKYGenCallingConv.inc"
 
 static const MCPhysReg GPRArgRegs[] = {CSKY::R0, CSKY::R1, CSKY::R2, CSKY::R3};
@@ -555,7 +556,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, XLenVT);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false, /*CI=*/nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
@@ -1224,12 +1225,12 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
 }
 
 Register CSKYTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return CSKY::R0;
 }
 
 Register CSKYTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return CSKY::R1;
 }
 

@@ -90,9 +90,9 @@ public:
     }
   };
 
-  TapiUniversal(MemoryBufferRef Source, Error &Err);
+  TapiUniversal(MemoryBufferRef Source, bool SkipUnknownTriples, Error &Err);
   static Expected<std::unique_ptr<TapiUniversal>>
-  create(MemoryBufferRef Source);
+  create(MemoryBufferRef Source, bool SkipUnknownTriples = false);
   ~TapiUniversal() override;
 
   object_iterator begin_objects() const { return ObjectForArch(this, 0); }

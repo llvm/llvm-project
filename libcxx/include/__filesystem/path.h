@@ -29,6 +29,7 @@
 #include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
+#  include <__locale_dir/utf8_conversions.h>
 #  include <iomanip> // for quoted
 #endif
 
@@ -42,6 +43,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 struct __can_convert_char {
@@ -79,7 +81,7 @@ struct __can_convert_char<char32_t> {
 
 template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI bool __is_separator(_ECharT __e) {
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
   return __e == _ECharT('/') || __e == _ECharT('\\');
 #  else
   return __e == _ECharT('/');
@@ -180,7 +182,7 @@ struct __is_pathable<_Tp, false, true, false> : __is_pathable_char_array<_Tp> {}
 template <class _Tp>
 struct __is_pathable<_Tp, false, false, true> : __is_pathable_iter<_Tp> {};
 
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
 typedef wstring __path_string;
 typedef wchar_t __path_value;
 #  else
@@ -188,7 +190,7 @@ typedef string __path_string;
 typedef char __path_value;
 #  endif
 
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
 _LIBCPP_EXPORTED_FROM_ABI size_t __wide_to_char(const wstring&, char*, size_t);
 _LIBCPP_EXPORTED_FROM_ABI size_t __char_to_wide(const string&, wchar_t*, size_t);
 #  endif
@@ -202,12 +204,12 @@ struct _PathCVT {
   static_assert(__can_convert_char<_ECharT>::value, "Char type not convertible");
 
   typedef __narrow_to_utf8<sizeof(_ECharT) * __CHAR_BIT__> _Narrower;
-#    if defined(_LIBCPP_WIN32API)
+#    ifdef _WIN32
   typedef __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Widener;
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _ECharT const* __b, _ECharT const* __e) {
-#    if defined(_LIBCPP_WIN32API)
+#    ifdef _WIN32
     string __utf8;
     _Narrower()(back_inserter(__utf8), __b, __e);
     _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
@@ -222,7 +224,7 @@ struct _PathCVT {
     if (__b == __e)
       return;
     basic_string<_ECharT> __tmp(__b, __e);
-#    if defined(_LIBCPP_WIN32API)
+#    ifdef _WIN32
     string __utf8;
     _Narrower()(back_inserter(__utf8), __tmp.data(), __tmp.data() + __tmp.length());
     _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
@@ -240,7 +242,7 @@ struct _PathCVT {
     basic_string<_ECharT> __tmp;
     for (; *__b != __sentinel; ++__b)
       __tmp.push_back(*__b);
-#    if defined(_LIBCPP_WIN32API)
+#    ifdef _WIN32
     string __utf8;
     _Narrower()(back_inserter(__utf8), __tmp.data(), __tmp.data() + __tmp.length());
     _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
@@ -283,7 +285,7 @@ struct _PathCVT<__path_value> {
   }
 };
 
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
 template <>
 struct _PathCVT<char> {
   _LIBCPP_HIDE_FROM_ABI static void __append_string(__path_string& __dest, const basic_string<char>& __str) {
@@ -368,7 +370,7 @@ struct _PathExport<char8_t> {
 };
 #      endif // _LIBCPP_HAS_CHAR8_T
 #    endif   // _LIBCPP_HAS_LOCALIZATION
-#  endif     // _LIBCPP_WIN32API
+#  endif     // _WIN32
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
@@ -381,7 +383,7 @@ class _LIBCPP_EXPORTED_FROM_ABI path {
   using _SourceCVT _LIBCPP_NODEBUG = _PathCVT<_SourceChar<_Tp> >;
 
 public:
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
   typedef wchar_t value_type;
   static constexpr value_type preferred_separator = L'\\';
 #  else
@@ -467,7 +469,7 @@ public:
 
 public:
   // appends
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
   _LIBCPP_HIDE_FROM_ABI path& operator/=(const path& __p) {
     auto __p_root_name      = __p.__root_name();
     auto __p_root_name_size = __p_root_name.size();
@@ -601,7 +603,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept { __pn_.clear(); }
 
   _LIBCPP_HIDE_FROM_ABI path& make_preferred() _LIBCPP_LIFETIMEBOUND {
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
     std::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
 #  endif
     return *this;
@@ -666,7 +668,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring wstring() const { return __pn_; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::wstring generic_wstring() const {
@@ -721,7 +723,7 @@ public:
     return __s;
   }
 #    endif // _LIBCPP_HAS_LOCALIZATION
-#  else    /* _LIBCPP_WIN32API */
+#  else    // _WIN32
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::string string() const { return __pn_; }
 #    if _LIBCPP_HAS_CHAR8_T
@@ -774,7 +776,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u16string generic_u16string() const { return string<char16_t>(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::u32string generic_u32string() const { return string<char32_t>(); }
 #    endif // _LIBCPP_HAS_LOCALIZATION
-#  endif   /* !_LIBCPP_WIN32API */
+#  endif   // _WIN32
 
 private:
   int __compare(__string_view) const;
@@ -798,7 +800,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_name() const { return string_type(__root_name()); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_directory() const { return string_type(__root_directory()); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI path root_path() const {
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
     return string_type(__root_path_raw());
 #  else
     return root_name().append(string_type(__root_directory()));
@@ -823,7 +825,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_extension() const { return !__extension().empty(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_absolute() const {
-#  if defined(_LIBCPP_WIN32API)
+#  ifdef _WIN32
     __string_view __root_name_str = __root_name();
     __string_view __root_dir      = __root_directory();
     if (__root_name_str.size() == 2 && __root_name_str[1] == ':') {
@@ -899,6 +901,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept { __lh
 
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD

@@ -4,8 +4,8 @@
 ; TODO: Currently lowering get_active_lane_mask requires +sve
 ; XFAIL: *
 
-define <16 x i1> @whilewr_8(ptr %a, ptr %b) {
+define <16 x i1> @whilewr_8(i64 %a, i64 %b) {
 entry:
-  %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
+  %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %a, i64 %b, i64 1)
   ret <16 x i1> %0
 }

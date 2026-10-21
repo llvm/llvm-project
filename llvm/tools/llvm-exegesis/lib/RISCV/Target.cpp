@@ -748,7 +748,7 @@ public:
     PM.add(exegesis::createRISCVPostprocessingPass());
     // PseudoRET will be expanded by RISCVAsmPrinter; we have to expand
     // PseudoMovImm with RISCVPostRAExpandPseudoPass though.
-    PM.add(createRISCVPostRAExpandPseudoPass());
+    PM.add(createRISCVExpandPseudoPostRALegacyPass());
   }
 };
 

@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -157,7 +158,20 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
     return;
   }
 
-  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+  // Handle feature strings
+  if (Info.Features.size() == 1) {
+    StringRef Feature = Info.Features[0];
+    assert(Feature.starts_with("+") || Feature.starts_with("-"));
+
+    // replace hyphens with underscores
+    std::string MangledName(Feature.drop_front(1));
+    std::replace(MangledName.begin(), MangledName.end(), '-', '_');
+
+    Out << "." << (Feature.starts_with("-") ? "no_" : "") << MangledName;
+    return;
+  }
+
+  llvm_unreachable("Invalid target_clones parameter");
 }
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -414,7 +428,7 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
   const Type *AlignTy = nullptr;
-  if (const Type *EltType = isSingleElementStruct(Ty, getContext())) {
+  if (const Type *EltType = isSingleElementRecord(Ty, getContext())) {
     const BuiltinType *BT = EltType->getAs<BuiltinType>();
     if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
         (BT && BT->isFloatingPoint()))
@@ -653,6 +667,7 @@ public:
 
   bool isPromotableTypeForABI(QualType Ty) const;
   CharUnits getParamTypeAlignment(QualType Ty) const;
+  const Type *getSingleElementFPOrVectorType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
@@ -674,15 +689,9 @@ public:
       // We rely on the default argument classification for the most part.
       // One exception:  An aggregate containing a single floating-point
       // or vector item must be passed in a register if one is available.
-      const Type *T = isSingleElementStruct(I.type, getContext());
-      if (T) {
-        const BuiltinType *BT = T->getAs<BuiltinType>();
-        if ((T->isVectorType() && getContext().getTypeSize(T) == 128) ||
-            (BT && BT->isFloatingPoint())) {
-          QualType QT(T, 0);
-          I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QT));
-          continue;
-        }
+      if (const Type *T = getSingleElementFPOrVectorType(I.type)) {
+        I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QualType(T, 0)));
+        continue;
       }
       I.info = classifyArgumentType(I.type);
     }
@@ -710,9 +719,6 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
-  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
-                          const llvm::MapVector<GlobalDecl, StringRef>
-                              &MangledDeclNames) const override;
 };
 
 class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -785,14 +791,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
-  const Type *AlignAsType = nullptr;
-  const Type *EltType = isSingleElementStruct(Ty, getContext());
-  if (EltType) {
-    const BuiltinType *BT = EltType->getAs<BuiltinType>();
-    if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
-        (BT && BT->isFloatingPoint()))
-      AlignAsType = EltType;
-  }
+  const Type *AlignAsType = getSingleElementFPOrVectorType(Ty);
 
   // Likewise for ELFv2 homogeneous aggregates.
   const Type *Base = nullptr;
@@ -815,6 +814,20 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   }
 
   return CharUnits::fromQuantity(8);
+}
+
+/// If Ty is a one-member aggregate wrapping a floating-point or 128-bit vector
+/// type, return that type.
+const Type *
+PPC64_SVR4_ABIInfo::getSingleElementFPOrVectorType(QualType Ty) const {
+  const Type *EltType = isSingleElementRecord(Ty, getContext());
+  if (!EltType)
+    return nullptr;
+  const BuiltinType *BT = EltType->getAs<BuiltinType>();
+  if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
+      (BT && BT->isFloatingPoint()))
+    return EltType;
+  return nullptr;
 }
 
 bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -1038,24 +1051,6 @@ PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
-}
-
-void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
-    CodeGen::CodeGenModule &CGM,
-    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
-  if (CGM.getTypes().isLongDoubleReferenced()) {
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    const auto *flt = &CGM.getTarget().getLongDoubleFormat();
-    if (flt == &llvm::APFloat::PPCDoubleDouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "doubledouble"));
-    else if (flt == &llvm::APFloat::IEEEquad())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeequad"));
-    else if (flt == &llvm::APFloat::IEEEdouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeedouble"));
-  }
 }
 
 bool

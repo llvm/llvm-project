@@ -12,29 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
-#include <cstdint>
 #include <iostream>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "check.h"
 #include "complexity.h"
-#include "string_util.h"
-#include "timers.h"
 
 // File format reference: http://edoceo.com/utilitas/csv-file-format.
 
 namespace benchmark {
 
 namespace {
-std::vector<std::string> elements = {
+const std::vector<const char*> elements = {
     "name",           "iterations",       "real_time",        "cpu_time",
     "time_unit",      "bytes_per_second", "items_per_second", "label",
     "error_occurred", "error_message"};
-}  // namespace
 
 std::string CsvEscape(const std::string& s) {
   std::string tmp;
@@ -51,6 +45,7 @@ std::string CsvEscape(const std::string& s) {
   }
   return '"' + tmp + '"';
 }
+}  // namespace
 
 BENCHMARK_EXPORT
 bool CSVReporter::ReportContext(const Context& context) {
@@ -66,8 +61,10 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
     // save the names of all the user counters
     for (const auto& run : reports) {
       for (const auto& cnt : run.counters) {
-        if (cnt.first == "bytes_per_second" || cnt.first == "items_per_second")
+        if (cnt.first == "bytes_per_second" ||
+            cnt.first == "items_per_second") {
           continue;
+        }
         user_counter_names_.insert(cnt.first);
       }
     }
@@ -75,7 +72,9 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
     // print the header
     for (auto B = elements.begin(); B != elements.end();) {
       Out << *B++;
-      if (B != elements.end()) Out << ",";
+      if (B != elements.end()) {
+        Out << ",";
+      }
     }
     for (auto B = user_counter_names_.begin();
          B != user_counter_names_.end();) {
@@ -88,8 +87,10 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
     // check that all the current counters are saved in the name set
     for (const auto& run : reports) {
       for (const auto& cnt : run.counters) {
-        if (cnt.first == "bytes_per_second" || cnt.first == "items_per_second")
+        if (cnt.first == "bytes_per_second" ||
+            cnt.first == "items_per_second") {
           continue;
+        }
         BM_CHECK(user_counter_names_.find(cnt.first) !=
                  user_counter_names_.end())
             << "All counters must be present in each run. "
@@ -109,7 +110,7 @@ BENCHMARK_EXPORT
 void CSVReporter::PrintRunData(const Run& run) {
   std::ostream& Out = GetOutputStream();
   Out << CsvEscape(run.benchmark_name()) << ",";
-  if (run.skipped) {
+  if (run.skipped != 0u) {
     Out << std::string(elements.size() - 3, ',');
     Out << std::boolalpha << (internal::SkippedWithError == run.skipped) << ",";
     Out << CsvEscape(run.skip_message) << "\n";

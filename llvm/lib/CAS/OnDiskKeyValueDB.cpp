@@ -110,7 +110,7 @@ static Error validateOnDiskKeyValueDB(const OnDiskTrieRawHashMap &Cache,
               llvm::errc::illegal_byte_sequence,
               "bad cache value at 0x" +
                   utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-                  Msg.str());
+                  Msg);
         };
 
         if (Record.Data.size() != ValueSize)

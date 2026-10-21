@@ -86,7 +86,7 @@ entry:
   %ehselector.slot = alloca i32, align 4
   %ref.tmp13 = alloca %"struct.std::__n4861::suspend_always", align 1
   %undef.agg.tmp14 = alloca %"struct.std::__n4861::suspend_always", align 1
-  %0 = call token @llvm.coro.id(i32 16, ptr %__promise, ptr null, ptr null), !dbg !33
+  %0 = call token @llvm.coro.id(i32 16, ptr %__promise, ptr @_Z3foov, ptr null), !dbg !33
   %1 = call i1 @llvm.coro.alloc(token %0), !dbg !33
   br i1 %1, label %coro.alloc, label %coro.init, !dbg !33
 

@@ -67,7 +67,15 @@ public:
 
   /// Returns type twice as wide the input type.
   IntegerType *getExtendedType() const {
-    return Type::getIntNTy(getContext(), 2 * getScalarSizeInBits());
+    return Type::getIntNTy(getContext(), 2 * getBitWidth());
+  }
+
+  /// Returns type half as wide the input type.
+  IntegerType *getTruncatedType() const {
+    unsigned BitWidth = getBitWidth();
+    assert((BitWidth & 1) == 0 &&
+           "Cannot truncate integer type with odd bit-width");
+    return Type::getIntNTy(getContext(), BitWidth / 2);
   }
 
   /// Get the number of bits in this IntegerType
@@ -98,6 +106,14 @@ public:
 
 unsigned Type::getIntegerBitWidth() const {
   return cast<IntegerType>(this)->getBitWidth();
+}
+
+bool Type::isIntegerTy(unsigned BitWidth) const {
+  return isIntegerTy() && getIntegerBitWidth() == BitWidth;
+}
+
+bool Type::isIntOrIntVectorTy(unsigned BitWidth) const {
+  return getScalarType()->isIntegerTy(BitWidth);
 }
 
 /// Class to represent byte types.
@@ -338,23 +354,18 @@ public:
   bool isOpaque() const { return (getSubclassData() & SCDB_HasBody) == 0; }
 
   /// isSized - Return true if this is a sized type.
-  LLVM_ABI bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
+  LLVM_ABI bool isSized() const;
 
   /// Returns true if this struct contains a scalable vector.
-  LLVM_ABI bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
-  using Type::isScalableTy;
+  LLVM_ABI bool isScalableTy() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a global.
-  LLVM_ABI bool
-  containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  using Type::containsNonGlobalTargetExtType;
+  LLVM_ABI bool containsNonGlobalTargetExtType() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a local.
-  LLVM_ABI bool
-  containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  using Type::containsNonLocalTargetExtType;
+  LLVM_ABI bool containsNonLocalTargetExtType() const;
 
   /// Returns true if this struct contains homogeneous scalable vector types.
   /// Note that the definition of homogeneous scalable vector type is not
@@ -542,9 +553,9 @@ public:
   // the input type, and the element type is an integer or float type which
   // is half as wide as the elements in the input type.
   static VectorType *getTruncatedElementVectorType(VectorType *VTy) {
-    Type *EltTy;
-    if (VTy->getElementType()->isFloatingPointTy()) {
-      switch(VTy->getElementType()->getTypeID()) {
+    Type *EltTy = VTy->getElementType();
+    if (EltTy->isFloatingPointTy()) {
+      switch (EltTy->getTypeID()) {
       case DoubleTyID:
         EltTy = Type::getFloatTy(VTy->getContext());
         break;
@@ -555,11 +566,7 @@ public:
         llvm_unreachable("Cannot create narrower fp vector element type");
       }
     } else {
-      unsigned EltBits =
-          VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
-      assert((EltBits & 1) == 0 &&
-             "Cannot truncate vector element with odd bit-width");
-      EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);
+      EltTy = cast<IntegerType>(EltTy)->getTruncatedType();
     }
     return VectorType::get(EltTy, VTy->getElementCount());
   }
@@ -614,9 +621,9 @@ public:
     if (!SizeTy->getPrimitiveSizeInBits().isKnownMultipleOf(EltSize))
       return nullptr;
 
-    ElementCount EC = SizeTy->getElementCount()
-                          .multiplyCoefficientBy(SizeTy->getScalarSizeInBits())
-                          .divideCoefficientBy(EltSize);
+    ElementCount EC =
+        (SizeTy->getElementCount() * SizeTy->getScalarSizeInBits())
+            .divideCoefficientBy(EltSize);
     return VectorType::get(EltTy->getScalarType(), EC);
   }
 
@@ -750,25 +757,9 @@ public:
   PointerType(const PointerType &) = delete;
   PointerType &operator=(const PointerType &) = delete;
 
-  /// This constructs a pointer to an object of the specified type in a numbered
-  /// address space.
-  [[deprecated("PointerType::get with pointee type is pending removal. Use "
-               "Context overload.")]]
-  LLVM_ABI static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
   LLVM_ABI static PointerType *get(LLVMContext &C, unsigned AddressSpace);
-
-  /// This constructs a pointer to an object of the specified type in the
-  /// default address space (address space zero).
-  [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
-               "Use Context overload.")]]
-  static PointerType *getUnqual(Type *ElementType) {
-    assert(ElementType && "Can't get a pointer to <null> type!");
-    assert(isValidElementType(ElementType) &&
-           "Invalid type for pointer element!");
-    return PointerType::getUnqual(ElementType->getContext());
-  }
 
   /// This constructs an opaque pointer to an object in the
   /// default address space (address space zero).
@@ -799,6 +790,16 @@ Type *Type::getExtendedType() const {
     return VectorType::getExtendedElementVectorType(
         const_cast<VectorType *>(VTy));
   return cast<IntegerType>(this)->getExtendedType();
+}
+
+Type *Type::getTruncatedType() const {
+  assert(
+      isIntOrIntVectorTy() &&
+      "Original type expected to be a vector of integers or a scalar integer.");
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VectorType::getTruncatedElementVectorType(
+        const_cast<VectorType *>(VTy));
+  return cast<IntegerType>(this)->getTruncatedType();
 }
 
 Type *Type::getWithNewType(Type *EltTy) const {

@@ -278,7 +278,8 @@ define i64 @test_ashr_wrong_op(i1 %c, i64 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_ASHR:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_ASHR_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_ASHR_NEXT]] = lshr i64 1, [[IV_ASHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[IV_ASHR]], 0
+; CHECK-NEXT:    [[IV_ASHR_NEXT]] = zext i1 [[TMP0]] to i64
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES:%.*]] = or i64 [[IV_ASHR]], 1023

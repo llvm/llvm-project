@@ -5,9 +5,8 @@
 define <vscale x 1 x double> @fma(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: fma:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fadd.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 %vl)
@@ -18,9 +17,8 @@ define <vscale x 1 x double> @fma(<vscale x 1 x double> %x, <vscale x 1 x double
 define <vscale x 1 x double> @fma_commute(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: fma_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fadd.nxv1f64(<vscale x 1 x double> %z, <vscale x 1 x double> %1, <vscale x 1 x i1> %m, i32 %vl)
@@ -31,9 +29,8 @@ define <vscale x 1 x double> @fma_commute(<vscale x 1 x double> %x, <vscale x 1 
 define <vscale x 1 x double> @fma_true(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: fma_true:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> splat (i1 true), i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fadd.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 %vl)
@@ -44,9 +41,8 @@ define <vscale x 1 x double> @fma_true(<vscale x 1 x double> %x, <vscale x 1 x d
 define <vscale x 1 x double> @fma_nonvp(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: fma_nonvp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = fmul fast <vscale x 1 x double> %x, %y
   %2 = call fast <vscale x 1 x double> @llvm.vp.fadd.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 %vl)
@@ -56,10 +52,9 @@ define <vscale x 1 x double> @fma_nonvp(<vscale x 1 x double> %x, <vscale x 1 x 
 define <vscale x 1 x double> @fma_reassociate(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, <vscale x 1 x double> %d, <vscale x 1 x double> %e, <vscale x 1 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: fma_reassociate:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v11, v10, v12, v0.t
-; CHECK-NEXT:    vfmadd.vv v9, v8, v11, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v10, v11, v12
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %c, <vscale x 1 x double> %d, <vscale x 1 x i1> %m, i32 %vl)

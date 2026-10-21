@@ -37,25 +37,25 @@ define void @foo(ptr %x, i1 %y, i1 %z) {
 entry:
   br label %loop.header
 
-exit:                                              ; preds = %loop.latch
+exit:
   ret void
 
-loop.header:                                              ; preds = %loop.latch, %entry
+loop.header:
   %phi = phi i64 [ %add, %loop.latch ], [ 0, %entry ]
   %phi3 = phi i64 [ %phi7, %loop.latch ], [ 0, %entry ]
   %phi4 = phi i1 [ %ynot, %loop.latch ], [ %y, %entry ]
   %phi5 = phi i1 [ %znot, %loop.latch ], [ %z, %entry ]
   br i1 %y, label %bb4, label %loop.latch
 
-bb4:                                              ; preds = %loop.header
+bb4:
   br i1 %z, label %loop.latch, label %bb5, !prof !0
 
-bb5:                                              ; preds = %bb4
+bb5:
   %load = load i64, ptr %x, align 8
   %call = call i64 @llvm.smin.i64(i64 %load, i64 %phi3)
   br label %loop.latch
 
-loop.latch:                                              ; preds = %bb5, %bb4, %loop.header
+loop.latch:
   %phi7 = phi i64 [ %phi3, %bb4 ], [ %call, %bb5 ], [ %phi3, %loop.header ]
   %add = add i64 %phi, 1
   %icmp = icmp eq i64 %phi, 1

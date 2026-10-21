@@ -33,8 +33,7 @@ template<typename T> T &make();
 // CHECK: @_ZDC2a12a2E ={{.*}} global {{.*}} zeroinitializer, align 4
 auto [a1, a2] = make<A>();
 // CHECK: @_ZDC2b12b2E ={{.*}} global {{.*}} zeroinitializer, align 1
-// CHECK: @b1 ={{.*}} global ptr null, align 8
-// CHECK: @_ZGR2b1_ = internal global {{.*}} zeroinitializer, align 1
+// CHECK: @b1 ={{.*}} global {{.*}} zeroinitializer, align 1
 // CHECK: @b2 ={{.*}} global ptr null, align 8
 // CHECK: @_ZGR2b2_ = internal global i32 0, align 4
 auto [b1, b2] = make<B>();
@@ -50,9 +49,8 @@ auto [e1, e2] = make<E>();
 
 // CHECK: @_Z4makeI1BERT_v()
 //   CHECK: call i32 @_Z3getILi0EEDa1B()
-//   CHECK: call void @_ZN1XC1E1Y(ptr {{[^,]*}} @_ZGR2b1_, i32
-//   CHECK: call i32 @__cxa_atexit({{.*}}@_ZN1XD1Ev{{.*}}@_ZGR2b1_
-//   CHECK: store ptr @_ZGR2b1_,
+//   CHECK: call void @_ZN1XC1E1Y(ptr {{[^,]*}} @b1, i32
+//   CHECK: call i32 @__cxa_atexit({{.*}}@_ZN1XD1Ev{{.*}}@b1
 //
 //   CHECK: call noundef double @_Z3getILi1EEDa1B()
 //   CHECK: fptosi double %{{.*}} to i32
@@ -149,9 +147,8 @@ int test_static_tuple() {
   // CHECK: br i1
   // CHECK: @__cxa_guard_acquire({{.*}} @_ZGVZ17test_static_tuplevE2x1)
   // CHECK: call {{.*}} @_Z3getILi0EEDa1B(
-  // CHECK: call {{.*}} @_ZN1XC1E1Y({{.*}} @_ZGRZ17test_static_tuplevE2x1_,
-  // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN1XD1Ev, {{.*}} @_ZGRZ17test_static_tuplevE2x1_
-  // CHECK: store {{.*}} @_ZGRZ17test_static_tuplevE2x1_, {{.*}} @_ZZ17test_static_tuplevE2x1
+  // CHECK: call {{.*}} @_ZN1XC1E1Y({{.*}} @_ZZ17test_static_tuplevE2x1,
+  // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN1XD1Ev, {{.*}} @_ZZ17test_static_tuplevE2x1
   // CHECK: call void @__cxa_guard_release({{.*}} @_ZGVZ17test_static_tuplevE2x1)
 
   // Initialization of the secret 'x2' variable.

@@ -295,13 +295,13 @@ bool RewriteMapParser::parseEntry(yaml::Stream &YS, yaml::KeyValueNode &Entry,
   SmallString<32> KeyStorage;
   StringRef RewriteType;
 
-  Key = dyn_cast<yaml::ScalarNode>(Entry.getKey());
+  Key = dyn_cast_if_present<yaml::ScalarNode>(Entry.getKey());
   if (!Key) {
     YS.printError(Entry.getKey(), "rewrite type must be a scalar");
     return false;
   }
 
-  Value = dyn_cast<yaml::MappingNode>(Entry.getValue());
+  Value = dyn_cast_if_present<yaml::MappingNode>(Entry.getValue());
   if (!Value) {
     YS.printError(Entry.getValue(), "rewrite descriptor must be a map");
     return false;
@@ -335,13 +335,13 @@ parseRewriteFunctionDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
     SmallString<32> ValueStorage;
     StringRef KeyValue;
 
-    Key = dyn_cast<yaml::ScalarNode>(Field.getKey());
+    Key = dyn_cast_if_present<yaml::ScalarNode>(Field.getKey());
     if (!Key) {
       YS.printError(Field.getKey(), "descriptor key must be a scalar");
       return false;
     }
 
-    Value = dyn_cast<yaml::ScalarNode>(Field.getValue());
+    Value = dyn_cast_if_present<yaml::ScalarNode>(Field.getValue());
     if (!Value) {
       YS.printError(Field.getValue(), "descriptor value must be a scalar");
       return false;
@@ -408,13 +408,13 @@ parseRewriteGlobalVariableDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
     SmallString<32> ValueStorage;
     StringRef KeyValue;
 
-    Key = dyn_cast<yaml::ScalarNode>(Field.getKey());
+    Key = dyn_cast_if_present<yaml::ScalarNode>(Field.getKey());
     if (!Key) {
       YS.printError(Field.getKey(), "descriptor Key must be a scalar");
       return false;
     }
 
-    Value = dyn_cast<yaml::ScalarNode>(Field.getValue());
+    Value = dyn_cast_if_present<yaml::ScalarNode>(Field.getValue());
     if (!Value) {
       YS.printError(Field.getValue(), "descriptor value must be a scalar");
       return false;
@@ -475,13 +475,13 @@ parseRewriteGlobalAliasDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
     SmallString<32> ValueStorage;
     StringRef KeyValue;
 
-    Key = dyn_cast<yaml::ScalarNode>(Field.getKey());
+    Key = dyn_cast_if_present<yaml::ScalarNode>(Field.getKey());
     if (!Key) {
       YS.printError(Field.getKey(), "descriptor key must be a scalar");
       return false;
     }
 
-    Value = dyn_cast<yaml::ScalarNode>(Field.getValue());
+    Value = dyn_cast_if_present<yaml::ScalarNode>(Field.getValue());
     if (!Value) {
       YS.printError(Field.getValue(), "descriptor value must be a scalar");
       return false;

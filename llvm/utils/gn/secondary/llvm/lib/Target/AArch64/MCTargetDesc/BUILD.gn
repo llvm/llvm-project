@@ -39,6 +39,12 @@ tablegen("AArch64GenSubtargetInfo") {
   td_file = "../AArch64.td"
 }
 
+tablegen("AArch64MCOptions") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "AArch64MCOptions.td"
+}
+
 # This should contain tablegen targets generating .inc files included
 # by other targets. .inc files only used by .cpp files in this directory
 # should be in deps on the static_library instead.
@@ -51,6 +57,7 @@ group("tablegen") {
     ":AArch64GenInstrInfo",
     ":AArch64GenRegisterInfo",
     ":AArch64GenSubtargetInfo",
+    ":AArch64MCOptions",
   ]
 }
 
@@ -63,6 +70,7 @@ static_library("MCTargetDesc") {
     ":AArch64GenMCCodeEmitter",
     "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/TargetInfo",
     "//llvm/lib/Target/AArch64/Utils",
@@ -77,6 +85,7 @@ static_library("MCTargetDesc") {
     "AArch64MCAsmInfo.cpp",
     "AArch64MCCodeEmitter.cpp",
     "AArch64MCExpr.cpp",
+    "AArch64MCLFIRewriter.cpp",
     "AArch64MCTargetDesc.cpp",
     "AArch64MachObjectWriter.cpp",
     "AArch64TargetStreamer.cpp",

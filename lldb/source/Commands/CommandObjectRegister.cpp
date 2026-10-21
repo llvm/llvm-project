@@ -10,6 +10,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -23,11 +24,19 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
+
+#include <string>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,6 +44,34 @@ using namespace lldb_private;
 // "register read"
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
+
+static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
+  const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
+  return reg_name ? strlen(reg_name) : 0;
+}
+
+static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
+                                         const RegisterSet &reg_set,
+                                         bool use_primary_name,
+                                         bool primitive_only) {
+  const size_t num_registers = reg_set.num_registers;
+  size_t name_right_align_at = 0;
+
+  // Loop through all the registers to find the longest register name.
+  for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
+    const size_t reg = reg_set.registers[reg_idx];
+    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg)) {
+      // Derived registers are skipped if primitive_only is true.
+      if (primitive_only && reg_info->value_regs)
+        continue;
+
+      name_right_align_at = std::max(name_right_align_at,
+                                     GetNameSize(reg_info, use_primary_name));
+    }
+  }
+
+  return name_right_align_at;
+}
 
 class CommandObjectRegisterRead : public CommandObjectParsed {
 public:
@@ -48,8 +85,8 @@ public:
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
         m_format_options(eFormatDefault, UINT64_MAX, UINT64_MAX,
                          {{CommandArgumentType::eArgTypeFormat,
-                           "Specify a format to be used for display. If this "
-                           "is set, register fields will not be displayed."}}) {
+                           "Specify a format to be used for display. This "
+                           "overrides any other register type information."}}) {
     AddSimpleArgumentList(eArgTypeRegisterName, eArgRepeatStar);
 
     // Add the "--format"
@@ -75,7 +112,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags) {
+                    bool print_type, size_t reg_name_right_align_at) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -85,8 +122,9 @@ public:
     bool prefix_with_altname = (bool)m_command_options.alternate_name;
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
-                      prefix_with_altname, m_format_options.GetFormat(), 8,
-                      exe_ctx.GetBestExecutionContextScope(), print_flags,
+                      prefix_with_altname, m_format_options.GetFormat(),
+                      reg_name_right_align_at,
+                      exe_ctx.GetBestExecutionContextScope(), print_type,
                       exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
         (reg_info.encoding == eEncodingSint)) {
@@ -108,6 +146,48 @@ public:
     return true;
   }
 
+  void DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
+                         const ValueObjectSP &value_sp,
+                         size_t reg_name_right_align_at,
+                         CommandReturnObject &result) {
+    DumpValueObjectOptions options(*value_sp);
+    options.SetHideRootType(true)
+        .SetHideRootName(true)
+        .SetHideName(true)
+        .SetAllowOnelinerMode(true);
+    if (m_format_options.GetFormatValue().OptionWasSet())
+      options.SetFormat(m_format_options.GetFormatValue().GetCurrentValue());
+
+    StreamString value_stream;
+    if (llvm::Error error = value_sp->Dump(value_stream, options)) {
+      result.AppendError(toString(std::move(error)));
+      return;
+    }
+
+    llvm::StringRef value = value_stream.GetString();
+    value.consume_back("\n");
+    const char *register_name =
+        m_command_options.alternate_name && reg_info.alt_name
+            ? reg_info.alt_name
+            : reg_info.name;
+
+    StreamString expression_stream;
+    value_sp->GetExpressionPath(expression_stream);
+    llvm::StringRef expression = expression_stream.GetString();
+    expression.consume_front("$");
+    llvm::StringRef expression_path = expression;
+
+    strm.Indent();
+    // Keep the resolved suffix while allowing an alternate register name.
+    if (expression_path.consume_front(reg_info.name))
+      strm.Printf("%*s%s = ", static_cast<int>(reg_name_right_align_at),
+                  register_name, expression_path.str().c_str());
+    else
+      strm.Printf("%*s = ", static_cast<int>(reg_name_right_align_at),
+                  expression.str().c_str());
+    strm << value << '\n';
+  }
+
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
                        RegisterContext *reg_ctx, size_t set_idx,
                        bool primitive_only = false) {
@@ -123,6 +203,8 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
+      size_t reg_name_right_align_at = ComputeLongestRegisterName(
+          reg_ctx, *reg_set, !m_command_options.alternate_name, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -130,8 +212,9 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                                     /*print_flags=*/false))
+        if (reg_info &&
+            DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                         /*print_type=*/false, reg_name_right_align_at))
           ++available_count;
         else
           ++unavailable_count;
@@ -171,8 +254,8 @@ protected:
               break;
             }
           } else {
-            result.AppendErrorWithFormat(
-                "invalid register set index: %" PRIu64 "\n", (uint64_t)set_idx);
+            result.AppendErrorWithFormat("invalid register set index: %" PRIu64,
+                                         (uint64_t)set_idx);
             break;
           }
         }
@@ -195,31 +278,86 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        for (auto &entry : command) {
-          // in most LLDB commands we accept $rbx as the name for register RBX
-          // - and here we would reject it and non-existant. we should be more
-          // consistent towards the user and allow them to say reg read $rbx -
-          // internally, however, we should be strict and not allow ourselves
-          // to call our registers $rbx in our own API
-          auto arg_str = entry.ref();
-          arg_str.consume_front("$");
+        struct RegisterArgument {
+          std::string expression;
+          const RegisterInfo *reg_info = nullptr;
+          ValueObjectSP value_sp;
+          Status error;
+        };
 
-          if (const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoByName(arg_str)) {
+        StackFrame *frame = m_exe_ctx.GetFramePtr();
+        if (!frame) {
+          result.AppendError("no frame");
+          return;
+        }
+        std::vector<RegisterArgument> register_arguments;
+        register_arguments.reserve(command.GetArgumentCount());
+        size_t reg_name_right_align_at = 0;
+
+        for (auto &entry : command) {
+          RegisterArgument argument;
+          argument.expression = entry.ref().str();
+
+          llvm::StringRef expression = entry.ref();
+          expression.consume_front("$");
+          std::string variable_path = "$" + expression.str();
+          VariableSP variable_sp;
+          argument.value_sp = frame->GetValueForVariableExpressionPath(
+              variable_path, eNoDynamicValues,
+              StackFrame::eExpressionPathOptionCheckPtrVsMember, variable_sp,
+              argument.error, eDILModeLegacy);
+          if (argument.error.Fail() &&
+              expression.find_first_of(".[") == llvm::StringRef::npos &&
+              !expression.contains("->")) {
+            argument.error = Status::FromErrorStringWithFormat(
+                "Invalid register name or identifier '%s'",
+                argument.expression.c_str());
+          }
+          if (argument.error.Success()) {
+            ValueObject *root = argument.value_sp->GetRoot();
+            if (root && root->GetValueType() == eValueTypeRegister)
+              argument.reg_info = reg_ctx->GetRegisterInfoByName(
+                  root->GetName().GetStringRef());
+          }
+
+          if (argument.error.Success() && !argument.reg_info)
+            argument.error = Status::FromErrorStringWithFormat(
+                "Invalid register expression '%s'",
+                argument.expression.c_str());
+          else if (argument.error.Success())
+            reg_name_right_align_at =
+                std::max(reg_name_right_align_at,
+                         GetNameSize(argument.reg_info,
+                                     !m_command_options.alternate_name));
+          register_arguments.push_back(std::move(argument));
+        }
+
+        // Extra ident to be consistent with register sets dumping.
+        strm.IndentMore();
+        for (const RegisterArgument &argument : register_arguments) {
+          if (argument.error.Fail()) {
+            result.AppendError(argument.error.AsCString());
+            continue;
+          }
+
+          if (argument.value_sp.get() == argument.value_sp->GetRoot()) {
             // If they have asked for a specific format don't obscure that by
-            // printing flags afterwards.
-            bool print_flags =
-                !m_format_options.GetFormatValue().OptionWasSet();
-            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
-                              print_flags))
-              strm.Printf("%-12s = error: unavailable\n", reg_info->name);
+            // printing a structured value afterwards.
+            bool print_type = !m_format_options.GetFormatValue().OptionWasSet();
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *argument.reg_info,
+                              print_type, reg_name_right_align_at))
+              strm.Printf("%-12s = error: unavailable\n",
+                          argument.reg_info->name);
           } else {
-            result.AppendErrorWithFormat("Invalid register name '%s'.\n",
-                                         arg_str.str().c_str());
+            DumpRegisterField(strm, *argument.reg_info, argument.value_sp,
+                              reg_name_right_align_at, result);
           }
         }
+        strm.IndentLess();
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   class CommandOptions : public OptionGroup {
@@ -368,7 +506,7 @@ protected:
         }
         if (error.AsCString()) {
           result.AppendErrorWithFormat(
-              "Failed to write register '%s' with value '%s': %s\n",
+              "Failed to write register '%s' with value '%s': %s",
               reg_name.str().c_str(), value_str.str().c_str(),
               error.AsCString());
         } else {
@@ -377,7 +515,7 @@ protected:
               reg_name.str().c_str(), value_str.str().c_str());
         }
       } else {
-        result.AppendErrorWithFormat("Register not found for '%s'.\n",
+        result.AppendErrorWithFormat("Register not found for '%s'",
                                      reg_name.str().c_str());
       }
     }
@@ -439,7 +577,7 @@ protected:
           GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else
-      result.AppendErrorWithFormat("No register found with name '%s'.\n",
+      result.AppendErrorWithFormat("No register found with name '%s'",
                                    reg_name.str().c_str());
   }
 };

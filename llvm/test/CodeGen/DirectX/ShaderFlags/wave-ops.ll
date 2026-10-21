@@ -28,6 +28,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i32 @wave_get_lane_count() {
+entry:
+  ; CHECK: Function wave_get_lane_count : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.get.lane.count()
+  ret i32 %ret
+}
+
 define noundef i1 @wave_any(i1 %x) {
 entry:
   ; CHECK: Function wave_any : [[WAVE_FLAG]]
@@ -74,6 +81,13 @@ define noundef i1 @wave_readlane(i1 %x, i32 %idx) {
 entry:
   ; CHECK: Function wave_readlane : [[WAVE_FLAG]]
   %ret = call i1 @llvm.dx.wave.readlane.i1(i1 %x, i32 %idx)
+  ret i1 %ret
+}
+
+define noundef i1 @wave_readlane_first(i1 %x) {
+entry:
+  ; CHECK: Function wave_readlane_first : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.wave.readlane.first.i1(i1 %x)
   ret i1 %ret
 }
 
@@ -193,5 +207,12 @@ define noundef i32 @quad_read_across_y_i32(i32 noundef %expr) {
 entry:
   ; CHECK: Function quad_read_across_y_i32 : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.quad.read.across.y.i32(i32 %expr)
+  ret i32 %ret
+}
+
+define noundef i32 @quad_read_across_diagonal_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_diagonal_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.diagonal.i32(i32 %expr)
   ret i32 %ret
 }

@@ -19,9 +19,6 @@ class SPIRVTargetObjectFile : public TargetLoweringObjectFile {
 public:
   ~SPIRVTargetObjectFile() override;
 
-  void Initialize(MCContext &ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFile::Initialize(ctx, TM);
-  }
   // All words in a SPIR-V module (excepting the first 5 ones) are a linear
   // sequence of instructions in a specific order. We put all the instructions
   // in the single text section.

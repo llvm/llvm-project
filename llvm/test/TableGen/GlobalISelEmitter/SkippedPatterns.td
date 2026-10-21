@@ -22,6 +22,7 @@ def gi_complex_rr :
     GIComplexPatternEquiv<complex_rr>;
 
 def INSN : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
+def FCVT : I<(outs GPR32:$dst), (ins FPR32:$src), []>;
 
 //===- Bail out when we define a variable twice wrt complex suboperands. -===//
 
@@ -33,3 +34,9 @@ let GISelShouldIgnore = 1 in
 def : Pat<(add (complex_rr GPR32:$x, GPR32:$y),
                (complex_rr GPR32:$x, GPR32:$z)),
                (INSN GPR32:$z, complex:$y)>;
+
+//===- Bail out when fp_to_[su]int_sat saturation width != result width. -===//
+
+// CHECK: warning: Skipped pattern: Saturation width must match the result width
+def : Pat<(i32 (fp_to_sint_sat (f32 FPR32:$src), i8)),
+          (FCVT FPR32:$src)>;

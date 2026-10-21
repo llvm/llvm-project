@@ -187,6 +187,21 @@
 
 // -----
 
+// CHECK-LABEL: test.commutatively_equal_permutation
+// CHECK-SAME: compares equals
+
+builtin.module attributes {test.includes_setup} {
+  %0:2 = "test.producer"() : () -> (i32, i32)
+  "test.commutatively_equal_permutation"() ({
+    arith.addi %0#0, %0#1 : i32
+  }) : () -> ()
+  "test.commutatively_equal_permutation"() ({
+    arith.addi %0#1, %0#0 : i32
+  }) : () -> ()
+}
+
+// -----
+
 // CHECK-LABEL: test.ignore_commutatively_equal_permutation
 // CHECK-SAME: compares NOT equals
 
@@ -199,3 +214,31 @@ builtin.module attributes {test.includes_setup} {
     arith.addi %0#1, %0#0 : i32
   }) { ignore_commutativity } : () -> ()
 }
+
+// -----
+
+// CHECK-LABEL: test.commutatively_equal
+// CHECK-SAME: compares equals
+
+"test.commutatively_equal"() ({
+  ^bb0(%arg0 : i32, %arg1 : i32):
+    arith.addi %arg0, %arg1 : i32
+  }) : () -> ()
+"test.commutatively_equal"() ({
+  ^bb0(%arg0 : i32, %arg1 : i32):
+    arith.addi %arg1, %arg0 : i32
+  }) : () -> ()
+
+// -----
+
+// CHECK-LABEL: test.ignore_commutatively_equal
+// CHECK-SAME: compares NOT equals
+
+"test.ignore_commutatively_equal"() ({
+  ^bb0(%arg0 : i32, %arg1 : i32):
+    arith.addi %arg0, %arg1 : i32
+  }) { ignore_commutativity } : () -> ()
+"test.ignore_commutatively_equal"() ({
+  ^bb0(%arg0 : i32, %arg1 : i32):
+    arith.addi %arg1, %arg0 : i32
+  }) { ignore_commutativity } : () -> ()

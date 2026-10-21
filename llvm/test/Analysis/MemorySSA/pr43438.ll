@@ -46,11 +46,7 @@ if.end569:                                        ; preds = %if.else568, %if.the
 
 
 ; CHECK-LABEL: @f(i1 %arg)
-; CHECK: 7 = MemoryPhi(
-; CHECK: 6 = MemoryPhi(
-; CHECK: 10 = MemoryPhi(
-; CHECK: 9 = MemoryPhi(
-; CHECK: 8 = MemoryPhi(
+; CHECK: 4 = MemoryPhi(
 define void @f(i1 %arg) {
 entry:
   %e = alloca i16, align 1

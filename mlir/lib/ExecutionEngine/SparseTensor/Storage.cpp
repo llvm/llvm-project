@@ -50,20 +50,20 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
 }
 
 // Helper macro for wrong "partial method specialization" errors.
-#define FATAL_PIV(NAME)                                                        \
-  fprintf(stderr, "<P,I,V> type mismatch for: " #NAME);                        \
+#define FATAL_PCV(NAME)                                                        \
+  fprintf(stderr, "<P,C,V> type mismatch for: " #NAME);                        \
   exit(1);
 
 #define IMPL_GETPOSITIONS(PNAME, P)                                            \
   void SparseTensorStorageBase::getPositions(std::vector<P> **, uint64_t) {    \
-    FATAL_PIV("getPositions" #PNAME);                                          \
+    FATAL_PCV("getPositions" #PNAME);                                          \
   }
 MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETPOSITIONS)
 #undef IMPL_GETPOSITIONS
 
 #define IMPL_GETCOORDINATES(CNAME, C)                                          \
   void SparseTensorStorageBase::getCoordinates(std::vector<C> **, uint64_t) {  \
-    FATAL_PIV("getCoordinates" #CNAME);                                        \
+    FATAL_PCV("getCoordinates" #CNAME);                                        \
   }
 MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
 #undef IMPL_GETCOORDINATES
@@ -71,21 +71,21 @@ MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
 #define IMPL_GETCOORDINATESBUFFER(CNAME, C)                                    \
   void SparseTensorStorageBase::getCoordinatesBuffer(std::vector<C> **,        \
                                                      uint64_t) {               \
-    FATAL_PIV("getCoordinatesBuffer" #CNAME);                                  \
+    FATAL_PCV("getCoordinatesBuffer" #CNAME);                                  \
   }
 MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATESBUFFER)
 #undef IMPL_GETCOORDINATESBUFFER
 
 #define IMPL_GETVALUES(VNAME, V)                                               \
   void SparseTensorStorageBase::getValues(std::vector<V> **) {                 \
-    FATAL_PIV("getValues" #VNAME);                                             \
+    FATAL_PCV("getValues" #VNAME);                                             \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETVALUES)
 #undef IMPL_GETVALUES
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::lexInsert(const uint64_t *, V) {               \
-    FATAL_PIV("lexInsert" #VNAME);                                             \
+    FATAL_PCV("lexInsert" #VNAME);                                             \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
 #undef IMPL_LEXINSERT
@@ -93,9 +93,9 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
 #define IMPL_EXPINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::expInsert(uint64_t *, V *, bool *, uint64_t *, \
                                           uint64_t, uint64_t) {                \
-    FATAL_PIV("expInsert" #VNAME);                                             \
+    FATAL_PCV("expInsert" #VNAME);                                             \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
-#undef FATAL_PIV
+#undef FATAL_PCV

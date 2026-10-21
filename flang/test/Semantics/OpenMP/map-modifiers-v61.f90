@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61 -Werror
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61 -Werror -Wno-experimental-option
 
 subroutine f00(x)
   integer, pointer :: x
@@ -47,3 +47,26 @@ subroutine f04(n)
   !$omp end target
 end
 end module
+
+subroutine f05(x)
+  integer :: x
+  !Expect no diagonstics
+  !$omp target map(always, to: x)
+  !$omp end target
+end
+
+subroutine f06(x)
+  integer :: x
+  x = 0
+  !Expect no diagonstics
+  !$omp target defaultmap(tofrom: scalar)
+  x = x + 1
+  !$omp end target
+end
+
+subroutine f07(x)
+  integer :: x
+  !ERROR: 'variable-category' modifier cannot occur multiple times
+  !$omp target defaultmap(tofrom: scalar, aggregate)
+  !$omp end target
+end

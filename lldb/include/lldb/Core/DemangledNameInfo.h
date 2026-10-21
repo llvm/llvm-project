@@ -9,13 +9,21 @@
 #ifndef LLDB_CORE_DEMANGLEDNAMEINFO_H
 #define LLDB_CORE_DEMANGLEDNAMEINFO_H
 
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Locked.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Demangle/Utility.h"
 
 #include <cstddef>
+#include <optional>
+#include <random>
 #include <utility>
+#include <vector>
 
 namespace lldb_private {
+
+class Mangled;
 
 /// Stores information about where certain portions of a demangled
 /// function name begin and end.
@@ -30,7 +38,7 @@ struct DemangledNameInfo {
   ///                        ^       ^
   ///                      start    end
   /// \endcode
-  std::pair<size_t, size_t> BasenameRange;
+  std::pair<uint32_t, uint32_t> BasenameRange;
 
   /// A [start, end) pair for the function template arguments.
   ///
@@ -40,7 +48,7 @@ struct DemangledNameInfo {
   ///                                ^      ^
   ///                              start   end
   /// \endcode
-  std::pair<size_t, size_t> TemplateArgumentsRange;
+  std::pair<uint32_t, uint32_t> TemplateArgumentsRange;
 
   /// A [start, end) pair for the function scope qualifiers.
   ///
@@ -50,7 +58,7 @@ struct DemangledNameInfo {
   ///         ^              ^
   ///       start           end
   /// \endcode
-  std::pair<size_t, size_t> ScopeRange;
+  std::pair<uint32_t, uint32_t> ScopeRange;
 
   /// Indicates the [start, end) of the function argument list.
   ///
@@ -60,7 +68,7 @@ struct DemangledNameInfo {
   ///                        ^              ^
   ///                      start           end
   /// \endcode
-  std::pair<size_t, size_t> ArgumentsRange;
+  std::pair<uint32_t, uint32_t> ArgumentsRange;
 
   /// Indicates the [start, end) of the function qualifiers
   /// (e.g., CV-qualifiers, reference qualifiers, requires clauses).
@@ -71,7 +79,7 @@ struct DemangledNameInfo {
   ///                                       ^        ^
   ///                                     start     end
   /// \endcode
-  std::pair<size_t, size_t> QualifiersRange;
+  std::pair<uint32_t, uint32_t> QualifiersRange;
 
   /// Indicates the [start, end) of the function's name qualifiers. This is a
   /// catch-all range for anything in between the basename and the function's
@@ -84,17 +92,17 @@ struct DemangledNameInfo {
   ///              ^        ^
   ///            start     end
   /// \endcode
-  std::pair<size_t, size_t> NameQualifiersRange;
+  std::pair<uint32_t, uint32_t> NameQualifiersRange;
 
   /// Indicates the [start, end) of the function's prefix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> PrefixRange;
+  std::pair<uint32_t, uint32_t> PrefixRange;
 
   /// Indicates the [start, end) of the function's suffix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> SuffixRange;
+  std::pair<uint32_t, uint32_t> SuffixRange;
 
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
@@ -130,6 +138,43 @@ struct DemangledNameInfo {
 
   /// Returns \c true if this object holds a valid suffix range.
   bool hasSuffix() const { return SuffixRange.second >= SuffixRange.first; }
+};
+
+/// A cache from mangled names to DemangledNameInfo.
+class DemangledNameInfoCache {
+public:
+  /// Calculates the DemangledNameInfo and caches the result.
+  ///
+  /// \return std::nullopt if no info could be computed for \c mangled.
+  std::optional<DemangledNameInfo> Get(const Mangled &mangled);
+
+  void Clear();
+
+  size_t GetMaxEntries() const;
+
+  size_t GetNumEntries() const;
+
+  /// Changes the maximum number of entries. A limit of 0 disables the cache.
+  void SetMaxEntries(size_t max_entries);
+
+private:
+  struct State {
+    /// Drops a random entry from the cache.
+    void EvictRandomEntry();
+
+    /// Maps a ConstString to its DemangledNameInfo.
+    /// Values can be empty if no name info could be computed for a name.
+    llvm::DenseMap<ConstString, std::optional<DemangledNameInfo>> infos;
+
+    /// The mangled names.
+    std::vector<ConstString> mangled_names;
+
+    std::minstd_rand rng;
+
+    size_t max_entries = 0;
+  };
+
+  Guarded<State> m_state;
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a

@@ -21,10 +21,18 @@ class CxxChar8_tTestCase(TestBase):
         self.expect("target variable a", substrs=["char8_t", "0x61 u8'a'"])
         self.expect("target variable ab", substrs=["const char8_t *", 'u8"你好"'])
         self.expect("target variable abc", substrs=["char8_t[9]", 'u8"你好"'])
+        self.expect(
+            "target variable aZero", substrs=["char8_t[32]", 'u8"I\\0have\\0zeros"']
+        )
+        self.expect("target variable cZero", substrs=["const char8_t *", 'u8"I"'])
 
         self.expect_expr("a", result_type="char8_t", result_summary="0x61 u8'a'")
         self.expect_expr("ab", result_type="const char8_t *", result_summary='u8"你好"')
         self.expect_expr("abc", result_type="char8_t[9]", result_summary='u8"你好"')
+        self.expect_expr(
+            "aZero", result_type="char8_t[32]", result_summary='u8"I\\0have\\0zeros"'
+        )
+        self.expect_expr("cZero", result_type="const char8_t *", result_summary='u8"I"')
 
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
     def test_with_process(self):
@@ -38,3 +46,7 @@ class CxxChar8_tTestCase(TestBase):
         self.expect_expr("a", result_type="char8_t", result_summary="0x61 u8'a'")
         self.expect_expr("ab", result_type="const char8_t *", result_summary='u8"你好"')
         self.expect_expr("abc", result_type="char8_t[9]", result_summary='u8"你好"')
+        self.expect_expr(
+            "aZero", result_type="char8_t[32]", result_summary='u8"I\\0have\\0zeros"'
+        )
+        self.expect_expr("cZero", result_type="const char8_t *", result_summary='u8"I"')

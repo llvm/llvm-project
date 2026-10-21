@@ -41,7 +41,7 @@ struct BumpAllocatorTy final {
   uint64_t Offset = 0;
 
   void *alloc(uint64_t Size) {
-    Size = utils::roundUp(Size, uint64_t(allocator::ALIGNMENT));
+    Size = utils::alignUp(Size, uint64_t(allocator::ALIGNMENT));
 
     uint64_t OldData = atomic::add(&Offset, Size, atomic::seq_cst);
     if (OldData + Size >= MEMORY_SIZE)

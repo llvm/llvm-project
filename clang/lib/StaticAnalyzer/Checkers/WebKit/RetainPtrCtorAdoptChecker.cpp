@@ -122,11 +122,13 @@ public:
 
   bool isAdoptFnName(const std::string &Name) const {
     return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc" ||
+           Name == "adoptCFNullable" || Name == "adoptCFNullableArc" ||
            Name == "adoptOSObject" || Name == "adoptOSObjectArc";
   }
 
   bool isAdoptNS(const std::string &Name) const {
-    return Name == "adoptNS" || Name == "adoptNSArc";
+    return Name == "adoptNS" || Name == "adoptNSArc" ||
+           Name == "adoptNSNullable" || Name == "adoptNSNullableArc";
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {

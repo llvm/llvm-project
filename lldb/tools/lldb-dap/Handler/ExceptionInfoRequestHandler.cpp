@@ -50,7 +50,7 @@ struct MainThreadCheckerReport {
   std::string selector;
 };
 
-// See `ReportRetriever::RetrieveReportData`.
+// See `InstrumentationRuntimeASan::RetrieveReportData`.
 struct ASanReport {
   std::string description;
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
@@ -271,6 +271,34 @@ static std::string FormatCrashReport(lldb::SBThread &thread) {
   return report;
 }
 
+static std::optional<json::Value> ParseJSON(DAP &dap, lldb::SBStream &stream) {
+  Expected<json::Value> value =
+      json::parse({stream.GetData(), stream.GetSize()});
+  if (!value) {
+    DAP_LOG_ERROR(dap.log, value.takeError(), "invalid JSON: {0}");
+    return std::nullopt;
+  }
+  return std::move(*value);
+}
+
+static std::optional<json::Value> GetExtendedStopInfo(DAP &dap,
+                                                      lldb::SBThread &thread) {
+  lldb::SBStream stream;
+  if (!thread.GetStopReasonExtendedInfoAsJSON(stream))
+    return std::nullopt;
+  return ParseJSON(dap, stream);
+}
+
+static std::optional<json::Value>
+GetExtendedCrashInformation(DAP &dap, lldb::SBThread &thread) {
+  lldb::SBStructuredData crash_info =
+      thread.GetProcess().GetExtendedCrashInformation();
+  lldb::SBStream stream;
+  if (!crash_info || crash_info.GetAsJSON(stream).Fail())
+    return std::nullopt;
+  return ParseJSON(dap, stream);
+}
+
 static std::string FormatStackTrace(lldb::SBThread &thread) {
   std::string stack_trace;
   raw_string_ostream OS(stack_trace);
@@ -347,6 +375,12 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   if (std::string crash_report = FormatCrashReport(thread);
       !crash_report.empty())
     body.description += formatv("\n\n{0}", crash_report);
+
+  // Clients that interpret these themselves shouldn't have to parse them back
+  // out of the description.
+  body.lldbExtStopReasonExtendedInfo = GetExtendedStopInfo(dap, thread);
+  body.lldbExtExtendedCrashInformation =
+      GetExtendedCrashInformation(dap, thread);
 
   lldb::SBProcess process = thread.GetProcess();
   for (uint32_t idx = 0; idx < lldb::eNumInstrumentationRuntimeTypes; idx++) {

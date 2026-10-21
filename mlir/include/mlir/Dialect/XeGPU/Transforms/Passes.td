@@ -11,15 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
-  let summary = "Distribute XeGPU ops to work items";
-  let description = [{
-    The pass distributes subgroup level (SIMD) XeGPU ops to work items.
-  }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect", "index::IndexDialect"];
-}
-
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let summary = "Propagate and assign XeGPU layout information";
   let description = [{
@@ -46,8 +37,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
       Propagate the `sg_layout` and `sg_data` fields of the layout attribute.
       Default values are selected to align with hardware.
   }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect"];
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
@@ -70,9 +60,9 @@ def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
     multiple subgroups based on the sg_layout and sg_data attributes.
   }];
 
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect", "arith::ArithDialect",
-                           "gpu::GPUDialect", "index::IndexDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect",
+                           "arith::ArithDialect", "gpu::GPUDialect",
+                           "index::IndexDialect"];
 }
 
 def XeGPUBlocking: Pass<"xegpu-blocking"> {
@@ -84,7 +74,7 @@ def XeGPUBlocking: Pass<"xegpu-blocking"> {
     to a hardware instruction.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect",
+      "memref::MemRefDialect", "vector::VectorDialect",
       "index::IndexDialect"];
 }
 
@@ -105,17 +95,17 @@ def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
     - Rewriting transpose B loads into more optimal forms to use HW block
       transpose instructions for better performance.
   }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+  let dependentDialects = ["memref::MemRefDialect",
                            "vector::VectorDialect"];
 }
 
-def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experimental"> {
-  let summary = "Distribute XeGPU ops to work items";
+def XeGPUSgToLaneDistribute : Pass<"xegpu-sg-to-lane-distribute"> {
+  let summary = "Distribute XeGPU ops to lanes";
   let description = [{
-    The pass distributes subgroup level XeGPU ops to work item level XeGPU ops.
+    The pass distributes subgroup level XeGPU ops to lane level XeGPU ops.
   }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
-                           "vector::VectorDialect", "index::IndexDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect",
+                           "index::IndexDialect"];
 }
 
 

@@ -90,6 +90,10 @@ TEST_F(ReparseWorkingDirTest, ReparseWorkingDir) {
   WorkingDir = "/";
 #endif
   llvm::sys::path::append(WorkingDir, "root");
+  // Normalize to native path style to match FileManager's WorkingDir
+  // which uses native style (potentially forward slashes on Windows
+  // if LLVM_WINDOWS_PREFER_FORWARD_SLASH is on).
+  llvm::sys::path::native(WorkingDir);
   setWorkingDirectory(WorkingDir);
 
   SmallString<32> Header;

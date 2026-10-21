@@ -83,6 +83,14 @@ namespace TypeQualifier {
   int k = f<int>(); // expected-error {{no matching}}
 }
 
+namespace BaseClass1 {
+  struct A {};
+  template <class> using B = A;
+  template <class T> struct C : B<T*> {};
+  // expected-error@-1 {{'type name' declared as a pointer to a reference of type 'int &'}}
+  template struct C<int&>; // expected-note {{requested here}}
+} // namespace BaseClass1
+
 namespace MemberOfInstantiationDependentBase {
   template<typename T> struct A { template<int> void f(int); };
   template<typename T> struct B { using X = A<T>; };

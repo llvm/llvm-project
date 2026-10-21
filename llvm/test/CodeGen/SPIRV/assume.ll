@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s | FileCheck --check-prefixes=EXT,CHECK %s
 ; RUN: llc -mtriple=spirv32-unknown-unknown < %s | FileCheck --check-prefixes=NOEXT,CHECK %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefixes=NOEXT,CHECK %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_expect_assume < %s -o - -filetype=obj | spirv-val %}
 
 ; EXT-DAG:    OpCapability ExpectAssumeKHR
 ; EXT-DAG:    OpExtension "SPV_KHR_expect_assume"

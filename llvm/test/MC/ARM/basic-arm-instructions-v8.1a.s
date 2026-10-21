@@ -27,16 +27,16 @@
 //CHECK-ERROR: error: invalid operand for instruction
 //CHECK-ERROR:   vqrdmlsh.f64  d3, d5, d5
 //CHECK-ERROR:           ^
-//CHECK-V8: error: invalid instruction
+//CHECK-V8: error: invalid operand for instruction
 //CHECK-V8:   vqrdmlah.i8   q0, q1, q2
 //CHECK-V8:   ^
-//CHECK-V8: error: invalid instruction
+//CHECK-V8: error: invalid operand for instruction
 //CHECK-V8:   vqrdmlah.u16  d0, d1, d2
 //CHECK-V8:   ^
-//CHECK-V8: error: invalid instruction
+//CHECK-V8: error: invalid operand for instruction
 //CHECK-V8:   vqrdmlsh.f32  q3, q4, q5
 //CHECK-V8:   ^
-//CHECK-V8: error: invalid instruction
+//CHECK-V8: error: invalid operand for instruction
 //CHECK-V8:  vqrdmlsh.f64  d3, d5, d5
 //CHECK-V8:  ^
 

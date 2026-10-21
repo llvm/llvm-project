@@ -32,6 +32,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, emissionKind: FullDebug)
 !2 = !DIFile(filename: "filename", directory: "directory")
-!3 = distinct !DISubprogram(name: "h1", unit: !1)
+!3 = distinct !DISubprogram(name: "h1", unit: !1, type: !7)
 !4 = !DILocalVariable(name: "b", arg: 1, scope: !3)
 !5 = !DILocation(scope: !3)
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)

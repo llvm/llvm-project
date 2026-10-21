@@ -41,6 +41,8 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/exception_guard.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -73,7 +75,9 @@ struct __is_hash_value_type : false_type {};
 template <class _One>
 struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__remove_cvref_t<_One> > {};
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI size_t __next_prime(size_t __n);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _NodePtr>
 struct __hash_node_base {
@@ -167,7 +171,7 @@ public:
 inline _LIBCPP_HIDE_FROM_ABI bool __is_hash_power2(size_t __bc) { return __bc > 2 && !(__bc & (__bc - 1)); }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __constrain_hash(size_t __h, size_t __bc) {
-  return !(__bc & (__bc - 1)) ? __h & (__bc - 1) : (__h < __bc ? __h : __h % __bc);
+  return !(__bc & (__bc - 1)) ? __h & (__bc - 1) : __h % __bc;
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __next_hash_pow2(size_t __n) {
@@ -285,7 +289,7 @@ private:
 };
 
 template <class _NodePtr>
-class __hash_const_iterator {
+class _LIBCPP_WARN_UNUSED __hash_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
@@ -524,9 +528,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __bucket_list_deallocator(__bucket_list_deallocator&& __x)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-      : __size_(std::move(__x.__size_)), __alloc_(std::move(__x.__alloc_)) {
-    __x.size() = 0;
-  }
+      : __size_(std::__exchange(__x.__size_, 0)), __alloc_(std::move(__x.__alloc_)) {}
 
   _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
   _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT { return __size_; }
@@ -676,12 +678,13 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
 
-  _LIBCPP_HIDE_FROM_ABI void
-  __copy_construct(__next_pointer __other_iter, __next_pointer __own_iter, size_t __current_chash) {
+  template <class _NodeConstructor>
+  _LIBCPP_HIDE_FROM_ABI void __construct_from_hash_table(
+      __next_pointer __other_iter, __next_pointer __own_iter, size_t __current_chash, _NodeConstructor __construct) {
     auto __bucket_count = bucket_count();
 
     for (; __other_iter; __other_iter = __other_iter->__next_) {
-      __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());
+      __node_holder __new_node = __construct(__other_iter);
 
       size_t __new_chash = std::__constrain_hash(__new_node->__hash(), __bucket_count);
       if (__new_chash != __current_chash) {
@@ -694,10 +697,22 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __copy_construct(__next_pointer __other_iter) {
+  template <class _NodeConstructor>
+  _LIBCPP_HIDE_FROM_ABI void __construct_from_hash_table(__next_pointer __other_iter, _NodeConstructor __construct) {
     __next_pointer __own_iter = __first_node_.__ptr();
+    // If copying a node throws, the nodes that have already been constructed and linked into the
+    // list have to be deallocated. When this is called from the copy constructor the enclosing
+    // __hash_table is not fully constructed yet, so its destructor would not run to release them.
+    // This is also reached from operator= when assigning into an empty table; there the table
+    // stays alive, so we must leave it in a valid empty state: besides releasing the nodes we
+    // clear the bucket pointers, which were made to point into the now-deallocated node list.
+    auto __guard = std::__make_exception_guard([&] {
+      __deallocate_node_list(__first_node_.__next_);
+      __first_node_.__next_ = nullptr;
+      std::fill_n(__bucket_list_.get(), bucket_count(), nullptr);
+    });
     {
-      __node_holder __new_node = __construct_node_hash(__other_iter->__hash(), __other_iter->__upcast()->__get_value());
+      __node_holder __new_node = __construct(__other_iter);
       __own_iter->__next_      = static_cast<__next_pointer>(__new_node.release());
     }
 
@@ -705,7 +720,36 @@ private:
     __bucket_list_[__current_chash] = __own_iter;
     __other_iter                    = __other_iter->__next_;
     __own_iter                      = __own_iter->__next_;
-    __copy_construct(__other_iter, __own_iter, __current_chash);
+    __construct_from_hash_table(__other_iter, __own_iter, __current_chash, __construct);
+    __guard.__complete();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void
+  __copy_construct(__next_pointer __other_iter, __next_pointer __own_iter, size_t __current_hash) {
+    __construct_from_hash_table(__other_iter, __own_iter, __current_hash, [this](__next_pointer __nd) {
+      return __construct_node_hash(__nd->__hash(), __nd->__upcast()->__get_value());
+    });
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __copy_construct(__next_pointer __other_iter) {
+    __construct_from_hash_table(__other_iter, [this](__next_pointer __nd) {
+      return __construct_node_hash(__nd->__hash(), __nd->__upcast()->__get_value());
+    });
+  }
+
+  template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void __move_construct(__next_pointer __other_iter) {
+    __construct_from_hash_table(__other_iter, [this](__next_pointer __nd) {
+      auto& __pair = __nd->__upcast()->__get_value();
+      return __construct_node_hash(__nd->__hash(), const_cast<key_type&&>(__pair.first), std::move(__pair.second));
+    });
+  }
+
+  template <class _ValueT = _Tp, __enable_if_t<!__is_hash_value_type<_ValueT>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void __move_construct(__next_pointer __other_iter) {
+    __construct_from_hash_table(__other_iter, [this](__next_pointer __nd) {
+      return __construct_node_hash(__nd->__hash(), std::move(__nd->__upcast()->__get_value()));
+    });
   }
 
 public:
@@ -774,26 +818,17 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-    return std::__try_key_extraction<key_type>(
+    return std::__try_key_extraction<key_type, value_type>(
         [this](const key_type& __key, _Args&&... __args2) {
           size_t __hash   = hash_function()(__key);
           size_type __bc  = bucket_count();
-          bool __inserted = false;
-          __next_pointer __nd;
           size_t __chash;
           if (__bc != 0) {
             __chash = std::__constrain_hash(__hash, __bc);
-            __nd    = __bucket_list_[__chash];
-            if (__nd != nullptr) {
-              for (__nd = __nd->__next_;
-                   __nd != nullptr &&
-                   (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-                   __nd = __nd->__next_) {
-                if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __key))
-                  goto __done;
-              }
-            }
+            if (auto __nd = __find_ptr(__key, __hash, __chash))
+              return pair<iterator, bool>(iterator(__nd), false);
           }
+          __next_pointer __nd;
           {
             __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args2)...);
             if (size() + 1 > __bc * max_load_factor()) {
@@ -819,10 +854,8 @@ public:
             __nd = static_cast<__next_pointer>(__h.release());
             // increment size
             ++size();
-            __inserted = true;
           }
-        __done:
-          return pair<iterator, bool>(iterator(__nd), __inserted);
+          return pair<iterator, bool>(iterator(__nd), true);
         },
         [this](_Args&&... __args2) {
           __node_holder __h        = __construct_node(std::forward<_Args>(__args2)...);
@@ -838,20 +871,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_multi(_Args&&... __args);
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
-
-  template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(value_type&& __value) {
-    __node_holder __h = __construct_node(const_cast<key_type&&>(__value.first), std::move(__value.second));
-    __node_insert_unique(__h.get());
-    __h.release();
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<!__is_hash_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(value_type&& __value) {
-    __node_holder __h = __construct_node(std::move(__value));
-    __node_insert_unique(__h.get());
-    __h.release();
-  }
 
   template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(value_type&& __value) {
@@ -913,9 +932,36 @@ public:
   }
 
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __x);
+  __next_pointer __find_ptr(const _Key& __key, size_t __key_hash, size_t __chash) const {
+    if (auto __nd = __bucket_list_[__chash]) {
+      auto __bc = bucket_count();
+      for (__nd = __nd->__next_;
+           __nd && (__nd->__hash() == __key_hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
+           __nd = __nd->__next_) {
+        if (__nd->__hash() == __key_hash && key_eq()(__nd->__upcast()->__get_value(), __key))
+          return __nd;
+      }
+    }
+    return nullptr;
+  }
+
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __x) const;
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __key) {
+    if (size() == 0)
+      return end();
+
+    size_t __hash = hash_function()(__key);
+    return iterator(__find_ptr(__key, __hash, std::__constrain_hash(__hash, bucket_count())));
+  }
+
+  template <class _Key>
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __key) const {
+    if (size() == 0)
+      return end();
+
+    size_t __hash = hash_function()(__key);
+    return const_iterator(__find_ptr(__key, __hash, std::__constrain_hash(__hash, bucket_count())));
+  }
 
   typedef __hash_node_destructor<__node_allocator> _Dp;
   typedef unique_ptr<__node, _Dp> __node_holder;
@@ -1167,6 +1213,17 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u, const
       size()                                                                                 = __u.size();
       __u.size()                                                                             = 0;
     }
+  } else {
+    auto& __bucket_list_del = __bucket_list_.get_deleter();
+    auto __bucket_count     = __u.bucket_count();
+    __bucket_list_.reset(__pointer_alloc_traits::allocate(__bucket_list_del.__alloc(), __bucket_count));
+    __bucket_list_del.size() = __bucket_count;
+
+    std::fill_n(__bucket_list_.get(), __bucket_count, nullptr);
+
+    __move_construct(__u.__first_node_.__next_);
+    __size_ = __u.size();
+    __u.clear(); // Ensure that __u is in a valid state after moving out the keys
   }
 }
 
@@ -1424,18 +1481,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(size_t __
   size_type __bc = bucket_count();
 
   if (__bc != 0) {
-    size_t __chash         = std::__constrain_hash(__hash, __bc);
-    __next_pointer __ndptr = __bucket_list_[__chash];
-    if (__ndptr != nullptr) {
-      for (__ndptr = __ndptr->__next_;
-           __ndptr != nullptr &&
-           (__ndptr->__hash() == __hash || std::__constrain_hash(__ndptr->__hash(), __bc) == __chash);
-           __ndptr = __ndptr->__next_) {
-        if ((__ndptr->__hash() == __hash) && key_eq()(__ndptr->__upcast()->__get_value(), __value))
-          return __ndptr;
-      }
-    }
+    if (auto __nd = __find_ptr(__value, __hash, std::__constrain_hash(__hash, __bc)))
+      return __nd;
   }
+
   if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
     __rehash_unique(std::max<size_type>(
         2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
@@ -1759,9 +1808,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __bucket_co
       } else {
         __next_pointer __np = __cp;
         if _LIBCPP_CONSTEXPR (!_UniqueKeys) {
-          for (; __np->__next_ != nullptr &&
-                 key_eq()(__cp->__upcast()->__get_value(), __np->__next_->__upcast()->__get_value());
-               __np = __np->__next_)
+          for (; __np->__next_ != nullptr && __cp->__hash() == __np->__next_->__hash(); __np = __np->__next_)
             ;
         }
         __pp->__next_                    = __np->__next_;
@@ -1770,48 +1817,6 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __bucket_co
       }
     }
   }
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Key>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) {
-  size_type __bc = bucket_count();
-  if (__bc != 0 && size() != 0) {
-    size_t __hash       = hash_function()(__k);
-    size_t __chash      = std::__constrain_hash(__hash, __bc);
-    __next_pointer __nd = __bucket_list_[__chash];
-    if (__nd != nullptr) {
-      for (__nd = __nd->__next_;
-           __nd != nullptr && (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-           __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
-          return iterator(__nd);
-      }
-    }
-  }
-  return end();
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Key>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const {
-  size_type __bc = bucket_count();
-  if (__bc != 0 && size() != 0) {
-    size_t __hash       = hash_function()(__k);
-    size_t __chash      = std::__constrain_hash(__hash, __bc);
-    __next_pointer __nd = __bucket_list_[__chash];
-    if (__nd != nullptr) {
-      for (__nd = __nd->__next_;
-           __nd != nullptr && (__hash == __nd->__hash() || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-           __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
-          return const_iterator(__nd);
-      }
-    }
-  }
-  return end();
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>

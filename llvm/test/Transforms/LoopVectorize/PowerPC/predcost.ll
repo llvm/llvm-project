@@ -8,21 +8,21 @@ define void @_tc(ptr nocapture noundef %aaa, i64 noundef %bbb) {
 entry:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   ret void
 
-for.body:                                         ; preds = %for.inc, %entry
+for.body:
   %i.08 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %aaa, i64 %i.08
   %0 = load i8, ptr %arrayidx, align 1
   %cmp1 = icmp eq i8 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i8 32, ptr %arrayidx, align 1
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %for.body
+for.inc:
   %inc = add nuw nsw i64 %i.08, 1
   %exitcond.not = icmp eq i64 %inc, %bbb
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body

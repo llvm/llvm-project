@@ -37,6 +37,14 @@ RT_API_ATTRS common::optional<Convert> GetConvertFromString(
 
 struct ExecutionEnvironment {
 
+  // List of unit(s) from environment variable FORT_CONVERT_UNIT with specific
+  // conversion rules.
+  struct ConvertUnit {
+    Convert conversion;
+    std::int32_t startUnit;
+    std::int32_t endUnit;
+  };
+
   typedef void (*ConfigEnvCallbackPtr)(
       int, const char *[], const char *[], const EnvironmentDefaultList *);
 
@@ -58,6 +66,9 @@ struct ExecutionEnvironment {
   std::int32_t UnsetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
+  bool ParseFortConvertUnit(const char *);
+  Convert UnitRtConvert(int);
+
   int argc{0};
   const char **argv{nullptr};
   char **envp{nullptr};
@@ -66,11 +77,21 @@ struct ExecutionEnvironment {
   enum decimal::FortranRounding defaultOutputRoundingMode{
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
+  ConvertUnit *convertUnits{nullptr}; // FORT_CONVERT_UNIT
+  std::size_t numConvertUnits{0};
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
+  // Default resolution is seconds.
+  bool timefInMillisec{false};
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM
   bool noEmptyAllocation{false}; // FORT_NO_EMPTY_ALLOCATION
+  // The system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
+  // restores the unconditional copy-out of argument temporaries
+  // (CopyOutAssign then copies every element back instead of only the
+  // suffix from the first modified element through the end).
+  bool copyOutModifiedOnly{true}; // FLANG_RT_COPYOUT_MODIFIED_ONLY
 
   enum InternalDebugging { WorkQueue = 1 };
   int internalDebugging{0}; // FLANG_RT_DEBUG
@@ -78,6 +99,7 @@ struct ExecutionEnvironment {
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
   bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
+  bool cudaCheckError{false}; // NV_CUDAFOR_CHECK_ERROR
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN

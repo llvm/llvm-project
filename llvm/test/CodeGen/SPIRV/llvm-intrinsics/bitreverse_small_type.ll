@@ -1,10 +1,35 @@
-;; Check that llvm.bitreverse.* intrinsics are lowered for
-;; 2/4-bit scalar and vector types.
+;; Check that llvm.bitreverse.* intrinsics are lowered correctly for
+;; 2/4-bit scalar and vector types under different extension combinations.
+;;
+;; Without SPV_ALTERA_arbitrary_precision_integers, sub-byte types are
+;; widened to i8 and OpBitReverse operates on the widened type.
+;; With SPV_ALTERA, native sub-byte types are preserved:
+;;   - Without SPV_KHR_bit_instructions: bitreverse is emulated.
+;;   - With SPV_KHR_bit_instructions: native OpBitReverse is used.
 
+;; Widen-to-i8 case (no ALTERA, sub-byte types widened):
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - | FileCheck %s --check-prefix=CHECK-WIDEN
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - | FileCheck %s --check-prefix=CHECK-WIDEN
+; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
+
+;; Native sub-byte types with emulated bitreverse (ALTERA only):
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s --check-prefix=CHECK-EMULATION
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - | FileCheck %s --check-prefix=CHECK-NATIVE
 ; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
+
+;; Native sub-byte types with native OpBitReverse (ALTERA + KHR):
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - | FileCheck %s --check-prefix=CHECK-NATIVE
 ; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Capability and type declarations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Widen case: sub-byte types become i8
+; CHECK-WIDEN: OpCapability BitInstructions
+; CHECK-WIDEN: OpExtension "SPV_KHR_bit_instructions"
+; CHECK-WIDEN-DAG: %[[#I8:]] = OpTypeInt 8 0
 
 ; CHECK-EMULATION-DAG: OpCapability ArbitraryPrecisionIntegersALTERA
 ; CHECK-EMULATION-DAG: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
@@ -54,6 +79,7 @@
 
 define spir_kernel void @test_scalar(i8 %a8, i2 %a2, i4 %a4, ptr addrspace(1) %res) #0 {
 entry:
+  ; CHECK-WIDEN-LABEL: Begin function test_scalar
   ; CHECK-NATIVE-LABEL: Begin function test_scalar
   ; CHECK-EMULATION-LABEL: Begin function test_scalar
   ; CHECK-EMULATION-NOT: OpBitReverse
@@ -64,6 +90,7 @@ entry:
   ; CHECK-EMULATION-DAG: %[[#I2_Arg:]] = OpFunctionParameter %[[#I2]]
   ; CHECK-EMULATION-DAG: %[[#I4_Arg:]] = OpFunctionParameter %[[#I4]]
 
+  ; CHECK-WIDEN: OpBitReverse %[[#I8]] %[[#]]
   ; CHECK-NATIVE: OpBitReverse  %[[#I2]] %[[#I2_Arg]]
   ; CHECK-EMULATION: OpShiftRightLogical %[[#I2]] %[[#I2_Arg]] %[[#]]
   ; CHECK-EMULATION: OpBitwiseAnd %[[#I2:]] %[[#]] %[[#]]
@@ -74,6 +101,7 @@ entry:
   %call2 = call i2 @llvm.bitreverse.i2(i2 %a2)
   store i2 %call2, ptr addrspace(1) %res, align 2
 
+  ; CHECK-WIDEN: OpBitReverse %[[#I8]] %[[#]]
   ; CHECK-NATIVE: OpBitReverse  %[[#I4]] %[[#I4_Arg]]
   ; CHECK-EMULATION: OpShiftRightLogical %[[#I4]] %[[#I4_Arg]] %[[#]]
   ; CHECK-EMULATION: OpBitwiseAnd %[[#I4:]] %[[#]] %[[#]]
@@ -84,6 +112,7 @@ entry:
   %call4 = call i4 @llvm.bitreverse.i4(i4 %a4)
   store i4 %call4, ptr addrspace(1) %res, align 4
 
+  ; CHECK-WIDEN-LABEL: OpFunctionEnd
   ; CHECK-NATIVE-LABEL: OpFunctionEnd
   ; CHECK-EMULATION-LABEL: OpFunctionEnd
   ret void

@@ -163,7 +163,7 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
     }
   }
 
-  ConstString const_decl_name(decl_name.c_str());
+  ConstString const_decl_name(decl_name);
 
   const char *uniqued_const_decl_name = const_decl_name.GetCString();
   if (m_active_lookups.find(uniqued_const_decl_name) !=
@@ -334,7 +334,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
   if (!language_runtime)
     return nullptr;
 
-  ConstString class_name(interface_decl->getNameAsString().c_str());
+  ConstString class_name(interface_decl->getNameAsString());
 
   lldb::TypeSP complete_type_sp(
       language_runtime->LookupInCompleteClassCache(class_name));
@@ -499,7 +499,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   assert(m_ast_context);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const auto name = context.m_decl_name.getAsString();
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -581,7 +581,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   SymbolContextList sc_list;
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -643,7 +643,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 void ClangASTSource::FillNamespaceMap(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     const CompilerDeclContext &namespace_decl) {
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -686,8 +686,7 @@ void ClangASTSource::FillNamespaceMap(
     // disambiguation for function calls are handled separately in
     // SearchFunctionsInSymbolContexts.
     const bool find_root_namespaces =
-        context.m_decl_context &&
-        context.m_decl_context->shouldUseQualifiedLookup();
+        context.m_decl_context && IsInQualifiedLookup(context.m_decl_context);
     found_namespace_decl = symbol_file->FindNamespace(
         name, namespace_decl, /* only root namespaces */ find_root_namespaces);
 
@@ -931,7 +930,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
   do {
     StreamString ms;
-    ms.Printf("-[%s %s]", interface_name.c_str(), selector_name.AsCString());
+    ms.Format("-[{0} {1}]", interface_name, selector_name);
     ms.Flush();
     ConstString instance_method_name(ms.GetString());
 
@@ -944,7 +943,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       break;
 
     ms.Clear();
-    ms.Printf("+[%s %s]", interface_name.c_str(), selector_name.AsCString());
+    ms.Format("+[{0} {1}]", interface_name, selector_name);
     ms.Flush();
     ConstString class_method_name(ms.GetString());
 
@@ -970,7 +969,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       if (!candidate_sc.function)
         continue;
 
-      const char *candidate_name = candidate_sc.function->GetName().AsCString();
+      const char *candidate_name =
+          candidate_sc.function->GetName().AsCString(nullptr);
 
       const char *cursor = candidate_name;
 
@@ -1076,7 +1076,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     if (std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
             GetClangModulesDeclVendor()) {
-      ConstString interface_name(interface_decl->getNameAsString().c_str());
+      ConstString interface_name(interface_decl->getNameAsString());
       bool append = false;
       uint32_t max_matches = 1;
       std::vector<CompilerDecl> decls;
@@ -1194,7 +1194,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
   DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(
       parser_iface_decl.GetOrigin(*m_ast_importer_sp));
 
-  ConstString class_name(parser_iface_decl->getNameAsString().c_str());
+  ConstString class_name(parser_iface_decl->getNameAsString());
 
   LLDB_LOG(log,
            "ClangASTSource::FindObjCPropertyAndIvarDecls on "
@@ -1264,7 +1264,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
       break;
 
     LLDB_LOG(log,
-             "CAS::FOPD[{0:x}] trying module "
+             "CAS::FOPD trying module "
              "(ObjCInterfaceDecl*){0:x}/(ASTContext*){1:x}...",
              interface_decl_from_modules.decl,
              &interface_decl_from_modules->getASTContext());
@@ -1308,7 +1308,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
       break;
 
     LLDB_LOG(log,
-             "CAS::FOPD[{0:x}] trying runtime "
+             "CAS::FOPD trying runtime "
              "(ObjCInterfaceDecl*){0:x}/(ASTContext*){1:x}...",
              interface_decl_from_runtime.decl,
              &interface_decl_from_runtime->getASTContext());
@@ -1425,7 +1425,7 @@ void ClangASTSource::CompleteNamespaceMap(
       namespace_map->push_back(std::pair<lldb::ModuleSP, CompilerDeclContext>(
           image, found_namespace_decl));
 
-      LLDB_LOG(log, "  CMN[{0}] Found namespace {0} in module {1}", name,
+      LLDB_LOG(log, "  CMN Found namespace {0} in module {1}", name,
                image->GetFileSpec().GetFilename());
     }
   }

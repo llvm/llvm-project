@@ -37,7 +37,7 @@ define nofpclass(inf norm sub zero qnan) float @ret_only_snan__fpext(half %x) {
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %result = fpext half %x to float
   ret float %result
@@ -46,7 +46,7 @@ define nofpclass(inf norm sub zero snan) float @ret_only_qnan__fpext(half %x) {
 define nofpclass(inf norm sub zero) float @ret_only_nan__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %result = fpext half %x to float
   ret float %result
@@ -65,7 +65,7 @@ define nofpclass(nan norm sub zero) float @ret_only_inf__fpext(half %x) {
 define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @ret_only_ninf__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %result = fpext half %x to float
   ret float %result
@@ -74,7 +74,7 @@ define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__fpext(half %x) {
 define nofpclass(nan ninf norm sub zero) float @ret_only_pinf__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) float @ret_only_pinf__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = fpext half %x to float
   ret float %result
@@ -415,7 +415,7 @@ define nofpclass(inf nan norm pzero psub) float @ret_only_nsub_nzero__fpext(half
 define nofpclass(ninf) float @ret_no_ninf__fpext__inf() {
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_no_ninf__fpext__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf_f16()
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %inf = call half @returns_inf_f16()
   %result = fpext half %inf to float
@@ -426,7 +426,7 @@ define nofpclass(ninf) float @ret_no_ninf__fpext__inf() {
 define nofpclass(pinf) float @ret_no_pinf__fpext__inf() {
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_no_pinf__fpext__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf_f16()
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %inf = call half @returns_inf_f16()
   %result = fpext half %inf to float

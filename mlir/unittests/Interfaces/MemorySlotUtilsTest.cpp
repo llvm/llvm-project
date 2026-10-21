@@ -19,7 +19,7 @@ static Operation *createOp(MLIRContext &ctx, StringRef name,
                            unsigned numRegions = 0) {
   return Operation::create(UnknownLoc::get(&ctx), OperationName(name, &ctx),
                            resultTypes, /*operands=*/{}, NamedAttrList(),
-                           /*properties=*/nullptr, /*successors=*/{},
+                           /*properties=*/PropertyRef(), /*successors=*/{},
                            numRegions);
 }
 

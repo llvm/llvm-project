@@ -15,7 +15,6 @@
 
 #include "flang/Evaluate/expression.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 

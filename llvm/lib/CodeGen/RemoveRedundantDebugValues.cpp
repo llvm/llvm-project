@@ -18,7 +18,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 /// \file RemoveRedundantDebugValues.cpp
 ///
@@ -128,11 +127,9 @@ static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
       continue;
 
     // Stop tracking any location that is clobbered by this instruction.
-    for (auto &Var : VariableMap) {
-      auto &LocOp = Var.second.first;
-      if (MI.modifiesRegister(LocOp->getReg(), TRI))
-        VariableMap.erase(Var.first);
-    }
+    VariableMap.remove_if([&](const auto &Var) {
+      return MI.modifiesRegister(Var.second.first->getReg(), TRI);
+    });
   }
 
   for (auto &Instr : DbgValsToBeRemoved) {

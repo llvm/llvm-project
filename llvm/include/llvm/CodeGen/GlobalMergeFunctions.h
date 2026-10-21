@@ -62,27 +62,27 @@ public:
 
   GlobalMergeFunc(const ModuleSummaryIndex *Index) : Index(Index) {};
 
-  void initializeMergerMode(const Module &M);
+  LLVM_ABI void initializeMergerMode(const Module &M);
 
-  bool run(Module &M);
+  LLVM_ABI bool run(Module &M);
 
   /// Analyze module to create stable function into LocalFunctionMap.
-  void analyze(Module &M);
+  LLVM_ABI void analyze(Module &M);
 
   /// Emit LocalFunctionMap into __llvm_merge section.
-  void emitFunctionMap(Module &M);
+  LLVM_ABI void emitFunctionMap(Module &M);
 
   /// Merge functions in the module using the given function map.
-  bool merge(Module &M, const StableFunctionMap *FunctionMap);
+  LLVM_ABI bool merge(Module &M, const StableFunctionMap *FunctionMap);
 };
 
 /// Global function merging pass for new pass manager.
-struct GlobalMergeFuncPass : public PassInfoMixin<GlobalMergeFuncPass> {
+struct GlobalMergeFuncPass : public OptionalPassInfoMixin<GlobalMergeFuncPass> {
   const ModuleSummaryIndex *ImportSummary = nullptr;
   GlobalMergeFuncPass() = default;
   GlobalMergeFuncPass(const ModuleSummaryIndex *ImportSummary)
       : ImportSummary(ImportSummary) {}
-  PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
+  LLVM_ABI PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
 };
 
 } // end namespace llvm

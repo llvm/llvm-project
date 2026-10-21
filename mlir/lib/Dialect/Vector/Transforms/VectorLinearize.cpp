@@ -15,12 +15,14 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -49,7 +51,7 @@ namespace {
 
 struct LinearizeConstantLike final
     : OpTraitConversionPattern<OpTrait::ConstantLike> {
-  using OpTraitConversionPattern::OpTraitConversionPattern;
+  using Base::Base;
 
   LinearizeConstantLike(const TypeConverter &typeConverter,
                         MLIRContext *context, PatternBenefit benefit = 1)
@@ -66,23 +68,22 @@ struct LinearizeConstantLike final
         typeConverter.convertType<VectorType>(op->getResult(0).getType());
     assert(resType && "expected 1-D vector type");
 
-    StringAttr attrName = rewriter.getStringAttr("value");
-    Attribute value = op->getAttr(attrName);
-    if (!value)
-      return rewriter.notifyMatchFailure(loc, "no 'value' attr");
+    Attribute value;
+    if (!matchPattern(op, m_Constant(&value)))
+      return rewriter.notifyMatchFailure(loc,
+                                         "could not fold constant-like op");
 
     FailureOr<Attribute> newValue =
         linearizeConstAttr(loc, rewriter, resType, value);
     if (failed(newValue))
       return failure();
 
-    FailureOr<Operation *> convertResult =
-        convertOpResultTypes(op, /*operands=*/{}, typeConverter, rewriter);
-    if (failed(convertResult))
-      return failure();
-
-    Operation *newOp = *convertResult;
-    newOp->setAttr(attrName, *newValue);
+    Operation *newOp = op->getDialect()->materializeConstant(
+        rewriter, *newValue, resType, loc);
+    if (!newOp)
+      return rewriter.notifyMatchFailure(
+          loc, "could not materialize linearized constant");
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.replaceOp(op, newOp);
     return success();
   }
@@ -90,7 +91,7 @@ struct LinearizeConstantLike final
 
 struct LinearizeVectorizable final
     : OpTraitConversionPattern<OpTrait::Vectorizable> {
-  using OpTraitConversionPattern::OpTraitConversionPattern;
+  using Base::Base;
 
 public:
   LinearizeVectorizable(const TypeConverter &typeConverter,
@@ -861,6 +862,68 @@ struct LinearizeVectorBroadcast final
   }
 };
 
+/// Linearize `vector.interleave` to operate on flattened 1D operands and
+/// result. The flattening is commutative here, the order of flatten and
+/// interleave ops does not matter, so this transform is valid for
+/// any ND shape.
+///
+/// Example:
+///   vector.interleave %a, %b : vector<4x1xT> -> vector<4x2xT>
+/// becomes:
+///   vector.interleave %a_flat, %b_flat : vector<4xT> -> vector<8xT>
+struct LinearizeVectorInterleave final
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using Base::Base;
+  LinearizeVectorInterleave(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType flatResultTy =
+        getTypeConverter()->convertType<VectorType>(op.getResultVectorType());
+    if (!flatResultTy)
+      return rewriter.notifyMatchFailure(op, "failed to linearize result type");
+    rewriter.replaceOpWithNewOp<vector::InterleaveOp>(
+        op, flatResultTy, adaptor.getLhs(), adaptor.getRhs());
+    return success();
+  }
+};
+
+/// Linearize `vector.deinterleave` to operate on a flattened 1D source.
+/// The flattening is commutative here, the order of flatten and deinterleave
+/// ops does not matter, so this transform is valid for any ND shape.
+///
+/// Example:
+///   %even, %odd = vector.deinterleave %src : vector<4x2xT> -> vector<4x1xT>
+/// becomes:
+///   %even, %odd = vector.deinterleave %src_flat : vector<8xT> -> vector<4xT>
+/// This linearization only works if the innermost dimension is even.
+/// Consider vector<2x5xT>:
+/// [[0,1,2,3,4],
+///  [5,6,7,8,9]]
+/// Non-linearized deinterleave returns the odd part: [[1, 3], [6, 8]]
+/// Linearized deinterleave would the odd part: [1, 3, 5, 7, 9]
+struct LinearizeVectorDeinterleave final
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using Base::Base;
+  LinearizeVectorDeinterleave(const TypeConverter &typeConverter,
+                              MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getSource().getType().getShape().back() % 2)
+      return failure();
+    auto newOp = vector::DeinterleaveOp::create(rewriter, op.getLoc(),
+                                                adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -945,6 +1008,65 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
       });
 }
 
+/// Get the set of operand/result types to check for sufficiently
+/// small inner-most dimension size.
+static SmallVector<std::pair<Type, unsigned>>
+getTypeBitWidthBoundPairs(Operation *op, unsigned targetBitWidth) {
+
+  if (auto insertOp = dyn_cast<vector::InsertOp>(op)) {
+    unsigned w = targetBitWidth < std::numeric_limits<unsigned>::max()
+                     ? targetBitWidth + 1
+                     : targetBitWidth;
+    return {{insertOp.getValueToStoreType(), w}};
+  }
+
+  auto resultTypes = op->getResultTypes();
+  SmallVector<std::pair<Type, unsigned>> resultsWithBitWidth;
+  resultsWithBitWidth.reserve(resultTypes.size());
+  for (Type type : resultTypes) {
+    resultsWithBitWidth.push_back({type, targetBitWidth});
+  }
+  return resultsWithBitWidth;
+}
+
+/// Returns true if any checked vector type of op's inner-most dimension
+/// size is equal to or exceeds target bit width.
+static bool hasWideInnerDim(Operation *op, unsigned targetBitWidth) {
+  // Check on bitwidths.
+  SmallVector<std::pair<Type, unsigned>> toCheck =
+      getTypeBitWidthBoundPairs(op, targetBitWidth);
+
+  // If `type` is VectorType with trailing dimension of (bit) size greater than
+  // or equal to `targetBitWidth`, its defining op is considered legal.
+  return llvm::any_of(toCheck, [&](std::pair<Type, unsigned> typeWidth) {
+    VectorType vecType = dyn_cast<VectorType>(typeWidth.first);
+
+    // Not linearizable for reasons other than what this function checks.
+    if (!vecType || vecType.getRank() == 0)
+      return false;
+
+    // The width of the type 'index' is unbounded (and therefore potentially
+    // above the target width).
+    if (vecType.getElementType().isIndex())
+      return true;
+
+    unsigned finalDimSize = vecType.getShape().back();
+    unsigned nbBitsPerElm = vecType.getElementTypeBitWidth();
+    unsigned trailingVecDimBitWidth = finalDimSize * nbBitsPerElm;
+    return trailingVecDimBitWidth >= typeWidth.second;
+  });
+}
+
+void mlir::vector::populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &target, unsigned targetBitWidth) {
+  target.markUnknownOpDynamicallyLegal(
+      [=](Operation *op) -> std::optional<bool> {
+        if (hasWideInnerDim(op, targetBitWidth))
+          return true;
+        return std::nullopt;
+      });
+}
+
 void mlir::vector::populateVectorLinearizeBasePatterns(
     const TypeConverter &typeConverter, const ConversionTarget &target,
     RewritePatternSet &patterns) {
@@ -952,7 +1074,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorCreateMask, LinearizeVectorLoad, LinearizeVectorStore,
            LinearizeVectorBroadcast, LinearizeVectorFromElements,
-           LinearizeVectorToElements>(typeConverter, patterns.getContext());
+           LinearizeVectorToElements, LinearizeVectorInterleave,
+           LinearizeVectorDeinterleave>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

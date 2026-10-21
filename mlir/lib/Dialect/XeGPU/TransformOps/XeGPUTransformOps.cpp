@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
@@ -82,7 +86,49 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Find producer operation of type T for the given value.
+/// Convert a single packed handle, that is either a transform param associated
+/// with a variadic number of integer attributes or mapped to a variadic number
+/// of payload ops each defining a single constant index result, to a list of
+/// int values.
+static DiagnosedSilenceableFailure
+convertPackedValueToInt(transform::TransformState &state,
+                        TransformOpInterface transformOp,
+                        SmallVectorImpl<int32_t> &result, Value packedHandle) {
+  // Transform param case.
+  if (isa<TransformParamTypeInterface>(packedHandle.getType())) {
+    for (Attribute param : state.getParams(packedHandle)) {
+      auto intAttr = dyn_cast<IntegerAttr>(param);
+      if (!intAttr)
+        return transformOp.emitDefiniteFailure()
+               << "expected the parameter to be associated with an integer "
+                  "attribute";
+      result.push_back(intAttr.getValue().getSExtValue());
+    }
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Payload op case.
+  for (Operation *op : state.getPayloadOps(packedHandle)) {
+    if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
+      DiagnosedSilenceableFailure diag =
+          transformOp.emitSilenceableError()
+          << "payload op must have exactly 1 index result";
+      diag.attachNote(op->getLoc())
+          << "has " << op->getNumResults() << " results";
+      return diag;
+    }
+
+    IntegerAttr intAttr;
+    if (!matchPattern(op->getResult(0), m_Constant(&intAttr)))
+      return transformOp.emitSilenceableError()
+             << "requires param or handle to be the result of a constant like "
+                "op";
+
+    result.push_back(intAttr.getInt());
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
 /// It's assumed that producer ops are chained through their first operand.
 /// Producer chain is traced trough loop block arguments (init values).
 template <typename T>
@@ -141,19 +187,28 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                           ArrayRef<::mlir::OpFoldResult> mixedSgLayout,
                           ArrayRef<::mlir::OpFoldResult> mixedSgData,
                           ArrayRef<::mlir::OpFoldResult> mixedInstData,
-                          ArrayRef<int32_t> order,
+                          Value packedSgLayout, Value packedSgData,
+                          Value packedInstData, ArrayRef<int32_t> order,
                           xegpu::LayoutAttr &layoutAttr) {
   SmallVector<int32_t> sgLayout, sgData, instData;
-  auto status =
-      convertMixedValuesToInt(state, transformOp, sgLayout, mixedSgLayout);
+
+  // A packed handle, when present, supersedes the mixed values and is unpacked
+  // to a variadic list of integers.
+  auto convert = [&](Value packed, ArrayRef<OpFoldResult> mixed,
+                     SmallVectorImpl<int32_t> &out) {
+    return packed ? convertPackedValueToInt(state, transformOp, out, packed)
+                  : convertMixedValuesToInt(state, transformOp, out, mixed);
+  };
+
+  auto status = convert(packedSgLayout, mixedSgLayout, sgLayout);
   if (!status.succeeded())
     return status;
 
-  status = convertMixedValuesToInt(state, transformOp, sgData, mixedSgData);
+  status = convert(packedSgData, mixedSgData, sgData);
   if (!status.succeeded())
     return status;
 
-  status = convertMixedValuesToInt(state, transformOp, instData, mixedInstData);
+  status = convert(packedInstData, mixedInstData, instData);
   if (!status.succeeded())
     return status;
   auto maybeInstData = instData.empty()
@@ -214,11 +269,24 @@ void transform::SetAnchorLayoutOp::build(
         /*sg_layout=*/dynamicSgLayout,
         /*sg_data=*/dynamicSgData,
         /*inst_data=*/dynamicInstData,
+        /*packed_sg_layout=*/Value(),
+        /*packed_sg_data=*/Value(),
+        /*packed_inst_data=*/Value(),
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
         /*order=*/order,
         /*slice_dims=*/sliceDims);
+}
+
+LogicalResult transform::SetAnchorLayoutOp::verify() {
+  if (getPackedSgLayout() && !getMixedSgLayout().empty())
+    return emitOpError("sg_layout and packed_sg_layout are mutually exclusive");
+  if (getPackedSgData() && !getMixedSgData().empty())
+    return emitOpError("sg_data and packed_sg_data are mutually exclusive");
+  if (getPackedInstData() && !getMixedInstData().empty())
+    return emitOpError("inst_data and packed_inst_data are mutually exclusive");
+  return success();
 }
 
 DiagnosedSilenceableFailure
@@ -232,7 +300,8 @@ transform::SetAnchorLayoutOp::apply(transform::TransformRewriter &rewriter,
   xegpu::LayoutAttr layoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
-      getMixedInstData(), getOrder(), layoutAttr);
+      getMixedInstData(), getPackedSgLayout(), getPackedSgData(),
+      getPackedInstData(), getOrder(), layoutAttr);
   if (!status.succeeded())
     return status;
 
@@ -282,6 +351,9 @@ void transform::SetAnchorLayoutOp::getEffects(
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
+  onlyReadsHandle(getPackedSgLayoutMutable(), effects);
+  onlyReadsHandle(getPackedSgDataMutable(), effects);
+  onlyReadsHandle(getPackedInstDataMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -405,11 +477,41 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
-  if (descOp.getMixedOffsets().size() > 0) {
-    auto diag = emitSilenceableFailure(getLoc())
-                << "desc op with offsets is not supported.";
-    diag.attachNote(descOp.getLoc()) << "desc op";
+
+  // Collect the loop-local operations computing the load offsets. These
+  // operations must be safe to execute before the corresponding load, both in
+  // the initial prefetch loop and at the start of each main-loop iteration.
+  SetVector<Operation *> offsetSlice;
+  BackwardSliceOptions sliceOptions;
+  sliceOptions.inclusive = true;
+  sliceOptions.omitBlockArguments = true;
+  sliceOptions.filter = [&](Operation *op) {
+    return op->getBlock() == forOp.getBody();
+  };
+  for (Value offset : loadOp.getOffsets())
+    if (failed(getBackwardSlice(offset, &offsetSlice, sliceOptions)))
+      return emitSilenceableFailure(getLoc())
+             << "Could not trace load offset computation.";
+
+  DominanceInfo dominance;
+  auto isAvailable = [&](Value value) {
+    return value == forOp.getInductionVar() ||
+           (value.getDefiningOp() &&
+            offsetSlice.contains(value.getDefiningOp())) ||
+           dominance.dominates(value, forOp);
+  };
+  for (Operation *op : offsetSlice) {
+    if (!isPure(op) || op->getNumRegions() != 0)
+      return emitSilenceableFailure(getLoc())
+             << "Offset computation cannot be safely replicated before the "
+                "for loop.";
+    if (!llvm::all_of(op->getOperands(), isAvailable))
+      return emitSilenceableFailure(getLoc())
+             << "Load offset depends on a value unavailable before the loop.";
   }
+  if (!llvm::all_of(loadOp.getOffsets(), isAvailable))
+    return emitSilenceableFailure(getLoc())
+           << "Load offset depends on a value unavailable before the loop.";
 
   // Clone desc op outside the loop.
   rewriter.setInsertionPoint(forOp);
@@ -432,17 +534,20 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   auto readCacheHint =
       xegpu::CachePolicyAttr::get(ctx, xegpu::CachePolicy::CACHED);
 
-  // Modify loadOp mixedOffsets by replacing the for loop induction variable
-  // with the given value.
+  // Recreate the offset calculation with the induction variable replaced by
+  // the iteration being prefetched. Cloning in slice order maps every result
+  // before it is used by a later offset operation.
   auto getPrefetchOffsets =
       [&](Value replacementVal) -> SmallVector<OpFoldResult> {
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
+    for (Operation *op : offsetSlice)
+      rewriter.clone(*op, mapping);
     SmallVector<Value> dynamicOffsets =
         llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);
         });
-    auto constOffsets = loadOp.getConstOffsets().value();
+    auto constOffsets = loadOp.getConstOffsets();
     return getMixedValues(constOffsets, dynamicOffsets, ctx);
   };
 
@@ -544,7 +649,9 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
   xegpu::LayoutAttr inputLayoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedInputSgLayout(),
-      getMixedInputSgData(), getMixedInputInstData(), getInputOrder(),
+      getMixedInputSgData(), getMixedInputInstData(),
+      /*packedSgLayout=*/Value(),
+      /*packedSgData=*/Value(), /*packedInstData=*/Value(), getInputOrder(),
       inputLayoutAttr);
   if (!status.succeeded())
     return status;
@@ -552,7 +659,9 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
   xegpu::LayoutAttr targetLayoutAttr = nullptr;
   status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedTargetSgLayout(),
-      getMixedTargetSgData(), getMixedTargetInstData(), getTargetOrder(),
+      getMixedTargetSgData(), getMixedTargetInstData(),
+      /*packedSgLayout=*/Value(),
+      /*packedSgData=*/Value(), /*packedInstData=*/Value(), getTargetOrder(),
       targetLayoutAttr);
   if (!status.succeeded())
     return status;

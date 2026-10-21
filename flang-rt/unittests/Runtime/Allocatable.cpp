@@ -75,6 +75,31 @@ TEST(AllocatableTest, MoveAlloc) {
   EXPECT_EQ(errStr, "MOVE_ALLOC passed the same address as to and from");
 }
 
+TEST(AllocatableTest, AllocateArrayIsAligned) {
+  using Fortran::common::TypeCategory;
+#if !defined(_WIN32)
+  // Since a single std::malloc result may happen to be 64-byte aligned
+  // allocate multiple arrays and check that all of them are aligned correctly
+  constexpr int count{32};
+  OwningPtr<Descriptor> arrays[count];
+  for (int i{0}; i < count; ++i) {
+    // REAL(8), ALLOCATABLE :: a(:)
+    arrays[i] = createAllocatable(TypeCategory::Real, 8);
+    // ALLOCATE(a(100))
+    arrays[i]->GetDimension(0).SetBounds(1, 100);
+    arrays[i]->Allocate(kNoAsyncObject);
+    EXPECT_TRUE(arrays[i]->IsAllocated());
+    EXPECT_EQ(reinterpret_cast<std::uintptr_t>(arrays[i]->raw().base_addr) %
+            kDefaultArrayAlignment,
+        0u);
+  }
+  for (int i{0}; i < count; ++i) {
+    arrays[i]->Deallocate();
+    EXPECT_FALSE(arrays[i]->IsAllocated());
+  }
+#endif
+}
+
 TEST(AllocatableTest, AllocateFromScalarSource) {
   using Fortran::common::TypeCategory;
   // REAL(4), ALLOCATABLE :: a(:)

@@ -85,6 +85,7 @@ enum class DeclUpdateKind;
 
 namespace SrcMgr {
 class FileInfo;
+class SLocEntry;
 } // namespace SrcMgr
 
 /// Writes an AST file containing the contents of a translation unit.
@@ -648,6 +649,7 @@ private:
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
+  void WriteOpenMPRequiresDecls(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
   void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
@@ -733,8 +735,7 @@ public:
   /// the module but currently is merely a random 32-bit number.
   ASTFileSignature WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                             StringRef OutputFile, Module *WritingModule,
-                            StringRef isysroot,
-                            bool ShouldCacheASTInMemory = false);
+                            StringRef isysroot);
 
   /// Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);
@@ -746,8 +747,28 @@ public:
   /// Emit a FileID.
   void AddFileID(FileID FID, RecordDataImpl &Record);
 
+  /// The starting offset of \p SLoc's entry within this module, with the dummy
+  /// entry skipped. This is what an SLocEntry record stores as its first field.
+  SourceLocation::UIntTy getEntryOffset(const SrcMgr::SLocEntry &SLoc) const;
+
+  /// Emit \p Offset as the next record field and return a chain anchored at
+  /// \p Offset + \p InitialDelta, for delta encoding the locations that follow.
+  static SourceLocationEncoding::Chain
+  EmitSourceLocationOffset(SourceLocation::UIntTy Offset,
+                           SourceLocation::UIntTy InitialDelta,
+                           RecordDataImpl &Record);
+
+  /// Emit \p SLoc's entry offset as the record's first field and return a chain
+  /// anchored at that entry, for delta encoding the locations that follow.
+  SourceLocationEncoding::Chain EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
+                                                RecordDataImpl &Record);
+
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
+
+  /// Emit a source location, delta encoded against \p Chain.
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                         SourceLocationEncoding::Chain &Chain);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
@@ -1011,7 +1032,6 @@ class PCHGenerator : public SemaConsumer {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
   bool AllowASTWithErrors;
-  bool ShouldCacheASTInMemory;
 
 protected:
   ASTWriter &getWriter() { return Writer; }
@@ -1033,7 +1053,6 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false,
                bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 

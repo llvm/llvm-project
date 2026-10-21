@@ -29,10 +29,26 @@ template <> struct DefaultSplit<double> {
 using DoubleDouble = NumberPair<double>;
 using FloatFloat = NumberPair<float>;
 
-// The output of Dekker's FastTwoSum algorithm is correct, i.e.:
-//   r.hi + r.lo = a + b exactly
-//   and |r.lo| < eps(r.lo)
-// Assumption: |a| >= |b|, or a = 0.
+// Dekker's FastTwoSum:
+//   r_hi + r_lo ~ a + b
+// In precision `p`, it's exact if `lsb(a) >= ulp(b)` and one of the following
+// conditions satisfies:
+//   (i)   rounding mode = RN
+//   (ii)  e_a - e_b <= p
+//   (iii) rounding mode = RD and b >= 0
+//   (iv)  rounding mode = RU and b <= 0
+//   (v)   rounding mode = RZ and ab >= 0
+// Otherwise, the errors err = (a + b) - (r_hi + r_lo) is bounded by:
+//   |err| <= 2^(-2p + 1) * ufp(a + b) <= 2^(-2p + 1) * ufp(r_hi)
+// when `lsb(a) >= ulp(b)`.
+// In particular,
+//   |err| <=  2^-47 * ufp(r_hi) for single precision,
+//         <= 2^-105 * ufp(r_hi) for double precision.
+// If the condition `lsb(a) >= ulp(b)` does NOT satisfy, then:
+//   |err| < 3 * 2^(-p) * |r_hi|.
+// Reference:
+//   Jeannerod, C.-P. and Zimmermann, P., "FastTwoSum revisited", ARITH 2025,
+//     <https://www.arith2025.org/proceedings/215900a141.pdf>.
 template <bool FAST2SUM = true, typename T = double>
 LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
   NumberPair<T> r{0.0, 0.0};
@@ -51,20 +67,25 @@ LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
   return r;
 }
 
-// Assumption: |a.hi| >= |b.hi|
-template <typename T>
+// Following the above analysis of FastTwoSum,
+// If `lsb(a.hi) >= ulp(b.hi)`, then the errors:
+//   err = (a.hi + a.lo + b.hi + b.lo) - (r.hi - r.lo) is bounded by:
+//   |err| < 2^(-2p) * ufp(r.hi) + 2^(-p + 2) * ufp(a.lo + b.lo).
+template <bool FAST2SUM = true, typename T>
 LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a,
                                         const NumberPair<T> &b) {
-  NumberPair<T> r = exact_add(a.hi, b.hi);
+  NumberPair<T> r = exact_add<FAST2SUM>(a.hi, b.hi);
   T lo = a.lo + b.lo;
-  return exact_add(r.hi, r.lo + lo);
+  T r_lo = r.lo + lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
 }
 
-// Assumption: |a.hi| >= |b|
-template <typename T>
+// Assumption: when FAST2SUM = true, |a.hi| >= |b|
+template <bool FAST2SUM = true, typename T>
 LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
-  NumberPair<T> r = exact_add<false>(a.hi, b);
-  return exact_add(r.hi, r.lo + a.lo);
+  NumberPair<T> r = exact_add<FAST2SUM>(a.hi, b);
+  T r_lo = r.lo + a.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
 }
 
 // Veltkamp's Splitting for double precision.
@@ -87,7 +108,8 @@ LIBC_INLINE constexpr NumberPair<T> split(T a) {
 
 // Helper for non-fma exact mult where the first number is already split.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
-LIBC_INLINE NumberPair<T> exact_mult(const NumberPair<T> &as, T a, T b) {
+LIBC_INLINE constexpr NumberPair<T> exact_mult(const NumberPair<T> &as, T a,
+                                               T b) {
   NumberPair<T> bs = split<T, SPLIT_B>(b);
   NumberPair<T> r{0.0, 0.0};
 
@@ -128,7 +150,7 @@ template <> struct TargetHasFmaInstruction<double> {
 // the generated constants to precision <= 51, and splitting it by 2^28 + 1,
 // then a * b = r.hi + r.lo is exact for all rounding modes.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
-LIBC_INLINE NumberPair<T> exact_mult(T a, T b) {
+LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
   NumberPair<T> r{0.0, 0.0};
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {

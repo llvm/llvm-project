@@ -24,7 +24,7 @@ define void @fn(i32 noundef %n, ptr %in, ptr %out) #0 {
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -84,7 +84,7 @@ entry:
   %cmp46.not = icmp eq i32 %n, 0
   br i1 %cmp46.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %ptr.iv.1 = phi ptr [ %in, %entry ], [ %ptr.iv.1.next, %for.body ]
   %ptr.iv.2 = phi ptr [ %out, %entry ], [ %ptr.iv.2.next, %for.body ]
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
@@ -131,6 +131,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i32 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+exit:
   ret void
 }

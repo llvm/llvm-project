@@ -17,7 +17,7 @@ define void @wide_ptr_induction_index_width_smaller_than_iv_width(ptr noalias %s
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[SRC]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST_0]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP10]], align 8

@@ -47,6 +47,9 @@ using ProgramPoint = const Fact *;
 ///   lifetime-relevant `Fact` transforms the lattice state. Only overloads
 ///   for facts relevant to the analysis need to be implemented.
 ///
+/// It may additionally override `Lattice transferAtBlockExit(Lattice);` to
+/// drop state that is not visible outside the block it was computed in.
+///
 /// \tparam Derived The CRTP derived class that implements the specific
 /// analysis.
 /// \tparam LatticeType The dataflow lattice used by the analysis.
@@ -157,7 +160,7 @@ private:
         State = transferFact(State, F);
       }
     }
-    return State;
+    return static_cast<Derived *>(this)->transferAtBlockExit(State);
   }
 
   Lattice transferFact(Lattice In, const Fact *F) {
@@ -180,11 +183,15 @@ private:
       return D->transfer(In, *F->getAs<TestPointFact>());
     case Fact::Kind::InvalidateOrigin:
       return D->transfer(In, *F->getAs<InvalidateOriginFact>());
+    case Fact::Kind::KillOrigin:
+      return D->transfer(In, *F->getAs<KillOriginFact>());
     }
     llvm_unreachable("Unknown fact kind");
   }
 
 public:
+  Lattice transferAtBlockExit(Lattice In) { return In; }
+
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }
@@ -193,6 +200,7 @@ public:
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
   Lattice transfer(Lattice In, const InvalidateOriginFact &) { return In; }
+  Lattice transfer(Lattice In, const KillOriginFact &) { return In; }
 };
 } // namespace clang::lifetimes::internal
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_DATAFLOW_H

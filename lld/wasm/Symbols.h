@@ -59,9 +59,11 @@ public:
     UndefinedGlobalKind,
     UndefinedTableKind,
     UndefinedTagKind,
+    CommonKind,
     LazyKind,
     SharedFunctionKind,
     SharedDataKind,
+    SharedTagKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -76,8 +78,10 @@ public:
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
+  bool isCommon() const { return symbolKind == CommonKind; }
   bool isShared() const {
-    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind ||
+           symbolKind == SharedTagKind;
   }
 
   bool isLocal() const;
@@ -292,7 +296,7 @@ class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind ||
-           s->kind() == SharedDataKind;
+           s->kind() == SharedDataKind || s->kind() == CommonKind;
   }
 
 protected:
@@ -345,6 +349,28 @@ public:
   static bool classof(const Symbol *s) {
     return s->kind() == UndefinedDataKind;
   }
+};
+
+class CommonSymbol : public DataSymbol {
+public:
+  CommonSymbol(StringRef name, uint32_t flags, InputFile *file, uint64_t size,
+               uint32_t alignment)
+      : DataSymbol(name, CommonKind, flags, file), size(size),
+        alignment(alignment) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
+
+  uint64_t getSize() const { return size; }
+  uint32_t getAlignment() const { return alignment; }
+
+  void setCommon(uint64_t s, uint32_t a) {
+    size = s;
+    alignment = a;
+  }
+
+private:
+  uint64_t size;
+  uint32_t alignment;
 };
 
 class GlobalSymbol : public Symbol {
@@ -461,7 +487,8 @@ public:
 class TagSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind;
+    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind ||
+           s->kind() == SharedTagKind;
   }
 
   // Get/set the tag index
@@ -499,6 +526,15 @@ public:
   }
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
+};
+
+class SharedTagSymbol : public TagSymbol {
+public:
+  SharedTagSymbol(StringRef name, uint32_t flags, InputFile *f,
+                  const WasmSignature *sig)
+      : TagSymbol(name, SharedTagKind, flags, f, sig) {}
+
+  static bool classof(const Symbol *s) { return s->kind() == SharedTagKind; }
 };
 
 class SharedFunctionSymbol : public FunctionSymbol {
@@ -553,6 +589,8 @@ union SymbolUnion {
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
   alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
+  alignas(SharedTagSymbol) char m[sizeof(SharedTagSymbol)];
+  alignas(CommonSymbol) char n[sizeof(CommonSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

@@ -188,7 +188,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    ret void
 //
 //
-// STRICTFP: Function Attrs: convergent nounwind
+// STRICTFP: Function Attrs: convergent nounwind strictfp
 // STRICTFP-LABEL: define spir_kernel void @__device_side_enqueue_block_invoke_kernel(
 // STRICTFP-SAME: ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
 // STRICTFP-NEXT:  [[ENTRY:.*:]]
@@ -197,17 +197,17 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 //.
 // SPIR32: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
-// SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // SPIR32: attributes #[[ATTR2]] = { convergent noinline nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 // SPIR32: attributes #[[ATTR4]] = { convergent nounwind denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // SPIR32: attributes #[[ATTR5]] = { convergent nounwind "uniform-work-group-size" }
 //.
 // STRICTFP: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // STRICTFP: attributes #[[ATTR2]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
 // STRICTFP: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
-// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind strictfp "stack-protector-buffer-size"="8" }
 // STRICTFP: attributes #[[ATTR5]] = { convergent nounwind strictfp }
 // STRICTFP: attributes #[[ATTR6]] = { strictfp }
 //.

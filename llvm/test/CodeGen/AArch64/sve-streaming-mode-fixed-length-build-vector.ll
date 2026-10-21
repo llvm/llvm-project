@@ -25,9 +25,9 @@ define void @build_vector_7_inc1_v32i8(ptr %a) {
 ; CHECK-LABEL: build_vector_7_inc1_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    add z0.b, z0.b, #7 // =0x7
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    add z1.b, z1.b, #23 // =0x17
+; CHECK-NEXT:    add z0.b, z0.b, #7 // =0x7
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
@@ -47,9 +47,9 @@ define void @build_vector_0_inc2_v16i16(ptr %a) {
 ; CHECK-LABEL: build_vector_0_inc2_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.h, #0, #2
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    add z0.h, z0.h, #16 // =0x10
-; CHECK-NEXT:    str q0, [x0, #16]
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    add z1.h, z1.h, #16 // =0x10
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: build_vector_0_inc2_v16i16:
@@ -69,9 +69,9 @@ define void @build_vector_0_dec3_v8i32(ptr %a) {
 ; CHECK-LABEL: build_vector_0_dec3_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.s, #0, #-3
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    sub z0.s, z0.s, #12 // =0xc
-; CHECK-NEXT:    str q0, [x0, #16]
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    sub z1.s, z1.s, #12 // =0xc
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: build_vector_0_dec3_v8i32:
@@ -92,9 +92,9 @@ define void @build_vector_minus2_dec32_v4i64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
 ; CHECK-NEXT:    index z0.d, #0, x8
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    sub z0.d, z0.d, #2 // =0x2
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    sub z1.d, z1.d, #66 // =0x42
+; CHECK-NEXT:    sub z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;

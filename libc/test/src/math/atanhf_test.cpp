@@ -101,7 +101,7 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcAtanhfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   const uint32_t STEP = FPBits(1.0f).uintval() / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

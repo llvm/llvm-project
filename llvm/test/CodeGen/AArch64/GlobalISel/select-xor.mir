@@ -35,10 +35,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[EORWrr:%[0-9]+]]:gpr32 = EORWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[EORWrr]]
-    %0(s32) = COPY $w0
-    %1(s32) = COPY $w1
-    %2(s32) = G_XOR %0, %1
-    $w0 = COPY %2(s32)
+    %0(i32) = COPY $w0
+    %1(i32) = COPY $w1
+    %2(i32) = G_XOR %0, %1
+    $w0 = COPY %2(i32)
 ...
 
 ---
@@ -63,10 +63,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[EORXrr:%[0-9]+]]:gpr64 = EORXrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[EORXrr]]
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = G_XOR %0, %1
-    $x0 = COPY %2(s64)
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %2(i64) = G_XOR %0, %1
+    $x0 = COPY %2(i64)
 ...
 
 ---
@@ -91,10 +91,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[COPY]]
     ; CHECK-NEXT: $w0 = COPY [[ORNWrr]]
-    %0(s32) = COPY $w0
-    %1(s32) = G_CONSTANT i32 -1
-    %2(s32) = G_XOR %0, %1
-    $w0 = COPY %2(s32)
+    %0(i32) = COPY $w0
+    %1(i32) = G_CONSTANT i32 -1
+    %2(i32) = G_XOR %0, %1
+    $w0 = COPY %2(i32)
 ...
 
 ---
@@ -118,10 +118,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[ORNXrr:%[0-9]+]]:gpr64 = ORNXrr $xzr, [[COPY]]
     ; CHECK-NEXT: $x0 = COPY [[ORNXrr]]
-    %0(s64) = COPY $x0
-    %1(s64) = G_CONSTANT i64 -1
-    %2(s64) = G_XOR %0, %1
-    $x0 = COPY %2(s64)
+    %0(i64) = COPY $x0
+    %1(i64) = G_CONSTANT i64 -1
+    %2(i64) = G_XOR %0, %1
+    $x0 = COPY %2(i64)
 ...
 
 ---
@@ -151,10 +151,10 @@ body:             |
   bb.0:
     liveins: $w0, $w1
     successors: %bb.1
-    %1(s32) = G_CONSTANT i32 -1
+    %1(i32) = G_CONSTANT i32 -1
     G_BR %bb.1
   bb.1:
-    %0(s32) = COPY $w0
-    %2(s32) = G_XOR %0, %1
-    $w0 = COPY %2(s32)
+    %0(i32) = COPY $w0
+    %2(i32) = G_XOR %0, %1
+    $w0 = COPY %2(i32)
 ...

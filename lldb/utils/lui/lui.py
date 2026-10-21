@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##===-- lui.py -----------------------------------------------*- Python -*-===##
 ##
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _AlgPolicy, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
+constexpr pair<_Iter, _Iter>
 __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "Providing a negative shift amount to shift_right is UB");
   if (__n == 0) {
@@ -53,7 +53,7 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
     _Iter __m = __first;
     _IterOps<_AlgPolicy>::advance(__m, (__size - __n));
     auto __ret = std::__move_backward<_AlgPolicy>(std::move(__first), std::move(__m), __end);
-    return pair<_Iter, _Iter>(std::move(__ret.second), std::move(__end));
+    return pair<_Iter, _Iter>(std::move(__ret.__out_), std::move(__end));
   } else if constexpr (derived_from<_IterCategory, bidirectional_iterator_tag>) {
     _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
     if constexpr (sized_sentinel_for<_Sent, _Iter>) {
@@ -69,7 +69,7 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
       --__m;
     }
     auto __ret = std::__move_backward<_AlgPolicy>(std::move(__first), std::move(__m), __end);
-    return pair<_Iter, _Iter>(std::move(__ret.second), std::move(__end));
+    return pair<_Iter, _Iter>(std::move(__ret.__out_), std::move(__end));
   } else {
     _Iter __ret = __first;
     for (; __n > 0; --__n) {
@@ -99,7 +99,7 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
     _Iter __mid = __first;
     while (true) {
       if (__lead == __last) {
-        __trail = std::__move<_AlgPolicy>(__mid, __ret, __trail).second;
+        __trail = std::__move<_AlgPolicy>(__mid, __ret, __trail).__out_;
         std::__move<_AlgPolicy>(std::move(__first), std::move(__mid), std::move(__trail));
         return pair<_Iter, _Iter>(__ret, std::move(__lead));
       }
@@ -115,7 +115,7 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
 }
 
 template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI constexpr _ForwardIterator
+constexpr _ForwardIterator
 shift_right(_ForwardIterator __first,
             _ForwardIterator __last,
             typename iterator_traits<_ForwardIterator>::difference_type __n) {

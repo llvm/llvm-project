@@ -144,16 +144,15 @@ uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
   uint64_t offset = *offset_ptr;
   if (!prepareRead(offset, byte_size, Err))
     return val;
-  std::memcpy(&val, &Data.data()[offset], byte_size);
+  // Copy into the least significant bytes of val regardless of host
+  // endianness.
+  std::memcpy(reinterpret_cast<char *>(&val) +
+                  (sys::IsLittleEndianHost ? 0 : 8 - byte_size),
+              &Data.data()[offset], byte_size);
+  // Swap the least significant bytes of val if endianness doesn't match.
   if (sys::IsLittleEndianHost != IsLittleEndian)
-    // Say byte_size is 3.
-    //                high                low
-    // Read bytes:    00 00 00 00 00 AA BB CC
-    // Swapped bytes: CC BB AA 00 00 00 00 00
-    // Shifted bytes: 00 00 00 00 00 CC BB AA
     val = sys::getSwappedBytes(val) >> (8 * (8 - byte_size));
 
-  // Advance the offset
   *offset_ptr += byte_size;
   return val;
 }
@@ -244,6 +243,37 @@ uint64_t DataExtractor::getULEB128(uint64_t *offset_ptr, Error *Err) const {
 
 int64_t DataExtractor::getSLEB128(uint64_t *offset_ptr, Error *Err) const {
   return getLEB128(Data, offset_ptr, Err, decodeSLEB128);
+}
+
+APSInt DataExtractor::getSLEB128APSInt(uint64_t *OffsetPtr, Error *Err) const {
+  ErrorAsOutParameter ErrAsOut(Err);
+  if (isError(Err))
+    return APSInt();
+
+  uint64_t Offset = *OffsetPtr;
+  APInt Value;
+  unsigned Shift = 0;
+  uint8_t Byte;
+  do {
+    if (!prepareRead(Offset, 1, Err))
+      return APSInt();
+    Byte = Data[Offset++];
+    APInt Slice(7, Byte & 0x7f);
+    if (Shift == 0)
+      Value = Slice;
+    else {
+      Value = Value.zext(Shift + 7);
+      Value.insertBits(Slice, Shift);
+    }
+    Shift += 7;
+  } while (Byte & 0x80);
+
+  // Sign extend Value to at least 64 bits to match getSLEB128.
+  if (Shift < 64)
+    Value = Value.sext(64);
+
+  *OffsetPtr = Offset;
+  return APSInt(std::move(Value), /*isUnsigned=*/false);
 }
 
 void DataExtractor::skip(Cursor &C, uint64_t Length) const {

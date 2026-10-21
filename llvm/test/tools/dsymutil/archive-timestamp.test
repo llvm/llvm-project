@@ -1,4 +1,4 @@
-# RUN: dsymutil -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
+# RUN: dsymutil --linker classic -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
 
 # RUN: dsymutil --linker parallel -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
 

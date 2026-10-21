@@ -26,6 +26,11 @@ AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
 
 } // namespace
 
+TemporaryObjectsCheck::TemporaryObjectsCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Names(utils::options::parseStringList(Options.get("Names", ""))) {}
+
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for default constructors.
   Finder->addMatcher(

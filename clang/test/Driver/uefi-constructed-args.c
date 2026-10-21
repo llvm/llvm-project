@@ -1,6 +1,6 @@
-// RUN: %clang -### --target=x86_64-unknown-uefi -g -- %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-uefi -mno-incremental-linker-compatible -g -- %s 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK %s
-// RUN: %clang_cl -### --target=x86_64-unknown-uefi -g -- %s 2>&1 \
+// RUN: %clang_cl -### --target=x86_64-unknown-uefi -mno-incremental-linker-compatible -g -- %s 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK %s
 // CHECK: "-cc1"
 // CHECK-SAME: "-triple" "x86_64-unknown-uefi"
@@ -12,6 +12,7 @@
 // CHECK-SAME: "/entry:EfiMain"
 // CHECK-SAME: "/tsaware:no"
 // CHECK-SAME: "/debug"
+// CHECK-SAME: "/Brepro"
 
 // RUN: %clang -### --target=x86_64-unknown-uefi -print-search-dirs 2>&1 \
 // RUN:     | FileCheck -check-prefixes=PROGPATH %s

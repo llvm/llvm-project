@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_REGISTERVALUE_H
 
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -24,7 +25,6 @@
 namespace lldb_private {
 class DataExtractor;
 class Stream;
-struct RegisterInfo;
 
 class RegisterValue {
 public:
@@ -98,6 +98,10 @@ public:
   RegisterValue::Type SetType(const RegisterInfo &reg_info);
 
   bool GetData(DataExtractor &data) const;
+
+  /// Copy \p byte_size bytes from this value into \p data using \p byte_order.
+  bool GetData(DataExtractor &data, uint32_t byte_size,
+               lldb::ByteOrder byte_order) const;
 
   // Copy the register value from this object into a buffer in "dst" and obey
   // the "dst_byte_order" when copying the data. Also watch out in case

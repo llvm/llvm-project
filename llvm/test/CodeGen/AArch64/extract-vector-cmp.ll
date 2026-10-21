@@ -60,8 +60,7 @@ define i128 @extract_icmp_v1i128(ptr %p) {
 ; CHECK-NEXT:    ldp x9, x8, [x0]
 ; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    csetm x0, eq
 ; CHECK-NEXT:    mov x1, x0
 ; CHECK-NEXT:    ret
   %load = load <1 x i128>, ptr %p, align 16

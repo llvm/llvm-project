@@ -16,6 +16,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace llvm;
@@ -25,6 +26,13 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(ObjectFileJSON)
 
 char ObjectFileJSON::ID;
+
+/// Returns the JSON text in the buffer, which is not null-terminated and may
+/// be zero padded past the end of the file.
+static StringRef GetText(const lldb_private::DataExtractor &data) {
+  StringRef text = toStringRef(data.GetData());
+  return text.substr(0, text.find('\0'));
+}
 
 void ObjectFileJSON::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -66,7 +74,7 @@ ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
+  StringRef text = GetText(*extractor_sp);
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -125,7 +133,7 @@ ObjectFileJSON::GetModuleSpecifications(const FileSpec &file,
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
+  StringRef text = GetText(*extractor_sp);
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -197,7 +205,7 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
       auto sect_id = section.user_id.value_or(id + 1);
       if (!section.user_id.has_value())
         ++id;
-      const auto name = ConstString(section.name);
+      const auto name = section.name;
       const auto sect_type = section.type.value_or(eSectionTypeCode);
       const auto vm_addr = section.address.value_or(0);
       const auto vm_size = section.size.value_or(0);
@@ -264,10 +272,9 @@ bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
   for (const SectionSP &section_sp : *m_sections_up) {
     addr_t section_load_addr = section_sp->GetFileAddress();
     if (section_load_addr != LLDB_INVALID_ADDRESS) {
-      LLDB_LOGF(
-          log,
-          "ObjectFileJSON::SetLoadAddress section %s to load addr 0x%" PRIx64,
-          section_sp->GetName().AsCString(), section_load_addr + slide);
+      LLDB_LOG(log,
+               "ObjectFileJSON::SetLoadAddress section {0} to load addr {1:x}",
+               section_sp->GetName(), section_load_addr + slide);
       target.SetSectionLoadAddress(section_sp, section_load_addr + slide,
                                    /*warn_multiple=*/true);
     }

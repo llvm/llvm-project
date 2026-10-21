@@ -249,6 +249,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
     return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint4tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case PPC::BI__builtin_altivec_vupkint8tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_altivec_vupkint4tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint8tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 1, 31);
@@ -606,6 +614,8 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
   auto &TargetInfo = getASTContext().getTargetInfo();
   bool HasDefault = false;
   bool HasComma = false;
+  bool HasNegativeDisablableFeature = false;
+  StringRef DisablableFeatureName;
   for (unsigned I = 0, E = Params.size(); I < E; ++I) {
     const StringRef Param = Params[I].trim();
     const SourceLocation &Loc = Locs[I];
@@ -625,6 +635,10 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       const SourceLocation &CurLoc =
           Loc.getLocWithOffset(LHS.data() - Param.data());
 
+      if (LHS.empty())
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << "" << TargetClones;
+
       if (LHS.starts_with("cpu=")) {
         StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
         if (!TargetInfo.isValidCPUName(CPUStr))
@@ -636,9 +650,27 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       } else if (LHS == "default") {
         HasDefault = true;
       } else {
-        // it's a feature string, but not supported yet.
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << LHS << TargetClones;
+        bool IsNegated = LHS.starts_with("no-");
+        StringRef FeatureName = IsNegated ? LHS.drop_front(3) : LHS;
+        if (!TargetInfo.isValidClonesFeatureName(FeatureName))
+          return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
+                 << FeatureName;
+        // All target_clones feature names must be valid target feature names.
+        assert(TargetInfo.isValidFeatureName(FeatureName));
+
+        if (llvm::PPC::canDisableFeatureOnAIX(FeatureName)) {
+          if (IsNegated) {
+            // Only one negative target-feature that can be disabled.
+            if (HasNegativeDisablableFeature) {
+              return Diag(CurLoc, diag::err_ppc_multiple_negative_disableable)
+                     << LHS << DisablableFeatureName;
+            }
+            HasNegativeDisablableFeature = true;
+            DisablableFeatureName = LHS;
+          }
+          // Positive disableable features are always allowed.
+        }
+        // Non-disableable features (positive or negative) are always allowed.
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {

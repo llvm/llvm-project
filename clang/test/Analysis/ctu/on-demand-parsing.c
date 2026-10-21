@@ -9,7 +9,7 @@
 //
 // RUN: echo '"%t/other.c": ["gcc", "-std=c89", "-Wno-visibility", "other.c"]' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
 //
-// RUN: cd "%t" && %clang_extdef_map "%t/other.c" > externalDefMap.txt
+// RUN: cd "%t" && %clang_extdef_map "%t/other.c" -- > externalDefMap.txt
 //
 // RUN: cd "%t" && %clang_analyze_cc1 -std=c89 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
@@ -85,4 +85,5 @@ void testStructDefInArgument() {
   d.a = 1;
   d.b = 0;
   clang_analyzer_eval(structInProto(&d) == 0); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  // expected-warning@-1{{import of an external symbol for CTU failed: Failed to import the definition.}}
 }

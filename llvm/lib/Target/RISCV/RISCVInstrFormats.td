@@ -108,6 +108,14 @@ def Vrgather       : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 def Vcompress      : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
+// smt.vmadot with sp and hp: the vmask operand (only use V0 or V1) must not
+// overlap with any of vd, vs1, or vs2.
+class RISCVSMTConstraint<bit DiffClassReg = 0> {
+  bits<1> Value = DiffClassReg;
+}
+def NoSMTConstraint        : RISCVSMTConstraint<>;
+def DiffWithMaskConstraint : RISCVSMTConstraint<DiffClassReg = 1>;
+
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
 class RISCVOpcode<string name, bits<7> val> {
@@ -289,6 +297,10 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   bit HasTkOp = 0;
   let TSFlags{31} = HasTkOp;
+
+  // SMT VDOTII register class constraint.
+  RISCVSMTConstraint SMTConstraint = NoSMTConstraint;
+  let TSFlags{32} = SMTConstraint.Value;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
@@ -327,33 +339,30 @@ class PseudoQuietFCMP<DAGOperand Ty>
   let mayStore = 0;
 }
 
-// Pseudo load instructions.
-class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
+// Pseudo load instructions (needs a destination/temporary register != x0).
+class PseudoLoad<string opcodestr, DAGOperand rdty = GPRNoX0>
     : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
-    : Pseudo<(outs GPR:$tmp, rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
+    : Pseudo<(outs GPRNoX0:$tmp, rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
-// Pseudo store instructions.
+// Pseudo store instructions (needs a temporary register != x0).
 class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
-    : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
+    : Pseudo<(outs GPRNoX0:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 1;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 // Instruction formats are listed in the order they appear in the RISC-V

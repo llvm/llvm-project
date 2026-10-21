@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -804,7 +805,7 @@ private:
                    const T *>                                                  \
   getNode() const {                                                            \
     assertHoldsState();                                                        \
-    return Callback.getInt() == (Index) ? Node##Index.dyn_cast<const T *>()    \
+    return Callback.getInt() == (Index) ? dyn_cast<const T *>(Node##Index)     \
                                         : nullptr;                             \
   }
 
@@ -1048,13 +1049,15 @@ private:
     const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     auto &Matchers = this->Matchers->DeclOrStmt;
+    // traverseIgnored() only ever replaces expressions.
+    const bool IsExpr = DynNode.get<Expr>() != nullptr;
     for (unsigned short I : Filter) {
       auto &MP = Matchers[I];
       if (EnableCheckProfiling)
         Timer.setBucket(&TimeByBucket[MP.second->getID()]);
       BoundNodesTreeBuilder Builder;
 
-      {
+      if (IsExpr) {
         TraversalKindScope RAII(getASTContext(), MP.first.getTraversalKind());
         if (getASTContext().getParentMapContext().traverseIgnored(DynNode) !=
             DynNode)
@@ -1509,6 +1512,9 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
 
 bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   if (shouldSkipNode(DeclNode))
+    return true;
+
+  if (Options.SkipDeclsInModules && DeclNode->isInAnotherModuleUnit())
     return true;
 
   bool ScopedTraversal =

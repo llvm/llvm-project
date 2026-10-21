@@ -117,6 +117,69 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
   }];
 }
 
+def NormalFormAttrInterface : AttrInterface<"NormalFormAttrInterface"> {
+  let description = [{
+    Interface for attributes that define normal form constraints on IR.
+
+    A normal form attribute specifies additional invariants beyond those
+    enforced by the verifiers that types, attributes, and operations may satisfy
+    to enable certain transformations. This can be seen as a transformation
+    pre/post-conditions.
+
+    Implementers should override one or more of `verifyType`, `verifyAttribute`,
+    or `verifyOperation` to define custom verification logic. The default
+    implementations return success.
+  }];
+  let cppNamespace = "::mlir::transform";
+
+  // Note: we can also consider dedicated methods for attributes and types.
+  let methods = [InterfaceMethod<
+                     /*desc=*/[{
+       Check that the given operation satisfies the constraints defined by this
+       normal form attribute.
+
+       Produce a silenceable error at the operation's location if constraints are not
+       satisfied.
+      }],
+                     /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
+                     /*name=*/"checkOperation",
+                     /*arguments=*/(ins "::mlir::Operation*":$op),
+                     /*methodBody=*/"",
+                     /*defaultImplementation=*/[{
+        return ::mlir::DiagnosedSilenceableFailure::success();
+      }]>,
+  ];
+}
+
+def NormalFormCheckedOpInterface : OpInterface<"NormalFormCheckedOpInterface"> {
+  let description = [{
+    Interface for operations that satisfy normal forms. Such an operation
+    declares a list of normal forms it satisfies and the interface-level
+    verifier ensures this is the case by calling the corresponding checkers from
+    the normal form interfaces.
+  }];
+  let cppNamespace = "::mlir::transform";
+  let methods = [InterfaceMethod<
+      /*desc=*/[{Returns the list of normal forms the operation satisfies.}],
+      /*returnType=*/"void",
+      /*name=*/"getCheckedNormalForms",
+      /*arguments=*/
+      (ins "::llvm::SmallVectorImpl<::mlir::transform::NormalFormAttrInterface>"
+           " &":$normalForms)>];
+
+  let verify = [{
+    ::llvm::SmallVector<::mlir::transform::NormalFormAttrInterface> normalForms;
+    cast<::mlir::transform::NormalFormCheckedOpInterface>($_op)
+        .getCheckedNormalForms(normalForms);
+    if (::llvm::failed(::mlir::transform::detail::verifyNormalFormList(
+        [&] { return $_op->emitError(); }, normalForms)))
+      return ::llvm::failure();
+    return ::mlir::transform::detail::checkNormalForms(normalForms, $_op)
+        .checkAndReport();
+  }];
+  let verifyWithRegions = 1;
+}
+
 class TransformTypeInterfaceBase<string cppClass, string cppObjectType>
     : TypeInterface<cppClass> {
   let cppNamespace = "::mlir::transform";

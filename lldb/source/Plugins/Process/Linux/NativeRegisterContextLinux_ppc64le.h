@@ -15,10 +15,10 @@
 #define lldb_NativeRegisterContextLinux_ppc64le_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
+#include "Register/Arch/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 
 namespace lldb_private {
@@ -122,7 +122,7 @@ private:
     int mode;               // Defines if watchpoint is read/write/access.
   };
 
-  std::array<DREG, 16> m_hwp_regs;
+  std::array<DREG, 16> m_hwp_regs{};
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   uint32_t m_max_hwp_supported = 16;

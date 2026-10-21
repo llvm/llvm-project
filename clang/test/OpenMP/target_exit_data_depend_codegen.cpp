@@ -110,7 +110,7 @@ void foo(int arg) {
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK1: [[IF_DEVICE:%.+]] = getelementptr inbounds nuw %struct.anon{{.+}}, ptr [[CAPTURES:%.+]], i32 0, i32 0
   // CK1: [[IF:%.+]] = load i8, ptr %{{.+}}
-  // CK1: [[IF_BOOL:%.+]] = trunc i8 [[IF]] to i1
+  // CK1: [[IF_BOOL:%.+]] = icmp ne i8 [[IF]], 0
   // CK1: [[IF:%.+]] = zext i1 [[IF_BOOL]] to i8
   // CK1: store i8 [[IF]], ptr [[IF_DEVICE]],
   // CK1: [[RES:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{64|36}}, i[[sz]] 1, ptr [[TASK_ENTRY2:@.+]])

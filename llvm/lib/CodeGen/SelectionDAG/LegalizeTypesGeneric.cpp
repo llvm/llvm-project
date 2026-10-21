@@ -83,7 +83,7 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
       Hi = DAG.getNode(ISD::BITCAST, dl, NOutVT, Hi);
       return;
     case TargetLowering::TypeScalarizeScalableVector:
-      report_fatal_error("Scalarization of scalable vectors is not supported.");
+      report_fatal_error("scalarization of scalable vectors is not supported");
     case TargetLowering::TypeWidenVector: {
       assert(!(InVT.getVectorNumElements() & 1) && "Unsupported BITCAST");
       InOp = GetWidenedVector(InOp);
@@ -231,8 +231,8 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
 
   // Extract the elements at 2 * Idx and 2 * Idx + 1 from the new vector.
   SDValue Idx = N->getOperand(1);
-
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NewVT, NewVec, Idx);
 
   Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
@@ -254,19 +254,20 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  AAMDNodes AAInfo = LD->getAAInfo();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
-  Lo = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(),
-                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
+  Lo =
+      DAG.getLoad(NVT, dl, Chain, Ptr, LD->getPointerInfo(), LD->getBaseAlign(),
+                  LD->getMemOperand()->getFlags(), Metadata);
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
-  Hi = DAG.getLoad(NVT, dl, Chain, Ptr,
-                   LD->getPointerInfo().getWithOffset(IncrementSize),
-                   LD->getBaseAlign(), LD->getMemOperand()->getFlags(), AAInfo);
+  Hi = DAG.getLoad(
+      NVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(IncrementSize),
+      LD->getBaseAlign(), LD->getMemOperand()->getFlags(), Metadata);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -446,12 +447,12 @@ SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
     std::swap(Lo, Hi);
 
   SDValue Idx = N->getOperand(2);
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Lo, Idx);
-  Idx = DAG.getNode(ISD::ADD, dl,
-                    Idx.getValueType(), Idx,
+  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx,
                     DAG.getConstant(1, dl, Idx.getValueType()));
-  NewVec =  DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
+  NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Hi, Idx);
 
   // Convert the new vector to the old vector type.
   return DAG.getNode(ISD::BITCAST, dl, VecVT, NewVec);
@@ -482,7 +483,7 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = St->getChain();
   SDValue Ptr = St->getBasePtr();
-  AAMDNodes AAInfo = St->getAAInfo();
+  MMOMetadata Metadata = St->getMMOMetadataForSubAccess();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
@@ -495,12 +496,12 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
 
   Lo =
       DAG.getStore(Chain, dl, Lo, Ptr, St->getPointerInfo(), St->getBaseAlign(),
-                   St->getMemOperand()->getFlags(), AAInfo);
+                   St->getMemOperand()->getFlags(), Metadata);
 
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   Hi = DAG.getStore(
       Chain, dl, Hi, Ptr, St->getPointerInfo().getWithOffset(IncrementSize),
-      St->getBaseAlign(), St->getMemOperand()->getFlags(), AAInfo);
+      St->getBaseAlign(), St->getMemOperand()->getFlags(), Metadata);
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
 }
@@ -555,7 +556,7 @@ void DAGTypeLegalizer::SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi) {
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 
-  if (Opcode != ISD::VP_SELECT && Opcode != ISD::VP_MERGE) {
+  if (Opcode != ISD::VP_MERGE) {
     Lo = DAG.getNode(Opcode, dl, LL.getValueType(), CL, LL, RL);
     Hi = DAG.getNode(Opcode, dl, LH.getValueType(), CH, LH, RH);
     return;

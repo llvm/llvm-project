@@ -13,7 +13,7 @@ BType BValue;
 // CHECK: VarDecl 0x{{.+}} <{{.+}}:14:1, col:80> col:80 CValue 'vk::SpirvOpaqueType<123, vk::Literal<vk::integral_constant<uint, 305419896>>>':'__hlsl_spirv_type<123, 0, 0, vk::Literal<vk::integral_constant<uint, 305419896>>>'
 vk::SpirvOpaqueType<123, vk::Literal<vk::integral_constant<uint, 0x12345678>>> CValue;
 
-// CHECK: TypeAliasDecl 0x{{.+}} <{{.+}}:18:1, col:72> col:7 Array 'vk::SpirvOpaqueType<28, T, vk::integral_constant<uint, L>>':'__hlsl_spirv_type<28U, 0, 0, T, vk::integral_constant<uint, L>>'
+// CHECK: TypeAliasDecl 0x{{.+}} <{{.+}}:18:1, col:72> col:7 referenced Array 'vk::SpirvOpaqueType<28, T, vk::integral_constant<uint, L>>':'__hlsl_spirv_type<28U, 0, 0, T, vk::integral_constant<uint, L>>'
 template <class T, uint L>
 using Array = vk::SpirvOpaqueType<28, T, vk::integral_constant<uint, L>>;
 

@@ -2,8 +2,10 @@
 ; RUN: llc -mtriple=x86_64-unknown-none -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
-; ASM:       .p2align 4
+; ASM:       .p2align 2
+; ASM:       .prefalign 4
 ; ASM:       .type __cfi_f1,@function
 ; ASM-LABEL: __cfi_f1:
 ; ASM-NEXT:    nop
@@ -114,7 +116,7 @@ define void @f6(ptr noundef %x) !kcfi_type !3 {
 define void @f7() {
 ; MIR-LABEL: name: f7
 ; MIR: body:
-; ISEL: TCRETURNmi64 killed %0, 1, $noreg, 0, $noreg, 0, csr_64, implicit $rsp, implicit $ssp, cfi-type 12345678
+; ISEL: TCRETURNmi64 %0, 1, $noreg, 0, $noreg, 0, csr_64, implicit $rsp, implicit $ssp, cfi-type 12345678
 ; KCFI: $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
 ; KCFI-NEXT:  BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
@@ -128,7 +130,7 @@ define void @f7() {
 define void @f8() {
 ; MIR-LABEL: name: f8
 ; MIR: body:
-; ISEL: CALL64m killed %0, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
+; ISEL: CALL64m %0, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
 ; KCFI: $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
 ; KCFI-NEXT:  BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
