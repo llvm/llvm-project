@@ -68,7 +68,7 @@
 // GPR_PPC / GPR_PPC64 / FPR_PPC64 / VMX_PPC64 / VSX_PPC64 structs used by
 // PtraceWrapper, GetSPRs, and SetSPRs below.
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 #ifdef __aarch64__

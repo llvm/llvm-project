@@ -12,6 +12,9 @@
 #if defined(__powerpc64__)
 
 #include "NativeRegisterContextAIX_ppc64.h"
+#include "NativeThreadAIX.h"
+#include "Register/Common/RegisterInfo_ppc64.h"
+#include "lldb/Utility/RegisterValue.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -22,7 +25,7 @@
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
+#include "Register/Arch/Utility/RegisterInfoPOSIX_ppc64.h"
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
@@ -127,7 +130,7 @@ NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64(target_arch)),
+          native_thread, new RegisterInfo_ppc64(target_arch)),
       NativeRegisterContextAIX(native_thread) {
   switch (target_arch.GetMachine()) {
       case llvm::Triple::ppc:

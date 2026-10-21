@@ -132,8 +132,9 @@ void PlatformAIX::GetStatus(Stream &strm) {
 
 void PlatformAIX::CalculateTrapHandlerSymbolNames() {}
 
+<<<<<<< HEAD
 lldb::UnwindPlanSP PlatformAIX::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                         ConstString name) {
+                                                         llvm::StringRef name) {
   return {};
 }
 

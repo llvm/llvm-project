@@ -1,7 +1,7 @@
 // Check frontend and linker invocations on Mentor Graphics MIPS toolchain.
 //
 // = Big-endian, hard float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32 %s
@@ -29,7 +29,7 @@
 // CHECK-BE-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, uclibc
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-HF-32 %s
@@ -58,7 +58,7 @@
 // CHECK-BE-UC-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, mips16
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mips16 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-16 %s
@@ -87,7 +87,7 @@
 // CHECK-BE-HF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, mmicromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mmicromips -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-MICRO %s
@@ -116,7 +116,7 @@
 // CHECK-BE-HF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, nan2008
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-NAN %s
@@ -145,7 +145,7 @@
 // CHECK-BE-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/nan2008/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, uclibc, nan2008
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-HF-NAN %s
@@ -174,7 +174,7 @@
 // CHECK-BE-UC-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, soft float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-32 %s
@@ -203,7 +203,7 @@
 // CHECK-BE-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, soft float, uclibc
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-SF-32 %s
@@ -232,7 +232,7 @@
 // CHECK-BE-UC-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, soft float, mips16
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mips16 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-16 %s
@@ -261,7 +261,7 @@
 // CHECK-BE-SF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, soft float, micromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mmicromips -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-MICRO %s
@@ -290,7 +290,7 @@
 // CHECK-BE-SF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Big-endian, hard float, 64-bit
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-linux-gnu -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64 %s
@@ -319,7 +319,7 @@
 // CHECK-BE-HF-64: "[[TC]]/../../../../mips-linux-gnu/libc/usr{{/|\\\\}}lib64{{/|\\\\}}crtn.o"
 //
 // = Big-endian, soft float, 64-bit
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64-linux-gnu -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64 %s
@@ -348,7 +348,7 @@
 // CHECK-BE-SF-64: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/usr{{/|\\\\}}lib64{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-32 %s
@@ -377,7 +377,7 @@
 // CHECK-EL-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, uclibc
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-HF-32 %s
@@ -406,7 +406,7 @@
 // CHECK-EL-UC-HF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, mips16
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-16 %s
@@ -435,7 +435,7 @@
 // CHECK-EL-HF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, micromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-MICRO %s
@@ -464,7 +464,7 @@
 // CHECK-EL-HF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, nan2008
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-NAN %s
@@ -493,7 +493,7 @@
 // CHECK-EL-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/nan2008/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, uclibc, nan2008
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -muclibc -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-HF-NAN %s
@@ -522,7 +522,7 @@
 // CHECK-EL-UC-HF-NAN: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/nan2008/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, soft float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-32 %s
@@ -551,7 +551,7 @@
 // CHECK-EL-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/soft-float/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, soft float, uclibc
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-SF-32 %s
@@ -580,7 +580,7 @@
 // CHECK-EL-UC-SF-32: "[[TC]]/../../../../mips-linux-gnu/libc/uclibc/soft-float/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, soft float, mips16
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-16 %s
@@ -609,7 +609,7 @@
 // CHECK-EL-SF-16: "[[TC]]/../../../../mips-linux-gnu/libc/mips16/soft-float/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, soft float, micromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-MICRO %s
@@ -638,7 +638,7 @@
 // CHECK-EL-SF-MICRO: "[[TC]]/../../../../mips-linux-gnu/libc/micromips/soft-float/el/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 //
 // = Little-endian, hard float, 64-bit
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64 %s
@@ -667,7 +667,7 @@
 // CHECK-EL-HF-64: "[[TC]]/../../../../mips-linux-gnu/libc/el/usr{{/|\\\\}}lib64{{/|\\\\}}crtn.o"
 //
 // = Little-endian, soft float, 64-bit
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64 %s

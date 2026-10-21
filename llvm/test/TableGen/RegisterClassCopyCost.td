@@ -7,7 +7,7 @@
 
 include "llvm/Target/Target.td"
 
-// CHECK: extern const MCRegisterClassStorage<{{[0-9, ]+}}> MyTargetMCRegisterClassStorage = {
+// CHECK: inline constexpr MCRegisterClassStorage<{{[0-9, ]+}}> MyTargetMCRegisterClassStorage = {
 // CHECK: 1, /* CopyCost */
 // CHECK: 255, /* CopyCost */
 

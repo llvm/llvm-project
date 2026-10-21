@@ -73,4 +73,15 @@ extern FILE *stderr;
 #define TMP_MAX 1000000
 #endif
 
+// match linux/limits.h PATH_MAX
+#ifndef FILENAME_MAX
+#define FILENAME_MAX 4096
+#endif
+
+// Actually a lower bound on how many files we guarantee can be open at once.
+// POSIX says "at least eight", which seems like a fine number to me.
+#ifndef FOPEN_MAX
+#define FOPEN_MAX 8
+#endif
+
 #endif // LLVM_LIBC_MACROS_STDIO_MACROS_H

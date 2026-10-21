@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12 %s
 
-; Reduced from the rocPRIM int8 radix sort histogram kernel. On the %entry path
-; the zero vector is materialized as "v0.h = 0; v0.l = v0.h", which must not be
-; merged into a single instruction that reads the old v0.hi.
+; Reduced from the rocPRIM int8 radix sort histogram kernel. The zero vector is
+; materialized as "v0.h = 0; v0.l = v0.h", which must not merge into something
+; that reads the old v0.hi. Forwarding turns it into v_mov_b32 v0, 0.
 
 define amdgpu_kernel void @histogram_i8_keys(i1 %in.range, ptr addrspace(1) %keys, <18 x i8> %other) {
 ; GFX11-LABEL: histogram_i8_keys:
@@ -22,18 +22,16 @@ define amdgpu_kernel void @histogram_i8_keys(i1 %in.range, ptr addrspace(1) %key
 ; GFX11-NEXT:    v_mov_b16_e32 v0.l, 0
 ; GFX11-NEXT:    s_branch .LBB0_3
 ; GFX11-NEXT:  .LBB0_2:
-; GFX11-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:  .LBB0_3: ; %merge
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_xor_b16 v1.l, v0.h, 1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_xor_b16 v0.l, v0.l, 1
-; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xff, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xff, v1
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    ds_add_u32 v1, v2
 ; GFX11-NEXT:    ds_add_u32 v0, v2
@@ -54,18 +52,16 @@ define amdgpu_kernel void @histogram_i8_keys(i1 %in.range, ptr addrspace(1) %key
 ; GFX12-NEXT:    v_mov_b16_e32 v0.l, 0
 ; GFX12-NEXT:    s_branch .LBB0_3
 ; GFX12-NEXT:  .LBB0_2:
-; GFX12-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:  .LBB0_3: ; %merge
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b16 v1.l, v0.h, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b16 v0.l, v0.l, 1
-; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xff, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xff, v1
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX12-NEXT:    ds_add_u32 v1, v2
 ; GFX12-NEXT:    ds_add_u32 v0, v2

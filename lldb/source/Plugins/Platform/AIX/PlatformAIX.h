@@ -48,7 +48,7 @@ public:
   void CalculateTrapHandlerSymbolNames() override;
 
   lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                              ConstString name) override;
+                                              llvm::StringRef name) override;
 
   bool IsTrapHandlerAddress(lldb::addr_t pc) const override;
 

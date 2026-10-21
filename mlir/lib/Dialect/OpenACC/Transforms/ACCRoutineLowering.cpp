@@ -33,6 +33,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -58,7 +59,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 /// Compute the ParLevel from an acc.routine op for specialization.
 static ParLevel computeParLevel(RoutineOp routineOp, DeviceType deviceType) {
   auto gangDim = routineOp.getGangDimValue(deviceType);
@@ -184,6 +184,11 @@ class ACCRoutineLowering
 public:
   using ACCRoutineLoweringBase::ACCRoutineLoweringBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCRoutineLoweringBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     ModuleOp mod = getOperation();
     if (mod.getOps<RoutineOp>().empty()) {
@@ -232,5 +237,4 @@ public:
     finalizeRoutines(accRoutineInfo, ctx);
   }
 };
-
 } // namespace

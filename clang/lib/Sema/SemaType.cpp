@@ -1298,11 +1298,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    Expr *E = DS.getPackIndexingExpr();
-    assert(E && "Didn't get an expression for pack indexing");
-    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
-    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
-                                     DS.getEllipsisLoc());
+    Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
       Result = Context.IntTy;
@@ -2090,6 +2086,26 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
   return false;
 }
 
+bool Sema::checkArrayTooLarge(QualType ElementType,
+                              const llvm::APSInt &NumElements,
+                              SourceLocation Loc, SourceRange Range) {
+  unsigned ActiveSizeBits = NumElements.getActiveBits();
+  if (!ElementType->isDependentType() && !ElementType->isIncompleteType() &&
+      !ElementType->isUndeducedType() && ElementType->isConstantSizeType())
+    ActiveSizeBits =
+        std::max(ActiveSizeBits, ConstantArrayType::getNumAddressingBits(
+                                     Context, ElementType, NumElements));
+  if (ActiveSizeBits <= ConstantArrayType::getMaxSizeBits(Context))
+    return false;
+
+  Diag(Loc, diag::err_array_too_large)
+      << toString(NumElements, 10, NumElements.isSigned(),
+                  /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                  /*InsertSeparators=*/true)
+      << Range;
+  return true;
+}
+
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
@@ -2316,20 +2332,9 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
           return QualType();
       }
 
-      // Is the array too large?
-      unsigned ActiveSizeBits =
-          (!T->isDependentType() && !T->isVariablyModifiedType() &&
-           !T->isIncompleteType() && !T->isUndeducedType())
-              ? ConstantArrayType::getNumAddressingBits(Context, T, ConstVal)
-              : ConstVal.getActiveBits();
-      if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-        Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10, ConstVal.isSigned(),
-                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                        /*InsertSeparators=*/true)
-            << ArraySize->getSourceRange();
+      if (checkArrayTooLarge(T, ConstVal, ArraySize->getBeginLoc(),
+                             ArraySize->getSourceRange()))
         return QualType();
-      }
 
       T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM,
                                        IndexTypeQuals);
@@ -2474,7 +2479,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      (IsNoBoolVecLang && T->isBooleanType())) {
+      T->isEnumeralType() || (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
@@ -6112,7 +6117,9 @@ namespace {
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
-      TL.setEllipsisLoc(DS.getEllipsisLoc());
+      TypeSourceInfo *TInfo = nullptr;
+      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
+      TL.copy(TInfo->getTypeLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
@@ -10176,8 +10183,7 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc) {
+                                     SourceLocation Loc) {
   if (!IndexExpr)
     return QualType();
 
@@ -10185,7 +10191,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   if (!Pattern->containsUnexpandedParameterPack())
     Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
 
-  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc);
 
   if (!Type.isNull())
     DiagCompat(Loc, diag_compat::pack_indexing);
@@ -10193,9 +10199,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 }
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc,
-                                     bool FullySubstituted,
+                                     SourceLocation Loc, bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;

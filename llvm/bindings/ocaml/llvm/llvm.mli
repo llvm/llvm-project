@@ -1966,15 +1966,15 @@ val builder : llcontext -> llbuilder
 
 (** [builder_at ip] creates an instruction builder positioned at [ip].
     See the constructor for [llvm::LLVMBuilder]. *)
-val builder_at : llcontext -> (llbasicblock, llvalue) llpos -> llbuilder
+val builder_at : (llbasicblock, llvalue) llpos -> llbuilder
 
 (** [builder_before ins] creates an instruction builder positioned before the
     instruction [isn]. See the constructor for [llvm::LLVMBuilder]. *)
-val builder_before : llcontext -> llvalue -> llbuilder
+val builder_before : llvalue -> llbuilder
 
 (** [builder_at_end bb] creates an instruction builder positioned at the end of
     the basic block [bb]. See the constructor for [llvm::LLVMBuilder]. *)
-val builder_at_end : llcontext -> llbasicblock -> llbuilder
+val builder_at_end : llbasicblock -> llbuilder
 
 (** [position_builder ip bb] moves the instruction builder [bb] to the position
     [ip].
