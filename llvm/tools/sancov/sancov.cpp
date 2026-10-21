@@ -121,11 +121,12 @@ static const Regex SymcovFileRegex(".*\\.symcov");
 
 // --------- MAIN DATASTRUCTURES ----------
 
+using RawAddrSet = std::set<uint64_t>;
+
 // Contents of .sancov file: list of coverage point addresses that were
 // executed.
 struct RawCoverage {
-  explicit RawCoverage(std::unique_ptr<std::set<uint64_t>> Addrs,
-                       FileHeader Header)
+  explicit RawCoverage(std::unique_ptr<RawAddrSet> Addrs, FileHeader Header)
       : Addrs(std::move(Addrs)), Header(Header) {}
 
   // Read binary .sancov file.
@@ -135,7 +136,7 @@ struct RawCoverage {
   // Write binary .sancov file.
   static void write(const std::string &FileName, const RawCoverage &Coverage);
 
-  std::unique_ptr<std::set<uint64_t>> Addrs;
+  std::unique_ptr<RawAddrSet> Addrs;
   FileHeader Header;
 };
 
@@ -215,8 +216,7 @@ static void failIfEmpty(const std::unique_ptr<T> &Ptr,
 
 // ----------- Coverage I/O ----------
 template <typename T>
-static void readInts(const char *Start, const char *End,
-                     std::set<uint64_t> *Ints) {
+static void readInts(const char *Start, const char *End, RawAddrSet *Ints) {
   const T *S = reinterpret_cast<const T *>(Start);
   const T *E = reinterpret_cast<const T *>(End);
   std::copy(S, E, std::inserter(*Ints, Ints->end()));
@@ -241,7 +241,7 @@ RawCoverage::read(const std::string &FileName) {
     return make_error_code(errc::illegal_byte_sequence);
   }
 
-  auto Addrs = std::make_unique<std::set<uint64_t>>();
+  auto Addrs = std::make_unique<RawAddrSet>();
 
   switch (Header->Bitness) {
   case Bitness64:
@@ -1100,7 +1100,7 @@ static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
   warnIfDifferentBitness(HeaderA, HeaderB, FileA, FileB);
 
   // Compute A - B
-  auto DiffAddrs = std::make_unique<std::set<uint64_t>>();
+  auto DiffAddrs = std::make_unique<RawAddrSet>();
   std::set_difference(CovA.get()->Addrs->begin(), CovA.get()->Addrs->end(),
                       CovB.get()->Addrs->begin(), CovB.get()->Addrs->end(),
                       std::inserter(*DiffAddrs, DiffAddrs->end()));
