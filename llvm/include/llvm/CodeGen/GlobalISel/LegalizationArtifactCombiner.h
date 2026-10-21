@@ -935,10 +935,6 @@ public:
 
         replaceRegOrBuildCopy(DefReg, FoundVal, MRI, MIB, UpdatedDefs,
                               Observer);
-        // We only want to replace the uses, not the def of the old reg.
-        Observer.changingInstr(MI);
-        MI.getOperand(DefIdx).setReg(DefReg);
-        Observer.changedInstr(MI);
         DeadDefs[DefIdx] = true;
       }
       return DeadDefs.all();
