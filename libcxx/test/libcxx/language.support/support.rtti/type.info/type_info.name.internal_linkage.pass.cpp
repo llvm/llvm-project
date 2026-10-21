@@ -8,7 +8,8 @@
 
 // UNSUPPORTED: no-rtti
 
-// Compilers may prefix the type_info::name() result with a '*' to indicate that the type has internal linkage. This test checks that libc++ strips the '*' prefix from the name() result.
+// Compilers may prefix the type_info::name() result with a '*' to indicate that the type has internal linkage.
+// This test checks that libc++ strips the '*' prefix from the name() result.
 
 #include <typeinfo>
 #include <cassert>

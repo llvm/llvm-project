@@ -9,7 +9,7 @@
 // UNSUPPORTED: no-rtti
 
 // Older versions don't mark RTTI names of types with internal linkage with a '*'
-// XFAIL: clang-21, clang-22, clang-23
+// XFAIL: clang-{{2[1-3]}}, apple-clang
 
 // Itanium ABI implementations prefix the RTTI name of a type with internal linkage with a '*',
 // which lets this implementation distinguish between two internally linked types.

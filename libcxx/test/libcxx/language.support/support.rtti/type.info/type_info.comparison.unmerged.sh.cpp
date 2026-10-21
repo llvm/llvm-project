@@ -8,8 +8,14 @@
 
 // UNSUPPORTED: no-rtti
 
-// The executable references the shared library by its host path, which doesn't exist on the device.
+// The shared library isn't available on the device.
 // UNSUPPORTED: android
+
+// No shared library support.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// Building the shared library requires symbol exports.
+// UNSUPPORTED: windows
 
 // The type A has external linkage, so its RTTI name is not prefixed with '*'.
 // Its RTTI is emitted separately in the shared library and in the main executable,
@@ -38,6 +44,7 @@ int main(int, char**) {
   std::type_index executable = std::type_index(typeid(A));
   std::type_index shared     = registerA();
 
+  assert(executable.name() != shared.name());
   assert(executable == shared);
   return 0;
 }
