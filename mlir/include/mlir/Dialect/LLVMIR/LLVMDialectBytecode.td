@@ -317,6 +317,7 @@ def DISubrangeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def LoopAnnotationAttr : DialectAttribute<(attr
+  OptionalAttribute<"DistinctAttr">:$id,
   OptionalAttribute<"BoolAttr">:$disableNonforced,
   OptionalAttribute<"LoopVectorizeAttr">:$vectorize,
   OptionalAttribute<"LoopInterleaveAttr">:$interleave,
@@ -331,7 +332,6 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"BoolAttr">:$isVectorized,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
-  OptionalAttribute<"DistinctAttr">:$id,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses
 )>;
 

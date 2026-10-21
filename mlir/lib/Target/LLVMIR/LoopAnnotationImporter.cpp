@@ -506,9 +506,9 @@ LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
     return {};
 
   return LoopAnnotationAttr::get(
-      ctx, *disableNonForced, *vecAttr, *interleaveAttr, *unrollAttr,
+      ctx, id, *disableNonForced, *vecAttr, *interleaveAttr, *unrollAttr,
       *unrollAndJamAttr, *licmAttr, *distributeAttr, *pipelineAttr, *peeledAttr,
-      *unswitchAttr, *mustProgress, *isVectorized, *startLoc, *endLoc, id,
+      *unswitchAttr, *mustProgress, *isVectorized, *startLoc, *endLoc,
       *parallelAccesses);
 }
 

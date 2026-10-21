@@ -308,6 +308,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
   }];
 
   let parameters = (ins
+    OptionalParameter<"DistinctAttr">:$id,
     OptionalParameter<"BoolAttr">:$disableNonforced,
     OptionalParameter<"LoopVectorizeAttr">:$vectorize,
     OptionalParameter<"LoopInterleaveAttr">:$interleave,
@@ -322,7 +323,6 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"BoolAttr">:$isVectorized,
     OptionalParameter<"FusedLoc">:$startLoc,
     OptionalParameter<"FusedLoc">:$endLoc,
-    OptionalParameter<"DistinctAttr">:$id,
     OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses
   );
 
