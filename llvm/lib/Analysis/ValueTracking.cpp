@@ -1009,6 +1009,11 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
             (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
       }
     }
+    if (Pred == ICmpInst::ICMP_SGT) {
+      // X | Y s> -1 -> X s> -1 && Y s> -1
+      if (C->isAllOnes() && match(LHS, m_c_Or(m_V, m_Value())))
+        Known.makeNonNegative();
+    }
   } break;
   }
 }
@@ -11061,6 +11066,15 @@ void llvm::findValuesAffectedByCondition(
             // X nuw- Y u> C -> X u> C
             if (match(A, m_NUWSub(m_Value(X), m_Value())))
               AddAffected(X);
+          }
+          if (ICmpInst::isSigned(Pred)) {
+            // X | Y s> -1 -> X s> -1 && Y s> -1
+            Value *Y = nullptr;
+            if (match(B, m_AllOnes()) &&
+                match(A, m_Or(m_Value(X), m_Value(Y)))) {
+              AddAffected(X);
+              AddAffected(Y);
+            }
           }
         }
 

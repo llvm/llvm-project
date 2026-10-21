@@ -8,8 +8,8 @@ define i32 @sdiv_nonnegative_sum_by_2(i32 noundef %x, i32 noundef %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR_COND_NOT1:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OR_COND_NOT1]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[ADD]], 2
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[ADD]], 1
 ; CHECK-NEXT:    ret i32 [[DIV2]]
 ;
   %cmp = icmp slt i32 %x, 0
@@ -24,17 +24,16 @@ define i32 @sdiv_nonnegative_sum_by_2(i32 noundef %x, i32 noundef %y) {
 
 define i32 @sdiv_nonnegative_sum_by_4_three_operands(i32 noundef %x, i32 noundef %y, i32 noundef %z) local_unnamed_addr #0 {
 ; CHECK-LABEL: @sdiv_nonnegative_sum_by_4_three_operands(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Z:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[Z1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP3]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD]], [[Z]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[Z]], [[Y]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD]], [[Z1]]
 ; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[ADD4]], 4
 ; CHECK-NEXT:    ret i32 [[DIV2]]
 ;
-  %cmp = icmp sle i32 %x, 0
+  %cmp = icmp slt i32 %x, 0
   %cmp1 = icmp slt i32 %y, 0
   %or.cond = select i1 %cmp, i1 true, i1 %cmp1
   %cmp3 = icmp slt i32 %z, 0
@@ -54,9 +53,9 @@ define i32 @sdiv_nonnegative_sum_by_4_three_operands_different_conditions(i32 no
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD]], [[Z]]
-; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[ADD4]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add nuw nsw i32 [[ADD]], [[Z]]
+; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[ADD4]], 2
 ; CHECK-NEXT:    ret i32 [[DIV2]]
 ;
   %cmp = icmp sle i32 %x, 0
