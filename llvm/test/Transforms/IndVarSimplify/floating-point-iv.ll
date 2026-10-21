@@ -674,21 +674,20 @@ exit:
 
 ; Make sure the FP IV is not converted when the exit comparison does not run
 ; on every iteration, as otherwise the integer IV could then wrap before the exit.
-; FIXME: This is a miscompilation (https://alive2.llvm.org/ce/z/yVQXyN)
 define i32 @test_fp_iv_exit_check_not_dominating_latch() {
 ; CHECK-LABEL: @test_fp_iv_exit_check_not_dominating_latch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[FP_IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[FP_IV_NEXT_INT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[FP_IV:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[FP_IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[INT_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INT_IV_NEXT:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[FP_IV_NEXT_INT]] = add i32 [[FP_IV_INT]], 1073741824
+; CHECK-NEXT:    [[FP_IV_NEXT]] = fadd double [[FP_IV]], f0x41D0000000000000
 ; CHECK-NEXT:    [[INT_IV_NEXT]] = add nuw nsw i32 [[INT_IV]], 1
 ; CHECK-NEXT:    [[SKIP:%.*]] = icmp samesign ult i32 [[INT_IV_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[SKIP]], label [[LATCH]], label [[CHECK:%.*]]
 ; CHECK:       check:
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FP_IV_NEXT_INT]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[FP_IV_NEXT]], 1.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    br label [[LOOP]]
