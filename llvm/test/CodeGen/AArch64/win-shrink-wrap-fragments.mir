@@ -84,6 +84,28 @@
 # CHECK-NEXT: 0x02                ; add sp, #32
 # CHECK-NEXT: 0xe4                ; end
 
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: adjacent_epilogues +0x4
+# CHECK: FunctionLength: 36
+# CHECK: EpilogueScopes: 2
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 3
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK-NEXT: Opcodes [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; add sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 6
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK-NEXT: Opcodes [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; add sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK-NOT: RuntimeFunction {
+
 # ASM-LABEL: frame_before_prologue:
 # ASM: DEBUG_LABEL: frame_before_prologue:before_return
 # ASM-NEXT: .pseudoprobe 1234 1 0 0 frame_before_prologue
@@ -107,6 +129,9 @@
     ret void
   }
   define void @dynamic_frame_paths(i64 %size) uwtable {
+    ret void
+  }
+  define void @adjacent_epilogues(i32 %skip, i32 %which) uwtable {
     ret void
   }
   declare void @work(i32)
@@ -363,5 +388,79 @@ body:             |
     $sp = frame-destroy ADDXri $sp, 32, 0
     frame-destroy SEH_StackAlloc 32
     frame-destroy SEH_EpilogEnd
+    RET undef $lr
+...
+---
+# Completing an epilogue changes outgoing CFG frame state, not layout coverage.
+# Adjacent epilogue blocks reached with the same frame must share one record,
+# ending only before the shared frameless return block.
+name:            adjacent_epilogues
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    16
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: adjacent_epilogues
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR-NOT: SEH_EndC
+  ; MIR: bb.3:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR-NOT: SEH_EndC
+  ; MIR: frame-destroy SEH_EpilogStart
+  ; MIR: B %bb.4 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.4:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR: RET
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  bb.0:
+    successors: %bb.1, %bb.4
+    CBZW $w0, %bb.4
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    CBZW $w1, %bb.3
+
+  bb.2:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
+
+  bb.3:
+    successors: %bb.4
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    B %bb.4
+
+  bb.4:
     RET undef $lr
 ...

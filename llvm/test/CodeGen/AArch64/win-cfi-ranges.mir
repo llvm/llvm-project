@@ -13,6 +13,9 @@
   define void @section_ranges() uwtable {
     ret void
   }
+  define void @loop_range() uwtable {
+    ret void
+  }
   declare i32 @__C_specific_handler(...)
 ...
 ---
@@ -143,5 +146,62 @@ body: |
     frame-destroy SEH_EpilogEnd
 
   bb.4 (bbsections 2, align 16):
+    RET undef $lr
+...
+---
+# A loop backedge within the framed region must neither restart traversal nor
+# split its unwind record. Only the shared frameless return ends the range.
+name: loop_range
+hasWinCFI: true
+noPhis: true
+isSSA: false
+noVRegs: true
+frameInfo:
+  stackSize: 16
+  maxAlignment: 16
+  adjustsStack: true
+body: |
+  ; CHECK-LABEL: name: loop_range
+  ; CHECK: bb.0:
+  ; CHECK-NOT: SEH_StartProc
+  ; CHECK: bb.1:
+  ; CHECK: SEH_StartProc
+  ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; CHECK: bb.2:
+  ; CHECK-NOT: SEH_StartProc
+  ; CHECK-NOT: SEH_EndProc
+  ; CHECK: bb.3:
+  ; CHECK-NOT: SEH_StartProc
+  ; CHECK: B %bb.4 {
+  ; CHECK-NEXT: SEH_EndProc
+  ; CHECK-NEXT: }
+  ; CHECK: bb.4:
+  ; CHECK-NOT: SEH_StartProc
+  ; CHECK-NOT: SEH_EndProc
+  ; CHECK: RET
+  bb.0:
+    successors: %bb.1, %bb.4
+    CBZW $w0, %bb.4
+
+  bb.1:
+    successors: %bb.2
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup SEH_PrologEnd
+    B %bb.2
+
+  bb.2:
+    successors: %bb.2, %bb.3
+    CBNZW $w1, %bb.2
+
+  bb.3:
+    successors: %bb.4
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    B %bb.4
+
+  bb.4:
     RET undef $lr
 ...
