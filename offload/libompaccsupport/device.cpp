@@ -51,8 +51,10 @@ using namespace llvm::omp::target::debug;
 namespace llvm::offload::tmp {
 llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
                                          ol_device_handle_t Device,
-                                         ol_alloc_type_t Kind, int64_t Size,
-                                         void *HostPtr);
+                                         ol_alloc_type_t Kind, int64_t Size);
+void __ol_tgt_ReportDeallocationOfWrongPtrKind(ol_device_handle_t Device,
+                                               void *Ptr,
+                                               llvm::StringRef Summary);
 llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
                              ol_device_handle_t Device, void *Ptr,
                              ol_alloc_type_t Kind);
@@ -153,8 +155,8 @@ llvm::Error DeviceTy::init() {
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
 
-  if (auto Err = olSetDeviceDiagnosticHandler(
-          DeviceHandle, llvm::omp::target::getDiagnosticPrinter()))
+  DiagnosticHandler = llvm::omp::target::getDiagnosticPrinter(DeviceID);
+  if (auto Err = olSetDeviceDiagnosticHandler(DeviceHandle, &DiagnosticHandler))
     return createError(ErrorCode::BackendFailure,
                        "failed to set diagnostic handler for device %d: %s",
                        DeviceID, Err->Details);
@@ -502,7 +504,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   }
 
   auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
-      Context, DeviceHandle, toOlAllocTy(Kind), Size, HstPtr);
+      Context, DeviceHandle, toOlAllocTy(Kind), Size);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -511,6 +513,9 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   assert(*AllocOrErr && "Null pointer upon successful allocation");
 
   TargetPtr = *AllocOrErr;
+
+  llvm::omp::target::recordAllocation(DeviceID, TargetPtr, HstPtr,
+                                      toOlAllocTy(Kind));
   return TargetPtr;
 }
 
@@ -530,6 +535,14 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
       return OFFLOAD_FAIL;
     }
     return OFFLOAD_SUCCESS;
+  }
+
+  std::string Summary;
+  if (!llvm::omp::target::checkDeallocation(DeviceID, TgtAllocBegin,
+                                            toOlAllocTy(Kind), Summary)) {
+    llvm::offload::tmp::__ol_tgt_ReportDeallocationOfWrongPtrKind(
+        DeviceHandle, TgtAllocBegin, Summary);
+    return OFFLOAD_FAIL;
   }
 
   if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
@@ -552,6 +565,10 @@ llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
     return createError(ErrorCode::BackendFailure,
                        "failed to allocate %" PRId64 " bytes on device %d: %s",
                        Size, DeviceID, Res->Details);
+
+  // The plugins track these allocations like any other, so they have to be
+  // recorded as well for the records to describe the same allocations.
+  llvm::omp::target::recordAllocation(DeviceID, Ptr, /*HstPtr=*/nullptr, Type);
   return Ptr;
 }
 
@@ -559,6 +576,7 @@ llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
   if (isRecordingOrReplaying())
     return RecordReplay->deallocate(Ptr);
 
+  llvm::omp::target::markDeallocated(DeviceID, Ptr);
   if (auto Res = olMemFree(Context, Ptr))
     return createError(ErrorCode::BackendFailure,
                        "failed to free memory %p on device %d: %s", Ptr,

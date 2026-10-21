@@ -1,4 +1,5 @@
-//===- ErrorReporting.h - Detect and triage offload errors ------- c++ -===//
+//===- ErrorReporting.h - Detect and triage offload errors ----------- c++
+//-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +16,6 @@
 #ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H
 
-#include "OffloadAPI.h"
 #include "PluginInterface.h"
 #include "Shared/EnvironmentVar.h"
 
@@ -131,7 +131,6 @@ private:
     Info.AllocationTrace = store(ATI->AllocationTrace);
     Info.DeallocationTrace = store(ATI->DeallocationTrace);
     Info.DevicePtr = ATI->DevicePtr;
-    Info.HostPtr = ATI->HostPtr;
     Info.Size = ATI->Size;
     Info.Prior = nullptr;
     Info.NumPrior = 0;
@@ -154,21 +153,6 @@ private:
                                  const ol_diagnostic_t &Diag);
 
 class ErrorReporter {
-
-  /// Return a nice name for an ol_alloc_type_t.
-  static StringRef getAllocTyName(ol_alloc_type_t Kind) {
-    switch (Kind) {
-    case OL_ALLOC_TYPE_DEVICE:
-      return "device memory";
-    case OL_ALLOC_TYPE_HOST:
-      return "pinned host memory";
-    case OL_ALLOC_TYPE_MANAGED:
-      return "managed memory";
-    default:
-      break;
-    }
-    llvm_unreachable("Unknown target alloc kind");
-  }
 
   /// Classify how \p DevicePtr relates to the allocations known to \p Device.
   static void classifyPointer(GenericDeviceTy &Device, void *DevicePtr,
@@ -231,31 +215,28 @@ public:
   }                                                                            \
   emitDiagnostic(Device.getDiagnosticHandler(), Builder.Diag);
 
-  [[noreturn]] static void reportDeallocationOfNonAllocatedPtr(
-      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
-      AllocationTraceInfoTy *ATI, std::string &StackTrace) {
+  [[noreturn]] static void
+  reportDeallocationOfNonAllocatedPtr(GenericDeviceTy &Device, void *DevicePtr,
+                                      AllocationTraceInfoTy *ATI,
+                                      std::string &StackTrace) {
     DEALLOCATION_DIAGNOSTIC(
         OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_NON_ALLOCATED_PTR,
-        "deallocation of non-allocated %s: %p", getAllocTyName(Kind).data(),
-        DevicePtr);
+        "deallocation of non-allocated pointer: %p", DevicePtr);
   }
 
-  [[noreturn]] static void reportDeallocationOfDeallocatedPtr(
-      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
-      AllocationTraceInfoTy *ATI, std::string &StackTrace) {
+  [[noreturn]] static void
+  reportDeallocationOfDeallocatedPtr(GenericDeviceTy &Device, void *DevicePtr,
+                                     AllocationTraceInfoTy *ATI,
+                                     std::string &StackTrace) {
     DEALLOCATION_DIAGNOSTIC(OL_DIAGNOSTIC_KIND_DOUBLE_FREE,
-                            "double-free of %s: %p",
-                            getAllocTyName(Kind).data(), DevicePtr);
+                            "double-free of pointer: %p", DevicePtr);
   }
 
   [[noreturn]] static void reportDeallocationOfWrongPtrKind(
-      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
+      GenericDeviceTy &Device, void *DevicePtr, StringRef Summary,
       AllocationTraceInfoTy *ATI, std::string &StackTrace) {
-    DEALLOCATION_DIAGNOSTIC(
-        OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND,
-        "deallocation requires %s but allocation was %s: %p",
-        getAllocTyName(Kind).data(), getAllocTyName(ATI->Kind).data(),
-        DevicePtr);
+    DEALLOCATION_DIAGNOSTIC(OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND,
+                            "%s", Summary.str().c_str());
 #undef DEALLOCATION_DIAGNOSTIC
   }
 

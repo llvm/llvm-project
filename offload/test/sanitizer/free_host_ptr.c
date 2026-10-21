@@ -16,7 +16,7 @@ int main(void) {
   omp_target_free(&X, 0);
 }
 
-// CHECK:  OFFLOAD ERROR: deallocation of non-allocated device memory: 0x
+// CHECK:  OFFLOAD ERROR: deallocation of non-allocated memory: 0x
 // CHECK:   deleteData
 // NDEBG:   main
 // DEBUG:   main {{.*}}free_host_ptr.c:[[@LINE-5]]

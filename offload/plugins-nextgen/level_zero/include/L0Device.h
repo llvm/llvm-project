@@ -514,7 +514,7 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
                  PluginContextTy *UserCtx) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
   Error free(void *TgtPtr,
              ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE) override;

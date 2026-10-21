@@ -45,7 +45,6 @@ def ol_allocation_info_t : Struct {
     StructMember<"const char*", "AllocationTrace", "The stack trace of the allocation itself. Never null, possibly empty">,
     StructMember<"const char*", "DeallocationTrace", "The stack trace of the deallocation. Never null, empty if still live">,
     StructMember<"void*", "DevicePtr", "The allocated device pointer">,
-    StructMember<"void*", "HostPtr", "The corresponding host pointer, or null">,
     StructMember<"uint64_t", "Size", "The size of the allocation">,
     StructMember<"const struct ol_allocation_info_t*", "Prior", "Prior allocations at the same base pointer, most recent first. Null when NumPrior is zero">,
     StructMember<"size_t", "NumPrior", "The number of entries in Prior">,

@@ -574,18 +574,17 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
       "missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
-Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
-                                            ol_alloc_type_t Kind,
+Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, ol_alloc_type_t Kind,
                                             size_t Alignment,
                                             GenericProfilerTy *ProfilerPtr) {
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
-  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, HostPtr, Size);
+  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, Size);
 
   void *Alloc = nullptr;
 
   // TODO Check alignment.
-  auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
+  auto AllocOrErr = allocate(Size, Kind, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   Alloc = *AllocOrErr;
@@ -604,8 +603,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   return Alloc;
 }
 
-void GenericDeviceTy::recordAllocation(void *DevicePtr, void *HostPtr,
-                                       int64_t Size, ol_alloc_type_t Kind) {
+void GenericDeviceTy::recordAllocation(void *DevicePtr, int64_t Size) {
   if (!OMPX_TrackAllocationTraces)
     return;
 
@@ -616,9 +614,7 @@ void GenericDeviceTy::recordAllocation(void *DevicePtr, void *HostPtr,
   AllocationTraceInfoTy *ATI = new AllocationTraceInfoTy();
   ATI->AllocationTrace = std::move(StackTrace);
   ATI->DevicePtr = DevicePtr;
-  ATI->HostPtr = HostPtr;
   ATI->Size = Size;
-  ATI->Kind = Kind;
 
   auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
   auto *&MapATI = (*AllocationTraceMap)[DevicePtr];
@@ -626,8 +622,7 @@ void GenericDeviceTy::recordAllocation(void *DevicePtr, void *HostPtr,
   MapATI = ATI;
 }
 
-void GenericDeviceTy::recordDeallocation(void *DevicePtr,
-                                         ol_alloc_type_t Kind) {
+void GenericDeviceTy::recordDeallocation(void *DevicePtr) {
   if (!OMPX_TrackAllocationTraces)
     return;
 
@@ -645,23 +640,37 @@ void GenericDeviceTy::recordDeallocation(void *DevicePtr,
 
   // The reporting functions below do not return, they end the execution.
   if (!ATI) {
-    ErrorReporter::reportDeallocationOfNonAllocatedPtr(*this, DevicePtr, Kind,
-                                                       ATI, StackTrace);
+    ErrorReporter::reportDeallocationOfNonAllocatedPtr(*this, DevicePtr, ATI,
+                                                       StackTrace);
   }
 
   // ATI is not null, thus we can lock it to inspect and modify it further.
   std::lock_guard<std::mutex> LG(ATI->Lock);
   if (!ATI->DeallocationTrace.empty()) {
-    ErrorReporter::reportDeallocationOfDeallocatedPtr(*this, DevicePtr, Kind,
-                                                      ATI, StackTrace);
-  }
-
-  if (ATI->Kind != Kind) {
-    ErrorReporter::reportDeallocationOfWrongPtrKind(*this, DevicePtr, Kind, ATI,
-                                                    StackTrace);
+    ErrorReporter::reportDeallocationOfDeallocatedPtr(*this, DevicePtr, ATI,
+                                                      StackTrace);
   }
 
   ATI->DeallocationTrace = StackTrace;
+}
+
+void GenericDeviceTy::reportDeallocationOfWrongPtrKind(void *DevicePtr,
+                                                       StringRef Summary) {
+  if (!OMPX_TrackAllocationTraces)
+    return;
+
+  AllocationTraceInfoTy *ATI = nullptr;
+  {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    ATI = (*AllocationTraceMap)[DevicePtr];
+  }
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  ErrorReporter::reportDeallocationOfWrongPtrKind(*this, DevicePtr, Summary,
+                                                  ATI, StackTrace);
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, ol_alloc_type_t Kind,
@@ -823,10 +832,9 @@ void PluginContextTy::releaseMemoryManagers() {
   HostMemoryManager.Allocator.reset();
 }
 
-Expected<void *> ContextAllocatorTy::allocate(size_t Size, void *HstPtr,
-                                              ol_alloc_type_t Kind,
+Expected<void *> ContextAllocatorTy::allocate(size_t Size, ol_alloc_type_t Kind,
                                               size_t Alignment) {
-  return Context.allocateImpl(Device, Size, HstPtr, Kind, Alignment);
+  return Context.allocateImpl(Device, Size, Kind, Alignment);
 }
 
 Error ContextAllocatorTy::free(void *TgtPtr, ol_alloc_type_t Kind) {
@@ -840,31 +848,30 @@ MemoryManagerTy *PluginContextTy::getMemoryManagerFor(GenericDeviceTy &Device,
 }
 
 Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
-                                           int64_t Size, void *HostPtr,
-                                           ol_alloc_type_t Kind,
+                                           int64_t Size, ol_alloc_type_t Kind,
                                            size_t Alignment,
                                            GenericProfilerTy *ProfilerPtr) {
   MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind);
-  auto AllocOrErr = Manager ? Manager->allocate(Size, HostPtr, Alignment)
-                            : allocateImpl(Device, Size, HostPtr, Kind,
-                                           Alignment, ProfilerPtr);
+  auto AllocOrErr =
+      Manager ? Manager->allocate(Size, Alignment)
+              : allocateImpl(Device, Size, Kind, Alignment, ProfilerPtr);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
   if (*AllocOrErr) {
     trackAllocation(Device, *AllocOrErr, Size, Kind);
-    Device.recordAllocation(*AllocOrErr, HostPtr, Size, Kind);
+    Device.recordAllocation(*AllocOrErr, Size);
   }
 
   return AllocOrErr;
 }
 
 Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
-                                               int64_t Size, void *HostPtr,
+                                               int64_t Size,
                                                ol_alloc_type_t Kind,
                                                size_t Alignment,
                                                GenericProfilerTy *ProfilerPtr) {
-  return Device.dataAlloc(Size, HostPtr, Kind, Alignment, ProfilerPtr);
+  return Device.dataAlloc(Size, Kind, Alignment, ProfilerPtr);
 }
 
 Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
@@ -881,7 +888,7 @@ Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
 Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
                                   ol_alloc_type_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
-  Device.recordDeallocation(Ptr, Kind);
+  Device.recordDeallocation(Ptr);
   untrackAllocation(Ptr);
 
   if (MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind))

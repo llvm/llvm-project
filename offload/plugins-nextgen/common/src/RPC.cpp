@@ -28,8 +28,7 @@ rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   switch (Port.get_opcode()) {
   case LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      auto PtrOrErr =
-          Device.allocate(Buffer->data[0], nullptr, OL_ALLOC_TYPE_DEVICE);
+      auto PtrOrErr = Device.allocate(Buffer->data[0], OL_ALLOC_TYPE_DEVICE);
       void *Ptr = nullptr;
       if (!PtrOrErr)
         llvm::consumeError(PtrOrErr.takeError());
@@ -214,7 +213,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (!RPCBuffer) {
     auto RPCBufferOrErr = Device.allocate(
         rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts),
-        nullptr, OL_ALLOC_TYPE_HOST);
+        OL_ALLOC_TYPE_HOST);
     if (!RPCBufferOrErr)
       return RPCBufferOrErr.takeError();
 

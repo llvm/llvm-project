@@ -12,8 +12,10 @@
 
 #include "DiagnosticPrinter.h"
 
-#include "OffloadAPI.h"
+#include "Shared/EnvironmentVar.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -27,11 +29,120 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::omp::target;
 
 namespace {
+
+/// What the OpenMP runtime knows about an allocation it issued and the plugins
+/// do not: what it is for and what kind of memory it was asked for.
+struct AllocationRecordTy {
+  /// The host data the allocation was issued for, or null if the allocation is
+  /// not backing any host data, as for omp_target_alloc.
+  void *HostPtr = nullptr;
+
+  /// The kind of memory that was allocated.
+  ol_alloc_type_t Type = OL_ALLOC_TYPE_DEVICE;
+
+  /// Whether the OpenMP runtime deallocated the allocation.
+  bool IsFreed = false;
+};
+
+/// The allocations issued at the same device pointer, most recent first.
+using AllocationHistoryTy = SmallVector<AllocationRecordTy, 1>;
+
+/// The allocations the OpenMP runtime issued, per device pointer of a device.
+/// Allocations are never dropped, as a diagnostic is usually about one that
+/// was already deallocated.
+class AllocationsTy {
+public:
+  /// Whether allocations are recorded at all. The plugins track the
+  /// allocations under the same environment variable.
+  bool isEnabled() const { return TrackAllocationTraces; }
+
+  /// Record a new allocation at \p DevicePtr.
+  void add(int32_t DeviceId, void *DevicePtr, AllocationRecordTy Record) {
+    std::lock_guard<std::mutex> LG(Mtx);
+    auto &History = Histories[{DeviceId, DevicePtr}];
+    History.insert(History.begin(), std::move(Record));
+  }
+
+  /// Return a copy of the allocation history of \p DevicePtr, most recent
+  /// first, which is empty if the OpenMP runtime did not allocate it.
+  AllocationHistoryTy get(int32_t DeviceId, void *DevicePtr) {
+    std::lock_guard<std::mutex> LG(Mtx);
+    auto It = Histories.find({DeviceId, DevicePtr});
+    if (It == Histories.end())
+      return {};
+    return It->second;
+  }
+
+  /// Record the deallocation of the allocation at \p DevicePtr.
+  void markFreed(int32_t DeviceId, void *DevicePtr) {
+    std::lock_guard<std::mutex> LG(Mtx);
+    auto It = Histories.find({DeviceId, DevicePtr});
+    if (It != Histories.end() && !It->second.empty())
+      It->second.front().IsFreed = true;
+  }
+
+  /// Record the deallocation of \p DevicePtr as \p Type memory, and return
+  /// true. If the allocation is live but of another type, nothing is recorded,
+  /// the type it has is returned in \p AllocatedType and the result is false. A
+  /// pointer that was never allocated, or that is already deallocated, is not
+  /// a problem to be detected here: the plugins do it.
+  bool recordDeallocation(int32_t DeviceId, void *DevicePtr,
+                          ol_alloc_type_t Type,
+                          ol_alloc_type_t &AllocatedType) {
+    std::lock_guard<std::mutex> LG(Mtx);
+    auto It = Histories.find({DeviceId, DevicePtr});
+    if (It == Histories.end() || It->second.empty())
+      return true;
+
+    AllocationRecordTy &Record = It->second.front();
+    if (Record.IsFreed)
+      return true;
+    if (Record.Type != Type) {
+      AllocatedType = Record.Type;
+      return false;
+    }
+
+    Record.IsFreed = true;
+    return true;
+  }
+
+private:
+  BoolEnvar TrackAllocationTraces =
+      BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
+
+  /// The allocations issued at a device pointer of a device.
+  DenseMap<std::pair<int32_t, void *>, AllocationHistoryTy> Histories;
+
+  /// Allocations can be recorded and reported from any thread.
+  std::mutex Mtx;
+};
+
+/// The recorded allocations. Created on first use, as the printer must not add
+/// a global constructor to the library.
+AllocationsTy &getAllocations() {
+  static AllocationsTy Allocations;
+  return Allocations;
+}
+
+/// Return the name of the allocation type \p Type, as the OpenMP user knows
+/// it.
+const char *getAllocTypeName(ol_alloc_type_t Type) {
+  switch (Type) {
+  case OL_ALLOC_TYPE_HOST:
+    return "pinned host memory";
+  case OL_ALLOC_TYPE_MANAGED:
+    return "managed memory";
+  case OL_ALLOC_TYPE_DEVICE:
+    return "device memory";
+  }
+  return "memory";
+}
 
 class DiagnosticPrinterTy {
 
@@ -133,18 +244,26 @@ class DiagnosticPrinterTy {
   }
 
   /// Report information about an allocation, and the prior allocations at the
-  /// same base pointer.
-  static void reportAllocationInfo(const ol_allocation_info_t &Alloc) {
+  /// same base pointer. \p Records are the allocations the OpenMP runtime
+  /// issued there, most recent first, which tell what they were for.
+  static void reportAllocationInfo(const ol_allocation_info_t &Alloc,
+                                   const AllocationHistoryTy &Records) {
+    // The host pointer the allocation \p I backs, I being 0 for the most recent
+    // one, or null if it is not known.
+    auto GetHostPtr = [&](size_t I) {
+      return I < Records.size() ? Records[I].HostPtr : nullptr;
+    };
+
     if (*Alloc.DeallocationTrace) {
       print(BoldLightPurple, "Last deallocation:\n");
       reportStackTrace(Alloc.DeallocationTrace);
     }
 
-    if (Alloc.HostPtr)
+    if (void *HostPtr = GetHostPtr(0))
       print(BoldLightPurple,
             "Last allocation of size %lu for host pointer %p -> device pointer "
             "%p:\n",
-            Alloc.Size, Alloc.HostPtr, Alloc.DevicePtr);
+            Alloc.Size, HostPtr, Alloc.DevicePtr);
     else
       print(BoldLightPurple,
             "Last allocation of size %lu -> device pointer %p:\n", Alloc.Size,
@@ -160,11 +279,11 @@ class DiagnosticPrinterTy {
       print(BoldLightPurple, " #%u Prior deallocation of size %lu:\n", I,
             Prior.Size);
       reportStackTrace(Prior.DeallocationTrace);
-      if (Prior.HostPtr)
+      if (void *HostPtr = GetHostPtr(I + 1))
         print(
             BoldLightPurple,
             " #%u Prior allocation for host pointer %p -> device pointer %p:\n",
-            I, Prior.HostPtr, Prior.DevicePtr);
+            I, HostPtr, Prior.DevicePtr);
       else
         print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n",
               I, Prior.DevicePtr);
@@ -172,12 +291,38 @@ class DiagnosticPrinterTy {
     }
   }
 
+  /// Report information about the allocation \p Alloc, which \p Diag is
+  /// about.
+  static void reportAllocationInfo(int32_t DeviceId,
+                                   const ol_allocation_info_t &Alloc) {
+    AllocationHistoryTy Records =
+        getAllocations().get(DeviceId, Alloc.DevicePtr);
+    reportAllocationInfo(Alloc, Records);
+  }
+
   /// Report a deallocation error and the history of the pointer involved.
-  static void reportDeallocationError(const ol_diagnostic_t &Diag) {
-    reportError(Diag.Summary);
+  static void reportDeallocationError(int32_t DeviceId,
+                                      const ol_diagnostic_t &Diag) {
+    SmallString<128> Summary(Diag.Summary);
+    if (Diag.Kind != OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND) {
+      // The plugins do not know what kind of memory was allocated, the
+      // allocations issued here do.
+      void *DevicePtr = Diag.Pointer ? Diag.Pointer->DevicePtr : nullptr;
+      AllocationHistoryTy Records = getAllocations().get(DeviceId, DevicePtr);
+      const char *Name =
+          Records.empty() ? "memory" : getAllocTypeName(Records.front().Type);
+      Summary.clear();
+      raw_svector_ostream OS(Summary);
+      if (Diag.Kind == OL_DIAGNOSTIC_KIND_DOUBLE_FREE)
+        OS << "double-free of " << Name << ": " << DevicePtr;
+      else
+        OS << "deallocation of non-allocated " << Name << ": " << DevicePtr;
+    }
+
+    reportError(Summary.c_str());
     reportStackTrace(Diag.OffendingStackTrace);
     if (Diag.Pointer && Diag.Pointer->Allocation)
-      reportAllocationInfo(*Diag.Pointer->Allocation);
+      reportAllocationInfo(DeviceId, *Diag.Pointer->Allocation);
   }
 
   /// Report the kernel traces in \p Diag, up to
@@ -229,7 +374,8 @@ class DiagnosticPrinterTy {
 
   /// Report a device memory access fault and what is known about the faulting
   /// pointer.
-  static void reportMemoryAccessError(const ol_diagnostic_t &Diag) {
+  static void reportMemoryAccessError(int32_t DeviceId,
+                                      const ol_diagnostic_t &Diag) {
     if (Diag.Tracking.KernelLaunchesKnown)
       reportKernelTraces(Diag);
 
@@ -258,7 +404,7 @@ class DiagnosticPrinterTy {
             Pointer.DevicePtr,
             Pointer.Relation == OL_POINTER_RELATION_INSIDE ? "" : " prior");
       if (Pointer.Allocation)
-        reportAllocationInfo(*Pointer.Allocation);
+        reportAllocationInfo(DeviceId, *Pointer.Allocation);
       return;
     case OL_POINTER_RELATION_NEAR:
     case OL_POINTER_RELATION_FAR: {
@@ -275,7 +421,7 @@ class DiagnosticPrinterTy {
             " byte%s; might be by page):\n",
             Pointer.Distance, Pointer.Distance > 1 ? "s" : "");
       if (Pointer.Allocation)
-        reportAllocationInfo(*Pointer.Allocation);
+        reportAllocationInfo(DeviceId, *Pointer.Allocation);
       return;
     }
     case OL_POINTER_RELATION_LAST:
@@ -309,17 +455,19 @@ class DiagnosticPrinterTy {
 
 public:
   /// ol_diagnostic_cb_t entry point.
-  static void report(const ol_diagnostic_t *Diag, void * /*UserData*/,
+  static void report(const ol_diagnostic_t *Diag, void *UserData,
                      ol_diagnostic_response_t *Response) {
     Response->Reported = 1;
+    // The device the handler was installed on, see getDiagnosticPrinter.
+    auto DeviceId = static_cast<int32_t>(reinterpret_cast<intptr_t>(UserData));
     switch (Diag->Kind) {
     case OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_NON_ALLOCATED_PTR:
     case OL_DIAGNOSTIC_KIND_DOUBLE_FREE:
     case OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND:
-      reportDeallocationError(*Diag);
+      reportDeallocationError(DeviceId, *Diag);
       return;
     case OL_DIAGNOSTIC_KIND_MEMORY_ACCESS_FAULT:
-      reportMemoryAccessError(*Diag);
+      reportMemoryAccessError(DeviceId, *Diag);
       return;
     case OL_DIAGNOSTIC_KIND_TRAP_IN_KERNEL:
       reportTrapInKernel(*Diag);
@@ -333,9 +481,46 @@ public:
 
 } // namespace
 
-const ol_diagnostic_handler_t *llvm::omp::target::getDiagnosticPrinter() {
-  static const ol_diagnostic_handler_t ThePrinter = {
-      &DiagnosticPrinterTy::report,
-      /*UserData=*/nullptr};
-  return &ThePrinter;
+void llvm::omp::target::recordAllocation(int32_t DeviceId, void *DevicePtr,
+                                         void *HstPtr, ol_alloc_type_t Type) {
+  auto &Allocations = getAllocations();
+  if (!Allocations.isEnabled() || !DevicePtr)
+    return;
+
+  AllocationRecordTy Record;
+  Record.HostPtr = HstPtr;
+  Record.Type = Type;
+  Allocations.add(DeviceId, DevicePtr, std::move(Record));
+}
+
+void llvm::omp::target::markDeallocated(int32_t DeviceId, void *DevicePtr) {
+  auto &Allocations = getAllocations();
+  if (!Allocations.isEnabled() || !DevicePtr)
+    return;
+
+  Allocations.markFreed(DeviceId, DevicePtr);
+}
+
+bool llvm::omp::target::checkDeallocation(int32_t DeviceId, void *DevicePtr,
+                                          ol_alloc_type_t Type,
+                                          std::string &Summary) {
+  auto &Allocations = getAllocations();
+  if (!Allocations.isEnabled() || !DevicePtr)
+    return true;
+
+  ol_alloc_type_t AllocatedType = Type;
+  if (Allocations.recordDeallocation(DeviceId, DevicePtr, Type, AllocatedType))
+    return true;
+
+  raw_string_ostream OS(Summary);
+  OS << "deallocation requires " << getAllocTypeName(Type)
+     << " but allocation was " << getAllocTypeName(AllocatedType) << ": "
+     << DevicePtr;
+  return false;
+}
+
+ol_diagnostic_handler_t
+llvm::omp::target::getDiagnosticPrinter(int32_t DeviceId) {
+  return {&DiagnosticPrinterTy::report,
+          reinterpret_cast<void *>(static_cast<intptr_t>(DeviceId))};
 }

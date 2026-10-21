@@ -39,7 +39,6 @@
 #include "OffloadAPI.h"
 #include "Program.h"
 
-
 // Forward declarations.
 struct __tgt_bin_desc;
 struct __tgt_target_table;
@@ -123,6 +122,9 @@ struct DeviceTy {
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;
   ol_context_handle_t Context = nullptr;
+  /// The handler of the diagnostics of the device, it has to outlive the device
+  /// as the plugin keeps a pointer to it.
+  ol_diagnostic_handler_t DiagnosticHandler{};
 
   DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
            ol_device_handle_t DeviceHandle, PluginManager *PM);
