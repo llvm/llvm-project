@@ -55,7 +55,7 @@ declare void @foo(ptr %arg1)
 
 ; // -----
 
-; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<disableNonforced = true, mustProgress = true, isVectorized = true, id = distinct[{{[0-9]+}}]<>>
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, disableNonforced = true, mustProgress = true, isVectorized = true>
 
 ; CHECK-LABEL: @simple
 define void @simple(i64 %n, ptr %A) {
@@ -75,7 +75,7 @@ end:
 
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
 ; CHECK-DAG: #[[VECTORIZE_ATTR:.*]] = #llvm.loop_vectorize<disable = false, predicateEnable = true, scalableEnable = false, width = 16 : i32, followupVectorized = #[[FOLLOWUP]], followupEpilogue = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<vectorize = #[[VECTORIZE_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, vectorize = #[[VECTORIZE_ATTR]]>
 
 ; CHECK-LABEL: @vectorize
 define void @vectorize(i64 %n, ptr %A) {
@@ -100,7 +100,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[INTERLEAVE_ATTR:.*]] = #llvm.loop_interleave<count = 8 : i32>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<interleave = #[[INTERLEAVE_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, interleave = #[[INTERLEAVE_ATTR]]>
 
 ; CHECK-LABEL: @interleave
 define void @interleave(i64 %n, ptr %A) {
@@ -118,7 +118,7 @@ end:
 
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
 ; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<disable = false, count = 16 : i32, runtimeDisable = true, full = true, followupUnrolled = #[[FOLLOWUP]], followupRemainder = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unroll = #[[UNROLL_ATTR]]>
 
 ; CHECK-LABEL: @unroll
 define void @unroll(i64 %n, ptr %A) {
@@ -143,7 +143,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<disable = true>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unroll = #[[UNROLL_ATTR]]>
 
 ; CHECK-LABEL: @unroll_disable
 define void @unroll_disable(i64 %n, ptr %A) {
@@ -163,7 +163,7 @@ end:
 ; disappear or acquire a self-referential LoopID wrapper.
 ; CHECK-DAG: #[[EMPTY:.*]] = #llvm.loop_annotation<>
 ; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<count = 8 : i32, followupUnrolled = #[[EMPTY]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unroll = #[[UNROLL_ATTR]]>
 ; CHECK-LABEL: @unroll_empty_followup
 ; ROUNDTRIP-LABEL: @unroll_empty_followup(
 define void @unroll_empty_followup() {
@@ -192,7 +192,7 @@ end:
 ; CHECK-DAG: #[[INNER_UNROLL:.*]] = #llvm.loop_unroll<count = 2 : i32, followupUnrolled = #[[EMPTY]]>
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<vectorize = #[[VECTORIZE_ATTR]], unroll = #[[INNER_UNROLL]], mustProgress = true>
 ; CHECK-DAG: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<count = 8 : i32, followupUnrolled = #[[FOLLOWUP]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unroll = #[[UNROLL_ATTR]]>
 ; CHECK-LABEL: @unroll_nested_followup
 ; ROUNDTRIP-LABEL: @unroll_nested_followup(
 define void @unroll_nested_followup() {
@@ -224,7 +224,7 @@ end:
 
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
 ; CHECK-DAG: #[[UNROLL_AND_JAM_ATTR:.*]] = #llvm.loop_unroll_and_jam<disable = false, count = 32 : i32, followupOuter = #[[FOLLOWUP]], followupInner = #[[FOLLOWUP]], followupRemainderOuter = #[[FOLLOWUP]], followupRemainderInner = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unrollAndJam = #[[UNROLL_AND_JAM_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unrollAndJam = #[[UNROLL_AND_JAM_ATTR]]>
 
 ; CHECK-LABEL: @unroll_and_jam
 define void @unroll_and_jam(i64 %n, ptr %A) {
@@ -249,7 +249,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[LICM_ATTR:.*]] = #llvm.loop_licm<disable = true, versioningDisable = true>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<licm = #[[LICM_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, licm = #[[LICM_ATTR]]>
 
 ; CHECK-LABEL: @licm
 define void @licm(i64 %n, ptr %A) {
@@ -268,7 +268,7 @@ end:
 
 ; CHECK-DAG: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<disableNonforced = true>
 ; CHECK-DAG: #[[DISTRIBUTE_ATTR:.*]] = #llvm.loop_distribute<disable = true, followupCoincident = #[[FOLLOWUP]], followupSequential = #[[FOLLOWUP]], followupFallback = #[[FOLLOWUP]], followupAll = #[[FOLLOWUP]]>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<distribute = #[[DISTRIBUTE_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, distribute = #[[DISTRIBUTE_ATTR]]>
 
 ; CHECK-LABEL: @distribute
 define void @distribute(i64 %n, ptr %A) {
@@ -291,7 +291,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[PIPELINE_ATTR:.*]] = #llvm.loop_pipeline<disable = false, initiationinterval = 2 : i32>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<pipeline = #[[PIPELINE_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, pipeline = #[[PIPELINE_ATTR]]>
 
 ; CHECK-LABEL: @pipeline
 define void @pipeline(i64 %n, ptr %A) {
@@ -309,7 +309,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[PEELED_ATTR:.*]] = #llvm.loop_peeled<count = 5 : i32>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<peeled = #[[PEELED_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, peeled = #[[PEELED_ATTR]]>
 
 ; CHECK-LABEL: @peeled
 define void @peeled(i64 %n, ptr %A) {
@@ -326,7 +326,7 @@ end:
 ; // -----
 
 ; CHECK-DAG: #[[UNSWITCH_ATTR:.*]] = #llvm.loop_unswitch<partialDisable = true>
-; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<unswitch = #[[UNSWITCH_ATTR]], id = distinct[{{[0-9]+}}]<>>
+; CHECK-DAG: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, unswitch = #[[UNSWITCH_ATTR]]>
 
 ; CHECK-LABEL: @unswitched
 define void @unswitched(i64 %n, ptr %A) {
@@ -410,11 +410,11 @@ end:
 ; CHECK: #[[FOLLOWUP:.*]] = #llvm.loop_annotation<mustProgress = true, startLoc = #[[start_loc_fused]], endLoc = #[[end_loc_fused]]>
 ; CHECK: #[[UNROLL_ATTR:.*]] = #llvm.loop_unroll<followupUnrolled = #[[FOLLOWUP]]>
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
+; CHECK-SAME: id = distinct[{{[0-9]+}}]<>
 ; CHECK-SAME: unroll = #[[UNROLL_ATTR]]
 ; CHECK-SAME: mustProgress = true
 ; CHECK-SAME: startLoc = #[[start_loc_fused]]
 ; CHECK-SAME: endLoc = #[[end_loc_fused]]
-; CHECK-SAME: id = distinct[{{[0-9]+}}]<>
 
 ; CHECK-LABEL: @loop_locs
 ; ROUNDTRIP-LABEL: @loop_locs(
@@ -453,8 +453,8 @@ end:
 ; // -----
 
 ; Make sure we get distinct annotations.
-; CHECK: #[[$ANNOT0:.*]] = #llvm.loop_annotation<mustProgress = true, id = distinct[{{[0-9]+}}]<>>
-; CHECK: #[[$ANNOT1:.*]] = #llvm.loop_annotation<mustProgress = true, id = distinct[{{[0-9]+}}]<>>
+; CHECK: #[[$ANNOT0:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, mustProgress = true>
+; CHECK: #[[$ANNOT1:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, mustProgress = true>
 
 ; CHECK-LABEL: @equal_loops
 ; ROUNDTRIP-LABEL: @equal_loops(

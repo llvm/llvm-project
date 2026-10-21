@@ -324,8 +324,8 @@ llvm.func @loop_annotation_with_locs() {
 // back edges of one loop) still share their node.
 
 #same = #llvm.loop_annotation<mustProgress = true>
-#id0 = #llvm.loop_annotation<mustProgress = true, id = distinct[0]<>>
-#id1 = #llvm.loop_annotation<mustProgress = true, id = distinct[1]<>>
+#id0 = #llvm.loop_annotation<id = distinct[0]<>, mustProgress = true>
+#id1 = #llvm.loop_annotation<id = distinct[1]<>, mustProgress = true>
 
 // CHECK-LABEL: @loop_ids
 llvm.func @loop_ids(%cond: i1) {

@@ -125,8 +125,8 @@ llvm.func @loop_annotation_with_locs() {
 
 // -----
 
-// CHECK-DAG: #[[ID_LOOP0:.*]] = #llvm.loop_annotation<mustProgress = true, id = distinct[[[ID0:[0-9]+]]]<>>
-// CHECK-DAG: #[[ID_LOOP1:.*]] = #llvm.loop_annotation<mustProgress = true, id = distinct[[[ID1:[0-9]+]]]<>>
+// CHECK-DAG: #[[ID_LOOP0:.*]] = #llvm.loop_annotation<id = distinct[[[ID0:[0-9]+]]]<>, mustProgress = true>
+// CHECK-DAG: #[[ID_LOOP1:.*]] = #llvm.loop_annotation<id = distinct[[[ID1:[0-9]+]]]<>, mustProgress = true>
 #id_loop0 = #llvm.loop_annotation<mustProgress = true, id = distinct[0]<>>
 #id_loop1 = #llvm.loop_annotation<mustProgress = true, id = distinct[1]<>>
 
