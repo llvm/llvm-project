@@ -12,7 +12,7 @@ define dso_local void @test()  {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[1,0],xmm0[1,0]

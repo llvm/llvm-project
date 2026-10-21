@@ -367,6 +367,8 @@ set(files
   __exception/nested_exception.h
   __exception/operations.h
   __exception/terminate.h
+  __execution/execution_policies.h
+  __execution/is_execution_policy.h
   __expected/bad_expected_access.h
   __expected/expected.h
   __expected/unexpect.h
@@ -828,6 +830,7 @@ set(files
   __system_error/system_error.h
   __system_error/throw_system_error.h
   __thread/formatter.h
+  __thread/hardware_concurrency.h
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
@@ -894,7 +897,6 @@ set(files
   __type_traits/is_empty.h
   __type_traits/is_enum.h
   __type_traits/is_equality_comparable.h
-  __type_traits/is_execution_policy.h
   __type_traits/is_final.h
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
@@ -1050,6 +1052,7 @@ set(files
   cuchar
   cwchar
   cwctype
+  debugging
   deque
   errno.h
   exception

@@ -34,8 +34,8 @@ define i8 @neg_abs_i8(i8 %x) nounwind {
 define i16 @neg_abs_i16(i16 %x) nounwind {
 ; X86-LABEL: neg_abs_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movswl %cx, %eax
 ; X86-NEXT:    sarl $15, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax
@@ -119,18 +119,18 @@ define i128 @neg_abs_i128(i128 %x) nounwind {
 ; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    movl 28(%ebp), %esi
 ; X86-NEXT:    xorl %ecx, %esi
-; X86-NEXT:    movl 24(%ebp), %edi
-; X86-NEXT:    xorl %ecx, %edi
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    subl %edi, %ebx
+; X86-NEXT:    movl 24(%ebp), %ebx
+; X86-NEXT:    xorl %ecx, %ebx
 ; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    sbbl %esi, %ebx
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    sbbl %edx, %esi
 ; X86-NEXT:    sbbl %eax, %ecx
 ; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %edi, (%eax)
+; X86-NEXT:    movl %ebx, 4(%eax)
 ; X86-NEXT:    movl %esi, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    leal -12(%ebp), %esp
@@ -182,8 +182,8 @@ define i8 @sub_abs_i8(i8 %x, i8 %y) nounwind {
 define i16 @sub_abs_i16(i16 %x, i16 %y) nounwind {
 ; X86-LABEL: sub_abs_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movswl %cx, %eax
 ; X86-NEXT:    sarl $15, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax

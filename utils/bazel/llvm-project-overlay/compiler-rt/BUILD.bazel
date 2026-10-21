@@ -411,6 +411,12 @@ AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
         "echo '#define MODEL " + model + "' >> $(OUTS) && " +
         "cat $(SRCS) >> $(OUTS)"
     ),
+    cmd_bat = (
+        ">>$(OUTS) echo #define L_" + pat + "&& " +
+        ">>$(OUTS) echo #define SIZE " + size + "&& " +
+        ">>$(OUTS) echo #define MODEL " + model + "&& " +
+        ">>$(OUTS) type $(SRCS)"
+    ),
 )] for (pat, size, model) in AARCH64_OUTLINE_ATOMICS]
 
 # Source files for the AArch64 architecture-specific builtins.

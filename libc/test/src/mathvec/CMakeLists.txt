@@ -421,7 +421,7 @@ add_fp_unittest(
 )
 
 if(NOT LIBC_CONF_MATH_OPTIMIZATIONS MATCHES
-   "LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT")
+  "LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT")
   add_fp_unittest(
     sinf_test
     SUITE

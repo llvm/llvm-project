@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -run-pass=live-debug-values -o - %s | FileCheck %s
 
 # Test the extension of debug ranges from predecessors.
 # Generated from the source file LiveDebugValues.c:
@@ -246,7 +246,7 @@ body:             |
     liveins: $ecx
 
     MOV32mr $rip, 1, _, @m, _, $ecx, debug-location !43 :: (store (s32) into @m, !tbaa !44)
-    dead $edi = MOV32ri @.str, implicit-def $rdi, debug-location !46
+    $edi = MOV32ri @.str, implicit-def $rdi, debug-location !46
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !47
     $esi = MOV32rr killed $ecx, debug-location !46
     CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit $al, implicit-def $rsp, implicit-def dead $eax, debug-location !46

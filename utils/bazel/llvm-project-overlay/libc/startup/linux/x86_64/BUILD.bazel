@@ -14,21 +14,6 @@ package(
 )
 
 libc_startup_library(
-    name = "tls",
-    srcs = ["tls.cpp"],
-    deps = [
-        "//libc:__support_macros_config",
-        "//libc:__support_osutil_linux_syscall_wrappers_getrandom",
-        "//libc:__support_osutil_linux_syscall_wrappers_mmap",
-        "//libc:__support_osutil_linux_syscall_wrappers_munmap",
-        "//libc:__support_threads_tcb",
-        "//libc:config_app_h",
-        "//libc:hdr_sys_mman_macros",
-        "//libc:string_memory_utils",
-    ],
-)
-
-libc_startup_library(
     name = "start",
     srcs = ["start.cpp"],
     deps = [

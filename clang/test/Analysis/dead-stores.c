@@ -660,3 +660,20 @@ int rdar34122265_test_nested(int input) {
   }
   return bar.x.x + bar.y.y;
 }
+
+// Parentheses on the left-hand side must not hide a dead store.
+long long dead_store_to_parenthesized_variable(int input) {
+  int foo;
+  long long bar;
+  long baz;
+  (bar) = input;
+  // non-nested-warning@-1 {{Value stored to 'bar' is never read}}
+  (foo) = input;
+  // non-nested-warning@-1 {{Value stored to 'foo' is never read}}
+  (baz) = input;
+  // non-nested-warning@-1 {{Value stored to 'baz' is never read}}
+  bar = 2;
+  foo = 2;
+  baz = 2;
+  return bar + foo + baz;
+}

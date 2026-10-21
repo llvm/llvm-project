@@ -1116,12 +1116,12 @@ protected:
           [&result, &formatter_regex,
            &any_printed](const TypeMatcher &type_matcher,
                          const FormatterSharedPointer &format_sp) -> bool {
-        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+        if (ShouldListItem(type_matcher.GetMatchString(),
                            formatter_regex.get())) {
           any_printed = true;
-          result.GetOutputStream().Printf(
-              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-              format_sp->GetDescription().c_str());
+          result.GetOutputStream().Format("{0}: {1}\n",
+                                          type_matcher.GetMatchString(),
+                                          format_sp->GetDescription());
         }
         return true;
       };
@@ -1737,9 +1737,9 @@ protected:
       DataVisualization::NamedSummaryFormats::ForEach(
           [&result](const TypeMatcher &type_matcher,
                     const TypeSummaryImplSP &summary_sp) -> bool {
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                summary_sp->GetDescription().c_str());
+            result.GetOutputStream().Format("{0}: {1}\n",
+                                            type_matcher.GetMatchString(),
+                                            summary_sp->GetDescription());
             return true;
           });
       return true;

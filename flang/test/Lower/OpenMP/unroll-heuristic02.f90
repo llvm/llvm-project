@@ -26,17 +26,17 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK-SAME:      %[[ARG5:.*]]: !fir.ref<i32> {fir.bindc_name = "inner_inc"}) {
 !CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomp_unroll_heuristic_nested02Ei"}>
-!CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFomp_unroll_heuristic_nested02Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG5]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Einner_inc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG3]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Einner_lb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG4]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Einner_ub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFomp_unroll_heuristic_nested02Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG5]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Einner_inc") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG3]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Einner_lb") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG4]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Einner_ub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFomp_unroll_heuristic_nested02Ej"}>
-!CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFomp_unroll_heuristic_nested02Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Eouter_inc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Eouter_lb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFomp_unroll_heuristic_nested02Eouter_ub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFomp_unroll_heuristic_nested02Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Eouter_inc") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Eouter_lb") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFomp_unroll_heuristic_nested02Eouter_ub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[VAL_11:.*]] = fir.alloca i32 <{bindc_name = "res", uniq_name = "_QFomp_unroll_heuristic_nested02Eres"}>
-!CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFomp_unroll_heuristic_nested02Eres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFomp_unroll_heuristic_nested02Eres") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
 !CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
@@ -47,7 +47,7 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK:           %[[VAL_20:.*]] = arith.select %[[VAL_18]], %[[VAL_19]], %[[VAL_15]] : i32
 !CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_18]], %[[VAL_14]], %[[VAL_13]] : i32
 !CHECK:           %[[VAL_22:.*]] = arith.select %[[VAL_18]], %[[VAL_13]], %[[VAL_14]] : i32
-!CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] overflow<nuw> : i32
+!CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] : i32
 !CHECK:           %[[VAL_24:.*]] = arith.divui %[[VAL_23]], %[[VAL_20]] : i32
 !CHECK:           %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_17]] overflow<nuw> : i32
 !CHECK:           %[[VAL_26:.*]] = arith.cmpi slt, %[[VAL_22]], %[[VAL_21]] : i32
@@ -67,7 +67,7 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_37]], %[[VAL_38]], %[[VAL_34]] : i32
 !CHECK:             %[[VAL_40:.*]] = arith.select %[[VAL_37]], %[[VAL_33]], %[[VAL_32]] : i32
 !CHECK:             %[[VAL_41:.*]] = arith.select %[[VAL_37]], %[[VAL_32]], %[[VAL_33]] : i32
-!CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_41]], %[[VAL_40]] overflow<nuw> : i32
+!CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_41]], %[[VAL_40]] : i32
 !CHECK:             %[[VAL_43:.*]] = arith.divui %[[VAL_42]], %[[VAL_39]] : i32
 !CHECK:             %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_36]] overflow<nuw> : i32
 !CHECK:             %[[VAL_45:.*]] = arith.cmpi slt, %[[VAL_41]], %[[VAL_40]] : i32
