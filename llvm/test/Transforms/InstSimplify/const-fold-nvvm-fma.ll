@@ -878,35 +878,11 @@ define double @test_fma_neg_1_minus_ulp_rz_d() {
 ;###############################################################
 ; Tests FMA with regular numbers that produce a precise result
 
-define half @test_fma_2_3_4_rm_f16() {
-; CHECK-LABEL: define half @test_fma_2_3_4_rm_f16() {
-; CHECK-NEXT:    ret half 1.000000e+01
-;
-  %res = call half @llvm.nvvm.fma.f16(half 2.0, half 3.0, half 4.0, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_fma_2_3_4_rn_f16() {
 ; CHECK-LABEL: define half @test_fma_2_3_4_rn_f16() {
 ; CHECK-NEXT:    ret half 1.000000e+01
 ;
   %res = call half @llvm.nvvm.fma.f16(half 2.0, half 3.0, half 4.0, /* rnd=rn */ i32 1)
-  ret half %res
-}
-
-define half @test_fma_2_3_4_rp_f16() {
-; CHECK-LABEL: define half @test_fma_2_3_4_rp_f16() {
-; CHECK-NEXT:    ret half 1.000000e+01
-;
-  %res = call half @llvm.nvvm.fma.f16(half 2.0, half 3.0, half 4.0, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_fma_2_3_4_rz_f16() {
-; CHECK-LABEL: define half @test_fma_2_3_4_rz_f16() {
-; CHECK-NEXT:    ret half 1.000000e+01
-;
-  %res = call half @llvm.nvvm.fma.f16(half 2.0, half 3.0, half 4.0, /* rnd=rz */ i32 0)
   ret half %res
 }
 
@@ -918,35 +894,11 @@ define half @test_fma_2_3_4_rn_ftz_f16() {
   ret half %res
 }
 
-define bfloat @test_fma_2_3_4_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_2_3_4_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+01
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 2.0, bfloat 3.0, bfloat 4.0, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
-
 define bfloat @test_fma_2_3_4_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_fma_2_3_4_rn_bf16() {
 ; CHECK-NEXT:    ret bfloat 1.000000e+01
 ;
   %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 2.0, bfloat 3.0, bfloat 4.0, /* rnd=rn */ i32 1)
-  ret bfloat %res
-}
-
-define bfloat @test_fma_2_3_4_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_2_3_4_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+01
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 2.0, bfloat 3.0, bfloat 4.0, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_fma_2_3_4_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_2_3_4_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+01
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 2.0, bfloat 3.0, bfloat 4.0, /* rnd=rz */ i32 0)
   ret bfloat %res
 }
 
@@ -979,14 +931,6 @@ define bfloat @test_fma_nan_rn_bf16() {
 ; Tests f16 FMA with 1.0 and 2^(-12) where different rounding modes produce
 ; different results.
 
-define half @test_fma_1_plus_ulp_rm_f16() {
-; CHECK-LABEL: define half @test_fma_1_plus_ulp_rm_f16() {
-; CHECK-NEXT:    ret half 1.000000e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half 1.0, half 0xH1000, /* rnd=rm */ i32 3)
-  ret half %res
-}
-
 define half @test_fma_1_plus_ulp_rn_f16() {
 ; CHECK-LABEL: define half @test_fma_1_plus_ulp_rn_f16() {
 ; CHECK-NEXT:    ret half 1.000000e+00
@@ -995,34 +939,10 @@ define half @test_fma_1_plus_ulp_rn_f16() {
   ret half %res
 }
 
-define half @test_fma_1_plus_ulp_rp_f16() {
-; CHECK-LABEL: define half @test_fma_1_plus_ulp_rp_f16() {
-; CHECK-NEXT:    ret half 1.000980e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half 1.0, half 0xH1000, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_fma_1_plus_ulp_rz_f16() {
-; CHECK-LABEL: define half @test_fma_1_plus_ulp_rz_f16() {
-; CHECK-NEXT:    ret half 1.000000e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half 1.0, half 0xH1000, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
 ;###############################################################
 ;#                 FMA(1.0, -1.0, -2^(-12)) - f16              #
 ;###############################################################
 ; Tests f16 FMA producing a negative result just below -1.0.
-
-define half @test_fma_neg_1_minus_ulp_rm_f16() {
-; CHECK-LABEL: define half @test_fma_neg_1_minus_ulp_rm_f16() {
-; CHECK-NEXT:    ret half -1.000980e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half -1.0, half 0xH9000, /* rnd=rm */ i32 3)
-  ret half %res
-}
 
 define half @test_fma_neg_1_minus_ulp_rn_f16() {
 ; CHECK-LABEL: define half @test_fma_neg_1_minus_ulp_rn_f16() {
@@ -1032,35 +952,11 @@ define half @test_fma_neg_1_minus_ulp_rn_f16() {
   ret half %res
 }
 
-define half @test_fma_neg_1_minus_ulp_rp_f16() {
-; CHECK-LABEL: define half @test_fma_neg_1_minus_ulp_rp_f16() {
-; CHECK-NEXT:    ret half -1.000000e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half -1.0, half 0xH9000, /* rnd=rp */ i32 2)
-  ret half %res
-}
-
-define half @test_fma_neg_1_minus_ulp_rz_f16() {
-; CHECK-LABEL: define half @test_fma_neg_1_minus_ulp_rz_f16() {
-; CHECK-NEXT:    ret half -1.000000e+00
-;
-  %res = call half @llvm.nvvm.fma.f16(half 1.0, half -1.0, half 0xH9000, /* rnd=rz */ i32 0)
-  ret half %res
-}
-
 ;###############################################################
 ;#                 FMA(1.0, 1.0, 2^(-9)) - bf16                #
 ;###############################################################
 ; Tests bf16 FMA with 1.0 and 2^(-9) where different rounding modes produce
 ; different results.
-
-define bfloat @test_fma_1_plus_ulp_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_1_plus_ulp_rm_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat 1.0, bfloat 0xR3B00, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
 
 define bfloat @test_fma_1_plus_ulp_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_fma_1_plus_ulp_rn_bf16() {
@@ -1070,34 +966,10 @@ define bfloat @test_fma_1_plus_ulp_rn_bf16() {
   ret bfloat %res
 }
 
-define bfloat @test_fma_1_plus_ulp_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_1_plus_ulp_rp_bf16() {
-; CHECK-NEXT:    ret bfloat 1.007810e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat 1.0, bfloat 0xR3B00, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_fma_1_plus_ulp_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_1_plus_ulp_rz_bf16() {
-; CHECK-NEXT:    ret bfloat 1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat 1.0, bfloat 0xR3B00, /* rnd=rz */ i32 0)
-  ret bfloat %res
-}
-
 ;###############################################################
 ;#                 FMA(1.0, -1.0, -2^(-9)) - bf16              #
 ;###############################################################
 ; Tests bf16 FMA producing a negative result just below -1.0.
-
-define bfloat @test_fma_neg_1_minus_ulp_rm_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_neg_1_minus_ulp_rm_bf16() {
-; CHECK-NEXT:    ret bfloat -1.007810e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat -1.0, bfloat 0xRBB00, /* rnd=rm */ i32 3)
-  ret bfloat %res
-}
 
 define bfloat @test_fma_neg_1_minus_ulp_rn_bf16() {
 ; CHECK-LABEL: define bfloat @test_fma_neg_1_minus_ulp_rn_bf16() {
@@ -1107,40 +979,24 @@ define bfloat @test_fma_neg_1_minus_ulp_rn_bf16() {
   ret bfloat %res
 }
 
-define bfloat @test_fma_neg_1_minus_ulp_rp_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_neg_1_minus_ulp_rp_bf16() {
-; CHECK-NEXT:    ret bfloat -1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat -1.0, bfloat 0xRBB00, /* rnd=rp */ i32 2)
-  ret bfloat %res
-}
-
-define bfloat @test_fma_neg_1_minus_ulp_rz_bf16() {
-; CHECK-LABEL: define bfloat @test_fma_neg_1_minus_ulp_rz_bf16() {
-; CHECK-NEXT:    ret bfloat -1.000000e+00
-;
-  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat -1.0, bfloat 0xRBB00, /* rnd=rz */ i32 0)
-  ret bfloat %res
-}
-
 ;###############################################################
 ;#          FMA(Subnormal, 2.0, Normal) - f16 FTZ              #
 ;###############################################################
 ; Tests that FTZ flushes a subnormal f16 input to zero before the operation.
 ; 0xH0200 is a subnormal f16 value (2^-19).
 
-define half @test_fma_subnorm_input_rp_f16() {
-; CHECK-LABEL: define half @test_fma_subnorm_input_rp_f16() {
-; CHECK-NEXT:    ret half 1.000980e+00
+define half @test_fma_subnorm_input_rn_f16() {
+; CHECK-LABEL: define half @test_fma_subnorm_input_rn_f16() {
+; CHECK-NEXT:    ret half 1.000000e+00
 ;
-  %res = call half @llvm.nvvm.fma.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rp */ i32 2)
+  %res = call half @llvm.nvvm.fma.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rn */ i32 1)
   ret half %res
 }
 
-define half @test_fma_subnorm_input_rp_ftz_f16() {
-; CHECK-LABEL: define half @test_fma_subnorm_input_rp_ftz_f16() {
+define half @test_fma_subnorm_input_rn_ftz_f16() {
+; CHECK-LABEL: define half @test_fma_subnorm_input_rn_ftz_f16() {
 ; CHECK-NEXT:    ret half 1.000000e+00
 ;
-  %res = call half @llvm.nvvm.fma.ftz.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rp */ i32 2)
+  %res = call half @llvm.nvvm.fma.ftz.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rn */ i32 1)
   ret half %res
 }

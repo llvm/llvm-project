@@ -7440,32 +7440,26 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
-// TODO: Remove the type-legality checks here once
-// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
-// explicit type constraints for overloaded intrinsics in tablegen.
-static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
-                               unsigned ISDOpcode, Intrinsic::ID IID,
+static bool isSupportedFPArith(SDNode *N, SelectionDAG &DAG,
+                               const NVPTXSubtarget &STI, unsigned ISDOpcode,
+                               Intrinsic::ID IID,
                                APFloat::roundingMode RoundingMode) {
   const EVT VT = N->getValueType(0);
-  if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
+  if (!nvvm::FPArithIsSupported(IID, VT.getTypeForEVT(*DAG.getContext()),
+                                RoundingMode))
     return false;
 
-  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
-  const bool IsSat = nvvm::FPArithIsSaturating(IID);
-  const bool IsRelu = nvvm::FPArithIsRelu(IID);
+  // Check the subtarget requirements of the remaining combinations.
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return IsRN;
+    return STI.hasFP16Math() &&
+           (!nvvm::FPArithIsRelu(IID) || STI.hasFeature(NVPTX::SM80));
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
+    return STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
-    return !IsRelu &&
-           (!VT.isVector() || (!IsSat && STI.hasF32x2Instructions()));
-  case MVT::f64:
-    return !VT.isVector() && !IsSat && !IsFTZ && !IsRelu;
+    return !VT.isVector() || STI.hasF32x2Instructions();
   default:
-    return false;
+    return true;
   }
 }
 
@@ -7497,7 +7491,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FADD, IID, RoundingMode))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
@@ -7512,7 +7506,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fma_ftz_relu: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(4).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FMA, IID, RoundingMode))
+    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FMA, IID, RoundingMode))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }
@@ -7522,7 +7516,7 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fmul_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+    if (!isSupportedFPArith(N, DCI.DAG, STI, ISD::FMUL, IID, RoundingMode))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }

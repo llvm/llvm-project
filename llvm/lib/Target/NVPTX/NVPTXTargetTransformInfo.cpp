@@ -159,17 +159,17 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::floor, FTZ_MustBeOn};
     case Intrinsic::nvvm_fma:
     case Intrinsic::nvvm_fma_ftz: {
-      // Only replace if the rounding mode is RN.
-      if (nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3)) !=
-          APFloat::rmNearestTiesToEven)
+      // Only replace supported combinations with RN rounding.
+      const APFloat::roundingMode RoundMode =
+          nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3));
+      if (RoundMode != APFloat::rmNearestTiesToEven ||
+          !nvvm::FPArithIsSupported(II->getIntrinsicID(), II->getType(),
+                                    RoundMode))
         return {};
       const bool IsFTZ = II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz;
       Type *EltTy = II->getType()->getScalarType();
       if (EltTy->isDoubleTy())
-        return IsFTZ ? SimplifyAction{}
-                     : SimplifyAction{Intrinsic::fma, FTZ_Any};
-      if (EltTy->isBFloatTy() && IsFTZ)
-        return {};
+        return {Intrinsic::fma, FTZ_Any};
       const bool IsHalfTy = EltTy->isHalfTy() || EltTy->isBFloatTy();
       return {Intrinsic::fma, IsFTZ ? FTZ_MustBeOn : FTZ_MustBeOff, IsHalfTy};
     }

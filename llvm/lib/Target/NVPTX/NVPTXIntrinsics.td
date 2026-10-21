@@ -2159,7 +2159,7 @@ foreach t = [F16RT, F16X2RT] in
       defm MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
                         !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
-                        fp_rnd_rn_imm>;
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -2505,8 +2505,9 @@ foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in
       defm ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
-        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t, !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret), fp_rnd_rn_imm>;
+        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
