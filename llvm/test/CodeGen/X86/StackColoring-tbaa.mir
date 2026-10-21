@@ -238,9 +238,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 1 :: (store (s32) into %ir.pa)
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 2 :: (store (s32) into %ir.pb)
-    ; CHECK-NEXT: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p)
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp)
-    ; CHECK-NEXT: [[ADD16rm:%[0-9]+]]:gr16 = ADD16rm [[MOV16rm]], [[MOV64rm]], 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s16) from %ir.q)
+    ; CHECK-NEXT: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p, !tbaa !8)
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp, !tbaa !10)
+    ; CHECK-NEXT: [[ADD16rm:%[0-9]+]]:gr16 = ADD16rm [[MOV16rm]], [[MOV64rm]], 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s16) from %ir.q, !tbaa !8)
     ; CHECK-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[ADD16rm]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr16_]]
     ; CHECK-NEXT: RET 0, $eax
@@ -280,8 +280,8 @@ body:             |
     ; CHECK-NEXT: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[LEA64r]] :: (store (s64) into %ir.out)
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 1 :: (store (s32) into %ir.pa)
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 2 :: (store (s32) into %ir.pb)
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp)
-    ; CHECK-NEXT: [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[MOV64rm]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.q)
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp, !tbaa !10)
+    ; CHECK-NEXT: [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[MOV64rm]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.q, !tbaa !8)
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rm16_]]
     ; CHECK-NEXT: RET 0, $eax
     %2:gr64_nosp = COPY $rdx
@@ -321,8 +321,8 @@ body:             |
     ; CHECK-NEXT: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, [[LEA64r]] :: (store (s64) into %ir.out)
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 1 :: (store (s32) into %ir.pa)
     ; CHECK-NEXT: MOV32mi %stack.0.a, 4, [[COPY]], 0, $noreg, 2 :: (store (s32) into %ir.pb)
-    ; CHECK-NEXT: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[COPY3]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p)
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp)
+    ; CHECK-NEXT: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[COPY3]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.p, !tbaa !8)
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY2]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.pp, !tbaa !10)
     ; CHECK-NEXT: [[ADD16rm:%[0-9]+]]:gr16 = ADD16rm [[MOV16rm]], [[MOV64rm]], 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s16) from %ir.q)
     ; CHECK-NEXT: [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[ADD16rm]]
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr16_]]
@@ -366,7 +366,7 @@ body:             |
     ; CHECK-NEXT: CALL64pcrel32 target-flags(x86-plt) @get, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     ; CHECK-NEXT: ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rax
-    ; CHECK-NEXT: [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[COPY1]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.q)
+    ; CHECK-NEXT: [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[COPY1]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.q, !tbaa !8)
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rm16_]]
     ; CHECK-NEXT: RET 0, $eax
     %0:gr64_nosp = COPY $rdi
@@ -407,7 +407,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x30000000), %bb.3(0x50000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY2]], %bb.0, %5, %bb.3
-  ; CHECK-NEXT:   [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[PHI]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.cur)
+  ; CHECK-NEXT:   [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 [[PHI]], 1, $noreg, 0, $noreg :: (load (s16) from %ir.cur, !tbaa !8)
   ; CHECK-NEXT:   TEST32rr [[MOVZX32rm16_]], [[MOVZX32rm16_]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.3, 5, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2
