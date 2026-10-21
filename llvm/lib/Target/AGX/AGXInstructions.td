@@ -1200,9 +1200,12 @@ def : Pat<(f32 (agx_atomic_fadd_device i64:$ptr, f32:$val)),
 
 // u64 min / max whose old value is unused: cmpxchg with bit 45 set, bit 46
 // clear for min (mode 3) and set for max (mode 1).
+// The native form is a silent no-op at an address 4 mod 8 (ptx-re-blockers
+// B24), so it needs a known 8-byte alignment.
 class AtomicNoRet64Frag<SDPatternOperator op>
     : PatFrag<(ops node:$ptr, node:$val), (op node:$ptr, node:$val), [{
-  return SDValue(N, 0).use_empty();
+  return SDValue(N, 0).use_empty() &&
+         cast<MemSDNode>(N)->getAlign() >= Align(8);
 }]> {
   let IsAtomic = 1;
   let MemoryVT = i64;
