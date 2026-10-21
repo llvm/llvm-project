@@ -560,6 +560,51 @@ struct DumpNotifications : public RewriterBase::Listener {
   }
 };
 
+struct TestOperationFolder
+    : public PassWrapper<TestOperationFolder, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOperationFolder)
+
+  StringRef getArgument() const final { return "test-operation-folder"; }
+  StringRef getDescription() const final {
+    return "Test constant hoisting and rehoisting notifications";
+  }
+
+  void runOnOperation() override {
+    DumpNotifications listener;
+    OperationFolder folder(&getContext(), &listener);
+    SmallVector<Operation *> constants;
+    getOperation()->walk([&](Operation *op) {
+      if (matchPattern(op, m_Constant()))
+        constants.push_back(op);
+    });
+    for (Operation *op : constants) {
+      if (folder.insertKnownConstant(op) ==
+          OperationFolder::ConstantInsertionResult::Replaced)
+        continue;
+      if (!op->hasAttr("test.rehoist"))
+        continue;
+
+      // A rewrite can insert an operation ahead of a folder-owned constant.
+      // Both entry points must report moving the constant back to the front.
+      OpBuilder builder(op);
+      OperationState state(op->getLoc(), "test.side_effect_op");
+      state.addTypes(builder.getI32Type());
+      Operation *inserted = builder.create(state);
+      llvm::outs() << "Rehoist with insertKnownConstant\n";
+      (void)folder.insertKnownConstant(op);
+      inserted->moveBefore(op);
+      llvm::outs() << "Rehoist with tryToFold\n";
+      (void)folder.tryToFold(op);
+
+      // Reusing a constant for an earlier operation must restore dominance.
+      builder.setInsertionPoint(op);
+      Operation *duplicate = builder.clone(*op);
+      llvm::outs() << "Fold before owned constant\n";
+      (void)folder.tryToFold(duplicate);
+    }
+  }
+};
+
 struct TestStrictPatternDriver
     : public PassWrapper<TestStrictPatternDriver, OperationPass<func::FuncOp>> {
 public:
@@ -2551,6 +2596,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestDerivedAttributeDriver>();
 
   PassRegistration<TestGreedyPatternDriver>();
+  PassRegistration<TestOperationFolder>();
   PassRegistration<TestStrictPatternDriver>();
   PassRegistration<TestWalkPatternDriver>();
 
