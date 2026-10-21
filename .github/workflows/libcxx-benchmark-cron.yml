@@ -80,7 +80,8 @@ jobs:
       EVERY: ${{ matrix.every }}
       SAMPLES: ${{ matrix.samples }}
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
-      LNT_URL: ${{ matrix.lnt-url }}
+      # Keep in sync with libcxx-lnt-submit.yml
+      LNT_URL: https://lnt.llvm.org
 
       DRY_RUN: ${{ inputs.dry-run || 'false' }}
     steps:
@@ -158,5 +159,4 @@ jobs:
             dry_run=(--dry-run)
           fi
 
-          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --lnt-url "${LNT_URL}"  \
-                                                  --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"
+          libcxx/utils/ci/lnt/dispatch-benchmarks --work-items plan.jsonl --max-in-flight "${MAX_IN_FLIGHT}" "${dry_run[@]}"
