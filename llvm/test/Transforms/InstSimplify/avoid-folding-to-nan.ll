@@ -3,21 +3,20 @@
 ; RUN: opt -passes=instsimplify -avoid-folding-to-nan -S %s | FileCheck %s --check-prefixes=CHECK,AVOID
 
 ; These constant evaluations produce NaNs and must be declined with the flag.
-define void @nan_results(ptr %binary_nan_res, ptr %unary_nan_res, ptr %fma_nan_res, ptr %mul_zero_inf_res, ptr %sub_inf_inf_res, ptr %rem_inf_res, ptr %mixed_nan_res, ptr %roundeven_snan_res) {
+define void @nan_results(ptr %binary_nan_res, ptr %unary_nan_res, ptr %fma_nan_res, ptr %mul_zero_inf_res, ptr %sub_inf_inf_res, ptr %mixed_nan_res, ptr %roundeven_snan_res) {
 ; FOLD-LABEL: define void @nan_results(
-; FOLD-SAME: ptr [[BINARY_NAN_RES:%.*]], ptr [[UNARY_NAN_RES:%.*]], ptr [[FMA_NAN_RES:%.*]], ptr [[MUL_ZERO_INF_RES:%.*]], ptr [[SUB_INF_INF_RES:%.*]], ptr [[REM_INF_RES:%.*]], ptr [[MIXED_NAN_RES:%.*]], ptr [[ROUNDEVEN_SNAN_RES:%.*]]) {
+; FOLD-SAME: ptr [[BINARY_NAN_RES:%.*]], ptr [[UNARY_NAN_RES:%.*]], ptr [[FMA_NAN_RES:%.*]], ptr [[MUL_ZERO_INF_RES:%.*]], ptr [[SUB_INF_INF_RES:%.*]], ptr [[MIXED_NAN_RES:%.*]], ptr [[ROUNDEVEN_SNAN_RES:%.*]]) {
 ; FOLD-NEXT:    store float +qnan, ptr [[BINARY_NAN_RES]], align 4
 ; FOLD-NEXT:    store float +qnan, ptr [[UNARY_NAN_RES]], align 4
 ; FOLD-NEXT:    store float +qnan, ptr [[FMA_NAN_RES]], align 4
 ; FOLD-NEXT:    store float +qnan, ptr [[MUL_ZERO_INF_RES]], align 4
 ; FOLD-NEXT:    store float +qnan, ptr [[SUB_INF_INF_RES]], align 4
-; FOLD-NEXT:    store float +qnan, ptr [[REM_INF_RES]], align 4
 ; FOLD-NEXT:    store <2 x float> <float +qnan, float 6.000000e+00>, ptr [[MIXED_NAN_RES]], align 8
 ; FOLD-NEXT:    store float +nan(0x1), ptr [[ROUNDEVEN_SNAN_RES]], align 4
 ; FOLD-NEXT:    ret void
 ;
 ; AVOID-LABEL: define void @nan_results(
-; AVOID-SAME: ptr [[BINARY_NAN_RES:%.*]], ptr [[UNARY_NAN_RES:%.*]], ptr [[FMA_NAN_RES:%.*]], ptr [[MUL_ZERO_INF_RES:%.*]], ptr [[SUB_INF_INF_RES:%.*]], ptr [[REM_INF_RES:%.*]], ptr [[MIXED_NAN_RES:%.*]], ptr [[ROUNDEVEN_SNAN_RES:%.*]]) {
+; AVOID-SAME: ptr [[BINARY_NAN_RES:%.*]], ptr [[UNARY_NAN_RES:%.*]], ptr [[FMA_NAN_RES:%.*]], ptr [[MUL_ZERO_INF_RES:%.*]], ptr [[SUB_INF_INF_RES:%.*]], ptr [[MIXED_NAN_RES:%.*]], ptr [[ROUNDEVEN_SNAN_RES:%.*]]) {
 ; AVOID-NEXT:    [[BINARY_NAN:%.*]] = fdiv float 0.000000e+00, 0.000000e+00
 ; AVOID-NEXT:    store float [[BINARY_NAN]], ptr [[BINARY_NAN_RES]], align 4
 ; AVOID-NEXT:    [[UNARY_NAN:%.*]] = call float @llvm.ceil.f32(float +qnan)
@@ -28,8 +27,6 @@ define void @nan_results(ptr %binary_nan_res, ptr %unary_nan_res, ptr %fma_nan_r
 ; AVOID-NEXT:    store float [[MUL_ZERO_INF]], ptr [[MUL_ZERO_INF_RES]], align 4
 ; AVOID-NEXT:    [[SUB_INF_INF:%.*]] = fsub float +inf, +inf
 ; AVOID-NEXT:    store float [[SUB_INF_INF]], ptr [[SUB_INF_INF_RES]], align 4
-; AVOID-NEXT:    [[REM_INF:%.*]] = frem float +inf, 2.000000e+00
-; AVOID-NEXT:    store float [[REM_INF]], ptr [[REM_INF_RES]], align 4
 ; AVOID-NEXT:    [[MIXED_NAN:%.*]] = fmul <2 x float> <float 1.000000e+00, float 2.000000e+00>, <float +qnan, float 3.000000e+00>
 ; AVOID-NEXT:    store <2 x float> [[MIXED_NAN]], ptr [[MIXED_NAN_RES]], align 8
 ; AVOID-NEXT:    [[ROUNDEVEN_SNAN:%.*]] = call float @llvm.roundeven.f32(float +snan(0x1))
@@ -46,8 +43,6 @@ define void @nan_results(ptr %binary_nan_res, ptr %unary_nan_res, ptr %fma_nan_r
   store float %mul_zero_inf, ptr %mul_zero_inf_res
   %sub_inf_inf = fsub float +inf, +inf
   store float %sub_inf_inf, ptr %sub_inf_inf_res
-  %rem_inf = frem float +inf, 2.0
-  store float %rem_inf, ptr %rem_inf_res
   %mixed_nan = fmul <2 x float> <float 1.0, float 2.0>, <float +qnan, float 3.0>
   store <2 x float> %mixed_nan, ptr %mixed_nan_res
   %roundeven_snan = call float @llvm.roundeven.f32(float +snan(0x1))

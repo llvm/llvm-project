@@ -925,10 +925,11 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Result = tryFoldFPConst(C1->getType(), FPOp::Div, {C1V, C2V}, Denormals,
                                 AvoidFoldingToNaN);
         break;
-      case Instruction::FRem:
-        Result = tryFoldFPConst(C1->getType(), FPOp::FRem, {C1V, C2V},
-                                Denormals, AvoidFoldingToNaN);
-        break;
+      case Instruction::FRem: {
+        APFloat C3V = C1V; // copy for modification
+        (void)C3V.mod(C2V);
+        return ConstantFP::get(C1->getType(), C3V);
+      }
       }
       if (Result)
         return Result;

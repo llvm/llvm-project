@@ -98,8 +98,6 @@ static APFloat::opStatus executeFold(FPOp Opcode, APFloat &Result,
       return Result.multiply(Args[1], RM);
     case FPOp::Div:
       return Result.divide(Args[1], RM);
-    case FPOp::FRem:
-      return Result.mod(Args[1]);
     case FPOp::MinNum:
       Result = minnum(Result, Args[1]);
       return containsSNaN(Args) ? APFloat::opInvalidOp : APFloat::opOK;

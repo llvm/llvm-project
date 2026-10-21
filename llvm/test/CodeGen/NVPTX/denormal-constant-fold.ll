@@ -2,13 +2,13 @@
 ; RUN: llc -mtriple=nvptx64 -mcpu=sm_80 < %s | FileCheck %s
 
 ; These constants are folded by SelectionDAG, rather than an IR optimization
-; pass. Verify that every scalar FP arithmetic fold, FMA fold, and comparison
-; observes the function denormal environment.
+; pass. Verify that arithmetic, FMA, rounding, and comparison folds observe
+; the function denormal environment.
 
-define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_res, ptr %frem_res, ptr %fmuladd_res, ptr %fma_res, ptr %fcmp_res, ptr %ceil_res) denormal_fpenv(float: preservesign) {
+define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_res, ptr %fmuladd_res, ptr %fma_res, ptr %fcmp_res, ptr %ceil_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: arithmetic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<10>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [arithmetic_param_0];
@@ -24,11 +24,9 @@ define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_r
 ; CHECK-NEXT:    ld.param.b64 %rd6, [arithmetic_param_5];
 ; CHECK-NEXT:    st.b32 [%rd6], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd7, [arithmetic_param_6];
-; CHECK-NEXT:    st.b32 [%rd7], 0;
+; CHECK-NEXT:    st.b8 [%rd7], 1;
 ; CHECK-NEXT:    ld.param.b64 %rd8, [arithmetic_param_7];
-; CHECK-NEXT:    st.b8 [%rd8], 1;
-; CHECK-NEXT:    ld.param.b64 %rd9, [arithmetic_param_8];
-; CHECK-NEXT:    st.b32 [%rd9], 0;
+; CHECK-NEXT:    st.b32 [%rd8], 0;
 ; CHECK-NEXT:    ret;
   %fadd = fadd float f0x00000001, f0x00000001
   store float %fadd, ptr %fadd_res
@@ -38,8 +36,6 @@ define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_r
   store float %fmul, ptr %fmul_res
   %fdiv = fdiv float f0x00000001, 5.000000e-01
   store float %fdiv, ptr %fdiv_res
-  %frem = frem float f0x00000001, 2.000000e+00
-  store float %frem, ptr %frem_res
   %fmuladd = call float @llvm.fmuladd.f32(float f0x00000001, float 1.0, float 0.0)
   store float %fmuladd, ptr %fmuladd_res
   %fma = call float @llvm.fma.f32(float f0x00000001, float 1.0, float 0.0)

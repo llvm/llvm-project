@@ -752,7 +752,8 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   case TargetOpcode::G_FDIV:
     return getFPValue(tryFoldFP(FPOp::Div, {C1, C2}, Denormals));
   case TargetOpcode::G_FREM:
-    return getFPValue(tryFoldFP(FPOp::FRem, {C1, C2}, Denormals));
+    C1.mod(C2);
+    return C1;
   case TargetOpcode::G_FCOPYSIGN:
     C1.copySign(C2);
     return C1;

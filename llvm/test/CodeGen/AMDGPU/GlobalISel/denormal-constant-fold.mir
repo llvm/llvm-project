@@ -4,7 +4,7 @@
 
 # The generic GlobalISel constant-folding rules obtain their denormal mode from
 # the MachineFunction. A minimum subnormal is therefore zero in FTZ mode. This
-# covers every G_F* binary operation, G_FMA, and G_FCMP routed through
+# covers arithmetic binary operations, G_FMA, and G_FCMP routed through
 # CombinerHelper.
 # The f16/f64 cases use the default denormal mode, independently of float:.
 
@@ -61,7 +61,6 @@ body: |
     ; CHECK-NEXT: $vgpr1 = COPY %add(f32)
     ; CHECK-NEXT: $vgpr2 = COPY %add(f32)
     ; CHECK-NEXT: $vgpr3 = COPY %add(f32)
-    ; CHECK-NEXT: $vgpr4 = COPY %add(f32)
     %denorm:_(f32) = G_FCONSTANT float 1.40129846e-45
     %negdenorm:_(f32) = G_FCONSTANT float -1.40129846e-45
     %zero:_(f32) = G_FCONSTANT float 0.000000e+00
@@ -71,12 +70,10 @@ body: |
     %sub:_(f32) = G_FSUB %denorm, %negdenorm
     %mul:_(f32) = G_FMUL %denorm, %two
     %div:_(f32) = G_FDIV %denorm, %half
-    %rem:_(f32) = G_FREM %denorm, %two
     $vgpr0 = COPY %add
     $vgpr1 = COPY %sub
     $vgpr2 = COPY %mul
     $vgpr3 = COPY %div
-    $vgpr4 = COPY %rem
 ...
 
 ---
@@ -221,7 +218,6 @@ body: |
     ; CHECK-NEXT: $vgpr1 = COPY %zero(f16)
     ; CHECK-NEXT: $vgpr2 = COPY %zero(f16)
     ; CHECK-NEXT: $vgpr3 = COPY %zero(f16)
-    ; CHECK-NEXT: $vgpr4 = COPY %zero(f16)
     ; CHECK-NEXT: $vgpr5 = COPY %zero(f16)
     ; CHECK-NEXT: $vgpr6 = COPY %zero(f16)
     ; CHECK-NEXT: $vgpr7 = COPY %zero(f16)
@@ -242,7 +238,6 @@ body: |
     %sub:_(f16) = G_FSUB %denorm, %negdenorm
     %mul:_(f16) = G_FMUL %denorm, %two
     %div:_(f16) = G_FDIV %denorm, %half
-    %rem:_(f16) = G_FREM %denorm, %two
     %fma:_(f16) = G_FMA %denorm, %one, %zero
     %ceil:_(f16) = G_FCEIL %denorm
     %minnum:_(f16) = G_FMINNUM %denorm, %one
@@ -259,7 +254,6 @@ body: |
     $vgpr1 = COPY %sub
     $vgpr2 = COPY %mul
     $vgpr3 = COPY %div
-    $vgpr4 = COPY %rem
     $vgpr5 = COPY %fma
     $vgpr6 = COPY %ceil
     $vgpr7 = COPY %minnum
@@ -348,7 +342,6 @@ body: |
     ; CHECK-NEXT: $vgpr2_vgpr3 = COPY %zero(f64)
     ; CHECK-NEXT: $vgpr4_vgpr5 = COPY %zero(f64)
     ; CHECK-NEXT: $vgpr6_vgpr7 = COPY %zero(f64)
-    ; CHECK-NEXT: $vgpr8_vgpr9 = COPY %zero(f64)
     ; CHECK-NEXT: $vgpr10_vgpr11 = COPY %zero(f64)
     ; CHECK-NEXT: $vgpr12_vgpr13 = COPY %zero(f64)
     ; CHECK-NEXT: $vgpr14_vgpr15 = COPY %zero(f64)
@@ -369,7 +362,6 @@ body: |
     %sub:_(f64) = G_FSUB %denorm, %negdenorm
     %mul:_(f64) = G_FMUL %denorm, %two
     %div:_(f64) = G_FDIV %denorm, %half
-    %rem:_(f64) = G_FREM %denorm, %two
     %fma:_(f64) = G_FMA %denorm, %one, %zero
     %ceil:_(f64) = G_FCEIL %denorm
     %minnum:_(f64) = G_FMINNUM %denorm, %one
@@ -386,7 +378,6 @@ body: |
     $vgpr2_vgpr3 = COPY %sub
     $vgpr4_vgpr5 = COPY %mul
     $vgpr6_vgpr7 = COPY %div
-    $vgpr8_vgpr9 = COPY %rem
     $vgpr10_vgpr11 = COPY %fma
     $vgpr12_vgpr13 = COPY %ceil
     $vgpr14_vgpr15 = COPY %minnum

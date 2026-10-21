@@ -8405,7 +8405,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
     case ISD::FDIV:
       return getConstantFP(tryFoldFP(FPOp::Div, {C1, C2}, DM), DL, VT);
     case ISD::FREM:
-      return getConstantFP(tryFoldFP(FPOp::FRem, {C1, C2}, DM), DL, VT);
+      C1.mod(C2);
+      return getConstantFP(C1, DL, VT);
     case ISD::FCOPYSIGN:
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);

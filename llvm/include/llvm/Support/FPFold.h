@@ -26,7 +26,6 @@ enum class FPOp {
   Sub,
   Mul,
   Div,
-  FRem,
   MinNum,
   MaxNum,
   Minimum,
@@ -58,7 +57,7 @@ LLVM_ABI bool shouldAvoidFoldingToNaN();
 /// operations take one input, FMA takes three, and other operations take two.
 /// Ceil, Floor, Trunc, Round, and RoundEven select their own rounding mode;
 /// Other rounding-dependent operations use RN.
-/// FRem and min/max do not depend on the rounding mode.
+/// Min/max do not depend on the rounding mode.
 ///
 /// Returns std::nullopt when the modes do not specify one result. In
 /// particular, this occurs when a dynamic denormal mode could change an input

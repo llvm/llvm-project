@@ -4,15 +4,13 @@
 ; Independent constant folds must use the function's denormal environment.
 ; The fcmp result is not FP: its operand type selects the denormal mode.
 ; ceil(min-subnormal) is one under IEEE, but zero with input flushing.
-define void @preservesign(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_res, ptr %frem_res, ptr %frem_negative_res, ptr %fmuladd_res, ptr %fma_res, ptr %ceil_res, ptr %fcmp_res, ptr %vector_add_res, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) denormal_fpenv(float: preservesign) {
+define void @preservesign(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_res, ptr %fmuladd_res, ptr %fma_res, ptr %ceil_res, ptr %fcmp_res, ptr %vector_add_res, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: define void @preservesign(
-; CHECK-SAME: ptr [[FADD_RES:%.*]], ptr [[FSUB_RES:%.*]], ptr [[FMUL_RES:%.*]], ptr [[FDIV_RES:%.*]], ptr [[FREM_RES:%.*]], ptr [[FREM_NEGATIVE_RES:%.*]], ptr [[FMULADD_RES:%.*]], ptr [[FMA_RES:%.*]], ptr [[CEIL_RES:%.*]], ptr [[FCMP_RES:%.*]], ptr [[VECTOR_ADD_RES:%.*]], ptr [[MINNUM_RES:%.*]], ptr [[MAXNUM_RES:%.*]], ptr [[MINIMUM_RES:%.*]], ptr [[MAXIMUM_RES:%.*]], ptr [[MINIMUMNUM_RES:%.*]], ptr [[MAXIMUMNUM_RES:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[FADD_RES:%.*]], ptr [[FSUB_RES:%.*]], ptr [[FMUL_RES:%.*]], ptr [[FDIV_RES:%.*]], ptr [[FMULADD_RES:%.*]], ptr [[FMA_RES:%.*]], ptr [[CEIL_RES:%.*]], ptr [[FCMP_RES:%.*]], ptr [[VECTOR_ADD_RES:%.*]], ptr [[MINNUM_RES:%.*]], ptr [[MAXNUM_RES:%.*]], ptr [[MINIMUM_RES:%.*]], ptr [[MAXIMUM_RES:%.*]], ptr [[MINIMUMNUM_RES:%.*]], ptr [[MAXIMUMNUM_RES:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FADD_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FSUB_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FMUL_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FDIV_RES]], align 4
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[FREM_RES]], align 4
-; CHECK-NEXT:    store float -0.000000e+00, ptr [[FREM_NEGATIVE_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FMULADD_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[FMA_RES]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[CEIL_RES]], align 4
@@ -34,10 +32,6 @@ define void @preservesign(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv
   store float %fmul, ptr %fmul_res
   %fdiv = fdiv float f0x00000001, 0.5
   store float %fdiv, ptr %fdiv_res
-  %frem = frem float f0x00000001, 2.0
-  store float %frem, ptr %frem_res
-  %frem_negative = frem float f0x80000001, 2.0
-  store float %frem_negative, ptr %frem_negative_res
   %fmuladd = call float @llvm.fmuladd.f32(float f0x00000001, float 1.0, float 0.0)
   store float %fmuladd, ptr %fmuladd_res
   %fma = call float @llvm.fma.f32(float f0x00000001, float 1.0, float 0.0)
@@ -64,103 +58,18 @@ define void @preservesign(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv
 }
 
 ; Dynamic denormal handling rejects dependent folds, but not normal results.
-define void @dynamic(ptr %minnum_res, ptr %fmul_res, ptr %frem_res) denormal_fpenv(float: dynamic) {
+define void @dynamic(ptr %minnum_res, ptr %fmul_res) denormal_fpenv(float: dynamic) {
 ; CHECK-LABEL: define void @dynamic(
-; CHECK-SAME: ptr [[MINNUM_RES:%.*]], ptr [[FMUL_RES:%.*]], ptr [[FREM_RES:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[MINNUM_RES:%.*]], ptr [[FMUL_RES:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float 1.401300e-45, float 1.000000e+00)
 ; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES]], align 4
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 1.401300e-45, 2.000000e+00
 ; CHECK-NEXT:    store float [[FMUL]], ptr [[FMUL_RES]], align 4
-; CHECK-NEXT:    store float 1.000000e+00, ptr [[FREM_RES]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %minnum = call float @llvm.minnum.f32(float f0x00000001, float 1.0)
   store float %minnum, ptr %minnum_res
   %fmul = fmul float f0x00000001, 2.0
   store float %fmul, ptr %fmul_res
-  %frem = frem float 5.0, 2.0
-  store float %frem, ptr %frem_res
-  ret void
-}
-
-; FRem is exact and independent of ambient rounding. Test input/output FTZ
-; separately, including signed zero. f0x80800001 % f0x00800000 produces the
-; negative minimum subnormal from two normal inputs.
-define void @ieee_input_denormal(ptr %ieee_input_denormal_res) denormal_fpenv(float: ieee) {
-; CHECK-LABEL: define void @ieee_input_denormal(
-; CHECK-SAME: ptr [[IEEE_INPUT_DENORMAL_RES:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    store float 1.401300e-45, ptr [[IEEE_INPUT_DENORMAL_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %ieee_input_denormal = frem float f0x00000001, 2.000000e+00
-  store float %ieee_input_denormal, ptr %ieee_input_denormal_res
-  ret void
-}
-
-define void @positive_zero_input_denormal(ptr %positive_zero_input_denormal_res) denormal_fpenv(float: positivezero) {
-; CHECK-LABEL: define void @positive_zero_input_denormal(
-; CHECK-SAME: ptr [[POSITIVE_ZERO_INPUT_DENORMAL_RES:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[POSITIVE_ZERO_INPUT_DENORMAL_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %positive_zero_input_denormal = frem float f0x80000001, 2.000000e+00
-  store float %positive_zero_input_denormal, ptr %positive_zero_input_denormal_res
-  ret void
-}
-
-define void @preserve_sign_input_only(ptr %preserve_sign_input_only_res) denormal_fpenv(float: ieee|preservesign) {
-; CHECK-LABEL: define void @preserve_sign_input_only(
-; CHECK-SAME: ptr [[PRESERVE_SIGN_INPUT_ONLY_RES:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    store float -0.000000e+00, ptr [[PRESERVE_SIGN_INPUT_ONLY_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %preserve_sign_input_only = frem float f0x80000001, 2.000000e+00
-  store float %preserve_sign_input_only, ptr %preserve_sign_input_only_res
-  ret void
-}
-
-define void @preserve_sign_output_only(ptr %preserve_sign_output_only_res) denormal_fpenv(float: preservesign|ieee) {
-; CHECK-LABEL: define void @preserve_sign_output_only(
-; CHECK-SAME: ptr [[PRESERVE_SIGN_OUTPUT_ONLY_RES:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    store float -0.000000e+00, ptr [[PRESERVE_SIGN_OUTPUT_ONLY_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %preserve_sign_output_only = frem float f0x80800001, f0x00800000
-  store float %preserve_sign_output_only, ptr %preserve_sign_output_only_res
-  ret void
-}
-
-define void @positive_zero_output_only(ptr %positive_zero_output_only_res) denormal_fpenv(float: positivezero|ieee) {
-; CHECK-LABEL: define void @positive_zero_output_only(
-; CHECK-SAME: ptr [[POSITIVE_ZERO_OUTPUT_ONLY_RES:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[POSITIVE_ZERO_OUTPUT_ONLY_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %positive_zero_output_only = frem float f0x80800001, f0x00800000
-  store float %positive_zero_output_only, ptr %positive_zero_output_only_res
-  ret void
-}
-
-define void @dynamic_input_declines(ptr %dynamic_input_declines_res) denormal_fpenv(float: ieee|dynamic) {
-; CHECK-LABEL: define void @dynamic_input_declines(
-; CHECK-SAME: ptr [[DYNAMIC_INPUT_DECLINES_RES:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[DYNAMIC_INPUT_DECLINES:%.*]] = frem float -1.401300e-45, 2.000000e+00
-; CHECK-NEXT:    store float [[DYNAMIC_INPUT_DECLINES]], ptr [[DYNAMIC_INPUT_DECLINES_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %dynamic_input_declines = frem float f0x80000001, 2.000000e+00
-  store float %dynamic_input_declines, ptr %dynamic_input_declines_res
-  ret void
-}
-
-define void @dynamic_output_declines(ptr %dynamic_output_declines_res) denormal_fpenv(float: dynamic|ieee) {
-; CHECK-LABEL: define void @dynamic_output_declines(
-; CHECK-SAME: ptr [[DYNAMIC_OUTPUT_DECLINES_RES:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[DYNAMIC_OUTPUT_DECLINES:%.*]] = frem float f0x80800001, f0x00800000
-; CHECK-NEXT:    store float [[DYNAMIC_OUTPUT_DECLINES]], ptr [[DYNAMIC_OUTPUT_DECLINES_RES]], align 4
-; CHECK-NEXT:    ret void
-;
-  %dynamic_output_declines = frem float f0x80800001, f0x00800000
-  store float %dynamic_output_declines, ptr %dynamic_output_declines_res
   ret void
 }
