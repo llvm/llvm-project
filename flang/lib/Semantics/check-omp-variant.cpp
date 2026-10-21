@@ -771,17 +771,27 @@ void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
 }
 
-void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
-  // Perform semantic checks on declarative variants.
+void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
+  // Perform semantic checks on declarative variants on this METADIRECTIVE.
   if (!partStack_.empty() && partStack_.back() == PartKind::SpecificationPart) {
     OmpVariantMatchContext matchContext{context_};
-    for (const MetadirectiveLoopVariant &variant : metadirectiveLoopVariants_) {
-      if (!MayVariantBeSelected(variant.selector, context_, matchContext)) {
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      auto *when{parser::Unwrap<parser::OmpWhenClause>(clause)};
+      if (!when) {
         continue;
       }
-      llvm::omp::Directive dirId{variant.spec->DirId()};
-      if (dirId == llvm::omp::Directive::OMPD_declare_reduction) {
-        CheckDeclareReduction(*variant.spec);
+      const auto &modifiers{OmpGetModifiers(*when)};
+      auto *selector{OmpGetUniqueModifier<parser::OmpContextSelector>(modifiers)};
+      if (!MayVariantBeSelected(selector, context_, matchContext)) {
+        continue;
+      }
+      using DirSpecType = common::Indirection<parser::OmpDirectiveSpecification>;
+      if (auto &maybeSpec{std::get<std::optional<DirSpecType>>(when->t)}) {
+        const parser::OmpDirectiveSpecification &spec{maybeSpec->value()};
+        llvm::omp::Directive dirId{spec.DirId()};
+        if (dirId == llvm::omp::Directive::OMPD_declare_reduction) {
+          CheckDeclareReduction(spec);
+        }
       }
     }
   }
