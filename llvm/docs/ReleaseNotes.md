@@ -199,6 +199,9 @@ Makes programs 10x faster by doing Special New Thing.
   `machine-function-splitter` pass name are removed;
   `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
 
+* Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
+  which no longer had any users.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -268,8 +271,18 @@ Makes programs 10x faster by doing Special New Thing.
   attribute perform a load from the return address before returning, reducing the
   cache side channel used to guess pointer authentication codes.
 
+* The SelectionDAG Darwin ABI lowering of function arguments which are
+  aggregates passed by value containing small integers less than 32 bits in
+  size has been made consistent with the GlobalISel lowering of such arguments.
+  This is an ABI-breaking change but is unlikely to have any observable effect
+  from higher-level languages compiled through clang.
+
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.
+
+* Added support for the `aarch64-unknown-uefi` target. It follows the Windows
+  ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
+  unwind information) and produces PE/COFF objects.
 
 ### Changes to the AMDGPU Backend
 
@@ -320,7 +333,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
-* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+* Added the `RVA23P1S64` and `RVB23P1S64` profiles (version 1.0).
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
@@ -366,6 +379,11 @@ Makes programs 10x faster by doing Special New Thing.
   a data layout, base type and index sequence. The latter API returns an option,
   as it may fail if the indices cannot be converted into ptradd representation.
 
+* The `llcontext` argument of `builder_at`, `builder_before` and
+  `builder_at_end` has been removed. These functions now take only an insertion
+  point, instruction, or block, respectively. The context is implied by the
+  insertion point.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -385,6 +403,10 @@ Makes programs 10x faster by doing Special New Thing.
   sequence. The latter API may fail if the indices cannot be converted into
   ptradd representation.
 
+* Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
+  `dso_local` runtime preemption specifier on global values (global variables,
+  functions and aliases).
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
@@ -392,6 +414,11 @@ Makes programs 10x faster by doing Special New Thing.
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
+* Fixed a crash
+  ([#204079](https://github.com/llvm/llvm-project/issues/204079)) in the
+  SelectionDAG pre-RA schedulers when they tried to unfold a load-folded
+  instruction to break a physical register dependency and the unfolded load
+  already existed in the DAG.
 * Fixed a crash
   ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
   compiling a `landingpad` whose result type is not a struct of an exception
@@ -449,6 +476,13 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to BOLT
 
 ### Changes to Sanitizers
+
+* AddressSanitizer's `operator new` now calls the current
+  `std::new_handler` on allocation failure, as the C++ standard
+  requires. With `allocator_may_return_null=1`, throwing `operator new`
+  throws `std::bad_alloc` instead of aborting (on runtimes built with
+  exceptions), and nothrow `operator new` returns `nullptr`. By default
+  it still aborts once the handler chain is exhausted.
 
 ### Other Changes
 

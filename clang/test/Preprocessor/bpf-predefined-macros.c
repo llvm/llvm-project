@@ -79,6 +79,9 @@ int x;
 #ifdef __BPF_FEATURE_STACK_ARGUMENT
 int y;
 #endif
+#ifdef __BPF_FEATURE_UNWIND
+int z;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -130,6 +133,11 @@ int y;
 // CPU_V2: int y;
 // CPU_V3: int y;
 // CPU_V4: int y;
+
+// CPU_V1: int z;
+// CPU_V2: int z;
+// CPU_V3: int z;
+// CPU_V4: int z;
 
 // CPU_GENERIC: int g;
 

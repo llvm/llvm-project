@@ -635,6 +635,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fdx-rootsignature-define" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_fdx_semantic_signature_packing_mode_EQ) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-semantic-signature-packing-mode" << GetInputKindName(IK);
+
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
@@ -5242,6 +5246,16 @@ bool CompilerInvocation::CreateFromArgsImpl(
           llvm::driver::ProfileInstrKind::ProfileNone)
     Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
+  llvm::TimeTraceCompression TimeTraceCompress =
+      Res.getFrontendOpts().TimeTraceCompress;
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Infer &&
+      !Res.getFrontendOpts().TimeTracePath.empty())
+    TimeTraceCompress = llvm::inferTimeTraceCompressionFromPath(
+        Res.getFrontendOpts().TimeTracePath);
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Zstd &&
+      !llvm::compression::zstd::isAvailable())
+    Diags.Report(diag::err_drv_time_trace_compression_unavailable) << "zstd";
+
   FixupInvocation(Res, Diags, Args, DashX);
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -5350,6 +5364,8 @@ std::string CompilerInvocation::computeContextHash() const {
 
       HBuilder.add(UserEntry);
     }
+
+    HBuilder.addRange(getFrontendOpts().ModuleMapFiles);
 
     HBuilder.addRange(hsOpts.VFSOverlayFiles);
 

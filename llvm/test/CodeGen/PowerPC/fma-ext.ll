@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -ppc-vsx-fma-mutation | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -ppc-vsx-fma-mutation | FileCheck -check-prefix=CHECK-VSX %s
 
 define double @test_FMADD_EXT1(float %A, float %B, double %C) {
     %D = fmul contract float %A, %B          ; <float> [#uses=1]

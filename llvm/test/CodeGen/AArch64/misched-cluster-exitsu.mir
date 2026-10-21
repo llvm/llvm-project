@@ -1,16 +1,15 @@
 # REQUIRES: asserts
 
-# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion \
+# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion,+fuse-csel \
 # RUN:   -passes=machine-scheduler -debug-only=machine-scheduler \
 # RUN:   -misched-prera-direction=topdown 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,TOP
-# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion \
+# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion,+fuse-csel \
 # RUN:   -passes=machine-scheduler -debug-only=machine-scheduler \
 # RUN:   -misched-prera-direction=bottomup 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,BOT
 
-# Fusing with the region's terminating branch puts ExitSU into the cluster.
-# The cluster dump must name it instead of printing its NodeNum.
+## Fusing with the branch puts ExitSU into the cluster.
 
 # CHECK-LABEL: fuse_with_exitsu
 # CHECK: Macro fuse: SU(0) - ExitSU /  ADDSWri - Bcc
@@ -30,4 +29,43 @@ body: |
     RET undef $lr
   bb.2:
     RET undef $lr
+...
+
+## SUBS is clustered with CSEL first, so fusing it with the branch conflicts.
+
+# CHECK-LABEL: fusion_conflict_with_exitsu
+# CHECK: Macro fuse: SU(0) - SU(1) /  SUBSWrr - CSELWr
+# CHECK: Fusion conflict: cannot fuse SU(0) and ExitSU
+# CHECK-NEXT:   SU(0) already clustered
+---
+name: fusion_conflict_with_exitsu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $wzr = SUBSWrr $w0, $w1, implicit-def $nzcv
+    $w3 = CSELWr $w1, $w2, 0, implicit $nzcv
+    Bcc 0, %bb.2, implicit $nzcv
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+## The first load's value has no use in the region, so it gets an edge to ExitSU,
+## which ld/st clustering copies to the second load.
+
+# CHECK-LABEL: load_cluster_copy_succ_exitsu
+# CHECK: Cluster ld/st SU(0) - SU(1)
+# CHECK-NEXT:   Copy Succ ExitSU
+---
+name: load_cluster_copy_succ_exitsu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    $x1 = LDRXui $x0, 0 :: (load (s64))
+    $x2 = LDRXui $x0, 1 :: (load (s64))
+    RET_ReallyLR
 ...

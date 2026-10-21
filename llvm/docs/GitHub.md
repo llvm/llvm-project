@@ -153,12 +153,7 @@ for the repository, the merge button in GitHub's web interface will be
 disabled. If this is the case, continue following the steps here but ask one of
 your reviewers to click the merge button on your behalf.
 
-If the PR is a single commit, all you need to do is click the merge button in
-GitHub's web interface.
-
-If your PR contains multiple commits, you need to consolidate those commits into
-one commit. There are three different ways to do this, shown here with the most
-commonly used first:
+To merge your PR into the LLVM main branch do one of the following:
 
 * Use the button `Squash and merge` in GitHub's web interface, if you do this
   remember to review the commit message when prompted.
@@ -166,52 +161,52 @@ commonly used first:
   Afterwards you can select the option `Delete branch` to delete the branch
   from your fork.
 
-* [Interactive rebase](https://git-scm.com/docs/git-rebase#_interactive_mode)
-  with fixups. This is the recommended method since you can control the final
-  commit message and check that the final commit looks as you expect. When
-  your local state is correct, remember to force-push to your branch and press
-  the merge button in GitHub's web interface afterwards.
-
-* Merge using the GitHub command line interface. Switch to your branch locally
+* Use the GitHub command line interface. Switch to your branch locally
   and run:
 
   ```console
   gh pr merge --squash --delete-branch
   ```
 
+  Specifying `--squash` automatically selects the desired "Squash and Merge" merge strategy.
+  If you don't specify `--squash`, you'll get a selection option where you can only select "Squash and Merge".
+  Do not specify `--rebase` or `--merge` as these merge modes are not permitted in the LLVM repository.
+
   If you observe an error message from the above informing you that your pull
   request is not mergeable, then that is likely because upstream has been
   modified since your pull request was authored in a way that now results in a
-  merge conflict. You must first resolve this merge conflict in order to merge
-  your pull request. In order to do that:
+  merge conflict.
 
-  ```console
-  git fetch upstream
-  git rebase upstream/main
-  ```
+If you need to resolve a merge conflict before merging, you can do it as follows:
 
-  Then fix the source files causing merge conflicts and make sure to rebuild and
-  retest the result. Then:
+```console
+git fetch upstream
+git rebase upstream/main
+```
 
-  ```console
-  git add <files with resolved merge conflicts>
-  git rebase --continue
-  ```
+Then fix the source files causing merge conflicts and make sure to rebuild and
+retest the result. Then:
 
-  Finally, you'll need to force push to your branch one more time before you can
-  merge:
+```console
+git add <files with resolved merge conflicts>
+git rebase --continue
+```
 
-  ```console
-  git push --force
-  gh pr merge --squash --delete-branch
-  ```
+Finally, you'll need to force push to your branch one more time before you can
+merge:
 
-  This force push may ask if you intend to push hundreds, or potentially
-  thousands of patches (depending on how long it's been since your pull request
-  was initially authored vs. when you intended to merge it). Since you're pushing
-  to a branch in your fork, this is ok and expected. Github's UI for the pull
-  request will understand that you're rebasing just your patches, and display
-  this result correctly with a note that a force push did occur.
+```console
+git push --force
+```
+
+This force push may ask if you intend to push hundreds, or potentially
+thousands of patches (depending on how long it's been since your pull request
+was initially authored vs. when you intended to merge it). Since you're pushing
+to a branch in your fork, this is ok and expected. Github's UI for the pull
+request will understand that you're rebasing just your patches, and display
+this result correctly with a note that a force push did occur.
+
+After your force push, try merging your PR again following one of the above methods.
 
 (github_branches)=
 
