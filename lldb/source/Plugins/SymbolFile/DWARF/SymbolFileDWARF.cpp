@@ -873,7 +873,7 @@ StandaloneDWARFLineTableInfo *SymbolFileDWARF::GetStandaloneLineTableInfo() {
 DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
-  if (GetStandaloneLineTableInfo())
+  if (MissingDebugInfo())
     return nullptr;
 
   // The compile unit ID is the index of the DWARF unit.
