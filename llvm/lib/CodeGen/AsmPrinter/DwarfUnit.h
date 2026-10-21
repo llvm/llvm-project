@@ -113,9 +113,6 @@ public:
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
 
-  /// Return true if this compile unit has something to write out.
-  bool hasContent() const { return getUnitDie().hasChildren(); }
-
   /// Get string containing language specific context for a global name.
   ///
   /// Walks the metadata parent chain in a language specific manner (using the
@@ -403,9 +400,6 @@ private:
 
   /// Get an anonymous type for index type.
   DIE *getIndexTyDie();
-
-  /// Set D as anonymous type for index which can be reused later.
-  void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
 

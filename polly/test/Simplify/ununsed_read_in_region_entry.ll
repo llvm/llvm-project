@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -plugin-arg=Polly,-polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
 ; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;simplify>' -S < %s | FileCheck %s -check-prefix=CODEGEN
 ;
 ; for (int i = 0; i < n; i+=1) {

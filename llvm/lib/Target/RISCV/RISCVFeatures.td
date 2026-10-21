@@ -507,7 +507,7 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
-                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
+                  AssemblerPredicate<(none_of FeatureStdExtZbb)>;
 
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
@@ -530,7 +530,7 @@ def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                     AssemblerPredicate<(all_of FeatureStdExtZbkb),
                         "'Zbkb' (Bitmanip instructions for Cryptography)">;
 def NoStdExtZbkb : Predicate<"!Subtarget->hasStdExtZbkb()">,
-                   AssemblerPredicate<(all_of (not FeatureStdExtZbkb))>;
+                   AssemblerPredicate<(none_of FeatureStdExtZbkb)>;
 
 def FeatureStdExtZbkx
     : RISCVExtension<1, 0, "Crossbar permutation instructions">,
@@ -771,7 +771,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 2,
+    : RISCVExperimentalExtension<0, 9,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
@@ -1327,7 +1327,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -1704,6 +1704,15 @@ def HasVendorXqccmp
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
+def FeatureVendorXqccmi
+    : RISCVExperimentalExtension<0, 2,
+                     "Qualcomm 16-bit Instruction Lookup Table",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmi
+    : Predicate<"Subtarget->hasVendorXqccmi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmi),
+                         "'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)">;
+
 def FeatureVendorXqccmt
     : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
                      [FeatureStdExtZca, FeatureStdExtZicsr]>;
@@ -1985,7 +1994,7 @@ def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
+             AssemblerPredicate<(none_of Feature64Bit),
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
@@ -2246,6 +2255,10 @@ def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
           "true", "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
+
+def TuneAvoidVXRM
+    : SubtargetFeature<"avoid-vxrm", "AvoidVXRM",
+                       "true", "Instructions that use VXRM should be avoided">;
 
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).

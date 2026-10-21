@@ -404,8 +404,6 @@ LANGOPT(ApplePragmaPack, 1, 0, NotCompatible, "Apple gcc-compatible #pragma pack
 
 LANGOPT(XLPragmaPack, 1, 0, NotCompatible, "IBM XL #pragma pack handling")
 
-LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, Compatible, "retain documentation comments from system headers in the AST")
-
 LANGOPT(APINotes, 1, 0, NotCompatible, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, NotCompatible, "use module-based external API notes")
 LANGOPT(SwiftVersionIndependentAPINotes, 1, 0, NotCompatible, "use external API notes capturing all versions")
@@ -469,6 +467,8 @@ ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAd
              "Scope of return address signing")
 ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddressKeyKind::AKey, NotCompatible,
              "Key used for return address signing")
+ENUM_LANGOPT(SignReturnAddressHardening, SignReturnAddressHardeningKind, 1,
+             SignReturnAddressHardeningKind::None, NotCompatible, "Hardening of return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, NotCompatible, "Branch-target enforcement enabled")
 LANGOPT(BranchProtectionPAuthLR, 1, 0, NotCompatible, "Use PC as a diversifier using PAuthLR NOP instructions.")
 LANGOPT(GuardedControlStack, 1, 0, NotCompatible, "Guarded control stack enabled")
@@ -525,7 +525,7 @@ LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
 LANGOPT(DebugRunLifetimeSafety, 1, 0, Benign, "Run lifetime safety analysis for C++. Does not enable warnings.")
 
-LANGOPT(EnableLifetimeSafetyInC, 1, 0, Benign, "Lifetime safety analysis for C")
+LANGOPT(EnableLifetimeSafetyInC, 1, 1, Benign, "Lifetime safety analysis for C")
 
 LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, Benign, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
 

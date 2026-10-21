@@ -35,6 +35,14 @@ add_header(
 )
 
 add_header(
+  sys_eventfd_macros
+  HDR
+    sys-eventfd-macros.h
+  DEPENDS
+    .fcntl_macros
+)
+
+add_header(
   sys_file_macros
   HDR
     sys-file-macros.h
@@ -44,6 +52,14 @@ add_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(
@@ -98,6 +114,12 @@ add_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h
+)
+
+add_header(
+  sys_xattr_macros
+  HDR
+    sys-xattr-macros.h
 )
 
 add_header(

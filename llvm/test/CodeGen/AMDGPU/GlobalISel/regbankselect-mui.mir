@@ -616,10 +616,10 @@ body: |
     ; NEW_RBS-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
     ; NEW_RBS-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
     ; NEW_RBS-NEXT: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
-    ; NEW_RBS-NEXT: [[C:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 1
-    ; NEW_RBS-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[COPY]], [[C]]
-    ; NEW_RBS-NEXT: [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
-    ; NEW_RBS-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](i32), [[C1]]
+    ; NEW_RBS-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; NEW_RBS-NEXT: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[COPY]], [[C]]
+    ; NEW_RBS-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; NEW_RBS-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](s32), [[C1]]
     ; NEW_RBS-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
     ; NEW_RBS-NEXT: G_STORE [[SELECT]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
     ; NEW_RBS-NEXT: S_ENDPGM 0
@@ -1206,8 +1206,8 @@ body: |
   ; NEW_RBS-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[C3]](s32)
   ; NEW_RBS-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[COPY8]]
   ; NEW_RBS-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
-  ; NEW_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C4]](s32)
+  ; NEW_RBS-NEXT:   [[C4:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C4]](i32)
   ; NEW_RBS-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY6]](s1), $exec_lo, implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
@@ -1227,8 +1227,8 @@ body: |
   ; NEW_RBS-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[C6]](s32)
   ; NEW_RBS-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[LOAD1]](s32), [[COPY12]]
   ; NEW_RBS-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP1]](s1)
-  ; NEW_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](s32)
+  ; NEW_RBS-NEXT:   [[C7:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](i32)
   ; NEW_RBS-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[AMDGPU_COPY_VCC_SCC1]](s1)
   ; NEW_RBS-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; NEW_RBS-NEXT:   G_BR %bb.4
@@ -1262,8 +1262,9 @@ body: |
   ; NEW_RBS-NEXT:   [[ADD1:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI2]], [[C9]]
   ; NEW_RBS-NEXT:   [[C10:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 100
   ; NEW_RBS-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(ult), [[PHI2]](s32), [[C10]]
-  ; NEW_RBS-NEXT:   [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP2]], [[C9]]
-  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](s32)
+  ; NEW_RBS-NEXT:   [[C11:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1
+  ; NEW_RBS-NEXT:   [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[ICMP2]], [[C11]]
+  ; NEW_RBS-NEXT:   [[AMDGPU_COPY_VCC_SCC2:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[AND]](i32)
   ; NEW_RBS-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC2]](s1), implicit-def $scc
   ; NEW_RBS-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
