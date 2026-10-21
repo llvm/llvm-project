@@ -35789,9 +35789,7 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
 
   Value *Vec = R.vectorizeTree({}, IVI);
   assert(Vec->getType() == FieldsTy && "Expected the vector of the fields.");
-  IRBuilder<TargetFolder> Builder(IVI->getContext(), TargetFolder(DL));
-  Builder.SetInsertPoint(IVI);
-  Builder.SetCurrentDebugLocation(IVI->getDebugLoc());
+  IRBuilder<TargetFolder> Builder(IVI->getIterator(), TargetFolder(DL));
   if (!IsIdentity)
     Vec = Builder.CreateShuffleVector(Vec, OrderMask);
   Value *Packed = Builder.CreateBitCast(Vec, PacksTy);

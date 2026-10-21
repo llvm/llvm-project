@@ -318,6 +318,14 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     `BUILD_SHARED_LIBS` is only recommended for use by LLVM developers. If you want to build LLVM as a shared library, you should use the `LLVM_BUILD_LLVM_DYLIB` option.
     :::
 
+**CLANG_ENABLE_CIR**:BOOL
+
+:   Used to disable building the experimental MLIR Code Generator, ClangIR when
+    building Clang. The ClangIR build automatically includes a significant amount
+    of the MLIR project as well, and results in a significant increase in the time
+    required to build Clang and the resulting size of the clang binary. Defaults
+    to ON.
+
 **LLVM_ABI_BREAKING_CHECKS**:STRING
 
 :   Used to decide if LLVM should be built with ABI breaking checks or not.
