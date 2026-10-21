@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterCheckerAPI.h"
+#include "UninitializedObject/UninitializedObject.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -481,26 +482,15 @@ static const FieldRegion *findUninitializedField(ProgramStateRef State,
     return First == Last ? nullptr : findUninitializedField(State, Last);
   }
 
-  const auto *RT = Ty->getAsStructureType();
-  if (!RT)
-    return nullptr;
-  const auto *RD = RT->getDecl()->getDefinition();
-  if (!RD)
+  if (!Ty->isStructureType())
     return nullptr;
 
-  for (const auto *FD : RD->fields()) {
-    if (!FD->getIdentifier())
-      continue;
+  UninitObjCheckerOptions Opts;
+  Opts.IsPedantic = true;
 
-    const auto *FR = MRMgr.getFieldRegion(FD, R);
-    if (FD->getType()->isStructureType()) {
-      if (const auto *Uninit = findUninitializedField(State, FR))
-        return Uninit;
-    } else if (!FD->getType()->isAggregateType() &&
-               State->getSVal(FR).isUndef())
-      return FR;
-  }
-  return nullptr;
+  FindUninitializedFields Finder(State, R, Opts);
+  const auto &UninitFields = Finder.getResults().second;
+  return UninitFields.empty() ? nullptr : UninitFields.begin()->first;
 }
 
 ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
