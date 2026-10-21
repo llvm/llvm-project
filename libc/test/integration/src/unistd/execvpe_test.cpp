@@ -74,8 +74,9 @@ void fork_and_execvpe_path_search() {
   ASSERT_EQ(WEXITSTATUS(status), 0);
 }
 
-// POSIX.1-2024 mandates that execvpe() searches for the program using the
-// value of PATH from the caller's environment, not from the envp argument.
+// Linux / GNU execvpe() searches for the program using the value of PATH
+// from the caller's environment, not from the envp argument (also standardized
+// in POSIX.1-2024).
 void fork_and_execvpe_caller_path_not_envp() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {

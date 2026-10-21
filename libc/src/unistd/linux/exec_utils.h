@@ -44,8 +44,8 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
   // Otherwise treat file as the name of a file in a directory, search the
   // directories listed in PATH.
   //
-  // Per POSIX.1-2024 and Linux specifications, the search path is taken from
-  // the caller's environment (via EnvironmentManager), not from the `envp`
+  // Per POSIX.1-2024 and Linux / GNU specifications, the search path is taken
+  // from the caller's environment (via EnvironmentManager), not from the `envp`
   // argument passed to execvpe.
   constexpr cpp::string_view DEFAULT_PATH = "/bin:/usr/bin";
   const char *env_path =
@@ -78,12 +78,15 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
     if (ret)
       return ret;
 
-    int err = ret.error();
-    if (err == EACCES) {
+    switch (int err = ret.error()) {
+    case EACCES:
       seen_eacces = true;
-    } else if (err == ENOENT || err == ENOTDIR) {
+      break;
+    case ENOENT:
+    case ENOTDIR:
       last_error = err;
-    } else {
+      break;
+    default:
       return Error(err);
     }
   }
