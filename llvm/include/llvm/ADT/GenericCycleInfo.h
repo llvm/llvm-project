@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +45,6 @@
 
 namespace llvm {
 
-template <typename PtrType> class SmallPtrSetImpl;
 template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
@@ -161,11 +161,6 @@ private:
            "CycleInfo used with outdated block number epoch");
   }
   void addToBlockMap(BlockT *Block, CycleRef C);
-
-  /// Implementation of verifyCycle. \p Reachable caches the blocks reachable
-  /// from the function entry; it is computed on first use, so that verifying
-  /// many cycles walks the whole function at most once.
-  void verifyCycle(CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const;
 
 public:
   /// Iteration over child cycles, yielding handles. The first child (if any)
@@ -319,7 +314,11 @@ public:
   BlockT *getCyclePredecessor(CycleRef C) const;
 
   /// Verify that \p C is actually a well-formed cycle in the CFG.
-  void verifyCycle(CycleRef C) const;
+  ///
+  /// \p Reachable caches the blocks reachable from the function entry. It is
+  /// computed on first use if empty, so that verifying many cycles walks the
+  /// whole function at most once. It must not be reused after the CFG changes.
+  void verifyCycle(CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const;
 
   /// Verify the parent-child relations of \p C.
   ///

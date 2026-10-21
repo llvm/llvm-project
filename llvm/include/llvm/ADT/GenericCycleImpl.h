@@ -105,14 +105,6 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(CycleRef C) const
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
-#ifndef NDEBUG
-  SmallPtrSet<BlockT *, 32> Reachable;
-  verifyCycle(C, Reachable);
-#endif
-}
-
-template <typename ContextT>
 void GenericCycleInfo<ContextT>::verifyCycle(
     CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const {
 #ifndef NDEBUG
