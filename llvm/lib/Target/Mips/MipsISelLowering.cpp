@@ -611,7 +611,7 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   // r6 selects can test canonical words directly in i64.
   SDValue LHS = SetCC.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
-  if (Subtarget.hasMips64r6() && Subtarget.isGP64bit() && FalseTy == MVT::i64 &&
+  if (Subtarget.hasMips64r6() && FalseTy == MVT::i64 &&
       LHS.getOpcode() == ISD::TRUNCATE && LHS.getValueType() == MVT::i32 &&
       LHS.getOperand(0).getValueType() == MVT::i64 &&
       (CC == ISD::SETEQ || CC == ISD::SETNE) &&
