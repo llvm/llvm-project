@@ -19315,10 +19315,29 @@ static auto m_Tbl(Instruction *&Tbl, Value *&Mask) {
                                       m_Value(), m_Value(Mask))))));
 }
 
-// Match a tbl intrinsic whose result is converted to a floating point value.
+// Match a tbl intrinsic whose result is converted to a floating point value,
+// with the src and dest types for the UIToFP having the same bitwidth.
+struct uitofp_tbl_match {
+  Instruction *&Tbl;
+  Value *&Mask;
+
+  uitofp_tbl_match(Instruction *&Tbl, Value *&Mask) : Tbl(Tbl), Mask(Mask) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    using namespace llvm::PatternMatch;
+
+    if (!PatternMatch::match(V, m_OneUse(m_UIToFP(m_Tbl(Tbl, Mask)))))
+      return false;
+
+    UIToFPInst *UIToFP = cast<UIToFPInst>(V);
+    return UIToFP->getSrcTy()->getPrimitiveSizeInBits() ==
+           UIToFP->getDestTy()->getPrimitiveSizeInBits();
+  }
+};
+
+
 static auto m_UIToFPTbl(Instruction *&Tbl, Value *&Mask) {
-  using namespace llvm::PatternMatch;
-  return m_OneUse(m_UIToFP(m_Tbl(Tbl, Mask)));
+  return uitofp_tbl_match(Tbl, Mask);
 }
 
 // Match either of the above tbls, and recalculate the index of the
