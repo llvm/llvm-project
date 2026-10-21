@@ -201,7 +201,9 @@ public:
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm ub-aware interpreter\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm ub-aware interpreter\n");
 
   if (EntryFunc.empty()) {
     WithColor::error() << "--entry-function name cannot be empty\n";
@@ -217,8 +219,6 @@ int main(int argc, char **argv) {
     WithColor::error() << "--vscale value must be a power of 2\n";
     return 1;
   }
-
-  LLVMContext Context;
 
   // Load the bitcode...
   SMDiagnostic Err;

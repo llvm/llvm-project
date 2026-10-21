@@ -1,0 +1,128 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner -aarch64postlegalizercombiner-only-enable-rule=simplify_demanded_bits -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target triple = "aarch64"
+
+  define void @drop_mask_debug() !dbg !10 { ret void }
+  define void @nested_logical_debug() !dbg !30 { ret void }
+  define void @shared_mask_debug() !dbg !50 { ret void }
+  define void @full_demand_debug() !dbg !60 { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "test.c", directory: "/")
+  !2 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !3 = !DISubroutineType(types: !4)
+  !4 = !{}
+  !5 = !{i32 2, !"Debug Info Version", i32 3}
+
+  !10 = distinct !DISubprogram(name: "drop_mask_debug", scope: !1, file: !1, line: 1, type: !3, spFlags: DISPFlagDefinition, unit: !0)
+  !11 = !DILocalVariable(name: "x", scope: !10, file: !1, line: 1, type: !2)
+  !12 = !DILocalVariable(name: "masked", scope: !10, file: !1, line: 1, type: !2)
+  !13 = !DILocalVariable(name: "sum", scope: !10, file: !1, line: 1, type: !2)
+  !19 = !DILocation(line: 1, column: 1, scope: !10)
+
+  !30 = distinct !DISubprogram(name: "nested_logical_debug", scope: !1, file: !1, line: 3, type: !3, spFlags: DISPFlagDefinition, unit: !0)
+  !31 = !DILocalVariable(name: "masked", scope: !30, file: !1, line: 3, type: !2)
+  !32 = !DILocalVariable(name: "logical", scope: !30, file: !1, line: 3, type: !2)
+  !39 = !DILocation(line: 3, column: 1, scope: !30)
+
+  !50 = distinct !DISubprogram(name: "shared_mask_debug", scope: !1, file: !1, line: 5, type: !3, spFlags: DISPFlagDefinition, unit: !0)
+  !51 = !DILocalVariable(name: "masked", scope: !50, file: !1, line: 5, type: !2)
+  !59 = !DILocation(line: 5, column: 1, scope: !50)
+
+  !60 = distinct !DISubprogram(name: "full_demand_debug", scope: !1, file: !1, line: 6, type: !3, spFlags: DISPFlagDefinition, unit: !0)
+  !61 = !DILocalVariable(name: "masked", scope: !60, file: !1, line: 6, type: !2)
+  !69 = !DILocation(line: 6, column: 1, scope: !60)
+
+...
+---
+# The removed mask's debug users cannot use the unmasked value. Keep x's value.
+name: drop_mask_debug
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: drop_mask_debug
+    ; CHECK: DBG_VALUE %x(i32), $noreg, {{![0-9]+}}, !DIExpression()
+    ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+    ; CHECK-NEXT: DBG_VALUE_LIST {{![0-9]+}}, !DIExpression({{.*}}), $noreg, $noreg
+    ; CHECK: %res:_(i32) = G_OR %x, %bits
+    %x:_(i32) = COPY $w0
+    DBG_VALUE %x, $noreg, !11, !DIExpression(), debug-location !19
+    %mask:_(i32) = G_CONSTANT i32 -65281
+    %masked:_(i32) = G_AND %x, %mask
+    DBG_VALUE %masked, $noreg, !12, !DIExpression(), debug-location !19
+    DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %masked, %x, debug-location !19
+    %bits:_(i32) = G_CONSTANT i32 65280
+    %res:_(i32) = disjoint G_OR %masked, %bits
+    $w0 = COPY %res(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# Propagate debug invalidation through a surviving logical operation.
+name: nested_logical_debug
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: nested_logical_debug
+    ; CHECK: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+    ; CHECK: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %high:_(i32) = G_CONSTANT i32 65280
+    %masked:_(i32) = G_OR %x, %high
+    DBG_VALUE %masked, $noreg, !31, !DIExpression(), debug-location !39
+    %logical:_(i32) = G_AND %masked, %y
+    DBG_VALUE %logical, $noreg, !32, !DIExpression(), debug-location !39
+    %low:_(i32) = G_CONSTANT i32 255
+    %res:_(i32) = G_AND %logical, %low
+    $w0 = COPY %res(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# Bypassing a shared producer leaves its value and debug users unchanged.
+name: shared_mask_debug
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: shared_mask_debug
+    ; CHECK: %masked:_(i32) = G_AND %x, %mask
+    ; CHECK-NEXT: DBG_VALUE %masked(i32), $noreg, {{![0-9]+}}, !DIExpression()
+    ; CHECK: %res:_(i32) = G_OR %x, %bits
+    %x:_(i32) = COPY $w0
+    %mask:_(i32) = G_CONSTANT i32 -65281
+    %masked:_(i32) = G_AND %x, %mask
+    DBG_VALUE %masked, $noreg, !51, !DIExpression(), debug-location !59
+    %bits:_(i32) = G_CONSTANT i32 65280
+    %res:_(i32) = disjoint G_OR %masked, %bits
+    $w0 = COPY %res(i32)
+    $w1 = COPY %masked(i32)
+    RET_ReallyLR implicit $w0, implicit $w1
+...
+---
+# Full demand makes the replacement valid for debug users as well.
+name: full_demand_debug
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: full_demand_debug
+    ; CHECK: DBG_VALUE %x(i32), $noreg, {{![0-9]+}}, !DIExpression()
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %mask:_(i32) = G_CONSTANT i32 -1
+    %masked:_(i32) = G_AND %x, %mask
+    DBG_VALUE %masked, $noreg, !61, !DIExpression(), debug-location !69
+    %res:_(i32) = G_OR %y, %masked
+    $w0 = COPY %res(i32)
+    RET_ReallyLR implicit $w0
+...

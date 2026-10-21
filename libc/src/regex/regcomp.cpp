@@ -23,6 +23,7 @@
 #include "src/__support/macros/null_check.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_internal.h"
+#include "src/__support/regex/regex_parser.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -40,6 +41,11 @@ LLVM_LIBC_FUNCTION(int, regcomp,
   preg->__internal = nullptr;
   preg->re_nsub = 0;
 
+  // TODO: Enable BRE (!(cflags & REG_EXTENDED)), REG_ICASE, REG_NEWLINE, and
+  // REG_NOSPEC as each feature is implemented in subsequent patches.
+  if (!(cflags & REG_EXTENDED) || (cflags & ~(REG_EXTENDED | REG_NOSUB)) != 0)
+    return REG_BADPAT;
+
   // TODO: Once cpp::unique_ptr and AllocChecker-backed cpp::make_unique are
   // available in src/__support/CPP/, manage RegexInternal via unique_ptr so
   // error paths do not require manual delete.
@@ -48,29 +54,14 @@ LLVM_LIBC_FUNCTION(int, regcomp,
   if (!ac)
     return REG_ESPACE;
 
-  ErrorOr<regex::ExprId> cur = internal->pool.empty_str();
-  if (!cur.has_value()) {
+  ErrorOr<regex::ExprId> root =
+      regex::parse_ere(cpp::string_view(pattern), cflags, internal->pool);
+  if (!root.has_value()) {
     delete internal;
-    return cur.error();
+    return root.error();
   }
 
-  // TODO: Replace direct literal concatenation with the ERE/BRE parser as
-  // regular expression syntax support is wired up.
-  cpp::string_view pattern_view(pattern);
-  for (char c : pattern_view) {
-    ErrorOr<regex::ExprId> lit = internal->pool.make_lit(c);
-    if (!lit.has_value()) {
-      delete internal;
-      return lit.error();
-    }
-    cur = internal->pool.make_concat(*cur, *lit);
-    if (!cur.has_value()) {
-      delete internal;
-      return cur.error();
-    }
-  }
-
-  internal->root = *cur;
+  internal->root = *root;
   internal->cflags = cflags;
   preg->__internal = internal;
   return 0;

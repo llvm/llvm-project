@@ -322,6 +322,101 @@ func.func @unsigned_ops_out_of_narrowed_signed_range() -> (i64, i64, i64, i64, i
 }
 
 //===----------------------------------------------------------------------===//
+// Unsigned division, remainder and logical right shift
+//===----------------------------------------------------------------------===//
+
+// For x = -3, the i9 operation computes 509 / 7 = 72, but narrowing gives
+// 253 / 7 = 36. Both results fit signed i8, so result ranges do not prevent it.
+// CHECK-LABEL: func.func @divui_extsi_i8
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C7:.+]] = arith.constant 7 : i9
+// CHECK-DAG: %[[WIDE:.+]] = arith.extsi %[[ARG]] : i8 to i9
+// CHECK: %[[DIV:.+]] = arith.divui %[[WIDE]], %[[C7]] : i9
+// CHECK-NEXT: return %[[DIV]] : i9
+func.func @divui_extsi_i8(%x: i8) -> i9 {
+  %c7 = arith.constant 7 : i9
+  %wide = arith.extsi %x : i8 to i9
+  %div = arith.divui %wide, %c7 : i9
+  return %div : i9
+}
+
+// For x = -3, the i9 operation computes ceil(509 / 7) = 73, but narrowing
+// gives ceil(253 / 7) = 37. Both results fit signed i8.
+// CHECK-LABEL: func.func @ceildivui_extsi_i8
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C7:.+]] = arith.constant 7 : i9
+// CHECK-DAG: %[[WIDE:.+]] = arith.extsi %[[ARG]] : i8 to i9
+// CHECK: %[[DIV:.+]] = arith.ceildivui %[[WIDE]], %[[C7]] : i9
+// CHECK-NEXT: return %[[DIV]] : i9
+func.func @ceildivui_extsi_i8(%x: i8) -> i9 {
+  %c7 = arith.constant 7 : i9
+  %wide = arith.extsi %x : i8 to i9
+  %div = arith.ceildivui %wide, %c7 : i9
+  return %div : i9
+}
+
+// Signed representability is insufficient for unsigned remainder. For x = -3,
+// the i16 operation computes 65533 % 7 = 6, but narrowing gives 253 % 7 = 1.
+// CHECK-LABEL: func.func @remui_extsi_i8
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C7:.+]] = arith.constant 7 : i16
+// CHECK-DAG: %[[WIDE:.+]] = arith.extsi %[[ARG]] : i8 to i16
+// CHECK: %[[REM:.+]] = arith.remui %[[WIDE]], %[[C7]] : i16
+// CHECK-NEXT: return %[[REM]] : i16
+func.func @remui_extsi_i8(%x: i8) -> i16 {
+  %c7 = arith.constant 7 : i16
+  %wide = arith.extsi %x : i8 to i16
+  %rem = arith.remui %wide, %c7 : i16
+  return %rem : i16
+}
+
+// Zero extension preserves both unsigned operands, including values >= 128.
+// CHECK-LABEL: func.func @remui_extui_i8
+// CHECK-SAME: (%[[LHS:.+]]: i8, %[[RHS:.+]]: i8)
+// CHECK-NEXT: %[[REM:.+]] = arith.remui %[[LHS]], %[[RHS]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[REM]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @remui_extui_i8(%lhs: i8, %rhs: i8) -> i16 {
+  %a = arith.extui %lhs : i8 to i16
+  %b = arith.extui %rhs : i8 to i16
+  %rem = arith.remui %a, %b : i16
+  return %rem : i16
+}
+
+// A sign-extended value can still narrow when its range proves it nonnegative.
+// CHECK-LABEL: func.func @remui_nonnegative_extsi_i8
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[C7:.+]] = arith.constant 7 : i8
+// CHECK: %[[NONNEGATIVE:.+]] = arith.maxsi %[[ARG]], %[[C0]] : i8
+// CHECK-NEXT: %[[REM:.+]] = arith.remui %[[NONNEGATIVE]], %[[C7]] : i8
+// CHECK-NEXT: %[[RESULT:.+]] = arith.extui %[[REM]] : i8 to i16
+// CHECK-NEXT: return %[[RESULT]] : i16
+func.func @remui_nonnegative_extsi_i8(%x: i8) -> i16 {
+  %c0 = arith.constant 0 : i8
+  %c7 = arith.constant 7 : i16
+  %nonnegative = arith.maxsi %x, %c0 : i8
+  %wide = arith.extsi %nonnegative : i8 to i16
+  %rem = arith.remui %wide, %c7 : i16
+  return %rem : i16
+}
+
+// For x = -3, the i9 operation computes 509 >> 2 = 127, but narrowing gives
+// 253 >> 2 = 63. The shift amount is also below the narrowed bitwidth.
+// CHECK-LABEL: func.func @shrui_extsi_i8
+// CHECK-SAME: (%[[ARG:.+]]: i8)
+// CHECK-DAG: %[[C2:.+]] = arith.constant 2 : i9
+// CHECK-DAG: %[[WIDE:.+]] = arith.extsi %[[ARG]] : i8 to i9
+// CHECK: %[[SHIFT:.+]] = arith.shrui %[[WIDE]], %[[C2]] : i9
+// CHECK-NEXT: return %[[SHIFT]] : i9
+func.func @shrui_extsi_i8(%x: i8) -> i9 {
+  %c2 = arith.constant 2 : i9
+  %wide = arith.extsi %x : i8 to i9
+  %shift = arith.shrui %wide, %c2 : i9
+  return %shift : i9
+}
+
+//===----------------------------------------------------------------------===//
 // Shift ops must not be narrowed when the shift amount can reach the target
 // bitwidth, since a shift >= the bitwidth is poison. Here the value fits in
 // i32 but the amount [0, 63] does not, so narrowing must be skipped.

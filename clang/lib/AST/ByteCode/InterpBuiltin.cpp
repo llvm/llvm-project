@@ -260,7 +260,7 @@ static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
-  unsigned Depth = S.Current->getDepth();
+  unsigned Depth = S.FrameDepth;
   auto isStdCall = [](const FunctionDecl *F) -> bool {
     return F && F->isInStdNamespace() && F->getIdentifier() &&
            F->getIdentifier()->isStr("is_constant_evaluated");

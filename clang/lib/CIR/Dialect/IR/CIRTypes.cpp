@@ -64,13 +64,8 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
 static bool isPureCIRType(mlir::Type ty) {
   if (!ty)
     return true;
-  return !ty.walk([](mlir::Type t) {
-              if (!t)
-                return mlir::WalkResult::advance();
-              return mlir::isa<cir::CIRDialect>(t.getDialect())
-                         ? mlir::WalkResult::advance()
-                         : mlir::WalkResult::interrupt();
-            }).wasInterrupted();
+  return ty.getContext()->getOrLoadDialect<cir::CIRDialect>()->isPureCIRType(
+      ty);
 }
 
 //===----------------------------------------------------------------------===//

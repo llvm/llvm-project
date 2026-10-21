@@ -390,14 +390,15 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
         if (castKind == CastKind::None)
           break;
       }
-      // For operations that explicitly treat the values as signed, we should
-      // only do signed casts, if those are deemed possible as such based on the
-      // value range.
+      // Constrain the cast kind to preserve the interpretation required by the
+      // operation.
       auto castKindForOp =
           llvm::TypeSwitch<Operation *, CastKind>(op)
               .Case<arith::DivSIOp, arith::CeilDivSIOp, arith::FloorDivSIOp,
                     arith::RemSIOp, arith::MaxSIOp, arith::MinSIOp,
                     arith::ShRSIOp>([](auto) { return CastKind::Signed; })
+              .Case<arith::DivUIOp, arith::CeilDivUIOp, arith::RemUIOp,
+                    arith::ShRUIOp>([](auto) { return CastKind::Unsigned; })
               .Default(CastKind::Both);
       castKind = mergeCastKinds(castKind, castKindForOp);
       if (castKind == CastKind::None)

@@ -5821,9 +5821,9 @@ add_header_library(
 )
 
 add_header_library(
-  tanf
+  tanf_double_eval
   HDRS
-    tanf.h
+    tanf_double_eval.h
   DEPENDS
     .range_reduction
     .sincosf_utils
@@ -5834,6 +5834,32 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanf_float_eval
+  HDRS
+    tanf_float_eval.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  tanf
+  HDRS
+    tanf.h
+  DEPENDS
+    .tanf_double_eval
+    .tanf_float_eval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(

@@ -1004,6 +1004,8 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # libintl.h entrypoints
+    libc.src.libintl.bind_textdomain_codeset
+    libc.src.libintl.bindtextdomain
     libc.src.libintl.textdomain
 
     # regex.h entrypoints

@@ -222,8 +222,17 @@ def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
                                        unmerge_duplane32, extract_duplane8,
                                        extract_duplane16, extract_duplane32]>;
 
+def perfectshuffle_matchdata : GIDefMatchData<"SmallVector<ShuffleEntry>">;
+def perfect_shuffle: GICombineRule<
+  (defs root:$root, perfectshuffle_matchdata:$matchinfo),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+         [{ return matchPerfectShuffle(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyPerfectShuffle(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
-                                              uzp, trn, shuf_to_ins, fullrev]>;
+                                              uzp, trn, shuf_to_ins, fullrev,
+                                              perfect_shuffle]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule<
@@ -442,5 +451,6 @@ def AArch64PostLegalizerCombiner
                         combine_mul_cmlt, combine_use_vector_truncate,
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
-                        funnel_shift_from_or_shift_constants_are_legal]> {
+                        funnel_shift_from_or_shift_constants_are_legal,
+                        simplify_demanded_bits]> {
 }

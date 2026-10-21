@@ -3324,6 +3324,33 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   return std::nullopt;
 }
 
+/// Match Or(And(MASK, A), And(Not(MASK), B)), which ISel selects as
+/// BSL/BIT/BIF. Both Ands must have one use and be in the Or's block. MainAnd,
+///
+/// OtherAnd, A and B are out parameters with the corresponding instructions.
+/// MainAnd refers to And that has Not as one of its operands.
+static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
+                     Instruction *&OtherAnd, Value *&A, Value *&B) {
+  Value *MaskValue;
+  if (!match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
+                       m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
+                                        m_Value(A))))))
+    return false;
+
+  if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Value(B))))
+    return false;
+
+  MainAnd = I->getOperand(0) == OtherAnd ? cast<Instruction>(I->getOperand(1))
+                                         : cast<Instruction>(I->getOperand(0));
+
+  // Both Ands should be in same basic block as Or
+  if (I->getParent() != MainAnd->getParent() ||
+      I->getParent() != OtherAnd->getParent())
+    return false;
+
+  return true;
+}
+
 bool SimplifyValuePattern(SmallVector<Value *> &Vec, bool AllowPoison) {
   size_t VecSize = Vec.size();
   if (VecSize == 1)
@@ -4088,6 +4115,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (AllUsersAbsorbCast)
       return MaxAbsorbedCost;
   }
+
+  // A vector compare already produces a lane mask (CMxx/FCMxx), so sign
+  // extending it to the compare width is free. That only holds while the
+  // result stays a vector; scalarized lanes still need a CSETM each.
+  const Instruction *Cmp;
+  const Value *CmpOp;
+  if (I && useNeonVector(Dst) &&
+      match(I, m_SExt(m_Instruction(Cmp, m_Cmp(m_Value(CmpOp), m_Value())))) &&
+      Cmp->getParent() == I->getParent() &&
+      CmpOp->getType()->getScalarSizeInBits() == Dst->getScalarSizeInBits() &&
+      getTypeLegalizationCost(Dst).second.isVector())
+    return 0;
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
@@ -8097,35 +8136,16 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     // Pattern: Or(And(MaskValue, A), And(Not(MaskValue), B)) ->
     // bitselect(MaskValue, A, B) where Not(MaskValue) = Xor(MaskValue, -1)
     if (ST->hasNEON()) {
-      Instruction *OtherAnd, *IA, *IB;
-      Value *MaskValue;
       // MainAnd refers to And instruction that has 'Not' as one of its operands
-      if (match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
-                          m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
-                                           m_Instruction(IA)))))) {
-        if (match(OtherAnd,
-                  m_c_And(m_Specific(MaskValue), m_Instruction(IB)))) {
-          Instruction *MainAnd = I->getOperand(0) == OtherAnd
-                                     ? cast<Instruction>(I->getOperand(1))
-                                     : cast<Instruction>(I->getOperand(0));
+      Instruction *MainAnd, *OtherAnd;
+      Value *A, *B;
+      if (matchBSL(I, MainAnd, OtherAnd, A, B)) {
+        Ops.push_back(
+            &MainAnd->getOperandUse(MainAnd->getOperand(0) == A ? 1 : 0));
+        Ops.push_back(&I->getOperandUse(0));
+        Ops.push_back(&I->getOperandUse(1));
 
-          // Both Ands should be in same basic block as Or
-          if (I->getParent() != MainAnd->getParent() ||
-              I->getParent() != OtherAnd->getParent())
-            return false;
-
-          // Non-mask operands of both Ands should also be in same basic block
-          if (I->getParent() != IA->getParent() ||
-              I->getParent() != IB->getParent())
-            return false;
-
-          Ops.push_back(
-              &MainAnd->getOperandUse(MainAnd->getOperand(0) == IA ? 1 : 0));
-          Ops.push_back(&I->getOperandUse(0));
-          Ops.push_back(&I->getOperandUse(1));
-
-          return true;
-        }
+        return true;
       }
     }
 
