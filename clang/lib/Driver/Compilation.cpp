@@ -288,12 +288,7 @@ struct ParallelJobResult {
   std::string Error;
 };
 
-// Collect the device jobs that share StartIndex's parallel group and can run
-// concurrently, run them on a thread pool, and record them in \p Done. Group
-// members need not be adjacent in the job list: in device-only compilation each
-// target's compile is followed by its own device link, so the compiles that
-// share a group are separated by those links. Returns true if a parallel group
-// (including the start job) was executed.
+// Device-only compiles in one group can be separated by device links.
 static bool
 tryExecuteParallelOffloadJobGroup(const Driver &D, const ArgList &Args,
                                   ArrayRef<std::optional<StringRef>> Redirects,
