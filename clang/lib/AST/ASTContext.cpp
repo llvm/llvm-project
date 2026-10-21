@@ -12657,6 +12657,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
   bool IsChar = false, IsShort = false;
+  bool IsLeast = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12679,6 +12680,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Signed && "Can't use both 'S' and 'U' modifiers!");
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
+      break;
+    case 'l':
+      // This modifier represents the least-width type (e.g. uint_least8_t).
+      assert(!IsLeast && "Can't use 'l' modifier multiple times!");
+      IsLeast = true;
       break;
     case 'B':
       // This modifier represents int8 type (byte-width).
@@ -12830,6 +12836,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Unsigned ? Context.UnsignedLongTy : Context.LongTy;
     else
       Type = Unsigned ? Context.UnsignedIntTy : Context.IntTy;
+    if (IsLeast)
+      Type = Context.getLeastIntTypeForBitwidth(Context.getIntWidth(Type),
+                                                /*Signed=*/!Unsigned);
     break;
   case 'c':
     assert(HowLong == 0 && "Bad modifiers used with 'c'!");
