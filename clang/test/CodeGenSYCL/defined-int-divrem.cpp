@@ -1,9 +1,9 @@
-// SYCL device code defaults to defined integer division and remainder, except
-// on SPIR and SPIR-V targets; host code retains undefined behavior.
+// SYCL device code defaults to defined integer division and remainder; host
+// code retains undefined behavior. An explicit opt-out restores plain ops.
 
-// RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
+// RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -fsycl-is-device -triple nvptx64-nvidia-cuda -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
-// RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -fdefined-int-divrem -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
+// RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -fno-defined-int-divrem -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
 // RUN: %clang_cc1 -fsycl-is-host -triple x86_64-unknown-linux-gnu -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
 
 int f_sdiv(int a, int b) { return a / b; }

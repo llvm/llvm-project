@@ -3229,9 +3229,9 @@ branches accordingly.) On by default.}]>;
 
 defm defined_int_divrem : BoolFOption<"defined-int-divrem",
   CodeGenOpts<"DefinedIntDivRem">,
-  Default<"(LangOpts->OpenCL || LangOpts->CUDAIsDevice || LangOpts->SYCLIsDevice) && !T.isSPIROrSPIRV()">,
+  Default<"LangOpts->OpenCL || LangOpts->CUDAIsDevice || LangOpts->SYCLIsDevice">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Give integer division and remainder by zero, and signed division overflow, an unspecified result instead of undefined behavior (default for OpenCL and for CUDA, HIP and SYCL device code, except on SPIR and SPIR-V targets)">,
+          "Give integer division and remainder by zero, and signed division overflow, an unspecified result instead of undefined behavior (default for OpenCL and for CUDA, HIP and SYCL device code)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Give integer division and remainder by zero, and signed division overflow, undefined behavior">>;
 

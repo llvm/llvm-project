@@ -314,10 +314,10 @@ features cannot lower the translation-unit ABI level;
   by zero, and signed division overflow (`INT_MIN / -1`), an unspecified result
   instead of undefined behavior by lowering integer `/` and `%` to frozen
   `llvm.<op>.poison` intrinsics. On by default for OpenCL (OpenCL C and C++ for
-  OpenCL) and for CUDA, HIP and SYCL device code, except on SPIR and SPIR-V
-  targets; off otherwise, including host code and OpenMP offload. NVPTX and
-  AMDGPU select the intrinsics as their plain division for types up to 64 bits,
-  so there is no guard on the divisor there.
+  OpenCL) and for CUDA, HIP and SYCL device code; off otherwise, including
+  host code and OpenMP offload. NVPTX and AMDGPU select the intrinsics as their
+  plain division for types up to 64 bits, so there is no guard on the divisor
+  there.
 
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
@@ -1133,9 +1133,8 @@ features cannot lower the translation-unit ABI level;
   emitted under ``-fsanitize-trap``.
 - Integer ``/`` and ``%`` now lower to the ``llvm.<op>.poison`` intrinsics,
   frozen to a fixed value (an unspecified result instead of undefined
-  behavior), by default except on SPIR and SPIR-V targets, as required by
-  OpenCL C v3.0 s6.5.1. The new ``-f[no-]defined-int-divrem`` flag controls
-  this explicitly.
+  behavior), by default, as required by OpenCL C v3.0 s6.5.1. The new
+  ``-f[no-]defined-int-divrem`` flag controls this explicitly.
 - In OpenCL C and C++ for OpenCL, ``-Wdivision-by-zero`` now says that integer
   division and remainder by zero result in an unspecified value instead of
   calling them undefined (OpenCL C v3.0 s6.5.1).
@@ -1235,11 +1234,10 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA/HIP Language Changes
 
-- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`,
-  except on SPIR and SPIR-V targets: division by zero and signed division
-  overflow give an unspecified value instead of undefined behavior. Host code
-  is unchanged, and `-fno-defined-int-divrem` restores the previous behavior in
-  device code.
+- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`:
+  division by zero and signed division overflow give an unspecified value
+  instead of undefined behavior. Host code is unchanged, and
+  `-fno-defined-int-divrem` restores the previous behavior in device code.
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected
   ROCm installation to the header search path when it exists. This allows
@@ -1428,11 +1426,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Improvements
 
-- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`,
-  except on SPIR and SPIR-V targets: division by zero and signed division
-  overflow give an unspecified value instead of undefined behavior. Host code
-  is unchanged, and `-fno-defined-int-divrem` restores the previous behavior in
-  device code.
+- Integer `/` and `%` in device code now default to `-fdefined-int-divrem`:
+  division by zero and signed division overflow give an unspecified value
+  instead of undefined behavior. Host code is unchanged, and
+  `-fno-defined-int-divrem` restores the previous behavior in device code.
 
 ## Additional Information
 

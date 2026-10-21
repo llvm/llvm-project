@@ -1,15 +1,13 @@
 // OpenCL C v3.0 s6.5.1: integer division by zero and INT_MIN / -1 result in
-// an unspecified value, so by default (except on SPIR and SPIR-V targets, as
-// SPIR-V has no instruction with these semantics yet) integer / and % lower to
-// a frozen llvm.<op>.poison intrinsic. A constant divisor that rules both cases out
+// an unspecified value, so by default integer / and % lower to a frozen
+// llvm.<op>.poison intrinsic. A constant divisor that rules both cases out
 // keeps the plain instruction.
 
 // RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-unknown-unknown -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-unknown-unknown -cl-std=CL3.0 -fno-defined-int-divrem -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
-// RUN: %clang_cc1 -disable-llvm-passes -triple spir64-unknown-unknown -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
-// RUN: %clang_cc1 -disable-llvm-passes -triple spir64-unknown-unknown -cl-std=CL3.0 -fdefined-int-divrem -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
-// RUN: %clang_cc1 -disable-llvm-passes -triple spirv64-unknown-unknown -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
-// RUN: %clang_cc1 -disable-llvm-passes -triple spirv64-unknown-unknown -cl-std=CL3.0 -fdefined-int-divrem -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
+// RUN: %clang_cc1 -disable-llvm-passes -triple spir64-unknown-unknown -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
+// RUN: %clang_cc1 -disable-llvm-passes -triple spirv64-unknown-unknown -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
+// RUN: %clang_cc1 -disable-llvm-passes -triple spirv64-unknown-unknown -cl-std=CL3.0 -fno-defined-int-divrem -emit-llvm -o - %s | FileCheck %s --check-prefix=OFF --implicit-check-not=.poison
 // RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-unknown-unknown -cl-std=clc++2021 -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=ON
 // RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-unknown-unknown -cl-std=CL3.0 -fsanitize=integer-divide-by-zero,signed-integer-overflow -emit-llvm -o - %s | FileCheck %s --check-prefix=UBSAN
