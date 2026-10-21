@@ -765,3 +765,95 @@ define i1 @test_nuw_incorrect_precondition(ptr %p, i64 %x, i64 %y) {
   %cmp2 = icmp ugt ptr %gep.x, %gep.y
   ret i1 %cmp2
 }
+
+define i1 @test_nuw_scale_exceeds_signed_range(ptr %p, i64 %x) {
+; CHECK-LABEL: @test_nuw_scale_exceeds_signed_range(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [9223372036854775809 x i8], ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr nuw [9223372036854775809 x i8], ptr %p, i64 %x
+  %cmp = icmp ule ptr %gep, %p
+  ret i1 %cmp
+}
+
+define i1 @test_nuw_scale_exceeds_signed_range_repeated_index(ptr %p, i64 %x) {
+; CHECK-LABEL: @test_nuw_scale_exceeds_signed_range_repeated_index(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [4611686018427387905 x [2 x i8]], ptr [[P:%.*]], i64 [[X:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[GEP]], [[P]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr nuw [4611686018427387905 x [2 x i8]], ptr %p, i64 %x, i64 %x
+  %cmp = icmp ule ptr %gep, %p
+  ret i1 %cmp
+}
+
+define i1 @test_nusw_nuw_scale_exceeds_signed_range(ptr %p, i64 %x) {
+; CHECK-LABEL: @test_nusw_nuw_scale_exceeds_signed_range(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw [9223372036854775809 x i8], ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr nusw nuw [9223372036854775809 x i8], ptr %p, i64 %x
+  %cmp = icmp ule ptr %gep, %p
+  ret i1 %cmp
+}
+
+define i1 @test_nuw_narrow_index(ptr %p, i32 %x) {
+; CHECK-LABEL: @test_nuw_narrow_index(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i32 [[X]]
+; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[X_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.ext = zext i32 %x to i64
+  %gep.x = getelementptr nuw i8, ptr %p, i32 %x
+  %gep.x.ext = getelementptr nuw i8, ptr %p, i64 %x.ext
+  %cmp = icmp ule ptr %gep.x, %gep.x.ext
+  ret i1 %cmp
+}
+
+define i1 @test_nuw_narrow_index_scale_4(ptr %p, i32 %x) {
+; CHECK-LABEL: @test_nuw_narrow_index_scale_4(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i32, ptr [[P:%.*]], i32 [[X]]
+; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nuw i32, ptr [[P]], i64 [[X_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.ext = zext i32 %x to i64
+  %gep.x = getelementptr nuw i32, ptr %p, i32 %x
+  %gep.x.ext = getelementptr nuw i32, ptr %p, i64 %x.ext
+  %cmp = icmp ule ptr %gep.x, %gep.x.ext
+  ret i1 %cmp
+}
+
+define i1 @test_nuw_narrow_index_known_non_negative(ptr %p, i32 %x) {
+; CHECK-LABEL: @test_nuw_narrow_index_known_non_negative(
+; CHECK-NEXT:    [[X_POS:%.*]] = icmp sge i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_POS]])
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i32 [[X]]
+; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[X_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.pos = icmp sge i32 %x, 0
+  call void @llvm.assume(i1 %x.pos)
+  %x.ext = zext i32 %x to i64
+  %gep.x = getelementptr nuw i8, ptr %p, i32 %x
+  %gep.x.ext = getelementptr nuw i8, ptr %p, i64 %x.ext
+  %cmp = icmp ule ptr %gep.x, %gep.x.ext
+  ret i1 %cmp
+}
+
+define i1 @test_nusw_nuw_narrow_index(ptr %p, i32 %x) {
+; CHECK-LABEL: @test_nusw_nuw_narrow_index(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i32 [[X]]
+; CHECK-NEXT:    [[GEP_X_EXT:%.*]] = getelementptr nusw nuw i8, ptr [[P]], i64 [[X_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.ext = zext i32 %x to i64
+  %gep.x = getelementptr nusw nuw i8, ptr %p, i32 %x
+  %gep.x.ext = getelementptr nusw nuw i8, ptr %p, i64 %x.ext
+  %cmp = icmp ule ptr %gep.x, %gep.x.ext
+  ret i1 %cmp
+}
