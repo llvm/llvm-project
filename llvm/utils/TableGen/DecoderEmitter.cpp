@@ -112,6 +112,13 @@ static cl::opt<bool> IgnoreFullyDefinedOperands(
         "Do not automatically decode operands with no '?' in their encoding."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+// TableGen.cmake enables this when assertions are on.
+static cl::opt<bool> EmitDecoderDebug(
+    "emit-decoder-debug",
+    cl::desc("Emit LLVM_DEBUG logging of operand and instruction decode "
+             "failures into the generated decoder."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -683,28 +690,25 @@ static std::vector<EncodingIsland> getIslands(const KnownBits &EncodingBits,
   return Islands;
 }
 
-/// Emit:
-///   if (!Check(...)) {
-///     LLVM_DEBUG(<Helper>(<Args>));
-///     [DecodeComplete = false;]
-///     return MCDisassembler::Fail;
-///   }
+/// Emit a failing-Check early return, logging via \p Helper if \p WithDebug.
 static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
                                 const Twine &CheckCall, StringRef Helper,
                                 const Twine &Args, bool SetDecodeCompleteOnFail,
                                 bool WithDebug) {
+  if (!WithDebug) {
+    OS << Indent << "if (!Check(S, " << CheckCall << ")) { "
+       << (SetDecodeCompleteOnFail ? "DecodeComplete = false; " : "")
+       << "return MCDisassembler::Fail; }\n";
+    return;
+  }
   OS << Indent << "if (!Check(S, " << CheckCall << ")) {\n";
-  // The LLVM_DEBUG line is debug-only; it is omitted from the de-duplication
-  // key so that it cannot perturb decoder sharing (see DecoderSet).
-  if (WithDebug)
-    OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
+  OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
   if (SetDecodeCompleteOnFail)
     OS << Indent << "  DecodeComplete = false;\n";
   OS << Indent << "  return MCDisassembler::Fail;\n";
   OS << Indent << "}\n";
 }
 
-/// Operand-level decoder (emitBinaryParser).
 static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
                                          const OperandInfo &OpInfo,
                                          const Twine &CheckCall,
@@ -715,8 +719,8 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
   std::string Args;
   raw_string_ostream AS(Args);
   if (OpInfo.Fields.empty()) {
-    const char *Desc = OpInfo.InitValue ? "imm" : "bits<0>";
-    AS << '"' << OpName << "\", \"" << Desc << "\", \"" << DecoderName << '"';
+    // 'bits<0>' operands are handled by the caller.
+    AS << '"' << OpName << "\", \"imm\", \"" << DecoderName << '"';
   } else {
     AS << '"' << OpName << "\", \"" << DecoderName << "\", {";
     ListSeparator LS;
@@ -727,21 +731,6 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
 
   emitCheckWithDbgMsg(OS, Indent, CheckCall, "reportOperandDecodeFailure", Args,
                       !OpInfo.HasCompleteDecoder, WithDebug);
-}
-
-/// Whole-instruction \p DecoderMethod. Used when the encoding
-/// has a custom \p DecoderMethod (whole-instruction decoder).
-static void emitDecoderMethodOpcDebug(raw_ostream &OS, indent Indent,
-                                      const InstructionEncoding &Encoding,
-                                      StringRef DecoderMethod, bool WithDebug) {
-  // Report MI's opcode rather than this encoding's name: identical decoder
-  // bodies are shared between encodings, so a baked-in name would misreport
-  // every encoding but the first one that produced the body.
-  emitCheckWithDbgMsg(OS, Indent,
-                      formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
-                      "reportInsnDecodeFailure",
-                      formatv("MI.getOpcode(), \"{}\"", DecoderMethod),
-                      !Encoding.hasCompleteDecoder(), WithDebug);
 }
 
 static void emitBinaryParser(raw_ostream &OS, indent Indent,
@@ -763,9 +752,17 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // The operand has no encoding, so the corresponding argument is omitted.
     // This avoids confusion and allows the function to be overloaded if the
     // operand does have an encoding in other instructions.
-    emitDecoderCheckWithOpcDebug(OS, Indent, OpInfo,
-                                 formatv("{}(MI, Decoder)", OpInfo.Decoder),
-                                 WithDebug);
+    if (!WithDebug) {
+      OS << Indent << "if (!Check(S, " << OpInfo.Decoder << "(MI, Decoder)))\n"
+         << Indent << "  return MCDisassembler::Fail;\n";
+      return;
+    }
+    emitCheckWithDbgMsg(OS, Indent, formatv("{}(MI, Decoder)", OpInfo.Decoder),
+                        "reportOperandDecodeFailure",
+                        formatv("\"{}\", \"bits<0>\", \"{}\"",
+                                OpInfo.Name.empty() ? "opd" : OpInfo.Name,
+                                OpInfo.Decoder),
+                        /*SetDecodeCompleteOnFail=*/false, WithDebug);
     return;
   }
 
@@ -817,7 +814,12 @@ static std::string getDecoderString(const InstructionEncoding &Encoding,
   // If a custom instruction decoder was specified, use that.
   StringRef DecoderMethod = Encoding.getDecoderMethod();
   if (!DecoderMethod.empty()) {
-    emitDecoderMethodOpcDebug(OS, Indent, Encoding, DecoderMethod, WithDebug);
+    // Decoder bodies are shared across encodings, so report MI's opcode.
+    emitCheckWithDbgMsg(
+        OS, Indent, formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
+        "reportInsnDecodeFailure",
+        formatv("MI.getOpcode(), \"{}\"", DecoderMethod),
+        !Encoding.hasCompleteDecoder(), WithDebug);
   } else {
     for (const OperandInfo &Op : Encoding.getOperands())
       emitBinaryParser(OS, Indent, Encoding, Op, WithDebug);
@@ -1146,16 +1148,15 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 )";
   }
 
-  // Dump the encoding being decoded. This is the only dynamic-value print the
-  // feature needs: every later message names the field(base, width) it read, so
-  // the failing bits can be read off this one line. Emitting it here rather
-  // than at each decoder check keeps the per-check cost at zero.
-  OS << "\n  LLVM_DEBUG(reportInsnBits(insn, ";
-  if (SpecializeDecodersPerBitwidth)
-    OS << "BitWidth";
-  else
-    OS << "std::is_integral_v<InsnType> ? sizeof(InsnType) * 8 : 64";
-  OS << "));\n";
+  // Failure messages name the field(base, width) they read; the bits are here.
+  if (EmitDecoderDebug) {
+    OS << "\n  LLVM_DEBUG(reportInsnBits(insn, ";
+    if (SpecializeDecodersPerBitwidth)
+      OS << "BitWidth";
+    else
+      OS << "std::is_integral_v<InsnType> ? sizeof(InsnType) * 8 : 64";
+    OS << "));\n";
+  }
 
   OS << R"(
   SmallVector<const uint8_t *, 8> ScopeStack;
@@ -1351,12 +1352,10 @@ DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
                                                NegativeMask.getZExtValue()));
   }
 
-  // De-duplicate on the debug-free body so that the per-operand debug logging
-  // (which is compiled out under NDEBUG) cannot change decoder sharing and thus
-  // the generated tables; emit the full body, including any LLVM_DEBUG calls.
+  // De-duplicate on the debug-free body; see DecoderSet.
   unsigned DecoderIndex =
       Ctx.getDecoderIndex(getDecoderString(Encoding, /*WithDebug=*/false),
-                          getDecoderString(Encoding, /*WithDebug=*/true));
+                          getDecoderString(Encoding, EmitDecoderDebug));
   N->addChild(std::make_unique<DecodeNode>(
       Encoding.getName(), Encoding.getInstruction()->EnumVal, DecoderIndex));
 
@@ -1592,9 +1591,11 @@ namespace {
 // on their usage.
 template <typename T> constexpr uint32_t InsnBitWidth = 0;
 
-#ifndef NDEBUG
-// Operand with no encoding fields: `Desc` is either "imm" (a constant
-// immediate) or "bits<0>" (no encoding at all).
+)";
+
+  if (EmitDecoderDebug)
+    OS << R"(#ifndef NDEBUG
+// Operand with no encoding fields: `Desc` is "imm" or "bits<0>".
 [[maybe_unused]] void reportOperandDecodeFailure(const char *OperandName,
                                                  const char *Desc,
                                                  const char *Decoder) {
@@ -1623,10 +1624,7 @@ reportOperandDecodeFailure(const char *OperandName, const char *Decoder,
          << " : FAIL\n";
 }
 
-// Dump the raw encoding once per decode attempt, so that the field(base, width)
-// named by a failing operand or opcode can be read straight off it. Printed
-// most-significant nibble first, zero-padded to \p NumBits, in 64-bit chunks so
-// that encodings wider than 64 bits work too.
+// Print \p NumBits of \p Insn in hex, in 64-bit chunks for wide encodings.
 template <typename InsnType>
 [[maybe_unused]] void reportInsnBits(const InsnType &Insn, unsigned NumBits) {
   dbgs() << "decodeInstruction: insn = 0x";

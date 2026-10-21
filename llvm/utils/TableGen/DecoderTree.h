@@ -24,11 +24,8 @@ namespace llvm {
 class InstructionEncoding;
 
 using PredicateSet = SetVector<CachedHashString>;
-// Maps a decoder's de-duplication key (its body with debug-only content
-// excluded) to the body actually emitted (which may include LLVM_DEBUG calls).
-// Keying on the debug-free body ensures decoder de-duplication -- and therefore
-// the generated decoder tables and indices -- is identical whether or not the
-// per-operand debug logging is present.
+// Maps a decoder's debug-free body (the de-duplication key) to the body that is
+// emitted, so debug logging cannot change decoder sharing.
 using DecoderSet = MapVector<CachedHashString, std::string>;
 
 /// Context shared across decoder trees.
@@ -46,9 +43,7 @@ struct DecoderContext {
     return std::distance(Predicates.begin(), I);
   }
 
-  // Decoders are de-duplicated on \p DedupKey, the body without debug-only
-  // content. \p DecoderBody is the body actually emitted for this decoder; if
-  // \p DedupKey was seen before, the first body wins.
+  // If \p DedupKey was seen before, the first \p DecoderBody wins.
   unsigned getDecoderIndex(StringRef DedupKey, StringRef DecoderBody) {
     CachedHashString Key(DedupKey);
     Decoders.insert({Key, DecoderBody.str()});

@@ -151,7 +151,8 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER: /* my_mov */, MyTarget::MY_MOV, Convert__RegByHwMode_YRegs_EvenIfRequired1_0__RegByHwMode_XRegs_EvenIfRequired1_1, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired, MCK_RegByHwMode_XRegs_EvenIfRequired }, },
 
 
-// DISASM:      {{^\[\[maybe_unused\]\]$}}
+
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeMyPtrRCRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:   switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:   case 0: // DefaultMode
@@ -163,7 +164,7 @@ include "Common/RegClassByHwModeCommon.td"
 // DISASM-NEXT:   }
 // DISASM-NEXT: }
 
-// DISASM:      {{^\[\[maybe_unused\]\]$}}
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeXRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:  case 0: // DefaultMode
@@ -177,7 +178,7 @@ include "Common/RegClassByHwModeCommon.td"
 // DISASM-NEXT:  }
 // DISASM-NEXT:}
 // DISASM-EMPTY:
-// DISASM:      {{^\[\[maybe_unused\]\]$}}
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeYRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:  case 0: // DefaultMode
@@ -192,19 +193,19 @@ include "Common/RegClassByHwModeCommon.td"
 // DISASM: static DecodeStatus decodeToMCInst(
 // DISASM:   switch (Idx) {
 // DISASM: case 0:
-// DISASM: Check(S, DecodeYRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))
-// DISASM: Check(S, DecodeXRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))
+// DISASM: if (!Check(S, DecodeYRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
+// DISASM: if (!Check(S, DecodeXRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // DISASM: case 1:
-// DISASM: Check(S, DecodeXRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))
+// DISASM: if (!Check(S, DecodeXRegs_EvenIfRequiredRegClassByHwMode(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // DISASM: case 2:
-// DISASM: Check(S, DecodeXRegs_EvenRegisterClass(MI, tmp, Address, Decoder))
+// DISASM: if (!Check(S, DecodeXRegs_EvenRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // DISASM: case 3:
-// DISASM: Check(S, DecodeXRegsRegisterClass(MI, tmp, Address, Decoder))
+// DISASM: if (!Check(S, DecodeXRegsRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // DISASM: case 4:
-// DISASM: Check(S, YEvenIfRequiredCustomDecoder(MI, tmp, Address, Decoder))
+// DISASM: if (!Check(S, YEvenIfRequiredCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 
 
 // ISEL-SDAG: MatcherTable

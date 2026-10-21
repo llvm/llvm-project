@@ -1,11 +1,7 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler -emit-decoder-debug -I %p/../../../include %s | FileCheck %s
 
-// Verify the per-operand decode debug path for an operand whose encoding bits
-// are spread across several disjoint islands of the instruction. Each island
-// becomes one (base, width) pair; the call site passes them as a list of
-// {base, width} pairs and reportOperandDecodeFailure joins them with " + " at
-// runtime, so no unique "field(b,w) + ..." string literal is baked into the
-// table.
+// An operand split across several encoding islands passes one {base, width}
+// pair per island.
 
 include "llvm/Target/Target.td"
 
@@ -32,8 +28,6 @@ def I : Instruction {
   let Inst{31} = 0;
 }
 
-// The operand is assembled from the three islands, then the field overload of
-// reportOperandDecodeFailure is called with all three (base, width) pairs.
 // CHECK-LABEL: case 0:
 // CHECK-NEXT:    tmp = 0x0;
 // CHECK-NEXT:    tmp |= fieldFromInstruction(insn, 0, 2);
