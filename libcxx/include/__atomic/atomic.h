@@ -77,16 +77,14 @@ struct __atomic_base // false
   _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return __a_.__atomic_exchange(__d, __m);
   }
-  _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return __a_.__atomic_exchange(__d, __m);
-  }
+  _Tp exchange(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT { return __a_.__atomic_exchange(__d, __m); }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
-    return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __s, __f);
+    return __a_.__atomic_compare_exchange_weak(std::addressof(__e), __d, __s, __f);
   }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
-    return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __s, __f);
+    return __a_.__atomic_compare_exchange_weak(std::addressof(__e), __d, __s, __f);
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __s, memory_order __f) volatile _NOEXCEPT
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f) {
@@ -97,10 +95,10 @@ struct __atomic_base // false
     return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __s, __f);
   }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
+    return __a_.__atomic_compare_exchange_weak(std::addressof(__e), __d, __m, __m);
   }
   bool compare_exchange_weak(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_compare_exchange_weak(std::addressof(__a_), std::addressof(__e), __d, __m, __m);
+    return __a_.__atomic_compare_exchange_weak(std::addressof(__e), __d, __m, __m);
   }
   bool compare_exchange_strong(_Tp& __e, _Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return __a_.__atomic_compare_exchange_strong(std::addressof(__e), __d, __m, __m);
@@ -144,28 +142,28 @@ struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_add(__op, __m);
   }
   _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_add(__op, __m);
   }
   _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_sub(__op, __m);
   }
   _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_sub(__op, __m);
   }
   _Tp fetch_and(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_and(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_and(__op, __m);
   }
   _Tp fetch_and(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_and(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_and(__op, __m);
   }
   _Tp fetch_or(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return std::__cxx_atomic_fetch_or(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_or(__op, __m);
   }
   _Tp fetch_or(_Tp __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return std::__cxx_atomic_fetch_or(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_or(__op, __m);
   }
   _Tp fetch_xor(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return std::__cxx_atomic_fetch_xor(std::addressof(this->__a_), __op, __m);
@@ -294,25 +292,25 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     // __atomic_fetch_add accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_add(__op, __m);
   }
 
   _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
     // __atomic_fetch_add accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_add(__op, __m);
   }
 
   _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_sub(__op, __m);
   }
 
   _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
     // __atomic_fetch_sub accepts function pointers, guard against them.
     static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
-    return std::__cxx_atomic_fetch_sub(std::addressof(this->__a_), __op, __m);
+    return this->__a_.__atomic_fetch_sub(__op, __m);
   }
 
 #if _LIBCPP_STD_VER >= 26
@@ -382,7 +380,7 @@ private:
   template <class _This>
   static _Tp __fetch_add(_This&& __self, _Tp __operand, memory_order __m) {
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
-      return std::__cxx_atomic_fetch_add(__a, __builtin_operand, __order);
+      return __a->__atomic_fetch_add(__builtin_operand, __order);
     };
     auto __plus = [](auto __a, auto __b) { return __a + __b; };
     return __rmw_op(std::forward<_This>(__self), __operand, __m, __plus, __builtin_op);
@@ -391,7 +389,7 @@ private:
   template <class _This>
   static _Tp __fetch_sub(_This&& __self, _Tp __operand, memory_order __m) {
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
-      return std::__cxx_atomic_fetch_sub(__a, __builtin_operand, __order);
+      return __a->__atomic_fetch_sub(__builtin_operand, __order);
     };
     auto __minus = [](auto __a, auto __b) { return __a - __b; };
     return __rmw_op(std::forward<_This>(__self), __operand, __m, __minus, __builtin_op);

@@ -401,13 +401,13 @@ static void __contention_wait(__cxx_atomic_contention_t* __waiter_count,
                               void const* __address_to_wait,
                               void const* __old_value,
                               MaybeTimeout maybe_timeout_ns) {
-  __cxx_atomic_fetch_add(__waiter_count, __cxx_contention_t(1), memory_order_relaxed);
+  __waiter_count->__atomic_fetch_add(__cxx_contention_t(1), memory_order_relaxed);
   // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
   __platform_wait_on_address<_Size>(__address_to_wait, __old_value, maybe_timeout_ns);
-  __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
+  __waiter_count->__atomic_fetch_sub(__cxx_contention_t(1), memory_order_release);
 }
 
 static constexpr size_t __contention_table_size = (1 << 8); /* < there's no magic in this number */
@@ -444,7 +444,7 @@ static __contention_state* __get_contention_state(void const* p) {
 static void __atomic_notify_global_table(void const* __location) {
   auto const __entry = __get_contention_state(__location);
   // The value sequence laundering happens on the next line below.
-  __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
+  __entry->__platform_state.__atomic_fetch_add(__cxx_contention_t(1), memory_order_seq_cst);
   __contention_notify<sizeof(__cxx_atomic_contention_t)>(
       &__entry->__waiter_count_global,
       &__entry->__platform_state,

@@ -35,6 +35,18 @@
 //   _Tp __atomic_exchange(_Tp __value, memory_order __order) noexcept;
 //   bool __atomic_compare_exchange_strong(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) volatile noexcept;
 //   bool __atomic_compare_exchange_strong(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) noexcept;
+//   bool __atomic_compare_exchange_weak(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) volatile noexcept;
+//   bool __atomic_compare_exchange_weak(_Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) noexcept;
+//   _Tp __atomic_fetch_add(_Tp __delta, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_add(_Tp __delta, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_add(ptrdiff_t __delta, memory_order __order) votalie noexcept;
+//   _Tp __atomic_fetch_add(ptrdiff_t __delta, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_sub(_Tp __delta, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_sub(_Tp __delta, memory_order __order) noexcept;
+//   _Tp* __atomic_fetch_sub(ptrdiff_t __delta, memory_order __order) volatile noexcept;
+//   _Tp* __atomic_fetch_sub(ptrdiff_t __delta, memory_order __order) noexcept;
+//   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) volatile noexcept;
+//   _Tp __atomic_fetch_and(_Tp __pattern, memory_order __order) noexcept;
 // };
 //
 // #define __cxx_atomic_is_lock_free(__size)
@@ -48,34 +60,9 @@
 //
 //
 //
-// template <class _Tp>
-// bool __cxx_atomic_compare_exchange_weak(_Atmc<_Tp> volatile* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) noexcept;
-// template <class _Tp>
-// bool __cxx_atomic_compare_exchange_weak(_Atmc<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) noexcept;
 //
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_add(_Atmc<_Tp> volatile* __a, _Tp __delta, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_add(_Atmc<_Tp>* __a, _Tp __delta, memory_order __order) noexcept;
 //
-// template <class _Tp>
-// _Tp* __cxx_atomic_fetch_add(_Atmc<_Tp*> volatile* __a, ptrdiff_t __delta, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp* __cxx_atomic_fetch_add(_Atmc<_Tp*>* __a, ptrdiff_t __delta, memory_order __order) noexcept;
 //
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_sub(_Atmc<_Tp> volatile* __a, _Tp __delta, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_sub(_Atmc<_Tp>* __a, _Tp __delta, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp* __cxx_atomic_fetch_sub(_Atmc<_Tp*> volatile* __a, ptrdiff_t __delta, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp* __cxx_atomic_fetch_sub(_Atmc<_Tp*>* __a, ptrdiff_t __delta, memory_order __order) noexcept;
-//
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_and(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
-// template <class _Tp>
-// _Tp __cxx_atomic_fetch_and(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
 //
 // template <class _Tp>
 // _Tp __cxx_atomic_fetch_or(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
