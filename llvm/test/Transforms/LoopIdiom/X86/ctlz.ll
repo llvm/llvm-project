@@ -811,24 +811,49 @@ while.end:                                        ; preds = %while.cond
 
 ; A zero guard preserves the existing nonzero precondition.
 define i32 @prechecked_shift4_i32(i32 %x) {
-; ALL-LABEL: @prechecked_shift4_i32(
-; ALL-NEXT:  entry:
-; ALL-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
-; ALL-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
-; ALL:       loop.preheader:
-; ALL-NEXT:    br label [[LOOP:%.*]]
-; ALL:       loop:
-; ALL-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; ALL-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; ALL-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
-; ALL-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
-; ALL-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VALUE_NEXT]], 0
-; ALL-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
-; ALL:       exit:
-; ALL-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i32 [ [[COUNT_NEXT]], [[LOOP]] ]
-; ALL-NEXT:    ret i32 [[COUNT_NEXT_LCSSA]]
-; ALL:       zero:
-; ALL-NEXT:    ret i32 0
+; LZCNT-LABEL: @prechecked_shift4_i32(
+; LZCNT-NEXT:  entry:
+; LZCNT-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
+; LZCNT-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
+; LZCNT:       loop.preheader:
+; LZCNT-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
+; LZCNT-NEXT:    [[TMP1:%.*]] = sub i32 32, [[TMP0]]
+; LZCNT-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 3
+; LZCNT-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP2]], 4
+; LZCNT-NEXT:    br label [[LOOP:%.*]]
+; LZCNT:       loop:
+; LZCNT-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP3]], [[LOOP_PREHEADER]] ], [ [[TCDEC:%.*]], [[LOOP]] ]
+; LZCNT-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; LZCNT-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
+; LZCNT-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; LZCNT-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
+; LZCNT-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; LZCNT-NEXT:    [[DONE:%.*]] = icmp eq i32 [[TCDEC]], 0
+; LZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; LZCNT:       exit:
+; LZCNT-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i32 [ [[TMP3]], [[LOOP]] ]
+; LZCNT-NEXT:    ret i32 [[COUNT_NEXT_LCSSA]]
+; LZCNT:       zero:
+; LZCNT-NEXT:    ret i32 0
+;
+; NOLZCNT-LABEL: @prechecked_shift4_i32(
+; NOLZCNT-NEXT:  entry:
+; NOLZCNT-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
+; NOLZCNT-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
+; NOLZCNT:       loop.preheader:
+; NOLZCNT-NEXT:    br label [[LOOP:%.*]]
+; NOLZCNT:       loop:
+; NOLZCNT-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; NOLZCNT-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
+; NOLZCNT-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; NOLZCNT-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
+; NOLZCNT-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VALUE_NEXT]], 0
+; NOLZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; NOLZCNT:       exit:
+; NOLZCNT-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i32 [ [[COUNT_NEXT]], [[LOOP]] ]
+; NOLZCNT-NEXT:    ret i32 [[COUNT_NEXT_LCSSA]]
+; NOLZCNT:       zero:
+; NOLZCNT-NEXT:    ret i32 0
 ;
 entry:
   %iszero = icmp eq i32 %x, 0
@@ -851,20 +876,42 @@ zero:
 
 ; Value tracking can prove nonzero without a branch; retain that existing behavior.
 define i16 @known_nonzero_shift8_i64(i64 %x) {
-; ALL-LABEL: @known_nonzero_shift8_i64(
-; ALL-NEXT:  entry:
-; ALL-NEXT:    [[INITIAL:%.*]] = or i64 [[X:%.*]], 1
-; ALL-NEXT:    br label [[LOOP:%.*]]
-; ALL:       loop:
-; ALL-NEXT:    [[COUNT:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[COUNT_NEXT:%.*]], [[LOOP]] ]
-; ALL-NEXT:    [[VALUE:%.*]] = phi i64 [ [[INITIAL]], [[ENTRY]] ], [ [[VALUE_NEXT:%.*]], [[LOOP]] ]
-; ALL-NEXT:    [[COUNT_NEXT]] = add i16 [[COUNT]], 1
-; ALL-NEXT:    [[VALUE_NEXT]] = lshr i64 [[VALUE]], 8
-; ALL-NEXT:    [[DONE:%.*]] = icmp eq i64 [[VALUE_NEXT]], 0
-; ALL-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
-; ALL:       exit:
-; ALL-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i16 [ [[COUNT_NEXT]], [[LOOP]] ]
-; ALL-NEXT:    ret i16 [[COUNT_NEXT_LCSSA]]
+; LZCNT-LABEL: @known_nonzero_shift8_i64(
+; LZCNT-NEXT:  entry:
+; LZCNT-NEXT:    [[INITIAL:%.*]] = or i64 [[X:%.*]], 1
+; LZCNT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[INITIAL]], i1 true)
+; LZCNT-NEXT:    [[TMP1:%.*]] = sub i64 64, [[TMP0]]
+; LZCNT-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 7
+; LZCNT-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 8
+; LZCNT-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i16
+; LZCNT-NEXT:    br label [[LOOP:%.*]]
+; LZCNT:       loop:
+; LZCNT-NEXT:    [[TCPHI:%.*]] = phi i64 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[TCDEC:%.*]], [[LOOP]] ]
+; LZCNT-NEXT:    [[COUNT:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[COUNT_NEXT:%.*]], [[LOOP]] ]
+; LZCNT-NEXT:    [[VALUE:%.*]] = phi i64 [ [[INITIAL]], [[ENTRY]] ], [ [[VALUE_NEXT:%.*]], [[LOOP]] ]
+; LZCNT-NEXT:    [[COUNT_NEXT]] = add i16 [[COUNT]], 1
+; LZCNT-NEXT:    [[VALUE_NEXT]] = lshr i64 [[VALUE]], 8
+; LZCNT-NEXT:    [[TCDEC]] = sub nsw i64 [[TCPHI]], 1
+; LZCNT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[TCDEC]], 0
+; LZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; LZCNT:       exit:
+; LZCNT-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i16 [ [[TMP4]], [[LOOP]] ]
+; LZCNT-NEXT:    ret i16 [[COUNT_NEXT_LCSSA]]
+;
+; NOLZCNT-LABEL: @known_nonzero_shift8_i64(
+; NOLZCNT-NEXT:  entry:
+; NOLZCNT-NEXT:    [[INITIAL:%.*]] = or i64 [[X:%.*]], 1
+; NOLZCNT-NEXT:    br label [[LOOP:%.*]]
+; NOLZCNT:       loop:
+; NOLZCNT-NEXT:    [[COUNT:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[COUNT_NEXT:%.*]], [[LOOP]] ]
+; NOLZCNT-NEXT:    [[VALUE:%.*]] = phi i64 [ [[INITIAL]], [[ENTRY]] ], [ [[VALUE_NEXT:%.*]], [[LOOP]] ]
+; NOLZCNT-NEXT:    [[COUNT_NEXT]] = add i16 [[COUNT]], 1
+; NOLZCNT-NEXT:    [[VALUE_NEXT]] = lshr i64 [[VALUE]], 8
+; NOLZCNT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[VALUE_NEXT]], 0
+; NOLZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; NOLZCNT:       exit:
+; NOLZCNT-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i16 [ [[COUNT_NEXT]], [[LOOP]] ]
+; NOLZCNT-NEXT:    ret i16 [[COUNT_NEXT_LCSSA]]
 ;
 entry:
   %initial = or i64 %x, 1
@@ -884,24 +931,51 @@ exit:
 
 ; The live-out PHI needs the actual shift amount before counting remaining shifts.
 define i32 @previous_count_shift4_i32(i32 %x) {
-; ALL-LABEL: @previous_count_shift4_i32(
-; ALL-NEXT:  entry:
-; ALL-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
-; ALL-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
-; ALL:       loop.preheader:
-; ALL-NEXT:    br label [[LOOP:%.*]]
-; ALL:       loop:
-; ALL-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; ALL-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; ALL-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
-; ALL-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
-; ALL-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VALUE_NEXT]], 0
-; ALL-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
-; ALL:       exit:
-; ALL-NEXT:    [[COUNT_LCSSA:%.*]] = phi i32 [ [[COUNT]], [[LOOP]] ]
-; ALL-NEXT:    ret i32 [[COUNT_LCSSA]]
-; ALL:       zero:
-; ALL-NEXT:    ret i32 0
+; LZCNT-LABEL: @previous_count_shift4_i32(
+; LZCNT-NEXT:  entry:
+; LZCNT-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
+; LZCNT-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
+; LZCNT:       loop.preheader:
+; LZCNT-NEXT:    [[TMP0:%.*]] = lshr i32 [[X]], 4
+; LZCNT-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
+; LZCNT-NEXT:    [[TMP2:%.*]] = sub i32 32, [[TMP1]]
+; LZCNT-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 3
+; LZCNT-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], 4
+; LZCNT-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
+; LZCNT-NEXT:    br label [[LOOP:%.*]]
+; LZCNT:       loop:
+; LZCNT-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP5]], [[LOOP_PREHEADER]] ], [ [[TCDEC:%.*]], [[LOOP]] ]
+; LZCNT-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; LZCNT-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
+; LZCNT-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; LZCNT-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
+; LZCNT-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; LZCNT-NEXT:    [[DONE:%.*]] = icmp eq i32 [[TCDEC]], 0
+; LZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; LZCNT:       exit:
+; LZCNT-NEXT:    [[COUNT_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[LOOP]] ]
+; LZCNT-NEXT:    ret i32 [[COUNT_LCSSA]]
+; LZCNT:       zero:
+; LZCNT-NEXT:    ret i32 0
+;
+; NOLZCNT-LABEL: @previous_count_shift4_i32(
+; NOLZCNT-NEXT:  entry:
+; NOLZCNT-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
+; NOLZCNT-NEXT:    br i1 [[ISZERO]], label [[ZERO:%.*]], label [[LOOP_PREHEADER:%.*]]
+; NOLZCNT:       loop.preheader:
+; NOLZCNT-NEXT:    br label [[LOOP:%.*]]
+; NOLZCNT:       loop:
+; NOLZCNT-NEXT:    [[COUNT:%.*]] = phi i32 [ [[COUNT_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; NOLZCNT-NEXT:    [[VALUE:%.*]] = phi i32 [ [[VALUE_NEXT:%.*]], [[LOOP]] ], [ [[X]], [[LOOP_PREHEADER]] ]
+; NOLZCNT-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; NOLZCNT-NEXT:    [[VALUE_NEXT]] = lshr i32 [[VALUE]], 4
+; NOLZCNT-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VALUE_NEXT]], 0
+; NOLZCNT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; NOLZCNT:       exit:
+; NOLZCNT-NEXT:    [[COUNT_LCSSA:%.*]] = phi i32 [ [[COUNT]], [[LOOP]] ]
+; NOLZCNT-NEXT:    ret i32 [[COUNT_LCSSA]]
+; NOLZCNT:       zero:
+; NOLZCNT-NEXT:    ret i32 0
 ;
 entry:
   %iszero = icmp eq i32 %x, 0
