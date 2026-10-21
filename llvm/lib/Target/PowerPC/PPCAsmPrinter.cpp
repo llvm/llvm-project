@@ -99,11 +99,11 @@ STATISTIC(NumTOCBlockAddress, "Number of Block Address TOC Entries.");
 STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 
 static cl::opt<bool> EnableSSPCanaryBitInTB(
-    "aix-ssp-tb-bit", cl::init(false),
+    "ppc-aix-ssp-tb-bit", cl::init(false),
     cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
 
 static cl::opt<bool> IFuncLocalIfProven(
-    "ifunc-local-if-proven", cl::init(false),
+    "ppc-ifunc-local-if-proven", cl::init(false),
     cl::desc("During ifunc lowering, the compiler assumes the resolver returns "
              "dso-local functions and bails out if non-local functions are "
              "detected; this flag flips the assumption: resolver returns "
@@ -112,7 +112,7 @@ static cl::opt<bool> IFuncLocalIfProven(
     cl::Hidden);
 
 // this flag is used for testing only as it might generate bad code.
-static cl::opt<bool> IFuncWarnInsteadOfError("test-ifunc-warn-noerror",
+static cl::opt<bool> IFuncWarnInsteadOfError("ppc-test-ifunc-warn-noerror",
                                              cl::init(false), cl::ReallyHidden);
 
 // Specialize DenseMapInfo to allow

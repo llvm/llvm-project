@@ -111,8 +111,10 @@ LLVM_ABI void setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
 LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI,
                                        uint64_t Count);
 
-/// Return the value of -pgo-instrument-cold-function-only.
-LLVM_ABI bool isPGOInstrumentColdFunctionOnly();
+/// Return the value of -pgo-instrument-cold-function-only in LibraryOptions, or
+/// its global value if null.
+LLVM_ABI bool isPGOInstrumentColdFunctionOnly(
+    const cl::LibraryOptionsContext *LibraryOptions);
 
 } // end namespace llvm
 
