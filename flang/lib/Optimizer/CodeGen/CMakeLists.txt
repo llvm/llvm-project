@@ -44,7 +44,7 @@ add_flang_library(FIRCodeGen
   MLIRMathToLibm
   MLIRMathToNVVM
   MLIRMathToROCDL
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenACCDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation

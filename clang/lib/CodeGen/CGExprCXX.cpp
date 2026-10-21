@@ -278,8 +278,18 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  auto getLValueForThis = [this, IsArrow,
-                           Base](bool EmitCheckedForStore = false) {
+  std::optional<LValue> HLSLThisLValue;
+  if (auto *HLSLOutArg = dyn_cast<HLSLOutArgExpr>(Base)) {
+    if (!RtlArgs)
+      RtlArgs = &RtlArgStorage;
+    HLSLThisLValue = EmitHLSLOutArgExpr(
+        HLSLOutArg, *RtlArgs, HLSLOutArg->getType(), /*IsImplicitObject=*/true);
+    EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                 drop_begin(CE->arguments(), 0), CE->getDirectCallee());
+  }
+
+  auto getLValueForThis = [this, IsArrow, Base,
+                           HLSLThisLValue](bool EmitCheckedForStore = false) {
     // FIXME: Respect EmitCheckedForStore for the IsArrow case.
     if (IsArrow) {
       LValueBaseInfo BaseInfo;
@@ -288,6 +298,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
                             BaseInfo, TBAAInfo);
     }
+    if (HLSLThisLValue)
+      return *HLSLThisLValue;
     if (EmitCheckedForStore)
       return EmitCheckedLValue(Base, TCK_Store);
     return EmitLValue(Base);

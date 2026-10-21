@@ -1535,7 +1535,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.pclose
     libc.src.stdio.perror
+    libc.src.stdio.popen
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -1736,6 +1738,18 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset
       libc.src.libintl.bindtextdomain
+      libc.src.libintl.dcgettext
+      libc.src.libintl.dcgettext_l
+      libc.src.libintl.dcngettext
+      libc.src.libintl.dcngettext_l
+      libc.src.libintl.dgettext
+      libc.src.libintl.dgettext_l
+      libc.src.libintl.dngettext
+      libc.src.libintl.dngettext_l
+      libc.src.libintl.gettext
+      libc.src.libintl.gettext_l
+      libc.src.libintl.ngettext
+      libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
 
       # net/if.h entrypoints
@@ -1762,6 +1776,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.time.tzset
 
       # unistd.h entrypoints
+      libc.src.unistd.setegid
+      libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
       libc.src.unistd.setreuid

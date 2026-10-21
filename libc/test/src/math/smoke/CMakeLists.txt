@@ -1498,6 +1498,7 @@ add_fp_unittest(
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
+    libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
 

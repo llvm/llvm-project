@@ -1608,7 +1608,7 @@ let True16Predicate = UseRealTrue16Insts in {
   def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_t16_e64>;
   def : GCNPat<
     (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
-    (V_SUB_NC_U16_t16_e64 0, VSrc_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
+    (V_SUB_NC_U16_t16_e64 0, VSrcT_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
   >;
 } // End True16Predicate = UseRealTrue16Insts
 
@@ -1821,6 +1821,10 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
   def : GCNPat<(v2bf16 (build_vector (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                      (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  let True16Predicate = UseRealTrue16Insts in
+  def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+               (EXTRACT_SUBREG (v2bf16 (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))), lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
 }

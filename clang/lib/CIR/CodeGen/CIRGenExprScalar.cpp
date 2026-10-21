@@ -26,6 +26,7 @@
 #include "mlir/IR/Value.h"
 
 #include <cassert>
+#include <numeric>
 #include <utility>
 
 using namespace clang;
@@ -416,6 +417,9 @@ public:
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+  mlir::Value emitVectorInitWithSubvectors(mlir::Location loc,
+                                           cir::VectorType vectorType,
+                                           ArrayRef<mlir::Value> inits);
 
   mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
     assert(cgf.getArrayInitIndex() &&
@@ -2653,7 +2657,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::Value src = Visit(const_cast<Expr *>(subExpr));
     mlir::Type dstTy = cgf.convertType(destTy);
 
-    assert(!cir::MissingFeatures::addressSpace());
+    // Function and object pointers may differ in address space.
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(src.getType());
+    auto dstPtrTy = mlir::dyn_cast<cir::PointerType>(dstTy);
+    if (srcPtrTy && dstPtrTy &&
+        srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace())
+      src = cgf.performAddrSpaceCast(
+          src,
+          builder.getPointerTo(srcPtrTy.getPointee(), dstPtrTy.getAddrSpace()));
 
     if (cgf.sanOpts.has(SanitizerKind::CFIUnrelatedCast))
       cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -2973,6 +2984,47 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
   return emitLoadOfLValue(e);
 }
 
+mlir::Value
+ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
+                                                cir::VectorType vectorType,
+                                                ArrayRef<mlir::Value> inits) {
+  const unsigned resElts = vectorType.getSize();
+  mlir::Value result =
+      builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
+  unsigned curIdx = 0;
+  for (mlir::Value init : inits) {
+    auto initType = mlir::dyn_cast<cir::VectorType>(init.getType());
+    if (!initType) {
+      result = builder.createInsertElement(loc, result, init, curIdx++);
+      continue;
+    }
+
+    const unsigned initElts = initType.getSize();
+    assert(curIdx + initElts <= resElts &&
+           "Sema should reject excess elements");
+    SmallVector<int64_t, 16> mask(resElts, -1);
+    std::iota(mask.begin(), mask.begin() + initElts, 0);
+    mlir::Value ext = builder.createVecShuffle(loc, init, mask);
+
+    // Poison stays on the RHS of the first shuffle, matching classic codegen.
+    const unsigned offset = curIdx == 0 ? 0 : resElts;
+    std::iota(mask.begin(), mask.begin() + curIdx, 0);
+    std::iota(mask.begin() + curIdx, mask.begin() + curIdx + initElts, offset);
+    if (curIdx == 0)
+      std::swap(result, ext);
+    result = builder.createVecShuffle(loc, result, ext, mask);
+    curIdx += initElts;
+  }
+
+  if (curIdx < resElts) {
+    const mlir::Value zeroValue =
+        builder.getNullValue(vectorType.getElementType(), loc);
+    for (; curIdx < resElts; ++curIdx)
+      result = builder.createInsertElement(loc, result, zeroValue, curIdx);
+  }
+  return result;
+}
+
 mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
   const unsigned numInitElements = e->getNumInits();
 
@@ -2991,9 +3043,15 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
 
     SmallVector<mlir::Value, 16> elements;
+    bool hasVectorInit = false;
     for (Expr *init : e->inits()) {
       elements.push_back(Visit(init));
+      hasVectorInit |= mlir::isa<cir::VectorType>(elements.back().getType());
     }
+
+    if (hasVectorInit)
+      return emitVectorInitWithSubvectors(cgf.getLoc(e->getSourceRange()),
+                                          vectorType, elements);
 
     // Zero-initialize any remaining values.
     if (numInitElements < vectorType.getSize()) {
@@ -3007,6 +3065,8 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                     cgf.getLoc(e->getSourceRange()), vectorType,
                                     elements);
   }
+
+  assert(!cir::MissingFeatures::scalableVectors());
 
   if (e->getType()->isVoidType())
     return {};

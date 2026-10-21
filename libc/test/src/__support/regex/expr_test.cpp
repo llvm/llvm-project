@@ -15,6 +15,8 @@
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::regex::ANCHOR_BOL;
+using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::ByteSet;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
 using LIBC_NAMESPACE::regex::Expr;
@@ -33,10 +35,25 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   ASSERT_TRUE(lit_a_2.has_value());
   // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(*lit_a, *lit_a_2);
+  EXPECT_FALSE(pool.has_anchors(*lit_a));
 
   auto lit_b = pool.make_lit('b');
   ASSERT_TRUE(lit_b.has_value());
   EXPECT_NE(*lit_a, *lit_b);
+
+  auto bol_1 = pool.make_anchor(ANCHOR_BOL);
+  auto bol_2 = pool.make_anchor(ANCHOR_BOL);
+  auto eol = pool.make_anchor(ANCHOR_EOL);
+  ASSERT_TRUE(bol_1.has_value());
+  ASSERT_TRUE(bol_2.has_value());
+  ASSERT_TRUE(eol.has_value());
+  EXPECT_EQ(*bol_1, *bol_2);
+  EXPECT_NE(*bol_1, *eol);
+  EXPECT_FALSE(pool.is_nullable(*bol_1));
+  EXPECT_TRUE(pool.has_anchors(*bol_1));
+  EXPECT_TRUE(pool.has_anchors(*pool.make_concat(*bol_1, *lit_a)));
+  EXPECT_TRUE(pool.has_anchors(*pool.make_alt(*lit_a, *eol)));
+  EXPECT_FALSE(pool.has_anchors(*pool.make_concat(*lit_a, *lit_b)));
 
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
