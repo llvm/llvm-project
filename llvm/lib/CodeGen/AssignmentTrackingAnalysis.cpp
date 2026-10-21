@@ -344,29 +344,57 @@ static bool shouldCoalesceFragments(Function &F) {
 using RPOToBlockMap = DenseMap<unsigned, BasicBlock *>;
 using BlockToRPOMap = DenseMap<BasicBlock *, unsigned>;
 
-/// Min-heap of RPO numbers for RPO dataflow worklists.
-using RPOWorklist = std::priority_queue<unsigned, std::vector<unsigned>,
-                                        std::greater<unsigned>>;
+namespace {
+/// A deduplicating min-heap of RPO block indices backed by a BitVector.
+class RPOWorklist {
+  std::priority_queue<unsigned, std::vector<unsigned>, std::greater<unsigned>>
+      Queue;
+  BitVector InQueue;
+
+public:
+  explicit RPOWorklist(unsigned NumBlocks, bool InsertAll = false)
+      : InQueue(NumBlocks, InsertAll) {
+    if (InsertAll)
+      for (unsigned RPO = 0; RPO < NumBlocks; ++RPO)
+        Queue.push(RPO);
+  }
+
+  bool empty() const { return Queue.empty(); }
+
+  /// Push \p RPO onto the worklist if not already present. Return true if
+  /// newly inserted.
+  bool insert(unsigned RPO) {
+    if (InQueue.test(RPO))
+      return false;
+    InQueue.set(RPO);
+    Queue.push(RPO);
+    return true;
+  }
+
+  unsigned pop() {
+    unsigned RPO = Queue.top();
+    Queue.pop();
+    InQueue.reset(RPO);
+    return RPO;
+  }
+
+  void swap(RPOWorklist &Other) {
+    Queue.swap(Other.Queue);
+    std::swap(InQueue, Other.InQueue);
+  }
+};
+} // namespace
 
 static void enqueueSuccessors(BasicBlock &BB, unsigned RPO,
                               const BlockToRPOMap &BBToOrder,
-                              BitVector &OnWorklist, BitVector &OnPending,
                               RPOWorklist &Worklist, RPOWorklist &Pending) {
   LLVM_DEBUG(dbgs() << BB.getName()
                     << " has new OutLocs, add succs to worklist: [ ");
   for (BasicBlock *Succ : successors(&BB)) {
     unsigned SuccRPO = BBToOrder.lookup(Succ);
-    if (SuccRPO > RPO) {
-      if (!OnWorklist.test(SuccRPO)) {
-        LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-        OnWorklist.set(SuccRPO);
-        Worklist.push(SuccRPO);
-      }
-    } else if (!OnPending.test(SuccRPO)) {
+    RPOWorklist &Target = SuccRPO > RPO ? Worklist : Pending;
+    if (Target.insert(SuccRPO))
       LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-      OnPending.set(SuccRPO);
-      Pending.push(SuccRPO);
-    }
   }
   LLVM_DEBUG(dbgs() << "]\n");
 }
@@ -1011,8 +1039,6 @@ public:
     // Prepare for traversal.
     //
     ReversePostOrderTraversal<Function *> RPOT(&Fn);
-    RPOWorklist Worklist;
-    RPOWorklist Pending;
     RPOToBlockMap OrderToBB;
     BlockToRPOMap BBToOrder;
     { // Init OrderToBB and BBToOrder.
@@ -1020,14 +1046,13 @@ public:
       for (BasicBlock *BB : RPOT) {
         OrderToBB[RPONumber] = BB;
         BBToOrder[BB] = RPONumber;
-        Worklist.push(RPONumber);
         ++RPONumber;
       }
     }
     BlockLivenessTracker Liveness(OrderToBB, BBToOrder);
     unsigned NumBlocks = OrderToBB.size();
-    BitVector OnWorklist(NumBlocks, /*t=*/true);
-    BitVector OnPending(NumBlocks);
+    RPOWorklist Worklist(NumBlocks, /*InsertAll=*/true);
+    RPOWorklist Pending(NumBlocks);
 
     // Perform the traversal.
     //
@@ -1042,11 +1067,9 @@ public:
     while (!Worklist.empty() || !Pending.empty()) {
       LLVM_DEBUG(dbgs() << "Processing Worklist\n");
       while (!Worklist.empty()) {
-        unsigned RPO = Worklist.top();
+        unsigned RPO = Worklist.pop();
         BasicBlock *BB = OrderToBB[RPO];
         LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
-        Worklist.pop();
-        OnWorklist.reset(RPO);
         bool SingleVisit = !Liveness.canRevisit(RPO);
         bool StoreLiveIn = !SingleVisit && BB->hasNPredecessorsOrMore(2);
         VarFragMap LiveSet;
@@ -1063,12 +1086,10 @@ public:
           process(*BB, LiveSet);
           if (updateLiveOut(*BB, RPO, SingleVisit, Liveness,
                             std::move(LiveSet)))
-            enqueueSuccessors(*BB, RPO, BBToOrder, OnWorklist, OnPending,
-                              Worklist, Pending);
+            enqueueSuccessors(*BB, RPO, BBToOrder, Worklist, Pending);
         }
       }
       Worklist.swap(Pending);
-      std::swap(OnWorklist, OnPending);
       // At this point, pending must be empty, since it was just the empty
       // worklist
       assert(Pending.empty() && "Pending should be empty");
@@ -2573,8 +2594,6 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
-  RPOWorklist Worklist;
-  RPOWorklist Pending;
   RPOToBlockMap OrderToBB;
   BlockToRPOMap BBToOrder;
   { // Init OrderToBB and BBToOrder.
@@ -2582,15 +2601,14 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
     for (BasicBlock *BB : RPOT) {
       OrderToBB[RPONumber] = BB;
       BBToOrder[BB] = RPONumber;
-      Worklist.push(RPONumber);
       ++RPONumber;
     }
   }
 
   BlockLivenessTracker Liveness(OrderToBB, BBToOrder);
   unsigned NumBlocks = OrderToBB.size();
-  BitVector OnWorklist(NumBlocks, /*t=*/true);
-  BitVector OnPending(NumBlocks);
+  RPOWorklist Worklist(NumBlocks, /*InsertAll=*/true);
+  RPOWorklist Pending(NumBlocks);
 
   // Perform the traversal.
   //
@@ -2606,11 +2624,9 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   while (!Worklist.empty() || !Pending.empty()) {
     LLVM_DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
-      unsigned RPO = Worklist.top();
+      unsigned RPO = Worklist.pop();
       BasicBlock *BB = OrderToBB[RPO];
       LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
-      Worklist.pop();
-      OnWorklist.reset(RPO);
 
       BlockInfo LiveSet;
       bool InChanged = join(*BB, RPO, Visited, Liveness, LiveSet);
@@ -2625,12 +2641,10 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
         // LiveSet is the LiveOut set for BB.
         process(*BB, &LiveSet);
         if (updateLiveOut(*BB, RPO, Liveness, std::move(LiveSet)))
-          enqueueSuccessors(*BB, RPO, BBToOrder, OnWorklist, OnPending,
-                            Worklist, Pending);
+          enqueueSuccessors(*BB, RPO, BBToOrder, Worklist, Pending);
       }
     }
     Worklist.swap(Pending);
-    std::swap(OnWorklist, OnPending);
     // At this point, pending must be empty, since it was just the empty
     // worklist
     assert(Pending.empty() && "Pending should be empty");
