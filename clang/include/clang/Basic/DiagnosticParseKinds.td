@@ -24,7 +24,8 @@ defm label_followed_by_declaration : C23Compat<
   "label followed by a declaration is">;
 
 // C2y compatibility with C23 and earlier.
-defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are",
+                                /*ext_warn=*/true>;
 defm generic_with_type_arg : C2yCompat<
   "passing a type argument as the first operand to '_Generic' is">;
 
