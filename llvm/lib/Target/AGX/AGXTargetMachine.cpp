@@ -85,12 +85,12 @@ AGXTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  // The module flag "agx-mesa-isa" selects Mesa's instruction forms for every
+  // The module flag "agx-strict" selects Mesa's instruction forms for every
   // function of the module.
   if (const auto *Flag = mdconst::extract_or_null<ConstantInt>(
-          F.getParent()->getModuleFlag("agx-mesa-isa")))
+          F.getParent()->getModuleFlag("agx-strict")))
     if (!Flag->isZero())
-      FS = FS.empty() ? "+mesa-isa" : FS + ",+mesa-isa";
+      FS = FS.empty() ? "+agx-strict" : FS + ",+agx-strict";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)

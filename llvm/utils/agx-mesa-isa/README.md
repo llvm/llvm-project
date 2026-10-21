@@ -3,8 +3,8 @@
 `mesa_isa.py` describes every instruction form Mesa's asahi compiler emits for
 G13 (M1) and G14 (M2): its packer, `src/asahi/compiler/agx_pack.c`, together
 with the operand values its compiler creates. It is the reference for the AGX
-backend's `mesa-isa` feature (llvm/docs/AGXUsage.rst, "Mesa ISA mode") and for
-the AGX Performance Simulator's `--mesa-isa` option.
+backend's `agx-strict` feature (llvm/docs/AGXUsage.rst, "strict mode") and for
+the AGX Performance Simulator's `--agx-strict` option.
 
 ```
 mesa_isa.py --cpp ../../lib/Target/AGX/MCTargetDesc/AGXMesaISA.inc   # backend table

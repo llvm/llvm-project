@@ -48,7 +48,7 @@ namespace {
 
 class AGXAsmPrinter : public AsmPrinter {
   bool ReportedMissingEncoding = false;
-  /// Encodes instructions printed as text in mesa-isa mode, so that they are
+  /// Encodes instructions printed as text in agx-strict mode, so that they are
   /// checked against Mesa's forms as object output is.
   std::unique_ptr<MCCodeEmitter> MesaChecker;
   /// The .agx.kernels record of each kernel, emitted at the end of the file.

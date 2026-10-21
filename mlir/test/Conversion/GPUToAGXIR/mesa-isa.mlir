@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-gpu-to-agxir -split-input-file | FileCheck %s
 
 // The target's features decide the lowering: on G14 the block barrier is
-// native; with +mesa-isa it takes the portable form, a threadgroup barrier.
+// native; with +agx-strict it takes the portable form, a threadgroup barrier.
 
 // CHECK-LABEL: gpu.module @native
 // CHECK: agxir.block.barrier
@@ -18,7 +18,7 @@ gpu.module @native [#agxir.target<chip = "agx-g14c">] {
 // CHECK-LABEL: gpu.module @mesa
 // CHECK-NOT: agxir.block.barrier
 // CHECK: agxir.threadgroup.barrier
-gpu.module @mesa [#agxir.target<chip = "agx-g14c", features = "+mesa-isa">] {
+gpu.module @mesa [#agxir.target<chip = "agx-g14c", features = "+agx-strict">] {
   func.func @f() {
     agx.block_barrier
     func.return

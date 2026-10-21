@@ -445,7 +445,7 @@ void AGXMCCodeEmitter::checkMesa(const MCInst &MI, ArrayRef<uint8_t> Bytes,
     return;
   Ctx.reportError(MI.getLoc(), Twine(MCII.getName(MI.getOpcode())) +
                                    " is not an instruction Mesa emits "
-                                   "(mesa-isa): " +
+                                   "(agx-strict): " +
                                    Why);
 }
 

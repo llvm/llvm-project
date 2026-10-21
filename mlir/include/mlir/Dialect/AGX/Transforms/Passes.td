@@ -35,7 +35,7 @@ def AGXExpandOpsPass : Pass<"agx-expand-ops"> {
     Option<"chip", "chip", "std::string", /*default=*/"\"\"",
            "Target chip (an LLVM AGX -mcpu), overriding the gpu.module's">,
     Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (\"+mesa-isa\"), overriding the gpu.module's">
+           "Target features (\"+agx-strict\"), overriding the gpu.module's">
   ];
 }
 

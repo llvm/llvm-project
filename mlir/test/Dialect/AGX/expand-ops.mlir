@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -agx-expand-ops=chip=agx-g14c -split-input-file | FileCheck %s --check-prefixes=CHECK,NATIVE
-// RUN: mlir-opt %s -agx-expand-ops="chip=agx-g14c features=+mesa-isa" -split-input-file | FileCheck %s --check-prefixes=CHECK,PORTABLE
+// RUN: mlir-opt %s -agx-expand-ops="chip=agx-g14c features=+agx-strict" -split-input-file | FileCheck %s --check-prefixes=CHECK,PORTABLE
 // RUN: mlir-opt %s -agx-expand-ops=chip=agx-g13g -split-input-file | FileCheck %s --check-prefixes=CHECK,PORTABLE
 
 // A fragment is loaded with two loads per thread at the documented layout.
@@ -55,7 +55,7 @@ func.func @lane_shift(%a: f32, %b: f32, %c: f32) -> f32 {
 
 // -----
 
-// G14 has the block barrier; G13 and Mesa ISA mode use the threadgroup one.
+// G14 has the block barrier; G13 and strict mode use the threadgroup one.
 // CHECK-LABEL: @barrier_and_uniform
 // NATIVE: agx.block_barrier
 // PORTABLE: agx.threadgroup_barrier

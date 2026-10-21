@@ -32,7 +32,7 @@ TEST(AGXChipInfoTest, Capabilities) {
   // Native forms stay off until their coverage is recorded.
   EXPECT_FALSE(m2max.laneShiftFMA);
   EXPECT_TRUE(m2max.blockBarrier);
-  EXPECT_FALSE(ChipInfo::get("agx-g14c", "+mesa-isa")->blockBarrier);
+  EXPECT_FALSE(ChipInfo::get("agx-g14c", "+agx-strict")->blockBarrier);
   EXPECT_FALSE(ChipInfo::get("agx-g13g")->blockBarrier);
   EXPECT_EQ(m2max.matrixUnit, MatrixUnit::Emulated);
 

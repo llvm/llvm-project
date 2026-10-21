@@ -1,17 +1,17 @@
-; Mesa ISA mode: only the instruction forms Mesa's AGX compiler emits.
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+mesa-isa -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-0
-; RUN: llc -mtriple=agx -mcpu=agx-g14c -mattr=+mesa-isa -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-0
-; RUN: llc -mtriple=agx -mcpu=agx-g13c -mattr=+mesa-isa -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-1
-; RUN: llc -mtriple=agx -mcpu=agx-g14d -mattr=+mesa-isa -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-1
+; strict mode: only the instruction forms Mesa's AGX compiler emits.
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+agx-strict -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-0
+; RUN: llc -mtriple=agx -mcpu=agx-g14c -mattr=+agx-strict -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-0
+; RUN: llc -mtriple=agx -mcpu=agx-g13c -mattr=+agx-strict -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-1
+; RUN: llc -mtriple=agx -mcpu=agx-g14d -mattr=+agx-strict -show-mc-encoding < %s | FileCheck %s --check-prefixes=CHECK,BIT45-1
 ; The module flag selects the same mode.
 ; RUN: sed 's/^;FLAG //' %s | llc -mtriple=agx -mcpu=agx-g14c -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,BIT45-0
 ; Without it, G14 has the native float add and u64 min/max.
 ; RUN: llc -mtriple=agx -mcpu=agx-g14c -show-mc-encoding < %s | FileCheck %s --check-prefix=NATIVE
 ; Every object instruction is checked as well.
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+mesa-isa -filetype=obj < %s -o /dev/null
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+agx-strict -filetype=obj < %s -o /dev/null
 
 ;FLAG !llvm.module.flags = !{!0}
-;FLAG !0 = !{i32 1, !"agx-mesa-isa", i32 1}
+;FLAG !0 = !{i32 1, !"agx-strict", i32 1}
 
 ; Mesa has no float atomics: atomicrmw fadd is a compare-and-swap loop. Bit 45
 ; (encoding byte 5, 0x20) is set only on multi-cluster G13 and two-die parts.

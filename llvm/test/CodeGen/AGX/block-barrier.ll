@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=agx -mcpu=agx-g14c -verify-machineinstrs < %s | FileCheck %s --check-prefix=G14
 ; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs < %s | FileCheck %s --check-prefix=TG
-; RUN: llc -mtriple=agx -mcpu=agx-g14c -mattr=+mesa-isa -verify-machineinstrs < %s | FileCheck %s --check-prefix=TG
+; RUN: llc -mtriple=agx -mcpu=agx-g14c -mattr=+agx-strict -verify-machineinstrs < %s | FileCheck %s --check-prefix=TG
 
 ; llvm.agx.block.barrier is the G14 block barrier, which orders memory by
-; itself; elsewhere (and in Mesa ISA mode) it is a threadgroup barrier. The
+; itself; elsewhere (and in strict mode) it is a threadgroup barrier. The
 ; compiler keeps memory accesses on their side of it.
 
 @tg = internal addrspace(3) global [128 x i32] undef

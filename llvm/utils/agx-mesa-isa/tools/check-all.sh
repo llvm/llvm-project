@@ -1,15 +1,15 @@
 #!/bin/sh
-# Runs every check of Mesa ISA mode across the projects that implement it and
+# Runs every check of strict mode across the projects that implement it and
 # prints one line per check (PASS, FAIL or SKIP when its inputs are missing):
 #
 #   tables     the backend and simulator tables are what mesa_isa.py generates
 #   fuzz       mesa_isa.py accepts what Mesa's own packer produces
 #   lit        the backend's Mesa ISA lit tests
-#   codegen    every CodeGen/AGX test compiles with +mesa-isa for G13 and G14
-#   mlir       the MLIR AGX tests (ChipInfo, expand-ops in Mesa ISA mode)
-#   fatbin     agx-build-fatbin.py builds the CHIP+mesa-isa entries
+#   codegen    every CodeGen/AGX test compiles with +agx-strict for G13 and G14
+#   mlir       the MLIR AGX tests (ChipInfo, expand-ops in strict mode)
+#   fatbin     agx-build-fatbin.py builds the CHIP+agx-strict entries
 #   simulator  the AGX Performance Simulator's Mesa ISA tests
-#   zluda      ZLUDA's PTX tests compiled in Mesa ISA mode
+#   zluda      ZLUDA's PTX tests compiled in strict mode
 #   sail       the Sail AGX model against Mesa's forms and corpus
 #
 #   check-all.sh [-k CHECK,...]
@@ -80,7 +80,7 @@ codegen() {
     # tests of diagnostics, and of other generations' features
     grep -q '^; RUN: not ' "$f" && continue
     for cpu in agx-g13g agx-g14c; do
-      if ! "$LLVM_BUILD/bin/llc" -mtriple=agx -mcpu=$cpu -mattr=+mesa-isa \
+      if ! "$LLVM_BUILD/bin/llc" -mtriple=agx -mcpu=$cpu -mattr=+agx-strict \
           -filetype=obj -o /dev/null "$f" 2>"$TMP/err"; then
         echo "$(basename "$f") $cpu:"; head -n 3 "$TMP/err"; n=$((n + 1))
       fi
@@ -111,7 +111,7 @@ d = open(sys.argv[1], "rb").read()
 assert d[:8] == b"ZAGXFAT1", "bad magic"
 n = struct.unpack_from("<I", d, 8)[0]
 names = [d[16 + 48 * i:48 + 48 * i].rstrip(b"\0").decode() for i in range(n)]
-want = ["agx-g13g", "agx-g14c", "agx-g13g+mesa-isa", "agx-g14c+mesa-isa"]
+want = ["agx-g13g", "agx-g14c", "agx-g13g+agx-strict", "agx-g14c+agx-strict"]
 assert names == want, names
 EOF
 }
@@ -125,7 +125,7 @@ zluda() {
   have "${ZLUDA:-}" || skip "ZLUDA unset"
   have "${LLVM_BUILD:-}" || skip "LLVM_BUILD unset"
   (cd "$ZLUDA" && ZLUDA_LLVM_BUILD_DIR="$LLVM_BUILD" cargo test -q -p ptx \
-    --no-default-features --features agx spirv_run_kernels_compile_mesa_isa)
+    --no-default-features --features agx spirv_run_kernels_compile_agx_strict)
 }
 
 sail() {

@@ -54,9 +54,9 @@ FailureOr<ChipInfo> ChipInfo::get(StringRef chip, StringRef features) {
   features.split(list, ',', -1, /*KeepEmpty=*/false);
   for (StringRef f : list) {
     f = f.trim();
-    if (f == "+mesa-isa")
+    if (f == "+agx-strict")
       info.mesaISA = true;
-    else if (f == "-mesa-isa")
+    else if (f == "-agx-strict")
       info.mesaISA = false;
   }
   if (info.mesaISA) {

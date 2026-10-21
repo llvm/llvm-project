@@ -11,9 +11,9 @@ The kernel source names no chip. For each chip the pipeline is:
   opt -mtriple=agx -mcpu=CHIP -O3
   llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
 
-With --mesa-isa (the default), each chip also gets an entry named "CHIP+mesa-isa", compiled with the target feature
-+mesa-isa in #agxir.target (so the agx operations take their portable forms) and in opt / llc (so only the
-instructions Mesa's asahi compiler emits are used). A runtime in Mesa ISA mode loads those entries.
+With --agx-strict (the default), each chip also gets an entry named "CHIP+agx-strict", compiled with the target feature
++agx-strict in #agxir.target (so the agx operations take their portable forms) and in opt / llc (so only the
+instructions Mesa's asahi compiler emits are used). A runtime in strict mode loads those entries.
 
 Fat AGX object layout (little-endian):
 
@@ -27,7 +27,7 @@ Fat AGX object layout (little-endian):
       then the objects (AGX ELF files), each 16-byte aligned.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
-                      [--chips agx-g13g,agx-g14c,...] [--no-mesa-isa] kernels.mlir -o out.agxfat
+                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
 """
 
 import argparse
@@ -54,7 +54,7 @@ def gpu_module_body(path):
     return "module {\n" + "\n".join(lines[start + 1:end]) + "\n}\n"
 
 
-MESA_ISA = "+mesa-isa"
+STRICT = "+agx-strict"
 
 
 def compile_for(a, src, chip, tmp, features=""):
@@ -99,8 +99,8 @@ def main():
     ap.add_argument("--llc", required=True)
     ap.add_argument("--opt", default=None, help="LLVM opt (default: next to llc)")
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
-    ap.add_argument("--no-mesa-isa", dest="mesa_isa", action="store_false",
-                    help="leave out the CHIP+mesa-isa entries")
+    ap.add_argument("--no-agx-strict", dest="agx_strict", action="store_false",
+                    help="leave out the CHIP+agx-strict entries")
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
@@ -108,9 +108,9 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         chips = [c for c in a.chips.split(",") if c]
         objects = [(c, compile_for(a, a.source, c, tmp)) for c in chips]
-        if a.mesa_isa:
+        if a.agx_strict:
             # Mesa compiles for G13 and G14 only.
-            objects += [(c + MESA_ISA, compile_for(a, a.source, c, tmp, MESA_ISA)) for c in chips
+            objects += [(c + STRICT, compile_for(a, a.source, c, tmp, STRICT)) for c in chips
                         if c.startswith(("agx-g13", "agx-g14"))]
     open(a.out, "wb").write(pack(objects))
     return 0

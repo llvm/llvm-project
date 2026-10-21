@@ -278,8 +278,8 @@ struct AGXExpandOpsPass
       FailureOr<ChipInfo> info = ChipInfo::get(name, targetFeatures);
       if (failed(info)) {
         root->emitError() << "unknown AGX chip '" << name << "'"
-                          << (targetFeatures.contains("+mesa-isa")
-                                  ? " for +mesa-isa (G13 and G14 only)"
+                          << (targetFeatures.contains("+agx-strict")
+                                  ? " for +agx-strict (G13 and G14 only)"
                                   : "");
         return signalPassFailure();
       }

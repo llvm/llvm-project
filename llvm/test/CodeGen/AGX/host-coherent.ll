@@ -5,7 +5,7 @@
 ; Device atomics see no host writes, so system-scope 32-bit atomic loads and
 ; stores are such loads and stores; other scopes keep the compare-and-swap.
 ; RUN: llc -mtriple=agx -mcpu=agx-g14c -show-mc-encoding < %s | FileCheck %s
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+mesa-isa -filetype=obj < %s -o /dev/null
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+agx-strict -filetype=obj < %s -o /dev/null
 
 ; CHECK-LABEL: poll:
 ; ld.volatile

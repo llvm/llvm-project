@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=agx -mcpu=agx-g14c -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+mesa-isa -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -mattr=+agx-strict -verify-machineinstrs < %s | FileCheck %s
 
 ; convert saturates and converts NaN to 0, so saturating conversions to 32 or
 ; 16 bits are one convert. A conversion that saturates to a narrower width
