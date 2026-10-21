@@ -52,7 +52,7 @@ double target_teams_loop_parallel_for(const double *y, int N) {
 
 // CHECK-LABEL: define internal void @{{.*}}teams_loop{{.*}}_l{{[0-9]+}}_omp_outlined(
 // CHECK: call void @__kmpc_distribute_static_init_4(
-// CHECK: omp.inner.for.body:
+// CHECK: omp.dispatch.cond:
 // CHECK: call void @__kmpc_distribute_static_fini(
 // CHECK: call i32 @__kmpc_gpu_xteam_reduce_nowait(
 

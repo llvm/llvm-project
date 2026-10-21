@@ -179,7 +179,8 @@ TAB_SIZE               = 2
 # will result in a user-defined paragraph with heading "Side Effects:".
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                =
+# Keep documentation-link aliases in sync with bindings/python/python.swig.
+ALIASES                = lldbformatting="https://lldb.llvm.org/use/formatting.html"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C
 # sources only. Doxygen will then generate output that is more tailored for C.

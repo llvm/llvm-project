@@ -292,10 +292,10 @@ define <4 x i32> @test12(ptr nocapture noundef readonly %a, ptr nocapture nounde
 ; CHECK-GI-LABEL: test12:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.2s }, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-GI-NEXT:    ld1r { v1.2s }, [x1]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    zip1 v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1

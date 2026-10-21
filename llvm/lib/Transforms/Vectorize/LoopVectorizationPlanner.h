@@ -449,12 +449,13 @@ public:
   /// result type \p ResultTy
   VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
                                        ArrayRef<VPValue *> Operands,
-                                       Type *ResultTy, DebugLoc DL) {
+                                       Type *ResultTy, DebugLoc DL,
+                                       const Twine &Name = "") {
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
     return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
-                                                  {}, {}, DL, "", ResultTy));
+                                                  {}, {}, DL, Name, ResultTy));
   }
 
   /// Create a scalar llvm.vscale call.
