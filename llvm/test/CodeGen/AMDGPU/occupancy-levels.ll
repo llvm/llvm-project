@@ -656,16 +656,18 @@ define amdgpu_kernel void @used_lds_13112() {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_64:
-; GFX6:       ; Occupancy: 1{{$}}
+; GFX6:       ; Occupancy: 2{{$}}
 ; GFX7:       ; Occupancy: 2{{$}}
 ; GFX8:       ; Occupancy: 2{{$}}
 ; GFX9:       ; Occupancy: 2{{$}}
 ; GFX950:     ; Occupancy: 5{{$}}
-; GFX10W64:   ; Occupancy: 4{{$}}
-; GFX10W32:   ; Occupancy: 8{{$}}
+; GFX1010W64: ; Occupancy: 4{{$}}
+; GFX1030W64: ; Occupancy: 4{{$}}
+; GFX1010W32: ; Occupancy: 8{{$}}
+; GFX1030W32: ; Occupancy: 7{{$}}
 ; GFX1100W64: ; Occupancy: 4{{$}}
-; GFX1100W32: ; Occupancy: 8{{$}}
-; GFX1200W32WG: ; Occupancy: 8{{$}}
+; GFX1100W32: ; Occupancy: 7{{$}}
+; GFX1200W32WG: ; Occupancy: 7{{$}}
 ; GFX1200W32CU: ; Occupancy: 7{{$}}
 ; GFX1200W64: ; Occupancy: 4{{$}}
 ; GFX1250:    ; Occupancy: 8{{$}}
@@ -680,18 +682,20 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_96:
-; GFX6:       ; Occupancy: 2{{$}}
+; GFX6:       ; Occupancy: 4{{$}}
 ; GFX7:       ; Occupancy: 4{{$}}
 ; GFX8:       ; Occupancy: 4{{$}}
 ; GFX9:       ; Occupancy: 4{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
-; GFX10W64:   ; Occupancy: 8{{$}}
-; GFX10W32:   ; Occupancy: 12{{$}}
-; GFX1100W64: ; Occupancy: 8{{$}}
-; GFX1100W32: ; Occupancy: 12{{$}}
-; GFX1200W32WG: ; Occupancy: 12{{$}}
+; GFX1010W64: ; Occupancy: 8{{$}}
+; GFX1030W64: ; Occupancy: 7{{$}}
+; GFX1010W32: ; Occupancy: 12{{$}}
+; GFX1030W32: ; Occupancy: 11{{$}}
+; GFX1100W64: ; Occupancy: 7{{$}}
+; GFX1100W32: ; Occupancy: 11{{$}}
+; GFX1200W32WG: ; Occupancy: 11{{$}}
 ; GFX1200W32CU: ; Occupancy: 11{{$}}
-; GFX1200W64WG: ; Occupancy: 8{{$}}
+; GFX1200W64WG: ; Occupancy: 7{{$}}
 ; GFX1200W64CU: ; Occupancy: 7{{$}}
 ; GFX1250:    ; Occupancy: 12{{$}}
 ; GFX1310W32WG: ; Occupancy: 16{{$}}
@@ -704,18 +708,20 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_128:
-; GFX6:       ; Occupancy: 2{{$}}
+; GFX6:       ; Occupancy: 4{{$}}
 ; GFX7:       ; Occupancy: 4{{$}}
 ; GFX8:       ; Occupancy: 4{{$}}
 ; GFX9:       ; Occupancy: 4{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
-; GFX10W64:   ; Occupancy: 8{{$}}
-; GFX10W32:   ; Occupancy: 15{{$}}
-; GFX1100W64: ; Occupancy: 8{{$}}
-; GFX1100W32: ; Occupancy: 15{{$}}
-; GFX1200W32WG: ; Occupancy: 15{{$}}
+; GFX1010W64: ; Occupancy: 8{{$}}
+; GFX1030W64: ; Occupancy: 7{{$}}
+; GFX1010W32: ; Occupancy: 15{{$}}
+; GFX1030W32: ; Occupancy: 14{{$}}
+; GFX1100W64: ; Occupancy: 7{{$}}
+; GFX1100W32: ; Occupancy: 14{{$}}
+; GFX1200W32WG: ; Occupancy: 14{{$}}
 ; GFX1200W32CU: ; Occupancy: 14{{$}}
-; GFX1200W64WG: ; Occupancy: 8{{$}}
+; GFX1200W64WG: ; Occupancy: 7{{$}}
 ; GFX1200W64CU: ; Occupancy: 7{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
 ; GFX1310W32: ; Occupancy: 16{{$}}
@@ -727,18 +733,19 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_192:
-; GFX6:       ; Occupancy: 3{{$}}
+; GFX6:       ; Occupancy: 6{{$}}
 ; GFX7:       ; Occupancy: 6{{$}}
 ; GFX8:       ; Occupancy: 6{{$}}
 ; GFX9:       ; Occupancy: 6{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
-; GFX10W64:   ; Occupancy: 12{{$}}
+; GFX1010W64: ; Occupancy: 12{{$}}
+; GFX1030W64: ; Occupancy: 11{{$}}
 ; GFX1010W32: ; Occupancy: 20{{$}}
 ; GFX1030W32: ; Occupancy: 15{{$}}
-; GFX1100W64: ; Occupancy: 12{{$}}
+; GFX1100W64: ; Occupancy: 11{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
 ; GFX1200W32: ; Occupancy: 15{{$}}
-; GFX1200W64WG: ; Occupancy: 12{{$}}
+; GFX1200W64WG: ; Occupancy: 11{{$}}
 ; GFX1200W64CU: ; Occupancy: 11{{$}}
 ; GFX1250:    ; Occupancy: 15{{$}}
 ; GFX1310W32: ; Occupancy: 15{{$}}
@@ -750,18 +757,19 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_256:
-; GFX6:       ; Occupancy: 3{{$}}
+; GFX6:       ; Occupancy: 7{{$}}
 ; GFX7:       ; Occupancy: 7{{$}}
 ; GFX8:       ; Occupancy: 7{{$}}
 ; GFX9:       ; Occupancy: 7{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
-; GFX10W64:   ; Occupancy: 15{{$}}
+; GFX1010W64: ; Occupancy: 15{{$}}
+; GFX1030W64: ; Occupancy: 14{{$}}
 ; GFX1010W32: ; Occupancy: 20{{$}}
 ; GFX1030W32: ; Occupancy: 16{{$}}
-; GFX1100W64: ; Occupancy: 15{{$}}
+; GFX1100W64: ; Occupancy: 14{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
 ; GFX1200W32: ; Occupancy: 16{{$}}
-; GFX1200W64WG: ; Occupancy: 15{{$}}
+; GFX1200W64WG: ; Occupancy: 14{{$}}
 ; GFX1200W64CU: ; Occupancy: 14{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
 ; GFX1310:    ; Occupancy: 16{{$}}
@@ -771,7 +779,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_512:
-; GFX6:       ; Occupancy: 6{{$}}
+; GFX6:       ; Occupancy: 10{{$}}
 ; GFX7:       ; Occupancy: 10{{$}}
 ; GFX8:       ; Occupancy: 10{{$}}
 ; GFX9:       ; Occupancy: 10{{$}}
@@ -806,7 +814,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_32:
-; GFX6:       ; Occupancy: 1{{$}}
+; GFX6:       ; Occupancy: 2{{$}}
 ; GFX7:       ; Occupancy: 2{{$}}
 ; GFX8:       ; Occupancy: 2{{$}}
 ; GFX9:       ; Occupancy: 2{{$}}

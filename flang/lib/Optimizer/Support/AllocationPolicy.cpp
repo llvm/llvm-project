@@ -12,6 +12,8 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -33,9 +35,49 @@ static llvm::cl::opt<std::uint64_t> allocationPlacementStackLimit(
     llvm::cl::init(fir::AllocationPolicy::totalStackLimitBytesDefault),
     llvm::cl::Hidden);
 
-bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
-                                const AllocationPolicy &policy,
-                                std::size_t stackBytesUsed) {
+fir::AllocationSizeContext fir::getAllocationSizeContext(mlir::Operation *op) {
+  auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!module)
+    module = op->getParentOfType<mlir::ModuleOp>();
+  if (!module)
+    return {std::nullopt, std::nullopt};
+  return {fir::support::getOrSetMLIRDataLayout(module,
+                                               /*allowDefaultLayout=*/false),
+          fir::getKindMapping(module)};
+}
+
+bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
+                                  const AllocationPolicy &allocationPolicy,
+                                  const AllocationSizeContext &sizeContext) {
+  if (fir::hasDynamicSize(sequenceType) || !sizeContext.dataLayout ||
+      !sizeContext.kindMap)
+    return false;
+  auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
+      loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
+  if (!sizeAndAlignment)
+    return false;
+  PendingAllocationInfo info{
+      /*isTemporary=*/true, /*isDynamic=*/false,
+      static_cast<std::int64_t>(sizeAndAlignment->first)};
+  AllocationPolicy copyInPolicy = allocationPolicy;
+  copyInPolicy.stackArrays = false;
+  return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
+}
+
+/// The policy in effect for \p info. Inside an offload region -fstack-arrays is
+/// not honored, since the device stack is far smaller than the host one.
+static fir::AllocationPolicy policyFor(const fir::PendingAllocationInfo &info,
+                                       const fir::AllocationPolicy &policy) {
+  fir::AllocationPolicy effective = policy;
+  if (effective.stackArrays && fir::isInOffloadRegion(info.context))
+    effective.stackArrays = false;
+  return effective;
+}
+
+/// shouldAllocateOnStack with the policy already narrowed by policyFor.
+static bool shouldAllocateOnStackImpl(const fir::PendingAllocationInfo &info,
+                                      const fir::AllocationPolicy &policy,
+                                      std::size_t stackBytesUsed) {
   // -fstack-arrays: put everything on the stack (best effort). For existing
   // allocations, the heap-to-stack conversion still only happens where it is
   // provably safe.
@@ -63,11 +105,19 @@ bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
          stackBytesUsed + size <= policy.totalStackLimitBytes;
 }
 
+bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
+                                const AllocationPolicy &basePolicy,
+                                std::size_t stackBytesUsed) {
+  return shouldAllocateOnStackImpl(info, policyFor(info, basePolicy),
+                                   stackBytesUsed);
+}
+
 fir::AllocationPlacement
 fir::decideAllocationPlacement(const AllocationInfo &info,
-                               const AllocationPolicy &policy,
+                               const AllocationPolicy &basePolicy,
                                std::size_t stackBytesUsed) {
   using P = fir::AllocationPlacement;
+  AllocationPolicy policy = policyFor(info, basePolicy);
 
   // An allocation that is not known to be dynamic but whose size cannot be
   // determined cannot be reasoned about: leave it where it is instead of
@@ -77,7 +127,7 @@ fir::decideAllocationPlacement(const AllocationInfo &info,
 
   // Translate the "should this be on the stack" decision into a placement,
   // accounting for where the allocation currently lives.
-  bool wantStack = fir::shouldAllocateOnStack(info, policy, stackBytesUsed);
+  bool wantStack = shouldAllocateOnStackImpl(info, policy, stackBytesUsed);
   if (wantStack)
     return info.isCurrentlyOnStack ? P::Leave : P::Stack;
   return info.isCurrentlyOnStack ? P::Heap : P::Leave;
@@ -91,12 +141,17 @@ fir::AllocationPolicy fir::getCommandLineAllocationPolicy(bool stackArrays) {
   return policy;
 }
 
+void fir::setAllocationPolicy(mlir::Operation *op,
+                              const fir::AllocationPolicy &policy) {
+  op->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
+                                        op->getContext(), policy.stackArrays,
+                                        policy.smallArrayThresholdBytes,
+                                        policy.totalStackLimitBytes));
+}
+
 void fir::setAllocationPolicy(mlir::ModuleOp mod,
                               const fir::AllocationPolicy &policy) {
-  mod->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
-                                         mod.getContext(), policy.stackArrays,
-                                         policy.smallArrayThresholdBytes,
-                                         policy.totalStackLimitBytes));
+  setAllocationPolicy(mod.getOperation(), policy);
 }
 
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
@@ -109,11 +164,23 @@ fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
                                attr.getTotalStackLimit()};
 }
 
+std::optional<fir::AllocationPolicy>
+fir::getLocalAllocationPolicy(mlir::Operation *op) {
+  auto attr =
+      op->getAttrOfType<fir::AllocationPolicyAttr>(allocationPolicyName);
+  if (!attr)
+    return std::nullopt;
+  return fir::AllocationPolicy{attr.getStackArrays(),
+                               attr.getSmallArrayThreshold(),
+                               attr.getTotalStackLimit()};
+}
+
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::Operation *op) {
-  auto mod = mlir::dyn_cast<mlir::ModuleOp>(op);
-  if (!mod)
-    mod = op->getParentOfType<mlir::ModuleOp>();
-  if (!mod)
-    return fir::AllocationPolicy{};
-  return getAllocationPolicy(mod);
+  // The innermost policy wins, so that a function can narrow the module one
+  // (e.g. device code, where the stack is a scarce resource).
+  for (mlir::Operation *cur = op; cur; cur = cur->getParentOp())
+    if (std::optional<fir::AllocationPolicy> policy =
+            fir::getLocalAllocationPolicy(cur))
+      return *policy;
+  return fir::AllocationPolicy{};
 }

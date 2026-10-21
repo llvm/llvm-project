@@ -1,16 +1,16 @@
 # REQUIRES: asserts
 
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
-# RUN:   -enable-post-misched -verify-machineinstrs \
-# RUN:   -debug-only=machine-scheduler -misched-postra-direction=topdown \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:   -misched-postra-direction=topdown \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=TOPDOWN %s
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
-# RUN:   -enable-post-misched -verify-machineinstrs \
-# RUN:   -debug-only=machine-scheduler -misched-postra-direction=bottomup \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:   -misched-postra-direction=bottomup \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BOTTOMUP %s
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
-# RUN:   -enable-post-misched -verify-machineinstrs \
-# RUN:   -debug-only=machine-scheduler -misched-postra-direction=bidirectional \
+# RUN:   -enable-post-misched -debug-only=machine-scheduler \
+# RUN:   -misched-postra-direction=bidirectional \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BIDIR %s
 
 ---

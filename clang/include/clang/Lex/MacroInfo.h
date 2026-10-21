@@ -511,7 +511,7 @@ MacroDirective::DefInfo::getPreviousDefinition() {
 /// the final directive for a macro name within a module. These entities also
 /// represent the macro override graph.
 ///
-/// These are stored in a FoldingSet in the preprocessor.
+/// These are stored in a UniquingSet in the preprocessor.
 class ModuleMacro : public llvm::FoldingSetNode {
   friend class Preprocessor;
 
@@ -543,14 +543,8 @@ public:
                              const IdentifierInfo *II, MacroInfo *Macro,
                              ArrayRef<ModuleMacro *> Overrides);
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    return Profile(ID, OwningModule, II);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, Module *OwningModule,
-                      const IdentifierInfo *II) {
-    ID.AddPointer(OwningModule);
-    ID.AddPointer(II);
+  std::pair<Module *, const IdentifierInfo *> getKey() const {
+    return {OwningModule, II};
   }
 
   /// Get the name of the macro.

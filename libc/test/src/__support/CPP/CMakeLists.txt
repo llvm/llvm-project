@@ -156,6 +156,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  unique_ptr_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    unique_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   tuple_test
   SUITE
     libc-cpp-utils-tests
@@ -205,18 +216,6 @@ add_libc_test(
     type_traits_test.cpp
   DEPENDS
     libc.src.__support.CPP.type_traits
-)
-
-add_libc_test(
-  vector_test
-  SUITE
-    libc-cpp-utils-tests
-  SRCS
-    vector_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.CPP.utility
-    libc.src.__support.CPP.vector
 )
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)

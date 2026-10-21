@@ -297,13 +297,13 @@ entry:
 
 ; Check aggregate types are handled properly.
 ; CHECK-LABEL: mad_u64
-; CHECK: v_mad_u64_u32
+; CHECK: ; def v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], use
 define void @mad_u64(i32 %x, i1 %c0) {
 entry:
   br i1 %c0, label %exit, label %false
 
 false:
-  %s0 = tail call { i64, i64 } asm sideeffect "v_mad_u64_u32 $0, $1, $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)
+  %s0 = tail call { i64, i64 } asm sideeffect "; def $0, $1, use $2, $3, $4", "=v,=s,v,v,v"(i32 -766435501, i32 %x, i64 0)
   br label %exit
 
 exit:

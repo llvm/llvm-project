@@ -72,7 +72,7 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def GotoSolver : Pass<"cir-goto-solver"> {
+def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{
     This pass transforms CIR and replaces goto-s with branch
@@ -173,7 +173,7 @@ def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def LoweringPrepare : Pass<"cir-lowering-prepare"> {
+def LoweringPrepare : Pass<"cir-lowering-prepare", "mlir::ModuleOp"> {
   let summary = "Lower to more fine-grained CIR operations before lowering to "
     "other dialects";
   let description = [{

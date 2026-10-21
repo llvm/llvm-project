@@ -50,24 +50,6 @@ def CIR_CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
   }];
   let canHaveIllegalCXXABIType = 0;
 }
-def CIR_CUDABinaryHandleAttr : CIR_Attr<
-  "CUDABinaryHandle", "cu.binary_handle"
-> {
-  let summary = "Fat binary handle for device code.";
-  let description =
-  [{
-    This attribute is attached to the ModuleOp and records the binary file
-    name passed to host.
-
-    CUDA first compiles device-side code into a fat binary file. The file
-    name is then passed into host-side code, which is used to create a handle
-    and then generate various registration functions.
-  }];
-
-  let parameters = (ins "mlir::StringAttr":$name);
-  let assemblyFormat = "`<` $name `>`";
-}
-
 // No wrapper attribute: the kind is only ever printed by
 // CIR_CUDAVarRegistrationInfoAttr's own assembly format.
 def CIR_CUDADeviceVarKind : CIR_I32Enum<"CUDADeviceVarKind",

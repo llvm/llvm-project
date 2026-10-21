@@ -43,8 +43,8 @@ public:
   }
 };
 
-#define LIST_FLOOR_TESTS(T, func)                                              \
-  using LlvmLibcFloorTest = FloorTest<T>;                                      \
-  TEST_F(LlvmLibcFloorTest, Range) { testRange(&func); }
+#define LIST_FLOOR_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = FloorTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FLOORTEST_H

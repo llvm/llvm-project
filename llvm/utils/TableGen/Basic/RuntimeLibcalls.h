@@ -135,8 +135,6 @@ public:
     OS << '\"' << getLibcallFuncName() << '\"';
   }
 
-  bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
-
   void emitEnumEntry(raw_ostream &OS) const {
     OS << "RTLIB::impl_" << this->getName();
   }
@@ -173,8 +171,7 @@ private:
   std::vector<RuntimeLibcall> RuntimeLibcallDefList;
   std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
 
-  DenseMap<const RuntimeLibcall *, const RuntimeLibcallImpl *>
-      LibCallToDefaultImpl;
+  std::vector<const Record *> FuncArgTypeList;
 
 public:
   RuntimeLibcalls(const RecordKeeper &Records);
@@ -193,6 +190,10 @@ public:
 
   const RuntimeLibcallImpl *getRuntimeLibcallImpl(const Record *Def) const {
     return Def2RuntimeLibcallImpl.lookup(Def);
+  }
+
+  ArrayRef<const Record *> getFuncArgTypeList() const {
+    return FuncArgTypeList;
   }
 };
 

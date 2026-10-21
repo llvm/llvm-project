@@ -92,7 +92,8 @@ void callCopyCtorNonByval() {
 // LLVM-CIR:     call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]])
 // OGCG:         call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
 
-// byval keeps the fresh copy the callee owns.
+// The materialized temporary is the operand's storage, so it is handed on as
+// the byval pointer with no slot of its own.
 void callByval() {
   Big b;
   takeByval(b);
@@ -100,21 +101,41 @@ void callByval() {
 
 // CIR-LABEL: cir.func {{.*}}@_Z9callByvalv
 // CIR:         %[[TMP:.*]] = cir.alloca "agg.tmp0" align(8) : !cir.ptr<!rec_Big>
-// CIR:         %[[V:.*]] = cir.load align(8) %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
-// CIR:         %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-// CIR:         cir.store %[[V]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR:         cir.call @_Z9takeByval3Big(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+// CIR-NOT:     cir.alloca "byval"
+// CIR:         cir.copy %{{.*}} align(8) to %[[TMP]] align(8) : !cir.ptr<!rec_Big>
+// CIR-NEXT:    cir.call @_Z9takeByval3Big(%[[TMP]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z9callByvalv()
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP:[^,]+]], ptr align 8 %{{[^,]+}}, i64 32, i1 false)
-// LLVM-CIR:     %[[V:.*]] = load %struct.Big, ptr %[[TMP]], align 8
-// LLVM-CIR:     store %struct.Big %[[V]], ptr %[[SLOT:.*]], align 8
-// LLVM-CIR:     call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
-// OGCG:         call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[TMP]])
+// LLVM-NEXT:    call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[TMP]])
 
 // An inherited constructor forwards its by-value parameter with no temporary
 // of its own, so the base constructor operates on the object the caller
 // destroys.
+struct NonTrivialPad {
+  char pad[17];
+  NonTrivialPad();
+  NonTrivialPad(const NonTrivialPad &);
+  ~NonTrivialPad();
+};
+
+union TailPadNoRegs {
+  NonTrivialPad n;
+  long l;
+  TailPadNoRegs();
+  TailPadNoRegs(const TailPadNoRegs &);
+  ~TailPadNoRegs();
+};
+
+// Nothing spans this union's 24 declared bytes, and its non-trivial member
+// keeps it out of registers, so it is indirect with no byval.
+void takeTailPadNoRegs(TailPadNoRegs u) {}
+
+// CIR-LABEL: cir.func {{.*}}@_Z17takeTailPadNoRegs13TailPadNoRegs
+// CIR-SAME:      %{{[^:]*}}: !cir.ptr<!rec_TailPadNoRegs> {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef}
+
+// LLVM: define dso_local void @_Z17takeTailPadNoRegs13TailPadNoRegs(ptr nofreeobj noundef align 8 dereferenceable(24) %{{[^,]+}})
+
 struct Base { Base(WithDtor t); };
 struct Derived : Base { using Base::Base; };
 void callInheritedCtor(WithDtor t) { Derived d(t); }

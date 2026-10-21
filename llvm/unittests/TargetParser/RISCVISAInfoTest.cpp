@@ -37,12 +37,44 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
   }
 }
 
+TEST(ParseNormalizedArchString, RejectsConflictingBaseISAs) {
+  for (StringRef Input : {"rv32i2p0_e2p0", "rv64i2p1_m2p0_e2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'i' and 'e'");
+  }
+  for (StringRef Input : {"rv32e2p0_i2p0", "rv64e2p0_m2p0_i2p1"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "conflicting base ISAs 'e' and 'i'");
+  }
+}
+
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
   }
+
+  for (StringRef Input : {"rv32im2p0", "rv32i2p0_im2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'i' is missing version number");
+  }
+
+  for (StringRef Input : {"rv64ea2p0", "rv32i2p0_em2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "base ISA 'e' is missing version number");
+  }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv32i2p0_ma2p0")
+                         .takeError()),
+            "extension 'm' is missing version number");
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv64i2p0_fd2p0")
+                         .takeError()),
+            "extension 'f' is missing version number");
 
   for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0"}) {
     EXPECT_EQ(
@@ -201,11 +233,11 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
         toString(RISCVISAInfo::parseArchString(Input, true, false).takeError()),
         "invalid standard user-level extension 'e'");
   }
-  for (StringRef Input : {"rv32y0p98i", "rv64y0p98i"}) {
+  for (StringRef Input : {"rv32y0p910i", "rv64y0p910i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'i'");
   }
-  for (StringRef Input : {"rv32y0p98e", "rv64y0p98e"}) {
+  for (StringRef Input : {"rv32y0p910e", "rv64y0p910e"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'e'");
   }
@@ -214,7 +246,7 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
 TEST(ParseArchString, RejectsInvalidYPosition) {
   // y in non-first position is rejected.
   for (StringRef Input :
-       {"rv32ey0p98", "rv64ey0p98", "rv32iy0p98", "rv64iy0p98"}) {
+       {"rv32ey0p910", "rv64ey0p910", "rv32iy0p910", "rv64iy0p910"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'y'");
   }
@@ -228,17 +260,17 @@ TEST(ParseArchString, RejectsInvalidYPosition) {
 TEST(ParseArchString, MissingBaseISA) {
   // With version check enabled (default), we must specify the version for
   // experimental extension 'y'.
-  auto MaybeRV32Y = RISCVISAInfo::parseArchString("rv32y0p98", true);
+  auto MaybeRV32Y = RISCVISAInfo::parseArchString("rv32y0p910", true);
   ASSERT_THAT_EXPECTED(MaybeRV32Y, Succeeded());
   RISCVISAInfo &InfoRV32Y = **MaybeRV32Y;
   const auto &ExtsRV32Y = InfoRV32Y.getExtensions();
   EXPECT_EQ(ExtsRV32Y.size(), 2UL); // i, y
   EXPECT_TRUE(ExtsRV32Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-  EXPECT_TRUE(ExtsRV32Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 98}));
+  EXPECT_TRUE(ExtsRV32Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
   EXPECT_EQ(InfoRV32Y.getXLen(), 32U);
 
-  // rv32y0p98m should succeed and contain i, m, y0p98, zmmul
-  auto MaybeRV32YM = RISCVISAInfo::parseArchString("rv32y0p98m", true);
+  // rv32y0p910m should succeed and contain i, m, y0p910, zmmul
+  auto MaybeRV32YM = RISCVISAInfo::parseArchString("rv32y0p910m", true);
   ASSERT_THAT_EXPECTED(MaybeRV32YM, Succeeded());
   RISCVISAInfo &InfoRV32YM = **MaybeRV32YM;
   EXPECT_EQ(InfoRV32YM.getExtensions().size(), 4UL); // i, m, y, zmmul
@@ -247,20 +279,20 @@ TEST(ParseArchString, MissingBaseISA) {
   EXPECT_TRUE(InfoRV32YM.getExtensions().at("m") ==
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(InfoRV32YM.getExtensions().at("y") ==
-              (RISCVISAUtils::ExtensionVersion{0, 98}));
+              (RISCVISAUtils::ExtensionVersion{0, 910}));
 
   // We can also parse it without version if we disable the version check.
   auto MaybeRV32YNoVal = RISCVISAInfo::parseArchString("rv32y", true, false);
   ASSERT_THAT_EXPECTED(MaybeRV32YNoVal, Succeeded());
   EXPECT_EQ((*MaybeRV32YNoVal)->getExtensions().size(), 2UL);
 
-  auto MaybeRV64Y = RISCVISAInfo::parseArchString("rv64y0p98", true);
+  auto MaybeRV64Y = RISCVISAInfo::parseArchString("rv64y0p910", true);
   ASSERT_THAT_EXPECTED(MaybeRV64Y, Succeeded());
   RISCVISAInfo &InfoRV64Y = **MaybeRV64Y;
   const auto &ExtsRV64Y = InfoRV64Y.getExtensions();
   EXPECT_EQ(ExtsRV64Y.size(), 2UL); // i, y
   EXPECT_TRUE(ExtsRV64Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-  EXPECT_TRUE(ExtsRV64Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 98}));
+  EXPECT_TRUE(ExtsRV64Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
   EXPECT_EQ(InfoRV64Y.getXLen(), 64U);
 }
 
@@ -402,6 +434,19 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64GCV.getMinVLen(), 128U);
   EXPECT_EQ(InfoRV64GCV.getMaxELen(), 64U);
   EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
+}
+
+TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64i_p0p21_v", true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  RISCVISAInfo &Info = **MaybeISAInfo;
+
+  // The canonical string should place 'v' before 'p'
+  EXPECT_EQ(
+      Info.toString(),
+      "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_"
+      "zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
@@ -663,7 +708,7 @@ TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64y0p97", true).takeError()),
       "unsupported version number 0.97 for experimental extension 'y' "
-      "(this compiler supports 0.98)");
+      "(this compiler supports 0.910)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -759,34 +804,34 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv32y0p98_zcf", true).takeError()),
+          RISCVISAInfo::parseArchString("rv32y0p910_zcf", true).takeError()),
       "'zcf' is incompatible with rv32y base");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv32y0p98_zclsd", true).takeError()),
+          RISCVISAInfo::parseArchString("rv32y0p910_zclsd", true).takeError()),
       "'zclsd' is incompatible with rv32y base");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64y0p98_zcd", true).takeError()),
+          RISCVISAInfo::parseArchString("rv64y0p910_zcd", true).takeError()),
       "'zcd' is incompatible with rv64y base");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64y0p98_zcmp", true).takeError()),
+          RISCVISAInfo::parseArchString("rv64y0p910_zcmp", true).takeError()),
       "'zcmp' is incompatible with rv64y base");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64y0p98_zcmt", true).takeError()),
+          RISCVISAInfo::parseArchString("rv64y0p910_zcmt", true).takeError()),
       "'zcmt' is incompatible with rv64y base");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64y0p98_xqccmp", true).takeError()),
+          RISCVISAInfo::parseArchString("rv64y0p910_xqccmp", true).takeError()),
       "'xqccmp' is incompatible with rv64y base");
   // RV64Y is incompatible with Zce (because Zce implies Zcmt/Zcmp which overlap
   // with RV64Y). This behaves exactly the same as enabling Zcd and Zce on a
   // RVI (conflict via Zcmt).
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64y0p98_zce", true).takeError()),
+          RISCVISAInfo::parseArchString("rv64y0p910_zce", true).takeError()),
       "'zcmt' is incompatible with rv64y base");
   EXPECT_EQ(
       toString(
@@ -813,6 +858,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_THAT(Error,
                 ::testing::EndsWith(" and 'zcd' extensions are incompatible"));
     EXPECT_THAT(Error, ::testing::HasSubstr(ConflictingExt));
+  }
+
+  for (StringRef Input : {"rv32idc_xqccmi0p2", "rv32i_zcd_xqccmi0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqccmi' and 'zcd' extensions are incompatible");
   }
 
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
@@ -1080,7 +1130,7 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IDZce.count("zcmt"), 1U);
 
   // RV32Y Zce: zcf incompatible, but zcmp/zcmt compatible. zca + y implies c.
-  auto MaybeRV32YZce = RISCVISAInfo::parseArchString("rv32y0p98_zce", true);
+  auto MaybeRV32YZce = RISCVISAInfo::parseArchString("rv32y0p910_zce", true);
   ASSERT_THAT_EXPECTED(MaybeRV32YZce, Succeeded());
   const auto &ExtsRV32YZce = (*MaybeRV32YZce)->getExtensions();
   EXPECT_EQ(ExtsRV32YZce.size(), 9UL);
@@ -1095,7 +1145,7 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV32YZce.count("zcmt"), 1U);
 
   // RV32Y Zce with F: zcf incompatible, so zcf is not implied.
-  auto MaybeRV32YFZce = RISCVISAInfo::parseArchString("rv32y0p98_f_zce", true);
+  auto MaybeRV32YFZce = RISCVISAInfo::parseArchString("rv32y0p910_f_zce", true);
   ASSERT_THAT_EXPECTED(MaybeRV32YFZce, Succeeded());
   const auto &ExtsRV32YFZce = (*MaybeRV32YFZce)->getExtensions();
   EXPECT_EQ(ExtsRV32YFZce.size(), 10UL);
@@ -1258,6 +1308,19 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f"}), "lp64f");
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
+
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
 
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
@@ -1637,7 +1700,7 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     p                    0.21
-    y                    0.98
+    y                    0.910
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zilx                 0.1
@@ -1646,7 +1709,7 @@ Experimental extensions
     zvdot4a8i            0.1
     zvfbdota32f          0.2
     zvfbfa               0.1
-    zvfofp8min           0.2
+    zvfofp8min           0.9
     zvfqwbdota8f         0.2
     zvfqwdota8f          0.2
     zvfwbdota16bf        0.2
@@ -1660,17 +1723,22 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.3
     smcsps               0.20
     smehv                0.20
+    smidctrl             0.20
     smijt                0.20
     smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
     sscsps               0.20
     ssehv                0.20
+    ssidctrl             0.20
     ssijt                0.20
     ssip                 0.20
+    ssnip                0.20
     svukte               1.0
+    xqccmi               0.2
     xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1
@@ -1680,8 +1748,10 @@ Supported Profiles
     rva20u64
     rva22s64
     rva22u64
+    rva23p1s64
     rva23s64
     rva23u64
+    rvb23p1s64
     rvb23s64
     rvb23u64
     rvi20u32

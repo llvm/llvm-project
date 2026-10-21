@@ -7,31 +7,37 @@ define void @and_store_8(ptr %p, ptr %q, ptr %out) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Q]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i8> [[TMP0]] to <8 x i1>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP1]] to <8 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i1> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i8> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[TMP3]] to i1
 ; CHECK-NEXT:    store i1 [[TMP4]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i8> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i8 [[TMP5]] to i1
 ; CHECK-NEXT:    store i1 [[TMP6]], ptr [[O1]], align 1
 ; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i8> [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i8 [[TMP7]] to i1
 ; CHECK-NEXT:    store i1 [[TMP8]], ptr [[O2]], align 1
 ; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP5]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i8> [[TMP2]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i8 [[TMP9]] to i1
 ; CHECK-NEXT:    store i1 [[TMP10]], ptr [[O3]], align 1
 ; CHECK-NEXT:    [[O4:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[TMP5]], i64 4
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i8> [[TMP2]], i64 4
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i8 [[TMP11]] to i1
 ; CHECK-NEXT:    store i1 [[TMP12]], ptr [[O4]], align 1
 ; CHECK-NEXT:    [[O5:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 5
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[TMP5]], i64 5
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i8> [[TMP2]], i64 5
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i8 [[TMP13]] to i1
 ; CHECK-NEXT:    store i1 [[TMP14]], ptr [[O5]], align 1
 ; CHECK-NEXT:    [[O6:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 6
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP5]], i64 6
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i8> [[TMP2]], i64 6
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i8 [[TMP15]] to i1
 ; CHECK-NEXT:    store i1 [[TMP16]], ptr [[O6]], align 1
 ; CHECK-NEXT:    [[O7:%.*]] = getelementptr inbounds nuw i1, ptr [[OUT]], i64 7
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i1> [[TMP5]], i64 7
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i8> [[TMP2]], i64 7
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i8 [[TMP17]] to i1
 ; CHECK-NEXT:    store i1 [[TMP18]], ptr [[O7]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -114,9 +120,8 @@ define <8 x i1> @or_icmp_bv(ptr %p, ptr %q) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Q]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i8> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i1> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP2]] to <8 x i1>
 ; CHECK-NEXT:    ret <8 x i1> [[TMP3]]
 ;
 entry:
@@ -192,11 +197,9 @@ define <8 x i1> @and_chain_bv(ptr %p, ptr %q, ptr %r) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Q]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[R]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP0]] to <8 x i1>
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i8> [[TMP1]] to <8 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <8 x i8> [[TMP2]] to <8 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i1> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i1> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i8> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i8> [[TMP4]] to <8 x i1>
 ; CHECK-NEXT:    ret <8 x i1> [[TMP5]]
 ;
 entry:
@@ -478,9 +481,7 @@ define <8 x i1> @and_select_val(ptr %p, ptr %q, ptr %c) {
 ; CHECK-NEXT:    [[C7:%.*]] = load i1, ptr [[C7P]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Q]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i8> [[TMP0]] to <8 x i1>
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc <8 x i8> [[TMP1]] to <8 x i1>
-; CHECK-NEXT:    [[TMP11:%.*]] = and <8 x i1> [[TMP2]], [[TMP13]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i8> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i1> poison, i1 [[C0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> [[TMP3]], i1 [[C1]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> [[TMP4]], i1 [[C2]], i64 2
@@ -489,6 +490,7 @@ define <8 x i1> @and_select_val(ptr %p, ptr %q, ptr %c) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i1> [[TMP7]], i1 [[C5]], i64 5
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i1> [[TMP8]], i1 [[C6]], i64 6
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i1> [[TMP9]], i1 [[C7]], i64 7
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i8> [[TMP2]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <8 x i1> [[TMP10]], <8 x i1> [[TMP11]], <8 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[TMP12]]
 ;

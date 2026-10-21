@@ -197,10 +197,14 @@ def LLVM_FshrOp : LLVM_TernarySameArgsIntrOpI<"fshr">;
 def LLVM_ClmulOp : LLVM_BinarySameArgsIntrOpI<"clmul">;
 def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
 def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
+def LLVM_SMulHOp : LLVM_BinarySameArgsIntrOpI<"smulh">;
+def LLVM_UMulHOp : LLVM_BinarySameArgsIntrOpI<"umulh">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrOpF<"minimum">;
+def LLVM_MaximumNumOp : LLVM_BinarySameArgsIntrOpF<"maximumnum">;
+def LLVM_MinimumNumOp : LLVM_BinarySameArgsIntrOpF<"minimumnum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
@@ -222,6 +226,16 @@ def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
 def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+def LLVM_ModfOp : LLVM_TwoResultIntrOp<"modf", [], [0],
   [Pure], /*requiresFastmath=*/1> {
   let arguments =
       (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
@@ -436,15 +450,6 @@ def LLVM_LaunderInvariantGroupOp
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
-def LLVM_StripInvariantGroupOp
-    : LLVM_OneResultIntrOp<"strip.invariant.group", [], [0],
-        [DeclareOpInterfaceMethods<PromotableOpInterface>,
-         SameOperandsAndResultType]> {
-  let arguments = (ins LLVM_AnyPointer:$ptr);
-  let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
-}
-
 // Constrained Floating-Point Intrinsics.
 
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
@@ -486,7 +491,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
                     std::back_inserter(overloadedTypes),
                     [&args](unsigned index) { return args[index]->getType(); });
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::Function *callee =
       llvm::Intrinsic::getOrInsertDeclaration(module,
         llvm::Intrinsic::experimental_constrained_}] #
@@ -1100,7 +1105,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
                      llvm::cast<llvm::DILocalVariable>(
@@ -1126,7 +1131,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDbgValue(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
@@ -1148,7 +1153,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertLabel(
         llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
@@ -1272,6 +1277,8 @@ def LLVM_vector_reduce_fmax : LLVM_VecReductionF<"fmax">;
 def LLVM_vector_reduce_fmin : LLVM_VecReductionF<"fmin">;
 def LLVM_vector_reduce_fmaximum : LLVM_VecReductionF<"fmaximum">;
 def LLVM_vector_reduce_fminimum : LLVM_VecReductionF<"fminimum">;
+def LLVM_vector_reduce_fmaximumnum : LLVM_VecReductionF<"fmaximumnum">;
+def LLVM_vector_reduce_fminimumnum : LLVM_VecReductionF<"fminimumnum">;
 
 def LLVM_vector_reduce_fadd : LLVM_VecReductionAccF<"fadd">;
 def LLVM_vector_reduce_fmul : LLVM_VecReductionAccF<"fmul">;
@@ -1299,8 +1306,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
         op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
@@ -1335,8 +1341,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));

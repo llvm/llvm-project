@@ -56,8 +56,6 @@ public:
 
   Symbol *find(StringRef name);
 
-  void handleDynamicList();
-
   Symbol *addUnusedUndefined(StringRef name,
                              uint8_t binding = llvm::ELF::STB_GLOBAL);
 
@@ -83,8 +81,6 @@ public:
 
 private:
   SmallVector<Symbol *, 0> findByVersion(SymbolVersion ver);
-  SmallVector<Symbol *, 0> findAllByVersion(SymbolVersion ver,
-                                            bool includeNonDefault);
 
   llvm::StringMap<SmallVector<Symbol *, 0>> &getDemangledSyms();
   bool assignExactVersion(SymbolVersion ver, uint16_t versionId);
