@@ -73,9 +73,7 @@ static_assert(std::weakly_incrementable<noncopyable_with_difference_type_and_min
 static_assert(std::weakly_incrementable<extended_integral_difference_type<__int128>>);
 #endif
 
-#if defined(__BIT_TYPES_DEFINED__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wbit-int-extension"
+#if TEST_HAS_BITINT
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(8)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(9)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(10)>>);
@@ -133,6 +131,7 @@ static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitIn
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(62)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(63)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(64)>>);
+#  if __BITINT_MAXWIDTH__ >= 96
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(65)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(66)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(67)>>);
@@ -165,6 +164,8 @@ static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitIn
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(94)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(95)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(96)>>);
+#  endif
+#  if __BITINT_MAXWIDTH__ >= 128
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(97)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(98)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(99)>>);
@@ -197,5 +198,5 @@ static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitIn
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(126)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(127)>>);
 static_assert(std::weakly_incrementable<extended_integral_difference_type<_BitInt(128)>>);
-#  pragma GCC diagnostic pop
+#  endif
 #endif
