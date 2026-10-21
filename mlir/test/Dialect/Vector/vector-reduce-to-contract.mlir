@@ -78,6 +78,18 @@ func.func @multidimreduction_contract_fastmath_strict_mul(
 
 // -----
 
+// CHECK-LABEL: multidimreduction_contract_fastmath_strict_reduction
+//  CHECK-NEXT:   vector.contract {indexing_maps =
+//  CHECK-NOT:    fastmath
+func.func @multidimreduction_contract_fastmath_strict_reduction(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<fast> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
 //-----------------------------------------------------------------------------
 // [Pattern: CombineContractABTranspose]
 //-----------------------------------------------------------------------------

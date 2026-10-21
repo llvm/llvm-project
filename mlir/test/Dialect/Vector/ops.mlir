@@ -925,8 +925,8 @@ func.func @multi_reduction(%0: vector<4x8x16x32xf32>, %acc0: vector<4x16xf32>,
   // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
   %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x16xf32> to f32
-  %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
+  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} fastmath<reassoc> [0, 1] : vector<4x16xf32> to f32
+  %2 = vector.multi_reduction <add>, %1, %acc1 fastmath<reassoc> [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
 }
@@ -1203,11 +1203,4 @@ func.func @scatter_tensor(%base: tensor<16x16xf32>, %v: vector<16xi32>,
       : tensor<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16x16xf32>
   // CHECK: return %[[RESULT]] : tensor<16x16xf32>
   return %0 : tensor<16x16xf32>
-}
-
-// CHECK-LABEL: @multi_reduction_fastmath
-func.func @multi_reduction_fastmath(%0: vector<4x8x16x32xf32>, %acc: vector<4x16xf32>) -> vector<4x16xf32> {
-  // CHECK: vector.multi_reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
-  %1 = vector.multi_reduction <maximumf>, %0, %acc fastmath<nnan,nsz> [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
-  return %1 : vector<4x16xf32>
 }
