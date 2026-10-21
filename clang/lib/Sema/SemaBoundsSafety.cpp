@@ -164,7 +164,7 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
     // Exception: void has an implicit size of 1 byte for pointer arithmetic
     // (following GNU convention). Therefore, counted_by on void* is allowed
     // and behaves equivalently to sized_by (treating the count as bytes).
-    if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
+    if (PointeeTy->isVoidType()) {
       // Emit a warning that this is a GNU extension.
       Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
       Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
@@ -180,7 +180,7 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
   } else if (!Flags.CountInBytes &&
              PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (Ty->isArrayType()) {
+    if (!getLangOpts().BoundsSafety && Ty->isArrayType()) {
       // This is a workaround for the Linux kernel that has already adopted
       // `counted_by` on a FAM where the pointee is a struct with a FAM. This
       // should be an error because computing the bounds of the array cannot
