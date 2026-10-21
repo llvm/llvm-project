@@ -57,6 +57,13 @@ interface CompileUnit {
    * The path of the compile unit.
    */
   compileUnitPath: string;
+
+  /**
+   * True if the compile unit was compiled with optimization, false if it
+   * was unoptimized or unknown. Optional so a debugger can omit it when
+   * unknown, in which case clients should treat it as unknown.
+   */
+  isOptimized?: boolean;
 }
 ```
 

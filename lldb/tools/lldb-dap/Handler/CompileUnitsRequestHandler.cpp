@@ -17,8 +17,7 @@
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
-static std::optional<CompileUnit>
-CreateCompileUnit(const lldb::SBCompileUnit &unit) {
+static std::optional<CompileUnit> CreateCompileUnit(lldb::SBCompileUnit unit) {
   const lldb::SBFileSpec file_spec = unit.GetFileSpec();
   if (!file_spec.IsValid())
     return std::nullopt;
@@ -30,6 +29,7 @@ CreateCompileUnit(const lldb::SBCompileUnit &unit) {
   CompileUnit result;
   result.id = unit.GetIDInModule();
   result.compileUnitPath = std::string(path_buffer.data(), path_size);
+  result.isOptimized = unit.GetIsOptimized();
   return result;
 }
 
