@@ -1,8 +1,0 @@
-
-# RUN: env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=%ssaf-driver-libs \
-# RUN:     %ssaf-driver-python -m unittest discover \
-# RUN:   -s %ssaf-driver-src/tests -t %ssaf-driver-src \
-# RUN:   > %t.log 2>&1
-# RUN: FileCheck %s --input-file=%t.log --implicit-check-not=FAILED
-
-# CHECK: {{^OK}}

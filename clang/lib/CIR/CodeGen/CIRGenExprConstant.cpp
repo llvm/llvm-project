@@ -378,6 +378,11 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
       elements[0] = cir::GlobalViewAttr::get(
           cir::VPtrType::get(builder.getContext()), apOp.getNameAttr(), indices,
           /*addressPoint=*/true);
+
+      // we only used the getVTableAddressPoint call to get the index/offset for
+      // the indices, and never added it to the module. So we need to erase it
+      // here.
+      apOp->erase();
     }
 
     unsigned baseNo = 0;

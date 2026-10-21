@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
 
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
@@ -133,10 +134,14 @@ static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
 
 static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
                                         cir::OpenCLVersionAttr cxxVersion) {
-  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
-         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
-          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+  return (openCLVersion.getMajorVersion() == 2 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 1 &&
+          cxxVersion.getMinorVersion() == 0) ||
+         (openCLVersion.getMajorVersion() == 3 &&
+          openCLVersion.getMinorVersion() == 0 &&
+          cxxVersion.getMajorVersion() == 2021 &&
+          cxxVersion.getMinorVersion() == 0);
 }
 
 static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
@@ -253,12 +258,64 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   return success();
 }
 
+bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
+  assert(ty && "isPureCIRType requires a non-null type");
+  {
+    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
+    auto it = pureCIRTypeCache.find(ty);
+    if (it != pureCIRTypeCache.end())
+      return it->second;
+  }
+  // Records gain members when completed, so a "pure" answer is only stable
+  // when the walk saw no incomplete record. "Impure" answers stay stable.
+  bool sawIncompleteRecord = false;
+  bool result = !ty.walk([&](mlir::Type t) {
+                     if (!t)
+                       return mlir::WalkResult::advance();
+                     if (auto rec = mlir::dyn_cast<cir::RecordType>(t))
+                       sawIncompleteRecord |= rec.isIncomplete();
+                     return mlir::isa<cir::CIRDialect>(t.getDialect())
+                                ? mlir::WalkResult::advance()
+                                : mlir::WalkResult::interrupt();
+                   }).wasInterrupted();
+  if (!result || !sawIncompleteRecord) {
+    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
+    pureCIRTypeCache[ty] = result;
+  }
+  return result;
+}
+
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
   llvm::StringRef attrName = attr.getName().getValue();
   if (isOpenCLVersionAttrName(attrName))
     return verifyOpenCLVersionAttr(op, attr);
+
+  if (attrName == getCXXABIAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCXXABIAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto abi = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!abi)
+      return op->emitOpError()
+             << "expects '" << getCXXABIAttrName() << "' to be a string";
+
+    StringRef abival = abi.getValue();
+    if (!clang::TargetCXXABI::isABI(abival))
+      return op->emitOpError() << "unknown C++ ABI '" << abi.getValue() << "'";
+
+    clang::TargetCXXABI::Kind kind = clang::TargetCXXABI::getKind(abival);
+    if (auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName()))
+      if (!clang::TargetCXXABI::isSupportedCXXABI(
+              llvm::Triple(triple.getValue()), kind))
+        return op->emitOpError()
+               << "C++ ABI '" << abi.getValue()
+               << "' is not supported on target '" << triple.getValue() << "'";
+
+    return success();
+  }
 
   if (attrName == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
@@ -778,6 +835,12 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 MutableOperandRange
 cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
   // The eh_token operand is not forwarded to the parent region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
+MutableOperandRange
+cir::CoroSuspendPoint::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The condition operand is not forwarded to successor regions.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
@@ -2039,14 +2102,31 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  // Execution always starts in the body region.
+  if (point.isParent()) {
+    regions.emplace_back(&getBodyRegion());
     return;
   }
 
-  // Execution always proceeds from the body region to the cleanup region.
-  regions.push_back(RegionSuccessor(&getBodyRegion()));
-  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+  mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+  assert(term && "expected a terminator predecessor");
+
+  if (term->getParentRegion() == &getBodyRegion()) {
+    // cir.resume unwinds out of the body. Every other terminator, such as
+    // cir.yield or cir.co_return, is a normal exit.
+    cir::CleanupKindAttr kind = getCleanupKindAttr();
+    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
+      regions.emplace_back(&getCleanupRegion());
+      return;
+    }
+  }
+
+  // Exiting the cleanup region, or a body exit that skips it, leaves the
+  // operation. An unwind out of the middle of the body is not a
+  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
+  // cir.goto, so a cleanup region reached only that way has no predecessor
+  // here.
+  regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -3702,8 +3782,9 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend: continue in resume once the coroutine is resumed,
-  // or exit to the parent operation if it stays suspended or is destroyed.
+  // Branching from suspend: continue in resume once the coroutine is resumed
+  // (or immediately if suspension is vetoed), or exit to the parent operation
+  // if it stays suspended or is destroyed.
   if (&getSuspend() == parentRegion) {
     regions.emplace_back(&getResume());
     regions.emplace_back(getOperation());
