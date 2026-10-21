@@ -240,12 +240,7 @@ define float @select_fmul_legacy_inverted_logical_and(float %x, float %y) {
 define float @select_fmul_legacy_inverted_fabs(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_inverted_fabs(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[XNZ:%.*]] = fcmp une float [[FABS_X]], 0.000000e+00
-; CHECK-NEXT:    [[YNZ:%.*]] = fcmp une float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[XNZ]], [[YNZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float [[MUL]], float 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)

@@ -178,7 +178,7 @@ public:
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
 
   /// Fold select (X == 0 || Y == 0), +0.0, X * Y into fmul_legacy(X, Y).
-  bool foldSelectToFMulLegacy(SelectInst &I);
+  bool foldSelectToFMulLegacy(SelectInst &I) const;
 
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
@@ -1582,7 +1582,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 }
 
 // select (X == 0 || Y == 0), +0.0, (X * Y) -> fmul_legacy(X, Y)
-bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
+bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) const {
   if (!I.getType()->isFloatTy())
     return false;
 
@@ -1596,7 +1596,30 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
              m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
     return false;
 
-  SmallVector<Value *, 4> Roots[2] = {{I.getCondition()}, {X, Y}};
+  // Collect the values compared against zero in the condition.
+  SmallVector<Value *, 4> CondWorklist = {I.getCondition()};
+  SmallVector<Value *, 4> CmpSrcs;
+  SmallPtrSet<Value *, 8> VisitedConds;
+  while (!CondWorklist.empty()) {
+    Value *Cond = CondWorklist.pop_back_val();
+    if (!VisitedConds.insert(Cond).second)
+      continue;
+
+    Value *LHS, *RHS, *Src;
+    if (Inverted ? match(Cond, m_And(m_Value(LHS), m_Value(RHS)))
+                 : match(Cond, m_Or(m_Value(LHS), m_Value(RHS)))) {
+      CondWorklist.append({LHS, RHS});
+      continue;
+    }
+
+    if (!match(Cond, m_SpecificFCmp(Inverted ? FCmpInst::FCMP_UNE
+                                             : FCmpInst::FCMP_OEQ,
+                                    m_Value(Src), m_AnyZeroFP())))
+      return false;
+    CmpSrcs.push_back(Src);
+  }
+
+  SmallVector<Value *, 4> Roots[2] = {std::move(CmpSrcs), {X, Y}};
   SmallPtrSet<Value *, 4> Leaves[2];
   for (auto [Worklist, Found] : zip(Roots, Leaves)) {
     SmallPtrSet<Value *, 8> Visited;
@@ -1606,23 +1629,6 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
       if (!Visited.insert(Cur).second)
         continue;
 
-      Value *Src, *LHS, *RHS;
-      if (Cur->getType()->isIntegerTy(1)) {
-        if (Inverted ? match(Cur, m_And(m_Value(LHS), m_Value(RHS)))
-                     : match(Cur, m_Or(m_Value(LHS), m_Value(RHS)))) {
-          Worklist.append({LHS, RHS});
-          continue;
-        }
-
-        if (!match(Cur, m_SpecificFCmp(Inverted ? FCmpInst::FCMP_UNE
-                                                : FCmpInst::FCMP_OEQ,
-                                       m_Value(Src), m_AnyZeroFP())))
-          return false;
-
-        Worklist.push_back(Src);
-        continue;
-      }
-
       // Peeling a nnan/ninf op could expose poison that the select hides.
       auto *FPOp = dyn_cast<FPMathOperator>(Cur);
       if (FPOp && (FPOp->hasNoNaNs() || FPOp->hasNoInfs())) {
@@ -1630,6 +1636,7 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
         continue;
       }
 
+      Value *Src;
       // m_UnOp, not m_FNeg: fsub -0.0, X may flush a denormal result to zero.
       if (match(Cur, m_CombineOr(m_UnOp(m_Value(Src)), m_FAbs(m_Value(Src))))) {
         Worklist.push_back(Src);
@@ -1645,7 +1652,7 @@ bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
 
   IRBuilder<> Builder(&I);
   Value *LegacyMul =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {}, {X, Y});
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {X, Y});
   LegacyMul->takeName(&I);
   I.replaceAllUsesWith(LegacyMul);
   DeadVals.push_back(&I);
