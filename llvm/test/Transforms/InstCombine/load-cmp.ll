@@ -633,11 +633,12 @@ define i1 @cmp_load_shifted_index(i32 %X) {
   ret i1 %cmp
 }
 
-; FIXME: The following are miscompilation issues.
 define i1 @cmp_load_multiplied_index_noflags(i32 %X) {
 ; CHECK-LABEL: @cmp_load_multiplied_index_noflags(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 2
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i32 %X, 3
@@ -649,7 +650,11 @@ define i1 @cmp_load_multiplied_index_noflags(i32 %X) {
 
 define i1 @cmp_load_multiplied_index_negative_inbounds(i32 %X) {
 ; CHECK-LABEL: @cmp_load_multiplied_index_negative_inbounds(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul nsw i32 [[X:%.*]], -6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nsw i32 %X, -3
   %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
@@ -660,7 +665,11 @@ define i1 @cmp_load_multiplied_index_negative_inbounds(i32 %X) {
 
 define i1 @cmp_load_multiplied_index_negative(i32 %X) {
 ; CHECK-LABEL: @cmp_load_multiplied_index_negative(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i32 [[X:%.*]], -6
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @G16, i32 [[GEP_IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 82
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nsw i32 %X, -3
   %gep = getelementptr [10 x i16], ptr @G16, i32 0, i32 %mul
